@@ -1,1 +1,1 @@
-gcc main.c -I/usr/local/Cellar/cjson/1.7.17/include/cjson -lcjson -lSDL2  -o main
+gcc main.c -I/usr/local/Cellar/cjson/1.7.17/include/cjson -lcjson -I/opt/local/include/ -L/opt/local/lib -lSDL2 -lSDL2_ttf  -o main

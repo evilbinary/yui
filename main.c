@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_ttf.h>
 #include "cJSON.h"
 
 // ====================== 图层数据结构 ======================
@@ -26,19 +27,20 @@ typedef struct Layer {
     int child_count;
     void (*onClick)();  // 事件回调函数指针
     
-    // 新增文本相关字段
-    char label[100];
-    char text[100];
-    
     // 新增布局管理器
     LayoutManager* layout_manager;
     int fixed_width;
     int fixed_height;
     float flex_ratio;
+    
+    // 新增label和text字段
+    char label[100];
+    char text[100];
 } Layer;
 
 // ====================== 全局渲染器 ======================
 SDL_Renderer* renderer = NULL;
+TTF_Font* default_font = NULL;  // 添加默认字体
 
 // ====================== JSON解析函数 ======================
 Layer* parse_layer(cJSON* json_obj) {
@@ -74,6 +76,14 @@ Layer* parse_layer(cJSON* json_obj) {
     // 解析弹性比例
     if (cJSON_HasObjectItem(json_obj, "flex")) {
         layer->flex_ratio = (float)cJSON_GetObjectItem(json_obj, "flex")->valuedouble;
+    }
+    
+    // 解析label和text属性
+    if (cJSON_HasObjectItem(json_obj, "label")) {
+        strcpy(layer->label, cJSON_GetObjectItem(json_obj, "label")->valuestring);
+    }
+    if (cJSON_HasObjectItem(json_obj, "text")) {
+        strcpy(layer->text, cJSON_GetObjectItem(json_obj, "text")->valuestring);
     }
     
     // 解析布局管理器
@@ -129,20 +139,12 @@ Layer* parse_layer(cJSON* json_obj) {
               cJSON_GetObjectItem(json_obj, "source")->valuestring);
     }
     
-    // 解析标签和文本
-    if (cJSON_HasObjectItem(json_obj, "label")) {
-        strcpy(layer->label, cJSON_GetObjectItem(json_obj, "label")->valuestring);
-    }
-    
-    if (cJSON_HasObjectItem(json_obj, "text")) {
-        strcpy(layer->text, cJSON_GetObjectItem(json_obj, "text")->valuestring);
-    }
-    
     // 解析事件绑定
     cJSON* events = cJSON_GetObjectItem(json_obj, "events");
     if (events && cJSON_HasObjectItem(events, "onClick")) {
         const char* handler_id = cJSON_GetObjectItem(events, "onClick")->valuestring;
         // 实际项目应建立handler_id到函数的映射表
+
 
         //if (strcmp(handler_id, "@handleSubmit") == 0) {
             // layer->onClick = submit_handler; // 绑定实际函数
@@ -174,6 +176,19 @@ void load_textures(Layer* root) {
     for (int i = 0; i < root->child_count; i++) {
         load_textures(root->children[i]);
     }
+}
+
+// 添加文字渲染函数
+SDL_Texture* render_text(const char* text, SDL_Color color) {
+    if (!default_font) return NULL;
+    
+    SDL_Surface* surface = TTF_RenderUTF8_Blended(default_font, text, color);
+    if (!surface) return NULL;
+    
+    SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
+    SDL_FreeSurface(surface);
+    
+    return texture;
 }
 
 // ====================== 渲染管线 ======================
@@ -282,9 +297,24 @@ void render_layer(Layer* layer) {
         
         // 渲染按钮文本
         if (strlen(layer->text) > 0) {
-            // 注意：实际项目中需要使用TTF库来渲染文本
-            // 这里仅作为占位符表示文本渲染逻辑
-            printf("Button '%s' with text: %s\n", layer->id, layer->text);
+            // 使用SDL_ttf渲染文本
+            SDL_Color text_color = {255, 255, 255, 255}; // 白色文字
+            SDL_Texture* text_texture = render_text(layer->text, text_color);
+            
+            if (text_texture) {
+                int text_width, text_height;
+                TTF_SizeText(default_font, layer->text, &text_width, &text_height);
+                
+                SDL_Rect text_rect = {
+                    layer->rect.x + (layer->rect.w - text_width) / 2,  // 居中
+                    layer->rect.y + (layer->rect.h - text_height) / 2,
+                    text_width,
+                    text_height
+                };
+                
+                SDL_RenderCopy(renderer, text_texture, NULL, &text_rect);
+                SDL_DestroyTexture(text_texture);
+            }
         }
     } 
     else if (strcmp(layer->type, "Input") == 0) {
@@ -302,9 +332,24 @@ void render_layer(Layer* layer) {
         
         // 渲染输入框标签
         if (strlen(layer->label) > 0) {
-            // 注意：实际项目中需要使用TTF库来渲染文本
-            // 这里仅作为占位符表示文本渲染逻辑
-            printf("Input '%s' with label: %s\n", layer->id, layer->label);
+            // 使用SDL_ttf渲染文本
+            SDL_Color text_color = {0, 0, 0, 255}; // 黑色文字
+            SDL_Texture* text_texture = render_text(layer->label, text_color);
+            
+            if (text_texture) {
+                int text_width, text_height;
+                TTF_SizeText(default_font, layer->label, &text_width, &text_height);
+                
+                SDL_Rect text_rect = {
+                    layer->rect.x + 5,  // 左侧留5像素边距
+                    layer->rect.y + (layer->rect.h - text_height) / 2,
+                    text_width,
+                    text_height
+                };
+                
+                SDL_RenderCopy(renderer, text_texture, NULL, &text_rect);
+                SDL_DestroyTexture(text_texture);
+            }
         }
     }
     else {
@@ -348,12 +393,32 @@ void handle_event(Layer* root, SDL_Event* event) {
 int main(int argc, char* argv[]) {
     // 初始化SDL
     SDL_Init(SDL_INIT_VIDEO);
+    
+    // 初始化TTF
+    if (TTF_Init() == -1) {
+        printf("TTF initialization failed: %s\n", TTF_GetError());
+        return -1;
+    }
+    
     SDL_Window* window = SDL_CreateWindow("YUI Renderer", 
                                         SDL_WINDOWPOS_CENTERED,
                                         SDL_WINDOWPOS_CENTERED,
                                         800, 600, 0);
     renderer = SDL_CreateRenderer(window, -1, 
                                  SDL_RENDERER_ACCELERATED);
+    
+    // 加载默认字体 (需要在项目目录下提供字体文件)
+    default_font = TTF_OpenFont("Roboto-Regular.ttf", 16);
+    if (!default_font) {
+        printf("Warning: Could not load font 'Roboto-Regular.ttf', trying other fonts\n");
+        // 尝试加载其他西文字体
+        default_font = TTF_OpenFont("arial.ttf", 16);
+        if (!default_font) {
+            default_font = TTF_OpenFont("Arial.ttf", 16);
+        }
+    }
+
+    
     char* json_path="ui_layout.json";
     // 加载UI描述文件
     if(argc>1){
@@ -397,6 +462,10 @@ int main(int argc, char* argv[]) {
     }
     
     // 清理资源
+    if (default_font) {
+        TTF_CloseFont(default_font);
+    }
+    TTF_Quit();
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();
