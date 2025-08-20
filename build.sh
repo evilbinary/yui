@@ -1,0 +1,1 @@
+gcc main.c -I/usr/local/Cellar/cjson/1.7.17/include/cjson -lcjson -lSDL2  -o main

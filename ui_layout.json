@@ -1,0 +1,39 @@
+{
+    "id": "main_panel",
+    "type": "Panel",
+    "position": [0, 0],
+    "size": [800, 600],
+    "style": {
+      "color": "#2C3E50"
+    },
+    "children": [
+      {
+        "id": "header",
+        "type": "Header",
+        "position": [50, 20],
+        "size": [700, 60],
+        "style": {
+          "color": "#3498DB"
+        }
+      },
+      {
+        "id": "submit_btn",
+        "type": "Button",
+        "position": [350, 500],
+        "size": [100, 50],
+        "style": {
+          "color": "#27AE60"
+        },
+        "events": {
+          "onClick": "@handleSubmit"
+        }
+      },
+      {
+        "id": "logo",
+        "type": "Image",
+        "position": [300, 100],
+        "size": [200, 200],
+        "source": "assets/logo.bmp"
+      }
+    ]
+  }

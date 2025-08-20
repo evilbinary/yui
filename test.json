@@ -1,0 +1,32 @@
+{
+    "id": "userFormPanel",
+    "type": "Panel",
+    "theme": "default",
+    "event": {
+        "@submitForm": "userService.saveData",
+        "@validateEmail": "utils.checkEmailFormat"
+    },
+    "children": [
+        {
+            "id": "emailInput",
+            "type": "Input",
+            "label": "邮箱",
+            "placeholder": "输入邮箱",
+            "events": {
+                "onChange": "@validateEmail"
+            },
+            "dataBinding": {
+                "path": "user.email"
+            }
+        },
+        {
+            "id": "submitBtn",
+            "type": "Button",
+            "text": "提交",
+            "events": {
+                "onClick": "@submitForm"
+            }
+        }
+    ]
+    
+}
