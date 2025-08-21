@@ -1,7 +1,14 @@
 #include <stdio.h>
+#ifdef D_SDL
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
 #include <SDL2/SDL_image.h>
+#else
+#include <SDL.h>
+#include <SDL_ttf.h>
+#include <SDL_image.h>
+#endif
+
 #include "cJSON.h"
 
 // ====================== 图层数据结构 ======================
