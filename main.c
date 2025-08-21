@@ -15,7 +15,10 @@
 typedef enum {
     LAYOUT_ABSOLUTE,
     LAYOUT_HORIZONTAL,
-    LAYOUT_VERTICAL
+    LAYOUT_VERTICAL,
+    LAYOUT_CENTER,
+    LAYOUT_LEFT,
+    LAYOUT_RIGHT
 } LayoutType;
 
 // 添加图片渲染模式枚举
@@ -82,6 +85,9 @@ Layer* parse_layer(cJSON* json_obj) {
     if(size!=NULL){
         layer->rect.w = cJSON_GetArrayItem(size, 0)->valueint;
         layer->rect.h = cJSON_GetArrayItem(size, 1)->valueint;
+        layer->fixed_width= layer->rect.w;
+        layer->fixed_height= layer->rect.h;
+
     }
     
     // 解析固定尺寸
@@ -117,7 +123,13 @@ Layer* parse_layer(cJSON* json_obj) {
                 layer->layout_manager->type = LAYOUT_HORIZONTAL;
             } else if (strcmp(layout_type->valuestring, "vertical") == 0) {
                 layer->layout_manager->type = LAYOUT_VERTICAL;
-            } else {
+            }else if (strcmp(layout_type->valuestring, "center") == 0) {
+                layer->layout_manager->type = LAYOUT_CENTER;
+            }else if (strcmp(layout_type->valuestring, "left") == 0) {
+                layer->layout_manager->type = LAYOUT_LEFT;
+            }else if (strcmp(layout_type->valuestring, "right") == 0) {
+                layer->layout_manager->type = LAYOUT_RIGHT;
+            }  else {
                 layer->layout_manager->type = LAYOUT_ABSOLUTE;
             }
         } else {
@@ -326,7 +338,16 @@ void render_layer(Layer* layer) {
                 child->rect.x = layer->rect.x + padding_left;
                 child->rect.y = current_y;
                 // 自动计算宽度以填充可用空间
-                child->rect.w = content_width;
+                if(child->rect.w<=0){
+                    child->rect.w = content_width;
+                }
+                if(child->layout_manager->type == LAYOUT_CENTER){
+                    child->rect.x+=child->rect.w/2 - padding_left/2;
+                }else if(child->layout_manager->type == LAYOUT_LEFT){
+                    child->rect.x =layer->rect.x+ padding_left;
+                }else if(child->layout_manager->type == LAYOUT_RIGHT){
+                    child->rect.x =layer->rect.x + child->rect.w -padding_left/2;
+                }
                 
                 current_y += child->rect.h + spacing;
             }

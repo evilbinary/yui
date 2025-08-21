@@ -24,10 +24,6 @@
         {
             "id": "logo",
             "type": "Image",
-            "size": [
-                200,
-                200
-            ],
             "source": "duck.png",
             "style": {
                 "mode": "fit"
@@ -83,9 +79,14 @@
             "id": "loginBtn",
             "type": "Button",
             "text": "登录",
+            "size":[240,40],
             "style": {
                 "color": "#FFFFFF",
                 "bgColor": "#1976D2"
+            },
+            "layout": {
+                "type":"center",
+                "spacing": 10
             },
             "events": {
                 "onClick": "@submitLogin"
