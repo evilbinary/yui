@@ -21,6 +21,7 @@ typedef struct Layer {
     char type[20];
     SDL_Rect rect;
     SDL_Color color;
+    SDL_Color bgColor;
     char texture_path[100];
     SDL_Texture* texture;
     struct Layer** children;
@@ -127,10 +128,25 @@ Layer* parse_layer(cJSON* json_obj) {
     // 解析样式
     cJSON* style = cJSON_GetObjectItem(json_obj, "style");
     if (style) {
-        sscanf(cJSON_GetObjectItem(style, "color")->valuestring, 
+        if(cJSON_HasObjectItem(style,"color")){
+            sscanf(cJSON_GetObjectItem(style, "color")->valuestring, 
+                "#%02hhx%02hhx%02hhx", 
+                &layer->color.r, &layer->color.g, &layer->color.b);
+            layer->color.a = 255;
+        }
+
+        if(cJSON_HasObjectItem(style,"bgColor")){
+             sscanf(cJSON_GetObjectItem(style, "bgColor")->valuestring, 
                "#%02hhx%02hhx%02hhx", 
-               &layer->color.r, &layer->color.g, &layer->color.b);
-        layer->color.a = 255;
+               &layer->bgColor.r, &layer->bgColor.g, &layer->bgColor.b);
+            layer->bgColor.a = 255;
+        }else{
+            layer->bgColor.r=0;
+            layer->bgColor.g=0;
+            layer->bgColor.b=0;
+            layer->bgColor.a = 0;
+        }
+       
     }
     
     // 解析资源路径
@@ -284,12 +300,14 @@ void render_layer(Layer* layer) {
     // 根据图层类型进行不同的渲染处理
     if (strcmp(layer->type, "Button") == 0) {
         // 按钮类型渲染：绘制背景和边框
-        SDL_SetRenderDrawColor(renderer, 
-                              layer->color.r, 
-                              layer->color.g, 
-                              layer->color.b, 
-                              layer->color.a);
-        SDL_RenderFillRect(renderer, &layer->rect);
+        if(layer->bgColor.a>0){
+            SDL_SetRenderDrawColor(renderer, 
+                                layer->bgColor.r, 
+                                layer->bgColor.g, 
+                                layer->bgColor.b, 
+                                layer->bgColor.a);
+            SDL_RenderFillRect(renderer, &layer->rect);
+        }
         
         // 绘制按钮边框
         SDL_SetRenderDrawColor(renderer, 200, 200, 200, 255);
@@ -298,12 +316,13 @@ void render_layer(Layer* layer) {
         // 渲染按钮文本
         if (strlen(layer->text) > 0) {
             // 使用SDL_ttf渲染文本
-            SDL_Color text_color = {255, 255, 255, 255}; // 白色文字
+           
+            SDL_Color text_color = layer->color; // 白色文字
             SDL_Texture* text_texture = render_text(layer->text, text_color);
             
             if (text_texture) {
                 int text_width, text_height;
-                TTF_SizeText(default_font, layer->text, &text_width, &text_height);
+                SDL_QueryTexture(text_texture, NULL, NULL, &text_width, &text_height);
                 
                 SDL_Rect text_rect = {
                     layer->rect.x + (layer->rect.w - text_width) / 2,  // 居中
@@ -312,6 +331,17 @@ void render_layer(Layer* layer) {
                     text_height
                 };
                 
+                // 确保文本不会超出按钮边界
+                if (text_rect.w > layer->rect.w - 20) {
+                    text_rect.w = layer->rect.w - 20;
+                    text_rect.x = layer->rect.x + 10;
+                }
+                
+                if (text_rect.h > layer->rect.h) {
+                    text_rect.h = layer->rect.h;
+                    text_rect.y = layer->rect.y;
+                }
+                
                 SDL_RenderCopy(renderer, text_texture, NULL, &text_rect);
                 SDL_DestroyTexture(text_texture);
             }
@@ -319,12 +349,15 @@ void render_layer(Layer* layer) {
     } 
     else if (strcmp(layer->type, "Input") == 0) {
         // 输入框类型渲染：绘制背景和边框
-        SDL_SetRenderDrawColor(renderer, 
-                              layer->color.r, 
-                              layer->color.g, 
-                              layer->color.b, 
-                              layer->color.a);
-        SDL_RenderFillRect(renderer, &layer->rect);
+        if(layer->bgColor.a>0){
+            SDL_SetRenderDrawColor(renderer, 
+                                layer->bgColor.r, 
+                                layer->bgColor.g, 
+                                layer->bgColor.b, 
+                                layer->bgColor.a);
+            
+            SDL_RenderFillRect(renderer, &layer->rect);
+        }
         
         // 绘制输入框边框
         SDL_SetRenderDrawColor(renderer, 150, 150, 150, 255);
@@ -333,12 +366,13 @@ void render_layer(Layer* layer) {
         // 渲染输入框标签
         if (strlen(layer->label) > 0) {
             // 使用SDL_ttf渲染文本
-            SDL_Color text_color = {0, 0, 0, 255}; // 黑色文字
+           
+            SDL_Color text_color = layer->color;
             SDL_Texture* text_texture = render_text(layer->label, text_color);
             
             if (text_texture) {
                 int text_width, text_height;
-                TTF_SizeText(default_font, layer->label, &text_width, &text_height);
+                SDL_QueryTexture(text_texture, NULL, NULL, &text_width, &text_height);
                 
                 SDL_Rect text_rect = {
                     layer->rect.x + 5,  // 左侧留5像素边距
@@ -347,11 +381,58 @@ void render_layer(Layer* layer) {
                     text_height
                 };
                 
+                // 确保文本不会超出输入框边界
+                if (text_rect.x + text_rect.w > layer->rect.x + layer->rect.w - 5) {
+                    text_rect.w = layer->rect.x + layer->rect.w - 5 - text_rect.x;
+                }
+                
+                if (text_rect.y + text_rect.h > layer->rect.y + layer->rect.h) {
+                    text_rect.h = layer->rect.y + layer->rect.h - text_rect.y;
+                }
+                
                 SDL_RenderCopy(renderer, text_texture, NULL, &text_rect);
                 SDL_DestroyTexture(text_texture);
             }
         }
     }
+    else if (strcmp(layer->type, "Label") == 0) {
+            if(layer->bgColor.a>0){
+                SDL_SetRenderDrawColor(renderer, 
+                                    layer->bgColor.r, 
+                                    layer->bgColor.g, 
+                                    layer->bgColor.b, 
+                                    layer->bgColor.a);
+                
+                SDL_RenderFillRect(renderer, &layer->rect);
+            }
+        
+            SDL_Color text_color = layer->color;
+            SDL_Texture* text_texture = render_text(layer->text, text_color);
+            
+            if (text_texture) {
+                int text_width, text_height;
+                SDL_QueryTexture(text_texture, NULL, NULL, &text_width, &text_height);
+                
+                SDL_Rect text_rect = {
+                    layer->rect.x + 5 + (layer->rect.w -text_width)/2,  // 左侧留5像素边距
+                    layer->rect.y + (layer->rect.h - text_height) / 2,
+                    text_width,
+                    text_height
+                };
+                
+                // 确保文本不会超出输入框边界
+                if (text_rect.x + text_rect.w > layer->rect.x + layer->rect.w - 5) {
+                    text_rect.w = layer->rect.x + layer->rect.w - 5 - text_rect.x;
+                }
+                
+                if (text_rect.y + text_rect.h > layer->rect.y + layer->rect.h) {
+                    text_rect.h = layer->rect.y + layer->rect.h - text_rect.y;
+                }
+                
+                SDL_RenderCopy(renderer, text_texture, NULL, &text_rect);
+                SDL_DestroyTexture(text_texture);
+            }
+    }    
     else {
         // 默认渲染方式
         SDL_SetRenderDrawColor(renderer, 
@@ -437,6 +518,21 @@ int main(int argc, char* argv[]) {
     // 解析JSON
     cJSON* root_json = cJSON_Parse(json_str);
     Layer* ui_root = parse_layer(root_json);
+    
+    // 如果根图层没有设置宽度和高度，则根据窗口大小设置
+    printf("ui_root%d\n",ui_root->rect.w);
+    
+    if (ui_root->rect.w <= 0 || ui_root->rect.h <= 0) {
+        int window_width, window_height;
+        SDL_GetWindowSize(window, &window_width, &window_height);
+        if (ui_root->rect.w <= 0) {
+            ui_root->rect.w = window_width;
+        }
+        if (ui_root->rect.h <= 0) {
+            ui_root->rect.h = window_height;
+        }
+    }
+    
     cJSON_Delete(root_json);
     free(json_str);
     
