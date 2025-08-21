@@ -1,32 +1,90 @@
 {
-    "id": "userFormPanel",
+    "id": "loginPage",
     "type": "Panel",
     "theme": "default",
-    "event": {
-        "@submitForm": "userService.saveData",
-        "@validateEmail": "utils.checkEmailFormat"
+    "style": {
+        "color": "#FFFFFF",
+        "bgColor": "#1E88E5"
+    },
+    "size": [400, 300],
+    "layout": {
+        "type": "vertical",
+        "spacing": 20,
+        "padding": [40, 40, 40, 40]
     },
     "children": [
+        {
+            "id": "loginTitle",
+            "type": "Label",
+            "text": "用户登录",
+            "style": {
+                "color": "#1976D2"
+            }
+        },
         {
             "id": "emailInput",
             "type": "Input",
             "label": "邮箱",
-            "placeholder": "输入邮箱",
+            "placeholder": "请输入邮箱地址",
             "events": {
                 "onChange": "@validateEmail"
             },
             "dataBinding": {
                 "path": "user.email"
+            },
+            "style": {
+                "color": "#212121",
+                "bgColor": "#E3F2FD"
+            },
+            "layout": {
+                "spacing": 10
             }
         },
         {
-            "id": "submitBtn",
-            "type": "Button",
-            "text": "提交",
+            "id": "pwdInput",
+            "type": "Input",
+            "label": "密码",
+            "placeholder": "请输入密码",
             "events": {
-                "onClick": "@submitForm"
+                "onChange": "@validatePassword"
+            },
+            "dataBinding": {
+                "path": "user.password"
+            },
+            "style": {
+                "color": "#212121",
+                "bgColor": "#E3F2FD"
+            },
+            "layout": {
+                "spacing": 10
+            }
+        },
+        {
+            "id": "loginBtn",
+            "type": "Button",
+            "text": "登录",
+            "style": {
+                "color": "#FFFFFF",
+                "bgColor": "#1976D2"
+            },
+            "events": {
+                "onClick": "@submitLogin"
+            },
+            "layout": {
+                "spacing": 10
+            }
+        },
+        {
+            "id": "registerLink",
+            "type": "Button",
+            "text": "还没有账号？立即注册",
+            "style": {
+                "color": "#1976D2",
+                "bgColor": "#F5F5F5"
+            },
+            "events": {
+                "onClick": "@goToRegister"
             }
         }
     ]
-    
 }
