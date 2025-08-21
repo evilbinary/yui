@@ -34,7 +34,7 @@
         "type": "Image",
         "position": [300, 100],
         "size": [200, 200],
-        "source": "assets/logo.bmp"
+        "source": "duck.png"
       }
     ]
   }

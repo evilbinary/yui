@@ -144,3 +144,7 @@ xattr -dr com.apple.quarantine ../libs/webp.framework
 xattr -dr com.apple.quarantine ../libs/SDL2.framework
 xattr -dr com.apple.quarantine ../libs/SDL2_ttf.framework/
 xattr -dr com.apple.quarantine ../libs/SDL2_image.framework/
+
+
+export DYLD_FRAMEWORK_PATH=../libs
+export DYLD_LIBRARY_PATH="../libs"

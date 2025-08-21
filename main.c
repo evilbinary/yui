@@ -479,11 +479,7 @@ void render_layer(Layer* layer) {
                               layer->color.a);
         SDL_RenderFillRect(renderer, &layer->rect);
     }
-    
-    // 绘制纹理
-    if (layer->texture) {
-        SDL_RenderCopy(renderer, layer->texture, NULL, &layer->rect);
-    }
+
     
     // 递归渲染子图层
     for (int i = 0; i < layer->child_count; i++) {
