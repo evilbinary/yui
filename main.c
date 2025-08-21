@@ -18,7 +18,10 @@ typedef enum {
     LAYOUT_VERTICAL,
     LAYOUT_CENTER,
     LAYOUT_LEFT,
-    LAYOUT_RIGHT
+    LAYOUT_RIGHT,
+    LAYOUT_ALIGN_CENTER,
+    LAYOUT_ALIGN_LEFT,
+    LAYOUT_ALIGN_RIGHT
 } LayoutType;
 
 // 添加图片渲染模式枚举
@@ -32,6 +35,7 @@ typedef struct LayoutManager {
     LayoutType type;
     int spacing;
     int padding[4]; // top, right, bottom, left
+    LayoutType align;
 } LayoutManager;
 
 typedef struct Layer {
@@ -135,6 +139,20 @@ Layer* parse_layer(cJSON* json_obj) {
         } else {
             // 默认使用垂直布局
             layer->layout_manager->type = LAYOUT_VERTICAL;
+        }
+        cJSON* layout_align = cJSON_GetObjectItem(layout, "align");
+        if (layout_align) {
+            //child 行为
+            if (strcmp(layout_align->valuestring, "left") == 0) {
+                layer->layout_manager->align = LAYOUT_ALIGN_LEFT;
+            }else if (strcmp(layout_align->valuestring, "right") == 0) {
+                layer->layout_manager->align = LAYOUT_ALIGN_RIGHT;
+            }else if (strcmp(layout_align->valuestring, "center") == 0) {
+                layer->layout_manager->align = LAYOUT_ALIGN_CENTER;
+            }else{
+                layer->layout_manager->align = LAYOUT_ALIGN_LEFT;
+            }
+            
         }
         
         if (cJSON_HasObjectItem(layout, "spacing")) {
@@ -318,6 +336,7 @@ void render_layer(Layer* layer) {
                 }
             }
             
+            
             // 分配空间
             int available_height = content_height - fixed_height_sum - 
                                   (layer->child_count - 1) * spacing;
@@ -341,12 +360,23 @@ void render_layer(Layer* layer) {
                 if(child->rect.w<=0){
                     child->rect.w = content_width;
                 }
+                printf("%s %s %d\n",child->type,child->text,child->rect.w);
+
                 if(child->layout_manager->type == LAYOUT_CENTER){
                     child->rect.x+=child->rect.w/2 - padding_left/2;
                 }else if(child->layout_manager->type == LAYOUT_LEFT){
                     child->rect.x =layer->rect.x+ padding_left;
                 }else if(child->layout_manager->type == LAYOUT_RIGHT){
                     child->rect.x =layer->rect.x + child->rect.w -padding_left/2;
+                }else{
+                    //对齐
+                    if(layer->layout_manager->align==LAYOUT_ALIGN_CENTER){
+                        child->rect.x+=child->rect.w/2 - padding_left/2;
+                    }else if(layer->layout_manager->align==LAYOUT_ALIGN_LEFT){
+                        child->rect.x =layer->rect.x+ padding_left;
+                    }else if(layer->layout_manager->align==LAYOUT_ALIGN_RIGHT){
+                        child->rect.x =layer->rect.x + child->rect.w -padding_left/2;
+                    }
                 }
                 
                 current_y += child->rect.h + spacing;

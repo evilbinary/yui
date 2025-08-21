@@ -12,6 +12,7 @@
     ],
     "layout": {
         "type": "vertical",
+        "align":"center",
         "spacing": 20,
         "padding": [
             40,
@@ -41,6 +42,7 @@
             "id": "emailInput",
             "type": "Input",
             "label": "邮箱",
+            "size":[240,40],
             "placeholder": "请输入邮箱地址",
             "events": {
                 "onChange": "@validateEmail"
@@ -61,6 +63,7 @@
             "type": "Input",
             "label": "密码",
             "placeholder": "请输入密码",
+            "size":[240,40],
             "events": {
                 "onChange": "@validatePassword"
             },
@@ -96,6 +99,7 @@
             "id": "registerLink",
             "type": "Button",
             "text": "还没有账号？立即注册",
+            "size":[240,40],
             "style": {
                 "color": "#1976D2",
                 "bgColor": "#F5F5F5"
