@@ -6,13 +6,33 @@
         "color": "#FFFFFF",
         "bgColor": "#1E88E5"
     },
-    "size": [400, 300],
+    "size": [
+        500,
+        400
+    ],
     "layout": {
         "type": "vertical",
         "spacing": 20,
-        "padding": [40, 40, 40, 40]
+        "padding": [
+            40,
+            40,
+            40,
+            40
+        ]
     },
     "children": [
+        {
+            "id": "logo",
+            "type": "Image",
+            "size": [
+                200,
+                200
+            ],
+            "source": "duck.png",
+            "style": {
+                "mode": "cover"
+            }
+        },
         {
             "id": "loginTitle",
             "type": "Label",
@@ -69,9 +89,6 @@
             },
             "events": {
                 "onClick": "@submitLogin"
-            },
-            "layout": {
-                "spacing": 10
             }
         },
         {
