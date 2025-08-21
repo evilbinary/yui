@@ -30,7 +30,7 @@
             ],
             "source": "duck.png",
             "style": {
-                "mode": "stretch"
+                "mode": "fit"
             }
         },
         {

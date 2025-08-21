@@ -18,6 +18,13 @@ typedef enum {
     LAYOUT_VERTICAL
 } LayoutType;
 
+// 添加图片渲染模式枚举
+typedef enum {
+    IMAGE_MODE_STRETCH,     // 拉伸填充整个区域
+    IMAGE_MODE_ASPECT_FIT,  // 自适应完整显示图片（可能有空白）
+    IMAGE_MODE_ASPECT_FILL  // 填充整个区域（可能裁剪图片）
+} ImageMode;
+
 typedef struct LayoutManager {
     LayoutType type;
     int spacing;
@@ -45,6 +52,9 @@ typedef struct Layer {
     // 新增label和text字段
     char label[100];
     char text[100];
+    
+    // 添加图片模式字段
+    ImageMode image_mode;
 } Layer;
 
 // ====================== 全局渲染器 ======================
@@ -154,6 +164,19 @@ Layer* parse_layer(cJSON* json_obj) {
             layer->bgColor.b=0;
             layer->bgColor.a = 0;
         }
+
+        // 从style.mode中解析图片渲染模式（优先级高于imageMode）
+        cJSON* mode_item = cJSON_GetObjectItem(style, "mode");
+        if (mode_item) {
+            const char* mode_str = mode_item->valuestring;
+            if (strcmp(mode_str, "fit") == 0) {
+                layer->image_mode = IMAGE_MODE_ASPECT_FIT;
+            } else if (strcmp(mode_str, "fill") == 0) {
+                layer->image_mode = IMAGE_MODE_ASPECT_FILL;
+            } else if (strcmp(mode_str, "stretch") == 0) {
+                layer->image_mode = IMAGE_MODE_STRETCH;
+            }
+        }
        
     }
     
@@ -161,7 +184,7 @@ Layer* parse_layer(cJSON* json_obj) {
     if (cJSON_HasObjectItem(json_obj, "source")) {
         strcpy(layer->texture_path, 
               cJSON_GetObjectItem(json_obj, "source")->valuestring);
-    }
+    }    
     
     // 解析事件绑定
     cJSON* events = cJSON_GetObjectItem(json_obj, "events");
@@ -461,7 +484,43 @@ void render_layer(Layer* layer) {
         
         // 渲染图片纹理
         if (layer->texture) {
-            SDL_RenderCopy(renderer, layer->texture, NULL, &layer->rect);
+            // 根据图片模式进行不同的渲染
+            if (layer->image_mode == IMAGE_MODE_STRETCH) {
+                // 拉伸模式：直接填充整个区域
+                SDL_RenderCopy(renderer, layer->texture, NULL, &layer->rect);
+            } else {
+                // 获取图片原始尺寸
+                int img_width, img_height;
+                SDL_QueryTexture(layer->texture, NULL, NULL, &img_width, &img_height);
+                
+                // 计算缩放比例
+                float scale_x = (float)layer->rect.w / img_width;
+                float scale_y = (float)layer->rect.h / img_height;
+                
+                SDL_Rect render_rect;
+                render_rect.x = layer->rect.x;
+                render_rect.y = layer->rect.y;
+                render_rect.w = img_width;
+                render_rect.h = img_height;
+                
+                if (layer->image_mode == IMAGE_MODE_ASPECT_FIT) {
+                    // 自适应模式：完整显示图片，可能有空白区域
+                    float scale = fmin(scale_x, scale_y);
+                    render_rect.w = (int)(img_width * scale);
+                    render_rect.h = (int)(img_height * scale);
+                    render_rect.x = layer->rect.x + (layer->rect.w - render_rect.w) / 2;
+                    render_rect.y = layer->rect.y + (layer->rect.h - render_rect.h) / 2;
+                } else if (layer->image_mode == IMAGE_MODE_ASPECT_FILL) {
+                    // 填充模式：填满整个区域，可能裁剪图片
+                    float scale = fmax(scale_x, scale_y);
+                    render_rect.w = (int)(img_width * scale);
+                    render_rect.h = (int)(img_height * scale);
+                    render_rect.x = layer->rect.x + (layer->rect.w - render_rect.w) / 2;
+                    render_rect.y = layer->rect.y + (layer->rect.h - render_rect.h) / 2;
+                }
+                
+                SDL_RenderCopy(renderer, layer->texture, NULL, &render_rect);
+            }
         } else {
             // 如果图片加载失败，绘制一个占位符
             SDL_SetRenderDrawColor(renderer, 200, 200, 200, 255);
