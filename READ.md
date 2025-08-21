@@ -136,3 +136,11 @@ quickjs 支持
 
        
 ```
+
+
+
+xattr -dr com.apple.quarantine ../libs/avif.framework
+xattr -dr com.apple.quarantine ../libs/webp.framework
+xattr -dr com.apple.quarantine ../libs/SDL2.framework
+xattr -dr com.apple.quarantine ../libs/SDL2_ttf.framework/
+xattr -dr com.apple.quarantine ../libs/SDL2_image.framework/

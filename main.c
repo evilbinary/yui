@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
+#include <SDL2/SDL_image.h>
 #include "cJSON.h"
 
 // ====================== 图层数据结构 ======================
@@ -184,9 +185,14 @@ Layer* parse_layer(cJSON* json_obj) {
 // ====================== 资源加载器 ======================
 void load_textures(Layer* root) {
     if (strlen(root->texture_path) > 0) {
-        SDL_Surface* surface = SDL_LoadBMP(root->texture_path);
-        root->texture = SDL_CreateTextureFromSurface(renderer, surface);
-        SDL_FreeSurface(surface);
+        // 修改为使用SDL_image支持多种格式
+        SDL_Surface* surface = IMG_Load(root->texture_path);
+        if (surface) {
+            root->texture = SDL_CreateTextureFromSurface(renderer, surface);
+            SDL_FreeSurface(surface);
+        } else {
+            printf("Failed to load image %s: %s\n", root->texture_path, IMG_GetError());
+        }
     }
     
     for (int i = 0; i < root->child_count; i++) {
@@ -433,6 +439,30 @@ void render_layer(Layer* layer) {
                 SDL_DestroyTexture(text_texture);
             }
     }    
+    else if (strcmp(layer->type, "Image") == 0) {
+        // 图片类型渲染：从文件路径加载并渲染图片（支持多种格式）
+        if (strlen(layer->texture_path) > 0 && !layer->texture) {
+            // 修改为使用SDL_image支持多种格式
+            SDL_Surface* surface = IMG_Load(layer->texture_path);
+            if (surface) {
+                layer->texture = SDL_CreateTextureFromSurface(renderer, surface);
+                SDL_FreeSurface(surface);
+            } else {
+                printf("Failed to load image %s: %s\n", layer->texture_path, IMG_GetError());
+            }
+        }
+        
+        // 渲染图片纹理
+        if (layer->texture) {
+            SDL_RenderCopy(renderer, layer->texture, NULL, &layer->rect);
+        } else {
+            // 如果图片加载失败，绘制一个占位符
+            SDL_SetRenderDrawColor(renderer, 200, 200, 200, 255);
+            SDL_RenderFillRect(renderer, &layer->rect);
+            SDL_SetRenderDrawColor(renderer, 100, 100, 100, 255);
+            SDL_RenderDrawRect(renderer, &layer->rect);
+        }
+    }
     else {
         // 默认渲染方式
         SDL_SetRenderDrawColor(renderer, 
@@ -474,6 +504,13 @@ void handle_event(Layer* root, SDL_Event* event) {
 int main(int argc, char* argv[]) {
     // 初始化SDL
     SDL_Init(SDL_INIT_VIDEO);
+    
+    // 初始化SDL_image库，支持多种图片格式
+    int imgFlags = IMG_INIT_PNG | IMG_INIT_JPG | IMG_INIT_TIF;
+    if (!(IMG_Init(imgFlags) & imgFlags)) {
+        printf("SDL_image initialization failed: %s\n", IMG_GetError());
+        return -1;
+    }
     
     // 初始化TTF
     if (TTF_Init() == -1) {
@@ -558,6 +595,7 @@ int main(int argc, char* argv[]) {
     }
     
     // 清理资源
+    IMG_Quit();
     if (default_font) {
         TTF_CloseFont(default_font);
     }
