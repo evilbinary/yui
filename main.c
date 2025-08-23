@@ -110,6 +110,23 @@ SDL_Renderer* renderer = NULL;
 TTF_Font* default_font=NULL;
 float scale=1.0;
 
+
+cJSON* parse_json(char* json_path){
+    FILE* file = fopen(json_path, "r");
+    fseek(file, 0, SEEK_END);
+    long fsize = ftell(file);
+    fseek(file, 0, SEEK_SET);
+    
+    char* json_str = malloc(fsize + 1);
+    fread(json_str, fsize, 1, file);
+    fclose(file);
+    json_str[fsize] = '\0';
+    
+    // 解析JSON
+    cJSON* root_json = cJSON_Parse(json_str);
+    free(json_str);
+    return root_json;
+}
 // ====================== JSON解析函数 ======================
 Layer* parse_layer(cJSON* json_obj) {
     if(json_obj==NULL){
@@ -305,7 +322,13 @@ Layer* parse_layer(cJSON* json_obj) {
         strcpy(layer->source, 
               source->valuestring);
         if(layer->type!=IMAGE){
-            layer->sub=parse_layer(source);
+            cJSON* sub=parse_json(source->valuestring);
+            if(sub!=NULL){
+                layer->sub=parse_layer(sub);
+            }else{
+                printf("cannot load file %s\n",source->valuestring);
+            }
+            
         }
     }    
     
@@ -365,9 +388,9 @@ SDL_Texture* render_text(const char* text, SDL_Color color) {
     return texture;
 }
 
-// ====================== 渲染管线 ======================
-void render_layer(Layer* layer) {
-    // 应用布局管理器
+
+void layout_layer(Layer* layer){
+// 应用布局管理器
     if (layer->layout_manager && layer->child_count > 0) {
         int padding_top = layer->layout_manager->padding[0];
         int padding_right = layer->layout_manager->padding[1];
@@ -475,6 +498,14 @@ void render_layer(Layer* layer) {
             }
         }
     }
+    if(layer->sub!=NULL){
+        layout_layer(layer->sub);
+    }
+}
+
+// ====================== 渲染管线 ======================
+void render_layer(Layer* layer) {
+    
     
     // 根据图层类型进行不同的渲染处理
     if (layer->type == BUTTON) {
@@ -754,12 +785,13 @@ void render_layer(Layer* layer) {
     }
 
     // 递归渲染子图层
-    if(layer->sub!=NULL){
-        render_layer(layer->sub);
-    }
-    // 递归渲染子图层
     for (int i = 0; i < layer->child_count; i++) {
         render_layer(layer->children[i]);
+    }
+
+       // 递归渲染子图层
+    if(layer->sub!=NULL){
+        render_layer(layer->sub);
     }
     
 }
@@ -789,6 +821,29 @@ float getDisplayScale(SDL_Window* window) {
     SDL_GL_GetDrawableSize(window, &renderW, &renderH);
     
     return (renderW) / windowW;
+}
+
+void load_font(Layer* root){
+    // 加载默认字体 (需要在项目目录下提供字体文件)
+    TTF_Font* default_font = TTF_OpenFont(root->font->path, 16*scale);
+    if (!default_font) {
+        printf("Warning: Could not load font 'Roboto-Regular.ttf', trying other fonts\n");
+        // 尝试加载其他西文字体
+        default_font = TTF_OpenFont("arial.ttf", 16*scale);
+        if (!default_font) {
+            default_font = TTF_OpenFont("Arial.ttf", 16*scale);
+        }
+        if (!default_font) {
+            default_font = TTF_OpenFont("assets/Roboto-Regular.ttf", 16*scale);
+        }
+        if (!default_font) {
+            default_font = TTF_OpenFont("app/assets/Roboto-Regular.ttf", 16*scale);
+        }
+    }
+    TTF_SetFontHinting(default_font, TTF_HINTING_LIGHT); 
+    TTF_SetFontOutline(default_font, 0); // 无轮廓
+
+    root->font->default_font=default_font;
 }
 
 // ====================== 主入口 ======================
@@ -826,34 +881,10 @@ int main(int argc, char* argv[]) {
     if(argc>1){
         json_path=argv[1];
     }
-    FILE* file = fopen(json_path, "r");
-    fseek(file, 0, SEEK_END);
-    long fsize = ftell(file);
-    fseek(file, 0, SEEK_SET);
-    
-    char* json_str = malloc(fsize + 1);
-    fread(json_str, fsize, 1, file);
-    fclose(file);
-    json_str[fsize] = '\0';
-    
-    // 解析JSON
-    cJSON* root_json = cJSON_Parse(json_str);
+    cJSON* root_json=parse_json(json_path);
     Layer* ui_root = parse_layer(root_json);
 
-    // 加载默认字体 (需要在项目目录下提供字体文件)
-    TTF_Font* default_font = TTF_OpenFont(ui_root->font->path, 16*scale);
-    if (!default_font) {
-        printf("Warning: Could not load font 'Roboto-Regular.ttf', trying other fonts\n");
-        // 尝试加载其他西文字体
-        default_font = TTF_OpenFont("arial.ttf", 16*scale);
-        if (!default_font) {
-            default_font = TTF_OpenFont("Arial.ttf", 16*scale);
-        }
-    }
-    TTF_SetFontHinting(default_font, TTF_HINTING_LIGHT); 
-    TTF_SetFontOutline(default_font, 0); // 无轮廓
-
-    ui_root->font->default_font=default_font;
+    
     
     // 如果根图层没有设置宽度和高度，则根据窗口大小设置
     printf("ui_root %d,%d\n",ui_root->rect.w,ui_root->rect.h);
@@ -870,10 +901,12 @@ int main(int argc, char* argv[]) {
     }
     
     cJSON_Delete(root_json);
-    free(json_str);
+  
     
     // 加载纹理资源
+    load_font(ui_root);
     load_textures(ui_root);
+    layout_layer(ui_root);
     
     // 主循环
     SDL_Event event;
