@@ -123,7 +123,7 @@
                         {
                             "id": "productImage",
                             "type": "Image",
-                            "source": "${image}",
+                            "source": "duck.png",
                             "size": [
                                 200,
                                 200
@@ -220,7 +220,7 @@
                         "children": [
                             {
                                 "type": "Image",
-                                "source": "${image}",
+                                "source": "duck.png",
                                 "size": [
                                     160,
                                     120

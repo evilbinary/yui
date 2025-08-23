@@ -4,5 +4,5 @@
     "assets":"app/assets",
     "font":"Roboto-Regular.ttf",
     "fontSize":"16",
-    "source":"app/test-list.json"
+    "source":"app/test.json"
 }

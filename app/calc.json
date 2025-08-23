@@ -1,0 +1,591 @@
+{
+    "id": "calculatorApp",
+    "type": "Panel",
+    "theme": "dark",
+    "style": {
+        "color": "#FFFFFF",
+        "bgColor": "#121212"
+    },
+    "size": [
+        400,
+        600
+    ],
+    "layout": {
+        "type": "vertical",
+        "spacing": 10,
+        "padding": [
+            20,
+            20,
+            20,
+            20
+        ]
+    },
+    "children": [
+        {
+            "id": "displayPanel",
+            "type": "Panel",
+            "style": {
+                "bgColor": "#1E1E1E",
+                "borderRadius": 8
+            },
+            "layout": {
+                "type": "vertical",
+                "spacing": 5,
+                "padding": [
+                    10,
+                    10,
+                    10,
+                    10
+                ]
+            },
+            "children": [
+                {
+                    "id": "expressionDisplay",
+                    "type": "Label",
+                    "text": "",
+                    "style": {
+                        "color": "#AAAAAA",
+                        "fontSize": 18,
+                        "textAlign": "right"
+                    },
+                    "size": [
+                        360,
+                        30
+                    ]
+                },
+                {
+                    "id": "resultDisplay",
+                    "type": "Label",
+                    "text": "0",
+                    "style": {
+                        "color": "#FFFFFF",
+                        "fontSize": 36,
+                        "fontWeight": "bold",
+                        "textAlign": "right"
+                    },
+                    "size": [
+                        360,
+                        50
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "buttonsPanel",
+            "type": "Grid",
+            "columns": 4,
+            "spacing": 10,
+            "children": [
+                {
+                    "id": "clearButton",
+                    "type": "Button",
+                    "text": "C",
+                    "style": {
+                        "color": "#FFFFFF",
+                        "bgColor": "#FF5252",
+                        "fontSize": 24,
+                        "borderRadius": 8
+                    },
+                    "size": [
+                        80,
+                        80
+                    ],
+                    "events": {
+                        "onClick": "@clearDisplay"
+                    }
+                },
+                {
+                    "id": "backspaceButton",
+                    "type": "Button",
+                    "text": "⌫",
+                    "style": {
+                        "color": "#FFFFFF",
+                        "bgColor": "#FF5252",
+                        "fontSize": 24,
+                        "borderRadius": 8
+                    },
+                    "size": [
+                        80,
+                        80
+                    ],
+                    "events": {
+                        "onClick": "@backspace"
+                    }
+                },
+                {
+                    "id": "percentButton",
+                    "type": "Button",
+                    "text": "%",
+                    "style": {
+                        "color": "#FFFFFF",
+                        "bgColor": "#5C6BC0",
+                        "fontSize": 24,
+                        "borderRadius": 8
+                    },
+                    "size": [
+                        80,
+                        80
+                    ],
+                    "events": {
+                        "onClick": "@percent"
+                    }
+                },
+                {
+                    "id": "divideButton",
+                    "type": "Button",
+                    "text": "÷",
+                    "style": {
+                        "color": "#FFFFFF",
+                        "bgColor": "#5C6BC0",
+                        "fontSize": 24,
+                        "borderRadius": 8
+                    },
+                    "size": [
+                        80,
+                        80
+                    ],
+                    "events": {
+                        "onClick": "@operation",
+                        "data": "divide"
+                    }
+                },
+                {
+                    "id": "sevenButton",
+                    "type": "Button",
+                    "text": "7",
+                    "style": {
+                        "color": "#FFFFFF",
+                        "bgColor": "#333333",
+                        "fontSize": 24,
+                        "borderRadius": 8
+                    },
+                    "size": [
+                        80,
+                        80
+                    ],
+                    "events": {
+                        "onClick": "@appendNumber",
+                        "data": "7"
+                    }
+                },
+                {
+                    "id": "eightButton",
+                    "type": "Button",
+                    "text": "8",
+                    "style": {
+                        "color": "#FFFFFF",
+                        "bgColor": "#333333",
+                        "fontSize": 24,
+                        "borderRadius": 8
+                    },
+                    "size": [
+                        80,
+                        80
+                    ],
+                    "events": {
+                        "onClick": "@appendNumber",
+                        "data": "8"
+                    }
+                },
+                {
+                    "id": "nineButton",
+                    "type": "Button",
+                    "text": "9",
+                    "style": {
+                        "color": "#FFFFFF",
+                        "bgColor": "#333333",
+                        "fontSize": 24,
+                        "borderRadius": 8
+                    },
+                    "size": [
+                        80,
+                        80
+                    ],
+                    "events": {
+                        "onClick": "@appendNumber",
+                        "data": "9"
+                    }
+                },
+                {
+                    "id": "multiplyButton",
+                    "type": "Button",
+                    "text": "×",
+                    "style": {
+                        "color": "#FFFFFF",
+                        "bgColor": "#5C6BC0",
+                        "fontSize": 24,
+                        "borderRadius": 8
+                    },
+                    "size": [
+                        80,
+                        80
+                    ],
+                    "events": {
+                        "onClick": "@operation",
+                        "data": "multiply"
+                    }
+                },
+                {
+                    "id": "fourButton",
+                    "type": "Button",
+                    "text": "4",
+                    "style": {
+                        "color": "#FFFFFF",
+                        "bgColor": "#333333",
+                        "fontSize": 24,
+                        "borderRadius": 8
+                    },
+                    "size": [
+                        80,
+                        80
+                    ],
+                    "events": {
+                        "onClick": "@appendNumber",
+                        "data": "4"
+                    }
+                },
+                {
+                    "id": "fiveButton",
+                    "type": "Button",
+                    "text": "5",
+                    "style": {
+                        "color": "#FFFFFF",
+                        "bgColor": "#333333",
+                        "fontSize": 24,
+                        "borderRadius": 8
+                    },
+                    "size": [
+                        80,
+                        80
+                    ],
+                    "events": {
+                        "onClick": "@appendNumber",
+                        "data": "5"
+                    }
+                },
+                {
+                    "id": "sixButton",
+                    "type": "Button",
+                    "text": "6",
+                    "style": {
+                        "color": "#FFFFFF",
+                        "bgColor": "#333333",
+                        "fontSize": 24,
+                        "borderRadius": 8
+                    },
+                    "size": [
+                        80,
+                        80
+                    ],
+                    "events": {
+                        "onClick": "@appendNumber",
+                        "data": "6"
+                    }
+                },
+                {
+                    "id": "subtractButton",
+                    "type": "Button",
+                    "text": "-",
+                    "style": {
+                        "color": "#FFFFFF",
+                        "bgColor": "#5C6BC0",
+                        "fontSize": 24,
+                        "borderRadius": 8
+                    },
+                    "size": [
+                        80,
+                        80
+                    ],
+                    "events": {
+                        "onClick": "@operation",
+                        "data": "subtract"
+                    }
+                },
+                {
+                    "id": "oneButton",
+                    "type": "Button",
+                    "text": "1",
+                    "style": {
+                        "color": "#FFFFFF",
+                        "bgColor": "#333333",
+                        "fontSize": 24,
+                        "borderRadius": 8
+                    },
+                    "size": [
+                        80,
+                        80
+                    ],
+                    "events": {
+                        "onClick": "@appendNumber",
+                        "data": "1"
+                    }
+                },
+                {
+                    "id": "twoButton",
+                    "type": "Button",
+                    "text": "2",
+                    "style": {
+                        "color": "#FFFFFF",
+                        "bgColor": "#333333",
+                        "fontSize": 24,
+                        "borderRadius": 8
+                    },
+                    "size": [
+                        80,
+                        80
+                    ],
+                    "events": {
+                        "onClick": "@appendNumber",
+                        "data": "2"
+                    }
+                },
+                {
+                    "id": "threeButton",
+                    "type": "Button",
+                    "text": "3",
+                    "style": {
+                        "color": "#FFFFFF",
+                        "bgColor": "#333333",
+                        "fontSize": 24,
+                        "borderRadius": 8
+                    },
+                    "size": [
+                        80,
+                        80
+                    ],
+                    "events": {
+                        "onClick": "@appendNumber",
+                        "data": "3"
+                    }
+                },
+                {
+                    "id": "addButton",
+                    "type": "Button",
+                    "text": "+",
+                    "style": {
+                        "color": "#FFFFFF",
+                        "bgColor": "#5C6BC0",
+                        "fontSize": 24,
+                        "borderRadius": 8
+                    },
+                    "size": [
+                        80,
+                        80
+                    ],
+                    "events": {
+                        "onClick": "@operation",
+                        "data": "add"
+                    }
+                },
+                {
+                    "id": "signButton",
+                    "type": "Button",
+                    "text": "±",
+                    "style": {
+                        "color": "#FFFFFF",
+                        "bgColor": "#333333",
+                        "fontSize": 24,
+                        "borderRadius": 8
+                    },
+                    "size": [
+                        80,
+                        80
+                    ],
+                    "events": {
+                        "onClick": "@toggleSign"
+                    }
+                },
+                {
+                    "id": "zeroButton",
+                    "type": "Button",
+                    "text": "0",
+                    "style": {
+                        "color": "#FFFFFF",
+                        "bgColor": "#333333",
+                        "fontSize": 24,
+                        "borderRadius": 8
+                    },
+                    "size": [
+                        80,
+                        80
+                    ],
+                    "events": {
+                        "onClick": "@appendNumber",
+                        "data": "0"
+                    }
+                },
+                {
+                    "id": "decimalButton",
+                    "type": "Button",
+                    "text": ".",
+                    "style": {
+                        "color": "#FFFFFF",
+                        "bgColor": "#333333",
+                        "fontSize": 24,
+                        "borderRadius": 8
+                    },
+                    "size": [
+                        80,
+                        80
+                    ],
+                    "events": {
+                        "onClick": "@appendDecimal"
+                    }
+                },
+                {
+                    "id": "equalsButton",
+                    "type": "Button",
+                    "text": "=",
+                    "style": {
+                        "color": "#FFFFFF",
+                        "bgColor": "#5C6BC0",
+                        "fontSize": 24,
+                        "borderRadius": 8
+                    },
+                    "size": [
+                        80,
+                        80
+                    ],
+                    "events": {
+                        "onClick": "@calculate"
+                    }
+                }
+            ]
+        },
+        {
+            "id": "memoryPanel",
+            "type": "Panel",
+            "style": {
+                "bgColor": "#1E1E1E",
+                "borderRadius": 8
+            },
+            "layout": {
+                "type": "horizontal",
+                "spacing": 10,
+                "padding": [
+                    10,
+                    10,
+                    10,
+                    10
+                ]
+            },
+            "children": [
+                {
+                    "id": "memoryClearButton",
+                    "type": "Button",
+                    "text": "MC",
+                    "style": {
+                        "color": "#FFFFFF",
+                        "bgColor": "#424242",
+                        "fontSize": 16,
+                        "borderRadius": 4
+                    },
+                    "size": [
+                        60,
+                        40
+                    ],
+                    "events": {
+                        "onClick": "@memoryClear"
+                    }
+                },
+                {
+                    "id": "memoryRecallButton",
+                    "type": "Button",
+                    "text": "MR",
+                    "style": {
+                        "color": "#FFFFFF",
+                        "bgColor": "#424242",
+                        "fontSize": 16,
+                        "borderRadius": 4
+                    },
+                    "size": [
+                        60,
+                        40
+                    ],
+                    "events": {
+                        "onClick": "@memoryRecall"
+                    }
+                },
+                {
+                    "id": "memoryAddButton",
+                    "type": "Button",
+                    "text": "M+",
+                    "style": {
+                        "color": "#FFFFFF",
+                        "bgColor": "#424242",
+                        "fontSize": 16,
+                        "borderRadius": 4
+                    },
+                    "size": [
+                        60,
+                        40
+                    ],
+                    "events": {
+                        "onClick": "@memoryAdd"
+                    }
+                },
+                {
+                    "id": "memorySubtractButton",
+                    "type": "Button",
+                    "text": "M-",
+                    "style": {
+                        "color": "#FFFFFF",
+                        "bgColor": "#424242",
+                        "fontSize": 16,
+                        "borderRadius": 4
+                    },
+                    "size": [
+                        60,
+                        40
+                    ],
+                    "events": {
+                        "onClick": "@memorySubtract"
+                    }
+                },
+                {
+                    "id": "memoryStoreButton",
+                    "type": "Button",
+                    "text": "MS",
+                    "style": {
+                        "color": "#FFFFFF",
+                        "bgColor": "#424242",
+                        "fontSize": 16,
+                        "borderRadius": 4
+                    },
+                    "size": [
+                        60,
+                        40
+                    ],
+                    "events": {
+                        "onClick": "@memoryStore"
+                    }
+                }
+            ]
+        }
+    ],
+    "data": {
+        "currentValue": "0",
+        "previousValue": "",
+        "operation": "",
+        "expression": "",
+        "memoryValue": 0,
+        "resetOnNextInput": false
+    },
+    "functions": {
+        "appendNumber": "function(context, data) {\n    const currentValue = context.data.currentValue;\n    const resetOnNextInput = context.data.resetOnNextInput;\n    \n    if (resetOnNextInput || currentValue === '0') {\n        context.data.currentValue = data;\n        context.data.resetOnNextInput = false;\n    } else {\n        context.data.currentValue = currentValue + data;\n    }\n    \n    context.updateDisplay();\n}",
+        "appendDecimal": "function(context) {\n    const currentValue = context.data.currentValue;\n    \n    if (!currentValue.includes('.')) {\n        context.data.currentValue = currentValue + '.';\n        context.data.resetOnNextInput = false;\n        context.updateDisplay();\n    }\n}",
+        "toggleSign": "function(context) {\n    const currentValue = context.data.currentValue;\n    \n    if (currentValue !== '0') {\n        if (currentValue.startsWith('-')) {\n            context.data.currentValue = currentValue.substring(1);\n        } else {\n            context.data.currentValue = '-' + currentValue;\n        }\n        context.updateDisplay();\n    }\n}",
+        "operation": "function(context, data) {\n    if (context.data.operation && !context.data.resetOnNextInput) {\n        context.calculate();\n    }\n    \n    context.data.previousValue = context.data.currentValue;\n    context.data.operation = data;\n    context.data.expression = context.data.previousValue + ' ' + context.getOperationSymbol(data);\n    context.data.resetOnNextInput = true;\n    context.updateDisplay();\n}",
+        "calculate": "function(context) {\n    if (!context.data.operation || context.data.resetOnNextInput) {\n        return;\n    }\n    \n    const prev = parseFloat(context.data.previousValue);\n    const current = parseFloat(context.data.currentValue);\n    let result;\n    \n    switch (context.data.operation) {\n        case 'add':\n            result = prev + current;\n            break;\n        case 'subtract':\n            result = prev - current;\n            break;\n        case 'multiply':\n            result = prev * current;\n            break;\n        case 'divide':\n            if (current === 0) {\n                context.data.currentValue = '错误';\n                context.data.resetOnNextInput = true;\n                context.updateDisplay();\n                return;\n            }\n            result = prev / current;\n            break;\n        default:\n            result = current;\n    }\n    \n    context.data.expression += ' ' + context.data.currentValue + ' =';\n    context.data.currentValue = result.toString();\n    context.data.operation = '';\n    context.data.resetOnNextInput = true;\n    context.updateDisplay();\n}",
+        "percent": "function(context) {\n    const current = parseFloat(context.data.currentValue);\n    context.data.currentValue = (current / 100).toString();\n    context.updateDisplay();\n}",
+        "clearDisplay": "function(context) {\n    context.data.currentValue = '0';\n    context.data.previousValue = '';\n    context.data.operation = '';\n    context.data.expression = '';\n    context.data.resetOnNextInput = false;\n    context.updateDisplay();\n}",
+        "backspace": "function(context) {\n    let currentValue = context.data.currentValue;\n    \n    if (currentValue.length === 1 || (currentValue.length === 2 && currentValue.startsWith('-'))) {\n        context.data.currentValue = '0';\n    } else {\n        context.data.currentValue = currentValue.substring(0, currentValue.length - 1);\n    }\n    \n    context.updateDisplay();\n}",
+        "memoryClear": "function(context) {\n    context.data.memoryValue = 0;\n}",
+        "memoryRecall": "function(context) {\n    context.data.currentValue = context.data.memoryValue.toString();\n    context.data.resetOnNextInput = true;\n    context.updateDisplay();\n}",
+        "memoryAdd": "function(context) {\n    const current = parseFloat(context.data.currentValue);\n    context.data.memoryValue += current;\n}",
+        "memorySubtract": "function(context) {\n    const current = parseFloat(context.data.currentValue);\n    context.data.memoryValue -= current;\n}",
+        "memoryStore": "function(context) {\n    const current = parseFloat(context.data.currentValue);\n    context.data.memoryValue = current;\n}",
+        "updateDisplay": "function(context) {\n    context.setValue('resultDisplay', 'text', context.data.currentValue);\n    context.setValue('expressionDisplay', 'text', context.data.expression);\n}",
+        "getOperationSymbol": "function(operation) {\n    switch (operation) {\n        case 'add': return '+';\n        case 'subtract': return '-';\n        case 'multiply': return '×';\n        case 'divide': return '÷';\n        default: return '';\n    }\n}"
+    }
+}

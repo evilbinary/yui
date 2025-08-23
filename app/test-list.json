@@ -1,0 +1,56 @@
+{
+    "id": "categoryList",
+    "type": "List",
+    "size":[200,400],
+    "data": [
+        {
+            "name": "测试1111abc",
+            "name1":"name1"
+        },
+        {
+            "name": 1234.333333     
+        },
+        {
+            "name": "哈哈啊"
+        },
+        {
+            "name": "哈哈啊"
+        },
+        {
+            "name": "哈哈啊"
+        },
+        {
+            "name": "哈哈啊"
+        },
+        {
+            "name": "哈哈啊"
+        },
+        {
+            "name": "哈哈啊"
+            
+        }
+    ],
+    "binding": {
+        "path": "categories",
+        "field": {
+            "key": "name"
+        }
+    },
+    "itemTemplate": {
+        "type": "Button",
+        "text": "${name}${name1}",
+        "style": {
+            "color": "#757575",
+            "bgColor": "#E3F2FD",
+            "hoverColor": "#1976D2",
+            "hoverBgColor": "#BBDEFB"
+        },
+        "events": {
+            "onClick": "@hello"
+        }
+    },
+    "layout": {
+        "type": "vertical",
+        "spacing": 5
+    }
+}
