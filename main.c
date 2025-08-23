@@ -67,6 +67,7 @@ typedef struct Layer {
 // ====================== 全局渲染器 ======================
 SDL_Renderer* renderer = NULL;
 TTF_Font* default_font = NULL;  // 添加默认字体
+float scale=1.0;
 
 // ====================== JSON解析函数 ======================
 Layer* parse_layer(cJSON* json_obj) {
@@ -267,7 +268,10 @@ SDL_Texture* render_text(const char* text, SDL_Color color) {
     SDL_Surface* surface = TTF_RenderUTF8_Blended(default_font, text, color);
     if (!surface) return NULL;
     
+    
     SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
+    SDL_SetTextureScaleMode(texture, SDL_ScaleModeBest);
+
     SDL_FreeSurface(surface);
     
     return texture;
@@ -360,10 +364,10 @@ void render_layer(Layer* layer) {
                 if(child->rect.w<=0){
                     child->rect.w = content_width;
                 }
-                printf("%s %s %d\n",child->type,child->text,child->rect.w);
-
+                //printf("%s %s %s %d\n",child->type,child->id,child->text,child->rect.w);
+                
                 if(child->layout_manager->type == LAYOUT_CENTER){
-                    child->rect.x+=child->rect.w/2 - padding_left/2;
+                    child->rect.x=layer->rect.x+ child->rect.w/2 + padding_left/2;
                 }else if(child->layout_manager->type == LAYOUT_LEFT){
                     child->rect.x =layer->rect.x+ padding_left;
                 }else if(child->layout_manager->type == LAYOUT_RIGHT){
@@ -371,7 +375,7 @@ void render_layer(Layer* layer) {
                 }else{
                     //对齐
                     if(layer->layout_manager->align==LAYOUT_ALIGN_CENTER){
-                        child->rect.x+=child->rect.w/2 - padding_left/2;
+                        child->rect.x=layer->rect.x+ child->rect.w/2 + padding_left/2;
                     }else if(layer->layout_manager->align==LAYOUT_ALIGN_LEFT){
                         child->rect.x =layer->rect.x+ padding_left;
                     }else if(layer->layout_manager->align==LAYOUT_ALIGN_RIGHT){
@@ -412,10 +416,10 @@ void render_layer(Layer* layer) {
                 SDL_QueryTexture(text_texture, NULL, NULL, &text_width, &text_height);
                 
                 SDL_Rect text_rect = {
-                    layer->rect.x + (layer->rect.w - text_width) / 2,  // 居中
-                    layer->rect.y + (layer->rect.h - text_height) / 2,
-                    text_width,
-                    text_height
+                    layer->rect.x + (layer->rect.w - text_width/ scale) / 2,  // 居中
+                    layer->rect.y + (layer->rect.h - text_height/ scale) / 2,
+                    text_width / scale,
+                    text_height / scale
                 };
                 
                 // 确保文本不会超出按钮边界
@@ -463,9 +467,9 @@ void render_layer(Layer* layer) {
                 
                 SDL_Rect text_rect = {
                     layer->rect.x + 5,  // 左侧留5像素边距
-                    layer->rect.y + (layer->rect.h - text_height) / 2,
-                    text_width,
-                    text_height
+                    layer->rect.y + (layer->rect.h - text_height/ scale) / 2,
+                    text_width / scale,
+                    text_height / scale
                 };
                 
                 // 确保文本不会超出输入框边界
@@ -501,10 +505,10 @@ void render_layer(Layer* layer) {
                 SDL_QueryTexture(text_texture, NULL, NULL, &text_width, &text_height);
                 
                 SDL_Rect text_rect = {
-                    layer->rect.x + 5 + (layer->rect.w -text_width)/2,  // 左侧留5像素边距
-                    layer->rect.y + (layer->rect.h - text_height) / 2,
-                    text_width,
-                    text_height
+                    layer->rect.x + 5 + (layer->rect.w -text_width/ scale)/2,  // 左侧留5像素边距
+                    layer->rect.y + (layer->rect.h - text_height/ scale) / 2,
+                    text_width / scale,
+                    text_height / scale
                 };
                 
                 // 确保文本不会超出输入框边界
@@ -613,6 +617,17 @@ void handle_event(Layer* root, SDL_Event* event) {
     }
 }
 
+// 检查是否Retina显示屏并获取缩放因子
+float getDisplayScale(SDL_Window* window) {
+    int renderW, renderH;
+    int windowW, windowH;
+    
+    SDL_GetWindowSize(window, &windowW, &windowH);
+    SDL_GL_GetDrawableSize(window, &renderW, &renderH);
+    
+    return (renderW) / windowW;
+}
+
 // ====================== 主入口 ======================
 int main(int argc, char* argv[]) {
     // 初始化SDL
@@ -634,21 +649,26 @@ int main(int argc, char* argv[]) {
     SDL_Window* window = SDL_CreateWindow("YUI Renderer", 
                                         SDL_WINDOWPOS_CENTERED,
                                         SDL_WINDOWPOS_CENTERED,
-                                        800, 600, 0);
+                                        800, 600, SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_SHOWN);
     renderer = SDL_CreateRenderer(window, -1, 
                                  SDL_RENDERER_ACCELERATED);
+
+    scale = getDisplayScale(window);
+
+    SDL_RenderSetScale(renderer, scale, scale);
     
     // 加载默认字体 (需要在项目目录下提供字体文件)
-    default_font = TTF_OpenFont("Roboto-Regular.ttf", 16);
+    default_font = TTF_OpenFont("Roboto-Regular.ttf", 16*scale);
     if (!default_font) {
         printf("Warning: Could not load font 'Roboto-Regular.ttf', trying other fonts\n");
         // 尝试加载其他西文字体
-        default_font = TTF_OpenFont("arial.ttf", 16);
+        default_font = TTF_OpenFont("arial.ttf", 16*scale);
         if (!default_font) {
-            default_font = TTF_OpenFont("Arial.ttf", 16);
+            default_font = TTF_OpenFont("Arial.ttf", 16*scale);
         }
     }
-
+    TTF_SetFontHinting(default_font, TTF_HINTING_LIGHT); 
+    TTF_SetFontOutline(default_font, 0); // 无轮廓
     
     char* json_path="ui_layout.json";
     // 加载UI描述文件
