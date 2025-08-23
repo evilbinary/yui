@@ -408,6 +408,10 @@ void load_textures(Layer* root) {
 
 // 添加文字渲染函数
 SDL_Texture* render_text(Layer* layer,const char* text, SDL_Color color) {
+    if(layer->font==NULL){
+        printf("error not found font %s %d\n",layer->id,layer->type);
+        return NULL;
+    }
     if (!layer->font->default_font) return NULL;
     
     SDL_Surface* surface = TTF_RenderUTF8_Blended(layer->font->default_font, text, color);
@@ -854,8 +858,12 @@ float getDisplayScale(SDL_Window* window) {
 void load_font(Layer* root){
     // 加载默认字体 (需要在项目目录下提供字体文件)
     char font_path[MAX_PATH];
-    snprintf(font_path, sizeof(font_path), "%s/%s", root->assets->path, root->font->path);
-    if(root->font->size==0){
+    if(root->assets){
+        snprintf(font_path, sizeof(font_path), "%s/%s", root->assets->path, root->font->path);
+    }else{
+        snprintf(font_path, sizeof(font_path), "%s", root->font->path);
+    }
+    if(root->font&& root->font->size==0){
         root->font->size=16;
     }
     TTF_Font* default_font = TTF_OpenFont(font_path, root->font->size*scale);
@@ -935,7 +943,15 @@ int main(int argc, char* argv[]) {
     }
     
     cJSON_Delete(root_json);
-  
+    
+    if(ui_root->font==NULL){
+        ui_root->font=malloc(sizeof(Font));
+        sprintf(ui_root->font->path,"%s","Roboto-Regular.ttf");
+    }
+    if(ui_root->assets==NULL){
+        ui_root->assets=malloc(sizeof(Assets));
+        sprintf(ui_root->assets->path,"%s","assets");
+    }
     
     // 加载纹理资源
     load_font(ui_root);
