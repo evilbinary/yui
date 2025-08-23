@@ -38,15 +38,45 @@ typedef struct LayoutManager {
     LayoutType align;
 } LayoutManager;
 
+// 添加数据绑定结构
+typedef struct Binding {
+    char path[100];
+} Binding;
+
+typedef struct Data {
+    int size;
+    cJSON* json;
+} Data;
+
+typedef struct Font {
+    char path[512];
+    int size;
+    TTF_Font* default_font;  // 添加默认字体
+} Font;
+
+
+typedef enum {
+    VIEW,
+    BUTTON,
+    INPUT,
+    LABEL,
+    IMAGE,
+    LIST
+} LayerType;
+
+ char *layer_type_name[]={"View","Button","Input","Label","Image","List"};
+
+
+typedef struct Layer Layer;
 typedef struct Layer {
     char id[50];
-    char type[20];
+    LayerType type;
     SDL_Rect rect;
     SDL_Color color;
     SDL_Color bgColor;
-    char texture_path[100];
+    char source[100];
     SDL_Texture* texture;
-    struct Layer** children;
+    Layer** children;
     int child_count;
     void (*onClick)();  // 事件回调函数指针
     
@@ -62,22 +92,54 @@ typedef struct Layer {
     
     // 添加图片模式字段
     ImageMode image_mode;
+    
+    // 添加数据绑定和模板字段
+    Binding* binding;
+    Layer* item_template;
+    //数据
+    Data* data;
+
+    //资源文件路径
+    Font* font;
+
+    Layer* sub;
 } Layer;
 
 // ====================== 全局渲染器 ======================
 SDL_Renderer* renderer = NULL;
-TTF_Font* default_font = NULL;  // 添加默认字体
+TTF_Font* default_font=NULL;
 float scale=1.0;
 
 // ====================== JSON解析函数 ======================
 Layer* parse_layer(cJSON* json_obj) {
+    if(json_obj==NULL){
+        return NULL;
+    }
     Layer* layer = malloc(sizeof(Layer));
     memset(layer, 0, sizeof(Layer));
     
     // 解析基础属性
-    strcpy(layer->id, cJSON_GetObjectItem(json_obj, "id")->valuestring);
-    strcpy(layer->type, cJSON_GetObjectItem(json_obj, "type")->valuestring);
+    if(cJSON_HasObjectItem(json_obj, "id")){
+        strcpy(layer->id, cJSON_GetObjectItem(json_obj, "id")->valuestring);
+    }
+    if(cJSON_HasObjectItem(json_obj, "type")){
+        for(int i=0;i<sizeof(layer_type_name)/sizeof(layer_type_name[0]);i++ ){
+            //printf("cmp %s == %s\n", cJSON_GetObjectItem(json_obj, "type")->valuestring,layer_type_name[i] );
+            if(strcmp(cJSON_GetObjectItem(json_obj, "type")->valuestring,layer_type_name[i])==0){
+                layer->type=i;
+                break;
+            }
+        }
+    }
     
+    // 解析资字体
+    cJSON* font = cJSON_GetObjectItem(json_obj, "font");
+    if(font!=NULL){
+        layer->font= malloc(sizeof(Font));
+        strcpy(layer->font->path, 
+              cJSON_GetObjectItem(json_obj, "font")->valuestring);
+    }
+
     // 解析位置尺寸
     cJSON* position = cJSON_GetObjectItem(json_obj, "position");
     if(position!=NULL){
@@ -115,6 +177,32 @@ Layer* parse_layer(cJSON* json_obj) {
     if (cJSON_HasObjectItem(json_obj, "text")) {
         strcpy(layer->text, cJSON_GetObjectItem(json_obj, "text")->valuestring);
     }
+    
+    // 解析数据绑定
+    cJSON* binding = cJSON_GetObjectItem(json_obj, "binding");
+    if (binding) {
+        layer->binding = malloc(sizeof(Binding));
+        cJSON* path = cJSON_GetObjectItem(binding, "path");
+        if (path) {
+            strcpy(layer->binding->path, path->valuestring);
+        }
+    }
+    //数据解析
+    cJSON* data = cJSON_GetObjectItem(json_obj, "data");
+    if (data) {
+        layer->data = malloc(sizeof(Data));
+        cJSON *copy = cJSON_Duplicate(data, 1);
+        layer->data->json= copy;
+        layer->data->size=cJSON_GetArraySize(json_obj);
+    }
+    
+    // 解析列表项模板
+    cJSON* item_template = cJSON_GetObjectItem(json_obj, "itemTemplate");
+    if (item_template) {
+        layer->item_template = parse_layer(item_template);
+    }
+
+   
     
     // 解析布局管理器
     cJSON* layout = cJSON_GetObjectItem(json_obj, "layout");
@@ -212,9 +300,13 @@ Layer* parse_layer(cJSON* json_obj) {
     }
     
     // 解析资源路径
-    if (cJSON_HasObjectItem(json_obj, "source")) {
-        strcpy(layer->texture_path, 
-              cJSON_GetObjectItem(json_obj, "source")->valuestring);
+    cJSON* source=cJSON_GetObjectItem(json_obj, "source");
+    if (source) {
+        strcpy(layer->source, 
+              source->valuestring);
+        if(layer->type!=IMAGE){
+            layer->sub=parse_layer(source);
+        }
     }    
     
     // 解析事件绑定
@@ -245,19 +337,15 @@ Layer* parse_layer(cJSON* json_obj) {
 
 // ====================== 资源加载器 ======================
 void load_textures(Layer* root) {
-    if (strlen(root->texture_path) > 0) {
+    if (root->type==IMAGE&& strlen(root->source) > 0) {
         // 修改为使用SDL_image支持多种格式
-        SDL_Surface* surface = IMG_Load(root->texture_path);
+        SDL_Surface* surface = IMG_Load(root->source);
         if (surface) {
             root->texture = SDL_CreateTextureFromSurface(renderer, surface);
             SDL_FreeSurface(surface);
         } else {
-            printf("Failed to load image %s: %s\n", root->texture_path, IMG_GetError());
+            printf("Failed to load image %s: %s\n", root->source, IMG_GetError());
         }
-    }
-    
-    for (int i = 0; i < root->child_count; i++) {
-        load_textures(root->children[i]);
     }
 }
 
@@ -389,7 +477,7 @@ void render_layer(Layer* layer) {
     }
     
     // 根据图层类型进行不同的渲染处理
-    if (strcmp(layer->type, "Button") == 0) {
+    if (layer->type == BUTTON) {
         // 按钮类型渲染：绘制背景和边框
         if(layer->bgColor.a>0){
             SDL_SetRenderDrawColor(renderer, 
@@ -438,7 +526,7 @@ void render_layer(Layer* layer) {
             }
         }
     } 
-    else if (strcmp(layer->type, "Input") == 0) {
+    else if (layer->type==INPUT) {
         // 输入框类型渲染：绘制背景和边框
         if(layer->bgColor.a>0){
             SDL_SetRenderDrawColor(renderer, 
@@ -486,7 +574,7 @@ void render_layer(Layer* layer) {
             }
         }
     }
-    else if (strcmp(layer->type, "Label") == 0) {
+    else if (layer->type==LABEL) {
             if(layer->bgColor.a>0){
                 SDL_SetRenderDrawColor(renderer, 
                                     layer->bgColor.r, 
@@ -524,16 +612,16 @@ void render_layer(Layer* layer) {
                 SDL_DestroyTexture(text_texture);
             }
     }    
-    else if (strcmp(layer->type, "Image") == 0) {
+    else if (layer->type == IMAGE) {
         // 图片类型渲染：从文件路径加载并渲染图片（支持多种格式）
-        if (strlen(layer->texture_path) > 0 && !layer->texture) {
+        if (strlen(layer->source) > 0 && !layer->texture) {
             // 修改为使用SDL_image支持多种格式
-            SDL_Surface* surface = IMG_Load(layer->texture_path);
+            SDL_Surface* surface = IMG_Load(layer->source);
             if (surface) {
                 layer->texture = SDL_CreateTextureFromSurface(renderer, surface);
                 SDL_FreeSurface(surface);
             } else {
-                printf("Failed to load image %s: %s\n", layer->texture_path, IMG_GetError());
+                printf("Failed to load image %s: %s\n", layer->source, IMG_GetError());
             }
         }
         
@@ -584,7 +672,78 @@ void render_layer(Layer* layer) {
             SDL_RenderDrawRect(renderer, &layer->rect);
         }
     }
+    else if ( layer->type==LIST) {
+        // List组件渲染：根据数据源动态生成列表项
+        // 这里模拟一些数据，实际项目中应该从数据源获取
+
+        int padding_top = layer->layout_manager ? layer->layout_manager->padding[0] : 0;
+        int padding_left = layer->layout_manager ? layer->layout_manager->padding[3] : 0;
+        int spacing = layer->layout_manager ? layer->layout_manager->spacing : 5;
+        
+        int current_y = layer->rect.y + padding_top;
+        
+        // 清理旧的子元素（如果有的话）
+        if (layer->children) {
+            for (int i = 0; i < layer->child_count; i++) {
+                free(layer->children[i]);
+            }
+            free(layer->children);
+            layer->children = NULL;
+            layer->child_count = 0;
+        }
+        
+        // 根据数据源和模板动态生成列表项
+        if (layer->item_template&& layer->data) {
+            int item_count = layer->data->size;
+            //json 数据 todo 从接口获取
+            layer->child_count = item_count;
+            layer->children = malloc(item_count * sizeof(Layer*));
+            
+            for (int i = 0; i < item_count; i++) {
+                // 创建基于模板的新项
+                layer->children[i] = malloc(sizeof(Layer));
+                memcpy(layer->children[i], layer->item_template, sizeof(Layer));
+                
+                // 设置位置和尺寸
+                layer->children[i]->rect.x = layer->rect.x + padding_left;
+                layer->children[i]->rect.y = current_y;
+                layer->children[i]->rect.w = layer->rect.w - (padding_left * 2);
+                layer->children[i]->rect.h = 30; // 固定高度
+                
+                // 替换文本中的占位符
+                char temp_text[100];
+                strcpy(temp_text, layer->children[i]->text);
+                // 简单替换${name}为实际数据
+                if (strstr(temp_text, "${name}")) {
+                    cJSON* item=cJSON_GetArrayItem(layer->data->json,i);
+                    if(item&& item->valuestring){
+                        
+                        strcpy(layer->children[i]->text, item->valuestring);
+                    }
+                }
+                
+                current_y += layer->children[i]->rect.h + spacing;
+            }
+        }
+        
+        // 绘制背景
+        if(layer->bgColor.a > 0) {
+            SDL_SetRenderDrawColor(renderer, 
+                                layer->bgColor.r, 
+                                layer->bgColor.g, 
+                                layer->bgColor.b, 
+                                layer->bgColor.a);
+            SDL_RenderFillRect(renderer, &layer->rect);
+        }
+        
+        // 递归渲染子图层（列表项）
+        for (int i = 0; i < layer->child_count; i++) {
+            render_layer(layer->children[i]);
+        }
+    }
     else {
+        //printf("layer->%s %d\n",layer->id,layer->type);
+
         // 默认渲染方式
         SDL_SetRenderDrawColor(renderer, 
                               layer->color.r, 
@@ -594,11 +753,15 @@ void render_layer(Layer* layer) {
         SDL_RenderFillRect(renderer, &layer->rect);
     }
 
-    
+    // 递归渲染子图层
+    if(layer->sub!=NULL){
+        render_layer(layer->sub);
+    }
     // 递归渲染子图层
     for (int i = 0; i < layer->child_count; i++) {
         render_layer(layer->children[i]);
     }
+    
 }
 
 // ====================== 事件处理器 ======================
@@ -657,20 +820,8 @@ int main(int argc, char* argv[]) {
 
     SDL_RenderSetScale(renderer, scale, scale);
     
-    // 加载默认字体 (需要在项目目录下提供字体文件)
-    default_font = TTF_OpenFont("Roboto-Regular.ttf", 16*scale);
-    if (!default_font) {
-        printf("Warning: Could not load font 'Roboto-Regular.ttf', trying other fonts\n");
-        // 尝试加载其他西文字体
-        default_font = TTF_OpenFont("arial.ttf", 16*scale);
-        if (!default_font) {
-            default_font = TTF_OpenFont("Arial.ttf", 16*scale);
-        }
-    }
-    TTF_SetFontHinting(default_font, TTF_HINTING_LIGHT); 
-    TTF_SetFontOutline(default_font, 0); // 无轮廓
     
-    char* json_path="ui_layout.json";
+    char* json_path="app.json";
     // 加载UI描述文件
     if(argc>1){
         json_path=argv[1];
@@ -688,9 +839,24 @@ int main(int argc, char* argv[]) {
     // 解析JSON
     cJSON* root_json = cJSON_Parse(json_str);
     Layer* ui_root = parse_layer(root_json);
+
+    // 加载默认字体 (需要在项目目录下提供字体文件)
+    TTF_Font* default_font = TTF_OpenFont(ui_root->font->path, 16*scale);
+    if (!default_font) {
+        printf("Warning: Could not load font 'Roboto-Regular.ttf', trying other fonts\n");
+        // 尝试加载其他西文字体
+        default_font = TTF_OpenFont("arial.ttf", 16*scale);
+        if (!default_font) {
+            default_font = TTF_OpenFont("Arial.ttf", 16*scale);
+        }
+    }
+    TTF_SetFontHinting(default_font, TTF_HINTING_LIGHT); 
+    TTF_SetFontOutline(default_font, 0); // 无轮廓
+
+    ui_root->font->default_font=default_font;
     
     // 如果根图层没有设置宽度和高度，则根据窗口大小设置
-    printf("ui_root%d\n",ui_root->rect.w);
+    printf("ui_root %d,%d\n",ui_root->rect.w,ui_root->rect.h);
     
     if (ui_root->rect.w <= 0 || ui_root->rect.h <= 0) {
         int window_width, window_height;
