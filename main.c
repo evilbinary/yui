@@ -11,6 +11,8 @@
 
 #include "cJSON.h"
 
+#define MAX_PATH 1024
+
 // ====================== 图层数据结构 ======================
 typedef enum {
     LAYOUT_ABSOLUTE,
@@ -347,7 +349,7 @@ Layer* parse_layer(cJSON* json_obj,Layer* parent) {
         if(layer->type!=IMAGE){
             cJSON* sub=parse_json(source->valuestring);
             if(sub!=NULL){
-                layer->sub=parse_layer(sub,parent);
+                layer->sub=parse_layer(sub,layer);
             }else{
                 printf("cannot load file %s\n",source->valuestring);
             }
@@ -374,7 +376,7 @@ Layer* parse_layer(cJSON* json_obj,Layer* parent) {
         layer->children = malloc(layer->child_count * sizeof(Layer*));
         
         for (int i = 0; i < layer->child_count; i++) {
-            layer->children[i] = parse_layer(cJSON_GetArrayItem(children, i),parent);
+            layer->children[i] = parse_layer(cJSON_GetArrayItem(children, i),layer);
         }
     }
     
@@ -385,7 +387,10 @@ Layer* parse_layer(cJSON* json_obj,Layer* parent) {
 void load_textures(Layer* root) {
     if (root->type==IMAGE&& strlen(root->source) > 0) {
         // 修改为使用SDL_image支持多种格式
-        SDL_Surface* surface = IMG_Load(root->source);
+        char path[MAX_PATH];
+        snprintf(path, sizeof(path), "%s/%s", root->assets->path, root->source);
+
+        SDL_Surface* surface = IMG_Load(path);
         if (surface) {
             root->texture = SDL_CreateTextureFromSurface(renderer, surface);
             SDL_FreeSurface(surface);
@@ -670,13 +675,7 @@ void render_layer(Layer* layer) {
         // 图片类型渲染：从文件路径加载并渲染图片（支持多种格式）
         if (strlen(layer->source) > 0 && !layer->texture) {
             // 修改为使用SDL_image支持多种格式
-            SDL_Surface* surface = IMG_Load(layer->source);
-            if (surface) {
-                layer->texture = SDL_CreateTextureFromSurface(renderer, surface);
-                SDL_FreeSurface(surface);
-            } else {
-                printf("Failed to load image %s: %s\n", layer->source, IMG_GetError());
-            }
+            load_textures(layer);
         }
         
         // 渲染图片纹理
@@ -848,9 +847,10 @@ float getDisplayScale(SDL_Window* window) {
 
 void load_font(Layer* root){
     // 加载默认字体 (需要在项目目录下提供字体文件)
-    root->asset->path root->font->path
+    char font_path[MAX_PATH];
+    snprintf(font_path, sizeof(font_path), "%s/%s", root->assets->path, root->font->path);
 
-    TTF_Font* default_font = TTF_OpenFont(, 16*scale);
+    TTF_Font* default_font = TTF_OpenFont(font_path, 16*scale);
     if (!default_font) {
         printf("Warning: Could not load font 'Roboto-Regular.ttf', trying other fonts\n");
         // 尝试加载其他西文字体
@@ -907,6 +907,7 @@ int main(int argc, char* argv[]) {
         json_path=argv[1];
     }
     cJSON* root_json=parse_json(json_path);
+
     Layer* ui_root = parse_layer(root_json,NULL);
 
     
