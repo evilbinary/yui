@@ -886,10 +886,10 @@ void render_layer(Layer* layer) {
              
                     cJSON* it=item->child;
                     char name[256];
-                    sprintf(name,"${%s}",it->string);
                     char val[256];
 
                     while(it!=NULL){
+                        sprintf(name,"${%s}",it->string);
                         if(cJSON_IsString(it)){
                             sprintf(val,"%s",it->valuestring);
                         }else if(cJSON_IsNumber(it)){
@@ -904,6 +904,7 @@ void render_layer(Layer* layer) {
                         char* result = replace_placeholder(layer->children[i]->text, name, val);
                         if(result){
                             strcpy(layer->children[i]->text, result);
+                            free(result);
                         }
                         it=it->next;
                     }
