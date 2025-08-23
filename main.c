@@ -164,13 +164,19 @@ Layer* parse_layer(cJSON* json_obj,Layer* parent) {
         layer->font= malloc(sizeof(Font));
         strcpy(layer->font->path, 
               cJSON_GetObjectItem(json_obj, "font")->valuestring);
+
+        cJSON* fontSize = cJSON_GetObjectItem(json_obj, "fontSize");
+        if(fontSize!=NULL){
+             layer->font->size=cJSON_GetObjectItem(json_obj, "fontSize")->valueint;
+        }
     }else{
         if(parent){
             layer->font=parent->font;
         }
     }
+    
 
-    // 解析资字体
+    // 解析资源
     cJSON* assets = cJSON_GetObjectItem(json_obj, "assets");
     if(assets!=NULL){
         layer->assets= malloc(sizeof(Assets));
@@ -849,20 +855,22 @@ void load_font(Layer* root){
     // 加载默认字体 (需要在项目目录下提供字体文件)
     char font_path[MAX_PATH];
     snprintf(font_path, sizeof(font_path), "%s/%s", root->assets->path, root->font->path);
-
-    TTF_Font* default_font = TTF_OpenFont(font_path, 16*scale);
+    if(root->font->size==0){
+        root->font->size=16;
+    }
+    TTF_Font* default_font = TTF_OpenFont(font_path, root->font->size*scale);
     if (!default_font) {
         printf("Warning: Could not load font 'Roboto-Regular.ttf', trying other fonts\n");
         // 尝试加载其他西文字体
-        default_font = TTF_OpenFont("arial.ttf", 16*scale);
+        default_font = TTF_OpenFont("arial.ttf", root->font->size*scale);
         if (!default_font) {
-            default_font = TTF_OpenFont("Arial.ttf", 16*scale);
+            default_font = TTF_OpenFont("Arial.ttf", root->font->size*scale);
         }
         if (!default_font) {
-            default_font = TTF_OpenFont("assets/Roboto-Regular.ttf", 16*scale);
+            default_font = TTF_OpenFont("assets/Roboto-Regular.ttf", root->font->size*scale);
         }
         if (!default_font) {
-            default_font = TTF_OpenFont("app/assets/Roboto-Regular.ttf", 16*scale);
+            default_font = TTF_OpenFont("app/assets/Roboto-Regular.ttf", root->font->size*scale);
         }
     }
     TTF_SetFontHinting(default_font, TTF_HINTING_LIGHT); 
