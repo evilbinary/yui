@@ -1,0 +1,7 @@
+{
+
+    "type":"main",
+    "font":"app/assets/Roboto-Regular.ttf",
+    "fontSize":"16",
+    "source":"app/test.json"
+}

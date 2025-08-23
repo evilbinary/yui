@@ -1,0 +1,271 @@
+{
+    "id": "orderPage",
+    "type": "Panel",
+    "theme": "default",
+    "style": {
+        "color": "#212121",
+        "bgColor": "#F5F5F5"
+    },
+    "size": [
+        900,
+        600
+    ],
+    "layout": {
+        "type": "horizontal",
+        "spacing": 20,
+        "padding": [
+            20,
+            20,
+            20,
+            20
+        ]
+    },
+    "children": [
+        {
+            "id": "categoryPanel",
+            "type": "Panel",
+            "size": [
+                200,
+                560
+            ],
+            "style": {
+                "bgColor": "#FFFFFF",
+                "borderRadius": 8
+            },
+            "layout": {
+                "type": "vertical",
+                "spacing": 10,
+                "padding": [
+                    10,
+                    10,
+                    10,
+                    10
+                ]
+            },
+            "children": [
+                {
+                    "id": "categoryTitle",
+                    "type": "Label",
+                    "text": "菜品分类",
+                    "style": {
+                        "fontSize": 18,
+                        "fontWeight": "bold",
+                        "color": "#1976D2"
+                    }
+                },
+                {
+                    "id": "categoryList",
+                    "type": "List",
+                    "data": [
+                        {
+                            "name": "aaa"
+                        },
+                        {
+                            "name": "bbb"
+                        }
+                    ],
+                    "binding": {
+                        "path": "categories",
+                        "field": {
+                            "key": "name"
+                        }
+                    },
+                    "itemTemplate": {
+                        "type": "Button",
+                        "text": "${name}",
+                        "style": {
+                            "color": "#757575",
+                            "bgColor": "#E3F2FD",
+                            "hoverColor": "#1976D2",
+                            "hoverBgColor": "#BBDEFB"
+                        },
+                        "events": {
+                            "onClick": "@selectCategory"
+                        }
+                    },
+                    "layout": {
+                        "type": "vertical",
+                        "spacing": 5
+                    }
+                }
+            ]
+        },
+        {
+            "id": "productPanel",
+            "type": "Panel",
+            "size": [
+                640,
+                560
+            ],
+            "style": {
+                "bgColor": "#FFFFFF",
+                "borderRadius": 8
+            },
+            "layout": {
+                "type": "vertical",
+                "spacing": 15,
+                "padding": [
+                    20,
+                    20,
+                    20,
+                    20
+                ]
+            },
+            "children": [
+                {
+                    "id": "productDetail",
+                    "type": "Panel",
+                    "layout": {
+                        "type": "horizontal",
+                        "spacing": 20
+                    },
+                    "children": [
+                        {
+                            "id": "productImage",
+                            "type": "Image",
+                            "source": "${image}",
+                            "size": [
+                                200,
+                                200
+                            ],
+                            "style": {
+                                "mode": "cover",
+                                "borderRadius": 8
+                            }
+                        },
+                        {
+                            "id": "productInfo",
+                            "type": "Panel",
+                            "layout": {
+                                "type": "vertical",
+                                "spacing": 10
+                            },
+                            "children": [
+                                {
+                                    "id": "productName",
+                                    "type": "Label",
+                                    "text": "${name}",
+                                    "style": {
+                                        "fontSize": 24,
+                                        "fontWeight": "bold",
+                                        "color": "#1976D2"
+                                    }
+                                },
+                                {
+                                    "id": "productDescription",
+                                    "type": "Label",
+                                    "text": "${description}",
+                                    "style": {
+                                        "fontSize": 14,
+                                        "color": "#616161"
+                                    }
+                                },
+                                {
+                                    "id": "productPrice",
+                                    "type": "Label",
+                                    "text": "¥${price}",
+                                    "style": {
+                                        "fontSize": 20,
+                                        "color": "#E65100",
+                                        "fontWeight": "bold"
+                                    }
+                                },
+                                {
+                                    "id": "addToCartBtn",
+                                    "type": "Button",
+                                    "text": "加入购物车",
+                                    "size": [
+                                        120,
+                                        40
+                                    ],
+                                    "style": {
+                                        "color": "#FFFFFF",
+                                        "bgColor": "#FF5722"
+                                    },
+                                    "events": {
+                                        "onClick": "@addToCart"
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "productList",
+                    "type": "Grid",
+                    "columns": 3,
+                    "binding": {
+                        "path": "products"
+                    },
+                    "itemTemplate": {
+                        "type": "Panel",
+                        "size": [
+                            180,
+                            220
+                        ],
+                        "style": {
+                            "bgColor": "#FAFAFA",
+                            "borderRadius": 8
+                        },
+                        "layout": {
+                            "type": "vertical",
+                            "spacing": 8,
+                            "padding": [
+                                10,
+                                10,
+                                10,
+                                10
+                            ]
+                        },
+                        "children": [
+                            {
+                                "type": "Image",
+                                "source": "${image}",
+                                "size": [
+                                    160,
+                                    120
+                                ],
+                                "style": {
+                                    "mode": "cover",
+                                    "borderRadius": 4
+                                }
+                            },
+                            {
+                                "type": "Label",
+                                "text": "${name}",
+                                "style": {
+                                    "fontSize": 14,
+                                    "fontWeight": "bold"
+                                }
+                            },
+                            {
+                                "type": "Label",
+                                "text": "¥${price}",
+                                "style": {
+                                    "fontSize": 14,
+                                    "color": "#E65100"
+                                }
+                            },
+                            {
+                                "type": "Button",
+                                "text": "选择",
+                                "size": [
+                                    80,
+                                    30
+                                ],
+                                "style": {
+                                    "color": "#FFFFFF",
+                                    "bgColor": "#1976D2",
+                                    "fontSize": 12
+                                },
+                                "events": {
+                                    "onClick": "@selectProduct"
+                                }
+                            }
+                        ]
+                    }
+                }
+            ]
+        }
+    ]
+}

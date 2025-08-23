@@ -12,7 +12,6 @@
     ],
     "layout": {
         "type": "vertical",
-        "align":"center",
         "spacing": 20,
         "padding": [
             40,
@@ -33,8 +32,9 @@
         {
             "id": "loginTitle",
             "type": "Label",
-            "text": "用户登录",
+            "text": "Welcom,欢迎用户登录",
             "style": {
+                "type":"center",
                 "color": "#1976D2"
             }
         },
@@ -55,6 +55,7 @@
                 "bgColor": "#E3F2FD"
             },
             "layout": {
+                "type":"center",
                 "spacing": 10
             }
         },
@@ -62,8 +63,8 @@
             "id": "pwdInput",
             "type": "Input",
             "label": "密码",
-            "placeholder": "请输入密码",
             "size":[240,40],
+            "placeholder": "请输入密码",
             "events": {
                 "onChange": "@validatePassword"
             },
@@ -75,6 +76,7 @@
                 "bgColor": "#E3F2FD"
             },
             "layout": {
+                "type":"center",
                 "spacing": 10
             }
         },
@@ -103,6 +105,10 @@
             "style": {
                 "color": "#1976D2",
                 "bgColor": "#F5F5F5"
+            },
+            "layout": {
+                "type":"center",
+                "spacing": 10
             },
             "events": {
                 "onClick": "@goToRegister"

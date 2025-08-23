@@ -1,0 +1,35 @@
+{
+    "id": "categoryList",
+    "type": "List",
+    "data": [
+        {
+            "name": "aaa"
+        },
+        {
+            "name": "bbb"
+        }
+    ],
+    "binding": {
+        "path": "categories",
+        "field": {
+            "key": "name"
+        }
+    },
+    "itemTemplate": {
+        "type": "Button",
+        "text": "${name}",
+        "style": {
+            "color": "#757575",
+            "bgColor": "#E3F2FD",
+            "hoverColor": "#1976D2",
+            "hoverBgColor": "#BBDEFB"
+        },
+        "events": {
+            "onClick": "@selectCategory"
+        }
+    },
+    "layout": {
+        "type": "vertical",
+        "spacing": 4
+    }
+}
