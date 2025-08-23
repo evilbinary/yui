@@ -8,10 +8,14 @@
 #include <SDL_ttf.h>
 #include <SDL_image.h>
 #endif
+#include <stdbool.h>
+#include <limits.h>
+
 
 #include "cJSON.h"
 
 #define MAX_PATH 1024
+#define MAX_TEXT 256
 
 // ====================== 图层数据结构 ======================
 typedef enum {
@@ -42,7 +46,7 @@ typedef struct LayoutManager {
 
 // 添加数据绑定结构
 typedef struct Binding {
-    char path[100];
+    char path[MAX_PATH];
 } Binding;
 
 typedef struct Data {
@@ -51,13 +55,13 @@ typedef struct Data {
 } Data;
 
 typedef struct Font {
-    char path[512];
+    char path[MAX_PATH];
     int size;
     TTF_Font* default_font;  // 添加默认字体
 } Font;
 
 typedef struct Assets {
-    char path[512];
+    char path[MAX_PATH];
     int size;
 } Assets;
 
@@ -80,7 +84,7 @@ typedef struct Layer {
     SDL_Rect rect;
     SDL_Color color;
     SDL_Color bgColor;
-    char source[100];
+    char source[MAX_PATH];
     SDL_Texture* texture;
     Layer** children;
     int child_count;
@@ -93,8 +97,8 @@ typedef struct Layer {
     float flex_ratio;
     
     // 新增label和text字段
-    char label[100];
-    char text[100];
+    char label[MAX_TEXT];
+    char text[MAX_TEXT];
     
     // 添加图片模式字段
     ImageMode image_mode;
@@ -241,7 +245,7 @@ Layer* parse_layer(cJSON* json_obj,Layer* parent) {
         layer->data = malloc(sizeof(Data));
         cJSON *copy = cJSON_Duplicate(data, 1);
         layer->data->json= copy;
-        layer->data->size=cJSON_GetArraySize(json_obj);
+        layer->data->size=cJSON_GetArraySize(data);
     }
     
     // 解析列表项模板
@@ -541,6 +545,109 @@ void layout_layer(Layer* layer){
     }
 }
 
+
+// 替换字符串中的占位符
+char* replace_placeholder(const char* template, const char* placeholder, const char* value) {
+    // 查找占位符位置
+    char* pos = strstr(template, placeholder);
+    if (pos == NULL) return NULL;
+    
+    // 计算新字符串长度
+    size_t template_len = strlen(template);
+    size_t placeholder_len = strlen(placeholder);
+    size_t value_len = strlen(value);
+    size_t new_len = template_len - placeholder_len + value_len + 1;
+    
+    // 分配内存
+    char* result = (char*)malloc(new_len);
+    if (result == NULL) return NULL;
+    
+    // 复制第一部分
+    size_t prefix_len = pos - template;
+    strncpy(result, template, prefix_len);
+    result[prefix_len] = '\0';
+    
+    // 追加替换值
+    strcat(result, value);
+    
+    // 追加剩余部分
+    strcat(result, pos + placeholder_len);
+    
+    return result;
+}
+
+// 替换所有出现的占位符
+char* replace_all_placeholders(const char* template, const char* placeholder, const char* value) {
+    char* result = strdup(template);
+    if (result == NULL) return NULL;
+    
+    char* pos = strstr(result, placeholder);
+    while (pos != NULL) {
+        // 计算新字符串长度
+        size_t result_len = strlen(result);
+        size_t placeholder_len = strlen(placeholder);
+        size_t value_len = strlen(value);
+        size_t new_len = result_len - placeholder_len + value_len + 1;
+        
+        // 分配临时内存
+        char* temp = (char*)malloc(new_len);
+        if (temp == NULL) {
+            free(result);
+            return NULL;
+        }
+        
+        // 复制第一部分
+        size_t prefix_len = pos - result;
+        strncpy(temp, result, prefix_len);
+        temp[prefix_len] = '\0';
+        
+        // 追加替换值
+        strcat(temp, value);
+        
+        // 追加剩余部分
+        strcat(temp, pos + placeholder_len);
+        
+        // 释放旧结果，使用新结果
+        free(result);
+        result = temp;
+        
+        // 查找下一个占位符
+        pos = strstr(result, placeholder);
+    }
+    
+    return result;
+}
+
+int is_cjson_float(const cJSON *item) {
+    if (item == NULL || !cJSON_IsNumber(item)) {
+        return 0;
+    }
+    
+    // 获取双精度值
+    double value = item->valuedouble;
+    
+    // 检查是否为有限数（非无穷大和非NaN）
+    if (!isfinite(value)) {
+        return 0;
+    }
+    
+    // 检查值是否超出整数范围
+    if (value > INT_MAX || value < INT_MIN) {
+        return 1; // 超出整数范围，肯定是浮点数
+    }
+    
+    // 检查值是否包含小数部分
+    double int_part;
+    double frac_part = modf(value, &int_part);
+    
+    // 如果小数部分的绝对值大于一个很小的容差值，则是浮点数
+    if (fabs(frac_part) > DBL_EPSILON) {
+        return 1;
+    }
+    
+    return 0; // 是整数
+}
+
 // ====================== 渲染管线 ======================
 void render_layer(Layer* layer) {
     
@@ -773,16 +880,34 @@ void render_layer(Layer* layer) {
                 layer->children[i]->rect.w = layer->rect.w - (padding_left * 2);
                 layer->children[i]->rect.h = 30; // 固定高度
                 
-                // 替换文本中的占位符
-                char temp_text[100];
-                strcpy(temp_text, layer->children[i]->text);
                 // 简单替换${name}为实际数据
-                if (strstr(temp_text, "${name}")) {
+                if (strstr(layer->children[i]->text, "${")) {
                     cJSON* item=cJSON_GetArrayItem(layer->data->json,i);
-                    if(item&& item->valuestring){
-                        
-                        strcpy(layer->children[i]->text, item->valuestring);
+             
+                    cJSON* it=item->child;
+                    char name[256];
+                    sprintf(name,"${%s}",it->string);
+                    char val[256];
+
+                    while(it!=NULL){
+                        if(cJSON_IsString(it)){
+                            sprintf(val,"%s",it->valuestring);
+                        }else if(cJSON_IsNumber(it)){
+                            if(is_cjson_float(it)){
+                                sprintf(val,"%f",it->valuedouble);
+                            }else{
+                                sprintf(val,"%d",it->valueint);
+                            }
+                            
+                        }
+
+                        char* result = replace_placeholder(layer->children[i]->text, name, val);
+                        if(result){
+                            strcpy(layer->children[i]->text, result);
+                        }
+                        it=it->next;
                     }
+                    
                 }
                 
                 current_y += layer->children[i]->rect.h + spacing;
