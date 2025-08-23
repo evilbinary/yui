@@ -928,9 +928,6 @@ int main(int argc, char* argv[]) {
 
     
     
-    // 如果根图层没有设置宽度和高度，则根据窗口大小设置
-    printf("ui_root %d,%d\n",ui_root->rect.w,ui_root->rect.h);
-    
     if (ui_root->rect.w <= 0 || ui_root->rect.h <= 0) {
         int window_width, window_height;
         SDL_GetWindowSize(window, &window_width, &window_height);
@@ -941,6 +938,10 @@ int main(int argc, char* argv[]) {
             ui_root->rect.h = window_height;
         }
     }
+
+        // 如果根图层没有设置宽度和高度，则根据窗口大小设置
+    printf("ui_root %d,%d\n",ui_root->rect.w,ui_root->rect.h);
+    
     
     cJSON_Delete(root_json);
     
