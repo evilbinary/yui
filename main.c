@@ -54,6 +54,10 @@ typedef struct Font {
     TTF_Font* default_font;  // 添加默认字体
 } Font;
 
+typedef struct Assets {
+    char path[512];
+    int size;
+} Assets;
 
 typedef enum {
     VIEW,
@@ -101,13 +105,14 @@ typedef struct Layer {
 
     //资源文件路径
     Font* font;
+    Assets* assets;
 
     Layer* sub;
+    Layer* parent;
 } Layer;
 
 // ====================== 全局渲染器 ======================
 SDL_Renderer* renderer = NULL;
-TTF_Font* default_font=NULL;
 float scale=1.0;
 
 
@@ -128,12 +133,14 @@ cJSON* parse_json(char* json_path){
     return root_json;
 }
 // ====================== JSON解析函数 ======================
-Layer* parse_layer(cJSON* json_obj) {
+Layer* parse_layer(cJSON* json_obj,Layer* parent) {
     if(json_obj==NULL){
         return NULL;
     }
     Layer* layer = malloc(sizeof(Layer));
     memset(layer, 0, sizeof(Layer));
+    layer->parent=parent;
+    
     
     // 解析基础属性
     if(cJSON_HasObjectItem(json_obj, "id")){
@@ -155,6 +162,22 @@ Layer* parse_layer(cJSON* json_obj) {
         layer->font= malloc(sizeof(Font));
         strcpy(layer->font->path, 
               cJSON_GetObjectItem(json_obj, "font")->valuestring);
+    }else{
+        if(parent){
+            layer->font=parent->font;
+        }
+    }
+
+    // 解析资字体
+    cJSON* assets = cJSON_GetObjectItem(json_obj, "assets");
+    if(assets!=NULL){
+        layer->assets= malloc(sizeof(Assets));
+        strcpy(layer->assets->path, 
+              cJSON_GetObjectItem(json_obj, "assets")->valuestring);
+    }else{
+        if(parent){
+            layer->assets=parent->assets;
+        }
     }
 
     // 解析位置尺寸
@@ -216,7 +239,7 @@ Layer* parse_layer(cJSON* json_obj) {
     // 解析列表项模板
     cJSON* item_template = cJSON_GetObjectItem(json_obj, "itemTemplate");
     if (item_template) {
-        layer->item_template = parse_layer(item_template);
+        layer->item_template = parse_layer(item_template,parent);
     }
 
    
@@ -324,7 +347,7 @@ Layer* parse_layer(cJSON* json_obj) {
         if(layer->type!=IMAGE){
             cJSON* sub=parse_json(source->valuestring);
             if(sub!=NULL){
-                layer->sub=parse_layer(sub);
+                layer->sub=parse_layer(sub,parent);
             }else{
                 printf("cannot load file %s\n",source->valuestring);
             }
@@ -351,7 +374,7 @@ Layer* parse_layer(cJSON* json_obj) {
         layer->children = malloc(layer->child_count * sizeof(Layer*));
         
         for (int i = 0; i < layer->child_count; i++) {
-            layer->children[i] = parse_layer(cJSON_GetArrayItem(children, i));
+            layer->children[i] = parse_layer(cJSON_GetArrayItem(children, i),parent);
         }
     }
     
@@ -373,10 +396,10 @@ void load_textures(Layer* root) {
 }
 
 // 添加文字渲染函数
-SDL_Texture* render_text(const char* text, SDL_Color color) {
-    if (!default_font) return NULL;
+SDL_Texture* render_text(Layer* layer,const char* text, SDL_Color color) {
+    if (!layer->font->default_font) return NULL;
     
-    SDL_Surface* surface = TTF_RenderUTF8_Blended(default_font, text, color);
+    SDL_Surface* surface = TTF_RenderUTF8_Blended(layer->font->default_font, text, color);
     if (!surface) return NULL;
     
     
@@ -528,7 +551,7 @@ void render_layer(Layer* layer) {
             // 使用SDL_ttf渲染文本
            
             SDL_Color text_color = layer->color; // 白色文字
-            SDL_Texture* text_texture = render_text(layer->text, text_color);
+            SDL_Texture* text_texture = render_text(layer,layer->text, text_color);
             
             if (text_texture) {
                 int text_width, text_height;
@@ -578,7 +601,7 @@ void render_layer(Layer* layer) {
             // 使用SDL_ttf渲染文本
            
             SDL_Color text_color = layer->color;
-            SDL_Texture* text_texture = render_text(layer->label, text_color);
+            SDL_Texture* text_texture = render_text(layer,layer->label, text_color);
             
             if (text_texture) {
                 int text_width, text_height;
@@ -617,7 +640,7 @@ void render_layer(Layer* layer) {
             }
         
             SDL_Color text_color = layer->color;
-            SDL_Texture* text_texture = render_text(layer->text, text_color);
+            SDL_Texture* text_texture = render_text(layer,layer->text, text_color);
             
             if (text_texture) {
                 int text_width, text_height;
@@ -825,7 +848,9 @@ float getDisplayScale(SDL_Window* window) {
 
 void load_font(Layer* root){
     // 加载默认字体 (需要在项目目录下提供字体文件)
-    TTF_Font* default_font = TTF_OpenFont(root->font->path, 16*scale);
+    root->asset->path root->font->path
+
+    TTF_Font* default_font = TTF_OpenFont(, 16*scale);
     if (!default_font) {
         printf("Warning: Could not load font 'Roboto-Regular.ttf', trying other fonts\n");
         // 尝试加载其他西文字体
@@ -882,7 +907,7 @@ int main(int argc, char* argv[]) {
         json_path=argv[1];
     }
     cJSON* root_json=parse_json(json_path);
-    Layer* ui_root = parse_layer(root_json);
+    Layer* ui_root = parse_layer(root_json,NULL);
 
     
     
@@ -905,6 +930,8 @@ int main(int argc, char* argv[]) {
     
     // 加载纹理资源
     load_font(ui_root);
+    TTF_Font* default_font=ui_root->font->default_font;
+
     load_textures(ui_root);
     layout_layer(ui_root);
     
