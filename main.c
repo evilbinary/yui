@@ -11,11 +11,12 @@
 #include <stdbool.h>
 #include <limits.h>
 
-
 #include "cJSON.h"
+#include "event.h"
 
 #define MAX_PATH 1024
 #define MAX_TEXT 256
+
 
 // ====================== 图层数据结构 ======================
 typedef enum {
@@ -65,6 +66,12 @@ typedef struct Assets {
     int size;
 } Assets;
 
+typedef struct Event {
+    char click_name[MAX_PATH];
+    void (*click)();  // 事件回调函数指针
+    void (*press)();
+} Event;
+
 typedef enum {
     VIEW,
     BUTTON,
@@ -88,7 +95,6 @@ typedef struct Layer {
     SDL_Texture* texture;
     Layer** children;
     int child_count;
-    void (*onClick)();  // 事件回调函数指针
     
     // 新增布局管理器
     LayoutManager* layout_manager;
@@ -115,11 +121,18 @@ typedef struct Layer {
 
     Layer* sub;
     Layer* parent;
+
+    //事件
+    Event* event;
 } Layer;
+
+
+
 
 // ====================== 全局渲染器 ======================
 SDL_Renderer* renderer = NULL;
 float scale=1.0;
+
 
 
 cJSON* parse_json(char* json_path){
@@ -369,14 +382,16 @@ Layer* parse_layer(cJSON* json_obj,Layer* parent) {
     
     // 解析事件绑定
     cJSON* events = cJSON_GetObjectItem(json_obj, "events");
-    if (events && cJSON_HasObjectItem(events, "onClick")) {
-        const char* handler_id = cJSON_GetObjectItem(events, "onClick")->valuestring;
-        // 实际项目应建立handler_id到函数的映射表
+    if(events){
+        if (cJSON_HasObjectItem(events, "onClick")) {
+            layer->event=malloc( sizeof(Event));
+            const char* handler_id = cJSON_GetObjectItem(events, "onClick")->valuestring;
+            // 实际项目应建立handler_id到函数的映射表
+            strcpy(layer->event->click_name,handler_id);
 
-
-        //if (strcmp(handler_id, "@handleSubmit") == 0) {
-            // layer->onClick = submit_handler; // 绑定实际函数
-        //}
+            EventHandler handler=find_event_by_name(handler_id);
+            layer->event->click = handler;
+        }
     }
     
     // 递归解析子图层
@@ -961,10 +976,14 @@ void handle_event(Layer* root, SDL_Event* event) {
         
         // 检测点击图层 (实际应使用空间分割优化)
         if (SDL_PointInRect(&mouse_pos, &root->rect)) {
-            if (root->onClick) root->onClick();
-            
+            if (root->event&& root->event->click){
+                root->event->click(root);
+            } 
             for (int i = 0; i < root->child_count; i++) {
                 handle_event(root->children[i], event);
+            }
+            if(root->sub){
+                handle_event(root->sub, event);
             }
         }
     }
@@ -1013,6 +1032,10 @@ void load_font(Layer* root){
     root->font->default_font=default_font;
 }
 
+void hello_world(Layer* layer) {
+    printf("你好，世界！ %s\n",layer->text);
+}
+
 // ====================== 主入口 ======================
 int main(int argc, char* argv[]) {
     // 初始化SDL
@@ -1048,6 +1071,10 @@ int main(int argc, char* argv[]) {
     if(argc>1){
         json_path=argv[1];
     }
+
+    //注册事件
+    register_event_handler("@hello", hello_world);
+    
     cJSON* root_json=parse_json(json_path);
 
     Layer* ui_root = parse_layer(root_json,NULL);
@@ -1079,7 +1106,7 @@ int main(int argc, char* argv[]) {
         ui_root->assets=malloc(sizeof(Assets));
         sprintf(ui_root->assets->path,"%s","assets");
     }
-    
+
     // 加载纹理资源
     load_font(ui_root);
     TTF_Font* default_font=ui_root->font->default_font;
