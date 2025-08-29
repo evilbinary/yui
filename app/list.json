@@ -71,7 +71,7 @@
         "type": "Button",
         "text": "${name}",
         "style": {
-            "color": "#757575",
+            "color": "#757575FF",
             "bgColor": "#E3F2FD",
             "hoverColor": "#1976D2",
             "hoverBgColor": "#BBDEFB"
@@ -88,6 +88,6 @@
     "scrollbar": {
         "visible": true,
         "thickness": 8,
-        "color": "#CCCCCC"
+        "color": "#CCCCCCC0"
     }
 }

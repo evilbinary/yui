@@ -343,6 +343,16 @@ void render_layer(Layer* layer) {
         // List组件渲染：根据数据源动态生成列表项
         // 这里模拟一些数据，实际项目中应该从数据源获取
 
+        // 绘制背景
+        if(layer->bgColor.a > 0) {
+            SDL_SetRenderDrawColor(renderer, 
+                                layer->bgColor.r, 
+                                layer->bgColor.g, 
+                                layer->bgColor.b, 
+                                layer->bgColor.a);
+            SDL_RenderFillRect(renderer, &layer->rect);
+        }
+        
         int padding_top = layer->layout_manager ? layer->layout_manager->padding[0] : 0;
         int padding_left = layer->layout_manager ? layer->layout_manager->padding[3] : 0;
         int spacing = layer->layout_manager ? layer->layout_manager->spacing : 5;
@@ -418,15 +428,6 @@ void render_layer(Layer* layer) {
             }
         }
         
-        // 绘制背景
-        if(layer->bgColor.a > 0) {
-            SDL_SetRenderDrawColor(renderer, 
-                                layer->bgColor.r, 
-                                layer->bgColor.g, 
-                                layer->bgColor.b, 
-                                layer->bgColor.a);
-            SDL_RenderFillRect(renderer, &layer->rect);
-        }
     }
     else {
         //printf("layer->%s %d\n",layer->id,layer->type);

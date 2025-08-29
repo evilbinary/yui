@@ -19,6 +19,18 @@ cJSON* parse_json(char* json_path){
     free(json_str);
     return root_json;
 }
+
+void parse_color(char* valuestring,SDL_Color* color){
+    if(strlen(valuestring)==9){
+        sscanf(valuestring, "#%02hhx%02hhx%02hhx%02hhx", 
+            &color->r, &color->g, &color->b,&color->a);
+    }else{
+        sscanf(valuestring, "#%02hhx%02hhx%02hhx", 
+            &color->r, &color->g, &color->b);
+        color->a = 255;
+    }
+}
+
 // ====================== JSON解析函数 ======================
 Layer* parse_layer(cJSON* json_obj,Layer* parent) {
     if(json_obj==NULL){
@@ -157,9 +169,7 @@ Layer* parse_layer(cJSON* json_obj,Layer* parent) {
         
         cJSON* color = cJSON_GetObjectItem(scrollbar, "color");
         if (color) {
-            sscanf(color->valuestring, "#%02hhx%02hhx%02hhx", 
-                   &layer->scrollbar->color.r, &layer->scrollbar->color.g, &layer->scrollbar->color.b);
-            layer->scrollbar->color.a = 255;
+            parse_color(color->valuestring,&layer->scrollbar->color);
         }
     }
     
@@ -225,17 +235,11 @@ Layer* parse_layer(cJSON* json_obj,Layer* parent) {
     cJSON* style = cJSON_GetObjectItem(json_obj, "style");
     if (style) {
         if(cJSON_HasObjectItem(style,"color")){
-            sscanf(cJSON_GetObjectItem(style, "color")->valuestring, 
-                "#%02hhx%02hhx%02hhx", 
-                &layer->color.r, &layer->color.g, &layer->color.b);
-            layer->color.a = 255;
+            parse_color(cJSON_GetObjectItem(style, "color")->valuestring,&layer->color);
         }
 
         if(cJSON_HasObjectItem(style,"bgColor")){
-             sscanf(cJSON_GetObjectItem(style, "bgColor")->valuestring, 
-               "#%02hhx%02hhx%02hhx", 
-               &layer->bgColor.r, &layer->bgColor.g, &layer->bgColor.b);
-            layer->bgColor.a = 255;
+            parse_color(cJSON_GetObjectItem(style, "bgColor")->valuestring,&layer->bgColor);
         }else{
             layer->bgColor.r=0;
             layer->bgColor.g=0;
