@@ -351,7 +351,6 @@ void render_layer(Layer* layer) {
 
         if (layer->scrollable) {
             current_y -= layer->scroll_offset;
-            
         }
 
         //printf("layer %d %s %s %d,%d\n",layer->type,layer->id,layer->text,layer->rect.x,layer->rect.y);
@@ -428,11 +427,6 @@ void render_layer(Layer* layer) {
                                 layer->bgColor.a);
             SDL_RenderFillRect(renderer, &layer->rect);
         }
-        
-        // 递归渲染子图层（列表项）
-        for (int i = 0; i < layer->child_count; i++) {
-            render_layer(layer->children[i]);
-        }
     }
     else {
         //printf("layer->%s %d\n",layer->id,layer->type);
@@ -446,14 +440,99 @@ void render_layer(Layer* layer) {
         SDL_RenderFillRect(renderer, &layer->rect);
     }
 
+    // 保存当前渲染目标的裁剪区域
+    SDL_Rect prev_clip;
+    render_clip_start(layer,&prev_clip);
+
     // 递归渲染子图层
     for (int i = 0; i < layer->child_count; i++) {
         render_layer(layer->children[i]);
     }
 
-       // 递归渲染子图层
+    // 递归渲染子图层
     if(layer->sub!=NULL){
         render_layer(layer->sub);
     }
+
+    // 渲染滚动条
+    if (layer->scrollable && layer->scrollbar && layer->scrollbar->visible) {
+       render_scrollbar(layer);
+    }
     
+    render_clip_end(layer,&prev_clip);
+
+
+}
+
+void render_clip_start(Layer* layer,SDL_Rect* prev_clip){
+    SDL_RenderGetClipRect(renderer, prev_clip);
+    // 设置当前图层的裁剪区域
+    SDL_Rect clip_rect = layer->rect;
+    
+    // 如果存在父级裁剪区域，则取交集作为最终裁剪区域
+    if (prev_clip->w > 0 && prev_clip->h > 0) {
+        // 计算两个矩形的交集
+        int left = fmax(clip_rect.x, prev_clip->x);
+        int top = fmax(clip_rect.y, prev_clip->y);
+        int right = fmin(clip_rect.x + clip_rect.w, prev_clip->x + prev_clip->w);
+        int bottom = fmin(clip_rect.y + clip_rect.h, prev_clip->y + prev_clip->h);
+        
+        if (left < right && top < bottom) {
+            clip_rect.x = left;
+            clip_rect.y = top;
+            clip_rect.w = right - left;
+            clip_rect.h = bottom - top;
+        } else {
+            // 没有交集，设置一个空的裁剪区域
+            clip_rect.w = 0;
+            clip_rect.h = 0;
+        }
+    }
+    
+    // 应用裁剪区域
+    SDL_RenderSetClipRect(renderer, &clip_rect);
+}
+
+void render_clip_end(Layer* layer,SDL_Rect* prev_clip){
+    // 恢复之前的裁剪区域
+    SDL_RenderSetClipRect(renderer, prev_clip);
+    
+}
+
+void render_scrollbar(Layer* layer){
+    int spacing = layer->layout_manager ? layer->layout_manager->spacing : 5;
+    // 计算内容总高度
+    int content_height = 0;
+    for (int i = 0; i < layer->child_count; i++) {
+        content_height += layer->children[i]->rect.h;
+        if (i > 0) content_height += spacing;
+    }
+    
+    int visible_height = layer->rect.h - layer->layout_manager->padding[0] - layer->layout_manager->padding[2];
+    
+    // 只有当内容高度超过可见高度时才显示滚动条
+    if (content_height > visible_height) {
+        // 计算滚动条尺寸和位置
+        int scrollbar_width = layer->scrollbar->thickness > 0 ? layer->scrollbar->thickness : 8;
+        int scrollbar_height = (int)((float)visible_height / content_height * visible_height);
+        if (scrollbar_height < 20) scrollbar_height = 20; // 最小高度
+        
+        int scrollbar_x = layer->rect.x + layer->rect.w - scrollbar_width;
+        int scrollbar_y = layer->rect.y + (int)((float)layer->scroll_offset / (content_height - visible_height) * (visible_height - scrollbar_height));
+        
+        // 确保滚动条位置在有效范围内
+        if (scrollbar_y < layer->rect.y) scrollbar_y = layer->rect.y;
+        if (scrollbar_y > layer->rect.y + visible_height - scrollbar_height) 
+            scrollbar_y = layer->rect.y + visible_height - scrollbar_height;
+        
+        SDL_Rect scrollbar_rect = {scrollbar_x, scrollbar_y, scrollbar_width, scrollbar_height};
+        
+        // 绘制滚动条
+        SDL_SetRenderDrawColor(renderer, 
+                                layer->scrollbar->color.r,
+                                layer->scrollbar->color.g,
+                                layer->scrollbar->color.b,
+                                layer->scrollbar->color.a);
+        SDL_RenderFillRect(renderer, &scrollbar_rect);
+    }
 }

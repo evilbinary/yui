@@ -4,5 +4,9 @@
     "assets":"app/assets",
     "font":"Roboto-Regular.ttf",
     "fontSize":"16",
-    "source":"app/test.json"
+    "source":"app/list.json",
+    "style": {
+        "color": "#2C3E50",
+        "bgColor": "#F5F5F5"
+      }
 }

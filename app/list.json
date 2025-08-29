@@ -1,12 +1,64 @@
 {
     "id": "categoryList",
+    "size":[200,300],
     "type": "List",
+    "style":{
+        "bgColor": "#2C3E50"
+    },
     "data": [
         {
             "name": "aaa"
         },
         {
             "name": "bbb"
+        },
+        {
+            "name": "bbb1"
+        },
+        {
+            "name": "bbb2"
+        },
+        {
+            "name": "bbb3"
+        },
+        {
+            "name": "bbb4"
+        },
+        {
+            "name": "bbb5"
+        },
+        {
+            "name": "bbb6"
+        },
+        {
+            "name": "bbb7"
+        },
+        {
+            "name": "bbb8"
+        },
+        {
+            "name": "bbb9"
+        },
+        {
+            "name": "bbb10"
+        },
+        {
+            "name": "bbb11"
+        },
+        {
+            "name": "bbb12"
+        },
+        {
+            "name": "bbb13"
+        },
+        {
+            "name": "bbb14"
+        },
+        {
+            "name": "bbb15"
+        },
+        {
+            "name": "bbb16"
         }
     ],
     "binding": {
@@ -31,5 +83,11 @@
     "layout": {
         "type": "vertical",
         "spacing": 4
+    },
+    "scrollable": true,
+    "scrollbar": {
+        "visible": true,
+        "thickness": 8,
+        "color": "#CCCCCC"
     }
 }
