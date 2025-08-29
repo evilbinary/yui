@@ -110,7 +110,7 @@ void layout_layer(Layer* layer){
                     }
                 }
                 
-                printf("%d %s %s %d,%d\n",child->type,child->id,child->text,child->rect.x,child->rect.y);
+                //printf("%d %s %s %d,%d\n",child->type,child->id,child->text,child->rect.x,child->rect.y);
 
                 current_y += child->rect.h + spacing;
             }
