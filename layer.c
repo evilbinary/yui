@@ -135,7 +135,33 @@ Layer* parse_layer(cJSON* json_obj,Layer* parent) {
         layer->item_template = parse_layer(item_template,parent);
     }
 
-   
+    // 解析滚动属性
+    if (cJSON_HasObjectItem(json_obj, "scrollable")) {
+        layer->scrollable = cJSON_GetObjectItem(json_obj, "scrollable")->valueint;
+    }
+    
+    cJSON* scrollbar = cJSON_GetObjectItem(json_obj, "scrollbar");
+    if (scrollbar) {
+        layer->scrollbar = malloc(sizeof(Scrollbar));
+        memset(layer->scrollbar, 0, sizeof(Scrollbar));
+        
+        cJSON* visible = cJSON_GetObjectItem(scrollbar, "visible");
+        if (visible) {
+            layer->scrollbar->visible = visible->valueint;
+        }
+        
+        cJSON* thickness = cJSON_GetObjectItem(scrollbar, "thickness");
+        if (thickness) {
+            layer->scrollbar->thickness = thickness->valueint;
+        }
+        
+        cJSON* color = cJSON_GetObjectItem(scrollbar, "color");
+        if (color) {
+            sscanf(color->valuestring, "#%02hhx%02hhx%02hhx", 
+                   &layer->scrollbar->color.r, &layer->scrollbar->color.g, &layer->scrollbar->color.b);
+            layer->scrollbar->color.a = 255;
+        }
+    }
     
     // 解析布局管理器
     cJSON* layout = cJSON_GetObjectItem(json_obj, "layout");
@@ -259,6 +285,18 @@ Layer* parse_layer(cJSON* json_obj,Layer* parent) {
 
             EventHandler handler=find_event_by_name(handler_id);
             layer->event->click = handler;
+        }
+        // 解析滚动事件
+        if (cJSON_HasObjectItem(events, "onScroll")) {
+            if (!layer->event) {
+                layer->event = malloc(sizeof(Event));
+                memset(layer->event, 0, sizeof(Event));
+            }
+            const char* handler_id = cJSON_GetObjectItem(events, "onScroll")->valuestring;
+            strcpy(layer->event->scroll_name, handler_id);
+            
+            EventHandler handler = find_event_by_name(handler_id);
+            layer->event->scroll = handler;
         }
     }
     

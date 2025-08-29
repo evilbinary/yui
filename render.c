@@ -348,6 +348,13 @@ void render_layer(Layer* layer) {
         int spacing = layer->layout_manager ? layer->layout_manager->spacing : 5;
         
         int current_y = layer->rect.y + padding_top;
+
+        if (layer->scrollable) {
+            current_y -= layer->scroll_offset;
+            
+        }
+
+        //printf("layer %d %s %s %d,%d\n",layer->type,layer->id,layer->text,layer->rect.x,layer->rect.y);
         
         // 清理旧的子元素（如果有的话）
         if (layer->children) {

@@ -66,10 +66,20 @@ typedef struct Assets {
     int size;
 } Assets;
 
+// 添加滚动条结构
+typedef struct Scrollbar {
+    int visible;
+    int thickness;
+    SDL_Color color;
+} Scrollbar;
+
 typedef struct Event {
     char click_name[MAX_PATH];
     void (*click)();  // 事件回调函数指针
     void (*press)();
+    // 添加滚动事件回调函数指针
+    void (*scroll)(); 
+    char scroll_name[MAX_PATH];
 } Event;
 
 typedef enum {
@@ -124,6 +134,11 @@ typedef struct Layer {
 
     //事件
     Event* event;
+    
+    // 添加滚动支持字段
+    int scrollable;
+    int scroll_offset;
+    Scrollbar* scrollbar;
 } Layer;
 
 
@@ -133,4 +148,3 @@ Layer* parse_layer(cJSON* json_obj,Layer* parent);
 
 
 #endif
-

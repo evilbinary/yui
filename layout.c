@@ -1,7 +1,6 @@
 #include "layout.h"
 
-
-
+// 递归处理子图层
 void layout_layer(Layer* layer){
 // 应用布局管理器
     if (layer->layout_manager && layer->child_count > 0) {
@@ -70,6 +69,11 @@ void layout_layer(Layer* layer){
                                   (layer->child_count - 1) * spacing;
             int current_y = layer->rect.y + padding_top;
             
+            // 如果是可滚动的List类型，考虑滚动偏移量
+            if (layer->scrollable) {
+                current_y -= layer->scroll_offset;
+            }
+            
             for (int i = 0; i < layer->child_count; i++) {
                 Layer* child = layer->children[i];
                 if (child->flex_ratio > 0 && total_flex > 0) {
@@ -88,7 +92,6 @@ void layout_layer(Layer* layer){
                 if(child->rect.w<=0){
                     child->rect.w = content_width;
                 }
-                //printf("%s %s %s %d\n",child->type,child->id,child->text,child->rect.w);
                 
                 if(child->layout_manager->type == LAYOUT_CENTER){
                     child->rect.x=layer->rect.x+ child->rect.w/2 + padding_left/2;
@@ -107,9 +110,15 @@ void layout_layer(Layer* layer){
                     }
                 }
                 
+                printf("%d %s %s %d,%d\n",child->type,child->id,child->text,child->rect.x,child->rect.y);
+
                 current_y += child->rect.h + spacing;
             }
         }
+    }
+    // 递归处理子图层
+    for (int i = 0; i < layer->child_count; i++) {
+        layout_layer(layer->children[i]);
     }
     if(layer->sub!=NULL){
         layout_layer(layer->sub);
