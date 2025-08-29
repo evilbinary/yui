@@ -1,0 +1,386 @@
+{
+    "id": "buttonsPanel",
+    "size":[400,400],
+    "type": "Grid",
+    "layout":{
+        "columns": 4,
+        "spacing": 10,
+        "type": "vertical"
+    },
+    "children": [
+        {
+            "id": "clearButton",
+            "type": "Button",
+            "text": "C",
+            "style": {
+                "color": "#FFFFFF",
+                "bgColor": "#FF5252",
+                "fontSize": 24,
+                "borderRadius": 8
+            },
+            "size": [
+                80,
+                80
+            ],
+            "events": {
+                "onClick": "@clearDisplay"
+            }
+        },
+        {
+            "id": "backspaceButton",
+            "type": "Button",
+            "text": "AC",
+            "style": {
+                "color": "#FFFFFF",
+                "bgColor": "#FF5252",
+                "fontSize": 24,
+                "borderRadius": 8
+            },
+            "size": [
+                80,
+                80
+            ],
+            "events": {
+                "onClick": "@backspace"
+            }
+        },
+        {
+            "id": "percentButton",
+            "type": "Button",
+            "text": "%",
+            "style": {
+                "color": "#FFFFFF",
+                "bgColor": "#5C6BC0",
+                "fontSize": 24,
+                "borderRadius": 8
+            },
+            "size": [
+                80,
+                80
+            ],
+            "events": {
+                "onClick": "@percent"
+            }
+        },
+        {
+            "id": "divideButton",
+            "type": "Button",
+            "text": "÷",
+            "style": {
+                "color": "#FFFFFF",
+                "bgColor": "#5C6BC0",
+                "fontSize": 24,
+                "borderRadius": 8
+            },
+            "size": [
+                80,
+                80
+            ],
+            "events": {
+                "onClick": "@operation",
+                "data": "divide"
+            }
+        },
+        {
+            "id": "sevenButton",
+            "type": "Button",
+            "text": "7",
+            "style": {
+                "color": "#FFFFFF",
+                "bgColor": "#333333",
+                "fontSize": 24,
+                "borderRadius": 8
+            },
+            "size": [
+                80,
+                80
+            ],
+            "events": {
+                "onClick": "@appendNumber",
+                "data": "7"
+            }
+        },
+        {
+            "id": "eightButton",
+            "type": "Button",
+            "text": "8",
+            "style": {
+                "color": "#FFFFFF",
+                "bgColor": "#333333",
+                "fontSize": 24,
+                "borderRadius": 8
+            },
+            "size": [
+                80,
+                80
+            ],
+            "events": {
+                "onClick": "@appendNumber",
+                "data": "8"
+            }
+        },
+        {
+            "id": "nineButton",
+            "type": "Button",
+            "text": "9",
+            "style": {
+                "color": "#FFFFFF",
+                "bgColor": "#333333",
+                "fontSize": 24,
+                "borderRadius": 8
+            },
+            "size": [
+                80,
+                80
+            ],
+            "events": {
+                "onClick": "@appendNumber",
+                "data": "9"
+            }
+        },
+        {
+            "id": "multiplyButton",
+            "type": "Button",
+            "text": "×",
+            "style": {
+                "color": "#FFFFFF",
+                "bgColor": "#5C6BC0",
+                "fontSize": 24,
+                "borderRadius": 8
+            },
+            "size": [
+                80,
+                80
+            ],
+            "events": {
+                "onClick": "@operation",
+                "data": "multiply"
+            }
+        },
+        {
+            "id": "fourButton",
+            "type": "Button",
+            "text": "4",
+            "style": {
+                "color": "#FFFFFF",
+                "bgColor": "#333333",
+                "fontSize": 24,
+                "borderRadius": 8
+            },
+            "size": [
+                80,
+                80
+            ],
+            "events": {
+                "onClick": "@appendNumber",
+                "data": "4"
+            }
+        },
+        {
+            "id": "fiveButton",
+            "type": "Button",
+            "text": "5",
+            "style": {
+                "color": "#FFFFFF",
+                "bgColor": "#333333",
+                "fontSize": 24,
+                "borderRadius": 8
+            },
+            "size": [
+                80,
+                80
+            ],
+            "events": {
+                "onClick": "@appendNumber",
+                "data": "5"
+            }
+        },
+        {
+            "id": "sixButton",
+            "type": "Button",
+            "text": "6",
+            "style": {
+                "color": "#FFFFFF",
+                "bgColor": "#333333",
+                "fontSize": 24,
+                "borderRadius": 8
+            },
+            "size": [
+                80,
+                80
+            ],
+            "events": {
+                "onClick": "@appendNumber",
+                "data": "6"
+            }
+        },
+        {
+            "id": "subtractButton",
+            "type": "Button",
+            "text": "-",
+            "style": {
+                "color": "#FFFFFF",
+                "bgColor": "#5C6BC0",
+                "fontSize": 24,
+                "borderRadius": 8
+            },
+            "size": [
+                80,
+                80
+            ],
+            "events": {
+                "onClick": "@operation",
+                "data": "subtract"
+            }
+        },
+        {
+            "id": "oneButton",
+            "type": "Button",
+            "text": "1",
+            "style": {
+                "color": "#FFFFFF",
+                "bgColor": "#333333",
+                "fontSize": 24,
+                "borderRadius": 8
+            },
+            "size": [
+                80,
+                80
+            ],
+            "events": {
+                "onClick": "@appendNumber",
+                "data": "1"
+            }
+        },
+        {
+            "id": "twoButton",
+            "type": "Button",
+            "text": "2",
+            "style": {
+                "color": "#FFFFFF",
+                "bgColor": "#333333",
+                "fontSize": 24,
+                "borderRadius": 8
+            },
+            "size": [
+                80,
+                80
+            ],
+            "events": {
+                "onClick": "@appendNumber",
+                "data": "2"
+            }
+        },
+        {
+            "id": "threeButton",
+            "type": "Button",
+            "text": "3",
+            "style": {
+                "color": "#FFFFFF",
+                "bgColor": "#333333",
+                "fontSize": 24,
+                "borderRadius": 8
+            },
+            "size": [
+                80,
+                80
+            ],
+            "events": {
+                "onClick": "@appendNumber",
+                "data": "3"
+            }
+        },
+        {
+            "id": "addButton",
+            "type": "Button",
+            "text": "+",
+            "style": {
+                "color": "#FFFFFF",
+                "bgColor": "#5C6BC0",
+                "fontSize": 24,
+                "borderRadius": 8
+            },
+            "size": [
+                80,
+                80
+            ],
+            "events": {
+                "onClick": "@operation",
+                "data": "add"
+            }
+        },
+        {
+            "id": "signButton",
+            "type": "Button",
+            "text": "±",
+            "style": {
+                "color": "#FFFFFF",
+                "bgColor": "#333333",
+                "fontSize": 24,
+                "borderRadius": 8
+            },
+            "size": [
+                80,
+                80
+            ],
+            "events": {
+                "onClick": "@toggleSign"
+            }
+        },
+        {
+            "id": "zeroButton",
+            "type": "Button",
+            "text": "0",
+            "style": {
+                "color": "#FFFFFF",
+                "bgColor": "#333333",
+                "fontSize": 24,
+                "borderRadius": 8
+            },
+            "size": [
+                80,
+                80
+            ],
+            "events": {
+                "onClick": "@appendNumber",
+                "data": "0"
+            }
+        },
+        {
+            "id": "decimalButton",
+            "type": "Button",
+            "text": ".",
+            "style": {
+                "color": "#FFFFFF",
+                "bgColor": "#333333",
+                "fontSize": 24,
+                "borderRadius": 8
+            },
+            "size": [
+                80,
+                80
+            ],
+            "events": {
+                "onClick": "@appendDecimal"
+            }
+        },
+        {
+            "id": "equalsButton",
+            "type": "Button",
+            "text": "=",
+            "style": {
+                "color": "#FFFFFF",
+                "bgColor": "#5C6BC0",
+                "fontSize": 24,
+                "borderRadius": 8
+            },
+            "size": [
+                80,
+                80
+            ],
+            "events": {
+                "onClick": "@calculate"
+            }
+        }
+    ]
+}

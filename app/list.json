@@ -84,8 +84,8 @@
         "type": "vertical",
         "spacing": 4
     },
-    "scrollable": true,
     "scrollbar": {
+        "scrollable": true,
         "visible": true,
         "thickness": 8,
         "color": "#CCCCCCC0"

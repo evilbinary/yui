@@ -1,6 +1,6 @@
 {
     "id": "main_panel",
-    "type": "Panel",
+    "type": "View",
     "position": [0, 0],
     "size": [800, 600],
     "style": {

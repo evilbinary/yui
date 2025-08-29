@@ -38,11 +38,27 @@ typedef enum {
     IMAGE_MODE_ASPECT_FILL  // 填充整个区域（可能裁剪图片）
 } ImageMode;
 
+// 添加图层类型枚举值 GRID
+typedef enum {
+    VIEW,
+    BUTTON,
+    INPUT,
+    LABEL,
+    IMAGE,
+    LIST,
+    GRID  // 添加GRID类型
+} LayerType;
+
+#define LAYER_TYPE_SIZE 7  // 更新图层类型数量
+extern char *layer_type_name[];
+
 typedef struct LayoutManager {
     LayoutType type;
     int spacing;
     int padding[4]; // top, right, bottom, left
     LayoutType align;
+    // 添加Grid布局特有属性
+    int columns;  // Grid布局列数
 } LayoutManager;
 
 // 添加数据绑定结构
@@ -65,14 +81,12 @@ typedef struct Assets {
     char path[MAX_PATH];
     int size;
 } Assets;
-
 // 添加滚动条结构
 typedef struct Scrollbar {
     int visible;
     int thickness;
     SDL_Color color;
 } Scrollbar;
-
 typedef struct Event {
     char click_name[MAX_PATH];
     void (*click)();  // 事件回调函数指针
@@ -81,18 +95,6 @@ typedef struct Event {
     void (*scroll)(); 
     char scroll_name[MAX_PATH];
 } Event;
-
-typedef enum {
-    VIEW,
-    BUTTON,
-    INPUT,
-    LABEL,
-    IMAGE,
-    LIST
-} LayerType;
-
-#define LAYER_TYPE_SIZE 6
-extern char *layer_type_name[];
 
 typedef struct Layer Layer;
 typedef struct Layer {

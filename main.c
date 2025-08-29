@@ -12,9 +12,8 @@
 
 
 // ====================== 事件处理器 ======================
-
 void handle_scroll_event(Layer* layer, int scroll_delta) {
-    if (layer->scrollable && layer->type == LIST) {
+    if (layer->scrollable) {
         layer->scroll_offset += scroll_delta * 20; // 每次滚动20像素
         
         // 限制滚动范围
@@ -43,12 +42,10 @@ void handle_scroll_event(Layer* layer, int scroll_delta) {
         if (layer->event && layer->event->scroll) {
             layer->event->scroll(layer);
         }
-        
         // 重新布局子元素
         layout_layer(layer);
     }
 }
-
 void handle_event(Layer* root, SDL_Event* event) {
     if (event->type == SDL_MOUSEBUTTONDOWN) {
         SDL_Point mouse_pos = { event->button.x, event->button.y };
@@ -66,7 +63,7 @@ void handle_event(Layer* root, SDL_Event* event) {
             }
         }
     }
-    // 添加鼠标滚轮事件处理
+// 添加鼠标滚轮事件处理
     else if (event->type == SDL_MOUSEWHEEL) {
         // 处理鼠标滚轮事件，传递给所有支持滚动的图层
         handle_scroll_event(root, -event->wheel.y); // 反向滚动更符合用户习惯
@@ -154,8 +151,7 @@ int main(int argc, char* argv[]) {
     scale = getDisplayScale(window);
 
     SDL_RenderSetScale(renderer, scale, scale);
-    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-
+    
     
     char* json_path="app.json";
     // 加载UI描述文件

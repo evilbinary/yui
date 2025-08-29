@@ -1,6 +1,6 @@
 {
     "id": "orderPage",
-    "type": "Panel",
+    "type": "View",
     "theme": "default",
     "style": {
         "color": "#212121",
@@ -22,8 +22,8 @@
     },
     "children": [
         {
-            "id": "categoryPanel",
-            "type": "Panel",
+            "id": "categoryView",
+            "type": "View",
             "size": [
                 200,
                 560
@@ -91,8 +91,8 @@
             ]
         },
         {
-            "id": "productPanel",
-            "type": "Panel",
+            "id": "productView",
+            "type": "View",
             "size": [
                 640,
                 560
@@ -114,7 +114,7 @@
             "children": [
                 {
                     "id": "productDetail",
-                    "type": "Panel",
+                    "type": "View",
                     "layout": {
                         "type": "horizontal",
                         "spacing": 20
@@ -135,7 +135,7 @@
                         },
                         {
                             "id": "productInfo",
-                            "type": "Panel",
+                            "type": "View",
                             "layout": {
                                 "type": "vertical",
                                 "spacing": 10
@@ -198,7 +198,7 @@
                         "path": "products"
                     },
                     "itemTemplate": {
-                        "type": "Panel",
+                        "type": "View",
                         "size": [
                             180,
                             220

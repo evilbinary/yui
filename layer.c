@@ -1,6 +1,7 @@
 #include "layer.h"
 
-char *layer_type_name[]={"View","Button","Input","Label","Image","List"};
+// 更新图层类型名称数组，添加GRID
+char *layer_type_name[]={"View","Button","Input","Label","Image","List","Grid"};
 
 
 cJSON* parse_json(char* json_path){
@@ -147,10 +148,7 @@ Layer* parse_layer(cJSON* json_obj,Layer* parent) {
         layer->item_template = parse_layer(item_template,parent);
     }
 
-    // 解析滚动属性
-    if (cJSON_HasObjectItem(json_obj, "scrollable")) {
-        layer->scrollable = cJSON_GetObjectItem(json_obj, "scrollable")->valueint;
-    }
+  
     
     cJSON* scrollbar = cJSON_GetObjectItem(json_obj, "scrollbar");
     if (scrollbar) {
@@ -170,6 +168,10 @@ Layer* parse_layer(cJSON* json_obj,Layer* parent) {
         cJSON* color = cJSON_GetObjectItem(scrollbar, "color");
         if (color) {
             parse_color(color->valuestring,&layer->scrollbar->color);
+        }
+        // 解析滚动属性
+        if (cJSON_HasObjectItem(scrollbar, "scrollable")) {
+            layer->scrollable = cJSON_GetObjectItem(scrollbar, "scrollable")->valueint;
         }
     }
     
@@ -223,6 +225,12 @@ Layer* parse_layer(cJSON* json_obj,Layer* parent) {
             layer->layout_manager->padding[1] = cJSON_GetArrayItem(padding, 1)->valueint; // right
             layer->layout_manager->padding[2] = cJSON_GetArrayItem(padding, 2)->valueint; // bottom
             layer->layout_manager->padding[3] = cJSON_GetArrayItem(padding, 3)->valueint; // left
+        }
+        
+        // 解析Grid布局的列数
+        cJSON* columns = cJSON_GetObjectItem(layout, "columns");
+        if (columns) {
+            layer->layout_manager->columns = columns->valueint;
         }
     } else {
         // 如果没有布局配置，创建默认的垂直布局

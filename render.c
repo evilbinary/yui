@@ -6,107 +6,6 @@
 SDL_Renderer* renderer = NULL;
 float scale=1.0;
 
-int is_cjson_float(const cJSON *item) {
-    if (item == NULL || !cJSON_IsNumber(item)) {
-        return 0;
-    }
-    
-    // 获取双精度值
-    double value = item->valuedouble;
-    
-    // 检查是否为有限数（非无穷大和非NaN）
-    if (!isfinite(value)) {
-        return 0;
-    }
-    
-    // 检查值是否超出整数范围
-    if (value > INT_MAX || value < INT_MIN) {
-        return 1; // 超出整数范围，肯定是浮点数
-    }
-    
-    // 检查值是否包含小数部分
-    double int_part;
-    double frac_part = modf(value, &int_part);
-    
-    // 如果小数部分的绝对值大于一个很小的容差值，则是浮点数
-    if (fabs(frac_part) > DBL_EPSILON) {
-        return 1;
-    }
-    
-    return 0; // 是整数
-}
-
-// 替换字符串中的占位符
-char* replace_placeholder(const char* template, const char* placeholder, const char* value) {
-    // 查找占位符位置
-    char* pos = strstr(template, placeholder);
-    if (pos == NULL) return NULL;
-    
-    // 计算新字符串长度
-    size_t template_len = strlen(template);
-    size_t placeholder_len = strlen(placeholder);
-    size_t value_len = strlen(value);
-    size_t new_len = template_len - placeholder_len + value_len + 1;
-    
-    // 分配内存
-    char* result = (char*)malloc(new_len);
-    if (result == NULL) return NULL;
-    
-    // 复制第一部分
-    size_t prefix_len = pos - template;
-    strncpy(result, template, prefix_len);
-    result[prefix_len] = '\0';
-    
-    // 追加替换值
-    strcat(result, value);
-    
-    // 追加剩余部分
-    strcat(result, pos + placeholder_len);
-    
-    return result;
-}
-
-// 替换所有出现的占位符
-char* replace_all_placeholders(const char* template, const char* placeholder, const char* value) {
-    char* result = strdup(template);
-    if (result == NULL) return NULL;
-    
-    char* pos = strstr(result, placeholder);
-    while (pos != NULL) {
-        // 计算新字符串长度
-        size_t result_len = strlen(result);
-        size_t placeholder_len = strlen(placeholder);
-        size_t value_len = strlen(value);
-        size_t new_len = result_len - placeholder_len + value_len + 1;
-        
-        // 分配临时内存
-        char* temp = (char*)malloc(new_len);
-        if (temp == NULL) {
-            free(result);
-            return NULL;
-        }
-        
-        // 复制第一部分
-        size_t prefix_len = pos - result;
-        strncpy(temp, result, prefix_len);
-        temp[prefix_len] = '\0';
-        
-        // 追加替换值
-        strcat(temp, value);
-        
-        // 追加剩余部分
-        strcat(temp, pos + placeholder_len);
-        
-        // 释放旧结果，使用新结果
-        free(result);
-        result = temp;
-        
-        // 查找下一个占位符
-        pos = strstr(result, placeholder);
-    }
-    
-    return result;
-}
 
 // ====================== 资源加载器 ======================
 void load_textures(Layer* root) {
@@ -339,133 +238,46 @@ void render_layer(Layer* layer) {
             SDL_RenderDrawRect(renderer, &layer->rect);
         }
     }
-    else if ( layer->type==LIST) {
-        // List组件渲染：根据数据源动态生成列表项
-        // 这里模拟一些数据，实际项目中应该从数据源获取
-
-        // 绘制背景
+    else {
+        //printf("layer->%s %d\n",layer->id,layer->type);
+    // 绘制背景
         if(layer->bgColor.a > 0) {
             SDL_SetRenderDrawColor(renderer, 
                                 layer->bgColor.r, 
                                 layer->bgColor.g, 
                                 layer->bgColor.b, 
                                 layer->bgColor.a);
-            SDL_RenderFillRect(renderer, &layer->rect);
+        }else{
+            // 默认渲染方式
+            SDL_SetRenderDrawColor(renderer, 
+                                layer->color.r, 
+                                layer->color.g, 
+                                layer->color.b, 
+                                layer->color.a);
         }
-        
-        int padding_top = layer->layout_manager ? layer->layout_manager->padding[0] : 0;
-        int padding_left = layer->layout_manager ? layer->layout_manager->padding[3] : 0;
-        int spacing = layer->layout_manager ? layer->layout_manager->spacing : 5;
-        
-        int current_y = layer->rect.y + padding_top;
-
-        if (layer->scrollable) {
-            current_y -= layer->scroll_offset;
-        }
-
-        //printf("layer %d %s %s %d,%d\n",layer->type,layer->id,layer->text,layer->rect.x,layer->rect.y);
-        
-        // 清理旧的子元素（如果有的话）
-        if (layer->children) {
-            for (int i = 0; i < layer->child_count; i++) {
-                free(layer->children[i]);
-            }
-            free(layer->children);
-            layer->children = NULL;
-            layer->child_count = 0;
-        }
-        
-        // 根据数据源和模板动态生成列表项
-        if (layer->item_template&& layer->data) {
-            int item_count = layer->data->size;
-            //json 数据 todo 从接口获取
-            layer->child_count = item_count;
-            layer->children = malloc(item_count * sizeof(Layer*));
-            
-            for (int i = 0; i < item_count; i++) {
-                // 创建基于模板的新项
-                layer->children[i] = malloc(sizeof(Layer));
-                memcpy(layer->children[i], layer->item_template, sizeof(Layer));
-                
-                // 设置位置和尺寸
-                layer->children[i]->rect.x = layer->rect.x + padding_left;
-                layer->children[i]->rect.y = current_y;
-                layer->children[i]->rect.w = layer->rect.w - (padding_left * 2);
-                layer->children[i]->rect.h = 30; // 固定高度
-                
-                // 简单替换${name}为实际数据
-                if (strstr(layer->children[i]->text, "${")) {
-                    cJSON* item=cJSON_GetArrayItem(layer->data->json,i);
-             
-                    cJSON* it=item->child;
-                    char name[256];
-                    char val[256];
-
-                    while(it!=NULL){
-                        sprintf(name,"${%s}",it->string);
-                        if(cJSON_IsString(it)){
-                            sprintf(val,"%s",it->valuestring);
-                        }else if(cJSON_IsNumber(it)){
-                            if(is_cjson_float(it)){
-                                sprintf(val,"%f",it->valuedouble);
-                            }else{
-                                sprintf(val,"%d",it->valueint);
-                            }
-                            
-                        }
-
-                        char* result = replace_placeholder(layer->children[i]->text, name, val);
-                        if(result){
-                            strcpy(layer->children[i]->text, result);
-                            free(result);
-                        }
-                        it=it->next;
-                    }
-                    
-                }
-                
-                current_y += layer->children[i]->rect.h + spacing;
-            }
-        }
-        
-    }
-    else {
-        //printf("layer->%s %d\n",layer->id,layer->type);
-
-        // 默认渲染方式
-        SDL_SetRenderDrawColor(renderer, 
-                              layer->color.r, 
-                              layer->color.g, 
-                              layer->color.b, 
-                              layer->color.a);
         SDL_RenderFillRect(renderer, &layer->rect);
     }
-
     // 保存当前渲染目标的裁剪区域
     SDL_Rect prev_clip;
     render_clip_start(layer,&prev_clip);
-
     // 递归渲染子图层
     for (int i = 0; i < layer->child_count; i++) {
         render_layer(layer->children[i]);
     }
 
-    // 递归渲染子图层
+       // 递归渲染子图层
     if(layer->sub!=NULL){
         render_layer(layer->sub);
     }
 
-    // 渲染滚动条
+        // 渲染滚动条
     if (layer->scrollable && layer->scrollbar && layer->scrollbar->visible) {
        render_scrollbar(layer);
     }
     
     render_clip_end(layer,&prev_clip);
-
-
 }
-
-void render_clip_start(Layer* layer,SDL_Rect* prev_clip){
+    void render_clip_start(Layer* layer,SDL_Rect* prev_clip){
     SDL_RenderGetClipRect(renderer, prev_clip);
     // 设置当前图层的裁剪区域
     SDL_Rect clip_rect = layer->rect;
@@ -536,4 +348,5 @@ void render_scrollbar(Layer* layer){
                                 layer->scrollbar->color.a);
         SDL_RenderFillRect(renderer, &scrollbar_rect);
     }
+
 }
