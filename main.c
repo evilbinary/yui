@@ -154,7 +154,8 @@ int main(int argc, char* argv[]) {
     scale = getDisplayScale(window);
 
     SDL_RenderSetScale(renderer, scale, scale);
-    
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+
     
     char* json_path="app.json";
     // 加载UI描述文件
