@@ -11,23 +11,6 @@
 #include "layout.h"
 #include "backend.h"
 
-void load_font(Layer* root){
-    // 加载默认字体 (需要在项目目录下提供字体文件)
-    char font_path[MAX_PATH];
-    if(root->assets){
-        snprintf(font_path, sizeof(font_path), "%s/%s", root->assets->path, root->font->path);
-    }else{
-        snprintf(font_path, sizeof(font_path), "%s", root->font->path);
-    }
-    if(root->font&& root->font->size==0){
-        root->font->size=16;
-    }
-
-    DFont* default_font=backend_load_font(font_path, root->font->size*scale);
-
-    root->font->default_font=default_font;
-}
-
 void hello_world(Layer* layer) {
     printf("你好，世界！ %s\n",layer->text);
 }
@@ -62,7 +45,7 @@ int main(int argc, char* argv[]) {
         }
     }
 
-        // 如果根图层没有设置宽度和高度，则根据窗口大小设置
+    // 如果根图层没有设置宽度和高度，则根据窗口大小设置
     printf("ui_root %d,%d\n",ui_root->rect.w,ui_root->rect.h);
     
     

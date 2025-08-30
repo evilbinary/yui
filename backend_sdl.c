@@ -52,6 +52,7 @@ int backend_init(){
 
     SDL_RenderSetScale(renderer, scale, scale);
     
+    return 0;
 
 }
 

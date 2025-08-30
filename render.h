@@ -9,6 +9,7 @@
 
 void render_layer(Layer* layer);
 void load_textures(Layer* root);
+void load_font(Layer* root);
 
 // 添加滚动条渲染函数声明
 void render_scrollbar(Layer* layer);

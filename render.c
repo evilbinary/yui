@@ -16,6 +16,23 @@ void load_textures(Layer* root) {
     }
 }
 
+void load_font(Layer* root){
+    // 加载默认字体 (需要在项目目录下提供字体文件)
+    char font_path[MAX_PATH];
+    if(root->assets){
+        snprintf(font_path, sizeof(font_path), "%s/%s", root->assets->path, root->font->path);
+    }else{
+        snprintf(font_path, sizeof(font_path), "%s", root->font->path);
+    }
+    if(root->font&& root->font->size==0){
+        root->font->size=16;
+    }
+
+    DFont* default_font=backend_load_font(font_path, root->font->size);
+
+    root->font->default_font=default_font;
+}
+
 // 添加文字渲染函数
 Texture* render_text(Layer* layer,const char* text, Color color) {
     if(layer->font==NULL){
@@ -196,7 +213,7 @@ void render_layer(Layer* layer) {
                     render_rect.x = layer->rect.x + (layer->rect.w - render_rect.w) / 2;
                     render_rect.y = layer->rect.y + (layer->rect.h - render_rect.h) / 2;
                 }
-                backend_render_text_copy(layer->texture,NULL,&layer->rect);
+                backend_render_text_copy(layer->texture,NULL,&render_rect);
        
             }
         } else {
