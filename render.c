@@ -6,7 +6,7 @@
 // ====================== 资源加载器 ======================
 void load_textures(Layer* root) {
     if (root->type==IMAGE&& strlen(root->source) > 0) {
-        // 修改为使用SDL_image支持多种格式
+        // 修改为使用image支持多种格式
         char path[MAX_PATH];
         snprintf(path, sizeof(path), "%s/%s", root->assets->path, root->source);
 
@@ -49,7 +49,6 @@ Texture* render_text(Layer* layer,const char* text, Color color) {
 // ====================== 渲染管线 ======================
 void render_layer(Layer* layer) {
     
-    
     // 根据图层类型进行不同的渲染处理
     if (layer->type == BUTTON) {
         // 按钮类型渲染：绘制背景和边框
@@ -62,16 +61,16 @@ void render_layer(Layer* layer) {
         
         // 渲染按钮文本
         if (strlen(layer->text) > 0) {
-            // 使用SDL_ttf渲染文本
+            // 使用ttf渲染文本
            
             Color text_color = layer->color; // 白色文字
-            SDL_Texture* text_texture = render_text(layer,layer->text, text_color);
+            Texture* text_texture = render_text(layer,layer->text, text_color);
             
             if (text_texture) {
                 int text_width, text_height;
-                SDL_QueryTexture(text_texture, NULL, NULL, &text_width, &text_height);
+                backend_query_texture(text_texture, NULL, NULL, &text_width, &text_height);
                 
-                SDL_Rect text_rect = {
+                Rect text_rect = {
                     layer->rect.x + (layer->rect.w - text_width/ scale) / 2,  // 居中
                     layer->rect.y + (layer->rect.h - text_height/ scale) / 2,
                     text_width / scale,
@@ -106,16 +105,16 @@ void render_layer(Layer* layer) {
         
         // 渲染输入框标签
         if (strlen(layer->label) > 0) {
-            // 使用SDL_ttf渲染文本
+            // 使用ttf渲染文本
            
             Color text_color = layer->color;
-            SDL_Texture* text_texture = render_text(layer,layer->label, text_color);
+            Texture* text_texture = render_text(layer,layer->label, text_color);
             
             if (text_texture) {
                 int text_width, text_height;
-                SDL_QueryTexture(text_texture, NULL, NULL, &text_width, &text_height);
+                backend_query_texture(text_texture, NULL, NULL, &text_width, &text_height);
                 
-                SDL_Rect text_rect = {
+                Rect text_rect = {
                     layer->rect.x + 5,  // 左侧留5像素边距
                     layer->rect.y + (layer->rect.h - text_height/ scale) / 2,
                     text_width / scale,
@@ -144,13 +143,13 @@ void render_layer(Layer* layer) {
             }
         
             Color text_color = layer->color;
-            SDL_Texture* text_texture = render_text(layer,layer->text, text_color);
+            Texture* text_texture = render_text(layer,layer->text, text_color);
             
             if (text_texture) {
                 int text_width, text_height;
-                SDL_QueryTexture(text_texture, NULL, NULL, &text_width, &text_height);
+                backend_query_texture(text_texture, NULL, NULL, &text_width, &text_height);
                 
-                SDL_Rect text_rect = {
+                Rect text_rect = {
                     layer->rect.x + 5 + (layer->rect.w -text_width/ scale)/2,  // 左侧留5像素边距
                     layer->rect.y + (layer->rect.h - text_height/ scale) / 2,
                     text_width / scale,
@@ -173,7 +172,7 @@ void render_layer(Layer* layer) {
     else if (layer->type == IMAGE) {
         // 图片类型渲染：从文件路径加载并渲染图片（支持多种格式）
         if (strlen(layer->source) > 0 && !layer->texture) {
-            // 修改为使用SDL_image支持多种格式
+            // 修改为使用image支持多种格式
             load_textures(layer);
         }
         
@@ -186,13 +185,13 @@ void render_layer(Layer* layer) {
             } else {
                 // 获取图片原始尺寸
                 int img_width, img_height;
-                SDL_QueryTexture(layer->texture, NULL, NULL, &img_width, &img_height);
+                backend_query_texture(layer->texture, NULL, NULL, &img_width, &img_height);
                 
                 // 计算缩放比例
                 float scale_x = (float)layer->rect.w / img_width;
                 float scale_y = (float)layer->rect.h / img_height;
                 
-                SDL_Rect render_rect;
+                Rect render_rect;
                 render_rect.x = layer->rect.x;
                 render_rect.y = layer->rect.y;
                 render_rect.w = img_width;
@@ -236,7 +235,7 @@ void render_layer(Layer* layer) {
     }
 
     // 保存当前渲染目标的裁剪区域
-    SDL_Rect prev_clip;
+    Rect prev_clip;
     render_clip_start(layer,&prev_clip);
     // 递归渲染子图层
     for (int i = 0; i < layer->child_count; i++) {
@@ -255,10 +254,10 @@ void render_layer(Layer* layer) {
     
     render_clip_end(layer,&prev_clip);
 }
-void render_clip_start(Layer* layer,SDL_Rect* prev_clip){
+void render_clip_start(Layer* layer,Rect* prev_clip){
     backend_render_get_clip_rect(prev_clip);
     // 设置当前图层的裁剪区域
-    SDL_Rect clip_rect = layer->rect;
+    Rect clip_rect = layer->rect;
     
     // 如果存在父级裁剪区域，则取交集作为最终裁剪区域
     if (prev_clip->w > 0 && prev_clip->h > 0) {
@@ -284,7 +283,7 @@ void render_clip_start(Layer* layer,SDL_Rect* prev_clip){
     backend_render_set_clip_rect(&clip_rect);
 }
 
-void render_clip_end(Layer* layer,SDL_Rect* prev_clip){
+void render_clip_end(Layer* layer,Rect* prev_clip){
     // 恢复之前的裁剪区域
     backend_render_set_clip_rect(prev_clip);
     
@@ -316,7 +315,7 @@ void render_scrollbar(Layer* layer){
         if (scrollbar_y > layer->rect.y + visible_height - scrollbar_height) 
             scrollbar_y = layer->rect.y + visible_height - scrollbar_height;
         
-        SDL_Rect scrollbar_rect = {scrollbar_x, scrollbar_y, scrollbar_width, scrollbar_height};
+        Rect scrollbar_rect = {scrollbar_x, scrollbar_y, scrollbar_width, scrollbar_height};
         
         // 绘制滚动条
         backend_render_fill_rect(&scrollbar_rect,layer->scrollbar->color);

@@ -171,6 +171,13 @@ Texture* backend_load_texture(char* path){
     return texture;
 }
 
+int backend_query_texture(Texture * texture,
+                     Uint32 * format, int *access,
+                     int *w, int *h){
+
+   return SDL_QueryTexture(texture,format,access,w,h);                     
+}
+
 Texture* backend_render_texture(DFont* font,const char* text,Color color){
      SDL_Surface* surface = TTF_RenderUTF8_Blended(font, text, color);
     if (!surface) return NULL;

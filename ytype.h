@@ -133,6 +133,7 @@ typedef struct Event {
 typedef struct Layer Layer;
 typedef struct Layer {
     char id[50];
+    int index;
     LayerType type;
     Rect rect;
     Color color;
