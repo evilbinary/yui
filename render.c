@@ -2,10 +2,6 @@
 #include "render.h"
 #include <limits.h>
 
-// ====================== 全局渲染器 ======================
-SDL_Renderer* renderer = NULL;
-float scale=1.0;
-
 
 // ====================== 资源加载器 ======================
 void load_textures(Layer* root) {
@@ -14,32 +10,21 @@ void load_textures(Layer* root) {
         char path[MAX_PATH];
         snprintf(path, sizeof(path), "%s/%s", root->assets->path, root->source);
 
-        SDL_Surface* surface = IMG_Load(path);
-        if (surface) {
-            root->texture = SDL_CreateTextureFromSurface(renderer, surface);
-            SDL_FreeSurface(surface);
-        } else {
-            printf("Failed to load image %s: %s\n", root->source, IMG_GetError());
-        }
+        root->texture=backend_load_texture(path);
+
+       
     }
 }
 
 // 添加文字渲染函数
-SDL_Texture* render_text(Layer* layer,const char* text, SDL_Color color) {
+Texture* render_text(Layer* layer,const char* text, Color color) {
     if(layer->font==NULL){
         printf("error not found font %s %d\n",layer->id,layer->type);
         return NULL;
     }
     if (!layer->font->default_font) return NULL;
     
-    SDL_Surface* surface = TTF_RenderUTF8_Blended(layer->font->default_font, text, color);
-    if (!surface) return NULL;
-    
-    
-    SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
-    SDL_SetTextureScaleMode(texture, SDL_ScaleModeBest);
-
-    SDL_FreeSurface(surface);
+    Texture* texture= backend_render_texture(layer->font->default_font,text,color);
     
     return texture;
 }
@@ -52,23 +37,17 @@ void render_layer(Layer* layer) {
     if (layer->type == BUTTON) {
         // 按钮类型渲染：绘制背景和边框
         if(layer->bgColor.a>0){
-            SDL_SetRenderDrawColor(renderer, 
-                                layer->bgColor.r, 
-                                layer->bgColor.g, 
-                                layer->bgColor.b, 
-                                layer->bgColor.a);
-            SDL_RenderFillRect(renderer, &layer->rect);
+            backend_render_fill_rect(&layer->rect,layer->bgColor);
         }
         
-        // 绘制按钮边框
-        SDL_SetRenderDrawColor(renderer, 200, 200, 200, 255);
-        SDL_RenderDrawRect(renderer, &layer->rect);
+        backend_render_rect_color(&layer->rect,200, 200, 200, 255);
+       
         
         // 渲染按钮文本
         if (strlen(layer->text) > 0) {
             // 使用SDL_ttf渲染文本
            
-            SDL_Color text_color = layer->color; // 白色文字
+            Color text_color = layer->color; // 白色文字
             SDL_Texture* text_texture = render_text(layer,layer->text, text_color);
             
             if (text_texture) {
@@ -93,32 +72,26 @@ void render_layer(Layer* layer) {
                     text_rect.y = layer->rect.y;
                 }
                 
-                SDL_RenderCopy(renderer, text_texture, NULL, &text_rect);
-                SDL_DestroyTexture(text_texture);
+                backend_render_text_copy(text_texture,NULL,&text_rect);
+                backend_render_text_destroy(text_texture);
+                
             }
         }
     } 
     else if (layer->type==INPUT) {
         // 输入框类型渲染：绘制背景和边框
         if(layer->bgColor.a>0){
-            SDL_SetRenderDrawColor(renderer, 
-                                layer->bgColor.r, 
-                                layer->bgColor.g, 
-                                layer->bgColor.b, 
-                                layer->bgColor.a);
-            
-            SDL_RenderFillRect(renderer, &layer->rect);
+            backend_render_fill_rect(&layer->rect,layer->bgColor);
         }
         
         // 绘制输入框边框
-        SDL_SetRenderDrawColor(renderer, 150, 150, 150, 255);
-        SDL_RenderDrawRect(renderer, &layer->rect);
+        backend_render_rect_color(&layer->rect,150, 150, 150, 255);
         
         // 渲染输入框标签
         if (strlen(layer->label) > 0) {
             // 使用SDL_ttf渲染文本
            
-            SDL_Color text_color = layer->color;
+            Color text_color = layer->color;
             SDL_Texture* text_texture = render_text(layer,layer->label, text_color);
             
             if (text_texture) {
@@ -141,23 +114,19 @@ void render_layer(Layer* layer) {
                     text_rect.h = layer->rect.y + layer->rect.h - text_rect.y;
                 }
                 
-                SDL_RenderCopy(renderer, text_texture, NULL, &text_rect);
-                SDL_DestroyTexture(text_texture);
+                backend_render_text_copy(text_texture,NULL,&text_rect);
+                backend_render_text_destroy(text_texture);
+
             }
         }
     }
     else if (layer->type==LABEL) {
             if(layer->bgColor.a>0){
-                SDL_SetRenderDrawColor(renderer, 
-                                    layer->bgColor.r, 
-                                    layer->bgColor.g, 
-                                    layer->bgColor.b, 
-                                    layer->bgColor.a);
-                
-                SDL_RenderFillRect(renderer, &layer->rect);
+                backend_render_fill_rect(&layer->rect,layer->bgColor);
+
             }
         
-            SDL_Color text_color = layer->color;
+            Color text_color = layer->color;
             SDL_Texture* text_texture = render_text(layer,layer->text, text_color);
             
             if (text_texture) {
@@ -180,8 +149,8 @@ void render_layer(Layer* layer) {
                     text_rect.h = layer->rect.y + layer->rect.h - text_rect.y;
                 }
                 
-                SDL_RenderCopy(renderer, text_texture, NULL, &text_rect);
-                SDL_DestroyTexture(text_texture);
+                backend_render_text_copy(text_texture,NULL,&text_rect);
+                backend_render_text_destroy(text_texture);
             }
     }    
     else if (layer->type == IMAGE) {
@@ -196,7 +165,7 @@ void render_layer(Layer* layer) {
             // 根据图片模式进行不同的渲染
             if (layer->image_mode == IMAGE_MODE_STRETCH) {
                 // 拉伸模式：直接填充整个区域
-                SDL_RenderCopy(renderer, layer->texture, NULL, &layer->rect);
+                backend_render_text_copy(layer->texture,NULL,&layer->rect);
             } else {
                 // 获取图片原始尺寸
                 int img_width, img_height;
@@ -227,36 +196,28 @@ void render_layer(Layer* layer) {
                     render_rect.x = layer->rect.x + (layer->rect.w - render_rect.w) / 2;
                     render_rect.y = layer->rect.y + (layer->rect.h - render_rect.h) / 2;
                 }
-                
-                SDL_RenderCopy(renderer, layer->texture, NULL, &render_rect);
+                backend_render_text_copy(layer->texture,NULL,&layer->rect);
+       
             }
         } else {
             // 如果图片加载失败，绘制一个占位符
-            SDL_SetRenderDrawColor(renderer, 200, 200, 200, 255);
-            SDL_RenderFillRect(renderer, &layer->rect);
-            SDL_SetRenderDrawColor(renderer, 100, 100, 100, 255);
-            SDL_RenderDrawRect(renderer, &layer->rect);
+            backend_render_fill_rect_color( &layer->rect,200, 200, 200, 255);
+            backend_render_rect_color(&layer->rect,100, 100, 100, 255);
         }
     }
     else {
         //printf("layer->%s %d\n",layer->id,layer->type);
     // 绘制背景
         if(layer->bgColor.a > 0) {
-            SDL_SetRenderDrawColor(renderer, 
-                                layer->bgColor.r, 
-                                layer->bgColor.g, 
-                                layer->bgColor.b, 
-                                layer->bgColor.a);
+            backend_render_fill_rect(&layer->rect,layer->bgColor);
+
         }else{
             // 默认渲染方式
-            SDL_SetRenderDrawColor(renderer, 
-                                layer->color.r, 
-                                layer->color.g, 
-                                layer->color.b, 
-                                layer->color.a);
+            backend_render_fill_rect(&layer->rect,layer->color);
+            
         }
-        SDL_RenderFillRect(renderer, &layer->rect);
     }
+
     // 保存当前渲染目标的裁剪区域
     SDL_Rect prev_clip;
     render_clip_start(layer,&prev_clip);
@@ -277,8 +238,8 @@ void render_layer(Layer* layer) {
     
     render_clip_end(layer,&prev_clip);
 }
-    void render_clip_start(Layer* layer,SDL_Rect* prev_clip){
-    SDL_RenderGetClipRect(renderer, prev_clip);
+void render_clip_start(Layer* layer,SDL_Rect* prev_clip){
+    backend_render_get_clip_rect(prev_clip);
     // 设置当前图层的裁剪区域
     SDL_Rect clip_rect = layer->rect;
     
@@ -303,12 +264,12 @@ void render_layer(Layer* layer) {
     }
     
     // 应用裁剪区域
-    SDL_RenderSetClipRect(renderer, &clip_rect);
+    backend_render_set_clip_rect(&clip_rect);
 }
 
 void render_clip_end(Layer* layer,SDL_Rect* prev_clip){
     // 恢复之前的裁剪区域
-    SDL_RenderSetClipRect(renderer, prev_clip);
+    backend_render_set_clip_rect(prev_clip);
     
 }
 
@@ -341,12 +302,8 @@ void render_scrollbar(Layer* layer){
         SDL_Rect scrollbar_rect = {scrollbar_x, scrollbar_y, scrollbar_width, scrollbar_height};
         
         // 绘制滚动条
-        SDL_SetRenderDrawColor(renderer, 
-                                layer->scrollbar->color.r,
-                                layer->scrollbar->color.g,
-                                layer->scrollbar->color.b,
-                                layer->scrollbar->color.a);
-        SDL_RenderFillRect(renderer, &scrollbar_rect);
+        backend_render_fill_rect(&scrollbar_rect,layer->scrollbar->color);
+  
     }
 
 }

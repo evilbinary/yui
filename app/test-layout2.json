@@ -1,0 +1,76 @@
+{
+    "id": "calculatorApp",
+    "type": "View",
+    "theme": "dark",
+    "style": {
+        "color": "#FFFFFF",
+        "bgColor": "#121212"
+    },
+    "size": [
+        400,
+        600
+    ],
+    "layout": {
+        "type": "vertical",
+        "spacing": 10,
+        "padding": [
+            20,
+            20,
+            20,
+            20
+        ]
+    },
+    "children": [
+        {
+            "id": "displayView",
+            "type": "View",
+            "style": {
+                "bgColor": "#1E1E1E",
+                "borderRadius": 8
+            },
+            "layout": {
+                "type": "vertical",
+                "spacing": 15,
+                "padding": [
+                    10,
+                    10,
+                    10,
+                    10
+                ]
+            },
+            "children": [
+                
+                {
+                    "id": "resultDisplay",
+                    "type": "Label",
+                    "text": "22222",
+                    "style": {
+                        "color": "#FFFFFF",
+                        "fontSize": 36,
+                        "fontWeight": "bold",
+                        "textAlign": "right"
+                    },
+                    "size": [
+                        360,
+                        50
+                    ]
+                },
+                {
+                    "id": "resultDisplay",
+                    "type": "Label",
+                    "text": "33333",
+                    "style": {
+                        "color": "#FFFFFF",
+                        "fontSize": 36,
+                        "fontWeight": "bold",
+                        "textAlign": "right"
+                    },
+                    "size": [
+                        360,
+                        50
+                    ]
+                }
+            ]
+        }
+    ]
+}

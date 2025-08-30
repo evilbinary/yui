@@ -14,6 +14,16 @@ void layout_layer(Layer* layer){
         int content_height = layer->rect.h - padding_top - padding_bottom;
         
         if (layer->layout_manager->type == LAYOUT_HORIZONTAL) {
+            if(layer->parent!=NULL){
+                if(layer->rect.w==0){
+                    layer->rect.w=layer->parent->rect.w;
+                }
+                // if(layer->rect.h==0){
+                //     layer->rect.h=layer->parent->rect.h;
+                // }
+            }
+        
+
             // 计算总权重
             float total_flex = 0;
             int fixed_width_sum = 0;
@@ -50,6 +60,15 @@ void layout_layer(Layer* layer){
                 current_x += child->rect.w + spacing;
             }
         } else if (layer->layout_manager->type == LAYOUT_VERTICAL) {
+            if(layer->parent!=NULL){
+                if(layer->rect.w==0){
+                    layer->rect.w=layer->parent->rect.w;
+                }
+                // if(layer->rect.h==0){
+                //     layer->rect.h=layer->parent->rect.h;
+                // }
+            }
+
             // 计算总权重
             float total_flex = 0;
             int fixed_height_sum = 0;

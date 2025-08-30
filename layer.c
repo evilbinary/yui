@@ -21,7 +21,7 @@ cJSON* parse_json(char* json_path){
     return root_json;
 }
 
-void parse_color(char* valuestring,SDL_Color* color){
+void parse_color(char* valuestring,Color* color){
     if(strlen(valuestring)==9){
         sscanf(valuestring, "#%02hhx%02hhx%02hhx%02hhx", 
             &color->r, &color->g, &color->b,&color->a);

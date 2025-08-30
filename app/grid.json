@@ -7,6 +7,9 @@
         "spacing": 10,
         "type": "vertical"
     },
+    "style": {
+        "bgColor": "#2C3E50"
+    },
     "children": [
         {
             "id": "clearButton",

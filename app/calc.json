@@ -1,6 +1,6 @@
 {
     "id": "calculatorApp",
-    "type": "Panel",
+    "type": "View",
     "theme": "dark",
     "style": {
         "color": "#FFFFFF",
@@ -22,8 +22,8 @@
     },
     "children": [
         {
-            "id": "displayPanel",
-            "type": "Panel",
+            "id": "displayView",
+            "type": "View",
             "style": {
                 "bgColor": "#1E1E1E",
                 "borderRadius": 8
@@ -71,10 +71,13 @@
             ]
         },
         {
-            "id": "buttonsPanel",
+            "id": "buttonsView",
             "type": "Grid",
-            "columns": 4,
-            "spacing": 10,
+            "layout":{
+                "columns": 4,
+                "spacing": 10,
+                "type": "vertical"
+            },
             "children": [
                 {
                     "id": "clearButton",
@@ -97,7 +100,7 @@
                 {
                     "id": "backspaceButton",
                     "type": "Button",
-                    "text": "⌫",
+                    "text": "backSpace",
                     "style": {
                         "color": "#FFFFFF",
                         "bgColor": "#FF5252",
@@ -453,8 +456,8 @@
             ]
         },
         {
-            "id": "memoryPanel",
-            "type": "Panel",
+            "id": "memoryView",
+            "type": "View",
             "style": {
                 "bgColor": "#1E1E1E",
                 "borderRadius": 8

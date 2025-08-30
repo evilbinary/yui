@@ -50,3 +50,41 @@ EventHandler find_event_by_name(const char* name) {
     }
     return NULL; // 未找到
 }
+
+
+
+// ====================== 事件处理器 ======================
+void handle_scroll_event(Layer* layer, int scroll_delta) {
+    if (layer->scrollable) {
+        layer->scroll_offset += scroll_delta * 20; // 每次滚动20像素
+        
+        // 限制滚动范围
+        int content_height = 0;
+        for (int i = 0; i < layer->child_count; i++) {
+            content_height += layer->children[i]->rect.h;
+            if (i > 0) content_height += layer->layout_manager->spacing;
+        }
+        
+        int visible_height = layer->rect.h - layer->layout_manager->padding[0] - layer->layout_manager->padding[2];
+        
+        // 不允许向上滚动超过顶部
+        if (layer->scroll_offset < 0) {
+            layer->scroll_offset = 0;
+        }
+        // 不允许向下滚动超过底部
+        else if (content_height > visible_height && layer->scroll_offset > content_height - visible_height) {
+            layer->scroll_offset = content_height - visible_height;
+        }
+        // 如果内容高度小于可见高度，则不能滚动
+        else if (content_height <= visible_height) {
+            layer->scroll_offset = 0;
+        }
+        
+        // 触发滚动事件回调
+        if (layer->event && layer->event->scroll) {
+            layer->event->scroll(layer);
+        }
+        // 重新布局子元素
+        layout_layer(layer);
+    }
+}
