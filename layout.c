@@ -10,20 +10,19 @@ void layout_layer(Layer* layer){
         int padding_left = layer->layout_manager->padding[3];
         int spacing = layer->layout_manager->spacing;
         
+        if(layer->parent!=NULL){
+            if(layer->rect.w==0){
+                layer->rect.w=layer->parent->rect.w;
+            }
+            if(layer->rect.h==0){
+                layer->rect.h=layer->parent->rect.h;
+            }
+        }
+        
         int content_width = layer->rect.w - padding_left - padding_right;
         int content_height = layer->rect.h - padding_top - padding_bottom;
         
         if (layer->layout_manager->type == LAYOUT_HORIZONTAL) {
-            if(layer->parent!=NULL){
-                if(layer->rect.w==0){
-                    layer->rect.w=layer->parent->rect.w;
-                }
-                // if(layer->rect.h==0){
-                //     layer->rect.h=layer->parent->rect.h;
-                // }
-            }
-        
-
             // 计算总权重
             float total_flex = 0;
             int fixed_width_sum = 0;
@@ -60,28 +59,21 @@ void layout_layer(Layer* layer){
                 current_x += child->rect.w + spacing;
             }
         } else if (layer->layout_manager->type == LAYOUT_VERTICAL) {
-            if(layer->parent!=NULL){
-                if(layer->rect.w==0){
-                    layer->rect.w=layer->parent->rect.w;
-                }
-                // if(layer->rect.h==0){
-                //     layer->rect.h=layer->parent->rect.h;
-                // }
-            }
 
             // 计算总权重
             float total_flex = 0;
             int fixed_height_sum = 0;
-            
+            int no_height_count=0;
             for (int i = 0; i < layer->child_count; i++) {
                 if (layer->children[i]->flex_ratio > 0) {
                     total_flex += layer->children[i]->flex_ratio;
                 } else {
-                    fixed_height_sum += layer->children[i]->fixed_height > 0 ? 
-                                       layer->children[i]->fixed_height : 30; // 默认高度
+                    fixed_height_sum += layer->children[i]->fixed_height; // 默认高度
                 }
-            }
-            
+                if(layer->children[i]->fixed_height==0){
+                    no_height_count++;
+                }
+            }       
             
             // 分配空间
             int available_height = content_height - fixed_height_sum - 
@@ -92,6 +84,9 @@ void layout_layer(Layer* layer){
             if (layer->scrollable) {
                 current_y -= layer->scroll_offset;
             }
+
+
+           
             
             for (int i = 0; i < layer->child_count; i++) {
                 Layer* child = layer->children[i];
@@ -102,7 +97,7 @@ void layout_layer(Layer* layer){
                     child->rect.h = child->fixed_height;
                 } else {
                     // 自动计算高度
-                    child->rect.h = 30; // 默认高度
+                    child->rect.h = available_height/no_height_count ; // 默认高度
                 }
                 
                 child->rect.x = layer->rect.x + padding_left;
@@ -129,7 +124,6 @@ void layout_layer(Layer* layer){
                         child->rect.x =layer->rect.x + child->rect.w -padding_left/2;
                     }
                 }
-                
                 current_y += child->rect.h + spacing;
             }
         }
@@ -227,6 +221,7 @@ void layout_layer(Layer* layer){
         int available_width = layer->rect.w - padding_left - padding_right;
         int available_height = layer->rect.h - padding_top - padding_bottom;
         
+        printf("grid %d,%d\n",available_width, available_height);
         // 计算每个网格单元的尺寸
         int rows = (layer->child_count + columns - 1) / columns; // 向上取整计算行数
         int cell_width = (available_width - (columns - 1) * spacing) / columns;
@@ -250,4 +245,11 @@ void layout_layer(Layer* layer){
     if(layer->sub!=NULL){
         layout_layer(layer->sub);
     }
+
+    if(layer->child_count>0){
+         for (int i = 0; i < layer->child_count; i++) {
+            layout_layer(layer->children[i]);
+         }
+    }
+    
 }

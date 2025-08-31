@@ -253,6 +253,14 @@ void render_layer(Layer* layer) {
     }
     
     render_clip_end(layer,&prev_clip);
+
+#if DEBUG_VIEW
+    Texture* text_texture = render_text(layer,layer->id, (Color){strlen(layer->id)*40%255, 0, 0, 255});
+    Rect r={layer->rect.x+2,layer->rect.y,strlen(layer->id)*6,12};
+    backend_render_text_copy(text_texture,NULL,&r);
+    backend_render_text_destroy(text_texture);
+    backend_render_rect(&layer->rect,(Color){strlen(layer->id)*40%255, 0, 0, 255});
+#endif
 }
 void render_clip_start(Layer* layer,Rect* prev_clip){
     backend_render_get_clip_rect(prev_clip);

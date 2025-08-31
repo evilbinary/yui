@@ -24,6 +24,7 @@
         {
             "id": "displayView",
             "type": "View",
+            "height":40,
             "style": {
                 "bgColor": "#1E1E1E",
                 "borderRadius": 8
@@ -56,7 +57,7 @@
                 {
                     "id": "resultDisplay",
                     "type": "Label",
-                    "text": "0",
+                    "text": "",
                     "style": {
                         "color": "#FFFFFF",
                         "fontSize": 36,
@@ -100,7 +101,7 @@
                 {
                     "id": "backspaceButton",
                     "type": "Button",
-                    "text": "backSpace",
+                    "text": "BackSpace",
                     "style": {
                         "color": "#FFFFFF",
                         "bgColor": "#FF5252",
@@ -462,6 +463,7 @@
                 "bgColor": "#1E1E1E",
                 "borderRadius": 8
             },
+            "height":60,
             "layout": {
                 "type": "horizontal",
                 "spacing": 10,

@@ -20,6 +20,7 @@
 #endif
 
 #define SDL2 1
+#define DEBUG_VIEW 1 
 
 #if SDL2
 

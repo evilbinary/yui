@@ -97,7 +97,11 @@ Layer* parse_layer(cJSON* json_obj,Layer* parent) {
     cJSON* size = cJSON_GetObjectItem(json_obj, "size");
     if(size!=NULL){
         layer->rect.w = cJSON_GetArrayItem(size, 0)->valueint;
-        layer->rect.h = cJSON_GetArrayItem(size, 1)->valueint;
+        if(cJSON_GetArraySize(size)>1){
+            layer->rect.h = cJSON_GetArrayItem(size, 1)->valueint;
+        }else{
+            layer->rect.h=layer->rect.w;
+        }
         layer->fixed_width= layer->rect.w;
         layer->fixed_height= layer->rect.h;
 
