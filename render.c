@@ -221,6 +221,56 @@ void render_layer(Layer* layer) {
             backend_render_rect_color(&layer->rect,100, 100, 100, 255);
         }
     }
+    if (layer->type == PROGRESS) {
+        // 按钮类型渲染：绘制背景和边框
+        if(layer->bgColor.a>0){
+            backend_render_fill_rect(&layer->rect,layer->bgColor);
+        }
+        if(layer->data!=NULL){
+            Rect fill_rect = {
+                    layer->rect.x ,
+                    layer->rect.y,
+                    layer->rect.w *(layer->data->json->valueint/100.0),
+                    layer->rect.h
+                };
+            backend_render_fill_rect(&fill_rect,layer->color);
+        }
+            
+        // 渲染按钮文本
+        if (strlen(layer->text) > 0) {
+            // 使用ttf渲染文本
+           
+            Color text_color = layer->color; // 白色文字
+            Texture* text_texture = render_text(layer,layer->text, text_color);
+            
+            if (text_texture) {
+                int text_width, text_height;
+                backend_query_texture(text_texture, NULL, NULL, &text_width, &text_height);
+                
+                Rect text_rect = {
+                    layer->rect.x + (layer->rect.w - text_width/ scale) / 2,  // 居中
+                    layer->rect.y + (layer->rect.h - text_height/ scale) / 2,
+                    text_width / scale,
+                    text_height / scale
+                };
+                
+                // 确保文本不会超出按钮边界
+                if (text_rect.w > layer->rect.w - 20) {
+                    text_rect.w = layer->rect.w - 20;
+                    text_rect.x = layer->rect.x + 10;
+                }
+                
+                if (text_rect.h > layer->rect.h) {
+                    text_rect.h = layer->rect.h;
+                    text_rect.y = layer->rect.y;
+                }
+                
+                backend_render_text_copy(text_texture,NULL,&text_rect);
+                backend_render_text_destroy(text_texture);
+                
+            }
+        }
+    } 
     else {
         //printf("layer->%s %d\n",layer->id,layer->type);
     // 绘制背景

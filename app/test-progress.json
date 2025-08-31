@@ -1,0 +1,55 @@
+{
+    "id": "testProgressApp",
+    "type": "View",
+    "theme": "dark",
+    "style": {
+        "color": "#FFFFFF",
+        "bgColor": "#121212"
+    },
+    "layout": {
+        "type": "vertical",
+        "spacing": 10,
+        "padding": [
+            20,
+            20,
+            20,
+            20
+        ]
+    },
+    "children": [
+        {
+            "id": "progress1",
+            "type": "Progress",
+            "position": [
+                10,
+                10
+            ],
+            "size": [
+                200,
+                40
+            ],
+            "data": 20,
+            "style": {
+                "color": "#2C3E5022",
+                "bgColor":"#CCCCCC"
+            }
+        },
+        {
+            "id": "progress2",
+            "type": "Progress",
+            "position": [
+                10,
+                10
+            ],
+            "size": [
+                300,
+                20
+            ],
+            "data": 50,
+            "style": {
+                "color": "#2C3E50",
+                "bgColor":"#CCCCCC"
+            }
+        }
+    ]
+}

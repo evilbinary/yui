@@ -81,11 +81,13 @@ typedef enum {
     LABEL,
     IMAGE,
     LIST,
-    GRID  // 添加GRID类型
+    GRID,  // 添加GRID类型
+    PROGRESS
 } LayerType;
 
-#define LAYER_TYPE_SIZE 7  // 更新图层类型数量
 extern char *layer_type_name[];
+#define LAYER_TYPE_SIZE (sizeof(layer_type_name) / sizeof(layer_type_name[0]))  // 更新图层类型数量
+
 
 typedef struct LayoutManager {
     LayoutType type;

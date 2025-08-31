@@ -76,7 +76,7 @@
             "type": "Grid",
             "layout":{
                 "columns": 4,
-                "spacing": 10,
+                "spacing": 6,
                 "type": "vertical"
             },
             "children": [
@@ -101,7 +101,7 @@
                 {
                     "id": "backspaceButton",
                     "type": "Button",
-                    "text": "BackSpace",
+                    "text": "回退",
                     "style": {
                         "color": "#FFFFFF",
                         "bgColor": "#FF5252",

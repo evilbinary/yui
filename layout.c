@@ -204,6 +204,10 @@ void layout_layer(Layer* layer){
                 
                 current_y += layer->children[i]->rect.h + spacing;
             }
+
+            for (int i = 0; i < layer->item_template->child_count; i++) {
+                layout_layer(layer->item_template->children[i]);
+            }
         }
         
     }else if(layer->type == GRID){

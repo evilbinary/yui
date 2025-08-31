@@ -1,7 +1,7 @@
 #include "layer.h"
 
 // 更新图层类型名称数组，添加GRID
-char *layer_type_name[]={"View","Button","Input","Label","Image","List","Grid"};
+char *layer_type_name[]={"View","Button","Input","Label","Image","List","Grid","Progress"};
 
 
 cJSON* parse_json(char* json_path){

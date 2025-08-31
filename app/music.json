@@ -1,0 +1,269 @@
+{
+    "id": "musicPlayer",
+    "type": "View",
+    "theme": "dark",
+    "size": [800, 600],
+    "style": {
+        "color": "#FFFFFF",
+        "bgColor": "#121212"
+    },
+    "layout": {
+        "type": "vertical",
+        "spacing": 15,
+        "padding": [20, 20, 20, 20]
+    },
+    "children": [
+        {
+            "id": "albumCover",
+            "type": "Image",
+            "source": "duck.png",
+            "size": [300, 300],
+            "layout": {
+                "type": "center"
+            },
+            "style": {
+                "borderRadius": 8,
+                "mode": "cover"
+            }
+        },
+        {
+            "id": "songInfo",
+            "type": "View",
+            "layout": {
+                "type": "vertical",
+                "spacing": 5,
+                "padding": [10, 0, 10, 0]
+            },
+            "children": [
+                {
+                    "id": "songTitle",
+                    "type": "Label",
+                    "text": "Unknown Track",
+                    "style": {
+                        "fontSize": 24,
+                        "fontWeight": "bold"
+                    }
+                },
+                {
+                    "id": "artistName",
+                    "type": "Label",
+                    "text": "Unknown Artist",
+                    "style": {
+                        "fontSize": 18,
+                        "color": "#B3B3B3"
+                    }
+                }
+            ]
+        },
+        {
+            "id": "progressArea",
+            "type": "View",
+            "layout": {
+                "type": "vertical",
+                "spacing": 5
+            },
+            "children": [
+                {
+                    "id": "progressBar",
+                    "type": "View",
+                    "size": [600, 4],
+                    "style": {
+                        "bgColor": "#535353",
+                        "borderRadius": 2
+                    },
+                    "children": [
+                        {
+                            "id": "progressFill",
+                            "type": "View",
+                            "size": [0, 4],
+                            "style": {
+                                "bgColor": "#1DB954",
+                                "borderRadius": 2
+                            }
+                        }
+                    ]
+                },
+                {
+                    "id": "timeLabels",
+                    "type": "View",
+                    "layout": {
+                        "type": "horizontal",
+                        "spacing": 0,
+                        "justify": "space-between"
+                    },
+                    "children": [
+                        {
+                            "id": "currentTime",
+                            "type": "Label",
+                            "text": "0:00",
+                            "style": {
+                                "color": "#B3B3B3"
+                            }
+                        },
+                        {
+                            "id": "totalTime",
+                            "type": "Label",
+                            "text": "0:00",
+                            "style": {
+                                "color": "#B3B3B3"
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "controlPanel",
+            "type": "View",
+            "layout": {
+                "type": "horizontal",
+                "spacing": 25,
+                "padding": [20, 0, 20, 0]
+            },
+            "children": [
+                {
+                    "id": "shuffleButton",
+                    "type": "Button",
+                    "text": "🔀",
+                    "size": [40, 40],
+                    "style": {
+                        "color": "#B3B3B3",
+                        "fontSize": 20
+                    }
+                },
+                {
+                    "id": "prevButton",
+                    "type": "Button",
+                    "text": "⏮",
+                    "size": [50, 50],
+                    "style": {
+                        "fontSize": 24
+                    }
+                },
+                {
+                    "id": "playButton",
+                    "type": "Button",
+                    "text": "▶",
+                    "size": [70, 70],
+                    "style": {
+                        "bgColor": "#1DB954",
+                        "borderRadius": 35,
+                        "fontSize": 30
+                    }
+                },
+                {
+                    "id": "nextButton",
+                    "type": "Button",
+                    "text": "⏭",
+                    "size": [50, 50],
+                    "style": {
+                        "fontSize": 24
+                    }
+                },
+                {
+                    "id": "repeatButton",
+                    "type": "Button",
+                    "text": "🔁",
+                    "size": [40, 40],
+                    "style": {
+                        "color": "#B3B3B3",
+                        "fontSize": 20
+                    }
+                }
+            ]
+        },
+        {
+            "id": "volumeControl",
+            "type": "View",
+            "layout": {
+                "type": "horizontal",
+                "spacing": 10,
+                "padding": [10, 0, 10, 0]
+            },
+            "children": [
+                {
+                    "id": "volumeIcon",
+                    "type": "Button",
+                    "text": "🔊",
+                    "size": [30, 30]
+                },
+                {
+                    "id": "volumeBar",
+                    "type": "View",
+                    "size": [150, 4],
+                    "style": {
+                        "bgColor": "#535353",
+                        "borderRadius": 2
+                    },
+                    "children": [
+                        {
+                            "id": "volumeLevel",
+                            "type": "View",
+                            "size": [100, 4],
+                            "style": {
+                                "bgColor": "#1DB954",
+                                "borderRadius": 2
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "playlistPanel",
+            "type": "List",
+            "size": [600, 150],
+            "style": {
+                "bgColor": "#181818",
+                "borderRadius": 8
+            },
+            "data": [
+                {"title": "Song One", "artist": "Artist A", "duration": "3:45"},
+                {"title": "Song Two", "artist": "Artist B", "duration": "4:20"}
+            ],
+            "binding": {
+                "path": "playlist"
+            },
+            "itemTemplate": {
+                "type": "View",
+                "layout": {
+                    "type": "horizontal",
+                    "spacing": 15,
+                    "padding": [10, 5, 10, 5]
+                },
+                "children": [
+                    {
+                        "type": "Label",
+                        "text": "${title}",
+                        "style": {
+                            "flex": 2,
+                            "fontWeight": "bold"
+                        }
+                    },
+                    {
+                        "type": "Label",
+                        "text": "${artist}",
+                        "style": {
+                            "flex": 1,
+                            "color": "#B3B3B3"
+                        }
+                    },
+                    {
+                        "type": "Label",
+                        "text": "${duration}",
+                        "style": {
+                            "flex": 0.5,
+                            "color": "#B3B3B3"
+                        }
+                    }
+                ]
+            },
+            "scrollbar": {
+                "scrollable": true,
+                "visible": true,
+                "thickness": 6,
+                "color": "#535353"
+            }
+        }
+    ]
+}
