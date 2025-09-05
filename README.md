@@ -1,5 +1,5 @@
 # YUI
-YUI is a GUI
+YUI is a GUI for AI
 
 https://github.com/evilbinary/YUI
 

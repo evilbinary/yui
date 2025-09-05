@@ -271,7 +271,7 @@ void render_layer(Layer* layer) {
             }
         }
     } 
-    else {
+    else if(layer->type==VIEW) {
         //printf("layer->%s %d\n",layer->id,layer->type);
     // 绘制背景
         if(layer->bgColor.a > 0) {

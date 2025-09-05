@@ -145,6 +145,12 @@ Layer* parse_layer(cJSON* json_obj,Layer* parent) {
         layer->data->json= copy;
         layer->data->size=cJSON_GetArraySize(data);
     }
+
+    //数据解析
+    cJSON* rotation = cJSON_GetObjectItem(json_obj, "rotation");
+    if (rotation) {
+        layer->rotation =rotation->valueint;
+    }
     
     // 解析列表项模板
     cJSON* item_template = cJSON_GetObjectItem(json_obj, "itemTemplate");

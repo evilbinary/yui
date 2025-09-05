@@ -145,6 +145,8 @@ typedef struct Layer {
     Texture* texture;
     Layer** children;
     int child_count;
+
+    int rotation;
     
     // 新增布局管理器
     LayoutManager* layout_manager;
