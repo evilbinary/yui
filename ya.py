@@ -41,6 +41,6 @@ def run(target):
         '-lcjson ',
         '-F../libs/'
         ),
-    add_files("*.c"),
+    add_files("src/*.c"),
     on_run(run)
 )

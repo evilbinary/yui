@@ -1,0 +1,68 @@
+{
+    "id": "analogClock",
+    "type": "View",
+    "size": [200, 200],
+    "style": {
+        "bgColor": "#FFFFFF",
+        "border": "2px solid #333",
+        "borderRadius": "50%"
+    },
+    "children": [
+        {
+            "id": "hourHand",
+            "type": "View",
+            "position": [100, 100],
+            "size": [4, 60],
+            "anchor": [0.5, 0.9],
+            "rotation": 0,
+            "render":"clock",
+            "style": {
+                "bgColor": "#333",
+                "borderRadius": "2px"
+            }
+        },
+        {
+            "id": "minuteHand",
+            "type": "View",
+            "position": [100, 100],
+            "size": [3, 80],
+            "anchor": [0.5, 0.9],
+            "rotation": 0,
+            "style": {
+                "bgColor": "#666",
+                "borderRadius": "2px"
+            }
+        },
+        {
+            "id": "secondHand",
+            "type": "View",
+            "position": [100, 100],
+            "size": [2, 90],
+            "anchor": [0.5, 0.9],
+            "rotation": 0,
+            "style": {
+                "bgColor": "#FF0000",
+                "borderRadius": "1px"
+            }
+        },
+        {
+            "id": "centerPin",
+            "type": "View",
+            "position": [100, 100],
+            "size": [10, 10],
+            "anchor": [0.5, 0.5],
+            "style": {
+                "bgColor": "#FF0000",
+                "borderRadius": "50%"
+            }
+        },
+        {
+            "id": "clockTimer",
+            "type": "Timer",
+            "interval": 1000,
+            "events": {
+                "onTick": "@updateClockHands"
+            }
+        }
+    ]
+}

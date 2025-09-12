@@ -50,6 +50,108 @@
                 "color": "#2C3E50",
                 "bgColor":"#CCCCCC"
             }
+        },
+        {
+            "id": "progress2",
+            "type": "Progress",
+            "position": [
+                10,
+                10
+            ],
+            "size": [
+                300,
+                20
+            ],
+            "data": 30,
+            "style": {
+                "color": "#2C3E50",
+                "bgColor":"#CCCCCC"
+            }
+        },
+        {
+            "id": "progress2",
+            "type": "Progress",
+            "position": [
+                10,
+                10
+            ],
+            "size": [
+                300,
+                20
+            ],
+            "data": 30,
+            "style": {
+                "color": "#2C3E50",
+                "bgColor":"#CCCCCC"
+            }
+        },
+        {
+            "id": "progress2",
+            "type": "Progress",
+            "position": [
+                10,
+                10
+            ],
+            "size": [
+                300,
+                20
+            ],
+            "data": 30,
+            "style": {
+                "color": "#2C3E50",
+                "bgColor":"#CCCCCC"
+            }
+        },
+        {
+            "id": "progress2",
+            "type": "Progress",
+            "position": [
+                10,
+                10
+            ],
+            "size": [
+                300,
+                20
+            ],
+            "data": 30,
+            "style": {
+                "color": "#2C3E50",
+                "bgColor":"#CCCCCC"
+            }
+        },
+        {
+            "id": "progress2",
+            "type": "Progress",
+            "position": [
+                10,
+                10
+            ],
+            "size": [
+                300,
+                20
+            ],
+            "data": 30,
+            "style": {
+                "color": "#2C3E50",
+                "bgColor":"#CCCCCC"
+            }
+        },
+        {
+            "id": "progress2",
+            "type": "Progress",
+            "position": [
+                10,
+                10
+            ],
+            "size": [
+                400,
+                20
+            ],
+            "data": 30,
+            "style": {
+                "color": "#2C3E50",
+                "bgColor":"#CCCCCC"
+            }
         }
     ]
 }

@@ -133,6 +133,12 @@ typedef struct Event {
     char scroll_name[MAX_PATH];
 } Event;
 
+typedef struct Animation{
+    float target_x;
+    float progress;
+    float (*easing_func)(float);
+}Animation;
+
 typedef struct Layer Layer;
 typedef struct Layer {
     char id[50];
@@ -147,6 +153,9 @@ typedef struct Layer {
     int child_count;
 
     int rotation;
+
+    //动画
+    Animation* animation;
     
     // 新增布局管理器
     LayoutManager* layout_manager;
