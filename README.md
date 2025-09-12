@@ -18,7 +18,13 @@ https://github.com/evilbinary/YUI
 
 ```
 
+## 运行
+
+```bash
+ya -r yui
+```
 
 ## 截图
 
 <img src="https://github.com/evilbinary/yui/blob/main/docs/login.png?raw=true" width="800px" />
+
