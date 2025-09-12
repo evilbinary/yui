@@ -9,7 +9,21 @@ project("yui",
 
 
 target("yui") 
+def run(target):
+    targetfile = target.targetfile()
+    sourcefiles = target.sourcefiles()
+    arch=target.get_arch()
+    arch_type= target.get_arch_type()
+    mode =target.get_config('mode')
+    plat=target.plat()
+
+    yui='export DYLD_FRAMEWORK_PATH=../libs && export DYLD_LIBRARY_PATH="../libs" '
+    yui+="&& ./build/"+str(plat)+"/"+str(arch)+"/"+str(mode)+"/yui"
+
+    print('run '+str(plat)+' yui',yui)
+    os.shell(yui)
 (
+    add_rules("mode.debug", "mode.release"),
     set_kind("binary"),
     add_cflags(
         '-g',
@@ -28,4 +42,5 @@ target("yui")
         '-F../libs/'
         ),
     add_files("*.c"),
+    on_run(run)
 )
