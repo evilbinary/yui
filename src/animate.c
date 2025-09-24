@@ -52,7 +52,7 @@ float lagrange_interpolate(float x[], float y[], int n, float xi) {
 }
 
 // 创建动画对象
-Animation* create_animation(float duration, float (*easing_func)(float)) {
+Animation* animation_create(float duration, float (*easing_func)(float)) {
     Animation* animation = (Animation*)malloc(sizeof(Animation));
     if (!animation) {
         return NULL;
@@ -95,7 +95,7 @@ Animation* create_animation(float duration, float (*easing_func)(float)) {
 }
 
 // 启动动画
-void start_animation(Layer* layer, Animation* animation) {
+void animation_start(Layer* layer, Animation* animation) {
     if (!layer || !animation) {
         return;
     }
@@ -124,7 +124,7 @@ void start_animation(Layer* layer, Animation* animation) {
 }
 
 // 停止动画
-void stop_animation(Layer* layer) {
+void animation_stop(Layer* layer) {
     if (!layer || !layer->animation) {
         return;
     }
@@ -147,7 +147,7 @@ void stop_animation(Layer* layer) {
 }
 
 // 暂停动画
-void pause_animation(Layer* layer) {
+void animation_pause(Layer* layer) {
     if (!layer || !layer->animation) {
         return;
     }
@@ -158,7 +158,7 @@ void pause_animation(Layer* layer) {
 }
 
 // 恢复动画
-void resume_animation(Layer* layer) {
+void animation_resume(Layer* layer) {
     if (!layer || !layer->animation) {
         return;
     }
@@ -169,7 +169,7 @@ void resume_animation(Layer* layer) {
 }
 
 // 更新动画
-void update_animation(Layer* layer, float delta_time) {
+void animation_update(Layer* layer, float delta_time) {
     if (!layer || !layer->animation) {
         return;
     }
@@ -258,7 +258,7 @@ void update_animation(Layer* layer, float delta_time) {
             
             // 如果填充模式是NONE，则停止动画并恢复初始状态
             if (animation->fill_mode == ANIMATION_FILL_NONE) {
-                stop_animation(layer);
+                animation_stop(layer);
                 return;
             }
         }
@@ -304,7 +304,7 @@ void update_animation(Layer* layer, float delta_time) {
 }
 
 // 设置动画目标属性
-void set_animation_target(Animation* animation, AnimationProperty property, float value) {
+void animation_set_target(Animation* animation, AnimationProperty property, float value) {
     if (!animation) {
         return;
     }
@@ -341,7 +341,7 @@ void set_animation_target(Animation* animation, AnimationProperty property, floa
 }
 
 // 设置动画填充模式
-void set_animation_fill_mode(Animation* animation, AnimationFillMode fill_mode) {
+void animation_set_fill_mode(Animation* animation, AnimationFillMode fill_mode) {
     if (!animation) {
         return;
     }
@@ -350,7 +350,7 @@ void set_animation_fill_mode(Animation* animation, AnimationFillMode fill_mode) 
 }
 
 // 设置动画完成回调函数
-void set_animation_complete_callback(Animation* animation, void (*on_complete)(Layer*)) {
+void animation_set_complete_callback(Animation* animation, void (*on_complete)(Layer*)) {
     if (!animation) {
         return;
     }
@@ -361,11 +361,11 @@ void set_animation_complete_callback(Animation* animation, void (*on_complete)(L
 // 图层动画更新函数，现在作为update_animation的简化版本
 void layer_update_animation(Layer* layer) {
     // 使用默认的delta_time值，例如16ms (约60FPS)
-    update_animation(layer, DEFAULT_DELTA_TIME);
+    animation_update(layer, DEFAULT_DELTA_TIME);
 }
 
 // 设置动画重复类型
-void set_animation_repeat_type(Animation* animation, AnimationRepeatType repeat_type) {
+void animation_set_repeat_type(Animation* animation, AnimationRepeatType repeat_type) {
     if (!animation) {
         return;
     }
@@ -373,7 +373,7 @@ void set_animation_repeat_type(Animation* animation, AnimationRepeatType repeat_
 }
 
 // 设置动画重复次数
-void set_animation_repeat_count(Animation* animation, int repeat_count) {
+void animation_set_repeat_count(Animation* animation, int repeat_count) {
     if (!animation) {
         return;
     }
@@ -381,7 +381,7 @@ void set_animation_repeat_count(Animation* animation, int repeat_count) {
 }
 
 // 设置动画重复时是否反向播放
-void set_animation_reverse_on_repeat(Animation* animation, bool reverse_on_repeat) {
+void animation_set_reverse_on_repeat(Animation* animation, bool reverse_on_repeat) {
     if (!animation) {
         return;
     }

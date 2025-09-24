@@ -90,22 +90,22 @@ extern float interpolate_with_easing(float start, float end, float t, float (*ea
 extern float lagrange_interpolate(float x[], float y[], int n, float xi);
 
 // 动画管理函数
-Animation* create_animation(float duration, float (*easing_func)(float));
-void start_animation(Layer* layer, Animation* animation);
-void stop_animation(Layer* layer);
-void pause_animation(Layer* layer);
-void resume_animation(Layer* layer);
-void update_animation(Layer* layer, float delta_time);
+Animation* animation_create(float duration, float (*easing_func)(float));
+void animation_start(Layer* layer, Animation* animation);
+void animation_stop(Layer* layer);
+void animation_pause(Layer* layer);
+void animation_resume(Layer* layer);
+void animation_update(Layer* layer, float delta_time);
 
 // 设置动画目标属性
-void set_animation_target(Animation* animation, AnimationProperty property, float value);
-void set_animation_fill_mode(Animation* animation, AnimationFillMode fill_mode);
-void set_animation_complete_callback(Animation* animation, void (*on_complete)(Layer*));
+void animation_set_target(Animation* animation, AnimationProperty property, float value);
+void animation_set_fill_mode(Animation* animation, AnimationFillMode fill_mode);
+void animation_set_complete_callback(Animation* animation, void (*on_complete)(Layer*));
 
 // 设置动画重复属性
-void set_animation_repeat_type(Animation* animation, AnimationRepeatType repeat_type);
-void set_animation_repeat_count(Animation* animation, int repeat_count);
-void set_animation_reverse_on_repeat(Animation* animation, bool reverse_on_repeat);
+void animation_set_repeat_type(Animation* animation, AnimationRepeatType repeat_type);
+void animation_set_repeat_count(Animation* animation, int repeat_count);
+void animation_set_reverse_on_repeat(Animation* animation, bool reverse_on_repeat);
 
 // 图层动画更新函数（使用默认delta_time值的简化版本）
 void layer_update_animation(Layer* layer);
