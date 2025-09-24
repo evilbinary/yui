@@ -23,7 +23,7 @@
 
 // 功能定义区域
 #define SDL2 1
-// #define DEBUG_VIEW 1 
+#define DEBUG_VIEW 1 
 #define YUI_ANIMATION 1
 
 
@@ -134,6 +134,33 @@ typedef struct Scrollbar {
     int thickness;
     Color color;
 } Scrollbar;
+
+// 触屏事件类型枚举
+typedef enum {
+    TOUCH_TYPE_START,    // 触摸开始
+    TOUCH_TYPE_MOVE,     // 触摸移动
+    TOUCH_TYPE_END,      // 触摸结束
+    TOUCH_TYPE_SWIPE,    // 滑动
+    TOUCH_TYPE_DOUBLE_TAP, // 双击
+    TOUCH_TYPE_LONG_PRESS, // 长按
+    TOUCH_TYPE_PINCH,    // 捏合
+    TOUCH_TYPE_ROTATE    // 旋转
+} TouchType;
+
+// 触屏事件参数结构
+typedef struct TouchEvent {
+    TouchType type;       // 事件类型
+    int x;                // x坐标
+    int y;                // y坐标
+    int deltaX;           // x方向变化量
+    int deltaY;           // y方向变化量
+    float scale;          // 缩放比例（用于捏合）
+    float rotation;       // 旋转角度（用于旋转）
+    int fingerCount;      // 手指数量
+    Uint32 timestamp;     // 时间戳
+} TouchEvent;
+
+// 事件结构
 typedef struct Event {
     char click_name[MAX_PATH];
     void (*click)();  // 事件回调函数指针
@@ -141,6 +168,10 @@ typedef struct Event {
     // 添加滚动事件回调函数指针
     void (*scroll)(); 
     char scroll_name[MAX_PATH];
+    
+    // 合并的触屏事件
+    char touch_name[MAX_PATH];
+    void (*touch)(TouchEvent* event);  // 统一的触屏事件处理函数
 } Event;
 
 // Animation结构体在animate.h中定义

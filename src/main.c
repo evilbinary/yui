@@ -15,6 +15,10 @@ void hello_world(Layer* layer) {
     printf("你好，世界！ %s\n",layer->text);
 }
 
+void hello_touch(Layer* layer) {
+    printf("touch %s\n",layer->text);
+}
+
 // ====================== 主入口 ======================
 int main(int argc, char* argv[]) {
 
@@ -29,7 +33,8 @@ int main(int argc, char* argv[]) {
 
     //注册事件
     register_event_handler("@hello", hello_world);
-    
+    register_event_handler("@helloTouch", hello_touch);
+
     cJSON* root_json=parse_json(json_path);
     Layer* ui_root = parse_layer(root_json,NULL);
 

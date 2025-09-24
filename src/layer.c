@@ -159,7 +159,7 @@ Layer* parse_layer(cJSON* json_obj,Layer* parent) {
         layer->item_template = parse_layer(item_template,parent);
     }
 
-  
+    
     
     cJSON* scrollbar = cJSON_GetObjectItem(json_obj, "scrollbar");
     if (scrollbar) {
@@ -320,6 +320,22 @@ Layer* parse_layer(cJSON* json_obj,Layer* parent) {
             
             EventHandler handler = find_event_by_name(handler_id);
             layer->event->scroll = handler;
+        }
+        // 解析统一触屏事件
+        if (cJSON_HasObjectItem(events, "onTouch")) {
+            if (!layer->event) {
+                layer->event = malloc(sizeof(Event));
+                memset(layer->event, 0, sizeof(Event));
+            }
+            const char* handler_id = cJSON_GetObjectItem(events, "onTouch")->valuestring;
+            strcpy(layer->event->touch_name, handler_id);
+            
+            // 查找事件处理函数
+            EventHandler handler = find_event_by_name(handler_id);
+            if (handler) {
+                // 由于EventHandler和touch函数签名不同，这里需要进行类型转换
+                layer->event->touch = (void (*)(TouchEvent*))handler;
+            }
         }
     }
     

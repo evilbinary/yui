@@ -1,0 +1,88 @@
+{
+  "id": "touch-test-app",
+  "type": "View",
+  "size": [800, 600],
+  "style": {
+    "color": "#FFFFFF",
+    "bgColor": "#1E1E1E"
+  },
+  "children": [
+    {
+      "id": "background",
+      "type": "View",
+      "position": [0, 0],
+      "size": [800, 600],
+      "style": {
+        "bgColor": "#1E1E1E"
+      },
+      "zIndex": 0
+    },
+    {
+      "id": "touch-area",
+      "type": "View",
+      "position": [100, 100],
+      "size": [600, 400],
+      "style": {
+        "bgColor": "#333333",
+        "borderColor": "#CCCCCC",
+        "borderWidth": 2
+      },
+      "zIndex": 1,
+      "events": {
+        "onTouch": "@helloTouch"
+      }
+    },
+    {
+      "id": "info-text",
+      "type": "Label",
+      "position": [20, 20],
+      "text": "触屏测试区域",
+      "font_size": 20,
+      "style": {
+        "color": "#FFFFFF"
+      },
+      "zIndex": 2
+    },
+    {
+      "id": "touch-type-text",
+      "type": "Label",
+      "position": [120, 520],
+      "text": "等待触摸...",
+      "font_size": 18,
+      "style": {
+        "color": "#CCCCFF"
+      },
+      "zIndex": 2
+    },
+    {
+      "id": "touch-coords-text",
+      "type": "Label",
+      "position": [120, 550],
+      "text": "坐标: --,--",
+      "font_size": 16,
+      "style": {
+        "color": "#CCCCFF"
+      },
+      "zIndex": 2
+    },
+    {
+      "id": "gesture-indicator",
+      "type": "View",
+      "position": [400, 300],
+      "size": [100, 100],
+      "style": {
+        "borderColor": "#00CC00",
+        "borderWidth": 2,
+        "bgColor": "#00000000",
+        "borderRadius": 50
+      },
+      "zIndex": 3,
+      "visible": false
+    }
+  ],
+  "meta": {
+    "name": "触屏测试应用",
+    "version": "1.0.0",
+    "description": "测试各种触摸手势事件: 点击、滑动、长按、双击、捏合、旋转"
+  }
+}

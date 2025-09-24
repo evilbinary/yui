@@ -1,16 +1,32 @@
 #include "backend.h"
 #include "event.h"
 #include "render.h"
+#include "ytype.h"
 
 
 
 #define WINDOW_WIDTH 1000
+#define MAX_TOUCHES 10
 
 // ====================== 全局渲染器 ======================
 SDL_Renderer* renderer = NULL;
 float scale=1.0;
 SDL_Window* window=NULL;
 DFont* default_font=NULL;
+
+// 触屏事件状态
+typedef struct {
+    int fingerCount;          // 当前触摸点数量
+    int lastX[MAX_TOUCHES];   // 上次触摸点X坐标
+    int lastY[MAX_TOUCHES];   // 上次触摸点Y坐标
+    Uint32 startTime;         // 触摸开始时间戳（用于长按检测）
+    Uint32 lastTapTime;       // 上次点击时间戳（用于双击检测）
+    int tapCount;             // 点击次数
+    int longPressDetected;    // 是否已检测到长按
+} TouchState;
+
+#define MAX_TOUCHES 10
+TouchState touchState = {0};
 
 // 检查是否Retina显示屏并获取缩放因子
 float getDisplayScale(SDL_Window* window) {
@@ -52,10 +68,49 @@ int backend_init(){
 
     SDL_RenderSetScale(renderer, scale, scale);
     
+    // 初始化触摸状态
+    memset(&touchState, 0, sizeof(TouchState));
+    
     return 0;
 
 }
 
+// 重置触摸状态
+void resetTouchState() {
+    touchState.fingerCount = 0;
+    memset(touchState.lastX, 0, sizeof(touchState.lastX));
+    memset(touchState.lastY, 0, sizeof(touchState.lastY));
+    touchState.longPressDetected = 0;
+}
+
+// 检查点是否在图层内
+int pointInLayer(SDL_Point* point, Layer* layer) {
+    return SDL_PointInRect(point, &layer->rect);
+}
+
+// 递归处理图层的触屏事件
+void propagateTouchEvent(Layer* layer, TouchEvent* event) {
+    if (!layer || !event) return;
+    
+    // 检查点是否在当前图层内
+    SDL_Point point = {event->x, event->y};
+    if (pointInLayer(&point, layer)) {
+        // 调用当前图层的触摸事件处理函数
+        if (layer->event && layer->event->touch) {
+            layer->event->touch(event);
+        }
+        
+        // 递归处理子图层
+        for (int i = 0; i < layer->child_count; i++) {
+            propagateTouchEvent(layer->children[i], event);
+        }
+        
+        // 处理子图层
+        if (layer->sub) {
+            propagateTouchEvent(layer->sub, event);
+        }
+    }
+}
 
 void handle_event(Layer* root, SDL_Event* event) {
     if (event->type == SDL_MOUSEBUTTONDOWN) {
@@ -83,6 +138,163 @@ void handle_event(Layer* root, SDL_Event* event) {
         }
         if(root->sub){
             handle_scroll_event(root->sub, -event->wheel.y);
+        }
+    }
+    // 触摸开始事件
+    else if (event->type == SDL_FINGERDOWN) {
+        // 更新触摸状态
+        touchState.fingerCount++;
+        if (touchState.fingerCount == 1) {
+            touchState.startTime = SDL_GetTicks();
+            touchState.longPressDetected = 0;
+        }
+        
+        // 转换触摸坐标为窗口坐标
+        int x, y;
+        SDL_GetWindowSize(window, &x, &y);
+        x = (int)(event->tfinger.x * x);
+        y = (int)(event->tfinger.y * y);
+        
+        // 保存触摸位置
+        int touchId = event->tfinger.fingerId % MAX_TOUCHES;
+        touchState.lastX[touchId] = x;
+        touchState.lastY[touchId] = y;
+        
+        // 创建触摸事件
+        TouchEvent touchEvent;
+        memset(&touchEvent, 0, sizeof(TouchEvent));
+        touchEvent.type = TOUCH_TYPE_START;
+        touchEvent.x = x;
+        touchEvent.y = y;
+        touchEvent.deltaX = 0;
+        touchEvent.deltaY = 0;
+        touchEvent.scale = 1.0f;
+        touchEvent.rotation = 0.0f;
+        touchEvent.fingerCount = touchState.fingerCount;
+        touchEvent.timestamp = SDL_GetTicks();
+        
+        // 传播触摸事件
+        propagateTouchEvent(root, &touchEvent);
+        
+        // 双击检测
+        Uint32 currentTime = SDL_GetTicks();
+        if (currentTime - touchState.lastTapTime < 300) {
+            touchState.tapCount++;
+            if (touchState.tapCount == 2) {
+                // 触发双击事件
+                touchEvent.type = TOUCH_TYPE_DOUBLE_TAP;
+                propagateTouchEvent(root, &touchEvent);
+                touchState.tapCount = 0;
+            }
+        } else {
+            touchState.tapCount = 1;
+        }
+        touchState.lastTapTime = currentTime;
+    }
+    // 触摸移动事件
+    else if (event->type == SDL_FINGERMOTION) {
+        // 转换触摸坐标为窗口坐标
+        int x, y;
+        SDL_GetWindowSize(window, &x, &y);
+        x = (int)(event->tfinger.x * x);
+        y = (int)(event->tfinger.y * y);
+        
+        // 计算位移
+        int touchId = event->tfinger.fingerId % MAX_TOUCHES;
+        int deltaX = x - touchState.lastX[touchId];
+        int deltaY = y - touchState.lastY[touchId];
+        
+        // 保存当前位置
+        touchState.lastX[touchId] = x;
+        touchState.lastY[touchId] = y;
+        
+        // 创建触摸事件
+        TouchEvent touchEvent;
+        memset(&touchEvent, 0, sizeof(TouchEvent));
+        touchEvent.type = TOUCH_TYPE_MOVE;
+        touchEvent.x = x;
+        touchEvent.y = y;
+        touchEvent.deltaX = deltaX;
+        touchEvent.deltaY = deltaY;
+        touchEvent.scale = 1.0f;
+        touchEvent.rotation = 0.0f;
+        touchEvent.fingerCount = touchState.fingerCount;
+        touchEvent.timestamp = SDL_GetTicks();
+        
+        // 传播触摸事件
+        propagateTouchEvent(root, &touchEvent);
+        
+        // 长按检测（500ms）
+        if (touchState.fingerCount == 1 && !touchState.longPressDetected) {
+            if (SDL_GetTicks() - touchState.startTime > 500) {
+                touchEvent.type = TOUCH_TYPE_LONG_PRESS;
+                propagateTouchEvent(root, &touchEvent);
+                touchState.longPressDetected = 1;
+            }
+        }
+    }
+    // 触摸结束事件
+    else if (event->type == SDL_FINGERUP) {
+        // 更新触摸状态
+        if (touchState.fingerCount > 0) {
+            touchState.fingerCount--;
+        }
+        
+        // 转换触摸坐标为窗口坐标
+        int x, y;
+        SDL_GetWindowSize(window, &x, &y);
+        x = (int)(event->tfinger.x * x);
+        y = (int)(event->tfinger.y * y);
+        
+        // 创建触摸事件
+        TouchEvent touchEvent;
+        memset(&touchEvent, 0, sizeof(TouchEvent));
+        touchEvent.type = TOUCH_TYPE_END;
+        touchEvent.x = x;
+        touchEvent.y = y;
+        touchEvent.deltaX = 0;
+        touchEvent.deltaY = 0;
+        touchEvent.scale = 1.0f;
+        touchEvent.rotation = 0.0f;
+        touchEvent.fingerCount = touchState.fingerCount;
+        touchEvent.timestamp = SDL_GetTicks();
+        
+        // 传播触摸事件
+        propagateTouchEvent(root, &touchEvent);
+        
+        // 如果所有手指都离开屏幕，重置状态
+        if (touchState.fingerCount == 0) {
+            resetTouchState();
+        }
+    }
+    // 多点触控手势事件（捏合、旋转）
+    else if (event->type == SDL_MULTIGESTURE) {
+        // 获取窗口尺寸
+        int winW, winH;
+        SDL_GetWindowSize(window, &winW, &winH);
+        
+        // 创建触摸事件
+        TouchEvent touchEvent;
+        memset(&touchEvent, 0, sizeof(TouchEvent));
+        
+        // 设置中心点坐标
+        touchEvent.x = (int)(event->mgesture.x * winW);
+        touchEvent.y = (int)(event->mgesture.y * winH);
+        touchEvent.fingerCount = event->mgesture.numFingers;
+        touchEvent.timestamp = SDL_GetTicks();
+        
+        // 处理缩放（捏合）
+        if (event->mgesture.dDist != 0.0f) {
+            touchEvent.type = TOUCH_TYPE_PINCH;
+            touchEvent.scale = 1.0f + event->mgesture.dDist;
+            propagateTouchEvent(root, &touchEvent);
+        }
+        
+        // 处理旋转
+        if (event->mgesture.dTheta != 0.0f) {
+            touchEvent.type = TOUCH_TYPE_ROTATE;
+            touchEvent.rotation = event->mgesture.dTheta;
+            propagateTouchEvent(root, &touchEvent);
         }
     }
 }
@@ -175,7 +387,7 @@ int backend_query_texture(Texture * texture,
                      Uint32 * format, int *access,
                      int *w, int *h){
 
-   return SDL_QueryTexture(texture,format,access,w,h);                     
+   return SDL_QueryTexture(texture,format,access,w,h);                      
 }
 
 Texture* backend_render_texture(DFont* font,const char* text,Color color){
@@ -273,20 +485,20 @@ void draw_circle(SDL_Renderer* renderer, int center_x, int center_y, int radius,
 // // 绘制带透明度的多边形
 // void draw_polygon(SDL_Renderer* renderer, SDL_Point points[], int count, SDL_Color color) {
 //     SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
-    
+//     
 //     // 绘制多边形轮廓
 //     for (int i = 0; i < count; i++) {
 //         int next = (i + 1) % count;
 //         SDL_RenderDrawLine(renderer, points[i].x, points[i].y, points[next].x, points[next].y);
 //     }
-    
+//     
 //     // 填充多边形 (简单实现，实际应用中可能需要更复杂的算法)
 //     int min_y = points[0].y, max_y = points[0].y;
 //     for (int i = 1; i < count; i++) {
 //         if (points[i].y < min_y) min_y = points[i].y;
 //         if (points[i].y > max_y) max_y = points[i].y;
 //     }
-    
+//     
 //     for (int y = min_y; y <= max_y; y++) {
 //         for (int x = 0; x < WINDOW_WIDTH; x++) {
 //             int inside = 0;
