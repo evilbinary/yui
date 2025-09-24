@@ -118,7 +118,8 @@
         "x": 550,
         "y": 300,
         "rotation": 360,
-        "autoPlay": true
+        "autoPlay": true,
+        "repeatType": "infinite"
       }
     },
     {
@@ -285,13 +286,16 @@
         "bgColor": "#E74C3C"
       },
       "animation": {
-        "duration": 3.0,
+        "duration": 130.0,
         "easing": "elasticOut",
         "fillMode": "both",
         "width": 150,
         "height": 150,
-        "opacity": 0.7,
-        "autoPlay": true
+        "opacity": 0.1,
+        "autoPlay": true,
+        "x": 200,
+        "y": 300,
+        "repeatType": "infinite"
       }
     }
   ]
