@@ -1,5 +1,6 @@
 #include "layer.h"
 #include "render.h"
+#include "animate.h"
 #include <limits.h>
 
 
@@ -48,6 +49,9 @@ Texture* render_text(Layer* layer,const char* text, Color color) {
 
 // ====================== 渲染管线 ======================
 void render_layer(Layer* layer) {
+    
+    // 在渲染图层之前更新动画状态
+    layer_update_animation(layer);
     
     // 根据图层类型进行不同的渲染处理
     if (layer->type == BUTTON) {

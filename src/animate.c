@@ -292,7 +292,7 @@ void set_animation_complete_callback(Animation* animation, void (*on_complete)(L
 // 原来的图层动画更新函数，现在作为update_animation的简化版本
 void layer_update_animation(Layer* layer) {
     // 使用默认的delta_time值，例如16ms (约60FPS)
-    update_animation(layer, 0.016f);
+    update_animation(layer, DEFAULT_DELTA_TIME);
 }
 
 
