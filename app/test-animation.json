@@ -110,6 +110,15 @@
       "style": {
         "color": "#FFFFFF",
         "bgColor": "#3498DB"
+      },
+      "animation": {
+        "duration": 2.0,
+        "easing": "easeInOut",
+        "fillMode": "forwards",
+        "x": 550,
+        "y": 300,
+        "rotation": 360,
+        "autoPlay": true
       }
     },
     {
@@ -120,6 +129,17 @@
       "source": "duck.png",
       "style": {
         "mode": "fit"
+      },
+      "animation": {
+        "duration": 1.5,
+        "easing": "easeOut",
+        "fillMode": "forwards",
+        "opacity": 0.3,
+        "scaleX": 1.5,
+        "scaleY": 1.5,
+        "repeatType": "infinite",
+        "reverseOnRepeat": true,
+        "autoPlay": true
       }
     },
     {
@@ -141,6 +161,27 @@
           "style": {
             "color": "#FFFFFF",
             "fontSize": 16
+          }
+        },
+        {
+          "id": "repeatAnimationTest",
+          "type": "View",
+          "position": [100, 300],
+          "size": [100, 100],
+          "style": {
+            "color": "#FFFFFF",
+            "bgColor": "#F1C40F"
+          },
+          "animation": {
+            "duration": 1.0,
+            "easing": "easeInOut",
+            "fillMode": "both",
+            "x": 200,
+            "rotation": 180,
+            "repeatType": "count",
+            "repeatCount": 3,
+            "reverseOnRepeat": true,
+            "autoPlay": true
           }
         },
         {
@@ -202,7 +243,26 @@
           "events": {
             "onClick": "@triggerElasticAnimation"
           }
+      },
+      {
+        "id": "infiniteBounceTest",
+        "type": "View",
+        "position": [150, 400],
+        "size": [50, 50],
+        "style": {
+          "color": "#FFFFFF",
+          "bgColor": "#9B59B6"
+        },
+        "animation": {
+          "duration": 1.0,
+          "easing": "easeOutElastic",
+          "fillMode": "forwards",
+          "y": 300,
+          "repeatType": "infinite",
+          "reverseOnRepeat": false,
+          "autoPlay": true
         }
+      }
       ]
     },
     {
@@ -213,6 +273,25 @@
       "style": {
         "color": "#BDC3C7",
         "fontSize": 14
+      }
+    },
+    {
+      "id": "sizeAnimationTest",
+      "type": "View",
+      "position": [500, 350],
+      "size": [50, 50],
+      "style": {
+        "color": "#FFFFFF",
+        "bgColor": "#E74C3C"
+      },
+      "animation": {
+        "duration": 3.0,
+        "easing": "elasticOut",
+        "fillMode": "both",
+        "width": 150,
+        "height": 150,
+        "opacity": 0.7,
+        "autoPlay": true
       }
     }
   ]

@@ -85,6 +85,12 @@ Animation* create_animation(float duration, float (*easing_func)(float)) {
     animation->state = ANIMATION_STATE_IDLE;
     animation->on_complete = NULL;
     
+    // 初始化重复动画相关字段
+    animation->repeat_type = ANIMATION_REPEAT_NONE;
+    animation->repeat_count = 0;
+    animation->current_repeats = 0;
+    animation->reverse_on_repeat = false;
+    
     return animation;
 }
 
@@ -180,18 +186,81 @@ void update_animation(Layer* layer, float delta_time) {
     
     // 检查动画是否完成
     if (animation->progress >= 1.0f) {
-        animation->progress = 1.0f;
-        animation->state = ANIMATION_STATE_COMPLETED;
+        // 处理重复动画
+        bool should_repeat = false;
         
-        // 如果有完成回调，则调用它
-        if (animation->on_complete) {
-            animation->on_complete(layer);
+        if (animation->repeat_type == ANIMATION_REPEAT_INFINITE) {
+            should_repeat = true;
+        } else if (animation->repeat_type == ANIMATION_REPEAT_COUNT && 
+                  animation->current_repeats < animation->repeat_count) {
+            should_repeat = true;
         }
         
-        // 如果填充模式是NONE，则停止动画并恢复初始状态
-        if (animation->fill_mode == ANIMATION_FILL_NONE) {
-            stop_animation(layer);
-            return;
+        if (should_repeat) {
+            // 增加重复计数
+            animation->current_repeats++;
+            
+            if (animation->reverse_on_repeat) {
+                // 交换起始值和目标值以实现反向动画
+                float temp;
+                
+                // X坐标
+                temp = animation->start_x;
+                animation->start_x = animation->target_x;
+                animation->target_x = temp;
+                
+                // Y坐标
+                temp = animation->start_y;
+                animation->start_y = animation->target_y;
+                animation->target_y = temp;
+                
+                // 宽度
+                temp = animation->start_width;
+                animation->start_width = animation->target_width;
+                animation->target_width = temp;
+                
+                // 高度
+                temp = animation->start_height;
+                animation->start_height = animation->target_height;
+                animation->target_height = temp;
+                
+                // 透明度
+                temp = animation->start_opacity;
+                animation->start_opacity = animation->target_opacity;
+                animation->target_opacity = temp;
+                
+                // 旋转角度
+                temp = animation->start_rotation;
+                animation->start_rotation = animation->target_rotation;
+                animation->target_rotation = temp;
+                
+                // 缩放值
+                temp = animation->start_scale_x;
+                animation->start_scale_x = animation->target_scale_x;
+                animation->target_scale_x = temp;
+                
+                temp = animation->start_scale_y;
+                animation->start_scale_y = animation->target_scale_y;
+                animation->target_scale_y = temp;
+            }
+            
+            // 重置动画进度
+            animation->progress = 0.0f;
+            animation->state = ANIMATION_STATE_RUNNING;
+        } else {
+            animation->progress = 1.0f;
+            animation->state = ANIMATION_STATE_COMPLETED;
+            
+            // 如果有完成回调，则调用它
+            if (animation->on_complete) {
+                animation->on_complete(layer);
+            }
+            
+            // 如果填充模式是NONE，则停止动画并恢复初始状态
+            if (animation->fill_mode == ANIMATION_FILL_NONE) {
+                stop_animation(layer);
+                return;
+            }
         }
     }
     
@@ -289,10 +358,32 @@ void set_animation_complete_callback(Animation* animation, void (*on_complete)(L
     animation->on_complete = on_complete;
 }
 
-// 原来的图层动画更新函数，现在作为update_animation的简化版本
+// 图层动画更新函数，现在作为update_animation的简化版本
 void layer_update_animation(Layer* layer) {
     // 使用默认的delta_time值，例如16ms (约60FPS)
     update_animation(layer, DEFAULT_DELTA_TIME);
 }
 
+// 设置动画重复类型
+void set_animation_repeat_type(Animation* animation, AnimationRepeatType repeat_type) {
+    if (!animation) {
+        return;
+    }
+    animation->repeat_type = repeat_type;
+}
 
+// 设置动画重复次数
+void set_animation_repeat_count(Animation* animation, int repeat_count) {
+    if (!animation) {
+        return;
+    }
+    animation->repeat_count = (repeat_count < 0) ? 0 : repeat_count;
+}
+
+// 设置动画重复时是否反向播放
+void set_animation_reverse_on_repeat(Animation* animation, bool reverse_on_repeat) {
+    if (!animation) {
+        return;
+    }
+    animation->reverse_on_repeat = reverse_on_repeat;
+}

@@ -1,6 +1,7 @@
 #ifndef YUI_ANIMATE_H
 #define YUI_ANIMATE_H
 
+#include <stdbool.h>
 #include "layer.h"
 #include "ytype.h"
 
@@ -35,6 +36,13 @@ typedef enum {
     ANIMATION_STATE_COMPLETED // 完成
 } AnimationState;
 
+// 动画重复类型枚举
+typedef enum {
+    ANIMATION_REPEAT_NONE,    // 不重复
+    ANIMATION_REPEAT_INFINITE,// 无限重复
+    ANIMATION_REPEAT_COUNT    // 有限次数重复
+} AnimationRepeatType;
+
 // 扩展动画结构体
 typedef struct Animation {
     float target_x;         // 目标X坐标
@@ -61,6 +69,10 @@ typedef struct Animation {
     
     AnimationFillMode fill_mode; // 填充模式
     AnimationState state;       // 动画状态
+    AnimationRepeatType repeat_type; // 重复类型
+    int repeat_count;           // 重复次数
+    int current_repeats;        // 当前已重复次数
+    bool reverse_on_repeat;     // 重复时是否反向播放
     
     // 动画完成回调函数
     void (*on_complete)(Layer* layer);
@@ -89,6 +101,11 @@ void update_animation(Layer* layer, float delta_time);
 void set_animation_target(Animation* animation, AnimationProperty property, float value);
 void set_animation_fill_mode(Animation* animation, AnimationFillMode fill_mode);
 void set_animation_complete_callback(Animation* animation, void (*on_complete)(Layer*));
+
+// 设置动画重复属性
+void set_animation_repeat_type(Animation* animation, AnimationRepeatType repeat_type);
+void set_animation_repeat_count(Animation* animation, int repeat_count);
+void set_animation_reverse_on_repeat(Animation* animation, bool reverse_on_repeat);
 
 // 图层动画更新函数（使用默认delta_time值的简化版本）
 void layer_update_animation(Layer* layer);

@@ -1,4 +1,5 @@
 #include "layer.h"
+#include "animate.h"
 
 // 更新图层类型名称数组，添加GRID
 char *layer_type_name[]={"View","Button","Input","Label","Image","List","Grid","Progress"};
@@ -319,6 +320,120 @@ Layer* parse_layer(cJSON* json_obj,Layer* parent) {
             
             EventHandler handler = find_event_by_name(handler_id);
             layer->event->scroll = handler;
+        }
+    }
+    
+    // 解析动画属性配置
+    cJSON* animation = cJSON_GetObjectItem(json_obj, "animation");
+    if (animation) {
+        // 解析持续时间
+        float duration = 1.0f; // 默认1秒
+        if (cJSON_HasObjectItem(animation, "duration")) {
+            duration = (float)cJSON_GetObjectItem(animation, "duration")->valuedouble;
+        }
+        
+        // 解析缓动函数
+        float (*easing_func)(float) = ease_in_out_quad; // 默认缓入缓出
+        if (cJSON_HasObjectItem(animation, "easing")) {
+            const char* easing_str = cJSON_GetObjectItem(animation, "easing")->valuestring;
+            if (strcmp(easing_str, "easeIn") == 0) {
+                easing_func = ease_in_quad;
+            } else if (strcmp(easing_str, "easeOut") == 0) {
+                easing_func = ease_out_quad;
+            } else if (strcmp(easing_str, "easeInOut") == 0) {
+                easing_func = ease_in_out_quad;
+            } else if (strcmp(easing_str, "elasticOut") == 0) {
+                easing_func = ease_out_elastic;
+            }
+        }
+        
+        // 创建动画对象
+        Animation* anim = create_animation(duration, easing_func);
+        if (anim) {
+            // 解析填充模式
+            if (cJSON_HasObjectItem(animation, "fillMode")) {
+                const char* fill_mode_str = cJSON_GetObjectItem(animation, "fillMode")->valuestring;
+                if (strcmp(fill_mode_str, "none") == 0) {
+                    set_animation_fill_mode(anim, ANIMATION_FILL_NONE);
+                } else if (strcmp(fill_mode_str, "forwards") == 0) {
+                    set_animation_fill_mode(anim, ANIMATION_FILL_FORWARDS);
+                } else if (strcmp(fill_mode_str, "backwards") == 0) {
+                    set_animation_fill_mode(anim, ANIMATION_FILL_BACKWARDS);
+                } else if (strcmp(fill_mode_str, "both") == 0) {
+                    set_animation_fill_mode(anim, ANIMATION_FILL_BOTH);
+                }
+            }
+            
+            // 解析重复动画属性
+            // 重复类型
+            if (cJSON_HasObjectItem(animation, "repeatType")) {
+                const char* repeat_type_str = cJSON_GetObjectItem(animation, "repeatType")->valuestring;
+                if (strcmp(repeat_type_str, "none") == 0) {
+                    set_animation_repeat_type(anim, ANIMATION_REPEAT_NONE);
+                } else if (strcmp(repeat_type_str, "infinite") == 0) {
+                    set_animation_repeat_type(anim, ANIMATION_REPEAT_INFINITE);
+                } else if (strcmp(repeat_type_str, "count") == 0) {
+                    set_animation_repeat_type(anim, ANIMATION_REPEAT_COUNT);
+                }
+            }
+            
+            // 重复次数
+            if (cJSON_HasObjectItem(animation, "repeatCount")) {
+                set_animation_repeat_count(anim, cJSON_GetObjectItem(animation, "repeatCount")->valueint);
+            }
+            
+            // 反向重复标志
+            if (cJSON_HasObjectItem(animation, "reverseOnRepeat")) {
+                set_animation_reverse_on_repeat(anim, cJSON_IsTrue(cJSON_GetObjectItem(animation, "reverseOnRepeat")));
+            }
+            
+            // 解析目标属性
+            // 位置
+            if (cJSON_HasObjectItem(animation, "x")) {
+                set_animation_target(anim, ANIMATION_PROPERTY_X, (float)cJSON_GetObjectItem(animation, "x")->valuedouble);
+            }
+            if (cJSON_HasObjectItem(animation, "y")) {
+                set_animation_target(anim, ANIMATION_PROPERTY_Y, (float)cJSON_GetObjectItem(animation, "y")->valuedouble);
+            }
+            
+            // 大小
+            if (cJSON_HasObjectItem(animation, "width")) {
+                set_animation_target(anim, ANIMATION_PROPERTY_WIDTH, (float)cJSON_GetObjectItem(animation, "width")->valuedouble);
+            }
+            if (cJSON_HasObjectItem(animation, "height")) {
+                set_animation_target(anim, ANIMATION_PROPERTY_HEIGHT, (float)cJSON_GetObjectItem(animation, "height")->valuedouble);
+            }
+            
+            // 透明度
+            if (cJSON_HasObjectItem(animation, "opacity")) {
+                set_animation_target(anim, ANIMATION_PROPERTY_OPACITY, (float)cJSON_GetObjectItem(animation, "opacity")->valuedouble);
+            }
+            
+            // 旋转
+            if (cJSON_HasObjectItem(animation, "rotation")) {
+                set_animation_target(anim, ANIMATION_PROPERTY_ROTATION, (float)cJSON_GetObjectItem(animation, "rotation")->valuedouble);
+            }
+            
+            // 缩放
+            if (cJSON_HasObjectItem(animation, "scaleX")) {
+                set_animation_target(anim, ANIMATION_PROPERTY_SCALE_X, (float)cJSON_GetObjectItem(animation, "scaleX")->valuedouble);
+            }
+            if (cJSON_HasObjectItem(animation, "scaleY")) {
+                set_animation_target(anim, ANIMATION_PROPERTY_SCALE_Y, (float)cJSON_GetObjectItem(animation, "scaleY")->valuedouble);
+            }
+            
+            // 解析自动播放属性
+            if (cJSON_HasObjectItem(animation, "autoPlay")) {
+                if (cJSON_IsTrue(cJSON_GetObjectItem(animation, "autoPlay"))) {
+                    start_animation(layer, anim);
+                } else {
+                    // 如果不自动播放，则将动画对象保存到图层，但不启动
+                    layer->animation = anim;
+                }
+            } else {
+                // 默认不自动播放
+                layer->animation = anim;
+            }
         }
     }
     
