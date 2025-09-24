@@ -8,22 +8,22 @@ float lerp(float start, float end, float t) {
     return start + t * (end - start);
 }
 
-// 1. 二次缓入 (Ease-In Quad): 开始时慢，然后加速[7](@ref)
+// 1. 二次缓入 (Ease-In Quad): 开始时慢，然后加速
 float ease_in_quad(float t) {
     return t * t;
 }
 
-// 2. 二次缓出 (Ease-Out Quad): 开始时快，然后减速[7](@ref)
+// 2. 二次缓出 (Ease-Out Quad): 开始时快，然后减速
 float ease_out_quad(float t) {
     return 1 - (1 - t) * (1 - t);
 }
 
-// 3. 二次缓入缓出 (Ease-In-Out Quad): 开始和结束慢，中间快[7](@ref)
+// 3. 二次缓入缓出 (Ease-In-Out Quad): 开始和结束慢，中间快
 float ease_in_out_quad(float t) {
     return t < 0.5 ? 2 * t * t : 1 - pow(-2 * t + 2, 2) / 2;
 }
 
-// 4. 弹性缓动 (Ease-Out Elastic): 带有弹性振荡效果[6](@ref)
+// 4. 弹性缓动 (Ease-Out Elastic): 带有弹性振荡效果
 float ease_out_elastic(float t) {
     if (t == 0.0f) return 0.0f;
     if (t == 1.0f) return 1.0f;
@@ -51,15 +51,248 @@ float lagrange_interpolate(float x[], float y[], int n, float xi) {
     return result;
 }
 
+// 创建动画对象
+Animation* create_animation(float duration, float (*easing_func)(float)) {
+    Animation* animation = (Animation*)malloc(sizeof(Animation));
+    if (!animation) {
+        return NULL;
+    }
+    
+    // 初始化所有目标值和起始值为默认值
+    animation->target_x = 0.0f;
+    animation->target_y = 0.0f;
+    animation->target_width = 0.0f;
+    animation->target_height = 0.0f;
+    animation->target_opacity = 1.0f;
+    animation->target_rotation = 0.0f;
+    animation->target_scale_x = 1.0f;
+    animation->target_scale_y = 1.0f;
+    
+    animation->start_x = 0.0f;
+    animation->start_y = 0.0f;
+    animation->start_width = 0.0f;
+    animation->start_height = 0.0f;
+    animation->start_opacity = 1.0f;
+    animation->start_rotation = 0.0f;
+    animation->start_scale_x = 1.0f;
+    animation->start_scale_y = 1.0f;
+    
+    animation->duration = duration;
+    animation->progress = 0.0f;
+    animation->easing_func = easing_func ? easing_func : ease_in_out_quad; // 默认使用缓入缓出
+    
+    animation->fill_mode = ANIMATION_FILL_FORWARDS;
+    animation->state = ANIMATION_STATE_IDLE;
+    animation->on_complete = NULL;
+    
+    return animation;
+}
 
-void layer_update_animation(Layer* layer) {
-    if(layer->animation==NULL){
+// 启动动画
+void start_animation(Layer* layer, Animation* animation) {
+    if (!layer || !animation) {
         return;
     }
     
-    float start_x = layer->rect.x; // 假设这是起始值
-    float current_x = interpolate_with_easing(start_x, layer->animation->target_x, layer->animation->progress, layer->animation->easing_func);
-    layer->rect.x = current_x;
+    // 保存图层的当前状态作为动画的起始值
+    animation->start_x = layer->rect.x;
+    animation->start_y = layer->rect.y;
+    animation->start_width = layer->rect.w;
+    animation->start_height = layer->rect.h;
+    animation->start_opacity = layer->color.a / 255.0f; // 假设alpha通道是0-255
+    animation->start_rotation = layer->rotation;
+    animation->start_scale_x = 1.0f; // 假设图层默认缩放为1
+    animation->start_scale_y = 1.0f;
+    
+    // 设置动画状态
+    animation->progress = 0.0f;
+    animation->state = ANIMATION_STATE_RUNNING;
+    
+    // 如果填充模式是BACKWARDS或BOTH，则立即应用起始值
+    if (animation->fill_mode == ANIMATION_FILL_BACKWARDS || animation->fill_mode == ANIMATION_FILL_BOTH) {
+        // 这里可以根据需要设置起始值
+    }
+    
+    // 将动画附加到图层
+    layer->animation = animation;
+}
+
+// 停止动画
+void stop_animation(Layer* layer) {
+    if (!layer || !layer->animation) {
+        return;
+    }
+    
+    // 如果填充模式不是FORWARDS或BOTH，则将图层恢复到初始状态
+    if (layer->animation->fill_mode != ANIMATION_FILL_FORWARDS && 
+        layer->animation->fill_mode != ANIMATION_FILL_BOTH) {
+        layer->rect.x = layer->animation->start_x;
+        layer->rect.y = layer->animation->start_y;
+        layer->rect.w = layer->animation->start_width;
+        layer->rect.h = layer->animation->start_height;
+        layer->color.a = layer->animation->start_opacity * 255.0f;
+        layer->rotation = layer->animation->start_rotation;
+        // 缩放值可以根据实际实现进行恢复
+    }
+    
+    // 释放动画资源
+    free(layer->animation);
+    layer->animation = NULL;
+}
+
+// 暂停动画
+void pause_animation(Layer* layer) {
+    if (!layer || !layer->animation) {
+        return;
+    }
+    
+    if (layer->animation->state == ANIMATION_STATE_RUNNING) {
+        layer->animation->state = ANIMATION_STATE_PAUSED;
+    }
+}
+
+// 恢复动画
+void resume_animation(Layer* layer) {
+    if (!layer || !layer->animation) {
+        return;
+    }
+    
+    if (layer->animation->state == ANIMATION_STATE_PAUSED) {
+        layer->animation->state = ANIMATION_STATE_RUNNING;
+    }
+}
+
+// 更新动画
+void update_animation(Layer* layer, float delta_time) {
+    if (!layer || !layer->animation) {
+        return;
+    }
+    
+    Animation* animation = layer->animation;
+    
+    // 只更新运行中的动画
+    if (animation->state != ANIMATION_STATE_RUNNING) {
+        return;
+    }
+    
+    // 更新动画进度
+    animation->progress += delta_time / animation->duration;
+    
+    // 检查动画是否完成
+    if (animation->progress >= 1.0f) {
+        animation->progress = 1.0f;
+        animation->state = ANIMATION_STATE_COMPLETED;
+        
+        // 如果有完成回调，则调用它
+        if (animation->on_complete) {
+            animation->on_complete(layer);
+        }
+        
+        // 如果填充模式是NONE，则停止动画并恢复初始状态
+        if (animation->fill_mode == ANIMATION_FILL_NONE) {
+            stop_animation(layer);
+            return;
+        }
+    }
+    
+    // 计算缓动后的进度
+    float eased_progress = animation->easing_func(animation->progress);
+    
+    // 应用所有属性的动画
+    // X坐标
+    if (animation->target_x != animation->start_x) {
+        layer->rect.x = interpolate_with_easing(animation->start_x, animation->target_x, eased_progress, animation->easing_func);
+    }
+    
+    // Y坐标
+    if (animation->target_y != animation->start_y) {
+        layer->rect.y = interpolate_with_easing(animation->start_y, animation->target_y, eased_progress, animation->easing_func);
+    }
+    
+    // 宽度
+    if (animation->target_width != animation->start_width) {
+        layer->rect.w = interpolate_with_easing(animation->start_width, animation->target_width, eased_progress, animation->easing_func);
+    }
+    
+    // 高度
+    if (animation->target_height != animation->start_height) {
+        layer->rect.h = interpolate_with_easing(animation->start_height, animation->target_height, eased_progress, animation->easing_func);
+    }
+    
+    // 透明度
+    if (animation->target_opacity != animation->start_opacity) {
+        float opacity = interpolate_with_easing(animation->start_opacity, animation->target_opacity, eased_progress, animation->easing_func);
+        layer->color.a = opacity * 255.0f; // 转换回0-255范围
+    }
+    
+    // 旋转角度
+    if (animation->target_rotation != animation->start_rotation) {
+        layer->rotation = interpolate_with_easing(animation->start_rotation, animation->target_rotation, eased_progress, animation->easing_func);
+    }
+    
+    // 缩放值可以根据实际实现进行处理
+    // ...
+}
+
+// 设置动画目标属性
+void set_animation_target(Animation* animation, AnimationProperty property, float value) {
+    if (!animation) {
+        return;
+    }
+    
+    switch (property) {
+        case ANIMATION_PROPERTY_X:
+            animation->target_x = value;
+            break;
+        case ANIMATION_PROPERTY_Y:
+            animation->target_y = value;
+            break;
+        case ANIMATION_PROPERTY_WIDTH:
+            animation->target_width = value;
+            break;
+        case ANIMATION_PROPERTY_HEIGHT:
+            animation->target_height = value;
+            break;
+        case ANIMATION_PROPERTY_OPACITY:
+            // 限制在0.0-1.0范围内
+            animation->target_opacity = (value < 0.0f) ? 0.0f : (value > 1.0f) ? 1.0f : value;
+            break;
+        case ANIMATION_PROPERTY_ROTATION:
+            animation->target_rotation = value;
+            break;
+        case ANIMATION_PROPERTY_SCALE_X:
+            animation->target_scale_x = value;
+            break;
+        case ANIMATION_PROPERTY_SCALE_Y:
+            animation->target_scale_y = value;
+            break;
+        default:
+            break;
+    }
+}
+
+// 设置动画填充模式
+void set_animation_fill_mode(Animation* animation, AnimationFillMode fill_mode) {
+    if (!animation) {
+        return;
+    }
+    
+    animation->fill_mode = fill_mode;
+}
+
+// 设置动画完成回调函数
+void set_animation_complete_callback(Animation* animation, void (*on_complete)(Layer*)) {
+    if (!animation) {
+        return;
+    }
+    
+    animation->on_complete = on_complete;
+}
+
+// 原来的图层动画更新函数，现在作为update_animation的简化版本
+void layer_update_animation(Layer* layer) {
+    // 使用默认的delta_time值，例如16ms (约60FPS)
+    update_animation(layer, 0.016f);
 }
 
 

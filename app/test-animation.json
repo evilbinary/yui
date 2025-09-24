@@ -1,0 +1,219 @@
+{
+  "id": "animationTestPage",
+  "type": "View",
+  "position": [0, 0],
+  "size": [800, 600],
+  "style": {
+    "color": "#2C3E50",
+    "bgColor": "#1A1A2E"
+  },
+  "children": [
+    {
+      "id": "title",
+      "type": "Label",
+      "position": [300, 50],
+      "text": "动画效果测试",
+      "style": {
+        "color": "#FFFFFF",
+        "fontSize": 24
+      }
+    },
+    {
+      "id": "moveBtn",
+      "type": "Button",
+      "position": [100, 120],
+      "size": [150, 50],
+      "text": "移动动画",
+      "style": {
+        "color": "#FFFFFF",
+        "bgColor": "#3498DB"
+      },
+      "events": {
+        "onClick": "@triggerMoveAnimation"
+      }
+    },
+    {
+      "id": "fadeBtn",
+      "type": "Button",
+      "position": [300, 120],
+      "size": [150, 50],
+      "text": "淡入淡出",
+      "style": {
+        "color": "#FFFFFF",
+        "bgColor": "#E74C3C"
+      },
+      "events": {
+        "onClick": "@triggerFadeAnimation"
+      }
+    },
+    {
+      "id": "scaleBtn",
+      "type": "Button",
+      "position": [500, 120],
+      "size": [150, 50],
+      "text": "缩放动画",
+      "style": {
+        "color": "#FFFFFF",
+        "bgColor": "#2ECC71"
+      },
+      "events": {
+        "onClick": "@triggerScaleAnimation"
+      }
+    },
+    {
+      "id": "rotateBtn",
+      "type": "Button",
+      "position": [100, 200],
+      "size": [150, 50],
+      "text": "旋转动画",
+      "style": {
+        "color": "#FFFFFF",
+        "bgColor": "#9B59B6"
+      },
+      "events": {
+        "onClick": "@triggerRotateAnimation"
+      }
+    },
+    {
+      "id": "comboBtn",
+      "type": "Button",
+      "position": [300, 200],
+      "size": [150, 50],
+      "text": "组合动画",
+      "style": {
+        "color": "#FFFFFF",
+        "bgColor": "#F39C12"
+      },
+      "events": {
+        "onClick": "@triggerComboAnimation"
+      }
+    },
+    {
+      "id": "resetBtn",
+      "type": "Button",
+      "position": [500, 200],
+      "size": [150, 50],
+      "text": "重置全部",
+      "style": {
+        "color": "#FFFFFF",
+        "bgColor": "#7F8C8D"
+      },
+      "events": {
+        "onClick": "@resetAllAnimations"
+      }
+    },
+    {
+      "id": "animatedBox",
+      "type": "View",
+      "position": [350, 300],
+      "size": [100, 100],
+      "style": {
+        "color": "#FFFFFF",
+        "bgColor": "#3498DB"
+      }
+    },
+    {
+      "id": "animatedImage",
+      "type": "Image",
+      "position": [300, 450],
+      "size": [200, 100],
+      "source": "duck.png",
+      "style": {
+        "mode": "fit"
+      }
+    },
+    {
+      "id": "easingDemoPanel",
+      "type": "View",
+      "position": [50, 300],
+      "size": [250, 250],
+      "style": {
+        "color": "#FFFFFF",
+        "bgColor": "#2C3E50",
+        "borderRadius": 5
+      },
+      "children": [
+        {
+          "id": "easingTitle",
+          "type": "Label",
+          "position": [20, 10],
+          "text": "缓动函数演示",
+          "style": {
+            "color": "#FFFFFF",
+            "fontSize": 16
+          }
+        },
+        {
+          "id": "easeInBtn",
+          "type": "Button",
+          "position": [20, 40],
+          "size": [210, 30],
+          "text": "缓入 (Ease In)",
+          "style": {
+            "color": "#FFFFFF",
+            "bgColor": "#E74C3C",
+            "fontSize": 12
+          },
+          "events": {
+            "onClick": "@triggerEaseInAnimation"
+          }
+        },
+        {
+          "id": "easeOutBtn",
+          "type": "Button",
+          "position": [20, 80],
+          "size": [210, 30],
+          "text": "缓出 (Ease Out)",
+          "style": {
+            "color": "#FFFFFF",
+            "bgColor": "#E74C3C",
+            "fontSize": 12
+          },
+          "events": {
+            "onClick": "@triggerEaseOutAnimation"
+          }
+        },
+        {
+          "id": "easeInOutBtn",
+          "type": "Button",
+          "position": [20, 120],
+          "size": [210, 30],
+          "text": "缓入缓出 (Ease In Out)",
+          "style": {
+            "color": "#FFFFFF",
+            "bgColor": "#E74C3C",
+            "fontSize": 12
+          },
+          "events": {
+            "onClick": "@triggerEaseInOutAnimation"
+          }
+        },
+        {
+          "id": "elasticBtn",
+          "type": "Button",
+          "position": [20, 160],
+          "size": [210, 30],
+          "text": "弹性效果 (Elastic)",
+          "style": {
+            "color": "#FFFFFF",
+            "bgColor": "#E74C3C",
+            "fontSize": 12
+          },
+          "events": {
+            "onClick": "@triggerElasticAnimation"
+          }
+        }
+      ]
+    },
+    {
+      "id": "animationInfo",
+      "type": "Label",
+      "position": [350, 250],
+      "text": "点击按钮测试动画效果",
+      "style": {
+        "color": "#BDC3C7",
+        "fontSize": 14
+      }
+    }
+  ]
+}

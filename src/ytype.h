@@ -133,11 +133,7 @@ typedef struct Event {
     char scroll_name[MAX_PATH];
 } Event;
 
-typedef struct Animation{
-    float target_x;
-    float progress;
-    float (*easing_func)(float);
-}Animation;
+// Animation结构体在animate.h中定义
 
 typedef struct Layer Layer;
 typedef struct Layer {
