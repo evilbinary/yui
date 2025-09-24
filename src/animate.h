@@ -4,6 +4,8 @@
 #include "layer.h"
 #include "ytype.h"
 
+typedef struct Layer Layer;
+
 // 动画属性类型枚举
 typedef enum {
     ANIMATION_PROPERTY_X,        // X坐标

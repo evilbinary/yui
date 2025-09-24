@@ -6,6 +6,8 @@
 #include <string.h>
 #include "cJSON.h"
 
+
+
 #ifdef D_SDL
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
@@ -19,8 +21,18 @@
 
 #endif
 
+// 功能定义区域
 #define SDL2 1
-#define DEBUG_VIEW 1 
+// #define DEBUG_VIEW 1 
+#define YUI_ANIMATION 1
+
+
+#ifdef YUI_ANIMATION
+#include "animate.h"
+typedef struct Animation Animation;
+#else 
+typedef struct void* Animation;
+#endif
 
 #if SDL2
 
@@ -44,8 +56,6 @@
 #endif
 
 #define DFont TTF_Font
-
-
 
 
 
@@ -152,7 +162,7 @@ typedef struct Layer {
 
     //动画
     Animation* animation;
-    
+
     // 新增布局管理器
     LayoutManager* layout_manager;
     int fixed_width;
