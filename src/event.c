@@ -113,3 +113,29 @@ void handle_key_event(Layer* layer, KeyEvent* event) {
         handle_key_event(layer->sub, event);
     }
 }
+
+// 处理鼠标事件
+void handle_mouse_event(Layer* layer, MouseEvent* event) {
+    if (!layer || !event) {
+        return;
+    }
+    if (layer->event && layer->event->click) {
+                layer->event->click(layer);
+    }
+    
+    if(layer->handle_mouse_event){
+        layer->handle_mouse_event(layer, event);
+    }
+    
+    // 递归处理子图层的事件
+    for (int i = 0; i < layer->child_count; i++) {
+        if (layer->children[i]) {
+            handle_mouse_event(layer->children[i], event);
+        }
+    }
+    
+    // 处理sub图层的事件
+    if (layer->sub) {
+        handle_mouse_event(layer->sub, event);
+    }
+}

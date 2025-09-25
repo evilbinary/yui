@@ -99,8 +99,8 @@ void propagateTouchEvent(Layer* layer, TouchEvent* event) {
     SDL_Point point = {event->x, event->y};
     if (pointInLayer(&point, layer)) {
         // 调用当前图层的触摸事件处理函数
-        if (layer->event && layer->event->touch) {
-            layer->event->touch(event);
+        if (layer->handle_touch_event) {
+            layer->handle_touch_event(layer,event);
         }
         
         // 递归处理子图层
@@ -136,18 +136,28 @@ void handle_event(Layer* root, SDL_Event* event) {
         handle_key_event(root, &key_event);
     }
     
+    // 处理鼠标事件
+    if (event->type == SDL_MOUSEBUTTONDOWN || event->type == SDL_MOUSEBUTTONUP || event->type == SDL_MOUSEMOTION) {
+        SDL_Point mouse_pos = { event->button.x, event->button.y };
+        MouseEvent mouse_event = {
+            .x = event->button.x,
+            .y = event->button.y,
+            .button = event->button.button,
+            .state = (event->type == SDL_MOUSEBUTTONDOWN) ? 1 : 0
+        };
+        if (SDL_PointInRect(&mouse_pos, &root->rect)) {
+            handle_mouse_event(root, &mouse_event);
+        }
+    }
+    // 保留原有点击检测逻辑
     if (event->type == SDL_MOUSEBUTTONDOWN) {
         SDL_Point mouse_pos = { event->button.x, event->button.y };
-        
-        // 检测点击图层 (实际应使用空间分割优化)
         if (SDL_PointInRect(&mouse_pos, &root->rect)) {
-            if (root->event&& root->event->click){
-                root->event->click(root);
-            } 
+            
             for (int i = 0; i < root->child_count; i++) {
                 handle_event(root->children[i], event);
             }
-            if(root->sub){
+            if (root->sub) {
                 handle_event(root->sub, event);
             }
         }

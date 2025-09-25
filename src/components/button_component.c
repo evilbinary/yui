@@ -84,12 +84,12 @@ void button_component_set_user_data(ButtonComponent* component, void* data) {
 // 处理鼠标事件
 void button_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     ButtonComponent* component = (ButtonComponent*)layer->component;
-    int is_click = (event->state == SDL_PRESSED);
+    int is_click = (event->state == 1);
     if (!component || component->state == BUTTON_STATE_DISABLED) {
         return;
     }
 
-    printf("button_component_handle_mouse_event: %d, %d, %d\n", event->x, event->y, is_click);
+    printf("button_component_handle_mouse_event: %d, %d, %d, %d state:%d\n", event->x, event->y, is_click , event->button,event->state);
     
     // 检查鼠标是否在按钮范围内
     int is_inside = (event->x >= component->layer->rect.x && 

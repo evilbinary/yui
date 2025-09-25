@@ -17,4 +17,5 @@ void handle_scroll_event(Layer* layer, int scroll_delta);
 // Fix: Make sure KeyEvent is properly declared
 void handle_key_event(Layer* layer, struct KeyEvent* event);
 
+void handle_mouse_event(Layer* layer, struct MouseEvent* event);
 #endif
