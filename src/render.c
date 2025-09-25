@@ -57,7 +57,11 @@ void render_layer(Layer* layer) {
     if (layer->type == BUTTON) {
         // 按钮类型渲染：绘制背景和边框
         if(layer->bgColor.a>0){
-            backend_render_fill_rect(&layer->rect,layer->bgColor);
+            if (layer->radius > 0) {
+                backend_render_rounded_rect(&layer->rect, layer->bgColor, layer->radius);
+            } else {
+                backend_render_fill_rect(&layer->rect,layer->bgColor);
+            }
         }
         
         backend_render_rect_color(&layer->rect,200, 200, 200, 255);
@@ -101,7 +105,11 @@ void render_layer(Layer* layer) {
     else if (layer->type==INPUT) {
         // 输入框类型渲染：绘制背景和边框
         if(layer->bgColor.a>0){
-            backend_render_fill_rect(&layer->rect,layer->bgColor);
+            if (layer->radius > 0) {
+                backend_render_rounded_rect(&layer->rect, layer->bgColor, layer->radius);
+            } else {
+                backend_render_fill_rect(&layer->rect,layer->bgColor);
+            }
         }
         
         // 绘制输入框边框
@@ -142,7 +150,11 @@ void render_layer(Layer* layer) {
     }
     else if (layer->type==LABEL) {
             if(layer->bgColor.a>0){
-                backend_render_fill_rect(&layer->rect,layer->bgColor);
+                if (layer->radius > 0) {
+                    backend_render_rounded_rect(&layer->rect, layer->bgColor, layer->radius);
+                } else {
+                    backend_render_fill_rect(&layer->rect,layer->bgColor);
+                }
 
             }
         
@@ -279,11 +291,19 @@ void render_layer(Layer* layer) {
         //printf("layer->%s %d\n",layer->id,layer->type);
     // 绘制背景
         if(layer->bgColor.a > 0) {
-            backend_render_fill_rect(&layer->rect,layer->bgColor);
+            if (layer->radius > 0) {
+                backend_render_rounded_rect(&layer->rect, layer->bgColor, layer->radius);
+            } else {
+                backend_render_fill_rect(&layer->rect, layer->bgColor);
+            }
 
         }else{
             // 默认渲染方式
-            backend_render_fill_rect(&layer->rect,layer->color);
+            if (layer->radius > 0) {
+                backend_render_rounded_rect(&layer->rect, layer->color, layer->radius);
+            } else {
+                backend_render_fill_rect(&layer->rect, layer->color);
+            }
             
         }
     }

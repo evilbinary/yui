@@ -184,6 +184,7 @@ typedef struct Layer {
     Rect rect;
     Color color;
     Color bgColor;
+    int radius; // 圆角半径
     char source[MAX_PATH];
     Texture* texture;
     Layer** children;

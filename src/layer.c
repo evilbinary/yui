@@ -265,6 +265,13 @@ Layer* parse_layer(cJSON* json_obj,Layer* parent) {
             layer->bgColor.b=0;
             layer->bgColor.a = 0;
         }
+        
+        // 解析圆角半径属性
+        if(cJSON_HasObjectItem(style,"radius")){
+            layer->radius = cJSON_GetObjectItem(style, "radius")->valueint;
+        }else{
+            layer->radius = 0; // 默认没有圆角
+        }
 
         // 从style.mode中解析图片渲染模式（优先级高于imageMode）
         cJSON* mode_item = cJSON_GetObjectItem(style, "mode");

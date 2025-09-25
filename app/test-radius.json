@@ -1,0 +1,80 @@
+{
+  "type": "View",
+  "id": "root",
+  "size": [600, 400],
+  "style": {
+    "bgColor": "#f0f0f0",
+    "color": "#000000"
+  },
+  "children": [
+    {
+      "type": "View",
+      "id": "rounded-view-10",
+      "position": [50, 50],
+      "size": [200, 100],
+      "style": {
+        "bgColor": "#4CAF50",
+        "color": "#ffffff",
+        "radius": 10
+      }
+    },
+    {
+      "type": "View",
+      "id": "rounded-view-20",
+      "position": [300, 50],
+      "size": [200, 100],
+      "style": {
+        "bgColor": "#2196F3",
+        "color": "#ffffff",
+        "radius": 20
+      }
+    },
+    {
+      "type": "View",
+      "id": "rounded-view-50",
+      "position": [50, 200],
+      "size": [200, 100],
+      "style": {
+        "bgColor": "#FF9800",
+        "color": "#ffffff",
+        "radius": 50
+      }
+    },
+    {
+      "type": "Button",
+      "id": "rounded-button-15",
+      "position": [300, 200],
+      "size": [200, 60],
+      "text": "圆角按钮",
+      "style": {
+        "bgColor": "#E91E63",
+        "color": "#ffffff",
+        "radius": 15
+      }
+    },
+    {
+      "type": "Input",
+      "id": "rounded-input-25",
+      "position": [50, 320],
+      "size": [200, 50],
+      "label": "圆角输入框",
+      "style": {
+        "bgColor": "#ffffff",
+        "color": "#000000",
+        "radius": 25
+      }
+    },
+    {
+      "type": "Label",
+      "id": "rounded-label-12",
+      "position": [300, 320],
+      "size": [200, 50],
+      "text": "带背景的标签",
+      "style": {
+        "bgColor": "#9C27B0",
+        "color": "#ffffff",
+        "radius": 12
+      }
+    }
+  ]
+}

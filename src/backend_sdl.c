@@ -39,6 +39,7 @@ float getDisplayScale(SDL_Window* window) {
     return (renderW) / windowW;
 }
 
+void draw_rounded_rect(SDL_Renderer* renderer, int x, int y, int w, int h, int radius, SDL_Color color);
 
 int backend_init(){
     // 初始化SDL
@@ -430,6 +431,17 @@ void backend_render_fill_rect_color(Rect* rect,unsigned char r,unsigned char g,u
     SDL_RenderFillRect(renderer, rect);
 }
 
+// 绘制带圆角的填充矩形
+void backend_render_rounded_rect(Rect* rect, Color color, int radius) {
+    draw_rounded_rect(renderer, rect->x, rect->y, rect->w, rect->h, radius, color);
+}
+
+// 绘制带圆角的填充矩形（直接指定颜色值）
+void backend_render_rounded_rect_color(Rect* rect, unsigned char r, unsigned char g, unsigned char b, unsigned char a, int radius) {
+    SDL_Color color = {r, g, b, a};
+    draw_rounded_rect(renderer, rect->x, rect->y, rect->w, rect->h, radius, color);
+}
+
 void backend_render_rect(Rect* rect,Color color){
      // 绘制按钮边框
     SDL_SetRenderDrawColor(renderer, 
@@ -514,3 +526,55 @@ void draw_circle(SDL_Renderer* renderer, int center_x, int center_y, int radius,
 //         }
 //     }
 // }
+
+// 绘制带透明度的圆角矩形
+void draw_rounded_rect(SDL_Renderer* renderer, int x, int y, int w, int h, int radius, SDL_Color color) {
+    SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
+    
+    // 限制圆角半径不超过宽高的一半
+    int r = radius;
+    if (r > w / 2) r = w / 2;
+    if (r > h / 2) r = h / 2;
+    
+    // 绘制四个角的圆弧
+    for (int i = 0; i <= r; i++) {
+        // 左上角圆弧
+        SDL_RenderDrawPoint(renderer, x + r - i, y + r - i);
+        SDL_RenderDrawPoint(renderer, x + r - i, y + r + i);
+        // 右上角圆弧
+        SDL_RenderDrawPoint(renderer, x + w - r + i, y + r - i);
+        SDL_RenderDrawPoint(renderer, x + w - r - i, y + r + i);
+        // 左下角圆弧
+        SDL_RenderDrawPoint(renderer, x + r - i, y + h - r - i);
+        SDL_RenderDrawPoint(renderer, x + r - i, y + h - r + i);
+        // 右下角圆弧
+        SDL_RenderDrawPoint(renderer, x + w - r + i, y + h - r - i);
+        SDL_RenderDrawPoint(renderer, x + w - r - i, y + h - r + i);
+    }
+    
+    // 绘制四条边
+    SDL_RenderDrawLine(renderer, x + r, y, x + w - r, y); // 上边
+    SDL_RenderDrawLine(renderer, x + r, y + h, x + w - r, y + h); // 下边
+    SDL_RenderDrawLine(renderer, x, y + r, x, y + h - r); // 左边
+    SDL_RenderDrawLine(renderer, x + w, y + r, x + w, y + h - r); // 右边
+    
+    // 填充圆角矩形内部
+    for (int fill_y = y + 1; fill_y < y + h - 1; fill_y++) {
+        // 计算当前行的左右边界
+        int left = x + 1;
+        int right = x + w - 1;
+        
+        // 调整圆角部分的左右边界
+        if (fill_y < y + r) {
+            int offset = (int)(sqrt(r * r - (fill_y - (y + r)) * (fill_y - (y + r))));
+            left = x + r - offset;
+            right = x + w - r + offset;
+        } else if (fill_y > y + h - r) {
+            int offset = (int)(sqrt(r * r - ((y + h - r) - fill_y) * ((y + h - r) - fill_y)));
+            left = x + r - offset;
+            right = x + w - r + offset;
+        }
+        
+        SDL_RenderDrawLine(renderer, left, fill_y, right, fill_y);
+    }
+}
