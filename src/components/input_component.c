@@ -26,6 +26,8 @@ InputComponent* input_component_create(Layer* layer) {
     // 设置组件指针和自定义渲染函数
     layer->component = component;
     layer->render = input_component_render;
+    layer->handle_mouse_event = input_component_handle_mouse_event;
+    layer->handle_key_event = input_component_handle_key_event;
     
     return component;
 }
@@ -89,11 +91,13 @@ void input_component_set_state(InputComponent* component, InputState state) {
 }
 
 // 处理键盘事件
-void input_component_handle_key_event(InputComponent* component, KeyEvent* event) {
+void input_component_handle_key_event(Layer* layer,  KeyEvent* event) {
+    InputComponent* component = (InputComponent*)layer->component;
     if (!component || !event || component->state == INPUT_STATE_DISABLED) {
         return;
     }
-    
+    printf("input_component_handle_key_event: %d, %s\n", event->type, event->data.text.text);
+
     int current_length = strlen(component->text);
     
     switch (event->type) {
@@ -209,15 +213,22 @@ void input_component_handle_key_event(InputComponent* component, KeyEvent* event
 }
 
 // 处理鼠标事件
-void input_component_handle_mouse_event(InputComponent* component, int x, int y, int is_click) {
-    if (!component || component->state == INPUT_STATE_DISABLED) {
+void input_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
+    if (!layer || layer->component) {
         return;
     }
-    
+    InputComponent* component = (InputComponent*)layer->component;
+
+    printf("input_component_handle_mouse_event: %d, %d, %d\n", event->x, event->y, event->state);
+    int is_click = (event->state == 1);
+
+   int is_inside = (event->x >= component->layer->rect.x && 
+                     event->x < component->layer->rect.x + component->layer->rect.w &&
+                     event->y >= component->layer->rect.y && 
+                     event->y < component->layer->rect.y + component->layer->rect.h);
+
     // 检查是否点击在输入框内
-    if (x >= component->layer->rect.x && x <= component->layer->rect.x + component->layer->rect.w &&
-        y >= component->layer->rect.y && y <= component->layer->rect.y + component->layer->rect.h) {
-        
+    if (is_inside) { 
         if (is_click) {
             // 点击时，设置为聚焦状态
             component->state = INPUT_STATE_FOCUSED;

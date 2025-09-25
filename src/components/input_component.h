@@ -34,8 +34,8 @@ void input_component_set_text(InputComponent* component, const char* text);
 void input_component_set_placeholder(InputComponent* component, const char* placeholder);
 void input_component_set_max_length(InputComponent* component, int max_length);
 void input_component_set_state(InputComponent* component, InputState state);
-void input_component_handle_key_event(InputComponent* component, KeyEvent* event);
-void input_component_handle_mouse_event(InputComponent* component, int x, int y, int is_click);
+void input_component_handle_key_event(Layer* layer, KeyEvent* event);
+void input_component_handle_mouse_event(Layer* layer,MouseEvent* event);
 void input_component_render(Layer* layer);
 
 #endif  // YUI_INPUT_COMPONENT_H
