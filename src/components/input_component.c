@@ -96,7 +96,7 @@ void input_component_handle_key_event(Layer* layer,  KeyEvent* event) {
     if (!component || !event || component->state == INPUT_STATE_DISABLED) {
         return;
     }
-    printf("input_component_handle_key_event: %d, %s\n", event->type, event->data.text.text);
+    // printf("input_component_handle_key_event: %d, %s\n", event->type, event->data.text.text);
 
     int current_length = strlen(component->text);
     
@@ -327,14 +327,49 @@ void input_component_render(Layer* layer) {
         text_color = (Color){150, 150, 150, 150};  // 占位文本使用灰色
     }
     
+    // 渲染label文本
+    if (strlen(layer->label) > 0 && layer->font && layer->font->default_font) {
+        Texture* label_texture = backend_render_texture(layer->font->default_font, layer->label, layer->color);
+        if (label_texture) {
+            int label_width, label_height;
+            backend_query_texture(label_texture, NULL, NULL, &label_width, &label_height);
+            
+            Rect label_rect = {
+                layer->rect.x + 5,  // 左侧留5像素边距
+                layer->rect.y + (layer->rect.h - label_height / scale) / 2,
+                label_width / scale,
+                label_height / scale
+            };
+            
+            backend_render_text_copy(label_texture, NULL, &label_rect);
+            backend_render_text_destroy(label_texture);
+        }
+    }
+    
     Texture* text_texture = render_text(layer, display_text, text_color);
     
     if (text_texture) {
         int text_width, text_height;
         backend_query_texture(text_texture, NULL, NULL, &text_width, &text_height);
         
+        int start_x = layer->rect.x + 5;  // 默认左侧留5像素边距
+        
+        // 如果图层有label文本，将text_rect放在label文字的右边
+        if (strlen(layer->label) > 0 && layer->font && layer->font->default_font) {
+            // 计算label文本的宽度
+            Texture* label_texture = backend_render_texture(layer->font->default_font, layer->label, layer->color);
+            if (label_texture) {
+                int label_width;
+                backend_query_texture(label_texture, NULL, NULL, &label_width, NULL);
+                backend_render_text_destroy(label_texture);
+                
+                // 将text_rect放在label文字的右边，留出5像素间距
+                start_x = layer->rect.x + label_width / scale + 10;
+            }
+        }
+        
         Rect text_rect = {
-            layer->rect.x + 5,  // 左侧留5像素边距
+            start_x,
             layer->rect.y + (layer->rect.h - text_height / scale) / 2,
             text_width / scale,
             text_height / scale
