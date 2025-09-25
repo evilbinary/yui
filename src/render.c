@@ -54,37 +54,9 @@ void render_layer(Layer* layer) {
     layer_update_animation(layer);
     
     // 根据图层类型进行不同的渲染处理
-    if (layer->type == BUTTON) {
-        if(layer->render!=NULL){
+    if(layer->render!=NULL){
             layer->render(layer);
-        }    
-    } 
-    else if (layer->type==INPUT) {
-        // 输入框类型渲染：绘制背景和边框
-        if(layer->render!=NULL){
-            layer->render(layer);
-        }
-    }
-    else if (layer->type==LABEL) {
-        if(layer->render!=NULL){
-            layer->render(layer);
-        }
-    
-    }    
-    else if (layer->type == IMAGE) {
-        if(layer->render!=NULL){
-            layer->render(layer);
-        }
-    }
-    if (layer->type == PROGRESS) {
-          if(layer->render!=NULL){
-            layer->render(layer);
-        }
-  
-            
-        
-    } 
-    else if(layer->type==VIEW) {
+    }else if(layer->type==VIEW) {
         //printf("layer->%s %d\n",layer->id,layer->type);
     // 绘制背景
         if(layer->bgColor.a > 0) {
