@@ -25,6 +25,10 @@
 // #define DEBUG_VIEW 1 
 #define YUI_ANIMATION 1
 #define YUI_INPUT_COMPONENT 1
+#define YUI_LABEL_COMPONENT 1
+#define YUI_IMAGE_COMPONENT 1
+#define YUI_BUTTON_COMPONENT 1
+#define YUI_PROGRESS_COMPONENT 1
 
 
 #ifdef YUI_ANIMATION
@@ -275,6 +279,22 @@ typedef struct {
 
 #ifdef YUI_INPUT_COMPONENT
 #include "components/input_component.h"
+#endif
+
+#ifdef YUI_LABEL_COMPONENT
+#include "components/label_component.h"
+#endif
+
+#ifdef YUI_IMAGE_COMPONENT
+#include "components/image_component.h"
+#endif
+
+#ifdef YUI_BUTTON_COMPONENT
+#include "components/button_component.h"
+#endif
+
+#ifdef YUI_PROGRESS_COMPONENT
+#include "components/progress_component.h"
 #endif
 
 #endif

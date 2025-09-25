@@ -55,57 +55,9 @@ void render_layer(Layer* layer) {
     
     // 根据图层类型进行不同的渲染处理
     if (layer->type == BUTTON) {
-        // 按钮类型渲染：绘制背景和边框
-        if(layer->bgColor.a>0){
-            if (layer->radius > 0) {
-                backend_render_rounded_rect(&layer->rect, layer->bgColor, layer->radius);
-            } else {
-                backend_render_fill_rect(&layer->rect,layer->bgColor);
-            }
-        }
-        
-        // 绘制边框，考虑圆角
-        if (layer->radius > 0) {
-            backend_render_rounded_rect_with_border(&layer->rect, layer->bgColor, layer->radius, 2, (Color){200, 200, 200, 255});
-        } else {
-            backend_render_rect_color(&layer->rect,200, 200, 200, 255);
-        }
-       
-        
-        // 渲染按钮文本
-        if (strlen(layer->text) > 0) {
-            // 使用ttf渲染文本
-           
-            Color text_color = layer->color; // 白色文字
-            Texture* text_texture = render_text(layer,layer->text, text_color);
-            
-            if (text_texture) {
-                int text_width, text_height;
-                backend_query_texture(text_texture, NULL, NULL, &text_width, &text_height);
-                
-                Rect text_rect = {
-                    layer->rect.x + (layer->rect.w - text_width/ scale) / 2,  // 居中
-                    layer->rect.y + (layer->rect.h - text_height/ scale) / 2,
-                    text_width / scale,
-                    text_height / scale
-                };
-                
-                // 确保文本不会超出按钮边界
-                if (text_rect.w > layer->rect.w - 20) {
-                    text_rect.w = layer->rect.w - 20;
-                    text_rect.x = layer->rect.x + 10;
-                }
-                
-                if (text_rect.h > layer->rect.h) {
-                    text_rect.h = layer->rect.h;
-                    text_rect.y = layer->rect.y;
-                }
-                
-                backend_render_text_copy(text_texture,NULL,&text_rect);
-                backend_render_text_destroy(text_texture);
-                
-            }
-        }
+        if(layer->render!=NULL){
+            layer->render(layer);
+        }    
     } 
     else if (layer->type==INPUT) {
         // 输入框类型渲染：绘制背景和边框
@@ -114,143 +66,23 @@ void render_layer(Layer* layer) {
         }
     }
     else if (layer->type==LABEL) {
-            if(layer->bgColor.a>0){
-                if (layer->radius > 0) {
-                    backend_render_rounded_rect(&layer->rect, layer->bgColor, layer->radius);
-                } else {
-                    backend_render_fill_rect(&layer->rect,layer->bgColor);
-                }
-
-            }
-        
-            Color text_color = layer->color;
-            Texture* text_texture = render_text(layer,layer->text, text_color);
-            
-            if (text_texture) {
-                int text_width, text_height;
-                backend_query_texture(text_texture, NULL, NULL, &text_width, &text_height);
-                
-                Rect text_rect = {
-                    layer->rect.x + 5 + (layer->rect.w -text_width/ scale)/2,  // 左侧留5像素边距
-                    layer->rect.y + (layer->rect.h - text_height/ scale) / 2,
-                    text_width / scale,
-                    text_height / scale
-                };
-                
-                // 确保文本不会超出输入框边界
-                if (text_rect.x + text_rect.w > layer->rect.x + layer->rect.w - 5) {
-                    text_rect.w = layer->rect.x + layer->rect.w - 5 - text_rect.x;
-                }
-                
-                if (text_rect.y + text_rect.h > layer->rect.y + layer->rect.h) {
-                    text_rect.h = layer->rect.y + layer->rect.h - text_rect.y;
-                }
-                
-                backend_render_text_copy(text_texture,NULL,&text_rect);
-                backend_render_text_destroy(text_texture);
-            }
+        if(layer->render!=NULL){
+            layer->render(layer);
+        }
+    
     }    
     else if (layer->type == IMAGE) {
-        // 图片类型渲染：从文件路径加载并渲染图片（支持多种格式）
-        if (strlen(layer->source) > 0 && !layer->texture) {
-            // 修改为使用image支持多种格式
-            load_textures(layer);
-        }
-        
-        // 渲染图片纹理
-        if (layer->texture) {
-            // 根据图片模式进行不同的渲染
-            if (layer->image_mode == IMAGE_MODE_STRETCH) {
-                // 拉伸模式：直接填充整个区域
-                backend_render_text_copy(layer->texture,NULL,&layer->rect);
-            } else {
-                // 获取图片原始尺寸
-                int img_width, img_height;
-                backend_query_texture(layer->texture, NULL, NULL, &img_width, &img_height);
-                
-                // 计算缩放比例
-                float scale_x = (float)layer->rect.w / img_width;
-                float scale_y = (float)layer->rect.h / img_height;
-                
-                Rect render_rect;
-                render_rect.x = layer->rect.x;
-                render_rect.y = layer->rect.y;
-                render_rect.w = img_width;
-                render_rect.h = img_height;
-                
-                if (layer->image_mode == IMAGE_MODE_ASPECT_FIT) {
-                    // 自适应模式：完整显示图片，可能有空白区域
-                    float scale = fmin(scale_x, scale_y);
-                    render_rect.w = (int)(img_width * scale);
-                    render_rect.h = (int)(img_height * scale);
-                    render_rect.x = layer->rect.x + (layer->rect.w - render_rect.w) / 2;
-                    render_rect.y = layer->rect.y + (layer->rect.h - render_rect.h) / 2;
-                } else if (layer->image_mode == IMAGE_MODE_ASPECT_FILL) {
-                    // 填充模式：填满整个区域，可能裁剪图片
-                    float scale = fmax(scale_x, scale_y);
-                    render_rect.w = (int)(img_width * scale);
-                    render_rect.h = (int)(img_height * scale);
-                    render_rect.x = layer->rect.x + (layer->rect.w - render_rect.w) / 2;
-                    render_rect.y = layer->rect.y + (layer->rect.h - render_rect.h) / 2;
-                }
-                backend_render_text_copy(layer->texture,NULL,&render_rect);
-       
-            }
-        } else {
-            // 如果图片加载失败，绘制一个占位符
-            backend_render_fill_rect_color( &layer->rect,200, 200, 200, 255);
-            backend_render_rect_color(&layer->rect,100, 100, 100, 255);
+        if(layer->render!=NULL){
+            layer->render(layer);
         }
     }
     if (layer->type == PROGRESS) {
-        // 按钮类型渲染：绘制背景和边框
-        if(layer->bgColor.a>0){
-            backend_render_fill_rect(&layer->rect,layer->bgColor);
+          if(layer->render!=NULL){
+            layer->render(layer);
         }
-        if(layer->data!=NULL){
-            Rect fill_rect = {
-                    layer->rect.x ,
-                    layer->rect.y,
-                    layer->rect.w *(layer->data->json->valueint/100.0),
-                    layer->rect.h
-                };
-            backend_render_fill_rect(&fill_rect,layer->color);
-        }
+  
             
-        // 渲染按钮文本
-        if (strlen(layer->text) > 0) {
-            // 使用ttf渲染文本
-           
-            Color text_color = layer->color; // 白色文字
-            Texture* text_texture = render_text(layer,layer->text, text_color);
-            
-            if (text_texture) {
-                int text_width, text_height;
-                backend_query_texture(text_texture, NULL, NULL, &text_width, &text_height);
-                
-                Rect text_rect = {
-                    layer->rect.x + (layer->rect.w - text_width/ scale) / 2,  // 居中
-                    layer->rect.y + (layer->rect.h - text_height/ scale) / 2,
-                    text_width / scale,
-                    text_height / scale
-                };
-                
-                // 确保文本不会超出按钮边界
-                if (text_rect.w > layer->rect.w - 20) {
-                    text_rect.w = layer->rect.w - 20;
-                    text_rect.x = layer->rect.x + 10;
-                }
-                
-                if (text_rect.h > layer->rect.h) {
-                    text_rect.h = layer->rect.h;
-                    text_rect.y = layer->rect.y;
-                }
-                
-                backend_render_text_copy(text_texture,NULL,&text_rect);
-                backend_render_text_destroy(text_texture);
-                
-            }
-        }
+        
     } 
     else if(layer->type==VIEW) {
         //printf("layer->%s %d\n",layer->id,layer->type);

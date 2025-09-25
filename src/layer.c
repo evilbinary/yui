@@ -473,6 +473,18 @@ Layer* parse_layer(cJSON* json_obj,Layer* parent) {
         if (cJSON_HasObjectItem(json_obj, "maxLength")) {
             input_component_set_max_length(layer->component, cJSON_GetObjectItem(json_obj, "maxLength")->valueint);
         }
+    }else if(layer->type==BUTTON){
+        layer->component = button_component_create(layer);
+
+    }else if(layer->type==LABEL){
+        layer->component = label_component_create(layer);
+        
+    }else if(layer->type==IMAGE){
+        layer->component = image_component_create(layer);
+        
+    }else if(layer->type==PROGRESS){
+        layer->component = progress_component_create(layer);
+        
     }
     
     // 递归解析子图层
