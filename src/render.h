@@ -16,4 +16,6 @@ void render_scrollbar(Layer* layer);
 void render_clip_start(Layer* layer,Rect* prev_clip);
 void render_clip_end(Layer* layer,Rect* prev_clip);
 
+Texture* render_text(Layer* layer,const char* text, Color color);
+
 #endif

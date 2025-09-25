@@ -109,53 +109,54 @@ void render_layer(Layer* layer) {
     } 
     else if (layer->type==INPUT) {
         // 输入框类型渲染：绘制背景和边框
-        if(layer->bgColor.a>0){
-            if (layer->radius > 0) {
-                backend_render_rounded_rect(&layer->rect, layer->bgColor, layer->radius);
-            } else {
-                backend_render_fill_rect(&layer->rect,layer->bgColor);
-            }
-        }
+        input_component_render(layer->component);
+        // if(layer->bgColor.a>0){
+        //     if (layer->radius > 0) {
+        //         backend_render_rounded_rect(&layer->rect, layer->bgColor, layer->radius);
+        //     } else {
+        //         backend_render_fill_rect(&layer->rect,layer->bgColor);
+        //     }
+        // }
         
-        // 绘制输入框边框，考虑圆角
-        if (layer->radius > 0) {
-            backend_render_rounded_rect_with_border(&layer->rect, layer->bgColor, layer->radius, 2, (Color){150, 150, 150, 255});
-        } else {
-            backend_render_rect_color(&layer->rect,150, 150, 150, 255);
-        }
+        // // 绘制输入框边框，考虑圆角
+        // if (layer->radius > 0) {
+        //     backend_render_rounded_rect_with_border(&layer->rect, layer->bgColor, layer->radius, 2, (Color){150, 150, 150, 255});
+        // } else {
+        //     backend_render_rect_color(&layer->rect,150, 150, 150, 255);
+        // }
         
-        // 渲染输入框标签
-        if (strlen(layer->label) > 0) {
-            // 使用ttf渲染文本
+        // // 渲染输入框标签
+        // if (strlen(layer->label) > 0) {
+        //     // 使用ttf渲染文本
            
-            Color text_color = layer->color;
-            Texture* text_texture = render_text(layer,layer->label, text_color);
+        //     Color text_color = layer->color;
+        //     Texture* text_texture = render_text(layer,layer->label, text_color);
             
-            if (text_texture) {
-                int text_width, text_height;
-                backend_query_texture(text_texture, NULL, NULL, &text_width, &text_height);
+        //     if (text_texture) {
+        //         int text_width, text_height;
+        //         backend_query_texture(text_texture, NULL, NULL, &text_width, &text_height);
                 
-                Rect text_rect = {
-                    layer->rect.x + 5,  // 左侧留5像素边距
-                    layer->rect.y + (layer->rect.h - text_height/ scale) / 2,
-                    text_width / scale,
-                    text_height / scale
-                };
+        //         Rect text_rect = {
+        //             layer->rect.x + 5,  // 左侧留5像素边距
+        //             layer->rect.y + (layer->rect.h - text_height/ scale) / 2,
+        //             text_width / scale,
+        //             text_height / scale
+        //         };
                 
-                // 确保文本不会超出输入框边界
-                if (text_rect.x + text_rect.w > layer->rect.x + layer->rect.w - 5) {
-                    text_rect.w = layer->rect.x + layer->rect.w - 5 - text_rect.x;
-                }
+        //         // 确保文本不会超出输入框边界
+        //         if (text_rect.x + text_rect.w > layer->rect.x + layer->rect.w - 5) {
+        //             text_rect.w = layer->rect.x + layer->rect.w - 5 - text_rect.x;
+        //         }
                 
-                if (text_rect.y + text_rect.h > layer->rect.y + layer->rect.h) {
-                    text_rect.h = layer->rect.y + layer->rect.h - text_rect.y;
-                }
+        //         if (text_rect.y + text_rect.h > layer->rect.y + layer->rect.h) {
+        //             text_rect.h = layer->rect.y + layer->rect.h - text_rect.y;
+        //         }
                 
-                backend_render_text_copy(text_texture,NULL,&text_rect);
-                backend_render_text_destroy(text_texture);
+        //         backend_render_text_copy(text_texture,NULL,&text_rect);
+        //         backend_render_text_destroy(text_texture);
 
-            }
-        }
+        //     }
+        // }
     }
     else if (layer->type==LABEL) {
             if(layer->bgColor.a>0){

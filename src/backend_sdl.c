@@ -116,6 +116,26 @@ void propagateTouchEvent(Layer* layer, TouchEvent* event) {
 }
 
 void handle_event(Layer* root, SDL_Event* event) {
+    // 处理键盘事件
+    if (event->type == SDL_KEYDOWN) {
+        // 创建键盘按键事件
+        KeyEvent key_event;
+        key_event.type = KEY_EVENT_DOWN;
+        key_event.data.key.key_code = event->key.keysym.sym;
+        key_event.data.key.mod = event->key.keysym.mod;
+        key_event.data.key.repeat = event->key.repeat;
+        
+        handle_key_event(root, &key_event);
+    } else if (event->type == SDL_TEXTINPUT) {
+        // 创建文本输入事件
+        KeyEvent key_event;
+        key_event.type = KEY_EVENT_TEXT_INPUT;
+        strncpy(key_event.data.text.text, event->text.text, 31);
+        key_event.data.text.text[31] = '\0';
+        
+        handle_key_event(root, &key_event);
+    }
+    
     if (event->type == SDL_MOUSEBUTTONDOWN) {
         SDL_Point mouse_pos = { event->button.x, event->button.y };
         
@@ -634,4 +654,12 @@ void draw_rounded_rect_with_border(SDL_Renderer* renderer, int x, int y, int w, 
         SDL_RenderDrawLine(renderer, current_x, current_y + current_r, current_x, current_y + current_h - current_r); // 左边
         SDL_RenderDrawLine(renderer, current_x + current_w, current_y + current_r, current_x + current_w, current_y + current_h - current_r); // 右边
     }
+}
+
+// Add this function anywhere in backend_sdl.c after the global renderer declaration
+
+// 绘制线段
+void backend_render_line(int x1, int y1, int x2, int y2, Color color) {
+    SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
+    SDL_RenderDrawLine(renderer, x1, y1, x2, y2);
 }

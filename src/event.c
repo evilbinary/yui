@@ -1,4 +1,6 @@
 #include "event.h"
+#include "util.h"
+#include "backend.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -86,5 +88,29 @@ void handle_scroll_event(Layer* layer, int scroll_delta) {
         }
         // 重新布局子元素
         layout_layer(layer);
+    }
+}
+
+// 处理键盘事件
+void handle_key_event(Layer* layer, KeyEvent* event) {
+    if (!layer || !event) {
+        return;
+    }
+    
+    // 检查是否是INPUT类型的图层，并且有input_component
+    if (layer->type == INPUT && layer->component) {
+        input_component_handle_key_event(layer->component, event);
+    }
+    
+    // 递归处理子图层的键盘事件
+    for (int i = 0; i < layer->child_count; i++) {
+        if (layer->children[i]) {
+            handle_key_event(layer->children[i], event);
+        }
+    }
+    
+    // 处理sub图层的键盘事件
+    if (layer->sub) {
+        handle_key_event(layer->sub, event);
     }
 }

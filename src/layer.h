@@ -9,7 +9,6 @@
 #include "event.h"
 
 
-
 cJSON* parse_json(char* json_path);
 Layer* parse_layer(cJSON* json_obj,Layer* parent);
 

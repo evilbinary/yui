@@ -3,6 +3,8 @@
 
 #include "layer.h"
 
+typedef struct Layer Layer;
+
 
 void layout_layer(Layer* layer);
 

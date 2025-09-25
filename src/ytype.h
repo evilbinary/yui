@@ -7,7 +7,6 @@
 #include "cJSON.h"
 
 
-
 #ifdef D_SDL
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
@@ -25,6 +24,7 @@
 #define SDL2 1
 // #define DEBUG_VIEW 1 
 #define YUI_ANIMATION 1
+#define YUI_INPUT_COMPONENT 1
 
 
 #ifdef YUI_ANIMATION
@@ -160,6 +160,27 @@ typedef struct TouchEvent {
     Uint32 timestamp;     // 时间戳
 } TouchEvent;
 
+// 自定义键盘事件结构体
+typedef struct KeyEvent{
+    enum {
+        KEY_EVENT_DOWN,
+        KEY_EVENT_UP,
+        KEY_EVENT_TEXT_INPUT
+    } type;
+    
+    union {
+        struct {
+            int key_code;  // 键码
+            int mod;       // 修饰键状态
+            int repeat;    // 是否重复按键
+        } key;
+        
+        struct {
+            char text[32];  // 输入的文本
+        } text;
+    } data;
+} KeyEvent;
+
 // 事件结构
 typedef struct Event {
     char click_name[MAX_PATH];
@@ -228,6 +249,9 @@ typedef struct Layer {
     int scrollable;
     int scroll_offset;
     Scrollbar* scrollbar;
+    
+    // 组件指针
+    void* component;
 } Layer;
 
 
@@ -246,6 +270,8 @@ typedef struct {
     EventHandler handler;   // 事件处理函数
 } EventEntry;
 
-
+#ifdef YUI_INPUT_COMPONENT
+#include "components/input_component.h"
+#endif
 
 #endif

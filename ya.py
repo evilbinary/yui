@@ -42,5 +42,6 @@ def run(target):
         '-F../libs/'
         ),
     add_files("src/*.c"),
+    add_files("src/components/*.c"),
     on_run(run)
 )

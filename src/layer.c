@@ -460,6 +460,21 @@ Layer* parse_layer(cJSON* json_obj,Layer* parent) {
         }
     }
     
+    // 如果是INPUT类型的图层，初始化InputComponent
+    if (layer->type == INPUT) {
+        layer->component = input_component_create(layer);
+        
+        // 解析placeholder属性
+        if (cJSON_HasObjectItem(json_obj, "placeholder")) {
+            input_component_set_placeholder(layer->component, cJSON_GetObjectItem(json_obj, "placeholder")->valuestring);
+        }
+        
+        // 解析maxLength属性
+        if (cJSON_HasObjectItem(json_obj, "maxLength")) {
+            input_component_set_max_length(layer->component, cJSON_GetObjectItem(json_obj, "maxLength")->valueint);
+        }
+    }
+    
     // 递归解析子图层
     cJSON* children = cJSON_GetObjectItem(json_obj, "children");
     if (children) {
