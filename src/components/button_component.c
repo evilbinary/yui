@@ -89,7 +89,7 @@ void button_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
         return;
     }
 
-    printf("button_component_handle_mouse_event: %d, %d, %d, %d state:%d\n", event->x, event->y, is_click , event->button,event->state);
+    // printf("button_component_handle_mouse_event: %d, %d, %d, %d state:%d\n", event->x, event->y, is_click , event->button,event->state);
     
     // 检查鼠标是否在按钮范围内
     int is_inside = (event->x >= component->layer->rect.x && 
@@ -98,6 +98,7 @@ void button_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
                      event->y < component->layer->rect.y + component->layer->rect.h);
     
     if (is_click) {
+        printf("button_component_handle_mouse_event click: %d, %d, %d, %d state:%d\n", event->x, event->y, is_click , event->button,event->state);
         if (is_inside) {
             // 鼠标点击在按钮上
             component->state = BUTTON_STATE_PRESSED;

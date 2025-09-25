@@ -38,6 +38,12 @@ typedef struct Animation Animation;
 typedef struct void* Animation;
 #endif
 
+
+typedef struct Point {
+    int x;
+    int y;
+} Point;
+
 #if SDL2
 
 #define Texture SDL_Texture
@@ -45,7 +51,9 @@ typedef struct void* Animation;
 #define Rect SDL_Rect
 
 #else
-    typedef struct Rect{
+
+
+typedef struct Rect {
         int x, y;
         int w, h;
     } Rect;
@@ -59,6 +67,10 @@ typedef struct void* Animation;
 
 #endif
 
+#define point_in_rect(pt, rect) \
+    ((pt.x) >= (rect).x && (pt.x) <= (rect).x + (rect).w) && \
+    ((pt.y) >= (rect).y && (pt.y) <= (rect).y + (rect).h)
+        
 #define DFont TTF_Font
 
 

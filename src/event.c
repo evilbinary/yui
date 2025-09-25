@@ -96,6 +96,7 @@ void handle_key_event(Layer* layer, KeyEvent* event) {
     if (!layer || !event) {
         return;
     }
+
     
     if(layer->handle_key_event){
         layer->handle_key_event(layer, event);
@@ -119,12 +120,16 @@ void handle_mouse_event(Layer* layer, MouseEvent* event) {
     if (!layer || !event) {
         return;
     }
-    if (layer->event && layer->event->click) {
-                layer->event->click(layer);
-    }
-    
-    if(layer->handle_mouse_event){
-        layer->handle_mouse_event(layer, event);
+    Point mouse_pos = {event->x, event->y};
+    if (point_in_rect(mouse_pos, layer->rect)) {
+
+        if (layer->event && layer->event->click) {
+            layer->event->click(layer);
+        }
+        
+        if (layer->handle_mouse_event) {
+            layer->handle_mouse_event(layer, event);
+        }
     }
     
     // 递归处理子图层的事件
