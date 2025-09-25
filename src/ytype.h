@@ -186,6 +186,14 @@ typedef struct KeyEvent{
 } KeyEvent;
 
 // 事件结构
+typedef struct MouseEvent {
+    int x;
+    int y;
+    int button;
+    int state;
+    Uint32 timestamp;
+} MouseEvent;
+
 typedef struct Event {
     char click_name[MAX_PATH];
     void (*click)();  // 事件回调函数指针
@@ -259,6 +267,12 @@ typedef struct Layer {
     
     // 自定义渲染函数指针
     void (*render)(Layer* layer);
+
+    // 新增事件处理函数指针
+    void (*handle_key_event)(Layer* layer, KeyEvent* event);
+    void (*handle_mouse_event)(Layer* layer, MouseEvent* event);
+    void (*handle_touch_event)(Layer* layer, TouchEvent* event);
+
 } Layer;
 
 

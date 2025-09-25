@@ -28,6 +28,10 @@ ButtonComponent* button_component_create(Layer* layer) {
     // 设置组件指针和自定义渲染函数
     layer->component = component;
     layer->render = button_component_render;
+    
+    // 绑定事件处理函数
+    layer->handle_mouse_event = button_component_handle_mouse_event;
+    
 
     
     return component;
@@ -78,24 +82,28 @@ void button_component_set_user_data(ButtonComponent* component, void* data) {
 }
 
 // 处理鼠标事件
-void button_component_handle_mouse_event(ButtonComponent* component, int x, int y, int is_click) {
+void button_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
+    ButtonComponent* component = (ButtonComponent*)layer->component;
+    int is_click = (event->state == SDL_PRESSED);
     if (!component || component->state == BUTTON_STATE_DISABLED) {
         return;
     }
+
+    printf("button_component_handle_mouse_event: %d, %d, %d\n", event->x, event->y, is_click);
     
     // 检查鼠标是否在按钮范围内
-    int is_inside = (x >= component->layer->rect.x && 
-                     x < component->layer->rect.x + component->layer->rect.w &&
-                     y >= component->layer->rect.y && 
-                     y < component->layer->rect.y + component->layer->rect.h);
+    int is_inside = (event->x >= component->layer->rect.x && 
+                     event->x < component->layer->rect.x + component->layer->rect.w &&
+                     event->y >= component->layer->rect.y && 
+                     event->y < component->layer->rect.y + component->layer->rect.h);
     
     if (is_click) {
         if (is_inside) {
             // 鼠标点击在按钮上
             component->state = BUTTON_STATE_PRESSED;
             // 触发点击事件（如果存在）
-            if (component->layer->event) {
-                // 这里可以添加事件触发逻辑
+            if (layer->event && layer->event->click) {
+                layer->event->click();
             }
         } else {
             // 鼠标点击在按钮外

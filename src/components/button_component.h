@@ -26,7 +26,7 @@ void button_component_set_text(ButtonComponent* component, const char* text);
 void button_component_set_state(ButtonComponent* component, ButtonState state);
 void button_component_set_color(ButtonComponent* component, ButtonState state, Color color);
 void button_component_set_user_data(ButtonComponent* component, void* data);
-void button_component_handle_mouse_event(ButtonComponent* component, int x, int y, int is_click);
+void button_component_handle_mouse_event(Layer* layer, MouseEvent* event);
 void button_component_render(Layer* layer);
 
 #endif  // YUI_BUTTON_COMPONENT_H

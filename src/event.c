@@ -97,9 +97,8 @@ void handle_key_event(Layer* layer, KeyEvent* event) {
         return;
     }
     
-    // 检查是否是INPUT类型的图层，并且有input_component
-    if (layer->type == INPUT && layer->component) {
-        input_component_handle_key_event(layer->component, event);
+    if(layer->handle_key_event){
+        layer->handle_key_event(layer, event);
     }
     
     // 递归处理子图层的键盘事件
