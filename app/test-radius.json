@@ -45,7 +45,7 @@
       "id": "rounded-button-15",
       "position": [300, 200],
       "size": [200, 60],
-      "text": "圆角按钮",
+      "text": "圆角按钮15",
       "style": {
         "bgColor": "#E91E63",
         "color": "#ffffff",
@@ -57,7 +57,7 @@
       "id": "rounded-input-25",
       "position": [50, 320],
       "size": [200, 50],
-      "label": "圆角输入框",
+      "label": "圆角输入框25",
       "style": {
         "bgColor": "#ffffff",
         "color": "#000000",
@@ -69,7 +69,7 @@
       "id": "rounded-label-12",
       "position": [300, 320],
       "size": [200, 50],
-      "text": "带背景的标签",
+      "text": "带背景的标签12",
       "style": {
         "bgColor": "#9C27B0",
         "color": "#ffffff",

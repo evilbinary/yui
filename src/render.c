@@ -64,7 +64,12 @@ void render_layer(Layer* layer) {
             }
         }
         
-        backend_render_rect_color(&layer->rect,200, 200, 200, 255);
+        // 绘制边框，考虑圆角
+        if (layer->radius > 0) {
+            backend_render_rounded_rect_with_border(&layer->rect, layer->bgColor, layer->radius, 2, (Color){200, 200, 200, 255});
+        } else {
+            backend_render_rect_color(&layer->rect,200, 200, 200, 255);
+        }
        
         
         // 渲染按钮文本
@@ -112,8 +117,12 @@ void render_layer(Layer* layer) {
             }
         }
         
-        // 绘制输入框边框
-        backend_render_rect_color(&layer->rect,150, 150, 150, 255);
+        // 绘制输入框边框，考虑圆角
+        if (layer->radius > 0) {
+            backend_render_rounded_rect_with_border(&layer->rect, layer->bgColor, layer->radius, 2, (Color){150, 150, 150, 255});
+        } else {
+            backend_render_rect_color(&layer->rect,150, 150, 150, 255);
+        }
         
         // 渲染输入框标签
         if (strlen(layer->label) > 0) {

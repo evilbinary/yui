@@ -86,7 +86,8 @@
             "size":[240,40],
             "style": {
                 "color": "#FFFFFF",
-                "bgColor": "#1976D2"
+                "bgColor": "#1976D2",
+                "radius": 20
             },
             "layout": {
                 "type":"center",
@@ -103,7 +104,8 @@
             "size":[240,40],
             "style": {
                 "color": "#1976D2",
-                "bgColor": "#F5F5F5"
+                "bgColor": "#F5F5F5",
+                "radius": 20
             },
             "layout": {
                 "type":"center",

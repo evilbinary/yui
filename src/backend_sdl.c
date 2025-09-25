@@ -39,6 +39,8 @@ float getDisplayScale(SDL_Window* window) {
     return (renderW) / windowW;
 }
 
+void draw_rounded_rect_with_border(SDL_Renderer* renderer, int x, int y, int w, int h, int radius, int border_width, SDL_Color bg_color, SDL_Color border_color);
+
 void draw_rounded_rect(SDL_Renderer* renderer, int x, int y, int w, int h, int radius, SDL_Color color);
 
 int backend_init(){
@@ -442,6 +444,11 @@ void backend_render_rounded_rect_color(Rect* rect, unsigned char r, unsigned cha
     draw_rounded_rect(renderer, rect->x, rect->y, rect->w, rect->h, radius, color);
 }
 
+// 绘制带圆角和边框的填充矩形
+void backend_render_rounded_rect_with_border(Rect* rect, Color bg_color, int radius, int border_width, Color border_color) {
+    draw_rounded_rect_with_border(renderer, rect->x, rect->y, rect->w, rect->h, radius, border_width, bg_color, border_color);
+}
+
 void backend_render_rect(Rect* rect,Color color){
      // 绘制按钮边框
     SDL_SetRenderDrawColor(renderer, 
@@ -536,7 +543,7 @@ void draw_rounded_rect(SDL_Renderer* renderer, int x, int y, int w, int h, int r
     if (r > w / 2) r = w / 2;
     if (r > h / 2) r = h / 2;
     
-    // 绘制四个角的圆弧（使用更精确的方式）
+    // 绘制四个角的圆弧
     for (int i = 0; i <= r; i++) {
         // 计算偏移量
         int j = (int)sqrt(r * r - i * i);
@@ -579,5 +586,52 @@ void draw_rounded_rect(SDL_Renderer* renderer, int x, int y, int w, int h, int r
         }
         
         SDL_RenderDrawLine(renderer, left, fill_y, right, fill_y);
+    }
+}
+
+// 绘制带边框的圆角矩形
+void draw_rounded_rect_with_border(SDL_Renderer* renderer, int x, int y, int w, int h, int radius, int border_width, SDL_Color bg_color, SDL_Color border_color) {
+    // 先绘制内部填充的圆角矩形
+    draw_rounded_rect(renderer, x, y, w, h, radius, bg_color);
+    
+    // 设置边框颜色
+    SDL_SetRenderDrawColor(renderer, border_color.r, border_color.g, border_color.b, border_color.a);
+    
+    // 限制圆角半径不超过宽高的一半
+    int r = radius;
+    if (r > w / 2) r = w / 2;
+    if (r > h / 2) r = h / 2;
+    
+    // 绘制圆角边框（多次绘制实现宽度效果）
+    for (int bw = 0; bw < border_width; bw++) {
+        int current_r = r - bw;
+        int current_x = x + bw;
+        int current_y = y + bw;
+        int current_w = w - 2 * bw;
+        int current_h = h - 2 * bw;
+        
+        // 绘制四个角的圆弧
+        for (int i = 0; i <= current_r; i++) {
+            int j = (int)sqrt(current_r * current_r - i * i);
+            
+            // 左上角圆弧
+            SDL_RenderDrawPoint(renderer, current_x + current_r - i, current_y + current_r - j);
+            SDL_RenderDrawPoint(renderer, current_x + current_r - j, current_y + current_r - i);
+            // 右上角圆弧
+            SDL_RenderDrawPoint(renderer, current_x + current_w - current_r + i, current_y + current_r - j);
+            SDL_RenderDrawPoint(renderer, current_x + current_w - current_r + j, current_y + current_r - i);
+            // 左下角圆弧
+            SDL_RenderDrawPoint(renderer, current_x + current_r - i, current_y + current_h - current_r + j);
+            SDL_RenderDrawPoint(renderer, current_x + current_r - j, current_y + current_h - current_r + i);
+            // 右下角圆弧
+            SDL_RenderDrawPoint(renderer, current_x + current_w - current_r + i, current_y + current_h - current_r + j);
+            SDL_RenderDrawPoint(renderer, current_x + current_w - current_r + j, current_y + current_h - current_r + i);
+        }
+        
+        // 绘制四条边
+        SDL_RenderDrawLine(renderer, current_x + current_r, current_y, current_x + current_w - current_r, current_y); // 上边
+        SDL_RenderDrawLine(renderer, current_x + current_r, current_y + current_h, current_x + current_w - current_r, current_y + current_h); // 下边
+        SDL_RenderDrawLine(renderer, current_x, current_y + current_r, current_x, current_y + current_h - current_r); // 左边
+        SDL_RenderDrawLine(renderer, current_x + current_w, current_y + current_r, current_x + current_w, current_y + current_h - current_r); // 右边
     }
 }
