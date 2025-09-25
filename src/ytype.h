@@ -252,6 +252,9 @@ typedef struct Layer {
     
     // 组件指针
     void* component;
+    
+    // 自定义渲染函数指针
+    void (*render)(Layer* layer);
 } Layer;
 
 

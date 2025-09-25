@@ -23,6 +23,10 @@ InputComponent* input_component_create(Layer* layer) {
     component->selection_start = 0;
     component->selection_end = 0;
     
+    // 设置组件指针和自定义渲染函数
+    layer->component = component;
+    layer->render = input_component_render;
+    
     return component;
 }
 
@@ -231,19 +235,60 @@ void input_component_handle_mouse_event(InputComponent* component, int x, int y,
 }
 
 // 渲染输入组件
-void input_component_render(InputComponent* component) {
-    if (!component || !component->layer) {
+void input_component_render(Layer* layer) {
+    if (!layer || !layer->component) {
         return;
     }
     
-    Layer* layer = component->layer;
+    InputComponent* component = (InputComponent*)layer->component;
     
+
     // 绘制背景
     if (layer->bgColor.a > 0) {
         if (layer->radius > 0) {
             backend_render_rounded_rect(&layer->rect, layer->bgColor, layer->radius);
         } else {
             backend_render_fill_rect(&layer->rect, layer->bgColor);
+        }
+    }
+
+    // 绘制输入框边框，考虑圆角
+    if (layer->radius > 0) {
+        backend_render_rounded_rect_with_border(&layer->rect, layer->bgColor, layer->radius, 2, (Color){150, 150, 150, 255});
+    } else {
+        backend_render_rect_color(&layer->rect,150, 150, 150, 255);
+    }
+    
+    // 渲染输入框标签
+    if (strlen(layer->label) > 0) {
+        // 使用ttf渲染文本
+        
+        Color text_color = layer->color;
+        Texture* text_texture = render_text(layer,layer->label, text_color);
+        
+        if (text_texture) {
+            int text_width, text_height;
+            backend_query_texture(text_texture, NULL, NULL, &text_width, &text_height);
+            
+            Rect text_rect = {
+                layer->rect.x + 5,  // 左侧留5像素边距
+                layer->rect.y + (layer->rect.h - text_height/ scale) / 2,
+                text_width / scale,
+                text_height / scale
+            };
+            
+            // 确保文本不会超出输入框边界
+            if (text_rect.x + text_rect.w > layer->rect.x + layer->rect.w - 5) {
+                text_rect.w = layer->rect.x + layer->rect.w - 5 - text_rect.x;
+            }
+            
+            if (text_rect.y + text_rect.h > layer->rect.y + layer->rect.h) {
+                text_rect.h = layer->rect.y + layer->rect.h - text_rect.y;
+            }
+            
+            backend_render_text_copy(text_texture,NULL,&text_rect);
+            backend_render_text_destroy(text_texture);
+
         }
     }
     
