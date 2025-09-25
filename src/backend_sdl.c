@@ -536,20 +536,23 @@ void draw_rounded_rect(SDL_Renderer* renderer, int x, int y, int w, int h, int r
     if (r > w / 2) r = w / 2;
     if (r > h / 2) r = h / 2;
     
-    // 绘制四个角的圆弧
+    // 绘制四个角的圆弧（使用更精确的方式）
     for (int i = 0; i <= r; i++) {
+        // 计算偏移量
+        int j = (int)sqrt(r * r - i * i);
+        
         // 左上角圆弧
-        SDL_RenderDrawPoint(renderer, x + r - i, y + r - i);
-        SDL_RenderDrawPoint(renderer, x + r - i, y + r + i);
+        SDL_RenderDrawPoint(renderer, x + r - i, y + r - j);
+        SDL_RenderDrawPoint(renderer, x + r - j, y + r - i);
         // 右上角圆弧
-        SDL_RenderDrawPoint(renderer, x + w - r + i, y + r - i);
-        SDL_RenderDrawPoint(renderer, x + w - r - i, y + r + i);
+        SDL_RenderDrawPoint(renderer, x + w - r + i, y + r - j);
+        SDL_RenderDrawPoint(renderer, x + w - r + j, y + r - i);
         // 左下角圆弧
-        SDL_RenderDrawPoint(renderer, x + r - i, y + h - r - i);
-        SDL_RenderDrawPoint(renderer, x + r - i, y + h - r + i);
+        SDL_RenderDrawPoint(renderer, x + r - i, y + h - r + j);
+        SDL_RenderDrawPoint(renderer, x + r - j, y + h - r + i);
         // 右下角圆弧
-        SDL_RenderDrawPoint(renderer, x + w - r + i, y + h - r - i);
-        SDL_RenderDrawPoint(renderer, x + w - r - i, y + h - r + i);
+        SDL_RenderDrawPoint(renderer, x + w - r + i, y + h - r + j);
+        SDL_RenderDrawPoint(renderer, x + w - r + j, y + h - r + i);
     }
     
     // 绘制四条边
