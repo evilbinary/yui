@@ -223,47 +223,102 @@ void input_component_handle_key_event(Layer* layer,  KeyEvent* event) {
     }
 }
 
+// 定义一个静态变量来跟踪上一次点击的组件
+static InputComponent* last_clicked_component = NULL;
+// 添加一个标记来跟踪是否应该强制保持焦点
+static bool force_focus_debug = false;
+
+// 添加焦点状态检查函数用于调试
+void input_component_debug_focus_state() {
+    printf("\n--- FOCUS STATE DEBUG INFO ---");
+    printf("\nLast clicked component address: %p", last_clicked_component);
+    if (last_clicked_component) {
+        printf(" (state: %d)", last_clicked_component->state);
+    }
+    printf("\n--- END FOCUS DEBUG INFO --\n");
+}
+
 // 处理鼠标事件
 void input_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     if (!layer || !layer->component) {
+        printf("Mouse event skipped: invalid layer or component\n");
         return;
     }
     InputComponent* component = (InputComponent*)layer->component;
 
-    printf("input_component_handle_mouse_event: %d, %d, %d\n", event->x, event->y, event->state);
+    printf("input_component_handle_mouse_event: layer address=%p, component address=%p\n", layer, component);
+    printf("event x=%d, y=%d, state=%d\n", event->x, event->y, event->state);
+    printf("Component current state before processing: %d\n", component->state);
     int is_click = (event->state == 1);
 
+    // Calculate component boundaries for debugging
+    printf("Component boundaries: x=%d, y=%d, w=%d, h=%d\n", 
+           component->layer->rect.x, component->layer->rect.y, 
+           component->layer->rect.w, component->layer->rect.h);
+    
    int is_inside = (event->x >= component->layer->rect.x && 
                      event->x < component->layer->rect.x + component->layer->rect.w &&
                      event->y >= component->layer->rect.y && 
                      event->y < component->layer->rect.y + component->layer->rect.h);
+    
+    printf("Mouse position is inside component: %s\n", is_inside ? "YES" : "NO");
+    printf("Is click event: %s\n", is_click ? "YES" : "NO");
 
     // 检查是否点击在输入框内
     if (is_inside) { 
         if (is_click) {
             // 点击时，设置为聚焦状态
             component->state = INPUT_STATE_FOCUSED;
+            last_clicked_component = component;  // 记录最后点击的组件
+            // 设置强制焦点标记用于调试
+            force_focus_debug = true;
+            printf("State set to FOCUSED (value: %d) on click inside\n", component->state);
+            printf("Last clicked component updated to: %p\n", last_clicked_component);
+            printf("DEBUG: force_focus_debug flag set to TRUE\n");
             
             // TODO: 根据点击位置计算光标位置
             // 这里简化处理，暂时设置为文本末尾
             component->cursor_pos = strlen(component->text);
             component->selection_start = component->cursor_pos;
             component->selection_end = component->cursor_pos;
+            
+            // 调用调试函数检查焦点状态
+            input_component_debug_focus_state();
         }
     } else if (is_click) {
-        // 点击输入框外，取消聚焦
-        component->state = INPUT_STATE_NORMAL;
+        printf("Click outside component: current component=%p, last_clicked_component=%p\n", component, last_clicked_component);
+        // 点击输入框外，只有当这个组件是最后点击的组件时才取消聚焦
+        if (component == last_clicked_component) {
+            component->state = INPUT_STATE_NORMAL;
+            last_clicked_component = NULL;  // 清除最后点击的组件记录
+            // 重置强制焦点标记
+            force_focus_debug = false;
+            printf("State set to NORMAL (value: %d) on click outside (last clicked component)\n", component->state);
+            printf("DEBUG: force_focus_debug flag set to FALSE\n");
+            input_component_debug_focus_state();
+        } else {
+            printf("Not resetting state: current component is not the last clicked component\n");
+        }
     }
 }
 
 // 渲染输入组件
 void input_component_render(Layer* layer) {
     if (!layer || !layer->component) {
+        printf("Render skipped: invalid layer or component\n");
         return;
     }
     
     InputComponent* component = (InputComponent*)layer->component;
     
+    printf("\n--- RENDER CYCLE START ---\n");
+    printf("Rendering input component: layer address=%p, component address=%p\n", layer, component);
+    
+    // 调用调试函数检查焦点状态
+    input_component_debug_focus_state();
+    
+    printf("Component state during render: %d (NORMAL=%d, FOCUSED=%d, DISABLED=%d)\n", 
+           component->state, INPUT_STATE_NORMAL, INPUT_STATE_FOCUSED, INPUT_STATE_DISABLED);
 
     // 绘制背景
     if (layer->bgColor.a > 0) {
@@ -399,15 +454,100 @@ void input_component_render(Layer* layer) {
         backend_render_text_destroy(text_texture);
     }
     
+    // 调试信息：检查当前状态和组件实例
+    printf("Rendering input component: state=%d, INPUT_STATE_FOCUSED=%d\n", 
+           component->state, INPUT_STATE_FOCUSED);
+    
+    // 比较当前组件和最后点击的组件是否为同一实例
+    printf("Component comparison: render component=%p, last_clicked_component=%p\n", 
+           component, last_clicked_component);
+    if (component == last_clicked_component) {
+        printf("This component is the last clicked component.\n");
+    } else {
+        printf("This component is NOT the last clicked component.\n");
+    }
+    
+    // DEBUG OPTION: Uncomment the line below to force the component to be in focused state
+    // component->state = INPUT_STATE_FOCUSED;
+    
+    // 全局调试选项：如果启用了强制焦点，则将组件状态设置为聚焦
+    if (force_focus_debug) {
+        component->state = INPUT_STATE_FOCUSED;
+        printf("DEBUG: Forcing component to FOCUSED state due to global debug flag\n");
+    }
+    
     // 聚焦状态下绘制光标
     if (component->state == INPUT_STATE_FOCUSED) {
+        // 调试信息：检查焦点状态和光标属性
+        printf("Cursor rendering: state=%d, color=(%d,%d,%d,%d)\n", 
+               component->state, 
+               component->cursor_color.r, component->cursor_color.g, 
+               component->cursor_color.b, component->cursor_color.a);
+        
         // 计算光标位置
-        // TODO: 更精确地计算光标位置
-        int cursor_x = layer->rect.x + 5;
+        int cursor_x = layer->rect.x + 5;  // 默认左侧边距
         int cursor_y = layer->rect.y + 5;
         int cursor_height = layer->rect.h - 10;
         
+        // 如果有文本，计算光标前面的文本宽度，更新光标x坐标
+        if (component->cursor_pos > 0 && strlen(component->text) > 0) {
+            // 创建光标前的子串
+            char cursor_text[component->cursor_pos + 1];
+            strncpy(cursor_text, component->text, component->cursor_pos);
+            cursor_text[component->cursor_pos] = '\0';
+            
+            // 如果图层有标签文本，需要调整起始位置
+            if (strlen(layer->label) > 0 && layer->font && layer->font->default_font) {
+                Texture* label_texture = backend_render_texture(layer->font->default_font, layer->label, layer->color);
+                if (label_texture) {
+                    int label_width;
+                    backend_query_texture(label_texture, NULL, NULL, &label_width, NULL);
+                    backend_render_text_destroy(label_texture);
+                    
+                    // 将光标起始位置放在label文字的右边，留出5像素间距
+                    cursor_x = layer->rect.x + label_width / scale + 10;
+                }
+            }
+            
+            // 计算光标前文本的宽度
+            if (layer->font && layer->font->default_font) {
+                Texture* cursor_text_texture = backend_render_texture(layer->font->default_font, cursor_text, text_color);
+                if (cursor_text_texture) {
+                    int text_width;
+                    backend_query_texture(cursor_text_texture, NULL, NULL, &text_width, NULL);
+                    backend_render_text_destroy(cursor_text_texture);
+                    
+                    // 更新光标x坐标
+                    cursor_x += text_width / scale;
+                }
+            }
+        } else if (strlen(layer->label) > 0 && layer->font && layer->font->default_font) {
+            // 没有文本但有标签，将光标放在标签右侧
+            Texture* label_texture = backend_render_texture(layer->font->default_font, layer->label, layer->color);
+            if (label_texture) {
+                int label_width;
+                backend_query_texture(label_texture, NULL, NULL, &label_width, NULL);
+                backend_render_text_destroy(label_texture);
+                
+                cursor_x = layer->rect.x + label_width / scale + 10;
+            }
+        }
+        
+        printf("Cursor position: x=%d, y=%d, height=%d\n", cursor_x, cursor_y, cursor_height);
+        
+        // 确保光标不超出输入框的右边界
+        int input_right_boundary = layer->rect.x + layer->rect.w;
+        if (cursor_x > input_right_boundary) {
+            cursor_x = input_right_boundary - 2; // 留出2像素边距
+            printf("DEBUG: Cursor position adjusted to stay within input bounds. New x=%d\n", cursor_x);
+        }
+        
         // 使用自定义光标颜色绘制垂直线作为光标
         backend_render_line(cursor_x, cursor_y, cursor_x, cursor_y + cursor_height, component->cursor_color);
+    } else {
+        printf("Not rendering cursor: state=%d (expected FOCUSED=%d)\n", 
+               component->state, INPUT_STATE_FOCUSED);
     }
+    
+    printf("--- RENDER CYCLE END ---\n\n");
 }
