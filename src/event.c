@@ -126,10 +126,9 @@ void handle_mouse_event(Layer* layer, MouseEvent* event) {
         if (layer->event && layer->event->click) {
             layer->event->click(layer);
         }
-        
-        if (layer->handle_mouse_event) {
-            layer->handle_mouse_event(layer, event);
-        }
+    }
+    if (layer->handle_mouse_event) {
+        layer->handle_mouse_event(layer, event);
     }
     
     // 递归处理子图层的事件

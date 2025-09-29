@@ -107,6 +107,9 @@ void input_component_handle_key_event(Layer* layer,  KeyEvent* event) {
     if (!component || !event || component->state == INPUT_STATE_DISABLED) {
         return;
     }
+    if(component->state != INPUT_STATE_FOCUSED){
+        return;
+    }
     // printf("input_component_handle_key_event: %d, %s\n", event->type, event->data.text.text);
 
     int current_length = strlen(component->text);
