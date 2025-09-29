@@ -29,6 +29,8 @@ InputComponent* input_component_create(Layer* layer) {
     layer->handle_mouse_event = input_component_handle_mouse_event;
     layer->handle_key_event = input_component_handle_key_event;
     
+    component->cursor_color = (Color){255, 0, 0, 255};
+
     return component;
 }
 
@@ -88,6 +90,15 @@ void input_component_set_state(InputComponent* component, InputState state) {
     }
     
     component->state = state;
+}
+
+// 设置光标颜色
+void input_component_set_cursor_color(InputComponent* component, Color cursor_color) {
+    if (!component) {
+        return;
+    }
+    
+    component->cursor_color = cursor_color;
 }
 
 // 处理键盘事件
@@ -214,7 +225,7 @@ void input_component_handle_key_event(Layer* layer,  KeyEvent* event) {
 
 // 处理鼠标事件
 void input_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
-    if (!layer || layer->component) {
+    if (!layer || !layer->component) {
         return;
     }
     InputComponent* component = (InputComponent*)layer->component;
@@ -396,7 +407,7 @@ void input_component_render(Layer* layer) {
         int cursor_y = layer->rect.y + 5;
         int cursor_height = layer->rect.h - 10;
         
-        // 简单处理：绘制垂直线作为光标
-        backend_render_line(cursor_x, cursor_y, cursor_x, cursor_y + cursor_height, (Color){0, 0, 0, 255});
+        // 使用自定义光标颜色绘制垂直线作为光标
+        backend_render_line(cursor_x, cursor_y, cursor_x, cursor_y + cursor_height, component->cursor_color);
     }
 }

@@ -25,6 +25,7 @@ typedef struct {
     InputState state;      // 输入状态
     int max_length;        // 最大输入长度
     int password_mode;     // 是否为密码模式
+    Color cursor_color;    // 光标颜色
 } InputComponent;
 
 // 函数声明
@@ -34,6 +35,7 @@ void input_component_set_text(InputComponent* component, const char* text);
 void input_component_set_placeholder(InputComponent* component, const char* placeholder);
 void input_component_set_max_length(InputComponent* component, int max_length);
 void input_component_set_state(InputComponent* component, InputState state);
+void input_component_set_cursor_color(InputComponent* component, Color cursor_color);
 void input_component_handle_key_event(Layer* layer, KeyEvent* event);
 void input_component_handle_mouse_event(Layer* layer,MouseEvent* event);
 void input_component_render(Layer* layer);
