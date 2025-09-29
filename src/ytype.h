@@ -221,7 +221,19 @@ typedef struct Event {
 
 // Animation结构体在animate.h中定义
 
+// 图层状态枚举
+typedef enum {
+    LAYER_STATE_NORMAL,
+    LAYER_STATE_FOCUSED,
+    LAYER_STATE_DISABLED,
+    LAYER_STATE_HOVER,
+    LAYER_STATE_PRESSED,
+} LayerState;
+
+
+
 typedef struct Layer Layer;
+
 typedef struct Layer {
     char id[50];
     int index;
@@ -236,6 +248,11 @@ typedef struct Layer {
     int child_count;
 
     int rotation;
+    
+    // 图层状态
+    LayerState state;
+    // 是否可获得焦点
+    int focusable;
 
     //动画
     Animation* animation;
@@ -287,9 +304,8 @@ typedef struct Layer {
 
 } Layer;
 
-
-
-
+// 全局变量：当前拥有焦点的图层
+extern Layer* focused_layer;
 
 
 #define MAX_EVENT 512
@@ -322,5 +338,7 @@ typedef struct {
 #ifdef YUI_PROGRESS_COMPONENT
 #include "components/progress_component.h"
 #endif
+
+
 
 #endif

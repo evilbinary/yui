@@ -4,6 +4,7 @@
 // 更新图层类型名称数组，添加GRID
 char *layer_type_name[]={"View","Button","Input","Label","Image","List","Grid","Progress"};
 
+Layer* focused_layer=NULL;
 
 cJSON* parse_json(char* json_path){
     FILE* file = fopen(json_path, "r");
@@ -41,6 +42,10 @@ Layer* parse_layer(cJSON* json_obj,Layer* parent) {
     Layer* layer = malloc(sizeof(Layer));
     memset(layer, 0, sizeof(Layer));
     layer->parent=parent;
+    
+    // 初始化焦点相关字段
+    layer->state = LAYER_STATE_NORMAL;  // 默认处于正常状态
+    layer->focusable = 0;  // 默认不可获得焦点
     
     
     // 解析基础属性

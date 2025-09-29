@@ -6,14 +6,6 @@
 typedef struct Layer Layer;
 typedef struct KeyEvent KeyEvent;
 
-// 输入状态枚举
-typedef enum {
-    INPUT_STATE_NORMAL,
-    INPUT_STATE_FOCUSED,
-    INPUT_STATE_DISABLED
-} InputState;
-
-
 // 输入组件结构体
 typedef struct {
     Layer* layer;          // 关联的图层
@@ -22,7 +14,6 @@ typedef struct {
     int cursor_pos;        // 光标位置
     int selection_start;   // 选择起始位置
     int selection_end;     // 选择结束位置
-    InputState state;      // 输入状态
     int max_length;        // 最大输入长度
     int password_mode;     // 是否为密码模式
     Color cursor_color;    // 光标颜色
@@ -34,7 +25,6 @@ void input_component_destroy(InputComponent* component);
 void input_component_set_text(InputComponent* component, const char* text);
 void input_component_set_placeholder(InputComponent* component, const char* placeholder);
 void input_component_set_max_length(InputComponent* component, int max_length);
-void input_component_set_state(InputComponent* component, InputState state);
 void input_component_set_cursor_color(InputComponent* component, Color cursor_color);
 void input_component_handle_key_event(Layer* layer, KeyEvent* event);
 void input_component_handle_mouse_event(Layer* layer,MouseEvent* event);

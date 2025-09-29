@@ -17,14 +17,13 @@ ButtonComponent* button_component_create(Layer* layer) {
     
     memset(component, 0, sizeof(ButtonComponent));
     component->layer = layer;
-    component->state = BUTTON_STATE_NORMAL;
     component->user_data = NULL;
     
     // 设置默认颜色
-    component->colors[BUTTON_STATE_NORMAL] = (Color){100, 149, 237, 255};    // 蓝色
-    component->colors[BUTTON_STATE_HOVER] = (Color){135, 206, 250, 255};     // 亮蓝色
-    component->colors[BUTTON_STATE_PRESSED] = (Color){70, 130, 180, 255};    // 深蓝色
-    component->colors[BUTTON_STATE_DISABLED] = (Color){200, 200, 200, 150};  // 灰色半透明
+    component->colors[LAYER_STATE_NORMAL] = (Color){100, 149, 237, 255};    // 蓝色
+    component->colors[LAYER_STATE_HOVER] = (Color){135, 206, 250, 255};     // 亮蓝色
+    component->colors[LAYER_STATE_PRESSED] = (Color){70, 130, 180, 255};    // 深蓝色
+    component->colors[LAYER_STATE_DISABLED] = (Color){200, 200, 200, 150};  // 灰色半透明
     // 设置组件指针和自定义渲染函数
     layer->component = component;
     layer->render = button_component_render;
@@ -32,7 +31,11 @@ ButtonComponent* button_component_create(Layer* layer) {
     // 绑定事件处理函数
     layer->handle_mouse_event = button_component_handle_mouse_event;
     
-
+    // 绑定键盘事件处理函数
+    layer->handle_key_event = button_component_handle_key_event;
+    
+    // 设置组件为可聚焦
+    layer->focusable = 1;
     
     return component;
 }
@@ -54,17 +57,8 @@ void button_component_set_text(ButtonComponent* component, const char* text) {
     component->layer->text[MAX_TEXT - 1] = '\0';
 }
 
-// 设置按钮状态
-void button_component_set_state(ButtonComponent* component, ButtonState state) {
-    if (!component) {
-        return;
-    }
-    
-    component->state = state;
-}
-
 // 设置按钮颜色
-void button_component_set_color(ButtonComponent* component, ButtonState state, Color color) {
+void button_component_set_color(ButtonComponent* component, LayerState state, Color color) {
     if (!component || state < 0 || state >= 4) {
         return;
     }
@@ -81,42 +75,62 @@ void button_component_set_user_data(ButtonComponent* component, void* data) {
     component->user_data = data;
 }
 
+// 处理键盘事件
+void button_component_handle_key_event(Layer* layer, KeyEvent* event) {
+    ButtonComponent* component = (ButtonComponent*)layer->component;
+    if (!component || layer->state == LAYER_STATE_DISABLED) {
+        return;
+    }
+    
+    // 处理回车键或空格键按下事件
+    if (event->type == KEY_EVENT_DOWN && (event->data.key.key_code == 13 || event->data.key.key_code == 32)) {
+        // 模拟按钮点击，设置Layer的PRESSED状态
+        layer->state = LAYER_STATE_PRESSED;
+        // 触发点击事件（如果存在）
+        if (layer->event && layer->event->click) {
+            layer->event->click();
+        }
+    }
+    
+    // 处理按键释放事件，恢复按钮状态
+    if (event->type == KEY_EVENT_UP && (event->data.key.key_code == 13 || event->data.key.key_code == 32)) {
+        // 同时设置Layer的状态，如果有焦点则保持焦点状态，否则设置为NORMAL
+        if (layer->state == LAYER_STATE_PRESSED) {
+            layer->state = (focused_layer == layer) ? LAYER_STATE_FOCUSED : LAYER_STATE_NORMAL;
+        }
+    }
+}
+
 // 处理鼠标事件
 void button_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     ButtonComponent* component = (ButtonComponent*)layer->component;
     int is_click = (event->state == 1);
-    if (!component || component->state == BUTTON_STATE_DISABLED) {
+    if (!component || layer->state == LAYER_STATE_DISABLED) {
         return;
     }
 
     // printf("button_component_handle_mouse_event: %d, %d, %d, %d state:%d\n", event->x, event->y, is_click , event->button,event->state);
     
     // 检查鼠标是否在按钮范围内
-    int is_inside = (event->x >= component->layer->rect.x && 
-                     event->x < component->layer->rect.x + component->layer->rect.w &&
-                     event->y >= component->layer->rect.y && 
-                     event->y < component->layer->rect.y + component->layer->rect.h);
+    int is_inside = (event->x >= layer->rect.x && 
+                     event->x < layer->rect.x + layer->rect.w &&
+                     event->y >= layer->rect.y && 
+                     event->y < layer->rect.y + layer->rect.h);
     
     if (is_click) {
         printf("button_component_handle_mouse_event click: %d, %d, %d, %d state:%d\n", event->x, event->y, is_click , event->button,event->state);
         if (is_inside) {
-            // 鼠标点击在按钮上
-            component->state = BUTTON_STATE_PRESSED;
+            // 鼠标点击在按钮上，设置Layer的PRESSED状态
+            layer->state = LAYER_STATE_PRESSED;
             // 触发点击事件（如果存在）
             if (layer->event && layer->event->click) {
                 layer->event->click();
             }
         } else {
-            // 鼠标点击在按钮外
-            component->state = BUTTON_STATE_NORMAL;
-        }
-    } else {
-        if (is_inside) {
-            // 鼠标悬停在按钮上
-            component->state = BUTTON_STATE_HOVER;
-        } else {
-            // 鼠标离开按钮
-            component->state = BUTTON_STATE_NORMAL;
+            // 鼠标点击在按钮外，设置Layer的NORMAL状态，但保持焦点状态
+            if (layer->state != LAYER_STATE_FOCUSED) {
+                layer->state = LAYER_STATE_NORMAL;
+            }
         }
     }
 }
@@ -134,7 +148,7 @@ void button_component_render(Layer* layer) {
     if (layer->bgColor.a > 0) {
         bg_color = layer->bgColor;
     } else {
-        bg_color = component->colors[component->state];
+        bg_color = component->colors[layer->state];
     }
     
     // 绘制背景
@@ -148,9 +162,9 @@ void button_component_render(Layer* layer) {
     
     // 绘制边框
     Color border_color = (Color){200, 200, 200, 255};
-    if (component->state == BUTTON_STATE_HOVER) {
+    if (layer->state == LAYER_STATE_HOVER) {
         border_color = (Color){150, 150, 150, 255};
-    } else if (component->state == BUTTON_STATE_PRESSED) {
+    } else if (layer->state == LAYER_STATE_PRESSED) {
         border_color = (Color){100, 100, 100, 255};
     }
     
@@ -163,7 +177,7 @@ void button_component_render(Layer* layer) {
     // 渲染按钮文本
     if (strlen(layer->text) > 0) {
         Color text_color = layer->color;
-        if (component->state == BUTTON_STATE_DISABLED) {
+        if (layer->state == LAYER_STATE_DISABLED) {
             text_color = (Color){255, 255, 255, 150};
         }
         

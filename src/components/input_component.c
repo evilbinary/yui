@@ -17,7 +17,6 @@ InputComponent* input_component_create(Layer* layer) {
     
     memset(component, 0, sizeof(InputComponent));
     component->layer = layer;
-    component->state = INPUT_STATE_NORMAL;
     component->max_length = MAX_TEXT - 1;
     component->cursor_pos = 0;
     component->selection_start = 0;
@@ -28,6 +27,9 @@ InputComponent* input_component_create(Layer* layer) {
     layer->render = input_component_render;
     layer->handle_mouse_event = input_component_handle_mouse_event;
     layer->handle_key_event = input_component_handle_key_event;
+    
+    // 设置组件为可聚焦
+    layer->focusable = 1;
     
     component->cursor_color = (Color){255, 0, 0, 255};
 
@@ -83,14 +85,7 @@ void input_component_set_max_length(InputComponent* component, int max_length) {
     }
 }
 
-// 设置输入状态
-void input_component_set_state(InputComponent* component, InputState state) {
-    if (!component) {
-        return;
-    }
-    
-    component->state = state;
-}
+
 
 // 设置光标颜色
 void input_component_set_cursor_color(InputComponent* component, Color cursor_color) {
@@ -104,10 +99,10 @@ void input_component_set_cursor_color(InputComponent* component, Color cursor_co
 // 处理键盘事件
 void input_component_handle_key_event(Layer* layer,  KeyEvent* event) {
     InputComponent* component = (InputComponent*)layer->component;
-    if (!component || !event || component->state == INPUT_STATE_DISABLED) {
+    if (!component || !event || layer->state == LAYER_STATE_DISABLED) {
         return;
     }
-    if(component->state != INPUT_STATE_FOCUSED){
+    if(layer->state != LAYER_STATE_FOCUSED){
         return;
     }
     // printf("input_component_handle_key_event: %d, %s\n", event->type, event->data.text.text);
@@ -235,9 +230,6 @@ static bool force_focus_debug = false;
 void input_component_debug_focus_state() {
     printf("\n--- FOCUS STATE DEBUG INFO ---");
     printf("\nLast clicked component address: %p", last_clicked_component);
-    if (last_clicked_component) {
-        printf(" (state: %d)", last_clicked_component->state);
-    }
     printf("\n--- END FOCUS DEBUG INFO --\n");
 }
 
@@ -251,7 +243,7 @@ void input_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
 
     printf("input_component_handle_mouse_event: layer address=%p, component address=%p\n", layer, component);
     printf("event x=%d, y=%d, state=%d\n", event->x, event->y, event->state);
-    printf("Component current state before processing: %d\n", component->state);
+    printf("Component current state before processing: %d\n", layer->state);
     int is_click = (event->state == 1);
 
     // Calculate component boundaries for debugging
@@ -271,11 +263,11 @@ void input_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     if (is_inside) { 
         if (is_click) {
             // 点击时，设置为聚焦状态
-            component->state = INPUT_STATE_FOCUSED;
+            layer->state = LAYER_STATE_FOCUSED;
             last_clicked_component = component;  // 记录最后点击的组件
             // 设置强制焦点标记用于调试
             force_focus_debug = true;
-            printf("State set to FOCUSED (value: %d) on click inside\n", component->state);
+            printf("State set to FOCUSED (value: %d) on click inside\n", layer->state);
             printf("Last clicked component updated to: %p\n", last_clicked_component);
             printf("DEBUG: force_focus_debug flag set to TRUE\n");
             
@@ -292,11 +284,12 @@ void input_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
         printf("Click outside component: current component=%p, last_clicked_component=%p\n", component, last_clicked_component);
         // 点击输入框外，只有当这个组件是最后点击的组件时才取消聚焦
         if (component == last_clicked_component) {
-            component->state = INPUT_STATE_NORMAL;
+            // 设置Layer的NORMAL状态
+            layer->state = LAYER_STATE_NORMAL;
             last_clicked_component = NULL;  // 清除最后点击的组件记录
             // 重置强制焦点标记
             force_focus_debug = false;
-            printf("State set to NORMAL (value: %d) on click outside (last clicked component)\n", component->state);
+            printf("State set to NORMAL (value: %d) on click outside (last clicked component)\n", layer->state);
             printf("DEBUG: force_focus_debug flag set to FALSE\n");
             input_component_debug_focus_state();
         } else {
@@ -320,8 +313,8 @@ void input_component_render(Layer* layer) {
     // 调用调试函数检查焦点状态
     input_component_debug_focus_state();
     
-    printf("Component state during render: %d (NORMAL=%d, FOCUSED=%d, DISABLED=%d)\n", 
-           component->state, INPUT_STATE_NORMAL, INPUT_STATE_FOCUSED, INPUT_STATE_DISABLED);
+    printf("Layer state during render: %d (NORMAL=%d, FOCUSED=%d, DISABLED=%d)\n", 
+           layer->state, LAYER_STATE_NORMAL, LAYER_STATE_FOCUSED, LAYER_STATE_DISABLED);
 
     // 绘制背景
     if (layer->bgColor.a > 0) {
@@ -374,7 +367,7 @@ void input_component_render(Layer* layer) {
     
     // 绘制边框
     Color border_color = {150, 150, 150, 255};
-    if (component->state == INPUT_STATE_FOCUSED) {
+    if (layer->state == LAYER_STATE_FOCUSED) {
         // 聚焦状态下使用高亮边框
         border_color = (Color){50, 150, 255, 255};
     }
@@ -390,7 +383,7 @@ void input_component_render(Layer* layer) {
     const char* display_text = component->text;
     
     // 如果没有输入文本且不是聚焦状态，显示占位文本
-    if (strlen(component->text) == 0 && component->state != INPUT_STATE_FOCUSED && 
+    if (strlen(component->text) == 0 && layer->state != LAYER_STATE_FOCUSED && 
         strlen(component->placeholder) > 0) {
         display_text = component->placeholder;
         text_color = (Color){150, 150, 150, 150};  // 占位文本使用灰色
@@ -458,8 +451,8 @@ void input_component_render(Layer* layer) {
     }
     
     // 调试信息：检查当前状态和组件实例
-    printf("Rendering input component: state=%d, INPUT_STATE_FOCUSED=%d\n", 
-           component->state, INPUT_STATE_FOCUSED);
+    printf("Rendering input component: state=%d, LAYER_STATE_FOCUSED=%d\n", 
+           layer->state, LAYER_STATE_FOCUSED);
     
     // 比较当前组件和最后点击的组件是否为同一实例
     printf("Component comparison: render component=%p, last_clicked_component=%p\n", 
@@ -471,19 +464,19 @@ void input_component_render(Layer* layer) {
     }
     
     // DEBUG OPTION: Uncomment the line below to force the component to be in focused state
-    // component->state = INPUT_STATE_FOCUSED;
+    // layer->state = LAYER_STATE_FOCUSED;
     
     // 全局调试选项：如果启用了强制焦点，则将组件状态设置为聚焦
     if (force_focus_debug) {
-        component->state = INPUT_STATE_FOCUSED;
+        layer->state = LAYER_STATE_FOCUSED;
         printf("DEBUG: Forcing component to FOCUSED state due to global debug flag\n");
     }
     
     // 聚焦状态下绘制光标
-    if (component->state == INPUT_STATE_FOCUSED) {
+    if (layer->state == LAYER_STATE_FOCUSED) {
         // 调试信息：检查焦点状态和光标属性
         printf("Cursor rendering: state=%d, color=(%d,%d,%d,%d)\n", 
-               component->state, 
+               layer->state, 
                component->cursor_color.r, component->cursor_color.g, 
                component->cursor_color.b, component->cursor_color.a);
         
@@ -549,7 +542,7 @@ void input_component_render(Layer* layer) {
         backend_render_line(cursor_x, cursor_y, cursor_x, cursor_y + cursor_height, component->cursor_color);
     } else {
         printf("Not rendering cursor: state=%d (expected FOCUSED=%d)\n", 
-               component->state, INPUT_STATE_FOCUSED);
+               layer->state, LAYER_STATE_FOCUSED);
     }
     
     printf("--- RENDER CYCLE END ---\n\n");
