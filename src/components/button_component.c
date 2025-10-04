@@ -78,14 +78,14 @@ void button_component_set_user_data(ButtonComponent* component, void* data) {
 // 处理键盘事件
 void button_component_handle_key_event(Layer* layer, KeyEvent* event) {
     ButtonComponent* component = (ButtonComponent*)layer->component;
-    if (!component || layer->state == LAYER_STATE_DISABLED) {
+    if (!component || HAS_STATE(layer, LAYER_STATE_DISABLED)) {
         return;
     }
     
     // 处理回车键或空格键按下事件
     if (event->type == KEY_EVENT_DOWN && (event->data.key.key_code == 13 || event->data.key.key_code == 32)) {
         // 模拟按钮点击，设置Layer的PRESSED状态
-        layer->state = LAYER_STATE_PRESSED;
+        SET_STATE(layer, LAYER_STATE_PRESSED);
         // 触发点击事件（如果存在）
         if (layer->event && layer->event->click) {
             layer->event->click();
@@ -95,8 +95,9 @@ void button_component_handle_key_event(Layer* layer, KeyEvent* event) {
     // 处理按键释放事件，恢复按钮状态
     if (event->type == KEY_EVENT_UP && (event->data.key.key_code == 13 || event->data.key.key_code == 32)) {
         // 同时设置Layer的状态，如果有焦点则保持焦点状态，否则设置为NORMAL
-        if (layer->state == LAYER_STATE_PRESSED) {
-            layer->state = (focused_layer == layer) ? LAYER_STATE_FOCUSED : LAYER_STATE_NORMAL;
+        if (HAS_STATE(layer, LAYER_STATE_PRESSED)) {
+            CLEAR_STATE(layer, LAYER_STATE_PRESSED);
+            // 保留焦点状态
         }
     }
 }
@@ -105,7 +106,7 @@ void button_component_handle_key_event(Layer* layer, KeyEvent* event) {
 void button_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     ButtonComponent* component = (ButtonComponent*)layer->component;
     int is_click = (event->state == 1);
-    if (!component || layer->state == LAYER_STATE_DISABLED) {
+    if (!component || HAS_STATE(layer, LAYER_STATE_DISABLED)) {
         return;
     }
 
@@ -117,21 +118,29 @@ void button_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
                      event->y >= layer->rect.y && 
                      event->y < layer->rect.y + layer->rect.h);
     
+    // 更新悬停状态
+    if (is_inside) {
+        SET_STATE(layer, LAYER_STATE_HOVER);
+    } else {
+        CLEAR_STATE(layer, LAYER_STATE_HOVER);
+    }
+    
     if (is_click) {
         printf("button_component_handle_mouse_event click: %d, %d, %d, %d state:%d\n", event->x, event->y, is_click , event->button,event->state);
         if (is_inside) {
             // 鼠标点击在按钮上，设置Layer的PRESSED状态
-            layer->state = LAYER_STATE_PRESSED;
+            SET_STATE(layer, LAYER_STATE_PRESSED);
             // 触发点击事件（如果存在）
             if (layer->event && layer->event->click) {
                 layer->event->click();
             }
         } else {
-            // 鼠标点击在按钮外，设置Layer的NORMAL状态，但保持焦点状态
-            if (layer->state != LAYER_STATE_FOCUSED) {
-                layer->state = LAYER_STATE_NORMAL;
-            }
+            // 鼠标点击在按钮外，清除按下状态
+            CLEAR_STATE(layer, LAYER_STATE_PRESSED);
         }
+    } else {
+        // 非点击事件，清除按下状态
+        CLEAR_STATE(layer, LAYER_STATE_PRESSED);
     }
 }
 
@@ -148,7 +157,18 @@ void button_component_render(Layer* layer) {
     if (layer->bgColor.a > 0) {
         bg_color = layer->bgColor;
     } else {
-        bg_color = component->colors[layer->state];
+        // 根据当前状态组合选择合适的颜色
+        if (HAS_STATE(layer, LAYER_STATE_PRESSED)) {
+            bg_color = component->colors[LAYER_STATE_PRESSED];
+        } else if (HAS_STATE(layer, LAYER_STATE_HOVER)) {
+            bg_color = component->colors[LAYER_STATE_HOVER];
+        } else if (HAS_STATE(layer, LAYER_STATE_FOCUSED)) {
+            bg_color = component->colors[LAYER_STATE_FOCUSED];
+        } else if (HAS_STATE(layer, LAYER_STATE_DISABLED)) {
+            bg_color = component->colors[LAYER_STATE_DISABLED];
+        } else {
+            bg_color = component->colors[LAYER_STATE_NORMAL];
+        }
     }
     
     // 绘制背景
@@ -162,10 +182,12 @@ void button_component_render(Layer* layer) {
     
     // 绘制边框
     Color border_color = (Color){200, 200, 200, 255};
-    if (layer->state == LAYER_STATE_HOVER) {
-        border_color = (Color){150, 150, 150, 255};
-    } else if (layer->state == LAYER_STATE_PRESSED) {
+    if (HAS_STATE(layer, LAYER_STATE_PRESSED)) {
         border_color = (Color){100, 100, 100, 255};
+    } else if (HAS_STATE(layer, LAYER_STATE_HOVER)) {
+        border_color = (Color){150, 150, 150, 255};
+    } else if (HAS_STATE(layer, LAYER_STATE_FOCUSED)) {
+        border_color = (Color){50, 150, 255, 255}; // 聚焦状态使用高亮边框
     }
     
     if (layer->radius > 0) {
@@ -177,7 +199,7 @@ void button_component_render(Layer* layer) {
     // 渲染按钮文本
     if (strlen(layer->text) > 0) {
         Color text_color = layer->color;
-        if (layer->state == LAYER_STATE_DISABLED) {
+        if (HAS_STATE(layer, LAYER_STATE_DISABLED)) {
             text_color = (Color){255, 255, 255, 150};
         }
         

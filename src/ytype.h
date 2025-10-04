@@ -221,18 +221,23 @@ typedef struct Event {
 
 // Animation结构体在animate.h中定义
 
-// 图层状态枚举
+// 图层状态枚举 - 使用位标志以便状态可以共存
 typedef enum {
-    LAYER_STATE_NORMAL,
-    LAYER_STATE_FOCUSED,
-    LAYER_STATE_DISABLED,
-    LAYER_STATE_HOVER,
-    LAYER_STATE_PRESSED,
+    LAYER_STATE_NORMAL   = 0,
+    LAYER_STATE_FOCUSED  = 1 << 0,  // 1
+    LAYER_STATE_DISABLED = 1 << 1,  // 2
+    LAYER_STATE_HOVER    = 1 << 2,  // 4
+    LAYER_STATE_PRESSED  = 1 << 3,  // 8
 } LayerState;
 
 
-
 typedef struct Layer Layer;
+
+// 辅助宏：检查状态
+#define HAS_STATE(layer, st) (layer->state & (st))
+#define SET_STATE(layer, st) (layer->state |= (st))
+#define CLEAR_STATE(layer, st) (layer->state &= ~(st))
+#define CLEAR_ALL_STATES(layer) (layer->state = LAYER_STATE_NORMAL)
 
 typedef struct Layer {
     char id[50];
@@ -249,8 +254,8 @@ typedef struct Layer {
 
     int rotation;
     
-    // 图层状态
-    LayerState state;
+    // 图层状态 - 现在支持位运算，可以同时表示多个状态
+    unsigned int state;
     // 是否可获得焦点
     int focusable;
 
