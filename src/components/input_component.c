@@ -388,6 +388,13 @@ void input_component_render(Layer* layer) {
         backend_render_rect_color(&layer->rect, border_color.r, border_color.g, border_color.b, border_color.a);
     }
     
+    // 全局调试选项：如果启用了强制焦点，则将组件状态设置为聚焦
+    // 注意：在实际生产环境中应禁用此调试选项
+    if (force_focus_debug) {
+        SET_STATE(layer, LAYER_STATE_FOCUSED);
+        printf("DEBUG: Forcing component to FOCUSED state due to global debug flag\n");
+    }
+    
     // 渲染文本
     Color text_color = layer->color;
     const char* display_text = component->text;
@@ -399,24 +406,7 @@ void input_component_render(Layer* layer) {
         text_color = (Color){150, 150, 150, 150};  // 占位文本使用灰色
     }
     
-    // 渲染label文本
-    if (strlen(layer->label) > 0 && layer->font && layer->font->default_font) {
-        Texture* label_texture = backend_render_texture(layer->font->default_font, layer->label, layer->color);
-        if (label_texture) {
-            int label_width, label_height;
-            backend_query_texture(label_texture, NULL, NULL, &label_width, &label_height);
-            
-            Rect label_rect = {
-                layer->rect.x + 5,  // 左侧留5像素边距
-                layer->rect.y + (layer->rect.h - label_height / scale) / 2,
-                label_width / scale,
-                label_height / scale
-            };
-            
-            backend_render_text_copy(label_texture, NULL, &label_rect);
-            backend_render_text_destroy(label_texture);
-        }
-    }
+    // 注意：标签文本已经在前面渲染过了，这里不需要重复渲染
     
     Texture* text_texture = render_text(layer, display_text, text_color);
     
