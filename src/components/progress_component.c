@@ -141,32 +141,43 @@ void progress_component_render(Layer* layer) {
         }
     }
     
-    // 绘制背景
-    if(layer->bgColor.a>0){
-        backend_render_fill_rect(&layer->rect,layer->bgColor);
+    // 绘制背景 - 移除透明度检查，确保背景总是被渲染
+    if (layer->radius > 0) {
+        // 使用圆角背景
+        backend_render_rounded_rect(&layer->rect, layer->bgColor, layer->radius);
+    } else {
+        // 使用普通矩形背景
+        backend_render_fill_rect(&layer->rect, layer->bgColor);
+    }
+    
+    // 绘制边框 - 移到背景之后，进度条之前，避免遮挡进度条颜色
+    if (layer->radius > 0) {
+        // 使用backend_render_rounded_rect_color绘制边框
+        backend_render_rounded_rect_color(&layer->rect, 150, 150, 150, 255, layer->radius);
+    } else {
+        // 使用普通边框
+        backend_render_rect_color(&layer->rect, 150, 150, 150, 255);
     }
     
     // 计算填充区域
     Rect fill_rect = layer->rect;
     
+    // 修复进度条长度计算，使用更精确的计算方式
     if (component->direction == PROGRESS_DIRECTION_HORIZONTAL) {
         // 水平进度条
-        fill_rect.w = (int)(layer->rect.w * component->progress);
+        fill_rect.w = (int)(layer->rect.w * component->progress + 0.5f); // 添加0.5f进行四舍五入
     } else {
         // 垂直进度条
-        fill_rect.h = (int)(layer->rect.h * component->progress);
+        fill_rect.h = (int)(layer->rect.h * component->progress + 0.5f); // 添加0.5f进行四舍五入
         fill_rect.y = layer->rect.y + (layer->rect.h - fill_rect.h);
     }
     
-    // 绘制填充部分
+    // 绘制填充部分 - 移到最后，确保显示在最上层
     if (layer->radius > 0) {
         backend_render_rounded_rect(&fill_rect, component->fill_color, layer->radius);
     } else {
         backend_render_fill_rect(&fill_rect, component->fill_color);
     }
-    
-    // 绘制边框
-    backend_render_rect_color(&layer->rect, 150, 150, 150, 255);
     
     // 显示百分比文本
     if (component->show_percentage && layer->font && layer->font->default_font) {
