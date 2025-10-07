@@ -19,6 +19,9 @@ ProgressComponent* progress_component_create(Layer* layer) {
     memset(component, 0, sizeof(ProgressComponent));
     component->layer = layer;
     component->progress = 0.0f;
+    component->target_progress = 0.0f;
+    component->animation_speed = 0.1f; // 默认动画速度
+    component->animating = 0;
     component->direction = PROGRESS_DIRECTION_HORIZONTAL;
     component->fill_color = (Color){50, 150, 255, 255};
     component->show_percentage = 1;
@@ -45,12 +48,14 @@ void progress_component_set_progress(ProgressComponent* component, float progres
     
     // 确保进度在0.0到1.0之间
     if (progress < 0.0f) {
-        component->progress = 0.0f;
+        progress = 0.0f;
     } else if (progress > 1.0f) {
-        component->progress = 1.0f;
-    } else {
-        component->progress = progress;
+        progress = 1.0f;
     }
+    
+    // 设置目标进度并标记为动画中
+    component->target_progress = progress;
+    component->animating = 1;
 }
 
 // 设置进度条方向
@@ -89,6 +94,22 @@ void progress_component_set_show_percentage(ProgressComponent* component, int sh
     component->show_percentage = show;
 }
 
+// 设置动画速度
+void progress_component_set_animation_speed(ProgressComponent* component, float speed) {
+    if (!component) {
+        return;
+    }
+    
+    // 确保速度在0.01到1.0之间
+    if (speed < 0.01f) {
+        component->animation_speed = 0.01f;
+    } else if (speed > 1.0f) {
+        component->animation_speed = 1.0f;
+    } else {
+        component->animation_speed = speed;
+    }
+}
+
 // 渲染进度条组件
 void progress_component_render(Layer* layer) {
     if (!layer || !layer->component) {
@@ -97,27 +118,33 @@ void progress_component_render(Layer* layer) {
     
     ProgressComponent* component = (ProgressComponent*)layer->component;
     
-      // 按钮类型渲染：绘制背景和边框
+    // 调试信息：打印当前状态
+    printf("Progress: %.2f, Target: %.2f, Animating: %d\n", 
+           component->progress, component->target_progress, component->animating);
+    
+    // 处理动画更新
+    if (component->animating) {
+        // 计算当前帧应该移动的进度
+        float diff = component->target_progress - component->progress;
+        
+        printf("Animation diff: %.4f\n", diff);
+        
+        if (fabs(diff) < 0.01f) {
+            // 如果差值很小，直接设置为目标值并停止动画
+            component->progress = component->target_progress;
+            component->animating = 0;
+            printf("Animation completed, progress set to: %.2f\n", component->progress);
+        } else {
+            // 否则，根据动画速度更新进度
+            component->progress += diff * component->animation_speed;
+            printf("Animation updated, new progress: %.2f\n", component->progress);
+        }
+    }
+    
+    // 绘制背景
     if(layer->bgColor.a>0){
         backend_render_fill_rect(&layer->rect,layer->bgColor);
     }
-
-    if(layer->data!=NULL){
-        Rect fill_rect = {
-                layer->rect.x ,
-                layer->rect.y,
-                layer->rect.w *(layer->data->json->valueint/100.0),
-                layer->rect.h
-            };
-        backend_render_fill_rect(&fill_rect,layer->color);
-    }
-    
-    // // 绘制背景
-    // if (layer->radius > 0) {
-    //     backend_render_rounded_rect(&layer->rect, layer->bgColor, layer->radius);
-    // } else {
-    //     backend_render_fill_rect(&layer->rect, layer->bgColor);
-    // }
     
     // 计算填充区域
     Rect fill_rect = layer->rect;

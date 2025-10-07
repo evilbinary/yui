@@ -490,6 +490,14 @@ Layer* parse_layer(cJSON* json_obj,Layer* parent) {
     }else if(layer->type==PROGRESS){
         layer->component = progress_component_create(layer);
         
+        // 设置进度值
+        if (layer->data && layer->data->json) {
+            ProgressComponent* progress_component = (ProgressComponent*)layer->component;
+            int value = layer->data->json->valueint;
+            // 将0-100的值转换为0.0-1.0
+            float progress = value / 100.0f;
+            progress_component_set_progress(progress_component, progress);
+        }
     }
     
     // 递归解析子图层
