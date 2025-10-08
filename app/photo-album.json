@@ -1,0 +1,202 @@
+{
+    "id": "photoAlbum",
+    "type": "View",
+    "size": [800, 600],
+    "theme": "dark",
+    "style": {
+        "color": "#FFFFFF",
+        "bgColor": "#121212"
+    },
+    "layout": {
+        "type": "vertical",
+        "spacing": 15,
+        "padding": [20, 20, 20, 20]
+    },
+    "children": [
+        {
+            "id": "albumHeader",
+            "type": "View",
+            "layout": {
+                "type": "horizontal",
+                "justify": "space-between",
+                "align": "center"
+            },
+            "height": 40,
+            "children": [
+                {
+                    "id": "albumTitle",
+                    "type": "Label",
+                    "text": "我的相册",
+                    "style": {
+                        "fontSize": 28,
+                        "fontWeight": "bold"
+                    }
+                },
+                {
+                    "id": "cameraButton",
+                    "type": "Button",
+                    "text": "📷",
+                    "style": {
+                        "color": "#FFFFFF",
+                        "bgColor": "#1DB954",
+                        "fontSize": 24,
+                        "radius": 30,
+                        "padding": [10, 15, 10, 15]
+                    }
+                }
+            ]
+        },
+        {
+            "id": "photosGrid",
+            "type": "Grid",
+            "layout": {
+                "columns": 3,
+                "spacing": 10,
+                "type": "vertical"
+            },
+            "children": [
+                {
+                    "id": "photo1",
+                    "type": "Image",
+                    "source": "duck.png",
+                    "size": [220, 300],
+                    "style": {
+                        "radius": 8,
+                        "mode": "fit"
+                    }
+                },
+                {
+                    "id": "photo2",
+                    "type": "Image",
+                    "source": "duck.png",
+                    "size": [220, 300],
+                    "style": {
+                        "radius": 8,
+                        "mode": "fit"
+                    }
+                },
+                {
+                    "id": "photo3",
+                    "type": "Image",
+                    "source": "duck.png",
+                    "size": [220, 300],
+                    "style": {
+                        "radius": 8,
+                        "mode": "fit"
+                    }
+                },
+                {
+                    "id": "photo4",
+                    "type": "Image",
+                    "source": "duck.png",
+                    "size": [220, 300],
+                    "style": {
+                        "radius": 8,
+                        "mode": "fit"
+                    }
+                },
+                {
+                    "id": "photo5",
+                    "type": "Image",
+                    "source": "duck.png",
+                    "size": [220, 300],
+                    "style": {
+                        "radius": 8,
+                        "mode": "fit"
+                    }
+                },
+                {
+                    "id": "photo6",
+                    "type": "Image",
+                    "source": "duck.png",
+                    "size": [220, 300],
+                    "style": {
+                        "radius": 8,
+                        "mode": "fit"
+                    }
+                },
+                {
+                    "id": "photo7",
+                    "type": "Image",
+                    "source": "duck.png",
+                    "size": [220, 300],
+                    "style": {
+                        "radius": 8,
+                        "mode": "fit"
+                    }
+                },
+                {
+                    "id": "photo8",
+                    "type": "Image",
+                    "source": "duck.png",
+                    "size": [220, 300],
+                    "style": {
+                        "radius": 8,
+                        "mode": "fit"
+                    }
+                },
+                {
+                    "id": "photo9",
+                    "type": "Image",
+                    "source": "duck.png",
+                    "size": [220, 300],
+                    "style": {
+                        "radius": 8,
+                        "mode": "fit"
+                    }
+                }
+            ]
+        },
+        {
+            "id": "albumFooter",
+            "type": "View",
+            "height": 40,
+            "layout": {
+                "type": "horizontal",
+                "justify": "space-around",
+                "align": "center"
+            },
+            "children": [
+                {
+                    "id": "allPhotosButton",
+                    "type": "Button",
+                    "text": "全部照片",
+                    "width": 120,
+                    "style": {
+                        "color": "#FFFFFF",
+                        "bgColor": "#1DB954",
+                        "fontSize": 16,
+                        "radius": 20,
+                        "padding": [10, 20, 10, 20]
+                    }
+                },
+                {
+                    "id": "favoritesButton",
+                    "type": "Button",
+                    "text": "收藏",
+                    "width": 120,
+                    "style": {
+                        "color": "#FFFFFF",
+                        "bgColor": "#535353",
+                        "fontSize": 16,
+                        "radius": 20,
+                        "padding": [10, 20, 10, 20]
+                    }
+                },
+                {
+                    "id": "sharedButton",
+                    "type": "Button",
+                    "text": "共享",
+                    "width": 120,
+                    "style": {
+                        "color": "#FFFFFF",
+                        "bgColor": "#535353",
+                        "fontSize": 16,
+                        "radius": 20,
+                        "padding": [10, 20, 10, 20]
+                    }
+                }
+            ]
+        }
+    ]
+}

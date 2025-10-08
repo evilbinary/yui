@@ -28,10 +28,11 @@
                 200,
                 40
             ],
-            "data": 20,
+            "data": 80,
             "style": {
-                "color": "#2C3E5022",
-                "bgColor":"#CCCCCC"
+                "color": "#2C3E50",
+                "bgColor":"#CCCCCC",
+                "radius": 40
             }
         },
         {

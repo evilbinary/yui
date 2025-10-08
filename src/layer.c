@@ -2,12 +2,16 @@
 #include "animate.h"
 
 // 更新图层类型名称数组，添加GRID
-char *layer_type_name[]={"View","Button","Input","Label","Image","List","Grid","Progress"};
+char *layer_type_name[]={"View","Button","Input","Label","Image","List","Grid","Progress","CheckBox","Radiobox"};
 
 Layer* focused_layer=NULL;
 
 cJSON* parse_json(char* json_path){
     FILE* file = fopen(json_path, "r");
+    if(!file){
+        printf("open file failed %s\n",json_path);
+        return NULL;
+    }
     fseek(file, 0, SEEK_END);
     long fsize = ftell(file);
     fseek(file, 0, SEEK_SET);
@@ -255,6 +259,13 @@ Layer* parse_layer(cJSON* json_obj,Layer* parent) {
         layer->layout_manager->type = LAYOUT_VERTICAL;
     }
     
+    //默认背景颜色
+    if(layer->bgColor.a == 0){
+        layer->bgColor.r=255;
+        layer->bgColor.g=255;
+        layer->bgColor.b=255;
+        layer->bgColor.a = 0;
+    }
     // 解析样式
     cJSON* style = cJSON_GetObjectItem(json_obj, "style");
     if (style) {
@@ -264,11 +275,6 @@ Layer* parse_layer(cJSON* json_obj,Layer* parent) {
 
         if(cJSON_HasObjectItem(style,"bgColor")){
             parse_color(cJSON_GetObjectItem(style, "bgColor")->valuestring,&layer->bgColor);
-        }else{
-            layer->bgColor.r=0;
-            layer->bgColor.g=0;
-            layer->bgColor.b=0;
-            layer->bgColor.a = 0;
         }
         
         // 解析圆角半径属性
@@ -498,6 +504,18 @@ Layer* parse_layer(cJSON* json_obj,Layer* parent) {
             float progress = value / 100.0f;
             progress_component_set_progress(progress_component, progress);
         }
+    }else if(layer->type==CHECKBOX){
+        layer->component = checkbox_component_create(layer);
+        
+    }else if(layer->type==RADIOBOX){
+
+         char* group_id="default";
+         if (cJSON_HasObjectItem(layer, "group")) {
+            char* group = cJSON_GetObjectItem(layer, "group")->valuestring;
+            group_id = strdup(group);
+        }
+        layer->component = radiobox_component_create(layer,group_id);
+        
     }
     
     // 递归解析子图层

@@ -69,9 +69,9 @@ void render_layer(Layer* layer) {
         }else{
             // 默认渲染方式
             if (layer->radius > 0) {
-                backend_render_rounded_rect(&layer->rect, layer->color, layer->radius);
+                backend_render_rounded_rect(&layer->rect, layer->bgColor, layer->radius);
             } else {
-                backend_render_fill_rect(&layer->rect, layer->color);
+                backend_render_fill_rect(&layer->rect, layer->bgColor);
             }
             
         }

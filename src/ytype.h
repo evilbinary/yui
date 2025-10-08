@@ -29,6 +29,8 @@
 #define YUI_IMAGE_COMPONENT 1
 #define YUI_BUTTON_COMPONENT 1
 #define YUI_PROGRESS_COMPONENT 1
+#define YUI_CHECKBOX_COMPONENT 1
+#define YUI_RADIOBOX_COMPONENT 1
 
 
 #ifdef YUI_ANIMATION
@@ -108,7 +110,9 @@ typedef enum {
     IMAGE,
     LIST,
     GRID,  // 添加GRID类型
-    PROGRESS
+    PROGRESS,
+    CHECKBOX,
+    RADIOBOX
 } LayerType;
 
 extern char *layer_type_name[];
@@ -344,6 +348,13 @@ typedef struct {
 #include "components/progress_component.h"
 #endif
 
+#ifdef YUI_CHECKBOX_COMPONENT
+#include "components/checkbox_component.h"
+#endif
+
+#ifdef YUI_RADIOBOX_COMPONENT
+#include "components/radiobox_component.h"
+#endif
 
 
 #endif

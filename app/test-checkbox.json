@@ -1,0 +1,249 @@
+{
+    "id": "checkboxTestApp",
+    "type": "View",
+    "theme": "default",
+    "style": {
+        "color": "#2C3E50",
+        "bgColor": "#F5F5F5"
+    },
+    "layout": {
+        "type": "vertical",
+        "spacing": 20,
+        "padding": [
+            40,
+            40,
+            40,
+            40
+        ]
+    },
+    "children": [
+        {
+            "id": "title",
+            "type": "Label",
+            "text": "复选框和单选框测试",
+            "style": {
+                "type": "center",
+                "color": "#1976D2",
+                "fontSize": 24
+            }
+        },
+        {
+            "id": "checkboxGroupTitle",
+            "type": "Label",
+            "text": "复选框组",
+            "style": {
+                "color": "#2C3E50",
+                "fontSize": 18
+            }
+        },
+        {
+            "id": "checkboxContainer",
+            "type": "View",
+            "layout": {
+                "type": "vertical",
+                "spacing": 15
+            },
+            "children": [
+                {
+                    "id": "checkbox1",
+                    "type": "Checkbox",
+                    "position": [10, 10],
+                    "size": [20, 20],
+                    "data": true,
+                    "label": "已选中的复选框",
+                    "style": {
+                        "color": "#2196F3",
+                        "bgColor": "#FFFFFF",
+                        "borderColor": "#2196F3",
+                        "radius": 4
+                    },
+                    "events": {
+                        "onChange": "@handleCheckboxChange"
+                    }
+                },
+                {
+                    "id": "checkbox2",
+                    "type": "Checkbox",
+                    "position": [10, 40],
+                    "size": [20, 20],
+                    "data": false,
+                    "label": "未选中的复选框",
+                    "style": {
+                        "color": "#2196F3",
+                        "bgColor": "#FFFFFF",
+                        "borderColor": "#9E9E9E",
+                        "radius": 4
+                    },
+                    "events": {
+                        "onChange": "@handleCheckboxChange"
+                    }
+                },
+                {
+                    "id": "checkbox3",
+                    "type": "Checkbox",
+                    "position": [10, 70],
+                    "size": [20, 20],
+                    "data": true,
+                    "label": "禁用的已选中复选框",
+                    "disabled": true,
+                    "style": {
+                        "color": "#BDBDBD",
+                        "bgColor": "#F5F5F5",
+                        "borderColor": "#BDBDBD",
+                        "radius": 4
+                    }
+                },
+                {
+                    "id": "checkbox4",
+                    "type": "Checkbox",
+                    "position": [10, 100],
+                    "size": [20, 20],
+                    "data": false,
+                    "label": "禁用的未选中复选框",
+                    "disabled": true,
+                    "style": {
+                        "color": "#BDBDBD",
+                        "bgColor": "#F5F5F5",
+                        "borderColor": "#BDBDBD",
+                        "radius": 4
+                    }
+                },
+                {
+                    "id": "checkbox5",
+                    "type": "Checkbox",
+                    "position": [10, 130],
+                    "size": [24, 24],
+                    "data": true,
+                    "label": "较大尺寸的复选框",
+                    "style": {
+                        "color": "#4CAF50",
+                        "bgColor": "#FFFFFF",
+                        "borderColor": "#4CAF50",
+                        "radius": 5
+                    },
+                    "events": {
+                        "onChange": "@handleCheckboxChange"
+                    }
+                }
+            ]
+        },
+        {
+            "id": "radioboxGroupTitle",
+            "type": "Label",
+            "text": "单选框组",
+            "style": {
+                "color": "#2C3E50",
+                "fontSize": 18,
+                "marginTop": 30
+            }
+        },
+        {
+            "id": "radioboxContainer",
+            "type": "View",
+            "layout": {
+                "type": "vertical",
+                "spacing": 15
+            },
+            "children": [
+                {
+                    "id": "radiobox1",
+                    "type": "Radiobox",
+                    "position": [10, 10],
+                    "size": [20, 20],
+                    "data": true,
+                    "label": "选项一",
+                    "group": "radioGroup1",
+                    "style": {
+                        "color": "#FF5722",
+                        "bgColor": "#FFFFFF",
+                        "borderColor": "#FF5722"
+                    },
+                    "events": {
+                        "onChange": "@handleRadioboxChange"
+                    }
+                },
+                {
+                    "id": "radiobox2",
+                    "type": "Radiobox",
+                    "position": [10, 40],
+                    "size": [20, 20],
+                    "data": false,
+                    "label": "选项二",
+                    "group": "radioGroup1",
+                    "style": {
+                        "color": "#FF5722",
+                        "bgColor": "#FFFFFF",
+                        "borderColor": "#9E9E9E"
+                    },
+                    "events": {
+                        "onChange": "@handleRadioboxChange"
+                    }
+                },
+                {
+                    "id": "radiobox3",
+                    "type": "Radiobox",
+                    "position": [10, 70],
+                    "size": [20, 20],
+                    "data": false,
+                    "label": "选项三",
+                    "group": "radioGroup1",
+                    "style": {
+                        "color": "#FF5722",
+                        "bgColor": "#FFFFFF",
+                        "borderColor": "#9E9E9E"
+                    },
+                    "events": {
+                        "onChange": "@handleRadioboxChange"
+                    }
+                },
+                {
+                    "id": "radiobox4",
+                    "type": "Radiobox",
+                    "position": [10, 100],
+                    "size": [20, 20],
+                    "data": true,
+                    "label": "禁用的已选中单选框",
+                    "disabled": true,
+                    "group": "radioGroupDisabled",
+                    "style": {
+                        "color": "#BDBDBD",
+                        "bgColor": "#F5F5F5",
+                        "borderColor": "#BDBDBD"
+                    }
+                },
+                {
+                    "id": "radiobox5",
+                    "type": "Radiobox",
+                    "position": [10, 130],
+                    "size": [24, 24],
+                    "data": false,
+                    "label": "较大尺寸的单选框",
+                    "group": "radioGroupLarge",
+                    "style": {
+                        "color": "#9C27B0",
+                        "bgColor": "#FFFFFF",
+                        "borderColor": "#9C27B0"
+                    },
+                    "events": {
+                        "onChange": "@handleRadioboxChange"
+                    }
+                }
+            ]
+        },
+        {
+            "id": "submitButton",
+            "type": "Button",
+            "position": [10, 10],
+            "size": [150, 40],
+            "text": "提交选择",
+            "style": {
+                "color": "#FFFFFF",
+                "bgColor": "#2196F3",
+                "radius": 4
+            },
+            "events": {
+                "onClick": "@handleSubmit"
+            }
+        }
+    ]
+}
