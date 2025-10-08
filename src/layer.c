@@ -261,9 +261,9 @@ Layer* parse_layer(cJSON* json_obj,Layer* parent) {
     
     //默认背景颜色
     if(layer->bgColor.a == 0){
-        layer->bgColor.r=255;
-        layer->bgColor.g=255;
-        layer->bgColor.b=255;
+        layer->bgColor.r=0xF5;
+        layer->bgColor.g=0xF5;
+        layer->bgColor.b=0xF5;
         layer->bgColor.a = 0;
     }
     // 解析样式
