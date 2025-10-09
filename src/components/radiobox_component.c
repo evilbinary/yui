@@ -114,14 +114,38 @@ void radiobox_component_set_user_data(RadioboxComponent* component, void* data) 
     }
 }
 
+// 设置单选框禁用状态
+void radiobox_component_set_disabled(RadioboxComponent* component, int disabled){
+    if (component) {
+        if (disabled) {
+            SET_STATE(component->layer, LAYER_STATE_DISABLED);
+        } else {
+            CLEAR_STATE(component->layer, LAYER_STATE_DISABLED);
+        }
+    }
+}
+
+// 获取单选框禁用状态
+int radiobox_component_is_disabled(RadioboxComponent* component) {
+    if (component && component->layer) {
+        return HAS_STATE(component->layer, LAYER_STATE_DISABLED);
+    }
+    return 0;
+}
+
 // 处理鼠标事件
 void radiobox_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     if (!layer || !event || !layer->component) {
         return;
     }
-    
+
+    // 如果图层被禁用，则不处理鼠标事件
+    if (HAS_STATE(layer, LAYER_STATE_DISABLED)) {
+        return;
+    }
+
     RadioboxComponent* component = (RadioboxComponent*)layer->component;
-    
+
     // 检查鼠标是否在复选框范围内
     int is_inside = (event->x >= layer->rect.x && 
         event->x < layer->rect.x + layer->rect.w &&
@@ -131,7 +155,7 @@ void radiobox_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     if (event->button == BUTTON_LEFT && event->state == BUTTON_PRESSED && is_inside) {
         // 选中当前单选框，取消同组内其他单选框的选中状态
         radiobox_set_group_checked(component->group_id, component);
-        
+
         // 如果有点击事件回调，调用它
         if (layer->event && layer->event->click) {
             layer->event->click();
@@ -139,19 +163,33 @@ void radiobox_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     }
 }
 
+// 将颜色转换为灰度并降低透明度
+static Color get_disabled_color(Color color) {
+    // 计算灰度值
+    int gray = (color.r * 0.3 + color.g * 0.59 + color.b * 0.11);
+    // 返回灰度颜色并降低透明度到60%
+    return (Color){
+        gray,
+        gray,
+        gray,
+        (int)(color.a * 0.6)
+    };
+}
+
 // 渲染单选框
 void radiobox_component_render(Layer* layer) {
     if (!layer || !layer->component) {
         return;
     }
-    
+
     RadioboxComponent* component = (RadioboxComponent*)layer->component;
-    
+    int is_disabled = HAS_STATE(layer, LAYER_STATE_DISABLED);
+
     // 计算圆形的中心点和半径
     int center_x = layer->rect.x + layer->rect.w / 2;
     int center_y = layer->rect.y + layer->rect.h / 2;
     int radius = (layer->rect.w < layer->rect.h ? layer->rect.w : layer->rect.h) / 2 - 2;
-    
+
     // 绘制圆形背景
     // 由于backend没有直接绘制圆形的函数，我们使用圆角矩形来模拟
     Rect circle_rect = {
@@ -160,24 +198,30 @@ void radiobox_component_render(Layer* layer) {
         radius * 2,
         radius * 2
     };
-    
+
+    // 如果禁用，使用灰度和降低透明度的颜色
+    Color bg_color = is_disabled ? get_disabled_color(component->bg_color) : component->bg_color;
+    Color border_color = is_disabled ? get_disabled_color(component->border_color) : component->border_color;
+    Color dot_color = is_disabled ? get_disabled_color(component->dot_color) : component->dot_color;
+    Color text_color = is_disabled ? get_disabled_color(layer->color) : layer->color;
+
     backend_render_fill_rect_color(
         &circle_rect,
-        component->bg_color.r,
-        component->bg_color.g,
-        component->bg_color.b,
-        component->bg_color.a
+        bg_color.r,
+        bg_color.g,
+        bg_color.b,
+        bg_color.a
     );
-    
+
     // 绘制圆形边框
     backend_render_rect_color(
         &circle_rect,
-        component->border_color.r,
-        component->border_color.g,
-        component->border_color.b,
-        component->border_color.a
+        border_color.r,
+        border_color.g,
+        border_color.b,
+        border_color.a
     );
-    
+
     // 如果选中，绘制内部圆点
     if (component->checked) {
         int dot_radius = radius / 2;
@@ -187,30 +231,30 @@ void radiobox_component_render(Layer* layer) {
             dot_radius * 2,
             dot_radius * 2
         };
-        
+
         backend_render_fill_rect_color(
             &dot_rect,
-            component->dot_color.r,
-            component->dot_color.g,
-            component->dot_color.b,
-            component->dot_color.a
+            dot_color.r,
+            dot_color.g,
+            dot_color.b,
+            dot_color.a
         );
     }
     // 绘制标签文本，使用layer->label和layer->color
     if (layer->label[0] != '\0' && layer->font->default_font) {
         // 计算标签位置（在复选框右侧，垂直居中）
         int label_x = layer->rect.x + layer->rect.w + 5;  // 5像素间距
-        
+
         // 使用backend_render_texture渲染文本到纹理
-        Texture* text_texture = backend_render_texture(layer->font->default_font, layer->label, layer->color);
+        Texture* text_texture = backend_render_texture(layer->font->default_font, layer->label, text_color);
         if (text_texture) {
             // 获取文本纹理的尺寸
             int text_width, text_height;
             backend_query_texture(text_texture, NULL, NULL, &text_width, &text_height);
-            
+
             // 计算垂直居中的Y坐标
             int label_y = layer->rect.y + (layer->rect.h - text_height/scale) / 2;
-            
+
             // 创建目标矩形
             Rect dst_rect = {
                 .x = label_x,
@@ -218,10 +262,10 @@ void radiobox_component_render(Layer* layer) {
                 .w = text_width/ scale,
                 .h = text_height/ scale
             };
-            
+
             // 渲染文本纹理
             backend_render_text_copy(text_texture, NULL, &dst_rect);
-            
+
             // 释放纹理资源
             backend_render_text_destroy(text_texture);
         }

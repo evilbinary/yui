@@ -29,6 +29,9 @@ int radiobox_component_is_checked(RadioboxComponent* component);
 void radiobox_component_set_colors(RadioboxComponent* component, Color bg_color, Color border_color, Color dot_color);
 void radiobox_component_set_group(RadioboxComponent* component, const char* group_id);
 void radiobox_component_set_user_data(RadioboxComponent* component, void* data);
+// 添加禁用/启用函数
+void radiobox_component_set_disabled(RadioboxComponent* component, int disabled);
+int radiobox_component_is_disabled(RadioboxComponent* component);
 void radiobox_component_handle_mouse_event(Layer* layer, MouseEvent* event);
 void radiobox_component_render(Layer* layer);
 

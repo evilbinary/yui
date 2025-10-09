@@ -108,10 +108,40 @@ void checkbox_component_set_label(CheckboxComponent* component, const char* labe
     }
 }
 
+// 设置禁用状态
+void checkbox_component_set_disabled(CheckboxComponent* component, int disabled) {
+    if (!component || !component->layer) {
+        return;
+    }
+    
+    if (disabled) {
+        SET_STATE(component->layer, LAYER_STATE_DISABLED);
+        // 禁用时不能获得焦点
+        component->layer->focusable = 0;
+    } else {
+        CLEAR_STATE(component->layer, LAYER_STATE_DISABLED);
+        // 启用时恢复焦点能力
+        component->layer->focusable = 1;
+    }
+}
+
+// 检查是否被禁用
+int checkbox_component_is_disabled(CheckboxComponent* component) {
+    if (!component || !component->layer) {
+        return 0;
+    }
+    
+    return HAS_STATE(component->layer, LAYER_STATE_DISABLED);
+}
+
 // 处理鼠标事件
-// 处理鼠标点击事件
 void checkbox_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     if (!layer || !event || !layer->component) {
+        return;
+    }
+    
+    // 如果组件被禁用，不响应点击事件
+    if (HAS_STATE(layer, LAYER_STATE_DISABLED)) {
         return;
     }
     
@@ -150,13 +180,22 @@ void checkbox_component_render(Layer* layer) {
     
     CheckboxComponent* component = (CheckboxComponent*)layer->component;
     
+    // 检查是否被禁用
+    int is_disabled = HAS_STATE(layer, LAYER_STATE_DISABLED);
+    
     // 绘制复选框背景，使用layer->bg_color
+    // 禁用时降低透明度
+    Color bg_color = layer->bg_color;
+    if (is_disabled) {
+        bg_color.a = bg_color.a * 0.6;
+    }
+    
     backend_render_fill_rect_color(
         &layer->rect,
-        layer->bg_color.r,
-        layer->bg_color.g,
-        layer->bg_color.b,
-        layer->bg_color.a
+        bg_color.r,
+        bg_color.g,
+        bg_color.b,
+        bg_color.a
     );
     
     // 绘制复选框边框
@@ -164,6 +203,15 @@ void checkbox_component_render(Layer* layer) {
     // 选中状态下使用不同的边框颜色
     if (component->checked) {
         border_color = component->check_color;
+    }
+    // 禁用时降低颜色饱和度
+    if (is_disabled) {
+        // 计算灰度值
+        int gray = (border_color.r * 30 + border_color.g * 59 + border_color.b * 11) / 100;
+        border_color.r = gray;
+        border_color.g = gray;
+        border_color.b = gray;
+        border_color.a = border_color.a * 0.6;
     }
     
     backend_render_rect_color(
@@ -174,7 +222,6 @@ void checkbox_component_render(Layer* layer) {
         border_color.a
     );
     
-    // printf("checkbox checked: %d\n", component->checked);
     // 如果选中，绘制勾选标记
     if (component->checked) {
         // 计算勾选标记的位置和大小
@@ -186,9 +233,19 @@ void checkbox_component_render(Layer* layer) {
         int x3 = layer->rect.x + layer->rect.w - padding;
         int y3 = layer->rect.y + padding;
         
+        Color check_color = component->check_color;
+        // 禁用时降低颜色饱和度和透明度
+        if (is_disabled) {
+            int gray = (check_color.r * 30 + check_color.g * 59 + check_color.b * 11) / 100;
+            check_color.r = gray;
+            check_color.g = gray;
+            check_color.b = gray;
+            check_color.a = check_color.a * 0.6;
+        }
+        
         // 绘制勾选标记（两条线）
-        backend_render_line(x1, y1, x2, y2, component->check_color);
-        backend_render_line(x2, y2, x3, y3, component->check_color);
+        backend_render_line(x1, y1, x2, y2, check_color);
+        backend_render_line(x2, y2, x3, y3, check_color);
     }
     
     // 绘制标签文本，使用layer->label和layer->color
@@ -196,8 +253,18 @@ void checkbox_component_render(Layer* layer) {
         // 计算标签位置（在复选框右侧，垂直居中）
         int label_x = layer->rect.x + layer->rect.w + 5;  // 5像素间距
         
+        Color text_color = layer->color;
+        // 禁用时降低颜色饱和度和透明度
+        if (is_disabled) {
+            int gray = (text_color.r * 30 + text_color.g * 59 + text_color.b * 11) / 100;
+            text_color.r = gray;
+            text_color.g = gray;
+            text_color.b = gray;
+            text_color.a = text_color.a * 0.6;
+        }
+        
         // 使用backend_render_texture渲染文本到纹理
-        Texture* text_texture = backend_render_texture(layer->font->default_font, layer->label, layer->color);
+        Texture* text_texture = backend_render_texture(layer->font->default_font, layer->label, text_color);
         if (text_texture) {
             // 获取文本纹理的尺寸
             int text_width, text_height;

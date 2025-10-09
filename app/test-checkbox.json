@@ -31,6 +31,7 @@
             "id": "checkboxGroupTitle",
             "type": "Label",
             "text": "复选框组",
+            "height":20,
             "style": {
                 "color": "#2C3E50",
                 "fontSize": 18
@@ -131,6 +132,7 @@
             "id": "radioboxGroupTitle",
             "type": "Label",
             "text": "单选框组",
+            "height":20,
             "style": {
                 "color": "#2C3E50",
                 "fontSize": 18,
@@ -229,21 +231,6 @@
                     }
                 }
             ]
-        },
-        {
-            "id": "submitButton",
-            "type": "Button",
-            "position": [10, 10],
-            "size": [150, 40],
-            "text": "提交选择",
-            "style": {
-                "color": "#FFFFFF",
-                "bgColor": "#2196F3",
-                "radius": 4
-            },
-            "events": {
-                "onClick": "@handleSubmit"
-            }
         }
     ]
 }

@@ -23,6 +23,9 @@ int checkbox_component_is_checked(CheckboxComponent* component);
 void checkbox_component_set_colors(CheckboxComponent* component, Color bg_color, Color border_color, Color check_color);
 void checkbox_component_set_user_data(CheckboxComponent* component, void* data);
 void checkbox_component_set_label(CheckboxComponent* component, const char* label, Color color);
+// 添加禁用/启用函数
+void checkbox_component_set_disabled(CheckboxComponent* component, int disabled);
+int checkbox_component_is_disabled(CheckboxComponent* component);
 void checkbox_component_handle_mouse_event(Layer* layer, MouseEvent* event);
 void checkbox_component_render(Layer* layer);
 

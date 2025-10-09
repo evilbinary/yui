@@ -155,6 +155,13 @@ Layer* parse_layer(cJSON* json_obj,Layer* parent) {
         layer->data->json= copy;
         layer->data->size=cJSON_GetArraySize(data);
     }
+    //禁用
+    cJSON* disabled = cJSON_GetObjectItem(json_obj, "disabled");
+    if (data) {
+        if(cJSON_IsTrue(disabled)){
+                SET_STATE(layer,LAYER_STATE_DISABLED);
+        }
+    }
 
     //数据解析
     cJSON* rotation = cJSON_GetObjectItem(json_obj, "rotation");
