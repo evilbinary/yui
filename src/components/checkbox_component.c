@@ -124,7 +124,7 @@ void checkbox_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
                      event->y < layer->rect.y + layer->rect.h);
     
     // 处理鼠标点击事件
-    if (event->button == SDL_BUTTON_LEFT && event->state == SDL_PRESSED && is_inside) {
+    if (event->button == BUTTON_LEFT && event->state == BUTTON_PRESSED && is_inside) {
         // 切换选中状态
         component->checked = !component->checked;
 

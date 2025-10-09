@@ -1,0 +1,17 @@
+{
+    "id": "checkbox1",
+    "type": "Checkbox",
+    "position": [10, 10],
+    "size": [20, 20],
+    "data": true,
+    "label": "已选中的复选框",
+    "style": {
+        "color": "#2196F3",
+        "bgColor": "#FFFFFF",
+        "borderColor": "#2196F3",
+        "radius": 4
+    },
+    "events": {
+        "onChange": "@handleCheckboxChange"
+    }
+}

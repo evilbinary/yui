@@ -70,6 +70,8 @@ void radiobox_component_set_checked(RadioboxComponent* component, int checked) {
             radiobox_set_group_checked(component->group_id, component);
         } else {
             component->checked = 0;
+            // 清除图层状态，确保重绘
+            CLEAR_STATE(component->layer, LAYER_STATE_ACTIVE);
         }
     }
 }
@@ -120,8 +122,13 @@ void radiobox_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     
     RadioboxComponent* component = (RadioboxComponent*)layer->component;
     
+    // 检查鼠标是否在复选框范围内
+    int is_inside = (event->x >= layer->rect.x && 
+        event->x < layer->rect.x + layer->rect.w &&
+        event->y >= layer->rect.y && 
+        event->y < layer->rect.y + layer->rect.h);
     // 处理鼠标点击事件
-    if (event->button == SDL_BUTTON_LEFT && event->state == SDL_PRESSED) {
+    if (event->button == BUTTON_LEFT && event->state == BUTTON_PRESSED && is_inside) {
         // 选中当前单选框，取消同组内其他单选框的选中状态
         radiobox_set_group_checked(component->group_id, component);
         
@@ -284,8 +291,12 @@ void radiobox_set_group_checked(const char* group_id, RadioboxComponent* compone
     for (int i = 0; i < group->radio_count; i++) {
         RadioboxComponent* radio = (RadioboxComponent*)group->radios[i];
         radio->checked = 0;
+        // 清除图层状态，确保重绘
+        CLEAR_STATE(radio->layer, LAYER_STATE_ACTIVE);
     }
     
     // 设置指定单选框为选中状态
     component->checked = 1;
+    // 设置图层状态，确保重绘
+    SET_STATE(component->layer, LAYER_STATE_ACTIVE);
 }

@@ -46,15 +46,21 @@ typedef struct Point {
     int y;
 } Point;
 
+
 #if SDL2
 
 #define Texture SDL_Texture
 #define Color SDL_Color
 #define Rect SDL_Rect
+#define  BUTTON_LEFT SDL_BUTTON_LEFT
+#define  BUTTON_PRESSED SDL_PRESSED
+#define  BUTTON_RIGHT SDL_BUTTON_RIGHT
 
 #else
 
-
+#define  BUTTON_LEFT 1
+#define  BUTTON_PRESSED 2
+#define  BUTTON_RIGHT 3
 typedef struct Rect {
         int x, y;
         int w, h;
