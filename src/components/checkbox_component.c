@@ -34,9 +34,9 @@ CheckboxComponent* checkbox_component_create(Layer* layer) {
     // 绑定事件处理函数
     layer->handle_mouse_event = checkbox_component_handle_mouse_event;
     
-    // 设置组件为可聚焦
-    layer->focusable = 1;
-    
+    // 设置组件为可聚焦（默认情况下未禁用时可聚焦）
+    layer->focusable = !HAS_STATE(layer, LAYER_STATE_DISABLED);
+
     return component;
 }
 
@@ -158,11 +158,11 @@ void checkbox_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
         // 切换选中状态
         component->checked = !component->checked;
 
-        // 标记图层状态变化，确保重绘
+        // 标记图层状态变化，确保重绘，但保留禁用状态
         if (component->checked) {
-            SET_STATE(layer, LAYER_STATE_ACTIVE);
+            layer->state |= LAYER_STATE_ACTIVE; // 只设置激活位，保留其他位
         } else {
-            CLEAR_STATE(layer, LAYER_STATE_ACTIVE);
+            layer->state &= ~LAYER_STATE_ACTIVE; // 只清除激活位，保留其他位
         }
         
         // 如果有点击事件回调，调用它

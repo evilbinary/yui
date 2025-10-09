@@ -245,7 +245,9 @@ typedef enum {
 typedef struct Layer Layer;
 
 // 辅助宏：检查状态
-#define HAS_STATE(layer, st) (layer->state & (st))
+// HAS_STATE - 检查layer->state中是否包含st指定的状态位
+// 逻辑：如果(st)与(layer->state)的按位与结果不为0，则表示st状态位被设置
+#define HAS_STATE(layer, st) ((layer->state & (st)) != 0)
 #define SET_STATE(layer, st) (layer->state |= (st))
 #define CLEAR_STATE(layer, st) (layer->state &= ~(st))
 #define CLEAR_ALL_STATES(layer) (layer->state = LAYER_STATE_NORMAL)

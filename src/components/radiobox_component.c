@@ -45,7 +45,7 @@ RadioboxComponent* radiobox_component_create(Layer* layer, const char* group_id)
     layer->handle_mouse_event = radiobox_component_handle_mouse_event;
     
     // 设置组件为可聚焦
-    layer->focusable = 1;
+    layer->focusable = !HAS_STATE(layer, LAYER_STATE_DISABLED);
     
     // 将单选框添加到组中
     radiobox_add_to_group(component);
@@ -116,11 +116,15 @@ void radiobox_component_set_user_data(RadioboxComponent* component, void* data) 
 
 // 设置单选框禁用状态
 void radiobox_component_set_disabled(RadioboxComponent* component, int disabled){
-    if (component) {
+    if (component && component->layer) {
         if (disabled) {
             SET_STATE(component->layer, LAYER_STATE_DISABLED);
+            // 禁用时不能获得焦点
+            component->layer->focusable = 0;
         } else {
             CLEAR_STATE(component->layer, LAYER_STATE_DISABLED);
+            // 启用时恢复焦点能力
+            component->layer->focusable = 1;
         }
     }
 }
@@ -361,16 +365,21 @@ void radiobox_set_group_checked(const char* group_id, RadioboxComponent* compone
         return;
     }
     
-    // 取消组内所有单选框的选中状态
+    // 检查目标单选框是否被禁用，如果是，则不执行任何操作
+    if (HAS_STATE(component->layer, LAYER_STATE_DISABLED)) {
+        return;
+    }
+    
+    // 取消组内所有单选框的选中状态，但保留禁用状态
     for (int i = 0; i < group->radio_count; i++) {
         RadioboxComponent* radio = (RadioboxComponent*)group->radios[i];
         radio->checked = 0;
-        // 清除图层状态，确保重绘
-        CLEAR_STATE(radio->layer, LAYER_STATE_ACTIVE);
+        // 清除图层激活状态，确保重绘，但保留禁用状态
+        radio->layer->state &= ~LAYER_STATE_ACTIVE; // 只清除激活位，保留其他位
     }
     
     // 设置指定单选框为选中状态
     component->checked = 1;
-    // 设置图层状态，确保重绘
-    SET_STATE(component->layer, LAYER_STATE_ACTIVE);
+    // 设置图层激活状态，确保重绘，但保留禁用状态
+    component->layer->state |= LAYER_STATE_ACTIVE; // 只设置激活位，保留其他位
 }
