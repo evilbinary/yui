@@ -10,7 +10,7 @@ static RadioGroup groups[MAX_GROUPS] = {0};
 static int group_count = 0;
 
 // 创建单选框组件
-RadioboxComponent* radiobox_component_create(Layer* layer, const char* group_id) {
+RadioboxComponent* radiobox_component_create(Layer* layer, const char* group_id, int default_checked) {
     if (!layer) {
         return NULL;
     }
@@ -22,7 +22,11 @@ RadioboxComponent* radiobox_component_create(Layer* layer, const char* group_id)
     
     memset(component, 0, sizeof(RadioboxComponent));
     component->layer = layer;
-    component->checked = 0;
+    component->checked = default_checked;
+    
+    if(default_checked) {
+        radiobox_set_group_checked(component->group_id, component);
+    }
     component->user_data = NULL;
     
     // 设置组ID

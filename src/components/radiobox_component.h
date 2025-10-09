@@ -22,7 +22,7 @@ typedef struct {
 } RadioboxComponent;
 
 // 函数声明
-RadioboxComponent* radiobox_component_create(Layer* layer, const char* group_id);
+RadioboxComponent* radiobox_component_create(Layer* layer, const char* group_id, int default_checked);
 void radiobox_component_destroy(RadioboxComponent* component);
 void radiobox_component_set_checked(RadioboxComponent* component, int checked);
 int radiobox_component_is_checked(RadioboxComponent* component);

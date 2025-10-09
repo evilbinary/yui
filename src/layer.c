@@ -521,7 +521,11 @@ Layer* parse_layer(cJSON* json_obj,Layer* parent) {
             char* group = cJSON_GetObjectItem(layer, "group")->valuestring;
             group_id = strdup(group);
         }
-        layer->component = radiobox_component_create(layer,group_id);
+        int checked=0;
+        if(cJSON_HasObjectItem(json_obj, "data")){
+            checked=cJSON_IsTrue(cJSON_GetObjectItem(json_obj, "data"));
+        }
+        layer->component = radiobox_component_create(layer,group_id,checked);
         
     }
     
