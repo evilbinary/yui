@@ -232,6 +232,7 @@ typedef enum {
     LAYER_STATE_DISABLED = 1 << 1,  // 2
     LAYER_STATE_HOVER    = 1 << 2,  // 4
     LAYER_STATE_PRESSED  = 1 << 3,  // 8
+    LAYER_STATE_ACTIVE   = 1 << 4,  // 16 - 用于表示选中、激活状态
 } LayerState;
 
 

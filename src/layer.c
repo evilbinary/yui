@@ -2,7 +2,7 @@
 #include "animate.h"
 
 // 更新图层类型名称数组，添加GRID
-char *layer_type_name[]={"View","Button","Input","Label","Image","List","Grid","Progress","CheckBox","Radiobox"};
+char *layer_type_name[]={"View","Button","Input","Label","Image","List","Grid","Progress","Checkbox","Radiobox"};
 
 Layer* focused_layer=NULL;
 

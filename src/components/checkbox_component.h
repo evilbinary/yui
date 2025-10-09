@@ -10,6 +10,8 @@ typedef struct {
     Color bg_color;        // 背景颜色
     Color border_color;    // 边框颜色
     Color check_color;     // 勾选颜色
+    Color label_color;     // 标签颜色
+    char* label;           // 标签文本
     void* user_data;       // 用户数据
 } CheckboxComponent;
 
@@ -20,6 +22,7 @@ void checkbox_component_set_checked(CheckboxComponent* component, int checked);
 int checkbox_component_is_checked(CheckboxComponent* component);
 void checkbox_component_set_colors(CheckboxComponent* component, Color bg_color, Color border_color, Color check_color);
 void checkbox_component_set_user_data(CheckboxComponent* component, void* data);
+void checkbox_component_set_label(CheckboxComponent* component, const char* label, Color color);
 void checkbox_component_handle_mouse_event(Layer* layer, MouseEvent* event);
 void checkbox_component_render(Layer* layer);
 

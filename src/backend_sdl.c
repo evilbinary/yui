@@ -149,19 +149,6 @@ void handle_event(Layer* root, SDL_Event* event) {
             handle_mouse_event(root, &mouse_event);
         }
     }
-    // 保留原有点击检测逻辑
-    if (event->type == SDL_MOUSEBUTTONDOWN) {
-        SDL_Point mouse_pos = { event->button.x, event->button.y };
-        if (SDL_PointInRect(&mouse_pos, &root->rect)) {
-            
-            for (int i = 0; i < root->child_count; i++) {
-                handle_event(root->children[i], event);
-            }
-            if (root->sub) {
-                handle_event(root->sub, event);
-            }
-        }
-    }
 // 添加鼠标滚轮事件处理
     else if (event->type == SDL_MOUSEWHEEL) {
         // 处理鼠标滚轮事件，传递给所有支持滚动的图层
