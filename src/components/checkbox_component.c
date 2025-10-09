@@ -5,7 +5,7 @@
 #include "checkbox_component.h"
 
 // 创建复选框组件
-CheckboxComponent* checkbox_component_create(Layer* layer) {
+CheckboxComponent* checkbox_component_create(Layer* layer, int default_checked) {
     if (!layer) {
         return NULL;
     }
@@ -17,7 +17,7 @@ CheckboxComponent* checkbox_component_create(Layer* layer) {
     
     memset(component, 0, sizeof(CheckboxComponent));
     component->layer = layer;
-    component->checked = 0;
+    component->checked = default_checked;
     component->user_data = NULL;
     // 不再初始化component->label，因为我们将使用layer->label
     
@@ -38,6 +38,15 @@ CheckboxComponent* checkbox_component_create(Layer* layer) {
     layer->focusable = !HAS_STATE(layer, LAYER_STATE_DISABLED);
 
     return component;
+}
+
+// 从JSON创建复选框组件
+CheckboxComponent* checkbox_component_create_from_json(Layer* layer, cJSON* json_obj) {
+    int default_checked = 0;
+    if(cJSON_HasObjectItem(json_obj, "data")) {
+        default_checked = cJSON_IsTrue(cJSON_GetObjectItem(json_obj, "data"));
+    }
+    return checkbox_component_create(layer, default_checked);
 }
 
 // 销毁复选框组件

@@ -512,7 +512,7 @@ Layer* parse_layer(cJSON* json_obj,Layer* parent) {
             progress_component_set_progress(progress_component, progress);
         }
     }else if(layer->type==CHECKBOX){
-        layer->component = checkbox_component_create(layer);
+        layer->component = checkbox_component_create_from_json(layer, json_obj);
         
     }else if(layer->type==RADIOBOX){
 

@@ -16,7 +16,8 @@ typedef struct {
 } CheckboxComponent;
 
 // 函数声明
-CheckboxComponent* checkbox_component_create(Layer* layer);
+CheckboxComponent* checkbox_component_create(Layer* layer, int default_checked);
+CheckboxComponent* checkbox_component_create_from_json(Layer* layer, cJSON* json_obj);
 void checkbox_component_destroy(CheckboxComponent* component);
 void checkbox_component_set_checked(CheckboxComponent* component, int checked);
 int checkbox_component_is_checked(CheckboxComponent* component);
