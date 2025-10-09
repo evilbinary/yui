@@ -196,6 +196,36 @@ void radiobox_component_render(Layer* layer) {
             component->dot_color.a
         );
     }
+    // 绘制标签文本，使用layer->label和layer->color
+    if (layer->label[0] != '\0' && layer->font->default_font) {
+        // 计算标签位置（在复选框右侧，垂直居中）
+        int label_x = layer->rect.x + layer->rect.w + 5;  // 5像素间距
+        
+        // 使用backend_render_texture渲染文本到纹理
+        Texture* text_texture = backend_render_texture(layer->font->default_font, layer->label, layer->color);
+        if (text_texture) {
+            // 获取文本纹理的尺寸
+            int text_width, text_height;
+            backend_query_texture(text_texture, NULL, NULL, &text_width, &text_height);
+            
+            // 计算垂直居中的Y坐标
+            int label_y = layer->rect.y + (layer->rect.h - text_height/scale) / 2;
+            
+            // 创建目标矩形
+            Rect dst_rect = {
+                .x = label_x,
+                .y = label_y,
+                .w = text_width/ scale,
+                .h = text_height/ scale
+            };
+            
+            // 渲染文本纹理
+            backend_render_text_copy(text_texture, NULL, &dst_rect);
+            
+            // 释放纹理资源
+            backend_render_text_destroy(text_texture);
+        }
+    }
 }
 
 // 获取单选框组
