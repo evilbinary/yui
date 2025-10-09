@@ -26,7 +26,7 @@ CheckboxComponent* checkbox_component_create(Layer* layer) {
     component->border_color = (Color){100, 149, 237, 255};     // 蓝色边框
     component->check_color = (Color){25, 25, 112, 255};        // 深蓝色勾选
     layer->color = (Color){0, 0, 0, 255};            // 黑色标签
-    
+        
     // 设置组件指针和自定义渲染函数
     layer->component = component;
     layer->render = checkbox_component_render;
@@ -204,14 +204,14 @@ void checkbox_component_render(Layer* layer) {
             backend_query_texture(text_texture, NULL, NULL, &text_width, &text_height);
             
             // 计算垂直居中的Y坐标
-            int label_y = layer->rect.y + (layer->rect.h - text_height) / 2;
+            int label_y = layer->rect.y + (layer->rect.h - text_height/scale) / 2;
             
             // 创建目标矩形
             Rect dst_rect = {
                 .x = label_x,
                 .y = label_y,
-                .w = text_width,
-                .h = text_height
+                .w = text_width/ scale,
+                .h = text_height/ scale
             };
             
             // 渲染文本纹理
