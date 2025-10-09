@@ -154,8 +154,8 @@ void button_component_render(Layer* layer) {
     
     // 根据按钮状态选择颜色，如果layer有背景色则优先使用layer的背景色
     Color bg_color;
-    if (layer->bgColor.a > 0) {
-        bg_color = layer->bgColor;
+    if (layer->bg_color.a > 0) {
+        bg_color = layer->bg_color;
     } else {
         // 根据当前状态组合选择合适的颜色
         if (HAS_STATE(layer, LAYER_STATE_PRESSED)) {

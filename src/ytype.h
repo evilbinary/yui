@@ -256,7 +256,7 @@ typedef struct Layer {
     LayerType type;
     Rect rect;
     Color color;
-    Color bgColor;
+    Color bg_color;
     int radius; // 圆角半径
     char source[MAX_PATH];
     Texture* texture;

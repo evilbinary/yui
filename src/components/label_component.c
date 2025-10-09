@@ -90,11 +90,11 @@ void label_component_render(Layer* layer) {
     LabelComponent* component = (LabelComponent*)layer->component;
     
     // 绘制背景
-    if (layer->bgColor.a > 0) {
+    if (layer->bg_color.a > 0) {
         if (layer->radius > 0) {
-            backend_render_rounded_rect(&layer->rect, layer->bgColor, layer->radius);
+            backend_render_rounded_rect(&layer->rect, layer->bg_color, layer->radius);
         } else {
-            backend_render_fill_rect(&layer->rect, layer->bgColor);
+            backend_render_fill_rect(&layer->rect, layer->bg_color);
         }
     }
     

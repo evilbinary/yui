@@ -22,7 +22,7 @@ CheckboxComponent* checkbox_component_create(Layer* layer) {
     // 不再初始化component->label，因为我们将使用layer->label
     
     // 设置默认颜色到layer
-    layer->bgColor = (Color){255, 255, 255, 255};         // 白色背景
+    layer->bg_color = (Color){255, 255, 255, 255};         // 白色背景
     component->border_color = (Color){100, 149, 237, 255};     // 蓝色边框
     component->check_color = (Color){25, 25, 112, 255};        // 深蓝色勾选
     layer->color = (Color){0, 0, 0, 255};            // 黑色标签
@@ -72,9 +72,9 @@ int checkbox_component_is_checked(CheckboxComponent* component) {
 // 设置复选框颜色
 void checkbox_component_set_colors(CheckboxComponent* component, Color bg_color, Color border_color, Color check_color) {
     if (component) {
-        // 使用layer->bgColor代替component->bg_color
+        // 使用layer->bg_color代替component->bg_color
         if (component->layer) {
-            component->layer->bgColor = bg_color;
+            component->layer->bg_color = bg_color;
         }
         component->border_color = border_color;
         component->check_color = check_color;
@@ -150,13 +150,13 @@ void checkbox_component_render(Layer* layer) {
     
     CheckboxComponent* component = (CheckboxComponent*)layer->component;
     
-    // 绘制复选框背景，使用layer->bgColor
+    // 绘制复选框背景，使用layer->bg_color
     backend_render_fill_rect_color(
         &layer->rect,
-        layer->bgColor.r,
-        layer->bgColor.g,
-        layer->bgColor.b,
-        layer->bgColor.a
+        layer->bg_color.r,
+        layer->bg_color.g,
+        layer->bg_color.b,
+        layer->bg_color.a
     );
     
     // 绘制复选框边框

@@ -82,7 +82,7 @@ void progress_component_set_background_color(ProgressComponent* component, Color
         return;
     }
     
-    component->layer->bgColor = color;
+    component->layer->bg_color = color;
 }
 
 // 设置是否显示百分比文本
@@ -144,10 +144,10 @@ void progress_component_render(Layer* layer) {
     // 绘制背景 - 移除透明度检查，确保背景总是被渲染
     if (layer->radius > 0) {
         // 使用圆角背景
-        backend_render_rounded_rect(&layer->rect, layer->bgColor, layer->radius);
+        backend_render_rounded_rect(&layer->rect, layer->bg_color, layer->radius);
     } else {
         // 使用普通矩形背景
-        backend_render_fill_rect(&layer->rect, layer->bgColor);
+        backend_render_fill_rect(&layer->rect, layer->bg_color);
     }
     
     // 绘制边框 - 移到背景之后，进度条之前，避免遮挡进度条颜色

@@ -59,19 +59,19 @@ void render_layer(Layer* layer) {
     }else if(layer->type==VIEW) {
         //printf("layer->%s %d\n",layer->id,layer->type);
     // 绘制背景
-        if(layer->bgColor.a > 0) {
+        if(layer->bg_color.a > 0) {
             if (layer->radius > 0) {
-                backend_render_rounded_rect(&layer->rect, layer->bgColor, layer->radius);
+                backend_render_rounded_rect(&layer->rect, layer->bg_color, layer->radius);
             } else {
-                backend_render_fill_rect(&layer->rect, layer->bgColor);
+                backend_render_fill_rect(&layer->rect, layer->bg_color);
             }
 
         }else{
             // 默认渲染方式
             if (layer->radius > 0) {
-                backend_render_rounded_rect(&layer->rect, layer->bgColor, layer->radius);
+                backend_render_rounded_rect(&layer->rect, layer->bg_color, layer->radius);
             } else {
-                backend_render_fill_rect(&layer->rect, layer->bgColor);
+                backend_render_fill_rect(&layer->rect, layer->bg_color);
             }
             
         }

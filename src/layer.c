@@ -260,11 +260,11 @@ Layer* parse_layer(cJSON* json_obj,Layer* parent) {
     }
     
     //默认背景颜色
-    if(layer->bgColor.a == 0){
-        layer->bgColor.r=0xF5;
-        layer->bgColor.g=0xF5;
-        layer->bgColor.b=0xF5;
-        layer->bgColor.a = 0;
+    if(layer->bg_color.a == 0){
+        layer->bg_color.r=0xF5;
+        layer->bg_color.g=0xF5;
+        layer->bg_color.b=0xF5;
+        layer->bg_color.a = 0;
     }
     // 解析样式
     cJSON* style = cJSON_GetObjectItem(json_obj, "style");
@@ -274,7 +274,7 @@ Layer* parse_layer(cJSON* json_obj,Layer* parent) {
         }
 
         if(cJSON_HasObjectItem(style,"bgColor")){
-            parse_color(cJSON_GetObjectItem(style, "bgColor")->valuestring,&layer->bgColor);
+            parse_color(cJSON_GetObjectItem(style, "bgColor")->valuestring,&layer->bg_color);
         }
         
         // 解析圆角半径属性

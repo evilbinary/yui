@@ -327,17 +327,17 @@ void input_component_render(Layer* layer) {
            HAS_STATE(layer, LAYER_STATE_PRESSED), HAS_STATE(layer, LAYER_STATE_DISABLED));
 
     // 绘制背景
-    if (layer->bgColor.a > 0) {
+    if (layer->bg_color.a > 0) {
         if (layer->radius > 0) {
-            backend_render_rounded_rect(&layer->rect, layer->bgColor, layer->radius);
+            backend_render_rounded_rect(&layer->rect, layer->bg_color, layer->radius);
         } else {
-            backend_render_fill_rect(&layer->rect, layer->bgColor);
+            backend_render_fill_rect(&layer->rect, layer->bg_color);
         }
     }
 
     // 绘制输入框边框，考虑圆角
     if (layer->radius > 0) {
-        backend_render_rounded_rect_with_border(&layer->rect, layer->bgColor, layer->radius, 2, (Color){150, 150, 150, 255});
+        backend_render_rounded_rect_with_border(&layer->rect, layer->bg_color, layer->radius, 2, (Color){150, 150, 150, 255});
     } else {
         backend_render_rect_color(&layer->rect,150, 150, 150, 255);
     }
@@ -383,7 +383,7 @@ void input_component_render(Layer* layer) {
     }
     
     if (layer->radius > 0) {
-        backend_render_rounded_rect_with_border(&layer->rect, layer->bgColor, layer->radius, 2, border_color);
+        backend_render_rounded_rect_with_border(&layer->rect, layer->bg_color, layer->radius, 2, border_color);
     } else {
         backend_render_rect_color(&layer->rect, border_color.r, border_color.g, border_color.b, border_color.a);
     }
