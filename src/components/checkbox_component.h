@@ -7,11 +7,11 @@
 typedef struct {
     Layer* layer;          // 关联的图层
     int checked;           // 是否选中
-    Color bg_color;        // 背景颜色
+    // 不再需要bg_color字段，使用layer->bgColor代替
     Color border_color;    // 边框颜色
     Color check_color;     // 勾选颜色
-    Color label_color;     // 标签颜色
-    char* label;           // 标签文本
+    // 不再需要label_color字段，使用layer->color代替
+    // 不再需要单独的label字段，使用layer->label代替
     void* user_data;       // 用户数据
 } CheckboxComponent;
 

@@ -19,13 +19,13 @@ CheckboxComponent* checkbox_component_create(Layer* layer) {
     component->layer = layer;
     component->checked = 0;
     component->user_data = NULL;
-    component->label = NULL;
+    // 不再初始化component->label，因为我们将使用layer->label
     
-    // 设置默认颜色
-    component->bg_color = (Color){255, 255, 255, 255};         // 白色背景
+    // 设置默认颜色到layer
+    layer->bgColor = (Color){255, 255, 255, 255};         // 白色背景
     component->border_color = (Color){100, 149, 237, 255};     // 蓝色边框
     component->check_color = (Color){25, 25, 112, 255};        // 深蓝色勾选
-    component->label_color = (Color){0, 0, 0, 255};            // 黑色标签
+    layer->color = (Color){0, 0, 0, 255};            // 黑色标签
     
     // 设置组件指针和自定义渲染函数
     layer->component = component;
@@ -43,9 +43,7 @@ CheckboxComponent* checkbox_component_create(Layer* layer) {
 // 销毁复选框组件
 void checkbox_component_destroy(CheckboxComponent* component) {
     if (component) {
-        if (component->label) {
-            free(component->label);
-        }
+        // 不再需要释放component->label，因为我们使用的是layer->label
         free(component);
     }
 }
@@ -74,7 +72,10 @@ int checkbox_component_is_checked(CheckboxComponent* component) {
 // 设置复选框颜色
 void checkbox_component_set_colors(CheckboxComponent* component, Color bg_color, Color border_color, Color check_color) {
     if (component) {
-        component->bg_color = bg_color;
+        // 使用layer->bgColor代替component->bg_color
+        if (component->layer) {
+            component->layer->bgColor = bg_color;
+        }
         component->border_color = border_color;
         component->check_color = check_color;
     }
@@ -93,19 +94,18 @@ void checkbox_component_set_label(CheckboxComponent* component, const char* labe
         return;
     }
     
-    // 释放之前的标签文本
-    if (component->label) {
-        free(component->label);
-        component->label = NULL;
+    // 直接使用layer->label
+    if (label && component->layer) {
+        strncpy(component->layer->label, label, MAX_TEXT - 1);
+        component->layer->label[MAX_TEXT - 1] = '\0'; // 确保字符串结束
+    } else if (component->layer) {
+        component->layer->label[0] = '\0'; // 清空标签
     }
     
-    // 设置新的标签文本
-    if (label) {
-        component->label = strdup(label);
+    // 使用layer->color代替component->label_color
+    if (component->layer) {
+        component->layer->color = color;
     }
-    
-    // 设置标签颜色
-    component->label_color = color;
 }
 
 // 处理鼠标事件
@@ -150,13 +150,13 @@ void checkbox_component_render(Layer* layer) {
     
     CheckboxComponent* component = (CheckboxComponent*)layer->component;
     
-    // 绘制复选框背景
+    // 绘制复选框背景，使用layer->bgColor
     backend_render_fill_rect_color(
         &layer->rect,
-        component->bg_color.r,
-        component->bg_color.g,
-        component->bg_color.b,
-        component->bg_color.a
+        layer->bgColor.r,
+        layer->bgColor.g,
+        layer->bgColor.b,
+        layer->bgColor.a
     );
     
     // 绘制复选框边框
@@ -191,13 +191,13 @@ void checkbox_component_render(Layer* layer) {
         backend_render_line(x2, y2, x3, y3, component->check_color);
     }
     
-    // 绘制标签文本
-    if (component->label && layer->font->default_font) {
+    // 绘制标签文本，使用layer->label和layer->color
+    if (layer->label[0] != '\0' && layer->font->default_font) {
         // 计算标签位置（在复选框右侧，垂直居中）
         int label_x = layer->rect.x + layer->rect.w + 5;  // 5像素间距
         
         // 使用backend_render_texture渲染文本到纹理
-        Texture* text_texture = backend_render_texture(layer->font->default_font, component->label, component->label_color);
+        Texture* text_texture = backend_render_texture(layer->font->default_font, layer->label, layer->color);
         if (text_texture) {
             // 获取文本纹理的尺寸
             int text_width, text_height;
