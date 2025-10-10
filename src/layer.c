@@ -179,8 +179,8 @@ Layer* parse_layer(cJSON* json_obj,Layer* parent) {
     
     cJSON* scrollbar = cJSON_GetObjectItem(json_obj, "scrollbar");
     if (scrollbar) {
-        layer->scrollbar = malloc(sizeof(Scrollbar));
-        memset(layer->scrollbar, 0, sizeof(Scrollbar));
+            layer->scrollbar = malloc(sizeof(Scrollbar));
+            memset(layer->scrollbar, 0, sizeof(Scrollbar));
         
         cJSON* visible = cJSON_GetObjectItem(scrollbar, "visible");
         if (visible) {

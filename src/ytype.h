@@ -159,6 +159,8 @@ typedef struct Scrollbar {
     int visible;
     int thickness;
     Color color;
+    int is_dragging;  // 滚动条是否被拖动
+    int drag_offset;  // 拖动时鼠标相对于滚动条顶部的偏移
 } Scrollbar;
 
 // 触屏事件类型枚举

@@ -126,7 +126,7 @@ void button_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     }
     
     if (is_click) {
-        printf("button_component_handle_mouse_event click: %d, %d, %d, %d state:%d\n", event->x, event->y, is_click , event->button,event->state);
+        // printf("button_component_handle_mouse_event click: %d, %d, %d, %d state:%d\n", event->x, event->y, is_click , event->button,event->state);
         if (is_inside) {
             // 鼠标点击在按钮上，设置Layer的PRESSED状态
             SET_STATE(layer, LAYER_STATE_PRESSED);

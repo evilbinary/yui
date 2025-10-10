@@ -167,8 +167,140 @@ void handle_mouse_event(Layer* layer, MouseEvent* event) {
         }
     }
     
-    // 处理sub图层的事件
+    // 递归处理子图层的事件
     if (layer->sub) {
         handle_mouse_event(layer->sub, event);
+    }
+}
+
+// 处理滚动条拖动事件
+void handle_scrollbar_drag_event(Layer* root, int mouse_x, int mouse_y, SDL_EventType event_type) {
+    if (!root) return;
+    
+    // 首先处理root图层自身的滚动条
+    if (root->scrollable && root->scrollbar && root->scrollbar->visible) {
+        // 计算内容高度和可见高度
+        int content_height = 0;
+        for (int j = 0; j < root->child_count; j++) {
+            content_height += root->children[j]->rect.h;
+            if (j > 0) content_height += root->layout_manager->spacing;
+        }
+        int visible_height = root->rect.h - root->layout_manager->padding[0] - root->layout_manager->padding[2];
+        
+        if (content_height > visible_height) { // 只有当内容高度大于可见高度时才显示滚动条
+            // 计算滚动条位置和大小
+            int scrollbar_width = root->scrollbar->thickness > 0 ? root->scrollbar->thickness : 8;
+            int scrollbar_height = (int)((float)visible_height / content_height * visible_height);
+            if (scrollbar_height < 20) scrollbar_height = 20;
+            int scrollbar_x = root->rect.x + root->rect.w - scrollbar_width;
+            int scrollbar_y = root->rect.y + (int)((float)root->scroll_offset / (content_height - visible_height) * (visible_height - scrollbar_height));
+            
+            // 处理鼠标按下事件
+            if (event_type == SDL_MOUSEBUTTONDOWN) {
+                // 检查鼠标是否在滚动条上
+                if (mouse_x >= scrollbar_x && mouse_x <= scrollbar_x + scrollbar_width && 
+                    mouse_y >= scrollbar_y && mouse_y <= scrollbar_y + scrollbar_height) {
+                    root->scrollbar->is_dragging = 1;
+                    root->scrollbar->drag_offset = mouse_y - scrollbar_y;
+                }
+            }
+            // 处理鼠标移动事件
+            else if (event_type == SDL_MOUSEMOTION && root->scrollbar->is_dragging) {
+                // 计算新的滚动条位置
+                int new_scrollbar_y = mouse_y - root->scrollbar->drag_offset;
+                // 限制滚动条位置在可见区域内
+                if (new_scrollbar_y < root->rect.y) new_scrollbar_y = root->rect.y;
+                if (new_scrollbar_y > root->rect.y + visible_height - scrollbar_height) 
+                    new_scrollbar_y = root->rect.y + visible_height - scrollbar_height;
+                
+                // 根据滚动条位置计算新的滚动偏移
+                float scroll_ratio = (float)(new_scrollbar_y - root->rect.y) / (visible_height - scrollbar_height);
+                root->scroll_offset = (int)(scroll_ratio * (content_height - visible_height));
+                
+                // 重新布局子元素
+                layout_layer(root);
+            }
+        }
+    }
+    
+    // 递归检查所有子图层
+    for (int i = 0; i < root->child_count; i++) {
+        Layer* layer = root->children[i];
+        
+        printf("scrollable layer: %s, type: %d\n", layer->id, layer->type);
+        if (layer->scrollable && layer->scrollbar && layer->scrollbar->visible) {
+            printf("scrollable layer: %s\n", layer->id);
+            // 计算内容高度和可见高度
+            int content_height = 0;
+            for (int j = 0; j < layer->child_count; j++) {
+                content_height += layer->children[j]->rect.h;
+                if (j > 0) content_height += layer->layout_manager->spacing;
+            }
+            int visible_height = layer->rect.h - layer->layout_manager->padding[0] - layer->layout_manager->padding[2];
+            
+            if (content_height <= visible_height) continue; // 内容不足时不显示滚动条
+            
+            // 计算滚动条位置和大小
+            int scrollbar_width = layer->scrollbar->thickness > 0 ? layer->scrollbar->thickness : 8;
+            int scrollbar_height = (int)((float)visible_height / content_height * visible_height);
+            if (scrollbar_height < 20) scrollbar_height = 20;
+            int scrollbar_x = layer->rect.x + layer->rect.w - scrollbar_width;
+            int scrollbar_y = layer->rect.y + (int)((float)layer->scroll_offset / (content_height - visible_height) * (visible_height - scrollbar_height));
+            
+            // 处理鼠标按下事件
+            if (event_type == SDL_MOUSEBUTTONDOWN) {
+                // 检查鼠标是否在滚动条上
+                if (mouse_x >= scrollbar_x && mouse_x <= scrollbar_x + scrollbar_width && 
+                    mouse_y >= scrollbar_y && mouse_y <= scrollbar_y + scrollbar_height) {
+                    layer->scrollbar->is_dragging = 1;
+                    layer->scrollbar->drag_offset = mouse_y - scrollbar_y;
+                }
+            }
+            // 处理鼠标移动事件
+            else if (event_type == SDL_MOUSEMOTION && layer->scrollbar->is_dragging) {
+                // 计算新的滚动条位置
+                int new_scrollbar_y = mouse_y - layer->scrollbar->drag_offset;
+                // 限制滚动条位置在可见区域内
+                if (new_scrollbar_y < layer->rect.y) new_scrollbar_y = layer->rect.y;
+                if (new_scrollbar_y > layer->rect.y + visible_height - scrollbar_height) 
+                    new_scrollbar_y = layer->rect.y + visible_height - scrollbar_height;
+                
+                // 根据滚动条位置计算新的滚动偏移
+                float scroll_ratio = (float)(new_scrollbar_y - layer->rect.y) / (visible_height - scrollbar_height);
+                layer->scroll_offset = (int)(scroll_ratio * (content_height - visible_height));
+                
+                // 重新布局子元素
+                layout_layer(layer);
+            }
+        }
+        
+        // 递归处理子图层的子图层
+        handle_scrollbar_drag_event(layer, mouse_x, mouse_y, event_type);
+    }
+    
+    // 处理sub图层
+    if (root->sub) {
+        handle_scrollbar_drag_event(root->sub, mouse_x, mouse_y, event_type);
+    }
+    
+    // 处理鼠标释放事件
+    if (event_type == SDL_MOUSEBUTTONUP) {
+        // 首先重置root图层自身的滚动条拖动状态
+        if (root->scrollbar) {
+            root->scrollbar->is_dragging = 0;
+        }
+        
+        // 然后重置所有子图层的滚动条拖动状态
+        for (int i = 0; i < root->child_count; i++) {
+            Layer* layer = root->children[i];
+            if (layer->scrollbar) {
+                layer->scrollbar->is_dragging = 0;
+            }
+        }
+        
+        // 处理sub图层的释放事件
+        if (root->sub && root->sub->scrollbar) {
+            root->sub->scrollbar->is_dragging = 0;
+        }
     }
 }
