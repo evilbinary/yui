@@ -6,6 +6,73 @@ char *layer_type_name[]={"View","Button","Input","Label","Image","List","Grid","
 
 Layer* focused_layer=NULL;
 
+// 移除JSON字符串中的注释
+static char* remove_json_comments(char* json_str) {
+    if (!json_str) return NULL;
+    
+    size_t len = strlen(json_str);
+    char* result = malloc(len + 1);
+    if (!result) return NULL;
+    
+    int in_string = 0;     // 是否在字符串内
+    int in_comment = 0;    // 0: 不在注释内, 1: 单行注释, 2: 多行注释
+    size_t j = 0;          // 结果字符串的索引
+    
+    for (size_t i = 0; i < len; i++) {
+        // 如果在字符串内
+        if (in_string) {
+            result[j++] = json_str[i];
+            // 处理转义字符
+            if (json_str[i] == '\\' && i + 1 < len) {
+                result[j++] = json_str[++i];
+            } else if (json_str[i] == '"') {
+                in_string = 0;
+            }
+            continue;
+        }
+        
+        // 如果不在注释内
+        if (!in_comment) {
+            // 检测到字符串开始
+            if (json_str[i] == '"') {
+                result[j++] = json_str[i];
+                in_string = 1;
+            }
+            // 检测到单行注释
+            else if (json_str[i] == '/' && i + 1 < len && json_str[i + 1] == '/') {
+                in_comment = 1;
+                i++;
+            }
+            // 检测到多行注释
+            else if (json_str[i] == '/' && i + 1 < len && json_str[i + 1] == '*') {
+                in_comment = 2;
+                i++;
+            }
+            // 正常字符
+            else {
+                result[j++] = json_str[i];
+            }
+        }
+        // 如果在单行注释内
+        else if (in_comment == 1) {
+            if (json_str[i] == '\n' || json_str[i] == '\r') {
+                in_comment = 0;
+                result[j++] = json_str[i];
+            }
+        }
+        // 如果在多行注释内
+        else if (in_comment == 2) {
+            if (json_str[i] == '*' && i + 1 < len && json_str[i + 1] == '/') {
+                in_comment = 0;
+                i++;
+            }
+        }
+    }
+    
+    result[j] = '\0';
+    return result;
+}
+
 cJSON* parse_json(char* json_path){
     FILE* file = fopen(json_path, "r");
     if(!file){
@@ -21,9 +88,16 @@ cJSON* parse_json(char* json_path){
     fclose(file);
     json_str[fsize] = '\0';
     
+    // 预处理JSON，移除注释
+    char* cleaned_json = remove_json_comments(json_str);
+    
     // 解析JSON
-    cJSON* root_json = cJSON_Parse(json_str);
+    cJSON* root_json = cJSON_Parse(cleaned_json);
+    
+    // 释放内存
     free(json_str);
+    free(cleaned_json);
+    
     return root_json;
 }
 
