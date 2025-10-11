@@ -2,6 +2,7 @@
 #include "event.h"
 #include "render.h"
 #include "ytype.h"
+#include <stdbool.h>  // 添加支持bool类型
 
 
 
@@ -48,11 +49,15 @@ int backend_init(){
     SDL_Init(SDL_INIT_VIDEO);
     
     // 初始化SDL_image库，支持多种图片格式
-    int imgFlags = IMG_INIT_PNG | IMG_INIT_JPG | IMG_INIT_TIF;
+    int imgFlags = IMG_INIT_PNG | IMG_INIT_JPG | IMG_INIT_TIF | IMG_INIT_WEBP;
     if (!(IMG_Init(imgFlags) & imgFlags)) {
         printf("SDL_image initialization failed: %s\n", IMG_GetError());
         return -1;
     }
+
+    // 检查SDL_image版本是否支持SVG（SDL_image 2.6.0及以上版本支持SVG）
+    const char* imgVersion = IMG_Linked_Version() ? SDL_GetRevision() : "Unknown";
+    printf("SDL_image version: %s\n", imgVersion);
     
     // 初始化TTF
     if (TTF_Init() == -1) {
@@ -397,9 +402,41 @@ void backend_get_windowsize(int* width,int * height){
     SDL_GetWindowSize(window, width, height);
 }
 
+// 检查文件是否为SVG格式
+bool is_svg_file(const char* path) {
+    const char* ext = strrchr(path, '.');
+    if (ext && strlen(ext) > 4) {
+        // 检查文件扩展名是否为.svg或.SVG
+        return (strcmp(ext, ".svg") == 0 || strcmp(ext, ".SVG") == 0);
+    }
+    return false;
+}
+
 Texture* backend_load_texture(char* path){
-     SDL_Surface* surface = IMG_Load(path);
-     SDL_Texture* texture=NULL;
+    SDL_Surface* surface = NULL;
+    SDL_Texture* texture=NULL;
+    
+    // 检查是否为SVG文件
+    if (is_svg_file(path)) {
+        // SDL_image 2.6.0及以上版本原生支持SVG
+        surface = IMG_Load(path);
+        
+        if (!surface) {
+            printf("Failed to load SVG image %s: %s\n", path, IMG_GetError());
+            printf("Note: SVG support requires SDL_image 2.6.0 or newer.\n");
+            
+            // 创建一个占位符表面，用于显示SVG加载失败的提示
+            surface = SDL_CreateRGBSurface(0, 100, 100, 32, 0, 0, 0, 0);
+            if (surface) {
+                // 填充为灰色背景
+                SDL_FillRect(surface, NULL, SDL_MapRGB(surface->format, 200, 200, 200));
+            }
+        }
+    } else {
+        // 非SVG文件，使用常规加载方式
+        surface = IMG_Load(path);
+    }
+    
     if (surface) {
         texture = SDL_CreateTextureFromSurface(renderer, surface);
         SDL_FreeSurface(surface);
