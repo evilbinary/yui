@@ -1,11 +1,10 @@
 {
-
     "type":"main",
     "assets":"app/assets",
     "font":"Roboto-Regular.ttf",
     "fontSize":"16",
-    "source":"app/test-radius.json",
+    "source":"app/text-editor.json",
     "style": {
         "color": "#2C3E50"
-      }
+    }
 }

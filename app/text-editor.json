@@ -1,0 +1,133 @@
+{
+    "id": "textEditorPanel",
+    "type": "Panel",
+    "size": [600, 500],
+    "style": {
+        "bgColor": "#F5F5F5",
+        "borderRadius": 12,
+        "boxShadow": "0 8px 32px rgba(0,0,0,0.15)"
+    },
+    "layout": {
+        "type": "vertical",
+        "spacing": 20
+    },
+    "children": [
+        {
+            "id": "editorHeader",
+            "type": "HStack",
+            "height":80,
+            "style": {
+                "bgColor": "#FFFFFF",
+                "padding": [20, 20],
+                "borderBottom": "1px solid #E0E0E0"
+            },
+            "children": [
+                {
+                    "id": "editorTitle",
+                    "type": "Label",
+                    "text": "文本编辑器",
+                    "style": {
+                        "color": "#333333",
+                        "fontSize": 20,
+                        "fontWeight": "bold"
+                    }
+                },
+                {
+                    "id": "closeButton",
+                    "type": "Button",
+                    "text": "关闭",
+                    "style": {
+                        "color": "#FFFFFF",
+                        "bgColor": "#FF5252",
+                        "fontSize": 14,
+                        "borderRadius": 6,
+                        "padding": [8, 16]
+                    },
+                    "events": {
+                        "onClick": "@closeTextEditor"
+                    }
+                }
+            ]
+        },
+        {
+            "id": "editorContent",
+            "type": "VStack",
+            "style": {
+                "padding": [20, 20],
+                "flex": 1
+            },
+            "children": [
+                {
+                    "id": "textArea",
+                    "type": "Text",
+                    "placeholder": "在此输入多行文本...",
+                    "multiline": true,
+                    "editable": true,
+                    "style": {
+                        "color": "#333333",
+                        "bgColor": "#FFFFFF",
+                        "fontSize": 16,
+                        "border": "1px solid #E0E0E0",
+                        "borderRadius": 8,
+                        "padding": [12, 16],
+                        "minHeight": 300,
+                        "flex": 1,
+                        "lineHeight": 1.5
+                    },
+                    "events": {
+                        "onChange": "@onTextChange"
+                    }
+                },
+                {
+                    "id": "toolbar",
+                    "type": "HStack",
+                    "style": {
+                        "spacing": 10,
+                        "padding": [10, 0]
+                    },
+                    "children": [
+                        {
+                            "id": "saveButton",
+                            "type": "Button",
+                            "text": "保存",
+                            "style": {
+                                "color": "#FFFFFF",
+                                "bgColor": "#4CAF50",
+                                "fontSize": 14,
+                                "borderRadius": 6,
+                                "padding": [8, 16]
+                            },
+                            "events": {
+                                "onClick": "@saveText"
+                            }
+                        },
+                        {
+                            "id": "clearButton",
+                            "type": "Button",
+                            "text": "清空",
+                            "style": {
+                                "color": "#FFFFFF",
+                                "bgColor": "#FF9800",
+                                "fontSize": 14,
+                                "borderRadius": 6,
+                                "padding": [8, 16]
+                            },
+                            "events": {
+                                "onClick": "@clearText"
+                            }
+                        },
+                        {
+                            "id": "wordCount",
+                            "type": "Label",
+                            "text": "字数: 0",
+                            "style": {
+                                "color": "#666666",
+                                "fontSize": 14
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

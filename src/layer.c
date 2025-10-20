@@ -1,8 +1,8 @@
 #include "layer.h"
 #include "animate.h"
 
-// 更新图层类型名称数组，添加GRID
-char *layer_type_name[]={"View","Button","Input","Label","Image","List","Grid","Progress","Checkbox","Radiobox"};
+// 更新图层类型名称数组，添加GRID和Text
+char *layer_type_name[]={"View","Button","Input","Label","Image","List","Grid","Progress","Checkbox","Radiobox","Text"};
 
 Layer* focused_layer=NULL;
 
@@ -601,6 +601,11 @@ Layer* parse_layer(cJSON* json_obj,Layer* parent) {
         }
         layer->component = radiobox_component_create(layer,group_id,checked);
         
+    } else if(layer->type==TEXT){
+        layer->component = text_component_create(layer,json_obj);
+        
+        // 设置可获得焦点
+        layer->focusable = 1;
     }
     
     // 递归解析子图层

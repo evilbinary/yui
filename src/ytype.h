@@ -31,6 +31,7 @@
 #define YUI_PROGRESS_COMPONENT 1
 #define YUI_CHECKBOX_COMPONENT 1
 #define YUI_RADIOBOX_COMPONENT 1
+#define YUI_TEXT_COMPONENT 1
 
 
 #ifdef YUI_ANIMATION
@@ -118,7 +119,8 @@ typedef enum {
     GRID,  // 添加GRID类型
     PROGRESS,
     CHECKBOX,
-    RADIOBOX
+    RADIOBOX,
+    TEXT  // 添加TEXT类型
 } LayerType;
 
 extern char *layer_type_name[];
@@ -365,6 +367,10 @@ typedef struct {
 
 #ifdef YUI_RADIOBOX_COMPONENT
 #include "components/radiobox_component.h"
+#endif
+
+#ifdef YUI_TEXT_COMPONENT
+#include "components/text_component.h"
 #endif
 
 
