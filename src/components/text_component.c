@@ -385,15 +385,213 @@ void text_component_render(Layer* layer) {
         Color placeholder_color = {150, 150, 150, 128};
         Texture* tex = backend_render_texture(layer->font->default_font, component->placeholder, placeholder_color);
         if (tex) {
-            backend_render_text_copy(tex, NULL, &render_rect);
+            int text_width, text_height;
+            backend_query_texture(tex, NULL, NULL, &text_width, &text_height);
+            
+            // 计算文本位置
+            Rect text_rect = {
+                render_rect.x,
+                // 多行模式下在顶部对齐，单行模式下垂直居中
+                component->multiline ? render_rect.y : render_rect.y + (render_rect.h - text_height / scale) / 2,
+                text_width / scale,
+                text_height / scale
+            };
+            
+            // 确保文本不会超出边界
+            if (text_rect.x + text_rect.w > render_rect.x + render_rect.w) {
+                text_rect.w = render_rect.x + render_rect.w - text_rect.x;
+            }
+            if (text_rect.y + text_rect.h > render_rect.y + render_rect.h) {
+                text_rect.h = render_rect.y + render_rect.h - text_rect.y;
+            }
+            
+            backend_render_text_copy(tex, NULL, &text_rect);
             backend_render_text_destroy(tex);
         }
     } else {
         // 绘制文本
-        Texture* tex = backend_render_texture(layer->font->default_font, component->text, layer->color);
-        if (tex) {
-            backend_render_text_copy(tex, NULL, &render_rect);
-            backend_render_text_destroy(tex);
+        if (component->multiline) {
+            // 多行模式下，实现自动换行
+            char* text = component->text;
+            int current_pos = 0;
+            int line_y = render_rect.y;
+            int line_height = 0;
+            
+            // 先获取单行文本的高度
+            Texture* temp_tex = backend_render_texture(layer->font->default_font, "X", layer->color);
+            if (temp_tex) {
+                int temp_width, temp_height;
+                backend_query_texture(temp_tex, NULL, NULL, &temp_width, &temp_height);
+                line_height = temp_height / scale;
+                backend_render_text_destroy(temp_tex);
+            }
+            
+            // 循环处理每一行
+            while (current_pos < strlen(text) && line_y + line_height <= render_rect.y + render_rect.h) {
+                // 查找当前行可以显示的最大文本长度
+                int line_end = current_pos;
+                int max_width = render_rect.w;
+                int current_width = 0;
+                
+                // 尝试找到合适的换行点
+                while (line_end < strlen(text)) {
+                    // 临时文本（从current_pos到line_end+1）
+                    char* temp_line = (char*)malloc(line_end - current_pos + 2);
+                    if (temp_line) {
+                        strncpy(temp_line, text + current_pos, line_end - current_pos + 1);
+                        temp_line[line_end - current_pos + 1] = '\0';
+                        
+                        // 计算临时文本宽度
+                        Texture* line_tex = backend_render_texture(layer->font->default_font, temp_line, layer->color);
+                        if (line_tex) {
+                            int line_width, line_height_ignore;
+                            backend_query_texture(line_tex, NULL, NULL, &line_width, &line_height_ignore);
+                            current_width = line_width / scale;
+                            backend_render_text_destroy(line_tex);
+                        }
+                        
+                        free(temp_line);
+                    }
+                    
+                    // 如果超出宽度，停止
+                    if (current_width > max_width && line_end > current_pos) {
+                        break;
+                    }
+                    
+                    // 记录空格位置，但只有当文本接近宽度限制时才在空格处换行
+                    if (text[line_end] == ' ' || text[line_end] == '\n') {
+                        int space_line_end = line_end;
+                        int space_width = 0;
+                        
+                        // 计算到空格位置的文本宽度
+                        char* temp_line = (char*)malloc(space_line_end - current_pos + 2);
+                        if (temp_line) {
+                            strncpy(temp_line, text + current_pos, space_line_end - current_pos + 1);
+                            temp_line[space_line_end - current_pos + 1] = '\0';
+                              
+                            Texture* line_tex = backend_render_texture(layer->font->default_font, temp_line, layer->color);
+                            if (line_tex) {
+                                int line_width, line_height_ignore;
+                                backend_query_texture(line_tex, NULL, NULL, &line_width, &line_height_ignore);
+                                space_width = line_width / scale;
+                                backend_render_text_destroy(line_tex);
+                            }
+                              
+                            free(temp_line);
+                        }
+                        
+                        // 只有当文本接近宽度限制时才在空格处换行
+                        if (space_width > max_width * 0.9) { // 当文本达到宽度的90%时考虑换行
+                            current_pos = space_line_end + 1;
+                            break;
+                        }
+                    }
+                    
+                    line_end++;
+                }
+                
+                // 确定当前行的结束位置
+                int split_pos = current_pos;
+                
+                // 如果文本没有超过宽度限制，并且没有到文本末尾
+                if (current_width <= max_width && line_end < strlen(text)) {
+                    split_pos = line_end; // 直接使用找到的line_end作为当前行的结束位置
+                } 
+                // 如果文本超过宽度限制，需要硬换行
+                else if (current_width > max_width) {
+                    // 找到最大的不超过宽度的位置
+                    split_pos = current_pos;
+                    while (split_pos < line_end) {
+                        char* temp_line = (char*)malloc(split_pos - current_pos + 2);
+                        if (temp_line) {
+                            strncpy(temp_line, text + current_pos, split_pos - current_pos + 1);
+                            temp_line[split_pos - current_pos + 1] = '\0';
+                                 
+                            Texture* line_tex = backend_render_texture(layer->font->default_font, temp_line, layer->color);
+                            if (line_tex) {
+                                int line_width, line_height_ignore;
+                                backend_query_texture(line_tex, NULL, NULL, &line_width, &line_height_ignore);
+                                if (line_width / scale > max_width) {
+                                    break;
+                                }
+                                backend_render_text_destroy(line_tex);
+                            }
+                                 
+                            free(temp_line);
+                        }
+                        split_pos++;
+                    }
+                     
+                    if (split_pos > current_pos) {
+                        split_pos--;
+                    }
+                }
+                // 如果到达文本末尾
+                else if (line_end >= strlen(text)) {
+                    split_pos = line_end;
+                }
+                
+                // 渲染当前行
+                char* current_line = (char*)malloc(split_pos - current_pos + 2);
+                if (current_line) {
+                    strncpy(current_line, text + current_pos, split_pos - current_pos + 1);
+                    current_line[split_pos - current_pos + 1] = '\0';
+                     
+                    Texture* line_tex = backend_render_texture(layer->font->default_font, current_line, layer->color);
+                    if (line_tex) {
+                        int actual_width, actual_height;
+                        backend_query_texture(line_tex, NULL, NULL, &actual_width, &actual_height);
+                         
+                        Rect text_rect = {
+                            render_rect.x,
+                            line_y,
+                            actual_width / scale,  // 使用实际文本宽度，避免文字变形
+                            actual_height / scale  // 使用实际文本高度
+                        };
+                         
+                        // 确保文本不会超出边界
+                        if (text_rect.x + text_rect.w > render_rect.x + render_rect.w) {
+                            text_rect.w = render_rect.x + render_rect.w - text_rect.x;
+                        }
+                         
+                        backend_render_text_copy(line_tex, NULL, &text_rect);
+                        backend_render_text_destroy(line_tex);
+                    }
+                     
+                    free(current_line);
+                }
+                 
+                current_pos = split_pos + 1;
+                
+                // 移动到下一行
+                line_y += line_height + 2; // 加2作为行间距
+            }
+        } else {
+            // 单行模式，保持原逻辑
+            Texture* tex = backend_render_texture(layer->font->default_font, component->text, layer->color);
+            if (tex) {
+                int text_width, text_height;
+                backend_query_texture(tex, NULL, NULL, &text_width, &text_height);
+                
+                // 计算文本位置
+                Rect text_rect = {
+                    render_rect.x,
+                    render_rect.y + (render_rect.h - text_height / scale) / 2,  // 单行模式下垂直居中
+                    text_width / scale,
+                    text_height / scale
+                };
+                
+                // 确保文本不会超出边界
+                if (text_rect.x + text_rect.w > render_rect.x + render_rect.w) {
+                    text_rect.w = render_rect.x + render_rect.w - text_rect.x;
+                }
+                if (text_rect.y + text_rect.h > render_rect.y + render_rect.h) {
+                    text_rect.h = render_rect.y + render_rect.h - text_rect.y;
+                }
+                
+                backend_render_text_copy(tex, NULL, &text_rect);
+                backend_render_text_destroy(tex);
+            }
         }
     }
     
@@ -405,18 +603,27 @@ void text_component_render(Layer* layer) {
             strncpy(temp_text, component->text, component->cursor_pos);
             temp_text[component->cursor_pos] = '\0';
             
-            // 计算光标位置
-            int w, h;
-            TTF_SizeUTF8(layer->font->default_font, temp_text, &w, &h);
-            
-            // 绘制光标
-            Rect cursor_rect;
-            cursor_rect.x = render_rect.x + w;
-            cursor_rect.y = render_rect.y;
-            cursor_rect.w = 2;
-            cursor_rect.h = h;
-            
-            backend_render_fill_rect(&cursor_rect, component->cursor_color);
+            // 计算光标位置（使用更跨平台的方法）
+            if (layer->font && layer->font->default_font) {
+                Texture* cursor_text_texture = backend_render_texture(layer->font->default_font, temp_text, layer->color);
+                if (cursor_text_texture) {
+                    int text_width, text_height;
+                    backend_query_texture(cursor_text_texture, NULL, NULL, &text_width, &text_height);
+                    
+                    // 绘制光标
+                    Rect cursor_rect;
+                    cursor_rect.x = render_rect.x + text_width / scale;
+                    // 多行模式下在顶部对齐，单行模式下垂直居中，与文本位置保持一致
+                    cursor_rect.y = component->multiline ? render_rect.y : render_rect.y + (render_rect.h - text_height / scale) / 2;
+                    cursor_rect.w = 2;
+                    cursor_rect.h = text_height / scale;
+                    
+                    backend_render_fill_rect(&cursor_rect, component->cursor_color);
+                    
+                    // 释放临时纹理
+                    backend_render_text_destroy(cursor_text_texture);
+                }
+            }
             
             free(temp_text);
         }
