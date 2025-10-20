@@ -837,8 +837,8 @@ void text_component_render(Layer* layer) {
                             }
                         }
                         
-                        // 根据行数计算Y坐标
-                        cursor_rect.y = render_rect.y + line_count * (line_height + 2); // +2 是行间距
+                        // 根据行数计算Y坐标，并考虑滚动偏移量
+                        cursor_rect.y = render_rect.y + line_count * (line_height + 2) - component->scroll_y; // +2 是行间距
                     } else {
                         // 单行模式下垂直居中
                         cursor_rect.y = render_rect.y + (render_rect.h - text_height / scale) / 2;
@@ -867,8 +867,8 @@ void text_component_render(Layer* layer) {
                             }
                         }
                         
-                        // 根据行数计算Y坐标
-                        cursor_rect.y = render_rect.y + line_count * 22; // 使用默认行高和间距
+                        // 根据行数计算Y坐标，并考虑滚动偏移量
+                        cursor_rect.y = render_rect.y + line_count * 22 - component->scroll_y; // 使用默认行高和间距
                     } else {
                         // 单行模式下垂直居中
                         cursor_rect.y = render_rect.y + (render_rect.h - 20) / 2;
