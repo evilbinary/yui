@@ -549,7 +549,7 @@ void text_component_render(Layer* layer) {
                     // 复制当前行文本，但不包含换行符
                     int copy_len = split_pos - current_pos;
                     // 检查是否在换行符处结束
-                    if (copy_len > 0 && text[split_pos] == '\n') {
+                    if (copy_len > 0 && text[split_pos - 1] == '\n') {
                         copy_len--; // 不包含换行符
                     }
                     strncpy(current_line, text + current_pos, copy_len);
@@ -583,7 +583,7 @@ void text_component_render(Layer* layer) {
                 if (split_pos < strlen(text) && text[split_pos] == '\n') {
                     current_pos = split_pos + 1;
                 } else {
-                    current_pos = split_pos + 1;
+                    current_pos = split_pos;
                 }
                 
                 // 移动到下一行
@@ -628,7 +628,12 @@ void text_component_render(Layer* layer) {
             
             // 计算光标位置（使用更跨平台的方法）
             if (layer->font && layer->font->default_font) {
-                Texture* cursor_text_texture = backend_render_texture(layer->font->default_font, temp_text, layer->color);
+                // 查找最后一个换行符的位置，只计算当前行的文本宽度
+                char* last_newline = strrchr(temp_text, '\n');
+                char* current_line_text = (last_newline) ? last_newline + 1 : temp_text;
+                
+                // 为了正确显示光标，特别是在新行的第一个字母前
+                Texture* cursor_text_texture = backend_render_texture(layer->font->default_font, current_line_text, layer->color);
                 if (cursor_text_texture) {
                     int text_width, text_height;
                     backend_query_texture(cursor_text_texture, NULL, NULL, &text_width, &text_height);
@@ -636,10 +641,34 @@ void text_component_render(Layer* layer) {
                     // 绘制光标
                     Rect cursor_rect;
                     cursor_rect.x = render_rect.x + text_width / scale;
-                    // 多行模式下在顶部对齐，单行模式下垂直居中，与文本位置保持一致
-                    cursor_rect.y = component->multiline ? render_rect.y : render_rect.y + (render_rect.h - text_height / scale) / 2;
                     cursor_rect.w = 2;
                     cursor_rect.h = text_height / scale;
+                    
+                    // 确保光标始终可见，即使在空行或新行的开头
+                    if (cursor_rect.x < render_rect.x) {
+                        cursor_rect.x = render_rect.x;
+                    }
+                    
+                    // 多行模式下需要计算光标所在行的Y坐标，单行模式下垂直居中
+                    if (component->multiline) {
+                        // 计算光标所在行的Y坐标
+                        int line_y = render_rect.y;
+                        int line_height = text_height / scale;
+                        
+                        // 计算光标前有多少个换行符
+                        int line_count = 0;
+                        for (int i = 0; i < component->cursor_pos; i++) {
+                            if (component->text[i] == '\n') {
+                                line_count++;
+                            }
+                        }
+                        
+                        // 根据行数计算Y坐标
+                        cursor_rect.y = render_rect.y + line_count * (line_height + 2); // +2 是行间距
+                    } else {
+                        // 单行模式下垂直居中
+                        cursor_rect.y = render_rect.y + (render_rect.h - text_height / scale) / 2;
+                    }
                     
                     backend_render_fill_rect(&cursor_rect, component->cursor_color);
                     
