@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+
+
 // 创建输入组件
 InputComponent* input_component_create(Layer* layer) {
     if (!layer) {
@@ -32,6 +34,22 @@ InputComponent* input_component_create(Layer* layer) {
     layer->focusable = 1;
     
     component->cursor_color = (Color){255, 0, 0, 255};
+    return component;
+}
+
+// 从JSON创建复选框组件
+InputComponent* input_component_create_from_json(Layer* layer, cJSON* json_obj) {
+    InputComponent* component = input_component_create(layer);
+    
+    // 解析placeholder属性
+    if (cJSON_HasObjectItem(json_obj, "placeholder")) {
+        input_component_set_placeholder(layer->component, cJSON_GetObjectItem(json_obj, "placeholder")->valuestring);
+    }
+    
+    // 解析maxLength属性
+    if (cJSON_HasObjectItem(json_obj, "maxLength")) {
+        input_component_set_max_length(layer->component, cJSON_GetObjectItem(json_obj, "maxLength")->valueint);
+    }
 
     return component;
 }

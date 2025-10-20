@@ -30,6 +30,15 @@ ProgressComponent* progress_component_create(Layer* layer) {
     layer->component = component;
     layer->render = progress_component_render;
     
+    // 设置进度值
+    if (layer->data && layer->data->json) {
+        ProgressComponent* progress_component = (ProgressComponent*)layer->component;
+        int value = layer->data->json->valueint;
+        // 将0-100的值转换为0.0-1.0
+        float progress = value / 100.0f;
+        progress_component_set_progress(progress_component, progress);
+    }
+    
     return component;
 }
 

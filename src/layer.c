@@ -554,17 +554,8 @@ Layer* parse_layer(cJSON* json_obj,Layer* parent) {
     
     // 如果是INPUT类型的图层，初始化InputComponent
     if (layer->type == INPUT) {
-        layer->component = input_component_create(layer);
-        
-        // 解析placeholder属性
-        if (cJSON_HasObjectItem(json_obj, "placeholder")) {
-            input_component_set_placeholder(layer->component, cJSON_GetObjectItem(json_obj, "placeholder")->valuestring);
-        }
-        
-        // 解析maxLength属性
-        if (cJSON_HasObjectItem(json_obj, "maxLength")) {
-            input_component_set_max_length(layer->component, cJSON_GetObjectItem(json_obj, "maxLength")->valueint);
-        }
+        layer->component = input_component_create_from_json(layer,json_obj);
+    
     }else if(layer->type==BUTTON){
         layer->component = button_component_create(layer);
 
@@ -576,33 +567,15 @@ Layer* parse_layer(cJSON* json_obj,Layer* parent) {
         
     }else if(layer->type==PROGRESS){
         layer->component = progress_component_create(layer);
-        
-        // 设置进度值
-        if (layer->data && layer->data->json) {
-            ProgressComponent* progress_component = (ProgressComponent*)layer->component;
-            int value = layer->data->json->valueint;
-            // 将0-100的值转换为0.0-1.0
-            float progress = value / 100.0f;
-            progress_component_set_progress(progress_component, progress);
-        }
+    
     }else if(layer->type==CHECKBOX){
         layer->component = checkbox_component_create_from_json(layer, json_obj);
         
     }else if(layer->type==RADIOBOX){
-
-         char* group_id="default";
-         if (cJSON_HasObjectItem(layer, "group")) {
-            char* group = cJSON_GetObjectItem(layer, "group")->valuestring;
-            group_id = strdup(group);
-        }
-        int checked=0;
-        if(cJSON_HasObjectItem(json_obj, "data")){
-            checked=cJSON_IsTrue(cJSON_GetObjectItem(json_obj, "data"));
-        }
-        layer->component = radiobox_component_create(layer,group_id,checked);
+        layer->component = radiobox_component_create_from_json(layer,json_obj);
         
     } else if(layer->type==TEXT){
-        layer->component = text_component_create(layer,json_obj);
+        layer->component = text_component_create_from_json(layer,json_obj);
         
         // 设置可获得焦点
         layer->focusable = 1;

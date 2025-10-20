@@ -24,7 +24,8 @@ typedef struct {
 } TextComponent;
 
 // 函数声明
-TextComponent* text_component_create(Layer* layer,cJSON* json_obj);
+TextComponent* text_component_create(Layer* layer);
+TextComponent* text_component_create_from_json(Layer* layer,cJSON* json_obj);
 void text_component_destroy(TextComponent* component);
 void text_component_set_text(TextComponent* component, const char* text);
 void text_component_set_placeholder(TextComponent* component, const char* placeholder);

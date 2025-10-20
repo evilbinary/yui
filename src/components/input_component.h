@@ -21,6 +21,7 @@ typedef struct {
 
 // 函数声明
 InputComponent* input_component_create(Layer* layer);
+InputComponent* input_component_create_from_json(Layer* layer, cJSON* json_obj);
 void input_component_destroy(InputComponent* component);
 void input_component_set_text(InputComponent* component, const char* text);
 void input_component_set_placeholder(InputComponent* component, const char* placeholder);

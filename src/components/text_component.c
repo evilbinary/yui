@@ -9,7 +9,7 @@
 #include <ctype.h>
 
 // 创建文本组件
-TextComponent* text_component_create(Layer* layer,cJSON* json_obj) {
+TextComponent* text_component_create(Layer* layer) {
     TextComponent* component = (TextComponent*)malloc(sizeof(TextComponent));
     if (!component) {
         return NULL;
@@ -35,7 +35,11 @@ TextComponent* text_component_create(Layer* layer,cJSON* json_obj) {
     layer->handle_key_event = text_component_handle_key_event;
     layer->handle_mouse_event = text_component_handle_mouse_event;
     
+    return component;
+}
 
+TextComponent* text_component_create_from_json(Layer* layer,cJSON* json_obj){
+    TextComponent* component = text_component_create(layer);
     // 设置文本内容
     if (cJSON_HasObjectItem(json_obj, "text")) {
         text_component_set_text(layer->component, cJSON_GetObjectItem(json_obj, "text")->valuestring);
@@ -62,6 +66,7 @@ TextComponent* text_component_create(Layer* layer,cJSON* json_obj) {
     }
 
     return component;
+
 }
 
 // 销毁文本组件

@@ -57,6 +57,27 @@ RadioboxComponent* radiobox_component_create(Layer* layer, const char* group_id,
     return component;
 }
 
+RadioboxComponent* radiobox_component_create_from_json(Layer* layer, cJSON* json_obj){
+    if (!layer || !json_obj) {
+        return NULL;
+    }
+    
+    // 从JSON中获取组ID
+    const char* group_id = "default";
+    if (cJSON_HasObjectItem(json_obj, "group")) {
+        group_id = cJSON_GetObjectItem(json_obj, "group")->valuestring;
+    }
+    
+    // 从JSON中获取默认选中状态
+    int default_checked = 0;
+    if (cJSON_HasObjectItem(json_obj, "checked")) {
+        default_checked = cJSON_IsTrue(cJSON_GetObjectItem(json_obj, "checked"));
+    }
+    
+    // 创建单选框组件
+    return radiobox_component_create(layer, group_id, default_checked);
+}
+
 // 销毁单选框组件
 void radiobox_component_destroy(RadioboxComponent* component) {
     if (component) {

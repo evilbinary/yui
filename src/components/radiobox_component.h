@@ -23,6 +23,8 @@ typedef struct {
 
 // 函数声明
 RadioboxComponent* radiobox_component_create(Layer* layer, const char* group_id, int default_checked);
+RadioboxComponent* radiobox_component_create_from_json(Layer* layer, cJSON* json_obj);
+
 void radiobox_component_destroy(RadioboxComponent* component);
 void radiobox_component_set_checked(RadioboxComponent* component, int checked);
 int radiobox_component_is_checked(RadioboxComponent* component);
