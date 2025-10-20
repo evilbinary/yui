@@ -343,6 +343,50 @@ void text_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     
     TextComponent* component = (TextComponent*)layer->component;
     
+    // 处理滚轮事件
+    if (event->state == SDL_MOUSEWHEEL) {
+        if (component->multiline) {
+            // 计算文本总高度以确定是否需要滚动
+            char* text = component->text;
+            int line_count = 1;
+            int line_height = 20; // 默认行高
+            
+            // 计算换行符数量
+            for (int i = 0; i < strlen(text); i++) {
+                if (text[i] == '\n') {
+                    line_count++;
+                }
+            }
+            
+            // 获取实际行高
+            Texture* temp_tex = backend_render_texture(layer->font->default_font, "X", layer->color);
+            if (temp_tex) {
+                int temp_width, temp_height;
+                backend_query_texture(temp_tex, NULL, NULL, &temp_width, &temp_height);
+                line_height = temp_height / scale;
+                backend_render_text_destroy(temp_tex);
+            }
+            
+            int total_text_height = line_count * (line_height + 2); // 2为行间距
+            int visible_height = layer->rect.h - 10; // 减去内边距
+            
+            // 只有当文本总高度大于可见高度时才允许滚动
+            if (total_text_height > visible_height) {
+                // SDL_MOUSEWHEEL事件的处理
+                int scroll_delta = ((SDL_MouseWheelEvent*)event)->y;
+                component->scroll_y += scroll_delta * -20; // 每次滚动20像素
+                
+                // 限制滚动范围
+                if (component->scroll_y < 0) {
+                    component->scroll_y = 0;
+                } else if (component->scroll_y > total_text_height - visible_height) {
+                    component->scroll_y = total_text_height - visible_height;
+                }
+            }
+            return;
+        }
+    }
+    
     // 简单实现点击设置光标位置（实际应用中需要更复杂的计算）
     if (event->state == BUTTON_PRESSED && event->button == BUTTON_LEFT) {
         Point pt = {event->x, event->y};
@@ -417,7 +461,7 @@ void text_component_render(Layer* layer) {
             // 多行模式下，实现自动换行
             char* text = component->text;
             int current_pos = 0;
-            int line_y = render_rect.y;
+            int line_y = render_rect.y - component->scroll_y; // 考虑滚动偏移
             int line_height = 0;
             
             // 先获取单行文本的高度
@@ -430,7 +474,7 @@ void text_component_render(Layer* layer) {
             }
             
             // 循环处理每一行
-            while (current_pos < strlen(text) && line_y + line_height <= render_rect.y + render_rect.h) {
+            while (current_pos < strlen(text)) {
                 // 查找当前行可以显示的最大文本长度
                 int line_end = current_pos;
                 int max_width = render_rect.w;
@@ -572,14 +616,17 @@ void text_component_render(Layer* layer) {
                             text_rect.w = render_rect.x + render_rect.w - text_rect.x;
                         }
                           
+                        // 只有当行在可见区域内时才渲染
+                    if (line_y + actual_height / scale > render_rect.y && line_y < render_rect.y + render_rect.h) {
                         backend_render_text_copy(line_tex, NULL, &text_rect);
-                        backend_render_text_destroy(line_tex);
-                    } 
-                    
-                    free(current_line);
-                }
-                  
-                // 如果是在换行符处结束，直接跳到下一个字符
+                    }
+                    backend_render_text_destroy(line_tex);
+                } 
+                
+                free(current_line);
+            }
+              
+            // 如果是在换行符处结束，直接跳到下一个字符
                 if (split_pos < strlen(text) && text[split_pos] == '\n') {
                     current_pos = split_pos + 1;
                 } else {
@@ -588,6 +635,19 @@ void text_component_render(Layer* layer) {
                 
                 // 移动到下一行
                 line_y += line_height + 2; // 加2作为行间距
+            }
+            
+            // 计算文本总高度
+            int total_text_height = line_y - (render_rect.y - component->scroll_y);
+            
+            // 限制滚动范围
+            if (component->scroll_y < 0) {
+                component->scroll_y = 0;
+            }
+            if (total_text_height <= render_rect.h) {
+                component->scroll_y = 0;
+            } else if (component->scroll_y > total_text_height - render_rect.h) {
+                component->scroll_y = total_text_height - render_rect.h;
             }
         } else {
             // 单行模式，保持原逻辑
@@ -722,8 +782,57 @@ void text_component_render(Layer* layer) {
     // 恢复裁剪区域
     backend_render_set_clip_rect(&prev_clip);
     
-    // 如果是多行模式且需要滚动，绘制滚动条（简单实现）
+    // 如果是多行模式且需要滚动，绘制滚动条
     if (component->multiline) {
-        // 这里可以添加滚动条的渲染逻辑
+        // 计算文本总高度以确定是否需要显示滚动条
+        char* text = component->text;
+        int line_count = 1;
+        int line_height = 20; // 默认行高
+        
+        // 计算换行符数量
+        for (int i = 0; i < strlen(text); i++) {
+            if (text[i] == '\n') {
+                line_count++;
+            }
+        }
+        
+        // 获取实际行高
+        Texture* temp_tex = backend_render_texture(layer->font->default_font, "X", layer->color);
+        if (temp_tex) {
+            int temp_width, temp_height;
+            backend_query_texture(temp_tex, NULL, NULL, &temp_width, &temp_height);
+            line_height = temp_height / scale;
+            backend_render_text_destroy(temp_tex);
+        }
+        
+        int total_text_height = line_count * (line_height + 2); // 2为行间距
+        int visible_height = layer->rect.h - 10; // 减去内边距
+        
+        // 只有当文本总高度大于可见高度时才显示滚动条
+        if (total_text_height > visible_height) {
+            // 绘制滚动条背景
+            Rect scrollbar_bg = {
+                layer->rect.x + layer->rect.w - 10, // 右侧留出10像素宽度的滚动条
+                layer->rect.y + 5, // 顶部内边距
+                5, // 滚动条宽度
+                layer->rect.h - 10 // 滚动条高度（减去上下内边距）
+            };
+            Color scrollbar_bg_color = {200, 200, 200, 255};
+            backend_render_fill_rect(&scrollbar_bg, scrollbar_bg_color);
+            
+            // 计算滚动条滑块位置和大小
+            float scroll_percent = (float)component->scroll_y / (total_text_height - visible_height);
+            int slider_height = visible_height * visible_height / total_text_height;
+            if (slider_height < 20) slider_height = 20; // 滑块最小高度
+            
+            Rect scrollbar_slider = {
+                scrollbar_bg.x,
+                scrollbar_bg.y + scroll_percent * (scrollbar_bg.h - slider_height),
+                scrollbar_bg.w,
+                slider_height
+            };
+            Color scrollbar_slider_color = {150, 150, 150, 255};
+            backend_render_fill_rect(&scrollbar_slider, scrollbar_slider_color);
+        }
     }
 }
