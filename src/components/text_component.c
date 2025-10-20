@@ -634,17 +634,19 @@ void text_component_render(Layer* layer) {
                 
                 // 为了正确显示光标，特别是在新行的第一个字母前
                 Texture* cursor_text_texture = backend_render_texture(layer->font->default_font, current_line_text, layer->color);
+                
+                // 绘制光标
+                Rect cursor_rect;
+                int text_height = 20; // 默认高度，以防没有文本
+                
                 if (cursor_text_texture) {
-                    int text_width, text_height;
+                    int text_width;
                     backend_query_texture(cursor_text_texture, NULL, NULL, &text_width, &text_height);
                     
-                    // 绘制光标
-                    Rect cursor_rect;
                     cursor_rect.x = render_rect.x + text_width / scale;
-                    cursor_rect.w = 2;
-                    cursor_rect.h = text_height / scale;
                     
                     // 确保光标始终可见，即使在空行或新行的开头
+                    // 当光标在起始位置时，确保其不会隐藏在渲染区域左侧
                     if (cursor_rect.x < render_rect.x) {
                         cursor_rect.x = render_rect.x;
                     }
@@ -670,11 +672,47 @@ void text_component_render(Layer* layer) {
                         cursor_rect.y = render_rect.y + (render_rect.h - text_height / scale) / 2;
                     }
                     
+                    cursor_rect.w = 2;
+                    cursor_rect.h = text_height / scale;
+                    
                     backend_render_fill_rect(&cursor_rect, component->cursor_color);
                     
                     // 释放临时纹理
                     backend_render_text_destroy(cursor_text_texture);
+                } else {
+                    // 特殊情况：没有文本或者文本渲染失败，确保光标显示在起始位置
+                    cursor_rect.x = render_rect.x;
+                    cursor_rect.w = 2;
+                    cursor_rect.h = 20; // 使用默认高度
+                    
+                    // 多行模式下需要计算光标所在行的Y坐标，单行模式下垂直居中
+                    if (component->multiline) {
+                        // 计算光标前有多少个换行符
+                        int line_count = 0;
+                        for (int i = 0; i < component->cursor_pos; i++) {
+                            if (component->text[i] == '\n') {
+                                line_count++;
+                            }
+                        }
+                        
+                        // 根据行数计算Y坐标
+                        cursor_rect.y = render_rect.y + line_count * 22; // 使用默认行高和间距
+                    } else {
+                        // 单行模式下垂直居中
+                        cursor_rect.y = render_rect.y + (render_rect.h - 20) / 2;
+                    }
+                    
+                    backend_render_fill_rect(&cursor_rect, component->cursor_color);
                 }
+            } else {
+                // 没有字体时，使用默认光标位置和大小
+                Rect cursor_rect;
+                cursor_rect.x = render_rect.x;
+                cursor_rect.y = render_rect.y + render_rect.h / 2 - 10;
+                cursor_rect.w = 2;
+                cursor_rect.h = 20;
+                
+                backend_render_fill_rect(&cursor_rect, component->cursor_color);
             }
             
             free(temp_text);
