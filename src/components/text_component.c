@@ -344,149 +344,9 @@ void text_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     TextComponent* component = (TextComponent*)layer->component;
     
     // 处理滚轮事件
-    if (event->state == SDL_MOUSEWHEEL) {
-        if (component->multiline) {
-            // 计算渲染区域
-            Rect render_rect = layer->rect;
-            render_rect.x += 5;  // 内边距
-            render_rect.y += 5;
-            render_rect.w -= 10;
-            render_rect.h -= 10;
-            
-            // 计算文本实际的总行数（包括自动换行）
-            char* text = component->text;
-            int line_height = 20; // 默认行高
-            int max_width = render_rect.w;
-            
-            // 获取实际行高
-            Texture* temp_tex = backend_render_texture(layer->font->default_font, "X", layer->color);
-            if (temp_tex) {
-                int temp_width, temp_height;
-                backend_query_texture(temp_tex, NULL, NULL, &temp_width, &temp_height);
-                line_height = temp_height / scale;
-                backend_render_text_destroy(temp_tex);
-            }
-            
-            // 模拟渲染计算，得到实际的总行数（包括自动换行）
-            int current_pos = 0;
-            int actual_line_count = 0;
-            
-            while (current_pos < strlen(text)) {
-                // 查找当前行可以显示的最大文本长度
-                int line_end = current_pos;
-                int current_width = 0;
-                
-                // 尝试找到合适的换行点
-                while (line_end < strlen(text)) {
-                    // 遇到换行符时立即换行
-                    if (text[line_end] == '\n') {
-                        break;
-                    }
-                    
-                    // 临时文本（从current_pos到line_end+1）
-                    char* temp_line = (char*)malloc(line_end - current_pos + 2);
-                    if (temp_line) {
-                        strncpy(temp_line, text + current_pos, line_end - current_pos + 1);
-                        temp_line[line_end - current_pos + 1] = '\0';
-                        
-                        // 计算临时文本宽度
-                        Texture* line_tex = backend_render_texture(layer->font->default_font, temp_line, layer->color);
-                        if (line_tex) {
-                            int line_width, line_height_ignore;
-                            backend_query_texture(line_tex, NULL, NULL, &line_width, &line_height_ignore);
-                            current_width = line_width / scale;
-                            backend_render_text_destroy(line_tex);
-                        }
-                        
-                        free(temp_line);
-                    }
-                    
-                    // 如果超出宽度，停止
-                    if (current_width > max_width && line_end > current_pos) {
-                        break;
-                    }
-                    
-                    line_end++;
-                }
-                
-                // 确定当前行的结束位置
-                int split_pos = current_pos;
-                
-                // 特殊处理换行符：如果遇到换行符，直接在换行符处结束当前行
-                if (line_end < strlen(text) && text[line_end] == '\n') {
-                    split_pos = line_end;
-                }
-                // 如果文本没有超过宽度限制，并且没有到文本末尾
-                else if (current_width <= max_width && line_end < strlen(text)) {
-                    split_pos = line_end; // 直接使用找到的line_end作为当前行的结束位置
-                } 
-                // 如果文本超过宽度限制，需要硬换行
-                else if (current_width > max_width) {
-                    // 找到最大的不超过宽度的位置
-                    split_pos = current_pos;
-                    while (split_pos < line_end) {
-                        char* temp_line = (char*)malloc(split_pos - current_pos + 2);
-                        if (temp_line) {
-                            strncpy(temp_line, text + current_pos, split_pos - current_pos + 1);
-                            temp_line[split_pos - current_pos + 1] = '\0';
-                               
-                            Texture* line_tex = backend_render_texture(layer->font->default_font, temp_line, layer->color);
-                            if (line_tex) {
-                                int line_width, line_height_ignore;
-                                backend_query_texture(line_tex, NULL, NULL, &line_width, &line_height_ignore);
-                                if (line_width / scale > max_width) {
-                                    break;
-                                }
-                                backend_render_text_destroy(line_tex);
-                            }
-                               
-                            free(temp_line);
-                        }
-                        split_pos++;
-                    } 
-                    
-                    if (split_pos > current_pos) {
-                        split_pos--;
-                    }
-                }
-                // 如果到达文本末尾
-                else if (line_end >= strlen(text)) {
-                    split_pos = line_end;
-                }
-                
-                // 增加行数计数
-                actual_line_count++;
-                
-                // 如果是在换行符处结束，直接跳到下一个字符
-                if (split_pos < strlen(text) && text[split_pos] == '\n') {
-                    current_pos = split_pos + 1;
-                } else {
-                    current_pos = split_pos;
-                }
-            }
-            
-            // 计算实际的文本总高度
-            int total_text_height = actual_line_count * (line_height + 2); // 2为行间距
-            int visible_height = render_rect.h;
-            
-            // 只有当文本总高度大于可见高度时才允许滚动
-            if (total_text_height > visible_height) {
-                // SDL_MOUSEWHEEL事件的处理
-                int scroll_delta = ((SDL_MouseWheelEvent*)event)->y;
-                component->scroll_y += scroll_delta * -20; // 每次滚动20像素
-                
-                // 限制滚动范围
-                if (component->scroll_y < 0) {
-                    component->scroll_y = 0;
-                } else if (component->scroll_y > total_text_height - visible_height) {
-                    component->scroll_y = total_text_height - visible_height;
-                }
-            } else {
-                component->scroll_y = 0; // 文本高度小于可见区域，不需要滚动
-            }
-            return;
-        }
-    }
+    // 由于Layer结构体没有handle_scroll_event字段
+    // 我们需要在backend_sdl.c中特别处理文本组件的滚轮事件
+    // 这里仅作为占位
     
     // 简单实现点击设置光标位置（实际应用中需要更复杂的计算）
     if (event->state == BUTTON_PRESSED && event->button == BUTTON_LEFT) {
@@ -562,7 +422,7 @@ void text_component_render(Layer* layer) {
             // 多行模式下，实现自动换行
             char* text = component->text;
             int current_pos = 0;
-            int line_y = render_rect.y - component->scroll_y; // 考虑滚动偏移
+            int line_y = render_rect.y - layer->scroll_offset; // 使用图层的scroll_offset而不是组件的scroll_y
             int line_height = 0;
             
             // 先获取单行文本的高度
