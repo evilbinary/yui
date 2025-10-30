@@ -6,6 +6,7 @@
 extern float scale;
 
 int backend_init();
+void backend_quit();
 Texture* backend_load_texture(char* path);
 Texture* backend_render_texture(DFont* font,const char* text,Color color);
 void backend_render_fill_rect(Rect* rect,Color color);

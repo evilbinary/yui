@@ -1,0 +1,108 @@
+{
+    "type": "View",
+    "rect": [0, 0, 800, 600],
+    "bgColor": "#2c3e50",
+    "children": [
+        {
+            "id": "background",
+            "type": "View",
+            "rect": [0, 0, 800, 600],
+            "children": [
+                {
+                    "id": "box1",
+                    "type": "View",
+                    "rect": [50, 50, 200, 200],
+                    "bgColor": "#e74c3c"
+                },
+                {
+                    "id": "box2",
+                    "type": "View",
+                    "rect": [300, 50, 200, 200],
+                    "bgColor": "#3498db"
+                },
+                {
+                    "id": "box3",
+                    "type": "View",
+                    "rect": [550, 50, 200, 200],
+                    "bgColor": "#2ecc71"
+                },
+                {
+                    "id": "box4",
+                    "type": "View",
+                    "rect": [50, 300, 200, 200],
+                    "bgColor": "#f39c12"
+                },
+                {
+                    "id": "box5",
+                    "type": "View",
+                    "rect": [300, 300, 200, 200],
+                    "bgColor": "#9b59b6"
+                },
+                {
+                    "id": "box6",
+                    "type": "View",
+                    "rect": [550, 300, 200, 200],
+                    "bgColor": "#1abc9c"
+                }
+            ]
+        },
+        {
+            "id": "glass_panel1",
+            "type": "View",
+            "rect": [100, 100, 600, 150],
+            "bgColor": "rgba(255, 255, 255, 0.2)",
+            "radius": 15,
+            "backdropFilter": true,
+            "blurRadius": 10,
+            "saturation": 1.2,
+            "brightness": 1.1,
+            "children": [
+                {
+                    "id": "glass_title1",
+                    "type": "Label",
+                    "rect": [350, 120, 200, 40],
+                    "text": "毛玻璃效果测试",
+                    "color": "#FFFFFF",
+                    "fontSize": 24
+                },
+                {
+                    "id": "glass_desc1",
+                    "type": "Label",
+                    "rect": [200, 160, 400, 30],
+                    "text": "这是一个性能优化的毛玻璃效果面板",
+                    "color": "#FFFFFF",
+                    "fontSize": 16
+                }
+            ]
+        },
+        {
+            "id": "glass_panel2",
+            "type": "View",
+            "rect": [100, 350, 600, 150],
+            "bgColor": "rgba(255, 255, 255, 0.15)",
+            "radius": 15,
+            "backdropFilter": true,
+            "blurRadius": 15,
+            "saturation": 1.1,
+            "brightness": 1.05,
+            "children": [
+                {
+                    "id": "glass_title2",
+                    "type": "Label",
+                    "rect": [350, 370, 200, 40],
+                    "text": "缓存优化测试",
+                    "color": "#FFFFFF",
+                    "fontSize": 24
+                },
+                {
+                    "id": "glass_desc2",
+                    "type": "Label",
+                    "rect": [200, 410, 400, 30],
+                    "text": "相同参数的毛玻璃效果会被缓存，提高性能",
+                    "color": "#FFFFFF",
+                    "fontSize": 16
+                }
+            ]
+        }
+    ]
+}

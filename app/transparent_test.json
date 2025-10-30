@@ -1,0 +1,77 @@
+{
+    "type": "main",
+    "children": [
+        {
+            "id": "background",
+            "type": "View",
+            "rect": [0, 0, 800, 600],
+            "bgColor": "#FF5733"
+        },
+        {
+            "id": "transparent_panel",
+            "type": "View",
+            "rect": [50, 50, 700, 500],
+            "bgColor": "rgba(255, 255, 255, 0.3)",
+            "radius": 20,
+            "backdropFilter": true,
+            "blurRadius": 15,
+            "saturation": 1.2,
+            "brightness": 1.1,
+            "children": [
+                {
+                    "id": "title",
+                    "type": "Label",
+                    "rect": [300, 80, 200, 40],
+                    "text": "透明度测试",
+                    "color": "#FFFFFF",
+                    "fontSize": 24
+                },
+                {
+                    "id": "description",
+                    "type": "Label",
+                    "rect": [100, 150, 600, 100],
+                    "text": "这个面板展示了YUI框架的透明度支持。背景使用了半透明白色，并启用了毛玻璃效果。",
+                    "color": "#FFFFFF",
+                    "fontSize": 16
+                },
+                {
+                    "id": "button1",
+                    "type": "Button",
+                    "rect": [150, 300, 200, 50],
+                    "text": "半透明按钮",
+                    "bgColor": "rgba(0, 123, 255, 0.5)",
+                    "radius": 10,
+                    "backdropFilter": true,
+                    "blurRadius": 5
+                },
+                {
+                    "id": "button2",
+                    "type": "Button",
+                    "rect": [450, 300, 200, 50],
+                    "text": "全透明按钮",
+                    "bgColor": "rgba(255, 193, 7, 0.2)",
+                    "radius": 10,
+                    "backdropFilter": true,
+                    "blurRadius": 8
+                },
+                {
+                    "id": "overlay",
+                    "type": "View",
+                    "rect": [200, 400, 400, 100],
+                    "bgColor": "rgba(76, 175, 80, 0.7)",
+                    "radius": 15,
+                    "children": [
+                        {
+                            "id": "overlay_text",
+                            "type": "Label",
+                            "rect": [250, 430, 300, 40],
+                            "text": "半透明覆盖层",
+                            "color": "#FFFFFF",
+                            "fontSize": 18
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,163 @@
+{
+    "type": "main",
+    "children": [
+        {
+            "id": "background",
+            "type": "View",
+            "rect": [0, 0, 800, 600],
+            "bgColor": "#3498db"
+        },
+        {
+            "id": "gradient_test",
+            "type": "View",
+            "rect": [0, 0, 800, 600],
+            "children": [
+                {
+                    "id": "red_box",
+                    "type": "View",
+                    "rect": [50, 50, 150, 150],
+                    "bgColor": "rgba(255, 0, 0, 0.7)"
+                },
+                {
+                    "id": "green_box",
+                    "type": "View",
+                    "rect": [150, 100, 150, 150],
+                    "bgColor": "rgba(0, 255, 0, 0.7)"
+                },
+                {
+                    "id": "blue_box",
+                    "type": "View",
+                    "rect": [100, 150, 150, 150],
+                    "bgColor": "rgba(0, 0, 255, 0.7)"
+                }
+            ]
+        },
+        {
+            "id": "glass_panel",
+            "type": "View",
+            "rect": [350, 50, 400, 250],
+            "bgColor": "rgba(255, 255, 255, 0.2)",
+            "radius": 20,
+            "backdropFilter": true,
+            "blurRadius": 15,
+            "saturation": 1.2,
+            "brightness": 1.1,
+            "children": [
+                {
+                    "id": "glass_title",
+                    "type": "Label",
+                    "rect": [450, 80, 200, 40],
+                    "text": "毛玻璃效果",
+                    "color": "#FFFFFF",
+                    "fontSize": 24
+                },
+                {
+                    "id": "glass_desc",
+                    "type": "Label",
+                    "rect": [380, 130, 340, 100],
+                    "text": "这是一个毛玻璃效果面板，背景模糊但文字清晰可见。",
+                    "color": "#FFFFFF",
+                    "fontSize": 16
+                },
+                {
+                    "id": "glass_button",
+                    "type": "Button",
+                    "rect": [425, 230, 150, 40],
+                    "text": "毛玻璃按钮",
+                    "bgColor": "rgba(255, 255, 255, 0.3)",
+                    "radius": 8,
+                    "backdropFilter": true,
+                    "blurRadius": 5
+                }
+            ]
+        },
+        {
+            "id": "nested_transparency",
+            "type": "View",
+            "rect": [50, 350, 700, 200],
+            "bgColor": "rgba(0, 0, 0, 0.3)",
+            "radius": 15,
+            "children": [
+                {
+                    "id": "nested_panel1",
+                    "type": "View",
+                    "rect": [80, 380, 200, 150],
+                    "bgColor": "rgba(255, 255, 255, 0.3)",
+                    "radius": 10,
+                    "children": [
+                        {
+                            "id": "nested_text1",
+                            "type": "Label",
+                            "rect": [130, 420, 100, 30],
+                            "text": "嵌套透明",
+                            "color": "#000000",
+                            "fontSize": 16
+                        },
+                        {
+                            "id": "nested_button1",
+                            "type": "Button",
+                            "rect": [105, 460, 150, 40],
+                            "text": "半透明按钮",
+                            "bgColor": "rgba(52, 152, 219, 0.7)",
+                            "radius": 5
+                        }
+                    ]
+                },
+                {
+                    "id": "nested_panel2",
+                    "type": "View",
+                    "rect": [300, 380, 200, 150],
+                    "bgColor": "rgba(255, 255, 255, 0.5)",
+                    "radius": 10,
+                    "backdropFilter": true,
+                    "blurRadius": 8,
+                    "children": [
+                        {
+                            "id": "nested_text2",
+                            "type": "Label",
+                            "rect": [350, 420, 100, 30],
+                            "text": "毛玻璃嵌套",
+                            "color": "#000000",
+                            "fontSize": 16
+                        },
+                        {
+                            "id": "nested_button2",
+                            "type": "Button",
+                            "rect": [325, 460, 150, 40],
+                            "text": "毛玻璃按钮",
+                            "bgColor": "rgba(46, 204, 113, 0.7)",
+                            "radius": 5,
+                            "backdropFilter": true,
+                            "blurRadius": 3
+                        }
+                    ]
+                },
+                {
+                    "id": "nested_panel3",
+                    "type": "View",
+                    "rect": [520, 380, 200, 150],
+                    "bgColor": "rgba(255, 255, 255, 0.7)",
+                    "radius": 10,
+                    "children": [
+                        {
+                            "id": "nested_text3",
+                            "type": "Label",
+                            "rect": [570, 420, 100, 30],
+                            "text": "高透明度",
+                            "color": "#000000",
+                            "fontSize": 16
+                        },
+                        {
+                            "id": "nested_button3",
+                            "type": "Button",
+                            "rect": [545, 460, 150, 40],
+                            "text": "高透明按钮",
+                            "bgColor": "rgba(231, 76, 60, 0.5)",
+                            "radius": 5
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

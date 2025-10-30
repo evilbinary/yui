@@ -4,8 +4,6 @@
 #include "ytype.h"
 #include <stdbool.h>  // 添加支持bool类型
 
-
-
 #define WINDOW_WIDTH 1000
 #define MAX_TOUCHES 10
 
@@ -14,6 +12,20 @@ SDL_Renderer* renderer = NULL;
 float scale=1.0;
 SDL_Window* window=NULL;
 DFont* default_font=NULL;
+
+// 毛玻璃效果缓存结构
+typedef struct {
+    SDL_Texture* texture;
+    int x, y, w, h;
+    int blur_radius;
+    float saturation, brightness;
+    Uint32 last_used;
+    int in_use;
+} BlurCacheEntry;
+
+#define MAX_BLUR_CACHE_ENTRIES 5
+BlurCacheEntry blur_cache[MAX_BLUR_CACHE_ENTRIES] = {0};
+int blur_cache_initialized = 0;
 
 // 触屏事件状态
 typedef struct {
@@ -70,7 +82,10 @@ int backend_init(){
                                         SDL_WINDOWPOS_CENTERED,
                                         800, 600, SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_SHOWN);
     renderer = SDL_CreateRenderer(window, -1, 
-                                 SDL_RENDERER_ACCELERATED);
+                                 SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    
+    // 启用透明度混合
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 
     scale = getDisplayScale(window);
 
@@ -342,6 +357,28 @@ void backend_render_text_destroy(Texture * texture){
     SDL_DestroyTexture(texture);
 }
 
+// 毛玻璃效果缓存管理函数声明
+void init_blur_cache();
+void cleanup_blur_cache();
+int find_matching_cache_entry(Rect* rect, int blur_radius, float saturation, float brightness);
+int find_available_cache_entry();
+
+void backend_quit(){
+      // 清理毛玻璃缓存
+      cleanup_blur_cache();
+      
+      // 清理资源
+    IMG_Quit();
+    if (default_font) {
+        TTF_CloseFont(default_font);
+    }
+    TTF_Quit();
+    
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
+    SDL_Quit();
+}
+
 void backend_run(Layer* ui_root){
      // 主循环
     SDL_Event event;
@@ -383,19 +420,6 @@ DFont* backend_load_font(char* font_path,int size){
     TTF_SetFontOutline(default_font, 0); // 无轮廓
 
     return default_font;
-}
-
-void backend_quit(){
-      // 清理资源
-    IMG_Quit();
-    if (default_font) {
-        TTF_CloseFont(default_font);
-    }
-    TTF_Quit();
-    
-    SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(window);
-    SDL_Quit();
 }
 
 void backend_get_windowsize(int* width,int * height){
@@ -704,18 +728,108 @@ void backend_render_line(int x1, int y1, int x2, int y2, Color color) {
     SDL_RenderDrawLine(renderer, x1, y1, x2, y2);
 }
 
-// 实现毛玻璃效果
+// 毛玻璃效果缓存管理函数
+void init_blur_cache() {
+    if (blur_cache_initialized) return;
+    
+    for (int i = 0; i < MAX_BLUR_CACHE_ENTRIES; i++) {
+        blur_cache[i].texture = NULL;
+        blur_cache[i].in_use = 0;
+        blur_cache[i].last_used = 0;
+    }
+    
+    blur_cache_initialized = 1;
+}
+
+// 清理毛玻璃缓存
+void cleanup_blur_cache() {
+    printf("Cleaning up blur cache...\n");
+    for (int i = 0; i < MAX_BLUR_CACHE_ENTRIES; i++) {
+        if (blur_cache[i].texture) {
+            printf("Destroying texture at cache index %d\n", i);
+            SDL_DestroyTexture(blur_cache[i].texture);
+            blur_cache[i].texture = NULL;
+        }
+        blur_cache[i].in_use = 0;
+    }
+    printf("Blur cache cleanup completed\n");
+}
+
+// 查找匹配的缓存条目
+int find_matching_cache_entry(Rect* rect, int blur_radius, float saturation, float brightness) {
+    printf("Searching for matching cache entry...\n");
+    for (int i = 0; i < MAX_BLUR_CACHE_ENTRIES; i++) {
+        if (blur_cache[i].in_use &&
+            blur_cache[i].x == rect->x &&
+            blur_cache[i].y == rect->y &&
+            blur_cache[i].w == rect->w &&
+            blur_cache[i].h == rect->h &&
+            blur_cache[i].blur_radius == blur_radius &&
+            blur_cache[i].saturation == saturation &&
+            blur_cache[i].brightness == brightness) {
+            printf("Found matching cache entry at index %d\n", i);
+            return i;
+        }
+    }
+    printf("No matching cache entry found\n");
+    return -1;
+}
+
+// 查找可用的缓存条目
+int find_available_cache_entry() {
+    // 首先查找未使用的条目
+    for (int i = 0; i < MAX_BLUR_CACHE_ENTRIES; i++) {
+        if (!blur_cache[i].in_use) {
+            return i;
+        }
+    }
+    
+    // 如果没有未使用的，查找最久未使用的条目
+    Uint32 oldest_time = SDL_GetTicks();
+    int oldest_index = 0;
+    
+    for (int i = 0; i < MAX_BLUR_CACHE_ENTRIES; i++) {
+        if (blur_cache[i].last_used < oldest_time) {
+            oldest_time = blur_cache[i].last_used;
+            oldest_index = i;
+        }
+    }
+    
+    // 清理最旧的条目
+    if (blur_cache[oldest_index].texture) {
+        SDL_DestroyTexture(blur_cache[oldest_index].texture);
+        blur_cache[oldest_index].texture = NULL;
+    }
+    
+    return oldest_index;
+}
+
+// 实现优化的毛玻璃效果（带缓存）
 void backend_render_backdrop_filter(Rect* rect, int blur_radius, float saturation, float brightness) {
     if (!renderer || !rect || blur_radius <= 0) {
+        return;
+    }
+    
+    // 初始化缓存（如果尚未初始化）
+    if (!blur_cache_initialized) {
+        init_blur_cache();
+    }
+    
+    // 查找匹配的缓存条目
+    int cache_index = find_matching_cache_entry(rect, blur_radius, saturation, brightness);
+    
+    // 如果找到匹配的缓存，直接使用
+    if (cache_index >= 0) {
+        SDL_RenderCopy(renderer, blur_cache[cache_index].texture, NULL, rect);
+        blur_cache[cache_index].last_used = SDL_GetTicks();
         return;
     }
     
     // 获取当前渲染目标
     SDL_Texture* current_target = SDL_GetRenderTarget(renderer);
     
-    // 获取窗口大小
-    int window_width, window_height;
-    SDL_GetWindowSize(window, &window_width, &window_height);
+    // 限制模糊半径以提高性能
+    if (blur_radius > 20) blur_radius = 20;
     
     // 创建一个临时纹理来捕获当前屏幕内容
     SDL_Texture* temp_texture = SDL_CreateTexture(
@@ -740,19 +854,73 @@ void backend_render_backdrop_filter(Rect* rect, int blur_radius, float saturatio
     SDL_Rect src_rect = *rect;
     SDL_Rect dst_rect = {0, 0, rect->w, rect->h};
     
-    // 恢复原始渲染目标
-    SDL_SetRenderTarget(renderer, current_target);
-    
     // 将屏幕内容渲染到临时纹理
     SDL_RenderCopy(renderer, current_target, &src_rect, &dst_rect);
     
     // 恢复原始渲染目标
     SDL_SetRenderTarget(renderer, current_target);
     
-    // 应用模糊效果
-    if (blur_radius > 0) {
-        // 创建模糊纹理
-        SDL_Texture* blur_texture = SDL_CreateTexture(
+    // 创建模糊纹理（只创建一次）
+    SDL_Texture* blur_texture = SDL_CreateTexture(
+        renderer, 
+        SDL_PIXELFORMAT_RGBA8888, 
+        SDL_TEXTUREACCESS_TARGET, 
+        rect->w, 
+        rect->h
+    );
+    
+    if (!blur_texture) {
+        SDL_DestroyTexture(temp_texture);
+        return;
+    }
+    
+    // 设置模糊纹理为渲染目标
+    SDL_SetRenderTarget(renderer, blur_texture);
+    SDL_SetTextureBlendMode(blur_texture, SDL_BLENDMODE_BLEND);
+    SDL_SetTextureBlendMode(temp_texture, SDL_BLENDMODE_BLEND);
+    
+    // 优化的模糊算法 - 使用更少的采样点
+    SDL_SetTextureAlphaMod(temp_texture, 200); // 增加不透明度以减少模糊次数
+    
+    // 使用优化的采样模式 - 减少采样点数量
+    int sample_step = (blur_radius > 10) ? 3 : 2; // 根据模糊半径调整采样步长
+    
+    for (int x = -blur_radius; x <= blur_radius; x += sample_step) {
+        for (int y = -blur_radius; y <= blur_radius; y += sample_step) {
+            // 使用圆形采样区域
+            if (x * x + y * y <= blur_radius * blur_radius) {
+                SDL_Rect offset_rect = {x, y, rect->w, rect->h};
+                SDL_RenderCopy(renderer, temp_texture, NULL, &offset_rect);
+            }
+        }
+    }
+    
+    // 恢复原始渲染目标
+    SDL_SetRenderTarget(renderer, current_target);
+    
+    // 应用饱和度和亮度调整（如果需要）
+    if (saturation != 1.0f || brightness != 1.0f) {
+        // 应用颜色调整
+        SDL_SetTextureColorMod(blur_texture, 
+            (Uint8)(255 * brightness), 
+            (Uint8)(255 * brightness), 
+            (Uint8)(255 * brightness)
+        );
+    }
+    
+    // 将最终结果渲染到屏幕
+    SDL_RenderCopy(renderer, blur_texture, NULL, rect);
+    
+    // 查找可用的缓存条目并保存结果
+    cache_index = find_available_cache_entry();
+    if (cache_index >= 0) {
+        // 如果已有纹理，先销毁
+        if (blur_cache[cache_index].texture) {
+            SDL_DestroyTexture(blur_cache[cache_index].texture);
+        }
+        
+        // 创建一个新的纹理作为缓存副本
+        blur_cache[cache_index].texture = SDL_CreateTexture(
             renderer, 
             SDL_PIXELFORMAT_RGBA8888, 
             SDL_TEXTUREACCESS_TARGET, 
@@ -760,71 +928,26 @@ void backend_render_backdrop_filter(Rect* rect, int blur_radius, float saturatio
             rect->h
         );
         
-        if (blur_texture) {
-            // 设置模糊纹理为渲染目标
-            SDL_SetRenderTarget(renderer, blur_texture);
-            
-            // 简单的盒式模糊实现
-            SDL_SetTextureBlendMode(temp_texture, SDL_BLENDMODE_BLEND);
-            SDL_SetTextureAlphaMod(temp_texture, 128);
-            
-            // 多次渲染并轻微偏移，模拟模糊效果
-            for (int x = -blur_radius; x <= blur_radius; x++) {
-                for (int y = -blur_radius; y <= blur_radius; y++) {
-                    if (x * x + y * y <= blur_radius * blur_radius) {
-                        SDL_Rect offset_rect = {x, y, rect->w, rect->h};
-                        SDL_RenderCopy(renderer, temp_texture, NULL, &offset_rect);
-                    }
-                }
-            }
-            
-            // 恢复原始渲染目标
+        if (blur_cache[cache_index].texture) {
+            // 将模糊纹理复制到缓存纹理
+            SDL_SetRenderTarget(renderer, blur_cache[cache_index].texture);
+            SDL_RenderCopy(renderer, blur_texture, NULL, NULL);
             SDL_SetRenderTarget(renderer, current_target);
             
-            // 应用饱和度和亮度调整
-            if (saturation != 1.0f || brightness != 1.0f) {
-                // 创建调整后的纹理
-                SDL_Texture* adjusted_texture = SDL_CreateTexture(
-                    renderer, 
-                    SDL_PIXELFORMAT_RGBA8888, 
-                    SDL_TEXTUREACCESS_TARGET, 
-                    rect->w, 
-                    rect->h
-                );
-                
-                if (adjusted_texture) {
-                    SDL_SetRenderTarget(renderer, adjusted_texture);
-                    
-                    // 应用颜色调整
-                    SDL_SetTextureColorMod(blur_texture, 
-                        (Uint8)(255 * brightness), 
-                        (Uint8)(255 * brightness), 
-                        (Uint8)(255 * brightness)
-                    );
-                    
-                    // 渲染调整后的纹理
-                    SDL_RenderCopy(renderer, blur_texture, NULL, NULL);
-                    
-                    // 恢复原始渲染目标
-                    SDL_SetRenderTarget(renderer, current_target);
-                    
-                    // 将最终结果渲染到屏幕
-                    SDL_RenderCopy(renderer, adjusted_texture, NULL, rect);
-                    
-                    SDL_DestroyTexture(adjusted_texture);
-                } else {
-                    // 如果创建调整纹理失败，直接渲染模糊纹理
-                    SDL_RenderCopy(renderer, blur_texture, NULL, rect);
-                }
-            } else {
-                // 如果不需要颜色调整，直接渲染模糊纹理
-                SDL_RenderCopy(renderer, blur_texture, NULL, rect);
-            }
-            
-            SDL_DestroyTexture(blur_texture);
+            // 更新缓存条目信息
+            blur_cache[cache_index].x = rect->x;
+            blur_cache[cache_index].y = rect->y;
+            blur_cache[cache_index].w = rect->w;
+            blur_cache[cache_index].h = rect->h;
+            blur_cache[cache_index].blur_radius = blur_radius;
+            blur_cache[cache_index].saturation = saturation;
+            blur_cache[cache_index].brightness = brightness;
+            blur_cache[cache_index].last_used = SDL_GetTicks();
+            blur_cache[cache_index].in_use = 1;
         }
     }
     
-    // 清理临时纹理
+    // 清理纹理资源
     SDL_DestroyTexture(temp_texture);
+    SDL_DestroyTexture(blur_texture);
 }

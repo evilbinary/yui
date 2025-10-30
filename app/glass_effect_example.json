@@ -5,7 +5,7 @@
   "children": [
     {
       "id": "background",
-      "type": "view",
+      "type": "View",
       "rect": [0, 0, 800, 600],
       "style": {
         "bgColor": "#FF6B6B"
@@ -13,7 +13,7 @@
     },
     {
       "id": "glass_panel",
-      "type": "view",
+      "type": "View",
       "rect": [100, 100, 600, 400],
       "style": {
         "backdropFilter": true,
@@ -31,7 +31,7 @@
       "children": [
         {
           "id": "title",
-          "type": "label",
+          "type": "Label",
           "rect": [0, 0, 540, 50],
           "text": "毛玻璃效果示例",
           "style": {
@@ -56,7 +56,7 @@
         },
         {
           "id": "description",
-          "type": "label",
+          "type": "Label",
           "rect": [0, 0, 540, 100],
           "text": "这是一个毛玻璃效果的示例。背景面板和按钮都应用了毛玻璃效果，使它们看起来更加现代和美观。",
           "style": {
