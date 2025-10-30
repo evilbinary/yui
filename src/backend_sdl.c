@@ -77,6 +77,9 @@ int backend_init(){
         return -1;
     }
     
+    // 设置渲染质量为最佳（抗锯齿）
+    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "best");
+    
     window = SDL_CreateWindow("YUI Renderer", 
                                         SDL_WINDOWPOS_CENTERED,
                                         SDL_WINDOWPOS_CENTERED,
@@ -627,32 +630,56 @@ void draw_rounded_rect(SDL_Renderer* renderer, int x, int y, int w, int h, int r
     if (r > w / 2) r = w / 2;
     if (r > h / 2) r = h / 2;
     
-    // 绘制四个角的圆弧
+    // 绘制中间矩形部分
+    SDL_Rect middle_rect = {x + r, y, w - 2 * r, h};
+    SDL_RenderFillRect(renderer, &middle_rect);
+    
+    // 绘制左右两个矩形部分
+    SDL_Rect left_rect = {x, y + r, r, h - 2 * r};
+    SDL_Rect right_rect = {x + w - r, y + r, r, h - 2 * r};
+    SDL_RenderFillRect(renderer, &left_rect);
+    SDL_RenderFillRect(renderer, &right_rect);
+    
+    // 使用抗锯齿算法绘制四个角的圆弧
     for (int i = 0; i <= r; i++) {
         // 计算偏移量
-        int j = (int)sqrt(r * r - i * i);
+        float j = sqrt(r * r - i * i);
+        int j_int = (int)j;
+        float fraction = j - j_int;
+        
+        // 计算透明度（抗锯齿）
+        Uint8 alpha = (Uint8)(fraction * color.a);
         
         // 左上角圆弧
-        SDL_RenderDrawPoint(renderer, x + r - i, y + r - j);
-        SDL_RenderDrawPoint(renderer, x + r - j, y + r - i);
+        SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, alpha);
+        if (i < r) SDL_RenderDrawPoint(renderer, x + r - i - 1, y + r - j_int);
+        SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
+        SDL_RenderDrawPoint(renderer, x + r - i, y + r - j_int);
+        SDL_RenderDrawPoint(renderer, x + r - j_int, y + r - i);
+        
         // 右上角圆弧
-        SDL_RenderDrawPoint(renderer, x + w - r + i, y + r - j);
-        SDL_RenderDrawPoint(renderer, x + w - r + j, y + r - i);
+        SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, alpha);
+        if (i < r) SDL_RenderDrawPoint(renderer, x + w - r + i, y + r - j_int);
+        SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
+        SDL_RenderDrawPoint(renderer, x + w - r + i, y + r - j_int);
+        SDL_RenderDrawPoint(renderer, x + w - r + j_int, y + r - i);
+        
         // 左下角圆弧
-        SDL_RenderDrawPoint(renderer, x + r - i, y + h - r + j);
-        SDL_RenderDrawPoint(renderer, x + r - j, y + h - r + i);
+        SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, alpha);
+        if (i < r) SDL_RenderDrawPoint(renderer, x + r - i - 1, y + h - r + j_int);
+        SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
+        SDL_RenderDrawPoint(renderer, x + r - i, y + h - r + j_int);
+        SDL_RenderDrawPoint(renderer, x + r - j_int, y + h - r + i);
+        
         // 右下角圆弧
-        SDL_RenderDrawPoint(renderer, x + w - r + i, y + h - r + j);
-        SDL_RenderDrawPoint(renderer, x + w - r + j, y + h - r + i);
+        SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, alpha);
+        if (i < r) SDL_RenderDrawPoint(renderer, x + w - r + i, y + h - r + j_int);
+        SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
+        SDL_RenderDrawPoint(renderer, x + w - r + i, y + h - r + j_int);
+        SDL_RenderDrawPoint(renderer, x + w - r + j_int, y + h - r + i);
     }
     
-    // 绘制四条边
-    SDL_RenderDrawLine(renderer, x + r, y, x + w - r, y); // 上边
-    SDL_RenderDrawLine(renderer, x + r, y + h, x + w - r, y + h); // 下边
-    SDL_RenderDrawLine(renderer, x, y + r, x, y + h - r); // 左边
-    SDL_RenderDrawLine(renderer, x + w, y + r, x + w, y + h - r); // 右边
-    
-    // 填充圆角矩形内部
+    // 填充圆角矩形内部（使用更高效的方法）
     for (int fill_y = y + 1; fill_y < y + h - 1; fill_y++) {
         // 计算当前行的左右边界
         int left = x + 1;
@@ -660,13 +687,13 @@ void draw_rounded_rect(SDL_Renderer* renderer, int x, int y, int w, int h, int r
         
         // 调整圆角部分的左右边界
         if (fill_y < y + r) {
-            int offset = (int)(sqrt(r * r - (fill_y - (y + r)) * (fill_y - (y + r))));
-            left = x + r - offset;
-            right = x + w - r + offset;
+            float offset = sqrt(r * r - (fill_y - (y + r)) * (fill_y - (y + r)));
+            left = x + r - (int)offset;
+            right = x + w - r + (int)offset;
         } else if (fill_y > y + h - r) {
-            int offset = (int)(sqrt(r * r - ((y + h - r) - fill_y) * ((y + h - r) - fill_y)));
-            left = x + r - offset;
-            right = x + w - r + offset;
+            float offset = sqrt(r * r - ((y + h - r) - fill_y) * ((y + h - r) - fill_y));
+            left = x + r - (int)offset;
+            right = x + w - r + (int)offset;
         }
         
         SDL_RenderDrawLine(renderer, left, fill_y, right, fill_y);
@@ -694,22 +721,50 @@ void draw_rounded_rect_with_border(SDL_Renderer* renderer, int x, int y, int w, 
         int current_w = w - 2 * bw;
         int current_h = h - 2 * bw;
         
-        // 绘制四个角的圆弧
+        // 如果半径太小，直接绘制矩形
+        if (current_r <= 0) {
+            SDL_Rect rect = {current_x, current_y, current_w, current_h};
+            SDL_RenderDrawRect(renderer, &rect);
+            continue;
+        }
+        
+        // 使用抗锯齿算法绘制四个角的圆弧
         for (int i = 0; i <= current_r; i++) {
-            int j = (int)sqrt(current_r * current_r - i * i);
+            // 计算偏移量
+            float j = sqrt(current_r * current_r - i * i);
+            int j_int = (int)j;
+            float fraction = j - j_int;
+            
+            // 计算透明度（抗锯齿）
+            Uint8 alpha = (Uint8)(fraction * border_color.a);
             
             // 左上角圆弧
-            SDL_RenderDrawPoint(renderer, current_x + current_r - i, current_y + current_r - j);
-            SDL_RenderDrawPoint(renderer, current_x + current_r - j, current_y + current_r - i);
+            SDL_SetRenderDrawColor(renderer, border_color.r, border_color.g, border_color.b, alpha);
+            if (i < current_r) SDL_RenderDrawPoint(renderer, current_x + current_r - i - 1, current_y + current_r - j_int);
+            SDL_SetRenderDrawColor(renderer, border_color.r, border_color.g, border_color.b, border_color.a);
+            SDL_RenderDrawPoint(renderer, current_x + current_r - i, current_y + current_r - j_int);
+            SDL_RenderDrawPoint(renderer, current_x + current_r - j_int, current_y + current_r - i);
+            
             // 右上角圆弧
-            SDL_RenderDrawPoint(renderer, current_x + current_w - current_r + i, current_y + current_r - j);
-            SDL_RenderDrawPoint(renderer, current_x + current_w - current_r + j, current_y + current_r - i);
+            SDL_SetRenderDrawColor(renderer, border_color.r, border_color.g, border_color.b, alpha);
+            if (i < current_r) SDL_RenderDrawPoint(renderer, current_x + current_w - current_r + i, current_y + current_r - j_int);
+            SDL_SetRenderDrawColor(renderer, border_color.r, border_color.g, border_color.b, border_color.a);
+            SDL_RenderDrawPoint(renderer, current_x + current_w - current_r + i, current_y + current_r - j_int);
+            SDL_RenderDrawPoint(renderer, current_x + current_w - current_r + j_int, current_y + current_r - i);
+            
             // 左下角圆弧
-            SDL_RenderDrawPoint(renderer, current_x + current_r - i, current_y + current_h - current_r + j);
-            SDL_RenderDrawPoint(renderer, current_x + current_r - j, current_y + current_h - current_r + i);
+            SDL_SetRenderDrawColor(renderer, border_color.r, border_color.g, border_color.b, alpha);
+            if (i < current_r) SDL_RenderDrawPoint(renderer, current_x + current_r - i - 1, current_y + current_h - current_r + j_int);
+            SDL_SetRenderDrawColor(renderer, border_color.r, border_color.g, border_color.b, border_color.a);
+            SDL_RenderDrawPoint(renderer, current_x + current_r - i, current_y + current_h - current_r + j_int);
+            SDL_RenderDrawPoint(renderer, current_x + current_r - j_int, current_y + current_h - current_r + i);
+            
             // 右下角圆弧
-            SDL_RenderDrawPoint(renderer, current_x + current_w - current_r + i, current_y + current_h - current_r + j);
-            SDL_RenderDrawPoint(renderer, current_x + current_w - current_r + j, current_y + current_h - current_r + i);
+            SDL_SetRenderDrawColor(renderer, border_color.r, border_color.g, border_color.b, alpha);
+            if (i < current_r) SDL_RenderDrawPoint(renderer, current_x + current_w - current_r + i, current_y + current_h - current_r + j_int);
+            SDL_SetRenderDrawColor(renderer, border_color.r, border_color.g, border_color.b, border_color.a);
+            SDL_RenderDrawPoint(renderer, current_x + current_w - current_r + i, current_y + current_h - current_r + j_int);
+            SDL_RenderDrawPoint(renderer, current_x + current_w - current_r + j_int, current_y + current_h - current_r + i);
         }
         
         // 绘制四条边

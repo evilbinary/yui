@@ -3,7 +3,8 @@
     "type": "Panel",
     "theme": "default",
     "style": {
-        "color": "#FFFFFF"
+        "color": "#FFFFFF",
+        "bgColor": "#FFFFFF"
     },
     "size": [
         500,
