@@ -442,7 +442,7 @@ int treeview_count_visible_nodes(TreeViewComponent* component) {
         // 如果节点展开，递归计算子节点
         if (node->expanded && node->child_count > 0) {
             // 使用栈来模拟递归
-            TreeNode** stack = (TreeNode**)malloc(sizeof(TreeNode*) * node->child_count);
+TreeNode** stack = (TreeNode**)malloc(sizeof(TreeNode*) * node->child_count);
             int stack_top = 0;
             
             // 将子节点压入栈
@@ -708,7 +708,7 @@ void treeview_component_render(Layer* layer) {
     // 渲染可见节点
     for (int i = 0; i < component->root_count; i++) {
         TreeNode* node = component->root_nodes[i];
-        
+
         // 绘制节点
         int text_x = layer->rect.x + node->level * component->indent_width + 20;
         int text_y = item_y + (component->item_height - text_height) / 2;
@@ -824,12 +824,33 @@ void treeview_component_render(Layer* layer) {
                     }
                 }
                 
-                // 绘制文本
+                // 绘制文本 - 修复后的代码
                 Color current_text_color = current->selected ? component->selected_text_color : component->text_color;
                 if (current->text && layer->font && layer->font->default_font) {
                     Texture* text_texture = backend_render_texture(layer->font->default_font, current->text, current_text_color);
                     if (text_texture) {
-                        Rect text_rect = {current_text_x, current_text_y, layer->rect.w - current_text_x, text_height};
+                        int actual_text_width, actual_text_height;
+                        backend_query_texture(text_texture, NULL, NULL, &actual_text_width, &actual_text_height);
+                        
+                        // 计算文本位置
+                        int current_text_x = layer->rect.x + current->level * component->indent_width + 20;
+                        int current_text_y = item_y + (component->item_height - actual_text_height / scale) / 2;
+                        
+                        Rect text_rect = {
+                            current_text_x,
+                            current_text_y,
+                            actual_text_width / scale,
+                            actual_text_height / scale
+                        };
+                        
+                        // 确保文本不会超出边界
+                        if (text_rect.x + text_rect.w > layer->rect.x + layer->rect.w) {
+                            text_rect.w = layer->rect.x + layer->rect.w - text_rect.x;
+                        }
+                        if (text_rect.y + text_rect.h > item_y + component->item_height) {
+                            text_rect.h = item_y + component->item_height - text_rect.y;
+                        }
+                        
                         backend_render_text_copy(text_texture, NULL, &text_rect);
                         backend_render_text_destroy(text_texture);
                     }
