@@ -1,6 +1,6 @@
 #include "util.h"
 #include <float.h> // 添加这个头文件以定义 DBL_EPSILON
-
+#include "ytype.h"
 
 int is_cjson_float(const cJSON *item) {
     if (item == NULL || !cJSON_IsNumber(item)) {
@@ -102,4 +102,52 @@ char* replace_all_placeholders(const char* template, const char* placeholder, co
     }
     
     return result;
+}
+
+
+
+// 辅助函数：将十六进制字符转换为数值
+static int hex_to_nibble(char c) {
+    c = tolower(c);
+    if (c >= '0' && c <= '9') {
+        return c - '0';
+    } else if (c >= 'a' && c <= 'f') {
+        return 10 + c - 'a';
+    }
+    return 0; // 默认返回0
+}
+
+// 将十六进制颜色字符串转换为Color结构体
+Color color_from_hex(const char* hex) {
+    Color color = {0, 0, 0, 255}; // 默认为黑色，完全不透明
+    
+    if (!hex) return color;
+    
+    // 跳过开头的'#'字符（如果有）
+    if (hex[0] == '#') {
+        hex++;
+    }
+    
+    size_t len = strlen(hex);
+    
+    // 支持3位、6位和8位十六进制颜色
+    if (len == 3) {
+        // 3位十六进制颜色（如"FFF"）
+        color.r = (hex_to_nibble(hex[0]) << 4) | hex_to_nibble(hex[0]);
+        color.g = (hex_to_nibble(hex[1]) << 4) | hex_to_nibble(hex[1]);
+        color.b = (hex_to_nibble(hex[2]) << 4) | hex_to_nibble(hex[2]);
+    } else if (len == 6) {
+        // 6位十六进制颜色（如"FFFFFF"）
+        color.r = (hex_to_nibble(hex[0]) << 4) | hex_to_nibble(hex[1]);
+        color.g = (hex_to_nibble(hex[2]) << 4) | hex_to_nibble(hex[3]);
+        color.b = (hex_to_nibble(hex[4]) << 4) | hex_to_nibble(hex[5]);
+    } else if (len == 8) {
+        // 8位十六进制颜色（如"FFFFFFFF"）
+        color.r = (hex_to_nibble(hex[0]) << 4) | hex_to_nibble(hex[1]);
+        color.g = (hex_to_nibble(hex[2]) << 4) | hex_to_nibble(hex[3]);
+        color.b = (hex_to_nibble(hex[4]) << 4) | hex_to_nibble(hex[5]);
+        color.a = (hex_to_nibble(hex[6]) << 4) | hex_to_nibble(hex[7]);
+    }
+    
+    return color;
 }

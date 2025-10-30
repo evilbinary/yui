@@ -1,0 +1,247 @@
+{
+    "id": "inputTestApp",
+    "type": "View",
+    "theme": "default",
+    "style": {
+        "color": "#2C3E50",
+        "bgColor": "#F5F5F5"
+    },
+    "layout": {
+        "type": "vertical",
+        "spacing": 20,
+        "padding": [
+            40,
+            40,
+            40,
+            40
+        ]
+    },
+    "children": [
+        {
+            "id": "title",
+            "type": "Label",
+            "text": "输入框组件测试",
+            "style": {
+                "type": "center",
+                "color": "#1976D2",
+                "fontSize": 24
+            }
+        },
+        {
+            "id": "basicInputTitle",
+            "type": "Label",
+            "text": "基本输入框",
+            "height": 20,
+            "style": {
+                "color": "#2C3E50",
+                "fontSize": 18
+            }
+        },
+        {
+            "id": "basicInputContainer",
+            "type": "View",
+            "layout": {
+                "type": "vertical",
+                "spacing": 15
+            },
+            "children": [
+                {
+                    "id": "usernameLabel",
+                    "type": "Label",
+                    "text": "用户名:",
+                    "style": {
+                        "color": "#2C3E50",
+                        "fontSize": 14
+                    }
+                },
+                {
+                    "id": "usernameInput",
+                    "type": "Input",
+                    "position": [10, 10],
+                    "size": [200, 30],
+                    "placeholder": "请输入用户名",
+                    "maxLength": 20,
+                    "style": {
+                        "bgColor": "#FFFFFF",
+                        "textColor": "#2C3E50",
+                        "borderColor": "#BDBDBD",
+                        "cursorColor": "#1976D2"
+                    }
+                },
+                {
+                    "id": "emailLabel",
+                    "type": "Label",
+                    "text": "邮箱:",
+                    "style": {
+                        "color": "#2C3E50",
+                        "fontSize": 14
+                    }
+                },
+                {
+                    "id": "emailInput",
+                    "type": "Input",
+                    "position": [10, 50],
+                    "size": [200, 30],
+                    "placeholder": "请输入邮箱地址",
+                    "maxLength": 50,
+                    "style": {
+                        "bgColor": "#FFFFFF",
+                        "textColor": "#2C3E50",
+                        "borderColor": "#BDBDBD",
+                        "cursorColor": "#1976D2"
+                    }
+                }
+            ]
+        },
+        {
+            "id": "passwordInputTitle",
+            "type": "Label",
+            "text": "密码输入框",
+            "height": 20,
+            "style": {
+                "color": "#2C3E50",
+                "fontSize": 18,
+                "marginTop": 20
+            }
+        },
+        {
+            "id": "passwordInputContainer",
+            "type": "View",
+            "layout": {
+                "type": "vertical",
+                "spacing": 15
+            },
+            "children": [
+                {
+                    "id": "passwordLabel",
+                    "type": "Label",
+                    "text": "密码:",
+                    "style": {
+                        "color": "#2C3E50",
+                        "fontSize": 14
+                    }
+                },
+                {
+                    "id": "passwordInput",
+                    "type": "Input",
+                    "position": [10, 10],
+                    "size": [200, 30],
+                    "placeholder": "请输入密码",
+                    "maxLength": 20,
+                    "passwordMode": true,
+                    "style": {
+                        "bgColor": "#FFFFFF",
+                        "textColor": "#2C3E50",
+                        "borderColor": "#BDBDBD",
+                        "cursorColor": "#1976D2"
+                    }
+                },
+                {
+                    "id": "confirmPasswordLabel",
+                    "type": "Label",
+                    "text": "确认密码:",
+                    "style": {
+                        "color": "#2C3E50",
+                        "fontSize": 14
+                    }
+                },
+                {
+                    "id": "confirmPasswordInput",
+                    "type": "Input",
+                    "position": [10, 50],
+                    "size": [200, 30],
+                    "placeholder": "请再次输入密码",
+                    "maxLength": 20,
+                    "passwordMode": true,
+                    "style": {
+                        "bgColor": "#FFFFFF",
+                        "textColor": "#2C3E50",
+                        "borderColor": "#BDBDBD",
+                        "cursorColor": "#1976D2"
+                    }
+                }
+            ]
+        },
+        {
+            "id": "specialInputTitle",
+            "type": "Label",
+            "text": "特殊输入框",
+            "height": 20,
+            "style": {
+                "color": "#2C3E50",
+                "fontSize": 18,
+                "marginTop": 20
+            }
+        },
+        {
+            "id": "specialInputContainer",
+            "type": "View",
+            "layout": {
+                "type": "vertical",
+                "spacing": 15
+            },
+            "children": [
+                {
+                    "id": "searchLabel",
+                    "type": "Label",
+                    "text": "搜索:",
+                    "style": {
+                        "color": "#2C3E50",
+                        "fontSize": 14
+                    }
+                },
+                {
+                    "id": "searchInput",
+                    "type": "Input",
+                    "position": [10, 10],
+                    "size": [300, 30],
+                    "placeholder": "请输入搜索关键词",
+                    "maxLength": 100,
+                    "style": {
+                        "bgColor": "#FFFFFF",
+                        "textColor": "#2C3E50",
+                        "borderColor": "#BDBDBD",
+                        "cursorColor": "#4CAF50"
+                    }
+                },
+                {
+                    "id": "commentLabel",
+                    "type": "Label",
+                    "text": "评论:",
+                    "style": {
+                        "color": "#2C3E50",
+                        "fontSize": 14
+                    }
+                },
+                {
+                    "id": "commentInput",
+                    "type": "Input",
+                    "position": [10, 50],
+                    "size": [300, 30],
+                    "placeholder": "请输入您的评论",
+                    "maxLength": 200,
+                    "style": {
+                        "bgColor": "#FFFFFF",
+                        "textColor": "#2C3E50",
+                        "borderColor": "#BDBDBD",
+                        "cursorColor": "#FF9800"
+                    }
+                }
+            ]
+        },
+        {
+            "id": "inputInfo",
+            "type": "Label",
+            "text": "请在输入框中输入内容进行测试",
+            "height": 20,
+            "style": {
+                "color": "#2C3E50",
+                "fontSize": 16,
+                "marginTop": 20
+            }
+        }
+    ],
+    "events": {
+        "onLoad": "@initInputs"
+    }
+}

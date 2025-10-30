@@ -1,8 +1,8 @@
 #include "layer.h"
 #include "animate.h"
 
-// 更新图层类型名称数组，添加GRID和Text
-char *layer_type_name[]={"View","Button","Input","Label","Image","List","Grid","Progress","Checkbox","Radiobox","Text"};
+// 更新图层类型名称数组，添加GRID、Text、Tab、Slider和Listbox
+char *layer_type_name[]={"View","Button","Input","Label","Image","List","Grid","Progress","Checkbox","Radiobox","Text","Treeview","Tab","Slider","Listbox"};
 
 Layer* focused_layer=NULL;
 
@@ -629,6 +629,156 @@ Layer* parse_layer(cJSON* json_obj,Layer* parent) {
         
         // 设置可获得焦点
         layer->focusable = 1;
+    } else if(layer->type==TAB){
+        layer->component = tab_component_create(layer);
+        
+        // 解析选项卡特定属性
+        cJSON* tabConfig = cJSON_GetObjectItem(json_obj, "tabConfig");
+        if (tabConfig) {
+            TabComponent* tabComponent = (TabComponent*)layer->component;
+            
+            if (cJSON_HasObjectItem(tabConfig, "tabHeight")) {
+                tab_component_set_tab_height(tabComponent, cJSON_GetObjectItem(tabConfig, "tabHeight")->valueint);
+            }
+            
+            if (cJSON_HasObjectItem(tabConfig, "closable")) {
+                tab_component_set_closable(tabComponent, cJSON_IsTrue(cJSON_GetObjectItem(tabConfig, "closable")));
+            }
+            
+            // 解析选项卡颜色
+            cJSON* colors = cJSON_GetObjectItem(tabConfig, "colors");
+            if (colors) {
+                Color tabColor = {240, 240, 240, 255};
+                Color activeTabColor = {255, 255, 255, 255};
+                Color textColor = {0, 0, 0, 255};
+                Color activeTextColor = {0, 0, 0, 255};
+                Color borderColor = {200, 200, 200, 255};
+                
+                if (cJSON_HasObjectItem(colors, "tabColor")) {
+                    parse_color(cJSON_GetObjectItem(colors, "tabColor")->valuestring, &tabColor);
+                }
+                if (cJSON_HasObjectItem(colors, "activeTabColor")) {
+                    parse_color(cJSON_GetObjectItem(colors, "activeTabColor")->valuestring, &activeTabColor);
+                }
+                if (cJSON_HasObjectItem(colors, "textColor")) {
+                    parse_color(cJSON_GetObjectItem(colors, "textColor")->valuestring, &textColor);
+                }
+                if (cJSON_HasObjectItem(colors, "activeTextColor")) {
+                    parse_color(cJSON_GetObjectItem(colors, "activeTextColor")->valuestring, &activeTextColor);
+                }
+                if (cJSON_HasObjectItem(colors, "borderColor")) {
+                    parse_color(cJSON_GetObjectItem(colors, "borderColor")->valuestring, &borderColor);
+                }
+                
+                tab_component_set_colors(tabComponent, tabColor, activeTabColor, textColor, activeTextColor, borderColor);
+            }
+        }
+    } else if(layer->type==SLIDER){
+        layer->component = slider_component_create(layer);
+        
+        // 解析滑块特定属性
+        cJSON* sliderConfig = cJSON_GetObjectItem(json_obj, "sliderConfig");
+        if (sliderConfig) {
+            SliderComponent* sliderComponent = (SliderComponent*)layer->component;
+            
+            if (cJSON_HasObjectItem(sliderConfig, "min")) {
+                float min = (float)cJSON_GetObjectItem(sliderConfig, "min")->valuedouble;
+                float max = 100.0f;
+                if (cJSON_HasObjectItem(sliderConfig, "max")) {
+                    max = (float)cJSON_GetObjectItem(sliderConfig, "max")->valuedouble;
+                }
+                slider_component_set_range(sliderComponent, min, max);
+            }
+            
+            if (cJSON_HasObjectItem(sliderConfig, "value")) {
+                slider_component_set_value(sliderComponent, (float)cJSON_GetObjectItem(sliderConfig, "value")->valuedouble);
+            }
+            
+            if (cJSON_HasObjectItem(sliderConfig, "step")) {
+                slider_component_set_step(sliderComponent, (float)cJSON_GetObjectItem(sliderConfig, "step")->valuedouble);
+            }
+            
+            if (cJSON_HasObjectItem(sliderConfig, "orientation")) {
+                if (strcmp(cJSON_GetObjectItem(sliderConfig, "orientation")->valuestring, "vertical") == 0) {
+                    slider_component_set_orientation(sliderComponent, SLIDER_ORIENTATION_VERTICAL);
+                }
+            }
+            
+            // 解析滑块颜色
+            cJSON* colors = cJSON_GetObjectItem(sliderConfig, "colors");
+            if (colors) {
+                Color trackColor = {200, 200, 200, 255};
+                Color thumbColor = {100, 100, 100, 255};
+                Color activeThumbColor = {50, 50, 50, 255};
+                
+                if (cJSON_HasObjectItem(colors, "trackColor")) {
+                    parse_color(cJSON_GetObjectItem(colors, "trackColor")->valuestring, &trackColor);
+                }
+                if (cJSON_HasObjectItem(colors, "thumbColor")) {
+                    parse_color(cJSON_GetObjectItem(colors, "thumbColor")->valuestring, &thumbColor);
+                }
+                if (cJSON_HasObjectItem(colors, "activeThumbColor")) {
+                    parse_color(cJSON_GetObjectItem(colors, "activeThumbColor")->valuestring, &activeThumbColor);
+                }
+                
+                slider_component_set_colors(sliderComponent, trackColor, thumbColor, activeThumbColor);
+            }
+        }
+    } else if(layer->type==LISTBOX){
+        layer->component = listbox_component_create(layer);
+        
+        // 解析列表框特定属性
+        cJSON* listboxConfig = cJSON_GetObjectItem(json_obj, "listboxConfig");
+        if (listboxConfig) {
+            ListBoxComponent* listboxComponent = (ListBoxComponent*)layer->component;
+            
+            if (cJSON_HasObjectItem(listboxConfig, "multiSelect")) {
+                listbox_component_set_multi_select(listboxComponent, cJSON_IsTrue(cJSON_GetObjectItem(listboxConfig, "multiSelect")));
+            }
+            
+            // 解析列表项数据
+            cJSON* items = cJSON_GetObjectItem(listboxConfig, "items");
+            if (items && cJSON_IsArray(items)) {
+                for (int i = 0; i < cJSON_GetArraySize(items); i++) {
+                    cJSON* item = cJSON_GetArrayItem(items, i);
+                    if (cJSON_IsString(item)) {
+                        listbox_component_add_item(listboxComponent, item->valuestring, NULL);
+                    } else if (cJSON_IsObject(item)) {
+                        const char* text = "";
+                        if (cJSON_HasObjectItem(item, "text")) {
+                            text = cJSON_GetObjectItem(item, "text")->valuestring;
+                        }
+                        listbox_component_add_item(listboxComponent, text, NULL);
+                    }
+                }
+            }
+            
+            // 解析列表框颜色
+            cJSON* colors = cJSON_GetObjectItem(listboxConfig, "colors");
+            if (colors) {
+                Color bgColor = {255, 255, 255, 255};
+                Color textColor = {0, 0, 0, 255};
+                Color selectedBgColor = {50, 150, 250, 255};
+                Color selectedTextColor = {255, 255, 255, 255};
+                
+                if (cJSON_HasObjectItem(colors, "bgColor")) {
+                    parse_color(cJSON_GetObjectItem(colors, "bgColor")->valuestring, &bgColor);
+                }
+                if (cJSON_HasObjectItem(colors, "textColor")) {
+                    parse_color(cJSON_GetObjectItem(colors, "textColor")->valuestring, &textColor);
+                }
+                if (cJSON_HasObjectItem(colors, "selectedBgColor")) {
+                    parse_color(cJSON_GetObjectItem(colors, "selectedBgColor")->valuestring, &selectedBgColor);
+                }
+                if (cJSON_HasObjectItem(colors, "selectedTextColor")) {
+                    parse_color(cJSON_GetObjectItem(colors, "selectedTextColor")->valuestring, &selectedTextColor);
+                }
+                
+                listbox_component_set_colors(listboxComponent, bgColor, textColor, selectedBgColor, selectedTextColor);
+            }
+        }
+    } else if(layer->type==TREEVIEW){
+        layer->component = treeview_component_create_from_json(layer, json_obj);
     }
     
     // 递归解析子图层

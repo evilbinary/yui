@@ -1,0 +1,155 @@
+{
+    "id": "dropdownTestApp",
+    "type": "View",
+    "theme": "default",
+    "style": {
+        "color": "#2C3E50",
+        "bgColor": "#F5F5F5"
+    },
+    "layout": {
+        "type": "vertical",
+        "spacing": 20,
+        "padding": [
+            40,
+            40,
+            40,
+            40
+        ]
+    },
+    "children": [
+        {
+            "id": "title",
+            "type": "Label",
+            "text": "下拉菜单组件测试",
+            "style": {
+                "type": "center",
+                "color": "#1976D2",
+                "fontSize": 24
+            }
+        },
+        {
+            "id": "simpleDropdownTitle",
+            "type": "Label",
+            "text": "简单下拉菜单",
+            "height": 20,
+            "style": {
+                "color": "#2C3E50",
+                "fontSize": 18
+            }
+        },
+        {
+            "id": "simpleDropdown",
+            "type": "Dropdown",
+            "position": [10, 10],
+            "size": [200, 30],
+            "items": [
+                {"text": "选项一", "selected": false},
+                {"text": "选项二", "selected": true},
+                {"text": "选项三", "selected": false},
+                {"text": "选项四", "selected": false},
+                {"text": "选项五", "selected": false}
+            ],
+            "selectedIndex": 1,
+            "style": {
+                "bgColor": "#FFFFFF",
+                "textColor": "#2C3E50",
+                "arrowColor": "#2196F3",
+                "dropdownBgColor": "#FFFFFF",
+                "selectedBgColor": "#E3F2FD",
+                "selectedTextColor": "#1976D2"
+            },
+            "events": {
+                "onSelectionChanged": "@handleSimpleDropdownChange"
+            }
+        },
+        {
+            "id": "colorDropdownTitle",
+            "type": "Label",
+            "text": "颜色选择下拉菜单",
+            "height": 20,
+            "style": {
+                "color": "#2C3E50",
+                "fontSize": 18,
+                "marginTop": 20
+            }
+        },
+        {
+            "id": "colorDropdown",
+            "type": "Dropdown",
+            "position": [10, 10],
+            "size": [200, 30],
+            "items": [
+                {"text": "红色", "selected": false},
+                {"text": "绿色", "selected": false},
+                {"text": "蓝色", "selected": true},
+                {"text": "黄色", "selected": false},
+                {"text": "紫色", "selected": false},
+                {"text": "橙色", "selected": false}
+            ],
+            "selectedIndex": 2,
+            "style": {
+                "bgColor": "#FFFFFF",
+                "textColor": "#2C3E50",
+                "arrowColor": "#FF5722",
+                "dropdownBgColor": "#FFFFFF",
+                "selectedBgColor": "#FBE9E7",
+                "selectedTextColor": "#D84315"
+            },
+            "events": {
+                "onSelectionChanged": "@handleColorDropdownChange"
+            }
+        },
+        {
+            "id": "fontDropdownTitle",
+            "type": "Label",
+            "text": "字体大小选择下拉菜单",
+            "height": 20,
+            "style": {
+                "color": "#2C3E50",
+                "fontSize": 18,
+                "marginTop": 20
+            }
+        },
+        {
+            "id": "fontDropdown",
+            "type": "Dropdown",
+            "position": [10, 10],
+            "size": [200, 30],
+            "items": [
+                {"text": "小号字体", "selected": false},
+                {"text": "标准字体", "selected": true},
+                {"text": "大号字体", "selected": false},
+                {"text": "特大号字体", "selected": false}
+            ],
+            "selectedIndex": 1,
+            "style": {
+                "bgColor": "#FFFFFF",
+                "textColor": "#2C3E50",
+                "arrowColor": "#4CAF50",
+                "dropdownBgColor": "#FFFFFF",
+                "selectedBgColor": "#E8F5E9",
+                "selectedTextColor": "#2E7D32"
+            },
+            "events": {
+                "onSelectionChanged": "@handleFontDropdownChange"
+            }
+        },
+        {
+            "id": "selectionDisplay",
+            "type": "Label",
+            "text": "当前选择: 选项二",
+            "height": 20,
+            "style": {
+                "color": "#2C3E50",
+                "fontSize": 16,
+                "marginTop": 20
+            }
+        }
+    ],
+    "events": {
+        "onLoad": "@initDropdowns",
+        "handleSimpleDropdownChange": "function(index) { const items = ['选项一', '选项二', '选项三', '选项四', '选项五']; document.getElementById('selectionDisplay').text = '当前选择: ' + items[index]; }",
+        "handleColorDropdownChange": "function(index) { const items = ['红色', '绿色', '蓝色', '黄色', '紫色', '橙色']; document.getElementById('selectionDisplay').text = '当前选择: ' + items[index]; }",
+        "handleFontDropdownChange": "function(index) { const items = ['小号字体', '标准字体', '大号字体', '特大号字体']; document.getElementById('selectionDisplay').text = '当前选择: ' + items[index]; }"
+    }
+}

@@ -1,0 +1,253 @@
+{
+    "id": "treeviewTestApp",
+    "type": "View",
+    "theme": "default",
+    "style": {
+        "color": "#2C3E50",
+        "bgColor": "#F5F5F5"
+    },
+    "layout": {
+        "type": "vertical",
+        "spacing": 20,
+        "padding": [
+            40,
+            40,
+            40,
+            40
+        ]
+    },
+    "children": [
+        {
+            "id": "title",
+            "type": "Label",
+            "text": "树视图组件测试",
+            "style": {
+                "type": "center",
+                "color": "#1976D2",
+                "fontSize": 24
+            }
+        },
+        {
+            "id": "fileTreeTitle",
+            "type": "Label",
+            "text": "文件树",
+            "height": 20,
+            "style": {
+                "color": "#2C3E50",
+                "fontSize": 18
+            }
+        },
+        {
+            "id": "fileTreeview",
+            "type": "Treeview",
+            "position": [10, 10],
+            "size": [300, 300],
+            "itemHeight": 24,
+            "indentWidth": 20,
+            "style": {
+                "textColor": "#2C3E50",
+                "selectedTextColor": "#FFFFFF",
+                "selectedBgColor": "#1976D2",
+                "hoverBgColor": "#E3F2FD",
+                "expandIconColor": "#757575"
+            },
+            "nodes": [
+                {
+                    "text": "文档",
+                    "expanded": true,
+                    "children": [
+                        {
+                            "text": "工作报告.docx",
+                            "expanded": false,
+                            "children": []
+                        },
+                        {
+                            "text": "会议记录.docx",
+                            "expanded": false,
+                            "children": []
+                        },
+                        {
+                            "text": "项目计划",
+                            "expanded": true,
+                            "children": [
+                                {
+                                    "text": "第一季度计划.xlsx",
+                                    "expanded": false,
+                                    "children": []
+                                },
+                                {
+                                    "text": "第二季度计划.xlsx",
+                                    "expanded": false,
+                                    "children": []
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "text": "图片",
+                    "expanded": false,
+                    "children": [
+                        {
+                            "text": "风景",
+                            "expanded": false,
+                            "children": [
+                                {
+                                    "text": "山水.jpg",
+                                    "expanded": false,
+                                    "children": []
+                                },
+                                {
+                                    "text": "日落.jpg",
+                                    "expanded": false,
+                                    "children": []
+                                }
+                            ]
+                        },
+                        {
+                            "text": "人物",
+                            "expanded": false,
+                            "children": [
+                                {
+                                    "text": "家庭合影.jpg",
+                                    "expanded": false,
+                                    "children": []
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "text": "音乐",
+                    "expanded": false,
+                    "children": [
+                        {
+                            "text": "流行音乐",
+                            "expanded": false,
+                            "children": [
+                                {
+                                    "text": "歌曲1.mp3",
+                                    "expanded": false,
+                                    "children": []
+                                },
+                                {
+                                    "text": "歌曲2.mp3",
+                                    "expanded": false,
+                                    "children": []
+                                }
+                            ]
+                        },
+                        {
+                            "text": "古典音乐",
+                            "expanded": false,
+                            "children": [
+                                {
+                                    "text": "贝多芬 - 月光奏鸣曲.mp3",
+                                    "expanded": false,
+                                    "children": []
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ],
+            "events": {
+                "onNodeSelected": "@handleFileNodeSelected",
+                "onNodeExpanded": "@handleFileNodeExpanded"
+            }
+        },
+        {
+            "id": "settingsTreeTitle",
+            "type": "Label",
+            "text": "设置树",
+            "height": 20,
+            "style": {
+                "color": "#2C3E50",
+                "fontSize": 18,
+                "marginTop": 20
+            }
+        },
+        {
+            "id": "settingsTreeview",
+            "type": "Treeview",
+            "position": [10, 10],
+            "size": [300, 200],
+            "itemHeight": 24,
+            "indentWidth": 20,
+            "style": {
+                "textColor": "#2C3E50",
+                "selectedTextColor": "#FFFFFF",
+                "selectedBgColor": "#4CAF50",
+                "hoverBgColor": "#E8F5E9",
+                "expandIconColor": "#757575"
+            },
+            "nodes": [
+                {
+                    "text": "常规设置",
+                    "expanded": true,
+                    "children": [
+                        {
+                            "text": "语言",
+                            "expanded": false,
+                            "children": []
+                        },
+                        {
+                            "text": "主题",
+                            "expanded": false,
+                            "children": []
+                        }
+                    ]
+                },
+                {
+                    "text": "隐私设置",
+                    "expanded": false,
+                    "children": [
+                        {
+                            "text": "位置服务",
+                            "expanded": false,
+                            "children": []
+                        },
+                        {
+                            "text": "数据收集",
+                            "expanded": false,
+                            "children": []
+                        }
+                    ]
+                },
+                {
+                    "text": "高级设置",
+                    "expanded": false,
+                    "children": [
+                        {
+                            "text": "开发者选项",
+                            "expanded": false,
+                            "children": []
+                        }
+                    ]
+                }
+            ],
+            "events": {
+                "onNodeSelected": "@handleSettingsNodeSelected",
+                "onNodeExpanded": "@handleSettingsNodeExpanded"
+            }
+        },
+        {
+            "id": "nodeInfo",
+            "type": "Label",
+            "text": "当前选择: 无",
+            "height": 20,
+            "style": {
+                "color": "#2C3E50",
+                "fontSize": 16,
+                "marginTop": 20
+            }
+        }
+    ],
+    "events": {
+        "onLoad": "@initTreeviews",
+        "handleFileNodeSelected": "function(node) { document.getElementById('nodeInfo').text = '当前选择: ' + node.text; }",
+        "handleFileNodeExpanded": "function(node, expanded) { console.log('节点 ' + node.text + (expanded ? ' 已展开' : ' 已折叠')); }",
+        "handleSettingsNodeSelected": "function(node) { document.getElementById('nodeInfo').text = '当前选择: ' + node.text; }",
+        "handleSettingsNodeExpanded": "function(node, expanded) { console.log('节点 ' + node.text + (expanded ? ' 已展开' : ' 已折叠')); }"
+    }
+}

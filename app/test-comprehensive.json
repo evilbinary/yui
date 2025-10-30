@@ -1,0 +1,453 @@
+{
+    "id": "comprehensiveTestApp",
+    "type": "View",
+    "theme": "default",
+    "style": {
+        "color": "#2C3E50",
+        "bgColor": "#F5F5F5"
+    },
+    "layout": {
+        "type": "vertical",
+        "spacing": 20,
+        "padding": [
+            20,
+            20,
+            20,
+            20
+        ]
+    },
+    "children": [
+        {
+            "id": "title",
+            "type": "Label",
+            "text": "新增组件综合测试",
+            "style": {
+                "type": "center",
+                "color": "#1976D2",
+                "fontSize": 24
+            }
+        },
+        {
+            "id": "tabContainer",
+            "type": "Tab",
+            "position": [0, 0],
+            "size": [700, 500],
+            "tabHeight": 40,
+            "activeTab": 0,
+            "closable": false,
+            "style": {
+                "tabColor": "#E0E0E0",
+                "activeTabColor": "#FFFFFF",
+                "textColor": "#757575",
+                "activeTextColor": "#1976D2",
+                "borderColor": "#BDBDBD"
+            },
+            "tabs": [
+                {
+                    "title": "滑块与输入",
+                    "content": {
+                        "type": "View",
+                        "layout": {
+                            "type": "vertical",
+                            "spacing": 20,
+                            "padding": [20, 20, 20, 20]
+                        },
+                        "children": [
+                            {
+                                "type": "Label",
+                                "text": "滑块组件测试",
+                                "style": {
+                                    "fontSize": 18,
+                                    "color": "#1976D2",
+                                    "marginBottom": 10
+                                }
+                            },
+                            {
+                                "type": "View",
+                                "layout": {
+                                    "type": "horizontal",
+                                    "spacing": 20
+                                },
+                                "children": [
+                                    {
+                                        "type": "View",
+                                        "layout": {
+                                            "type": "vertical",
+                                            "spacing": 10
+                                        },
+                                        "children": [
+                                            {
+                                                "type": "Label",
+                                                "text": "水平滑块:",
+                                                "style": {
+                                                    "fontSize": 14,
+                                                    "color": "#2C3E50"
+                                                }
+                                            },
+                                            {
+                                                "id": "horizontalSlider",
+                                                "type": "Slider",
+                                                "position": [0, 0],
+                                                "size": [200, 30],
+                                                "data": 50,
+                                                "min": 0,
+                                                "max": 100,
+                                                "step": 1,
+                                                "orientation": 0,
+                                                "style": {
+                                                    "trackColor": "#E0E0E0",
+                                                    "thumbColor": "#2196F3",
+                                                    "activeThumbColor": "#1976D2"
+                                                }
+                                            },
+                                            {
+                                                "id": "sliderValue",
+                                                "type": "Label",
+                                                "text": "值: 50",
+                                                "style": {
+                                                    "fontSize": 14,
+                                                    "color": "#2C3E50"
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "type": "View",
+                                        "layout": {
+                                            "type": "vertical",
+                                            "spacing": 10
+                                        },
+                                        "children": [
+                                            {
+                                                "type": "Label",
+                                                "text": "垂直滑块:",
+                                                "style": {
+                                                    "fontSize": 14,
+                                                    "color": "#2C3E50"
+                                                }
+                                            },
+                                            {
+                                                "id": "verticalSlider",
+                                                "type": "Slider",
+                                                "position": [0, 0],
+                                                "size": [30, 150],
+                                                "data": 30,
+                                                "min": 0,
+                                                "max": 100,
+                                                "step": 1,
+                                                "orientation": 1,
+                                                "style": {
+                                                    "trackColor": "#E0E0E0",
+                                                    "thumbColor": "#4CAF50",
+                                                    "activeThumbColor": "#388E3C"
+                                                }
+                                            },
+                                            {
+                                                "id": "verticalSliderValue",
+                                                "type": "Label",
+                                                "text": "值: 30",
+                                                "style": {
+                                                    "fontSize": 14,
+                                                    "color": "#2C3E50"
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                            {
+                                "type": "Label",
+                                "text": "输入框组件测试",
+                                "style": {
+                                    "fontSize": 18,
+                                    "color": "#1976D2",
+                                    "marginTop": 20,
+                                    "marginBottom": 10
+                                }
+                            },
+                            {
+                                "type": "View",
+                                "layout": {
+                                    "type": "horizontal",
+                                    "spacing": 20
+                                },
+                                "children": [
+                                    {
+                                        "type": "View",
+                                        "layout": {
+                                            "type": "vertical",
+                                            "spacing": 10
+                                        },
+                                        "children": [
+                                            {
+                                                "type": "Label",
+                                                "text": "普通输入:",
+                                                "style": {
+                                                    "fontSize": 14,
+                                                    "color": "#2C3E50"
+                                                }
+                                            },
+                                            {
+                                                "id": "normalInput",
+                                                "type": "Input",
+                                                "position": [0, 0],
+                                                "size": [200, 30],
+                                                "placeholder": "请输入文本",
+                                                "maxLength": 50,
+                                                "style": {
+                                                    "bgColor": "#FFFFFF",
+                                                    "textColor": "#2C3E50",
+                                                    "borderColor": "#BDBDBD",
+                                                    "cursorColor": "#1976D2"
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "type": "View",
+                                        "layout": {
+                                            "type": "vertical",
+                                            "spacing": 10
+                                        },
+                                        "children": [
+                                            {
+                                                "type": "Label",
+                                                "text": "密码输入:",
+                                                "style": {
+                                                    "fontSize": 14,
+                                                    "color": "#2C3E50"
+                                                }
+                                            },
+                                            {
+                                                "id": "passwordInput",
+                                                "type": "Input",
+                                                "position": [0, 0],
+                                                "size": [200, 30],
+                                                "placeholder": "请输入密码",
+                                                "maxLength": 20,
+                                                "passwordMode": true,
+                                                "style": {
+                                                    "bgColor": "#FFFFFF",
+                                                    "textColor": "#2C3E50",
+                                                    "borderColor": "#BDBDBD",
+                                                    "cursorColor": "#1976D2"
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                },
+                {
+                    "title": "下拉与树视图",
+                    "content": {
+                        "type": "View",
+                        "layout": {
+                            "type": "horizontal",
+                            "spacing": 20,
+                            "padding": [20, 20, 20, 20]
+                        },
+                        "children": [
+                            {
+                                "type": "View",
+                                "layout": {
+                                    "type": "vertical",
+                                    "spacing": 15
+                                },
+                                "children": [
+                                    {
+                                        "type": "Label",
+                                        "text": "下拉菜单组件测试",
+                                        "style": {
+                                            "fontSize": 18,
+                                            "color": "#1976D2",
+                                            "marginBottom": 10
+                                        }
+                                    },
+                                    {
+                                        "type": "View",
+                                        "layout": {
+                                            "type": "vertical",
+                                            "spacing": 10
+                                        },
+                                        "children": [
+                                            {
+                                                "type": "Label",
+                                                "text": "选择颜色:",
+                                                "style": {
+                                                    "fontSize": 14,
+                                                    "color": "#2C3E50"
+                                                }
+                                            },
+                                            {
+                                                "id": "colorDropdown",
+                                                "type": "Dropdown",
+                                                "position": [0, 0],
+                                                "size": [150, 30],
+                                                "items": [
+                                                    {"text": "红色", "selected": false},
+                                                    {"text": "绿色", "selected": false},
+                                                    {"text": "蓝色", "selected": true},
+                                                    {"text": "黄色", "selected": false}
+                                                ],
+                                                "selectedIndex": 2,
+                                                "style": {
+                                                    "bgColor": "#FFFFFF",
+                                                    "textColor": "#2C3E50",
+                                                    "arrowColor": "#FF5722",
+                                                    "dropdownBgColor": "#FFFFFF",
+                                                    "selectedBgColor": "#FBE9E7",
+                                                    "selectedTextColor": "#D84315"
+                                                }
+                                            },
+                                            {
+                                                "id": "colorSelection",
+                                                "type": "Label",
+                                                "text": "当前选择: 蓝色",
+                                                "style": {
+                                                    "fontSize": 14,
+                                                    "color": "#2C3E50"
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "type": "View",
+                                        "layout": {
+                                            "type": "vertical",
+                                            "spacing": 10
+                                        },
+                                        "children": [
+                                            {
+                                                "type": "Label",
+                                                "text": "选择字体:",
+                                                "style": {
+                                                    "fontSize": 14,
+                                                    "color": "#2C3E50"
+                                                }
+                                            },
+                                            {
+                                                "id": "fontDropdown",
+                                                "type": "Dropdown",
+                                                "position": [0, 0],
+                                                "size": [150, 30],
+                                                "items": [
+                                                    {"text": "小号", "selected": false},
+                                                    {"text": "标准", "selected": true},
+                                                    {"text": "大号", "selected": false}
+                                                ],
+                                                "selectedIndex": 1,
+                                                "style": {
+                                                    "bgColor": "#FFFFFF",
+                                                    "textColor": "#2C3E50",
+                                                    "arrowColor": "#4CAF50",
+                                                    "dropdownBgColor": "#FFFFFF",
+                                                    "selectedBgColor": "#E8F5E9",
+                                                    "selectedTextColor": "#2E7D32"
+                                                }
+                                            },
+                                            {
+                                                "id": "fontSelection",
+                                                "type": "Label",
+                                                "text": "当前选择: 标准",
+                                                "style": {
+                                                    "fontSize": 14,
+                                                    "color": "#2C3E50"
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                            {
+                                "type": "View",
+                                "layout": {
+                                    "type": "vertical",
+                                    "spacing": 15
+                                },
+                                "children": [
+                                    {
+                                        "type": "Label",
+                                        "text": "树视图组件测试",
+                                        "style": {
+                                            "fontSize": 18,
+                                            "color": "#1976D2",
+                                            "marginBottom": 10
+                                        }
+                                    },
+                                    {
+                                        "id": "fileTreeview",
+                                        "type": "Treeview",
+                                        "position": [0, 0],
+                                        "size": [250, 300],
+                                        "itemHeight": 24,
+                                        "indentWidth": 20,
+                                        "style": {
+                                            "textColor": "#2C3E50",
+                                            "selectedTextColor": "#FFFFFF",
+                                            "selectedBgColor": "#1976D2",
+                                            "hoverBgColor": "#E3F2FD",
+                                            "expandIconColor": "#757575"
+                                        },
+                                        "nodes": [
+                                            {
+                                                "text": "文档",
+                                                "expanded": true,
+                                                "children": [
+                                                    {
+                                                        "text": "工作报告.docx",
+                                                        "expanded": false,
+                                                        "children": []
+                                                    },
+                                                    {
+                                                        "text": "会议记录.docx",
+                                                        "expanded": false,
+                                                        "children": []
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                "text": "图片",
+                                                "expanded": false,
+                                                "children": [
+                                                    {
+                                                        "text": "风景.jpg",
+                                                        "expanded": false,
+                                                        "children": []
+                                                    },
+                                                    {
+                                                        "text": "人物.jpg",
+                                                        "expanded": false,
+                                                        "children": []
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "id": "nodeSelection",
+                                        "type": "Label",
+                                        "text": "当前选择: 无",
+                                        "style": {
+                                            "fontSize": 14,
+                                            "color": "#2C3E50"
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                }
+            ],
+            "events": {
+                "onTabChanged": "@handleTabChange"
+            }
+        }
+    ],
+    "events": {
+        "onLoad": "@initComprehensiveTest",
+        "handleTabChange": "function(oldTab, newTab) { console.log('切换到选项卡: ' + newTab); }"
+    }
+}

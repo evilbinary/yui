@@ -22,7 +22,7 @@
 
 // 功能定义区域
 #define SDL2 1
-// #define DEBUG_VIEW 1 
+#define DEBUG_VIEW 1 
 #define YUI_ANIMATION 1
 #define YUI_INPUT_COMPONENT 1
 #define YUI_LABEL_COMPONENT 1
@@ -32,6 +32,11 @@
 #define YUI_CHECKBOX_COMPONENT 1
 #define YUI_RADIOBOX_COMPONENT 1
 #define YUI_TEXT_COMPONENT 1
+#define YUI_TREEVIEW_COMPONENT 1
+#define YUI_TAB_COMPONENT 1
+#define YUI_SLIDER_COMPONENT 1
+#define YUI_LISTBOX_COMPONENT 1
+
 
 
 #ifdef YUI_ANIMATION
@@ -120,7 +125,11 @@ typedef enum {
     PROGRESS,
     CHECKBOX,
     RADIOBOX,
-    TEXT  // 添加TEXT类型
+    TEXT,  // 添加TEXT类型
+    TREEVIEW,
+    TAB,
+    SLIDER,
+    LISTBOX
 } LayerType;
 
 extern char *layer_type_name[];
@@ -377,6 +386,23 @@ typedef struct {
 
 #ifdef YUI_TEXT_COMPONENT
 #include "components/text_component.h"
+#endif
+
+
+#ifdef YUI_TREEVIEW_COMPONENT
+#include "components/treeview_component.h"
+#endif
+
+#ifdef YUI_TAB_COMPONENT
+#include "components/tab_component.h"
+#endif
+
+#ifdef YUI_SLIDER_COMPONENT
+#include "components/slider_component.h"
+#endif
+
+#ifdef YUI_LISTBOX_COMPONENT
+#include "components/listbox_component.h"
 #endif
 
 

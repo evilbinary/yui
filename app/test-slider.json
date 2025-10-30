@@ -1,0 +1,201 @@
+{
+    "id": "sliderTestApp",
+    "type": "View",
+    "theme": "default",
+    "style": {
+        "color": "#2C3E50",
+        "bgColor": "#F5F5F5"
+    },
+    "layout": {
+        "type": "vertical",
+        "spacing": 20,
+        "padding": [
+            40,
+            40,
+            40,
+            40
+        ]
+    },
+    "children": [
+        {
+            "id": "title",
+            "type": "Label",
+            "text": "滑块组件测试",
+            "style": {
+                "type": "center",
+                "color": "#1976D2",
+                "fontSize": 24
+            }
+        },
+        {
+            "id": "horizontalSliderTitle",
+            "type": "Label",
+            "text": "水平滑块",
+            "height": 20,
+            "style": {
+                "color": "#2C3E50",
+                "fontSize": 18
+            }
+        },
+        {
+            "id": "horizontalSliderContainer",
+            "type": "View",
+            "layout": {
+                "type": "vertical",
+                "spacing": 15
+            },
+            "children": [
+                {
+                    "id": "horizontalSlider1",
+                    "type": "Slider",
+                    "position": [10, 10],
+                    "size": [300, 30],
+                    "data": 50,
+                    "min": 0,
+                    "max": 100,
+                    "step": 1,
+                    "orientation": 0,
+                    "style": {
+                        "trackColor": "#E0E0E0",
+                        "thumbColor": "#2196F3",
+                        "activeThumbColor": "#1976D2"
+                    },
+                    "events": {
+                        "onChange": "@handleSliderChange"
+                    }
+                },
+                {
+                    "id": "horizontalSlider2",
+                    "type": "Slider",
+                    "position": [10, 50],
+                    "size": [300, 30],
+                    "data": 25,
+                    "min": 0,
+                    "max": 255,
+                    "step": 5,
+                    "orientation": 0,
+                    "style": {
+                        "trackColor": "#E0E0E0",
+                        "thumbColor": "#4CAF50",
+                        "activeThumbColor": "#388E3C"
+                    },
+                    "events": {
+                        "onChange": "@handleSliderChange"
+                    }
+                },
+                {
+                    "id": "horizontalSlider3",
+                    "type": "Slider",
+                    "position": [10, 90],
+                    "size": [300, 30],
+                    "data": 75,
+                    "min": 0,
+                    "max": 1,
+                    "step": 0.01,
+                    "orientation": 0,
+                    "style": {
+                        "trackColor": "#E0E0E0",
+                        "thumbColor": "#FF5722",
+                        "activeThumbColor": "#D84315"
+                    },
+                    "events": {
+                        "onChange": "@handleSliderChange"
+                    }
+                }
+            ]
+        },
+        {
+            "id": "verticalSliderTitle",
+            "type": "Label",
+            "text": "垂直滑块",
+            "height": 20,
+            "style": {
+                "color": "#2C3E50",
+                "fontSize": 18,
+                "marginTop": 20
+            }
+        },
+        {
+            "id": "verticalSliderContainer",
+            "type": "View",
+            "layout": {
+                "type": "horizontal",
+                "spacing": 30
+            },
+            "children": [
+                {
+                    "id": "verticalSlider1",
+                    "type": "Slider",
+                    "position": [10, 10],
+                    "size": [30, 200],
+                    "data": 30,
+                    "min": 0,
+                    "max": 100,
+                    "step": 1,
+                    "orientation": 1,
+                    "style": {
+                        "trackColor": "#E0E0E0",
+                        "thumbColor": "#9C27B0",
+                        "activeThumbColor": "#7B1FA2"
+                    },
+                    "events": {
+                        "onChange": "@handleSliderChange"
+                    }
+                },
+                {
+                    "id": "verticalSlider2",
+                    "type": "Slider",
+                    "position": [60, 10],
+                    "size": [30, 200],
+                    "data": 60,
+                    "min": -50,
+                    "max": 50,
+                    "step": 2,
+                    "orientation": 1,
+                    "style": {
+                        "trackColor": "#E0E0E0",
+                        "thumbColor": "#FF9800",
+                        "activeThumbColor": "#F57C00"
+                    },
+                    "events": {
+                        "onChange": "@handleSliderChange"
+                    }
+                },
+                {
+                    "id": "verticalSlider3",
+                    "type": "Slider",
+                    "position": [110, 10],
+                    "size": [30, 200],
+                    "data": 80,
+                    "min": 0,
+                    "max": 10,
+                    "step": 0.1,
+                    "orientation": 1,
+                    "style": {
+                        "trackColor": "#E0E0E0",
+                        "thumbColor": "#607D8B",
+                        "activeThumbColor": "#455A64"
+                    },
+                    "events": {
+                        "onChange": "@handleSliderChange"
+                    }
+                }
+            ]
+        },
+        {
+            "id": "valueDisplay",
+            "type": "Label",
+            "text": "当前值: 50",
+            "height": 20,
+            "style": {
+                "color": "#2C3E50",
+                "fontSize": 16,
+                "marginTop": 20
+            }
+        }
+    ],
+    "events": {
+        "onLoad": "@initSliders",
+        "handleSliderChange": "function(value) { document.getElementById('valueDisplay').text = '当前值: ' + value; }"
+    }
+}
