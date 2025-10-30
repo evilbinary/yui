@@ -173,6 +173,11 @@ void button_component_render(Layer* layer) {
     
     // 绘制背景
     if (bg_color.a > 0) {
+        // 如果启用了毛玻璃效果，先渲染毛玻璃效果
+        if (layer->backdrop_filter) {
+            backend_render_backdrop_filter(&layer->rect, layer->blur_radius, layer->saturation, layer->brightness);
+        }
+        
         if (layer->radius > 0) {
             backend_render_rounded_rect(&layer->rect, bg_color, layer->radius);
         } else {

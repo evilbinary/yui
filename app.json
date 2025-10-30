@@ -3,7 +3,7 @@
     "assets":"app/assets",
     "font":"Roboto-Regular.ttf",
     "fontSize":"16",
-    "source":"app/text-editor.json",
+    "source":"app/glass_effect_example.json",
     "style": {
         "color": "#2C3E50"
     }

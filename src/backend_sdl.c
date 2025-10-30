@@ -703,3 +703,128 @@ void backend_render_line(int x1, int y1, int x2, int y2, Color color) {
     SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
     SDL_RenderDrawLine(renderer, x1, y1, x2, y2);
 }
+
+// 实现毛玻璃效果
+void backend_render_backdrop_filter(Rect* rect, int blur_radius, float saturation, float brightness) {
+    if (!renderer || !rect || blur_radius <= 0) {
+        return;
+    }
+    
+    // 获取当前渲染目标
+    SDL_Texture* current_target = SDL_GetRenderTarget(renderer);
+    
+    // 获取窗口大小
+    int window_width, window_height;
+    SDL_GetWindowSize(window, &window_width, &window_height);
+    
+    // 创建一个临时纹理来捕获当前屏幕内容
+    SDL_Texture* temp_texture = SDL_CreateTexture(
+        renderer, 
+        SDL_PIXELFORMAT_RGBA8888, 
+        SDL_TEXTUREACCESS_TARGET, 
+        rect->w, 
+        rect->h
+    );
+    
+    if (!temp_texture) {
+        return;
+    }
+    
+    // 设置临时纹理为渲染目标
+    if (SDL_SetRenderTarget(renderer, temp_texture) != 0) {
+        SDL_DestroyTexture(temp_texture);
+        return;
+    }
+    
+    // 将当前屏幕内容复制到临时纹理
+    SDL_Rect src_rect = *rect;
+    SDL_Rect dst_rect = {0, 0, rect->w, rect->h};
+    
+    // 恢复原始渲染目标
+    SDL_SetRenderTarget(renderer, current_target);
+    
+    // 将屏幕内容渲染到临时纹理
+    SDL_RenderCopy(renderer, current_target, &src_rect, &dst_rect);
+    
+    // 恢复原始渲染目标
+    SDL_SetRenderTarget(renderer, current_target);
+    
+    // 应用模糊效果
+    if (blur_radius > 0) {
+        // 创建模糊纹理
+        SDL_Texture* blur_texture = SDL_CreateTexture(
+            renderer, 
+            SDL_PIXELFORMAT_RGBA8888, 
+            SDL_TEXTUREACCESS_TARGET, 
+            rect->w, 
+            rect->h
+        );
+        
+        if (blur_texture) {
+            // 设置模糊纹理为渲染目标
+            SDL_SetRenderTarget(renderer, blur_texture);
+            
+            // 简单的盒式模糊实现
+            SDL_SetTextureBlendMode(temp_texture, SDL_BLENDMODE_BLEND);
+            SDL_SetTextureAlphaMod(temp_texture, 128);
+            
+            // 多次渲染并轻微偏移，模拟模糊效果
+            for (int x = -blur_radius; x <= blur_radius; x++) {
+                for (int y = -blur_radius; y <= blur_radius; y++) {
+                    if (x * x + y * y <= blur_radius * blur_radius) {
+                        SDL_Rect offset_rect = {x, y, rect->w, rect->h};
+                        SDL_RenderCopy(renderer, temp_texture, NULL, &offset_rect);
+                    }
+                }
+            }
+            
+            // 恢复原始渲染目标
+            SDL_SetRenderTarget(renderer, current_target);
+            
+            // 应用饱和度和亮度调整
+            if (saturation != 1.0f || brightness != 1.0f) {
+                // 创建调整后的纹理
+                SDL_Texture* adjusted_texture = SDL_CreateTexture(
+                    renderer, 
+                    SDL_PIXELFORMAT_RGBA8888, 
+                    SDL_TEXTUREACCESS_TARGET, 
+                    rect->w, 
+                    rect->h
+                );
+                
+                if (adjusted_texture) {
+                    SDL_SetRenderTarget(renderer, adjusted_texture);
+                    
+                    // 应用颜色调整
+                    SDL_SetTextureColorMod(blur_texture, 
+                        (Uint8)(255 * brightness), 
+                        (Uint8)(255 * brightness), 
+                        (Uint8)(255 * brightness)
+                    );
+                    
+                    // 渲染调整后的纹理
+                    SDL_RenderCopy(renderer, blur_texture, NULL, NULL);
+                    
+                    // 恢复原始渲染目标
+                    SDL_SetRenderTarget(renderer, current_target);
+                    
+                    // 将最终结果渲染到屏幕
+                    SDL_RenderCopy(renderer, adjusted_texture, NULL, rect);
+                    
+                    SDL_DestroyTexture(adjusted_texture);
+                } else {
+                    // 如果创建调整纹理失败，直接渲染模糊纹理
+                    SDL_RenderCopy(renderer, blur_texture, NULL, rect);
+                }
+            } else {
+                // 如果不需要颜色调整，直接渲染模糊纹理
+                SDL_RenderCopy(renderer, blur_texture, NULL, rect);
+            }
+            
+            SDL_DestroyTexture(blur_texture);
+        }
+    }
+    
+    // 清理临时纹理
+    SDL_DestroyTexture(temp_texture);
+}

@@ -60,6 +60,11 @@ void render_layer(Layer* layer) {
         //printf("layer->%s %d\n",layer->id,layer->type);
     // 绘制背景
         if(layer->bg_color.a > 0) {
+            // 如果启用了毛玻璃效果，先渲染毛玻璃效果
+            if (layer->backdrop_filter) {
+                backend_render_backdrop_filter(&layer->rect, layer->blur_radius, layer->saturation, layer->brightness);
+            }
+            
             if (layer->radius > 0) {
                 backend_render_rounded_rect(&layer->rect, layer->bg_color, layer->radius);
             } else {
@@ -68,6 +73,11 @@ void render_layer(Layer* layer) {
 
         }else{
             // 默认渲染方式
+            // 如果启用了毛玻璃效果，先渲染毛玻璃效果
+            if (layer->backdrop_filter) {
+                backend_render_backdrop_filter(&layer->rect, layer->blur_radius, layer->saturation, layer->brightness);
+            }
+            
             if (layer->radius > 0) {
                 backend_render_rounded_rect(&layer->rect, layer->bg_color, layer->radius);
             } else {

@@ -323,6 +323,12 @@ typedef struct Layer {
     void (*handle_key_event)(Layer* layer, KeyEvent* event);
     void (*handle_mouse_event)(Layer* layer, MouseEvent* event);
     void (*handle_touch_event)(Layer* layer, TouchEvent* event);
+    
+    // 毛玻璃效果相关属性
+    int backdrop_filter;     // 是否启用毛玻璃效果
+    int blur_radius;         // 模糊半径
+    float saturation;         // 饱和度 (1.0为正常，>1.0为更饱和，<1.0为不饱和)
+    float brightness;        // 亮度 (1.0为正常，>1.0为更亮，<1.0为更暗)
 
 } Layer;
 

@@ -1,0 +1,90 @@
+{
+  "type": "app",
+  "width": 800,
+  "height": 600,
+  "children": [
+    {
+      "id": "background",
+      "type": "Text",
+      "rect": [0, 0, 800, 600],
+      "style": {
+        "bgColor": "#336699"
+      }
+    },
+    {
+      "id": "color_test_panel",
+      "type": "Text",
+      "rect": [50, 50, 700, 500],
+      "layout": {
+        "type": "vertical",
+        "spacing": 20,
+        "padding": [20, 20, 20, 20]
+      },
+      "children": [
+        {
+          "id": "rgba_box",
+          "type": "Text",
+          "rect": [0, 0, 660, 80],
+          "text": "RGBA格式: rgba(255, 0, 0, 0.7)",
+          "style": {
+            "bgColor": "rgba(255, 0, 0, 0.7)",
+            "radius": 10,
+            "color": "#FFFFFF",
+            "fontSize": 18
+          }
+        },
+        {
+          "id": "rgb_box",
+          "type": "Text",
+          "rect": [0, 0, 660, 80],
+          "text": "RGB格式: rgb(0, 255, 0)",
+          "style": {
+            "bgColor": "rgb(0, 255, 0)",
+            "radius": 10,
+            "color": "#000000",
+            "fontSize": 18
+          }
+        },
+        {
+          "id": "hex_box",
+          "type": "Text",
+          "rect": [0, 0, 660, 80],
+          "text": "十六进制格式: #0000FF",
+          "style": {
+            "bgColor": "#0000FF",
+            "radius": 10,
+            "color": "#FFFFFF",
+            "fontSize": 18
+          }
+        },
+        {
+          "id": "hex_alpha_box",
+          "type": "Text",
+          "rect": [0, 0, 660, 80],
+          "text": "十六进制透明格式: #FFFF0080",
+          "style": {
+            "bgColor": "#FFFF0080",
+            "radius": 10,
+            "color": "#000000",
+            "fontSize": 18
+          }
+        },
+        {
+          "id": "glass_button",
+          "type": "button",
+          "rect": [0, 0, 200, 50],
+          "text": "毛玻璃按钮",
+          "style": {
+            "backdropFilter": true,
+            "blurRadius": 8,
+            "saturation": 1.2,
+            "brightness": 1.1,
+            "bgColor": "rgba(255, 255, 255, 0.3)",
+            "radius": 10,
+            "color": "#000000"
+          }
+        }
+      ]
+    }
+  ]
+}

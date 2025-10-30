@@ -102,13 +102,33 @@ cJSON* parse_json(char* json_path){
 }
 
 void parse_color(char* valuestring,Color* color){
-    if(strlen(valuestring)==9){
+    // 支持多种颜色格式
+    if (strncmp(valuestring, "rgba(", 5) == 0) {
+        // 解析 rgba(r, g, b, a) 格式
+        int r, g, b;
+        float a;
+        sscanf(valuestring, "rgba(%d,%d,%d,%f)", &r, &g, &b, &a);
+        color->r = (unsigned char)r;
+        color->g = (unsigned char)g;
+        color->b = (unsigned char)b;
+        color->a = (unsigned char)(a * 255); // 将0.0-1.0的范围转换为0-255
+    } else if (strncmp(valuestring, "rgb(", 4) == 0) {
+        // 解析 rgb(r, g, b) 格式
+        int r, g, b;
+        sscanf(valuestring, "rgb(%d,%d,%d)", &r, &g, &b);
+        color->r = (unsigned char)r;
+        color->g = (unsigned char)g;
+        color->b = (unsigned char)b;
+        color->a = 255; // 默认不透明
+    } else if (strlen(valuestring) == 9) {
+        // 解析十六进制 #RRGGBBAA 格式
         sscanf(valuestring, "#%02hhx%02hhx%02hhx%02hhx", 
-            &color->r, &color->g, &color->b,&color->a);
-    }else{
+            &color->r, &color->g, &color->b, &color->a);
+    } else {
+        // 解析十六进制 #RRGGBB 格式
         sscanf(valuestring, "#%02hhx%02hhx%02hhx", 
             &color->r, &color->g, &color->b);
-        color->a = 255;
+        color->a = 255; // 默认不透明
     }
 }
 
@@ -375,6 +395,36 @@ Layer* parse_layer(cJSON* json_obj,Layer* parent) {
                 layer->image_mode = IMAGE_MODE_ASPECT_FILL;
             } else if (strcmp(mode_str, "stretch") == 0) {
                 layer->image_mode = IMAGE_MODE_STRETCH;
+            }
+        }
+        
+        // 解析毛玻璃效果
+        cJSON* backdrop_filter = cJSON_GetObjectItem(style, "backdropFilter");
+        if (backdrop_filter) {
+            layer->backdrop_filter = cJSON_IsTrue(backdrop_filter) ? 1 : 0;
+            
+            // 解析模糊半径
+            cJSON* blur_radius = cJSON_GetObjectItem(style, "blurRadius");
+            if (blur_radius) {
+                layer->blur_radius = blur_radius->valueint;
+            } else {
+                layer->blur_radius = 10; // 默认模糊半径
+            }
+            
+            // 解析饱和度
+            cJSON* saturation = cJSON_GetObjectItem(style, "saturation");
+            if (saturation) {
+                layer->saturation = (float)saturation->valuedouble;
+            } else {
+                layer->saturation = 1.0f; // 默认饱和度
+            }
+            
+            // 解析亮度
+            cJSON* brightness = cJSON_GetObjectItem(style, "brightness");
+            if (brightness) {
+                layer->brightness = (float)brightness->valuedouble;
+            } else {
+                layer->brightness = 1.0f; // 默认亮度
             }
         }
        

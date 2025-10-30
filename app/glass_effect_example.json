@@ -1,0 +1,70 @@
+{
+  "type": "app",
+  "width": 800,
+  "height": 600,
+  "children": [
+    {
+      "id": "background",
+      "type": "view",
+      "rect": [0, 0, 800, 600],
+      "style": {
+        "bgColor": "#FF6B6B"
+      }
+    },
+    {
+      "id": "glass_panel",
+      "type": "view",
+      "rect": [100, 100, 600, 400],
+      "style": {
+        "backdropFilter": true,
+        "blurRadius": 15,
+        "saturation": 1.2,
+        "brightness": 1.1,
+        "bgColor": "rgba(255, 255, 255, 0.2)",
+        "radius": 20
+      },
+      "layout": {
+        "type": "vertical",
+        "spacing": 20,
+        "padding": [30, 30, 30, 30]
+      },
+      "children": [
+        {
+          "id": "title",
+          "type": "label",
+          "rect": [0, 0, 540, 50],
+          "text": "毛玻璃效果示例",
+          "style": {
+            "color": "#FFFFFF",
+            "fontSize": 24
+          }
+        },
+        {
+          "id": "glass_button",
+          "type": "button",
+          "rect": [0, 0, 200, 50],
+          "text": "毛玻璃按钮",
+          "style": {
+            "backdropFilter": true,
+            "blurRadius": 10,
+            "saturation": 1.0,
+            "brightness": 1.0,
+            "bgColor": "rgba(255, 255, 255, 0.3)",
+            "radius": 10,
+            "color": "#FFFFFF"
+          }
+        },
+        {
+          "id": "description",
+          "type": "label",
+          "rect": [0, 0, 540, 100],
+          "text": "这是一个毛玻璃效果的示例。背景面板和按钮都应用了毛玻璃效果，使它们看起来更加现代和美观。",
+          "style": {
+            "color": "#FFFFFF",
+            "fontSize": 16
+          }
+        }
+      ]
+    }
+  ]
+}
