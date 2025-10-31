@@ -20,6 +20,7 @@
         {
             "id": "title",
             "type": "Label",
+            "height":20,
             "text": "树视图组件测试",
             "style": {
                 "type": "center",
