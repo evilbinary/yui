@@ -716,7 +716,7 @@ void treeview_component_render(Layer* layer) {
         // 绘制背景
         if (node->selected) {
             Rect sel_rect = {layer->rect.x, item_y, layer->rect.w, component->item_height};
-            backend_render_rect(&sel_rect, component->selected_bg_color);
+            backend_render_fill_rect(&sel_rect, component->selected_bg_color);
         }
         
         // 绘制展开/折叠图标
@@ -798,7 +798,7 @@ void treeview_component_render(Layer* layer) {
                 // 绘制背景
                 if (current->selected) {
                     Rect sel_rect = {layer->rect.x, item_y, layer->rect.w, component->item_height};
-                    backend_render_rect(&sel_rect, component->selected_bg_color);
+                    backend_render_fill_rect(&sel_rect, component->selected_bg_color);
                 }
                 
                 // 绘制展开/折叠图标
