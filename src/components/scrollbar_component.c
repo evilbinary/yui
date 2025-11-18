@@ -292,23 +292,27 @@ ScrollbarComponent* scrollbar_component_create_from_json(Layer* layer,Layer* tar
     if (thickness_json && cJSON_IsNumber(thickness_json)) {
         scrollbar_component_set_thickness(component, thickness_json->valueint);
     }
+    
+    // 兼容旧的 scrollbarWidth 属性
+    cJSON* scrollbar_width_json = cJSON_GetObjectItem(json_obj, "scrollbarWidth");
+    if (scrollbar_width_json && cJSON_IsNumber(scrollbar_width_json)) {
+        scrollbar_component_set_thickness(component, scrollbar_width_json->valueint);
+    }
 
     // 设置轨道颜色
     cJSON* track_color_json = cJSON_GetObjectItem(json_obj, "trackColor");
     if (track_color_json && cJSON_IsString(track_color_json)) {
-        Color track_color = component->track_color;
-        Color thumb_color = component->thumb_color;
+        Color track_color;
         parse_color(track_color_json->valuestring, &track_color);
-        scrollbar_component_set_colors(component, track_color, thumb_color);
+        scrollbar_component_set_colors(component, track_color, component->thumb_color);
     }
 
     // 设置滑块颜色
     cJSON* thumb_color_json = cJSON_GetObjectItem(json_obj, "thumbColor");
     if (thumb_color_json && cJSON_IsString(thumb_color_json)) {
-        Color track_color = component->track_color;
-        Color thumb_color = component->thumb_color;
+        Color thumb_color;
         parse_color(thumb_color_json->valuestring, &thumb_color);
-        scrollbar_component_set_colors(component, track_color, thumb_color);
+        scrollbar_component_set_colors(component, component->track_color, thumb_color);
     }
 
     // 设置可见性

@@ -273,10 +273,43 @@ Layer* parse_layer(cJSON* json_obj,Layer* parent) {
 
     
     
+    // 解析滚动属性 - 作为 Layer 的直接属性
+    cJSON* scrollable = cJSON_GetObjectItem(json_obj, "scrollable");
+    if (scrollable) {
+        layer->scrollable = scrollable->valueint;
+        
+        // 根据 scrollable 类型自动创建滚动条
+        if (layer->scrollable > 0) {
+            // 创建垂直滚动条 (支持垂直滚动或双向滚动)
+            if (layer->scrollable == 1 || layer->scrollable == 3) {
+                layer->scrollbar_v = malloc(sizeof(Scrollbar));
+                memset(layer->scrollbar_v, 0, sizeof(Scrollbar));
+                layer->scrollbar_v->visible = 1;
+                layer->scrollbar_v->thickness = 10;
+                layer->scrollbar_v->color = (Color){128, 128, 128, 200};
+                layer->scrollbar_v->direction = SCROLLBAR_DIRECTION_VERTICAL;
+            }
+            
+            // 创建水平滚动条 (支持水平滚动或双向滚动)
+            if (layer->scrollable == 2 || layer->scrollable == 3) {
+                layer->scrollbar_h = malloc(sizeof(Scrollbar));
+                memset(layer->scrollbar_h, 0, sizeof(Scrollbar));
+                layer->scrollbar_h->visible = 1;
+                layer->scrollbar_h->thickness = 10;
+                layer->scrollbar_h->color = (Color){128, 128, 128, 200};
+                layer->scrollbar_h->direction = SCROLLBAR_DIRECTION_HORIZONTAL;
+            }
+        }
+    }
+    
+    // 兼容旧的 scrollbar 配置 (用于自定义样式)
     cJSON* scrollbar = cJSON_GetObjectItem(json_obj, "scrollbar");
     if (scrollbar) {
+        // 如果还没有创建滚动条，则创建旧的滚动条结构
+        if (!layer->scrollbar) {
             layer->scrollbar = malloc(sizeof(Scrollbar));
             memset(layer->scrollbar, 0, sizeof(Scrollbar));
+        }
         
         cJSON* visible = cJSON_GetObjectItem(scrollbar, "visible");
         if (visible) {
@@ -291,10 +324,6 @@ Layer* parse_layer(cJSON* json_obj,Layer* parent) {
         cJSON* color = cJSON_GetObjectItem(scrollbar, "color");
         if (color) {
             parse_color(color->valuestring,&layer->scrollbar->color);
-        }
-        // 解析滚动属性
-        if (cJSON_HasObjectItem(scrollbar, "scrollable")) {
-            layer->scrollable = cJSON_GetObjectItem(scrollbar, "scrollable")->valueint;
         }
     }
     

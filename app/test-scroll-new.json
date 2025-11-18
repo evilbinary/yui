@@ -1,0 +1,226 @@
+{
+    "id": "scrollTest",
+    "type": "View",
+    "theme": "default",
+    "style": {
+        "color": "#2C3E50",
+        "bgColor": "#F5F5F5"
+    },
+    "layout": {
+        "type": "vertical",
+        "spacing": 20,
+        "padding": [
+            40,
+            40,
+            40,
+            40
+        ]
+    },
+    "children": [
+        {
+            "id": "title",
+            "type": "Label",
+            "height": 30,
+            "text": "滚动条测试 - 新架构",
+            "style": {
+                "type": "center",
+                "color": "#1976D2",
+                "fontSize": 24
+            }
+        },
+        {
+            "id": "horizontalScrollContainer",
+            "type": "View",
+            "width": 400,
+            "height": 100,
+            "scrollable": 2,
+            "style": {
+                "bgColor": "#E3F2FD",
+                "borderRadius": 4
+            },
+            "layout": {
+                "type": "horizontal",
+                "spacing": 10,
+                "padding": [10, 10, 10, 10]
+            },
+            "children": [
+                {
+                    "type": "Label",
+                    "width": 150,
+                    "height": 80,
+                    "text": "长内容1",
+                    "style": {
+                        "color": "#212121",
+                        "fontSize": 16,
+                        "bgColor": "#FFC107"
+                    }
+                },
+                {
+                    "type": "Label",
+                    "width": 150,
+                    "height": 80,
+                    "text": "长内容2",
+                    "style": {
+                        "color": "#212121",
+                        "fontSize": 16,
+                        "bgColor": "#4CAF50"
+                    }
+                },
+                {
+                    "type": "Label",
+                    "width": 150,
+                    "height": 80,
+                    "text": "长内容3",
+                    "style": {
+                        "color": "#212121",
+                        "fontSize": 16,
+                        "bgColor": "#2196F3"
+                    }
+                },
+                {
+                    "type": "Label",
+                    "width": 150,
+                    "height": 80,
+                    "text": "长内容4",
+                    "style": {
+                        "color": "#212121",
+                        "fontSize": 16,
+                        "bgColor": "#FF5722"
+                    }
+                }
+            ]
+        },
+        {
+            "id": "verticalScrollContainer",
+            "type": "View",
+            "width": 300,
+            "height": 150,
+            "scrollable": 1,
+            "style": {
+                "bgColor": "#E8F5E8",
+                "borderRadius": 4
+            },
+            "layout": {
+                "type": "vertical",
+                "spacing": 10,
+                "padding": [10, 10, 10, 10]
+            },
+            "children": [
+                {
+                    "type": "Label",
+                    "width": 280,
+                    "height": 60,
+                    "text": "垂直滚动项目 1",
+                    "style": {
+                        "color": "#FFFFFF",
+                        "fontSize": 16,
+                        "bgColor": "#E91E63"
+                    }
+                },
+                {
+                    "type": "Label",
+                    "width": 280,
+                    "height": 60,
+                    "text": "垂直滚动项目 2",
+                    "style": {
+                        "color": "#FFFFFF",
+                        "fontSize": 16,
+                        "bgColor": "#9C27B0"
+                    }
+                },
+                {
+                    "type": "Label",
+                    "width": 280,
+                    "height": 60,
+                    "text": "垂直滚动项目 3",
+                    "style": {
+                        "color": "#FFFFFF",
+                        "fontSize": 16,
+                        "bgColor": "#673AB7"
+                    }
+                },
+                {
+                    "type": "Label",
+                    "width": 280,
+                    "height": 60,
+                    "text": "垂直滚动项目 4",
+                    "style": {
+                        "color": "#FFFFFF",
+                        "fontSize": 16,
+                        "bgColor": "#3F51B5"
+                    }
+                },
+                {
+                    "type": "Label",
+                    "width": 280,
+                    "height": 60,
+                    "text": "垂直滚动项目 5",
+                    "style": {
+                        "color": "#FFFFFF",
+                        "fontSize": 16,
+                        "bgColor": "#2196F3"
+                    }
+                }
+            ]
+        },
+        {
+            "id": "bothScrollContainer",
+            "type": "View",
+            "width": 250,
+            "height": 120,
+            "scrollable": 3,
+            "style": {
+                "bgColor": "#FFF3E0",
+                "borderRadius": 4
+            },
+            "children": [
+                {
+                    "type": "View",
+                    "width": 400,
+                    "height": 200,
+                    "children": [
+                        {
+                            "type": "Label",
+                            "x": 10,
+                            "y": 10,
+                            "width": 200,
+                            "height": 30,
+                            "text": "双向滚动测试内容",
+                            "style": {
+                                "color": "#212121",
+                                "fontSize": 14,
+                                "bgColor": "#FF9800"
+                            }
+                        },
+                        {
+                            "type": "Label",
+                            "x": 220,
+                            "y": 10,
+                            "width": 150,
+                            "height": 30,
+                            "text": "右侧内容",
+                            "style": {
+                                "color": "#212121",
+                                "fontSize": 14,
+                                "bgColor": "#795548"
+                            }
+                        },
+                        {
+                            "type": "Label",
+                            "x": 10,
+                            "y": 160,
+                            "width": 360,
+                            "height": 30,
+                            "text": "底部内容 - 需要双向滚动才能看到",
+                            "style": {
+                                "color": "#FFFFFF",
+                                "fontSize": 14,
+                                "bgColor": "#607D8B"
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

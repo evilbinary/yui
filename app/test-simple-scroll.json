@@ -1,0 +1,125 @@
+{
+    "id": "simpleScrollTest",
+    "type": "View",
+    "width": 800,
+    "height": 600,
+    "style": {
+        "bgColor": "#F0F0F0"
+    },
+    "children": [
+        {
+            "id": "scrollContainer",
+            "type": "View",
+            "x": 50,
+            "y": 50,
+            "width": 300,
+            "height": 200,
+            "scrollable": 1,
+            "style": {
+                "bgColor": "#FFFFFF",
+                "borderRadius": 8
+            },
+            "layout": {
+                "type": "vertical",
+                "spacing": 5,
+                "padding": [10, 10, 10, 10]
+            },
+            "children": [
+                {
+                    "type": "View",
+                    "height": 60,
+                    "style": {
+                        "bgColor": "#FF6B6B"
+                    }
+                },
+                {
+                    "type": "View",
+                    "height": 60,
+                    "style": {
+                        "bgColor": "#4ECDC4"
+                    }
+                },
+                {
+                    "type": "View",
+                    "height": 60,
+                    "style": {
+                        "bgColor": "#45B7D1"
+                    }
+                },
+                {
+                    "type": "View",
+                    "height": 60,
+                    "style": {
+                        "bgColor": "#96CEB4"
+                    }
+                },
+                {
+                    "type": "View",
+                    "height": 60,
+                    "style": {
+                        "bgColor": "#FFEAA7"
+                    }
+                },
+                {
+                    "type": "View",
+                    "height": 60,
+                    "style": {
+                        "bgColor": "#DDA0DD"
+                    }
+                }
+            ]
+        },
+        {
+            "id": "horizontalScrollContainer",
+            "type": "View",
+            "x": 400,
+            "y": 50,
+            "width": 300,
+            "height": 100,
+            "scrollable": 2,
+            "style": {
+                "bgColor": "#FFFFFF",
+                "borderRadius": 8
+            },
+            "layout": {
+                "type": "horizontal",
+                "spacing": 5,
+                "padding": [10, 10, 10, 10]
+            },
+            "children": [
+                {
+                    "type": "View",
+                    "width": 200,
+                    "height": 80,
+                    "style": {
+                        "bgColor": "#FF6B6B"
+                    }
+                },
+                {
+                    "type": "View",
+                    "width": 200,
+                    "height": 80,
+                    "style": {
+                        "bgColor": "#4ECDC4"
+                    }
+                },
+                {
+                    "type": "View",
+                    "width": 200,
+                    "height": 80,
+                    "style": {
+                        "bgColor": "#45B7D1"
+                    }
+                },
+                {
+                    "type": "View",
+                    "width": 200,
+                    "height": 80,
+                    "style": {
+                        "bgColor": "#96CEB4"
+                    }
+                }
+            ]
+        }
+    ]
+}

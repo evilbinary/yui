@@ -1,0 +1,240 @@
+{
+    "id": "scrollbarDemo",
+    "type": "View",
+    "width": 800,
+    "height": 600,
+    "style": {
+        "bgColor": "#F5F5F5"
+    },
+    "layout": {
+        "type": "vertical",
+        "spacing": 20,
+        "padding": [20, 20, 20, 20]
+    },
+    "children": [
+        {
+            "id": "title",
+            "type": "Label",
+            "height": 40,
+            "text": "YUI 滚动条组件演示",
+            "style": {
+                "type": "center",
+                "color": "#1976D2",
+                "fontSize": 28,
+                "bgColor": "transparent"
+            }
+        },
+        {
+            "id": "verticalDemo",
+            "type": "View",
+            "height": 200,
+            "scrollable": 1,
+            "style": {
+                "bgColor": "#FFFFFF",
+                "borderRadius": 8
+            },
+            "layout": {
+                "type": "vertical",
+                "spacing": 10,
+                "padding": [15, 15, 15, 15]
+            },
+            "children": [
+                {
+                    "type": "Label",
+                    "height": 30,
+                    "text": "垂直滚动演示 (scrollable: 1)",
+                    "style": {
+                        "color": "#212121",
+                        "fontSize": 18,
+                        "bgColor": "transparent"
+                    }
+                },
+                {
+                    "type": "View",
+                    "height": 50,
+                    "style": {
+                        "bgColor": "#FF6B6B",
+                        "borderRadius": 4
+                    }
+                },
+                {
+                    "type": "View",
+                    "height": 50,
+                    "style": {
+                        "bgColor": "#4ECDC4",
+                        "borderRadius": 4
+                    }
+                },
+                {
+                    "type": "View",
+                    "height": 50,
+                    "style": {
+                        "bgColor": "#45B7D1",
+                        "borderRadius": 4
+                    }
+                },
+                {
+                    "type": "View",
+                    "height": 50,
+                    "style": {
+                        "bgColor": "#96CEB4",
+                        "borderRadius": 4
+                    }
+                },
+                {
+                    "type": "View",
+                    "height": 50,
+                    "style": {
+                        "bgColor": "#FFEAA7",
+                        "borderRadius": 4
+                    }
+                }
+            ]
+        },
+        {
+            "id": "horizontalDemo",
+            "type": "View",
+            "height": 120,
+            "scrollable": 2,
+            "style": {
+                "bgColor": "#FFFFFF",
+                "borderRadius": 8
+            },
+            "layout": {
+                "type": "horizontal",
+                "spacing": 10,
+                "padding": [15, 15, 15, 15]
+            },
+            "children": [
+                {
+                    "type": "Label",
+                    "width": 250,
+                    "height": 90,
+                    "text": "水平滚动演示 (scrollable: 2)",
+                    "style": {
+                        "color": "#212121",
+                        "fontSize": 18,
+                        "bgColor": "transparent"
+                    }
+                },
+                {
+                    "type": "View",
+                    "width": 180,
+                    "height": 90,
+                    "style": {
+                        "bgColor": "#FF6B6B",
+                        "borderRadius": 4
+                    }
+                },
+                {
+                    "type": "View",
+                    "width": 180,
+                    "height": 90,
+                    "style": {
+                        "bgColor": "#4ECDC4",
+                        "borderRadius": 4
+                    }
+                },
+                {
+                    "type": "View",
+                    "width": 180,
+                    "height": 90,
+                    "style": {
+                        "bgColor": "#45B7D1",
+                        "borderRadius": 4
+                    }
+                }
+            ]
+        },
+        {
+            "id": "bothDemo",
+            "type": "View",
+            "width": 400,
+            "height": 150,
+            "scrollable": 3,
+            "style": {
+                "bgColor": "#FFFFFF",
+                "borderRadius": 8
+            },
+            "children": [
+                {
+                    "type": "View",
+                    "width": 600,
+                    "height": 250,
+                    "children": [
+                        {
+                            "type": "Label",
+                            "x": 20,
+                            "y": 20,
+                            "width": 300,
+                            "height": 30,
+                            "text": "双向滚动演示 (scrollable: 3)",
+                            "style": {
+                                "color": "#212121",
+                                "fontSize": 18,
+                                "bgColor": "#FFE66D"
+                            }
+                        },
+                        {
+                            "type": "View",
+                            "x": 350,
+                            "y": 20,
+                            "width": 200,
+                            "height": 80,
+                            "style": {
+                                "bgColor": "#A8E6CF",
+                                "borderRadius": 4
+                            }
+                        },
+                        {
+                            "type": "View",
+                            "x": 20,
+                            "y": 120,
+                            "width": 250,
+                            "height": 80,
+                            "style": {
+                                "bgColor": "#FFD3B6",
+                                "borderRadius": 4
+                            }
+                        },
+                        {
+                            "type": "View",
+                            "x": 300,
+                            "y": 120,
+                            "width": 250,
+                            "height": 80,
+                            "style": {
+                                "bgColor": "#FFAAA5",
+                                "borderRadius": 4
+                            }
+                        },
+                        {
+                            "type": "Label",
+                            "x": 20,
+                            "y": 200,
+                            "width": 530,
+                            "height": 30,
+                            "text": "底部内容 - 需要双向滚动才能完全看到",
+                            "style": {
+                                "color": "#FFFFFF",
+                                "fontSize": 16,
+                                "bgColor": "#B4A7D6"
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "instructions",
+            "type": "Label",
+            "height": 60,
+            "text": "操作说明：\n• 鼠标滚轮 - 垂直滚动\n• Shift + 鼠标滚轮 - 水平滚动\n• 拖拽滚动条 - 直接滚动",
+            "style": {
+                "color": "#666666",
+                "fontSize": 14,
+                "bgColor": "transparent"
+            }
+        }
+    ]
+}
