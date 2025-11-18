@@ -44,6 +44,7 @@
             "position": [10, 10],
             "size": [300, 300],
             "itemHeight": 24,
+            "scrollable": 2,
             "indentWidth": 20,
             "style": {
                 "textColor": "#2C3E50",

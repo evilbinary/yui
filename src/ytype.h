@@ -22,7 +22,7 @@
 
 // 功能定义区域
 #define SDL2 1
-#define DEBUG_VIEW 1 
+// #define DEBUG_VIEW 1 
 #define YUI_ANIMATION 1
 #define YUI_INPUT_COMPONENT 1
 #define YUI_LABEL_COMPONENT 1

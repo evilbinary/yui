@@ -1,577 +1,650 @@
 {
   "id": "osDesktop",
   "type": "View",
-  "position": [0, 0],
-  "size": [800, 600],
-  "enterAnimation": "fadeInUp",
-  "enterDuration": 400,
+  "position": [
+    0,
+    0
+  ],
+  "size": [
+    800,
+    600
+  ],
   "style": {
-    "color": "$text",
-    "bgColor": "$background"
+    "color": "#ffffff",
+    "bgColor": "#1e3c72"
   },
   "children": [
-    // 顶部状态栏
+    // 顶部菜单栏
     {
-      "id": "statusBar",
+      "id": "menuBar",
       "type": "View",
-      "position": [0, 0],
-      "size": [800, 32],
+      "position": [
+        0,
+        0
+      ],
+      "size": [
+        800,
+        28
+      ],
       "style": {
-        "bgColor": "$surface",
-        "borderBottom": "1px solid $border",
-        "shadow": "0 2px 4px rgba(0,0,0,0.1)",
-        "backdropFilter": "blur(8px)"
+        "bgColor": "rgba(0, 0, 0, 0.3)",
+        "borderBottom": "1px solid rgba(255, 255, 255, 0.2)"
+      },
+      "layout": {
+        "type": "horizontal",
+        "spacing": 10,
+        "padding": [
+          4,
+          4,
+          4,
+          10
+        ]
       },
       "children": [
-        // 左侧系统信息
+        // 苹果菜单
         {
-          "id": "systemInfo",
+          "id": "appleMenu",
           "type": "Label",
-          "position": [12, 6],
-          "text": "YUI OS",
+          "text": "",
           "style": {
-            "color": "$text",
-            "fontSize": 14,
-            "fontWeight": "bold"
+            "color": "#ffffff",
+            "fontSize": 16,
+            "fontWeight": "500"
+          },
+          "events": {
+            "onClick": "@openAppleMenu"
           }
         },
-        // 中间时间显示
+        // 应用程序菜单
         {
-          "id": "timeDisplay",
+          "id": "appMenu",
           "type": "Label",
-          "position": [370, 6],
-          "text": "12:00",
+          "text": "应用程序",
           "style": {
-            "color": "$text",
-            "fontSize": 14
-          }
-        },
-        // 右侧状态图标
-        {
-          "id": "wifiIcon",
-          "type": "View",
-          "position": [740, 6],
-          "size": [20, 20],
-          "style": {
-            "bgColor": "$success",
-            "borderRadius": 4,
-            "shadow": "0 2px 4px rgba(0,0,0,0.2)"
+            "color": "#ffffff",
+            "fontSize": 13
+          },
+          "events": {
+            "onClick": "@openAppMenu"
           }
         },
         {
-          "id": "batteryIcon",
-          "type": "View",
-          "position": [765, 6],
-          "size": [20, 20],
+          "id": "fileMenu",
+          "type": "Label",
+          "text": "文件",
           "style": {
-            "bgColor": "$warning",
-            "borderRadius": 4,
-            "shadow": "0 2px 4px rgba(0,0,0,0.2)"
+            "color": "#ffffff",
+            "fontSize": 13
+          },
+          "events": {
+            "onClick": "@openFileMenu"
           }
-        }
-      ]
-    },
-    
-    // 中间应用图标区域
-    {
-      "id": "appGrid",
-  "type": "GridView",
-  "position": [0, 32],
-  "size": [800, 500],
-  "gridOptions": {
-    "columnCount": 4,
-    "rowCount": 3,
-    "itemSpacing": 40,
-    "lineSpacing": 60
-  },
-  "style": {
-    "bgColor": "rgba(var(--surface-rgb), 0.6)",
-    "backdropFilter": "blur(20px)",
-    "borderRadius": 24
-  },
-      "children": [
-        // 第一行应用图标
+        },
         {
-          "id": "app1",
-          "type": "View",
-          "size": [80, 100],
+          "id": "editMenu",
+          "type": "Label",
+          "text": "编辑",
           "style": {
-            "bgColor": "transparent"
+            "color": "#ffffff",
+            "fontSize": 13
+          },
+          "events": {
+            "onClick": "@openEditMenu"
+          }
+        },
+        {
+          "id": "viewMenu",
+          "type": "Label",
+          "text": "视图",
+          "style": {
+            "color": "#ffffff",
+            "fontSize": 13
+          },
+          "events": {
+            "onClick": "@openViewMenu"
+          }
+        },
+        {
+          "id": "windowMenu",
+          "type": "Label",
+          "text": "窗口",
+          "style": {
+            "color": "#ffffff",
+            "fontSize": 13
+          },
+          "events": {
+            "onClick": "@openWindowMenu"
+          }
+        },
+        {
+          "id": "helpMenu",
+          "type": "Label",
+          "text": "帮助",
+          "style": {
+            "color": "#ffffff",
+            "fontSize": 13
+          },
+          "events": {
+            "onClick": "@openHelpMenu"
+          }
+        },
+        // 桌面小部件
+        {
+          "id": "desktopWidget",
+          "type": "View",
+          "position": [
+            820,
+            60
+          ],
+          "size": [
+            360,
+            60
+          ],
+          "style": {
+            "bgColor": "rgba(255, 255, 255, 0.1)",
+            "borderRadius": 16,
+            "border": "1px solid rgba(255, 255, 255, 0.2)"
+          },
+          "layout": {
+            "type": "horizontal",
+            "spacing": 5
+            
           },
           "children": [
             {
-              "id": "app1Icon",
-              "type": "Image",
-              "position": [10, 10],
-              "size": [60, 60],
-              "source": "duck.png",
+              "id": "widgetTitle",
+              "type": "Label",
+              "text": "系统状态",
               "style": {
-                "bgColor": "$primary",
-                "borderRadius": 16,
-                "shadow": "0 6px 12px rgba(0,0,0,0.15)",
-                "border": "1px solid rgba(var(--border-rgb), 0.1)",
-                "overflow": "hidden",
-                "hoverBgColor": "$primary",
-                "hoverScale": 1.08,
-                "activeScale": 0.95,
-                "hoverShadow": "0 8px 16px rgba(0,0,0,0.3)",
-                "transition": "$iconTransition"
+                "color": "#ffffff",
+                "fontSize": 12,
+                "fontWeight": "600"
               }
             },
             {
-              "id": "app1Label",
+              "id": "widgetTime",
               "type": "Label",
-              "position": [0, 80],
-              "text": "浏览器",
+              "text": "12:00",
               "style": {
-                "color": "$text",
-                "fontSize": 13,
-                "width": 80,
-                "textAlign": "center",
-                "fontFamily": "system-ui",
-                "letterSpacing": 0.5,
-                "textShadow": "0 2px 4px rgba(0,0,0,0.15)",
-                "opacity": 0.9
+                "color": "#ffffff",
+                "fontSize": 24,
+                "fontWeight": "300"
+              }
+            },
+            {
+              "id": "widgetDate",
+              "type": "Label",
+              "text": "2023年10月15日",
+              "style": {
+                "color": "#ffffff",
+                "fontSize": 12
+              }
+            },
+            {
+              "id": "widgetWeather",
+              "type": "Label",
+              "text": "晴天 25°C",
+              "style": {
+                "color": "#ffffff",
+                "fontSize": 12
               }
             }
-          ],
-          "events": {
-            "onClick": "@openApp"
-          }
-        },
-        
+          ]
+        }
+      ]
+    },
+    // 桌面快捷方式
+    {
+      "id": "desktopShortcuts",
+      "type": "View",
+      "position": [
+        20,
+        40
+      ],
+      "size": [
+        800,
+        500
+      ],
+      "style": {
+      },
+      "children": [
         {
-          "id": "app2",
+          "id": "shortcut1",
           "type": "View",
-          "position": [150, 50],
-          "size": [80, 100],
+          "position": [
+            0,
+            0
+          ],
+          "size": [
+            80,
+            100
+          ],
           "style": {
-            "bgColor": "transparent"
+            "bgColor": "transparent",
+            "borderRadius": 8
           },
           "children": [
             {
-              "id": "app2Icon",
+              "id": "shortcut1Icon",
               "type": "Image",
-              "position": [10, 10],
-              "size": [60, 60],
+              "position": [
+                10,
+                10
+              ],
+              "size": [
+                60,
+                60
+              ],
               "source": "folder.svg",
               "style": {
-                "bgColor": "$accent",
-                "borderRadius": 12,
-                "shadow": "0 4px 8px rgba(0,0,0,0.2)",
-                "hoverBgColor": "$accent",
-                "hoverScale": 1.05,
-                "transition": "all 0.3s ease"
+                "bgColor": "rgba(255, 255, 255, 0.9)",
+                "borderRadius": 12
               }
             },
             {
-              "id": "app2Label",
+              "id": "shortcut1Label",
               "type": "Label",
-              "position": [0, 80],
-              "text": "文件管理器",
+              "position": [
+                0,
+                75
+              ],
+              "text": "此电脑",
               "style": {
-                "color": "$text",
-                "fontSize": 13,
+                "color": "#ffffff",
+                "fontSize": 12,
                 "width": 80,
-                "textAlign": "center",
-                "textShadow": "0 1px 2px rgba(0,0,0,0.3)"
+                "textAlign": "center"
               }
             }
           ],
           "events": {
-            "onClick": "@openApp"
+            "onClick": "@openShortcut",
+            "onDoubleClick": "@openShortcut"
           }
         },
-        
         {
-          "id": "app3",
+          "id": "shortcut2",
           "type": "View",
-          "position": [250, 50],
-          "size": [80, 100],
+          "position": [
+            0,
+            110
+          ],
+          "size": [
+            80,
+            100
+          ],
           "style": {
-            "bgColor": "transparent"
+            "bgColor": "transparent",
+            "borderRadius": 8
           },
           "children": [
             {
-              "id": "app3Icon",
+              "id": "shortcut2Icon",
               "type": "Image",
-              "position": [10, 10],
-              "size": [60, 60],
-              "source": "code.svg",
+              "position": [
+                10,
+                10
+              ],
+              "size": [
+                60,
+                60
+              ],
+              "source": "folder.svg",
               "style": {
-                "bgColor": "$secondary",
-                "borderRadius": 12,
-                "shadow": "0 4px 8px rgba(0,0,0,0.2)",
-                "hoverBgColor": "$secondary",
-                "hoverScale": 1.05,
-                "transition": "all 0.3s ease"
+                "bgColor": "rgba(255, 255, 255, 0.9)",
+                "borderRadius": 12
               }
             },
             {
-              "id": "app3Label",
+              "id": "shortcut2Label",
               "type": "Label",
-              "position": [0, 80],
-              "text": "编辑器",
+              "position": [
+                0,
+                75
+              ],
+              "text": "文档",
               "style": {
-                "color": "$text",
-                "fontSize": 13,
+                "color": "#ffffff",
+                "fontSize": 12,
                 "width": 80,
-                "textAlign": "center",
-                "textShadow": "0 1px 2px rgba(0,0,0,0.3)"
+                "textAlign": "center"
               }
             }
           ],
           "events": {
-            "onClick": "@openApp"
+            "onClick": "@openShortcut",
+            "onDoubleClick": "@openShortcut"
           }
         },
-        
         {
-          "id": "app4",
+          "id": "shortcut3",
           "type": "View",
-          "position": [350, 50],
-          "size": [80, 100],
+          "position": [
+            0,
+            220
+          ],
+          "size": [
+            80,
+            100
+          ],
           "style": {
-            "bgColor": "transparent"
+            "bgColor": "transparent",
+            "borderRadius": 8
           },
           "children": [
             {
-              "id": "app4Icon",
+              "id": "shortcut3Icon",
               "type": "Image",
-              "position": [10, 10],
-              "size": [60, 60],
-              "source": "terminal.svg",
+              "position": [
+                10,
+                10
+              ],
+              "size": [
+                60,
+                60
+              ],
+              "source": "trash.svg",
               "style": {
-                "bgColor": "$surfaceLight",
-                "borderRadius": 12,
-                "shadow": "0 4px 8px rgba(0,0,0,0.2)",
-                "hoverBgColor": "$surfaceLight",
-                "hoverScale": 1.05,
-                "transition": "all 0.3s ease"
+                "bgColor": "rgba(255, 255, 255, 0.9)",
+                "borderRadius": 12
               }
             },
             {
-              "id": "app4Label",
+              "id": "shortcut3Label",
               "type": "Label",
-              "position": [0, 80],
-              "text": "终端",
+              "position": [
+                0,
+                75
+              ],
+              "text": "回收站",
               "style": {
-                "color": "$text",
-                "fontSize": 13,
+                "color": "#ffffff",
+                "fontSize": 12,
                 "width": 80,
-                "textAlign": "center",
-                "textShadow": "0 1px 2px rgba(0,0,0,0.3)"
+                "textAlign": "center"
               }
             }
           ],
           "events": {
-            "onClick": "@openApp"
-          }
-        },
-        
-        // 第二行应用图标
-        {
-          "id": "app5",
-          "type": "View",
-          "position": [50, 180],
-          "size": [80, 100],
-          "style": {
-            "bgColor": "transparent"
-          },
-          "children": [
-            {
-              "id": "app5Icon",
-              "type": "Image",
-              "position": [10, 10],
-              "size": [60, 60],
-              "source": "music.svg",
-              "style": {
-                "bgColor": "$warning",
-                "borderRadius": 12,
-                "shadow": "0 4px 8px rgba(0,0,0,0.2)",
-                "hoverBgColor": "$warning",
-                "hoverScale": 1.05,
-                "transition": "all 0.3s ease"
-              }
-            },
-            {
-              "id": "app5Label",
-              "type": "Label",
-              "position": [0, 80],
-              "text": "音乐播放器",
-              "style": {
-                "color": "$text",
-                "fontSize": 13,
-                "width": 80,
-                "textAlign": "center",
-                "textShadow": "0 1px 2px rgba(0,0,0,0.3)"
-              }
-            }
-          ],
-          "events": {
-            "onClick": "@openApp"
-          }
-        },
-        
-        {
-          "id": "app6",
-          "type": "View",
-          "position": [150, 180],
-          "size": [80, 100],
-          "style": {
-            "bgColor": "transparent"
-          },
-          "children": [
-            {
-              "id": "app6Icon",
-              "type": "Image",
-              "position": [10, 10],
-              "size": [60, 60],
-              "source": "image.svg",
-              "style": {
-                "bgColor": "$primary",
-                "borderRadius": 12,
-                "shadow": "0 4px 8px rgba(0,0,0,0.2)",
-                "hoverBgColor": "$primary",
-                "hoverScale": 1.05,
-                "transition": "all 0.3s ease"
-              }
-            },
-            {
-              "id": "app6Label",
-              "type": "Label",
-              "position": [0, 80],
-              "text": "图片查看器",
-              "style": {
-                "color": "$text",
-                "fontSize": 13,
-                "width": 80,
-                "textAlign": "center",
-                "textShadow": "0 1px 2px rgba(0,0,0,0.3)"
-              }
-            }
-          ],
-          "events": {
-            "onClick": "@openApp"
-          }
-        },
-        
-        {
-          "id": "app7",
-          "type": "View",
-          "position": [250, 180],
-          "size": [80, 100],
-          "style": {
-            "bgColor": "transparent"
-          },
-          "children": [
-            {
-              "id": "app7Icon",
-              "type": "Image",
-              "position": [10, 10],
-              "size": [60, 60],
-              "source": "settings.svg",
-              "style": {
-                "bgColor": "$surfaceLight",
-                "borderRadius": 12,
-                "shadow": "0 4px 8px rgba(0,0,0,0.2)",
-                "hoverBgColor": "$surfaceLight",
-                "hoverScale": 1.05,
-                "transition": "all 0.3s ease"
-              }
-            },
-            {
-              "id": "app7Label",
-              "type": "Label",
-              "position": [0, 80],
-              "text": "设置",
-              "style": {
-                "color": "$text",
-                "fontSize": 13,
-                "width": 80,
-                "textAlign": "center",
-                "textShadow": "0 1px 2px rgba(0,0,0,0.3)"
-              }
-            }
-          ],
-          "events": {
-            "onClick": "@openApp"
-          }
-        },
-        
-        {
-          "id": "app8",
-          "type": "View",
-          "position": [350, 180],
-          "size": [80, 100],
-          "style": {
-            "bgColor": "transparent"
-          },
-          "children": [
-            {
-              "id": "app8Icon",
-              "type": "Image",
-              "position": [10, 10],
-              "size": [60, 60],
-              "source": "calc.svg",
-              "style": {
-                "bgColor": "$secondary",
-                "borderRadius": 12,
-                "shadow": "0 4px 8px rgba(0,0,0,0.2)",
-                "hoverBgColor": "$secondary",
-                "hoverScale": 1.05,
-                "transition": "all 0.3s ease"
-              }
-            },
-            {
-              "id": "app8Label",
-              "type": "Label",
-              "position": [0, 80],
-              "text": "计算器",
-              "style": {
-                "color": "$text",
-                "fontSize": 13,
-                "width": 80,
-                "textAlign": "center",
-                "textShadow": "0 1px 2px rgba(0,0,0,0.3)"
-              }
-            }
-          ],
-          "events": {
-            "onClick": "@openApp"
+            "onClick": "@openShortcut",
+            "onDoubleClick": "@openShortcut"
           }
         }
       ]
     },
-    
-    // 底部Docker栏
+    // 底部Dock栏
     {
-      "id": "docker",
-      "type": "HStack",
-      "position": [0, 532],
-      "size": [800, 68],
-      "spacing": 20,
-      "padding": [20, 0],
+      "id": "dock",
+      "type": "View",
+      "position": [
+        0,
+        640
+      ],
+      "size": [
+        800,
+        60
+      ],
       "style": {
-        "bgColor": "rgba(var(--surface-rgb), 0.7)",
-        "backdropFilter": "blur(20px) saturate(180%)",
-        "borderTop": "1px solid #e0e0e0",
-        "shadow": "0 -4px 12px rgba(0,0,0,0.08)"
+        "bgColor": "rgba(255, 255, 255, 0.1)",
+        "borderTop": "1px solid rgba(255, 255, 255, 0.2)"
+      },
+      "layout": {
+        "type": "horizontal",
+        "spacing": 20,
+        "padding": [3, 3, 3, 3]
       },
       "children": [
-        // 动态分隔线
+        // Dock应用图标
         {
-          "id": "dockerSeparator",
+          "id": "dockApp1",
           "type": "View",
-          "size": [1, 40],
+          "position": [
+            20,
+            5
+          ],
+          "size": [
+            50,
+            50
+          ],
           "style": {
-            "bgColor": "rgba(var(--border-rgb), 0.2)",
-            "marginLeft": 15
-          }
-        },
-        {
-          "id": "dockerApp1",
-          "type": "Image",
-          "position": [20, 9],
-          "size": [50, 50],
-          "source": "duck.png",
-          "style": {
-            "bgColor": "$primary",
-            "borderRadius": 10,
-            "shadow": "0 2px 4px rgba(0,0,0,0.2)",
-            "hoverBgColor": "$primary",
-            "hoverScale": 1.08,
-            "activeScale": 0.95,
-            "transition": "transform 0.25s cubic-bezier(0.18, 0.89, 0.32, 1.28), box-shadow 0.2s ease"
+            "bgColor": "rgba(255, 255, 255, 0.9)",
+            "borderRadius": 12
           },
+          "children": [
+            {
+              "id": "dockApp1Icon",
+              "type": "Image",
+              "position": [
+                0,
+                0
+              ],
+              "size": [
+                50,
+                50
+              ],
+              "source": "duck.png",
+              "style": {
+                "bgColor": "transparent",
+                "borderRadius": 12
+              }
+            }
+          ],
           "events": {
-            "onClick": "@openDockerApp"
+            "onClick": "@openDockApp",
+            "onRightClick": "@showDockContextMenu"
           }
         },
-        
         {
-          "id": "dockerApp2",
-          "type": "Image",
-          "position": [80, 9],
-          "size": [50, 50],
-          "source": "folder.svg",
-          "style": {
-            "bgColor": "$accent",
-            "borderRadius": 10,
-            "shadow": "0 2px 4px rgba(0,0,0,0.2)",
-            "hoverBgColor": "$accent",
-            "hoverScale": 1.1,
-            "transition": "all 0.3s ease"
-          },
-          "events": {
-            "onClick": "@openDockerApp"
-          }
-        },
-        
-        {
-          "id": "dockerApp3",
-          "type": "Image",
-          "position": [140, 9],
-          "size": [50, 50],
-          "source": "code.svg",
-          "style": {
-            "bgColor": "$secondary",
-            "borderRadius": 10,
-            "shadow": "0 2px 4px rgba(0,0,0,0.2)",
-            "hoverBgColor": "$secondary",
-            "hoverScale": 1.1,
-            "transition": "all 0.3s ease"
-          },
-          "events": {
-            "onClick": "@openDockerApp"
-          }
-        },
-        
-        {
-          "id": "dockerApp4",
-          "type": "Image",
-          "position": [200, 9],
-          "size": [50, 50],
-          "source": "terminal.svg",
-          "style": {
-            "bgColor": "$surfaceLight",
-            "borderRadius": 10,
-            "shadow": "0 2px 4px rgba(0,0,0,0.2)",
-            "hoverBgColor": "$surfaceLight",
-            "hoverScale": 1.1,
-            "transition": "all 0.3s ease"
-          },
-          "events": {
-            "onClick": "@openDockerApp"
-          }
-        },
-        
-        // 中间分隔线
-        {
-          "id": "dockerSeparator",
+          "id": "dockApp2",
           "type": "View",
-          "position": [380, 15],
-          "size": [2, 38],
+          "position": [
+            80,
+            5
+          ],
+          "size": [
+            50,
+            50
+          ],
           "style": {
-            "bgColor": "$border",
-            "borderRadius": 1
+            "bgColor": "rgba(255, 255, 255, 0.9)",
+            "borderRadius": 12
+          },
+          "children": [
+            {
+              "id": "dockApp2Icon",
+              "type": "Image",
+              "position": [
+                0,
+                0
+              ],
+              "size": [
+                50,
+                50
+              ],
+              "source": "folder.svg",
+              "style": {
+                "bgColor": "transparent",
+                "borderRadius": 12
+              }
+            }
+          ],
+          "events": {
+            "onClick": "@openDockApp",
+            "onRightClick": "@showDockContextMenu"
           }
         },
-        
-        // 右侧系统图标
         {
-          "id": "trashIcon",
-          "type": "Image",
-          "position": [730, 9],
-          "size": [50, 50],
-          "source": "trash.svg",
+          "id": "dockApp3",
+          "type": "View",
+          "position": [
+            140,
+            5
+          ],
+          "size": [
+            50,
+            50
+          ],
           "style": {
-            "bgColor": "$surfaceLight",
-            "borderRadius": 10,
-            "shadow": "0 2px 4px rgba(0,0,0,0.2)",
-            "hoverBgColor": "$surfaceLight",
-            "hoverScale": 1.1,
-            "transition": "all 0.3s ease"
+            "bgColor": "rgba(255, 255, 255, 0.9)",
+            "borderRadius": 12
+          },
+          "children": [
+            {
+              "id": "dockApp3Icon",
+              "type": "Image",
+              "position": [
+                0,
+                0
+              ],
+              "size": [
+                50,
+                50
+              ],
+              "source": "code.svg",
+              "style": {
+                "bgColor": "transparent",
+                "borderRadius": 12
+              }
+            }
+          ],
+          "events": {
+            "onClick": "@openDockApp",
+            "onRightClick": "@showDockContextMenu"
+          }
+        },
+        {
+          "id": "dockApp4",
+          "type": "View",
+          "position": [
+            200,
+            5
+          ],
+          "size": [
+            50,
+            50
+          ],
+          "style": {
+            "bgColor": "rgba(255, 255, 255, 0.9)",
+            "borderRadius": 12
+          },
+          "children": [
+            {
+              "id": "dockApp4Icon",
+              "type": "Image",
+              "position": [
+                0,
+                0
+              ],
+              "size": [
+                50,
+                50
+              ],
+              "source": "terminal.svg",
+              "style": {
+                "bgColor": "transparent",
+                "borderRadius": 12
+              }
+            }
+          ],
+          "events": {
+            "onClick": "@openDockApp",
+            "onRightClick": "@showDockContextMenu"
+          }
+        },
+        // 分隔线
+        {
+          "id": "dockSeparator",
+          "type": "View",
+          "position": [
+            270,
+            15
+          ],
+          "size": [
+            1,
+            30
+          ],
+          "style": {
+            "bgColor": "rgba(255, 255, 255, 0.3)"
+          }
+        },
+        // 最小化的窗口
+        {
+          "id": "minimizedWindow1",
+          "type": "View",
+          "position": [
+            290,
+            5
+          ],
+          "size": [
+            50,
+            50
+          ],
+          "style": {
+            "bgColor": "rgba(255, 255, 255, 0.6)",
+            "borderRadius": 12
+          },
+          "children": [
+            {
+              "id": "minimizedWindow1Icon",
+              "type": "Image",
+              "position": [
+                0,
+                0
+              ],
+              "size": [
+                50,
+                50
+              ],
+              "source": "music.svg",
+              "style": {
+                "bgColor": "transparent",
+                "borderRadius": 12
+              }
+            }
+          ],
+          "events": {
+            "onClick": "@restoreWindow",
+            "onRightClick": "@showWindowContextMenu"
+          }
+        },
+        // 回收站
+        {
+          "id": "dockTrash",
+          "type": "View",
+          "position": [
+            730,
+            5
+          ],
+          "size": [
+            50,
+            50
+          ],
+          "style": {
+            "bgColor": "rgba(255, 255, 255, 0.9)",
+            "borderRadius": 12
+          },
+          "children": [
+            {
+              "id": "dockTrashIcon",
+              "type": "Image",
+              "position": [
+                0,
+                0
+              ],
+              "size": [
+                50,
+                50
+              ],
+              "source": "trash.svg",
+              "style": {
+                "bgColor": "transparent",
+                "borderRadius": 12
+              }
+            }
+          ],
+          "events": {
+            "onClick": "@openTrash",
+            "onRightClick": "@showTrashContextMenu"
           }
         }
       ]
