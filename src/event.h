@@ -12,7 +12,11 @@ int register_event_handler(const char* name, EventHandler handler);
 
 EventHandler find_event_by_name(const char* name);
 
+// 处理垂直滚动事件
 void handle_scroll_event(Layer* layer, int scroll_delta);
+
+// 处理水平滚动事件
+void handle_horizontal_scroll_event(Layer* layer, int scroll_delta);
 
 // Fix: Make sure KeyEvent is properly declared
 void handle_key_event(Layer* layer, struct KeyEvent* event);

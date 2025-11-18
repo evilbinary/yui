@@ -56,18 +56,22 @@ EventHandler find_event_by_name(const char* name) {
 
 
 // ====================== 事件处理器 ======================
+// 处理垂直滚动事件
 void handle_scroll_event(Layer* layer, int scroll_delta) {
-    if (layer->scrollable) {
+    if (layer->scrollable && layer->scrollbar_v) {
         layer->scroll_offset += scroll_delta * 20; // 每次滚动20像素
         
         // 限制滚动范围
         int content_height = 0;
         for (int i = 0; i < layer->child_count; i++) {
             content_height += layer->children[i]->rect.h;
-            if (i > 0) content_height += layer->layout_manager->spacing;
+            if (i > 0 && layer->layout_manager) content_height += layer->layout_manager->spacing;
         }
         
-        int visible_height = layer->rect.h - layer->layout_manager->padding[0] - layer->layout_manager->padding[2];
+        int visible_height = layer->rect.h;
+        if (layer->layout_manager) {
+            visible_height -= layer->layout_manager->padding[0] + layer->layout_manager->padding[2];
+        }
         
         // 不允许向上滚动超过顶部
         if (layer->scroll_offset < 0) {
@@ -80,6 +84,45 @@ void handle_scroll_event(Layer* layer, int scroll_delta) {
         // 如果内容高度小于可见高度，则不能滚动
         else if (content_height <= visible_height) {
             layer->scroll_offset = 0;
+        }
+        
+        // 触发滚动事件回调
+        if (layer->event && layer->event->scroll) {
+            layer->event->scroll(layer);
+        }
+        // 重新布局子元素
+        layout_layer(layer);
+    }
+}
+
+// 处理水平滚动事件
+void handle_horizontal_scroll_event(Layer* layer, int scroll_delta) {
+    if (layer->scrollable && layer->scrollbar_h) {
+        layer->scroll_offset_x += scroll_delta * 20; // 每次滚动20像素
+        
+        // 限制滚动范围
+        int content_width = 0;
+        for (int i = 0; i < layer->child_count; i++) {
+            content_width += layer->children[i]->rect.w;
+            if (i > 0 && layer->layout_manager) content_width += layer->layout_manager->spacing;
+        }
+        
+        int visible_width = layer->rect.w;
+        if (layer->layout_manager) {
+            visible_width -= layer->layout_manager->padding[1] + layer->layout_manager->padding[3];
+        }
+        
+        // 不允许向左滚动超过左侧
+        if (layer->scroll_offset_x < 0) {
+            layer->scroll_offset_x = 0;
+        }
+        // 不允许向右滚动超过右侧
+        else if (content_width > visible_width && layer->scroll_offset_x > content_width - visible_width) {
+            layer->scroll_offset_x = content_width - visible_width;
+        }
+        // 如果内容宽度小于可见宽度，则不能滚动
+        else if (content_width <= visible_width) {
+            layer->scroll_offset_x = 0;
         }
         
         // 触发滚动事件回调
@@ -176,64 +219,176 @@ void handle_mouse_event(Layer* layer, MouseEvent* event) {
 // 处理滚动条拖动事件
 // 辅助函数：处理单个图层的滚动条事件
 static void process_layer_scrollbar(Layer* layer, int mouse_x, int mouse_y, SDL_EventType event_type) {
-    if (!layer || !layer->scrollable || !layer->scrollbar || !layer->scrollbar->visible) {
-        return;
-    }
-    
-    // 计算内容高度和可见高度
-    int content_height = 0;
-    for (int j = 0; j < layer->child_count; j++) {
-        content_height += layer->children[j]->rect.h;
-        if (j > 0 && layer->layout_manager) {
-            content_height += layer->layout_manager->spacing;
-        }
-    }
-    
-    int visible_height = layer->rect.h;
-    if (layer->layout_manager) {
-        visible_height -= layer->layout_manager->padding[0] + layer->layout_manager->padding[2];
-    }
-    
-    if (content_height <= visible_height) {
-        return; // 内容不足时不需要滚动条
-    }
-    
-    // 计算滚动条位置和大小
-    int scrollbar_width = layer->scrollbar->thickness > 0 ? layer->scrollbar->thickness : 8;
-    int scrollbar_height = (int)((float)visible_height / content_height * visible_height);
-    if (scrollbar_height < 20) {
-        scrollbar_height = 20;
-    }
-    int scrollbar_x = layer->rect.x + layer->rect.w - scrollbar_width;
-    int scrollbar_y = layer->rect.y + (int)((float)layer->scroll_offset / (content_height - visible_height) * (visible_height - scrollbar_height));
-    
-    // 处理鼠标按下事件
-    if (event_type == SDL_MOUSEBUTTONDOWN) {
-        // 检查鼠标是否在滚动条上
-        if (mouse_x >= scrollbar_x && mouse_x <= scrollbar_x + scrollbar_width && 
-            mouse_y >= scrollbar_y && mouse_y <= scrollbar_y + scrollbar_height) {
-            layer->scrollbar->is_dragging = 1;
-            layer->scrollbar->drag_offset = mouse_y - scrollbar_y;
-        }
-    }
-    // 处理鼠标移动事件
-    else if (event_type == SDL_MOUSEMOTION && layer->scrollbar->is_dragging) {
-        // 计算新的滚动条位置
-        int new_scrollbar_y = mouse_y - layer->scrollbar->drag_offset;
-        // 限制滚动条位置在可见区域内
-        if (new_scrollbar_y < layer->rect.y) {
-            new_scrollbar_y = layer->rect.y;
-        }
-        if (new_scrollbar_y > layer->rect.y + visible_height - scrollbar_height) {
-            new_scrollbar_y = layer->rect.y + visible_height - scrollbar_height;
+    // 处理垂直滚动条
+    if (layer && layer->scrollable && layer->scrollbar_v && layer->scrollbar_v->visible) {
+        // 计算内容高度和可见高度
+        int content_height = 0;
+        for (int j = 0; j < layer->child_count; j++) {
+            content_height += layer->children[j]->rect.h;
+            if (j > 0 && layer->layout_manager) {
+                content_height += layer->layout_manager->spacing;
+            }
         }
         
-        // 根据滚动条位置计算新的滚动偏移
-        float scroll_ratio = (float)(new_scrollbar_y - layer->rect.y) / (visible_height - scrollbar_height);
-        layer->scroll_offset = (int)(scroll_ratio * (content_height - visible_height));
+        int visible_height = layer->rect.h;
+        if (layer->layout_manager) {
+            visible_height -= layer->layout_manager->padding[0] + layer->layout_manager->padding[2];
+        }
         
-        // 重新布局子元素
-        layout_layer(layer);
+        if (content_height > visible_height) {
+            // 计算滚动条位置和大小
+            int scrollbar_width = layer->scrollbar_v->thickness > 0 ? layer->scrollbar_v->thickness : 8;
+            int scrollbar_height = (int)((float)visible_height / content_height * visible_height);
+            if (scrollbar_height < 20) {
+                scrollbar_height = 20;
+            }
+            int scrollbar_x = layer->rect.x + layer->rect.w - scrollbar_width;
+            int scrollbar_y = layer->rect.y + (int)((float)layer->scroll_offset / (content_height - visible_height) * (visible_height - scrollbar_height));
+            
+            // 处理鼠标按下事件
+            if (event_type == SDL_MOUSEBUTTONDOWN) {
+                // 检查鼠标是否在滚动条上
+                if (mouse_x >= scrollbar_x && mouse_x <= scrollbar_x + scrollbar_width && 
+                    mouse_y >= scrollbar_y && mouse_y <= scrollbar_y + scrollbar_height) {
+                    layer->scrollbar_v->is_dragging = 1;
+                    layer->scrollbar_v->drag_offset = mouse_y - scrollbar_y;
+                }
+            }
+            // 处理鼠标移动事件
+            else if (event_type == SDL_MOUSEMOTION && layer->scrollbar_v->is_dragging) {
+                // 计算新的滚动条位置
+                int new_scrollbar_y = mouse_y - layer->scrollbar_v->drag_offset;
+                // 限制滚动条位置在可见区域内
+                if (new_scrollbar_y < layer->rect.y) {
+                    new_scrollbar_y = layer->rect.y;
+                }
+                if (new_scrollbar_y > layer->rect.y + visible_height - scrollbar_height) {
+                    new_scrollbar_y = layer->rect.y + visible_height - scrollbar_height;
+                }
+                
+                // 根据滚动条位置计算新的滚动偏移
+                float scroll_ratio = (float)(new_scrollbar_y - layer->rect.y) / (visible_height - scrollbar_height);
+                layer->scroll_offset = (int)(scroll_ratio * (content_height - visible_height));
+                
+                // 重新布局子元素
+                layout_layer(layer);
+            }
+        }
+    }
+    
+    // 处理水平滚动条
+    if (layer && layer->scrollable && layer->scrollbar_h && layer->scrollbar_h->visible) {
+        // 计算内容宽度和可见宽度
+        int content_width = 0;
+        for (int j = 0; j < layer->child_count; j++) {
+            content_width += layer->children[j]->rect.w;
+            if (j > 0 && layer->layout_manager) {
+                content_width += layer->layout_manager->spacing;
+            }
+        }
+        
+        int visible_width = layer->rect.w;
+        if (layer->layout_manager) {
+            visible_width -= layer->layout_manager->padding[1] + layer->layout_manager->padding[3];
+        }
+        
+        if (content_width > visible_width) {
+            // 计算滚动条位置和大小
+            int scrollbar_height = layer->scrollbar_h->thickness > 0 ? layer->scrollbar_h->thickness : 8;
+            int scrollbar_width = (int)((float)visible_width / content_width * visible_width);
+            if (scrollbar_width < 20) {
+                scrollbar_width = 20;
+            }
+            int scrollbar_x = layer->rect.x + (int)((float)layer->scroll_offset_x / (content_width - visible_width) * (visible_width - scrollbar_width));
+            int scrollbar_y = layer->rect.y + layer->rect.h - scrollbar_height;
+            
+            // 处理鼠标按下事件
+            if (event_type == SDL_MOUSEBUTTONDOWN) {
+                // 检查鼠标是否在滚动条上
+                if (mouse_x >= scrollbar_x && mouse_x <= scrollbar_x + scrollbar_width && 
+                    mouse_y >= scrollbar_y && mouse_y <= scrollbar_y + scrollbar_height) {
+                    layer->scrollbar_h->is_dragging = 1;
+                    layer->scrollbar_h->drag_offset = mouse_x - scrollbar_x;
+                }
+            }
+            // 处理鼠标移动事件
+            else if (event_type == SDL_MOUSEMOTION && layer->scrollbar_h->is_dragging) {
+                // 计算新的滚动条位置
+                int new_scrollbar_x = mouse_x - layer->scrollbar_h->drag_offset;
+                // 限制滚动条位置在可见区域内
+                if (new_scrollbar_x < layer->rect.x) {
+                    new_scrollbar_x = layer->rect.x;
+                }
+                if (new_scrollbar_x > layer->rect.x + visible_width - scrollbar_width) {
+                    new_scrollbar_x = layer->rect.x + visible_width - scrollbar_width;
+                }
+                
+                // 根据滚动条位置计算新的滚动偏移
+                float scroll_ratio = (float)(new_scrollbar_x - layer->rect.x) / (visible_width - scrollbar_width);
+                layer->scroll_offset_x = (int)(scroll_ratio * (content_width - visible_width));
+                
+                // 重新布局子元素
+                layout_layer(layer);
+            }
+        }
+    }
+    
+    // 兼容性处理：旧的scrollbar字段
+    if (layer && layer->scrollable && layer->scrollbar && layer->scrollbar->visible) {
+        // 旧的滚动条处理逻辑保持不变，以确保向后兼容
+        // 计算内容高度和可见高度
+        int content_height = 0;
+        for (int j = 0; j < layer->child_count; j++) {
+            content_height += layer->children[j]->rect.h;
+            if (j > 0 && layer->layout_manager) {
+                content_height += layer->layout_manager->spacing;
+            }
+        }
+        
+        int visible_height = layer->rect.h;
+        if (layer->layout_manager) {
+            visible_height -= layer->layout_manager->padding[0] + layer->layout_manager->padding[2];
+        }
+        
+        if (content_height > visible_height) {
+            // 计算滚动条位置和大小
+            int scrollbar_width = layer->scrollbar->thickness > 0 ? layer->scrollbar->thickness : 8;
+            int scrollbar_height = (int)((float)visible_height / content_height * visible_height);
+            if (scrollbar_height < 20) {
+                scrollbar_height = 20;
+            }
+            int scrollbar_x = layer->rect.x + layer->rect.w - scrollbar_width;
+            int scrollbar_y = layer->rect.y + (int)((float)layer->scroll_offset / (content_height - visible_height) * (visible_height - scrollbar_height));
+            
+            // 处理鼠标按下事件
+            if (event_type == SDL_MOUSEBUTTONDOWN) {
+                // 检查鼠标是否在滚动条上
+                if (mouse_x >= scrollbar_x && mouse_x <= scrollbar_x + scrollbar_width && 
+                    mouse_y >= scrollbar_y && mouse_y <= scrollbar_y + scrollbar_height) {
+                    layer->scrollbar->is_dragging = 1;
+                    layer->scrollbar->drag_offset = mouse_y - scrollbar_y;
+                }
+            }
+            // 处理鼠标移动事件
+            else if (event_type == SDL_MOUSEMOTION && layer->scrollbar->is_dragging) {
+                // 计算新的滚动条位置
+                int new_scrollbar_y = mouse_y - layer->scrollbar->drag_offset;
+                // 限制滚动条位置在可见区域内
+                if (new_scrollbar_y < layer->rect.y) {
+                    new_scrollbar_y = layer->rect.y;
+                }
+                if (new_scrollbar_y > layer->rect.y + visible_height - scrollbar_height) {
+                    new_scrollbar_y = layer->rect.y + visible_height - scrollbar_height;
+                }
+                
+                // 根据滚动条位置计算新的滚动偏移
+                float scroll_ratio = (float)(new_scrollbar_y - layer->rect.y) / (visible_height - scrollbar_height);
+                layer->scroll_offset = (int)(scroll_ratio * (content_height - visible_height));
+                
+                // 重新布局子元素
+                layout_layer(layer);
+            }
+        }
     }
 }
 
@@ -243,7 +398,17 @@ static void reset_scrollbar_dragging_state(Layer* layer) {
         return;
     }
     
-    // 重置当前图层的滚动条拖动状态
+    // 重置当前图层的垂直滚动条拖动状态
+    if (layer->scrollbar_v) {
+        layer->scrollbar_v->is_dragging = 0;
+    }
+    
+    // 重置当前图层的水平滚动条拖动状态
+    if (layer->scrollbar_h) {
+        layer->scrollbar_h->is_dragging = 0;
+    }
+    
+    // 重置当前图层的旧滚动条拖动状态（向后兼容）
     if (layer->scrollbar) {
         layer->scrollbar->is_dragging = 0;
     }

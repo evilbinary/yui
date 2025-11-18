@@ -2,7 +2,7 @@
 #include "animate.h"
 
 // 更新图层类型名称数组，添加GRID、Text、Tab、Slider和Listbox
-char *layer_type_name[]={"View","Button","Input","Label","Image","List","Grid","Progress","Checkbox","Radiobox","Text","Treeview","Tab","Slider","Listbox"};
+char *layer_type_name[]={"View","Button","Input","Label","Image","List","Grid","Progress","Checkbox","Radiobox","Text","Treeview","Tab","Slider","Listbox","Scrollbar"};
 
 Layer* focused_layer=NULL;
 
@@ -145,6 +145,8 @@ Layer* parse_layer(cJSON* json_obj,Layer* parent) {
     layer->state = LAYER_STATE_NORMAL;  // 默认处于正常状态
     layer->focusable = 0;  // 默认不可获得焦点
     
+    // 用于标记是否已经自定义处理了子图层（如SCROLLBAR类型）
+    int has_custom_children = 0;
     
     // 解析基础属性
     if(cJSON_HasObjectItem(json_obj, "id")){
@@ -779,13 +781,33 @@ Layer* parse_layer(cJSON* json_obj,Layer* parent) {
         }
     } else if(layer->type==TREEVIEW){
         layer->component = treeview_component_create_from_json(layer, json_obj);
+    } else if(layer->type==SCROLLBAR){
+        // 不再创建滑块子图层
+        layer->child_count = 0;
+        layer->children = NULL;
+        
+        // 创建滚动条组件
+        ScrollbarComponent* scrollbar = NULL;
+        if (parent != NULL) {
+            scrollbar = scrollbar_component_create_from_json(layer, parent, json_obj);
+        } else {
+            printf("Warning: SCROLLBAR layer %s has no parent layer\n", layer->id);
+            scrollbar = scrollbar_component_create_from_json(layer, layer, json_obj);
+        }
+        if (scrollbar) {
+            layer->component = scrollbar;
+        }
+        
+        // 对于SCROLLBAR类型，不应该覆盖子图层数组，所以跳过后续的子图层解析
+        has_custom_children = 1;
     }
-    
-    // 递归解析子图层
+
+
+    // 递归解析子图层（如果不是SCROLLBAR类型）
     cJSON* children = cJSON_GetObjectItem(json_obj, "children");
-    if (children) {
+    if (children && !has_custom_children) {
         layer->child_count = cJSON_GetArraySize(children);
-        layer->children = malloc(layer->child_count * sizeof(Layer*));
+        layer->children = realloc(layer->children, layer->child_count * sizeof(Layer*));
         
         for (int i = 0; i < layer->child_count; i++) {
             layer->children[i] = parse_layer(cJSON_GetArrayItem(children, i),layer);

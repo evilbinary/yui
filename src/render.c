@@ -50,6 +50,12 @@ Texture* render_text(Layer* layer,const char* text, Color color) {
 // ====================== 渲染管线 ======================
 void render_layer(Layer* layer) {
     
+    // 添加调试信息，检查layer指针是否为NULL
+    if (!layer) {
+        printf("render_layer: layer is NULL\n");
+        return;
+    }
+    
     // 在渲染图层之前更新动画状态
     layer_update_animation(layer);
     
@@ -92,6 +98,15 @@ void render_layer(Layer* layer) {
     render_clip_start(layer,&prev_clip);
     // 递归渲染子图层
     for (int i = 0; i < layer->child_count; i++) {
+        // 添加调试信息，检查children指针是否为NULL
+        if (!layer->children) {
+            printf("render_layer: layer->children is NULL for layer %s\n", layer->id);
+            break;
+        }
+        if (!layer->children[i]) {
+            printf("render_layer: layer->children[%d] is NULL for layer %s\n", i, layer->id);
+            continue;
+        }
         render_layer(layer->children[i]);
     }
 
@@ -101,6 +116,17 @@ void render_layer(Layer* layer) {
     }
 
         // 渲染滚动条
+    // 渲染垂直滚动条
+    if (layer->scrollable && layer->scrollbar_v && layer->scrollbar_v->visible) {
+       render_vertical_scrollbar(layer);
+    }
+    
+    // 渲染水平滚动条
+    if (layer->scrollable && layer->scrollbar_h && layer->scrollbar_h->visible) {
+       render_horizontal_scrollbar(layer);
+    }
+    
+    // 兼容性处理：旧的滚动条（向后兼容）
     if (layer->scrollable && layer->scrollbar && layer->scrollbar->visible) {
        render_scrollbar(layer);
     }
@@ -183,4 +209,88 @@ void render_scrollbar(Layer* layer){
   
     }
 
+}
+
+// 渲染垂直滚动条
+void render_vertical_scrollbar(Layer* layer) {
+    int spacing = layer->layout_manager ? layer->layout_manager->spacing : 5;
+    // 计算内容总高度
+    int content_height = 0;
+    for (int i = 0; i < layer->child_count; i++) {
+        content_height += layer->children[i]->rect.h;
+        if (i > 0) content_height += spacing;
+    }
+    
+    int visible_height = layer->rect.h;
+    if (layer->layout_manager) {
+        visible_height -= layer->layout_manager->padding[0] + layer->layout_manager->padding[2];
+    }
+    
+    // 只有当内容高度超过可见高度时才显示滚动条
+    if (content_height > visible_height) {
+        // 计算滚动条尺寸和位置
+        int scrollbar_width = layer->scrollbar_v->thickness > 0 ? layer->scrollbar_v->thickness : 8;
+        int scrollbar_height = (int)((float)visible_height / content_height * visible_height);
+        if (scrollbar_height < 20) scrollbar_height = 20; // 最小高度
+        
+        int scrollbar_x = layer->rect.x + layer->rect.w - scrollbar_width;
+        int scrollbar_y = layer->rect.y + (int)((float)layer->scroll_offset / (content_height - visible_height) * (visible_height - scrollbar_height));
+        
+        // 确保滚动条位置在有效范围内
+        if (scrollbar_y < layer->rect.y) scrollbar_y = layer->rect.y;
+        if (scrollbar_y > layer->rect.y + visible_height - scrollbar_height) 
+            scrollbar_y = layer->rect.y + visible_height - scrollbar_height;
+        
+        Rect scrollbar_rect = {scrollbar_x, scrollbar_y, scrollbar_width, scrollbar_height};
+        
+        // 绘制滚动条轨道
+        Rect track_rect = {scrollbar_x, layer->rect.y, scrollbar_width, visible_height};
+        Color track_color = {100, 100, 100, 50}; // 半透明灰色
+        backend_render_fill_rect(&track_rect, track_color);
+        
+        // 绘制滚动条
+        backend_render_fill_rect(&scrollbar_rect, layer->scrollbar_v->color);
+    }
+}
+
+// 渲染水平滚动条
+void render_horizontal_scrollbar(Layer* layer) {
+    int spacing = layer->layout_manager ? layer->layout_manager->spacing : 5;
+    // 计算内容总宽度
+    int content_width = 0;
+    for (int i = 0; i < layer->child_count; i++) {
+        content_width += layer->children[i]->rect.w;
+        if (i > 0) content_width += spacing;
+    }
+    
+    int visible_width = layer->rect.w;
+    if (layer->layout_manager) {
+        visible_width -= layer->layout_manager->padding[1] + layer->layout_manager->padding[3];
+    }
+    
+    // 只有当内容宽度超过可见宽度时才显示滚动条
+    if (content_width > visible_width) {
+        // 计算滚动条尺寸和位置
+        int scrollbar_height = layer->scrollbar_h->thickness > 0 ? layer->scrollbar_h->thickness : 8;
+        int scrollbar_width = (int)((float)visible_width / content_width * visible_width);
+        if (scrollbar_width < 20) scrollbar_width = 20; // 最小宽度
+        
+        int scrollbar_x = layer->rect.x + (int)((float)layer->scroll_offset_x / (content_width - visible_width) * (visible_width - scrollbar_width));
+        int scrollbar_y = layer->rect.y + layer->rect.h - scrollbar_height;
+        
+        // 确保滚动条位置在有效范围内
+        if (scrollbar_x < layer->rect.x) scrollbar_x = layer->rect.x;
+        if (scrollbar_x > layer->rect.x + visible_width - scrollbar_width) 
+            scrollbar_x = layer->rect.x + visible_width - scrollbar_width;
+        
+        Rect scrollbar_rect = {scrollbar_x, scrollbar_y, scrollbar_width, scrollbar_height};
+        
+        // 绘制滚动条轨道
+        Rect track_rect = {layer->rect.x, scrollbar_y, visible_width, scrollbar_height};
+        Color track_color = {100, 100, 100, 50}; // 半透明灰色
+        backend_render_fill_rect(&track_rect, track_color);
+        
+        // 绘制滚动条
+        backend_render_fill_rect(&scrollbar_rect, layer->scrollbar_h->color);
+    }
 }

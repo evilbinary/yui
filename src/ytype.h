@@ -22,7 +22,7 @@
 
 // 功能定义区域
 #define SDL2 1
-// #define DEBUG_VIEW 1 
+#define DEBUG_VIEW 1 
 #define YUI_ANIMATION 1
 #define YUI_INPUT_COMPONENT 1
 #define YUI_LABEL_COMPONENT 1
@@ -36,6 +36,7 @@
 #define YUI_TAB_COMPONENT 1
 #define YUI_SLIDER_COMPONENT 1
 #define YUI_LISTBOX_COMPONENT 1
+#define YUI_SCROLLBAR_COMPONENT 1
 
 
 
@@ -129,7 +130,8 @@ typedef enum {
     TREEVIEW,
     TAB,
     SLIDER,
-    LISTBOX
+    LISTBOX,
+    SCROLLBAR  // 添加SCROLLBAR类型
 } LayerType;
 
 extern char *layer_type_name[];
@@ -165,6 +167,12 @@ typedef struct Assets {
     char path[MAX_PATH];
     int size;
 } Assets;
+// 滚动条方向枚举
+typedef enum {
+    SCROLLBAR_DIRECTION_VERTICAL,   // 垂直滚动条
+    SCROLLBAR_DIRECTION_HORIZONTAL  // 水平滚动条
+} ScrollbarDirection;
+
 // 添加滚动条结构
 typedef struct Scrollbar {
     int visible;
@@ -172,6 +180,7 @@ typedef struct Scrollbar {
     Color color;
     int is_dragging;  // 滚动条是否被拖动
     int drag_offset;  // 拖动时鼠标相对于滚动条顶部的偏移
+    ScrollbarDirection direction;  // 滚动条方向
 } Scrollbar;
 
 // 触屏事件类型枚举
@@ -318,9 +327,12 @@ typedef struct Layer {
     Event* event;
     
     // 添加滚动支持字段
-    int scrollable;
-    int scroll_offset;
-    Scrollbar* scrollbar;
+    int scrollable;          // 滚动类型: 0=不可滚动, 1=垂直滚动, 2=水平滚动, 3=双向滚动
+    int scroll_offset;       // 垂直滚动偏移
+    int scroll_offset_x;     // 水平滚动偏移
+    Scrollbar* scrollbar;    // 旧的滚动条指针(为了兼容性保留)
+    Scrollbar* scrollbar_v;  // 垂直滚动条
+    Scrollbar* scrollbar_h;  // 水平滚动条
     
     // 组件指针
     void* component;
@@ -403,6 +415,11 @@ typedef struct {
 
 #ifdef YUI_LISTBOX_COMPONENT
 #include "components/listbox_component.h"
+#endif
+
+
+#ifdef YUI_SCROLLBAR_COMPONENT
+#include "components/scrollbar_component.h"
 #endif
 
 
