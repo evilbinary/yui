@@ -214,11 +214,22 @@ Layer* parse_layer(cJSON* json_obj,Layer* parent) {
     }
     
     // 解析固定尺寸
+    printf("DEBUG: Layer '%s' checking for width/height fields\n", layer->id);
     if (cJSON_HasObjectItem(json_obj, "width")) {
         layer->fixed_width = cJSON_GetObjectItem(json_obj, "width")->valueint;
+        layer->rect.w = layer->fixed_width;  // 同时设置rect.w
+        printf("DEBUG: Layer '%s' width parsed: %d, rect.w set to %d\n", 
+               layer->id, layer->fixed_width, layer->rect.w);
+    } else {
+        printf("DEBUG: Layer '%s' no width field found\n", layer->id);
     }
     if (cJSON_HasObjectItem(json_obj, "height")) {
         layer->fixed_height = cJSON_GetObjectItem(json_obj, "height")->valueint;
+        layer->rect.h = layer->fixed_height;  // 同时设置rect.h
+        printf("DEBUG: Layer '%s' height parsed: %d, rect.h set to %d\n", 
+               layer->id, layer->fixed_height, layer->rect.h);
+    } else {
+        printf("DEBUG: Layer '%s' no height field found\n", layer->id);
     }
     
     // 解析弹性比例
@@ -277,6 +288,7 @@ Layer* parse_layer(cJSON* json_obj,Layer* parent) {
     cJSON* scrollable = cJSON_GetObjectItem(json_obj, "scrollable");
     if (scrollable) {
         layer->scrollable = scrollable->valueint;
+        printf("DEBUG: Layer '%s' scrollable set to %d\n", layer->id, layer->scrollable);
         
         // 根据 scrollable 类型自动创建滚动条
         if (layer->scrollable > 0) {
@@ -298,6 +310,8 @@ Layer* parse_layer(cJSON* json_obj,Layer* parent) {
                 layer->scrollbar_h->thickness = 10;
                 layer->scrollbar_h->color = (Color){128, 128, 128, 200};
                 layer->scrollbar_h->direction = SCROLLBAR_DIRECTION_HORIZONTAL;
+                printf("HORIZONTAL SCROLLBAR CREATED for layer '%s' with scrollable=%d, initial rect.w=%d\n", 
+                       layer->id, layer->scrollable, layer->rect.w);
             }
         }
     }

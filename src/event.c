@@ -58,7 +58,8 @@ EventHandler find_event_by_name(const char* name) {
 // ====================== 事件处理器 ======================
 // 处理垂直滚动事件
 void handle_scroll_event(Layer* layer, int scroll_delta) {
-    if (layer->scrollable && layer->scrollbar_v) {
+    // 只有在垂直滚动或双向滚动模式下才处理垂直滚动
+    if ((layer->scrollable == 1 || layer->scrollable == 3) && layer->scrollbar_v) {
         layer->scroll_offset += scroll_delta * 20; // 每次滚动20像素
         
         // 限制滚动范围
@@ -97,7 +98,8 @@ void handle_scroll_event(Layer* layer, int scroll_delta) {
 
 // 处理水平滚动事件
 void handle_horizontal_scroll_event(Layer* layer, int scroll_delta) {
-    if (layer->scrollable && layer->scrollbar_h) {
+    // 只有在水平滚动或双向滚动模式下才处理水平滚动
+    if ((layer->scrollable == 2 || layer->scrollable == 3) && layer->scrollbar_h) {
         layer->scroll_offset_x += scroll_delta * 20; // 每次滚动20像素
         
         // 限制滚动范围
@@ -220,7 +222,7 @@ void handle_mouse_event(Layer* layer, MouseEvent* event) {
 // 辅助函数：处理单个图层的滚动条事件
 static void process_layer_scrollbar(Layer* layer, int mouse_x, int mouse_y, SDL_EventType event_type) {
     // 处理垂直滚动条
-    if (layer && layer->scrollable && layer->scrollbar_v && layer->scrollbar_v->visible) {
+    if (layer && (layer->scrollable == 1 || layer->scrollable == 3) && layer->scrollbar_v && layer->scrollbar_v->visible) {
         // 计算内容高度和可见高度
         int content_height = 0;
         for (int j = 0; j < layer->child_count; j++) {
@@ -277,7 +279,7 @@ static void process_layer_scrollbar(Layer* layer, int mouse_x, int mouse_y, SDL_
     }
     
     // 处理水平滚动条
-    if (layer && layer->scrollable && layer->scrollbar_h && layer->scrollbar_h->visible) {
+    if (layer && (layer->scrollable == 2 || layer->scrollable == 3) && layer->scrollbar_h && layer->scrollbar_h->visible) {
         // 计算内容宽度和可见宽度
         int content_width = 0;
         for (int j = 0; j < layer->child_count; j++) {

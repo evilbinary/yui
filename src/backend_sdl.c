@@ -386,8 +386,26 @@ void backend_quit(){
     SDL_Quit();
 }
 
+// 打印所有图层信息的辅助函数
+void print_layer_info(Layer* layer, int depth) {
+    for (int i = 0; i < depth; i++) printf("  ");
+    printf("Layer '%s': type=%d, scrollable=%d, scrollbar_v=%p, scrollbar_h=%p\n", 
+           layer->id, layer->type, layer->scrollable, (void*)layer->scrollbar_v, (void*)layer->scrollbar_h);
+    
+    for (int i = 0; i < layer->child_count; i++) {
+        if (layer->children[i]) {
+            print_layer_info(layer->children[i], depth + 1);
+        }
+    }
+}
+
 void backend_run(Layer* ui_root){
-     // 主循环
+     // 打印所有图层信息
+    printf("=== Layer Information ===\n");
+    print_layer_info(ui_root, 0);
+    printf("========================\n");
+    
+    // 主循环
     SDL_Event event;
     int running = 1;
     while (running) {

@@ -30,6 +30,8 @@ int main(int argc, char* argv[]) {
     if(argc>1){
         json_path=argv[1];
     }
+    
+    printf("DEBUG: Loading JSON from path: %s\n", json_path);
 
     //注册事件
     register_event_handler("@hello", hello_world);

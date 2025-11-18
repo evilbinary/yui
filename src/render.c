@@ -63,7 +63,7 @@ void render_layer(Layer* layer) {
     if(layer->render!=NULL){
             layer->render(layer);
     }else if(layer->type==VIEW) {
-        //printf("layer->%s %d\n",layer->id,layer->type);
+        //printf("layer->%s %dn",layer->id,layer->type);
     // 绘制背景
         if(layer->bg_color.a > 0) {
             // 如果启用了毛玻璃效果，先渲染毛玻璃效果
@@ -92,7 +92,6 @@ void render_layer(Layer* layer) {
             
         }
     }
-
     // 保存当前渲染目标的裁剪区域
     Rect prev_clip;
     render_clip_start(layer,&prev_clip);
@@ -117,12 +116,15 @@ void render_layer(Layer* layer) {
 
         // 渲染滚动条
     // 渲染垂直滚动条
-    if (layer->scrollable && layer->scrollbar_v && layer->scrollbar_v->visible) {
+    if ((layer->scrollable == 1 || layer->scrollable == 3) && layer->scrollbar_v && layer->scrollbar_v->visible) {
        render_vertical_scrollbar(layer);
     }
     
     // 渲染水平滚动条
-    if (layer->scrollable && layer->scrollbar_h && layer->scrollbar_h->visible) {
+    // printf("DEBUG: Check horizontal scrollbar for layer '%s' - scrollable=%d, scrollbar_h=%p, visible=%d\n", 
+    //        layer->id, layer->scrollable, (void*)layer->scrollbar_h, layer->scrollbar_h ? layer->scrollbar_h->visible : -1);
+    if ((layer->scrollable == 2 || layer->scrollable == 3) && layer->scrollbar_h && layer->scrollbar_h->visible) {
+    //    printf("DEBUG: Rendering horizontal scrollbar for layer '%s'\n", layer->id);
        render_horizontal_scrollbar(layer);
     }
     
@@ -255,12 +257,24 @@ void render_vertical_scrollbar(Layer* layer) {
 
 // 渲染水平滚动条
 void render_horizontal_scrollbar(Layer* layer) {
+    // printf("DEBUG: render_horizontal_scrollbar called for layer '%s'\n", layer->id);
+    
     int spacing = layer->layout_manager ? layer->layout_manager->spacing : 5;
+    
+    // 打印容器的原始尺寸
+    // printf("DEBUG: Layer '%s' - rect={x=%d, y=%d, w=%d, h=%d}, padding=[%d,%d,%d,%d]\n", 
+    //        layer->id, layer->rect.x, layer->rect.y, layer->rect.w, layer->rect.h,
+    //        layer->layout_manager ? layer->layout_manager->padding[0] : -1,
+    //        layer->layout_manager ? layer->layout_manager->padding[1] : -1,
+    //        layer->layout_manager ? layer->layout_manager->padding[2] : -1,
+    //        layer->layout_manager ? layer->layout_manager->padding[3] : -1);
+    
     // 计算内容总宽度
     int content_width = 0;
     for (int i = 0; i < layer->child_count; i++) {
         content_width += layer->children[i]->rect.w;
         if (i > 0) content_width += spacing;
+        // printf("DEBUG: child[%d] width=%d, total=%d\n", i, layer->children[i]->rect.w, content_width);
     }
     
     int visible_width = layer->rect.w;
@@ -269,14 +283,27 @@ void render_horizontal_scrollbar(Layer* layer) {
     }
     
     // 只有当内容宽度超过可见宽度时才显示滚动条
+    // printf("DEBUG: Layer '%s' - rect.w=%d, visible_width=%d, content_width=%d, scrollable=%d\n", 
+    //        layer->id, layer->rect.w, visible_width, content_width, layer->scrollable);
     if (content_width > visible_width) {
+        // printf("DEBUG: Content width exceeds visible width, showing horizontal scrollbar for layer '%s'\n", layer->id);
+        // printf("DEBUG: About to calculate horizontal scrollbar metrics\n");
         // 计算滚动条尺寸和位置
         int scrollbar_height = layer->scrollbar_h->thickness > 0 ? layer->scrollbar_h->thickness : 8;
         int scrollbar_width = (int)((float)visible_width / content_width * visible_width);
         if (scrollbar_width < 20) scrollbar_width = 20; // 最小宽度
         
-        int scrollbar_x = layer->rect.x + (int)((float)layer->scroll_offset_x / (content_width - visible_width) * (visible_width - scrollbar_width));
+        // printf("DEBUG: scroll_offset_x=%d, content_width=%d, visible_width=%d\n", 
+        //        layer->scroll_offset_x, content_width, visible_width);
+        
+        int scrollbar_x = layer->rect.x;
+        if (content_width > visible_width) {
+            scrollbar_x += (int)((float)layer->scroll_offset_x / (content_width - visible_width) * (visible_width - scrollbar_width));
+        }
         int scrollbar_y = layer->rect.y + layer->rect.h - scrollbar_height;
+        
+        // printf("DEBUG: Horizontal scrollbar metrics - scrollbar_width=%d, scrollbar_height=%d, scrollbar_x=%d, scrollbar_y=%d\n", 
+        //        scrollbar_width, scrollbar_height, scrollbar_x, scrollbar_y);
         
         // 确保滚动条位置在有效范围内
         if (scrollbar_x < layer->rect.x) scrollbar_x = layer->rect.x;
@@ -288,9 +315,15 @@ void render_horizontal_scrollbar(Layer* layer) {
         // 绘制滚动条轨道
         Rect track_rect = {layer->rect.x, scrollbar_y, visible_width, scrollbar_height};
         Color track_color = {100, 100, 100, 50}; // 半透明灰色
+        // printf("DEBUG: Drawing horizontal scrollbar track at x=%d, y=%d, w=%d, h=%d\n", 
+        //        track_rect.x, track_rect.y, track_rect.w, track_rect.h);
         backend_render_fill_rect(&track_rect, track_color);
         
         // 绘制滚动条
+        // printf("DEBUG: Drawing horizontal scrollbar thumb at x=%d, y=%d, w=%d, h=%d, color=(%d,%d,%d,%d)\n", 
+        //        scrollbar_rect.x, scrollbar_rect.y, scrollbar_rect.w, scrollbar_rect.h,
+        //        layer->scrollbar_h->color.r, layer->scrollbar_h->color.g, 
+        //        layer->scrollbar_h->color.b, layer->scrollbar_h->color.a);
         backend_render_fill_rect(&scrollbar_rect, layer->scrollbar_h->color);
     }
 }

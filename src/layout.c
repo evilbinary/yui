@@ -37,8 +37,12 @@ void layout_layer(Layer* layer){
         int spacing = layer->layout_manager->spacing;
         
         if(layer->parent!=NULL){
+            printf("DEBUG: layer '%s' before parent adjustment: rect.w=%d, parent.rect.w=%d\n", 
+                   layer->id ? layer->id : "(null)", layer->rect.w, layer->parent->rect.w);
             if(layer->rect.w==0){
                 layer->rect.w=layer->parent->rect.w;
+                printf("DEBUG: layer '%s' width set to parent width: %d\n", 
+                       layer->id ? layer->id : "(null)", layer->rect.w);
             }
             if(layer->rect.h==0){
                 layer->rect.h=layer->parent->rect.h;
@@ -78,7 +82,7 @@ void layout_layer(Layer* layer){
             int current_x = layer->rect.x + padding_left;
             
             // 添加水平滚动偏移量
-            if (layer->scrollable) {
+            if (layer->scrollable == 2 || layer->scrollable == 3) {
                 current_x -= layer->scroll_offset_x;
             }
             
@@ -155,7 +159,7 @@ void layout_layer(Layer* layer){
             int current_y = layer->rect.y + padding_top;
             
             // 如果是可滚动的List类型，考虑滚动偏移量
-            if (layer->scrollable) {
+            if (layer->scrollable == 1 || layer->scrollable == 3) {
                 current_y -= layer->scroll_offset;
             }
 
@@ -188,6 +192,14 @@ void layout_layer(Layer* layer){
                 
                 child->rect.x = layer->rect.x + padding_left;
                 child->rect.y = current_y;
+                
+                // 应用水平滚动偏移量
+                if (layer->scrollable == 2 || layer->scrollable == 3) {
+                    int original_x = child->rect.x;
+                    child->rect.x -= layer->scroll_offset_x;
+                    printf("DEBUG: Applied horizontal scroll offset to child '%s': x=%d -> %d (offset=%d)\n", 
+                           child->id ? child->id : "(null)", original_x, child->rect.x, layer->scroll_offset_x);
+                }
                 // 自动计算宽度以填充可用空间
                 if(child->rect.w<=0){
                     child->rect.w = content_width;
@@ -236,12 +248,12 @@ void layout_layer(Layer* layer){
         int current_y = layer->rect.y + padding_top;
     
         // 添加水平滚动偏移量
-        if (layer->scrollable) {
+        if (layer->scrollable == 2 || layer->scrollable == 3) {
             current_x -= layer->scroll_offset_x;
         }
         
         // 添加垂直滚动偏移量
-        if (layer->scrollable) {
+        if (layer->scrollable == 1 || layer->scrollable == 3) {
             current_y -= layer->scroll_offset;
         }
     

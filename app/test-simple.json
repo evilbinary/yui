@@ -1,0 +1,91 @@
+{
+    "id": "simpleTest",
+    "type": "View",
+    "width": 800,
+    "height": 600,
+    "style": {
+        "bgColor": "#F5F5F5"
+    },
+    "children": [
+        {
+            "id": "bothDemo",
+            "type": "View",
+            "width": 600,
+            "height": 150,
+            "scrollable": 2,
+            "style": {
+                "bgColor": "#FFFFFF",
+                "borderRadius": 8
+            },
+            "children": [
+                {
+                    "type": "View",
+                    "width": 900,
+                    "height": 250,
+                    "children": [
+                        {
+                            "type": "Label",
+                            "x": 20,
+                            "y": 20,
+                            "width": 300,
+                            "height": 30,
+                            "text": "滚动演示",
+                            "style": {
+                                "color": "#212121",
+                                "fontSize": 18,
+                                "bgColor": "#FFE66D"
+                            }
+                        },
+                        {
+                            "type": "Label",
+                            "x": 350,
+                            "y": 20,
+                            "text": "YUI 滚动条示例 哈哈哈   额发觉说的发送了打飞机啊是老地方见滴滴答答滴滴答答滴滴答答滴滴答答滴滴答啊啊",
+                            "width": 800,
+                            "height": 80,
+                            "style": {
+                                "bgColor": "#A8E6CF",
+                                "borderRadius": 4
+                            }
+                        },
+                        {
+                            "type": "View",
+                            "x": 20,
+                            "y": 120,
+                            "width": 250,
+                            "height": 80,
+                            "style": {
+                                "bgColor": "#FFD3B6",
+                                "borderRadius": 4
+                            }
+                        },
+                        {
+                            "type": "View",
+                            "x": 300,
+                            "y": 120,
+                            "width": 250,
+                            "height": 80,
+                            "style": {
+                                "bgColor": "#FFAAA5",
+                                "borderRadius": 4
+                            }
+                        },
+                        {
+                            "type": "Label",
+                            "x": 20,
+                            "y": 200,
+                            "width": 530,
+                            "height": 30,
+                            "text": "底部内容 - 需要双向滚动才能完全看到",
+                            "style": {
+                                "color": "#FFFFFF",
+                                "fontSize": 16,
+                                "bgColor": "#B4A7D6"
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
