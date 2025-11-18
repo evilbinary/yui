@@ -26,4 +26,6 @@ ya -r yui
 
 ## 截图
 
+<img src="https://github.com/evilbinary/yui/blob/main/docs/scroll.png?raw=true" width="800px" />
+
 <img src="https://github.com/evilbinary/yui/blob/main/docs/login.png?raw=true" width="800px" />
