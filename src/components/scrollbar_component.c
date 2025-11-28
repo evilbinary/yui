@@ -169,7 +169,6 @@ void scrollbar_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     }
     
     Layer* target = component->target_layer;
-    
     // 获取相对滑块位置
     Rect absolute_thumb_rect = component->thumb_rect;
     absolute_thumb_rect.x += layer->rect.x;

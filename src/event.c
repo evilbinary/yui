@@ -96,7 +96,7 @@ void handle_scroll_event(Layer* layer,int scroll_deltax,int scroll_deltay) {
         layout_layer(layer);
     }
 
-    handle_horizontal_scroll_event(layer, scroll_deltax); // 水平滚动
+    handle_horizontal_scroll_event(layer, scroll_deltay); // 水平滚动
 
     // 递归处理子图层的键盘事件（但只有焦点图层会实际处理事件）
     for (int i = 0; i < layer->child_count; i++) {
