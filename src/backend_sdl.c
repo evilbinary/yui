@@ -178,19 +178,16 @@ void handle_event(Layer* root, SDL_Event* event) {
             handle_mouse_event(root, &mouse_event);
         }
     }
-// 添加鼠标滚轮事件处理
+    // 添加鼠标滚轮事件处理
     else if (event->type == SDL_MOUSEWHEEL) {
         // 处理鼠标滚轮事件，传递给所有支持滚动的图层
-        handle_scroll_event(root, -event->wheel.y); // 垂直滚动
-        handle_horizontal_scroll_event(root, event->wheel.x); // 水平滚动
-        
-        for (int i = 0; i < root->child_count; i++) {
-            handle_scroll_event(root->children[i], -event->wheel.y);
-            handle_horizontal_scroll_event(root->children[i], event->wheel.x);
-        }
-        if(root->sub){
-            handle_scroll_event(root->sub, -event->wheel.y);
-            handle_horizontal_scroll_event(root->sub, event->wheel.x);
+        int mouse_x = event->motion.x;
+        int mouse_y = event->motion.y;
+        SDL_GetMouseState(&mouse_x, &mouse_y);
+        SDL_Point mouse_pos = { mouse_x, mouse_y };
+        if (SDL_PointInRect(&mouse_pos, &root->rect)) {
+            printf("鼠标滚轮事件在图层内: %d, %d\n", event->wheel.x, event->wheel.y);
+            handle_scroll_event(root, event->wheel.x,-event->wheel.y);
         }
     }
     // 触摸开始事件
