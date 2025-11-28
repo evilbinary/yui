@@ -302,6 +302,8 @@ typedef struct Layer {
     int fixed_width;
     int fixed_height;
     float flex_ratio;
+    int content_height; // 内容高度
+    int content_width; // 内容宽度
     
     // 新增label和text字段
     char label[MAX_TEXT];
@@ -339,6 +341,9 @@ typedef struct Layer {
     
     // 自定义渲染函数指针
     void (*render)(Layer* layer);
+
+    // 布局更新函数指针
+    void (*layout)(Layer* layer);
 
     // 新增事件处理函数指针
     void (*handle_key_event)(Layer* layer, KeyEvent* event);

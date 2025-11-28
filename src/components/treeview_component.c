@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+
 // 创建树视图组件
 TreeViewComponent* treeview_component_create(Layer* layer) {
     TreeViewComponent* component = (TreeViewComponent*)malloc(sizeof(TreeViewComponent));
@@ -474,6 +475,118 @@ TreeNode** stack = (TreeNode**)malloc(sizeof(TreeNode*) * node->child_count);
     return count;
 }
 
+// 计算内容总高度
+int treeview_calculate_content_height(TreeViewComponent* component) {
+    if (!component) return 0;
+    
+    int visible_count = treeview_count_visible_nodes(component);
+    return visible_count * component->item_height;
+}
+
+// 更新滚动条状态
+void treeview_update_scrollbar(TreeViewComponent* component) {
+    if (!component || !component->layer) return;
+    
+    Layer* layer = component->layer;
+    
+    // 计算内容高度
+    int content_height = treeview_calculate_content_height(component);
+    layer->content_height = content_height;
+    
+    int visible_height = layer->rect.h;
+    
+    printf("DEBUG: treeview_update_scrollbar - content_height=%d, visible_height=%d, scrollable=%d\n", 
+           content_height, visible_height, layer->scrollable);
+    
+    // 更新滚动条可见性
+    if ((layer->scrollable == 1 || layer->scrollable == 3) && layer->scrollbar_v) {
+        layer->scrollbar_v->visible = (content_height > visible_height);
+        printf("DEBUG: scrollbar_v visible set to %d\n", layer->scrollbar_v->visible);
+    }
+}
+
+// 滚动到指定节点
+void treeview_scroll_to_node(TreeViewComponent* component, TreeNode* target_node) {
+    if (!component || !target_node || !component->layer) return;
+    
+    Layer* layer = component->layer;
+    
+    // 计算目标节点在可见节点中的位置
+    int node_index = 0;
+    int found = 0;
+    
+    // 搜索根节点
+    for (int i = 0; i < component->root_count && !found; i++) {
+        TreeNode* node = component->root_nodes[i];
+        if (node == target_node) {
+            found = 1;
+            break;
+        }
+        node_index++;
+        
+        // 搜索展开的子节点
+        if (node->expanded && node->child_count > 0) {
+            TreeNode** stack = (TreeNode**)malloc(sizeof(TreeNode*) * node->child_count);
+            int stack_top = 0;
+            
+            for (int j = node->child_count - 1; j >= 0; j--) {
+                stack[stack_top++] = node->children[j];
+            }
+            
+            while (stack_top > 0 && !found) {
+                TreeNode* current = stack[--stack_top];
+                if (current == target_node) {
+                    found = 1;
+                    break;
+                }
+                node_index++;
+                
+                if (current->expanded && current->child_count > 0) {
+                    TreeNode** new_stack = (TreeNode**)realloc(stack, sizeof(TreeNode*) * (stack_top + current->child_count));
+                    if (new_stack) {
+                        stack = new_stack;
+                        for (int j = current->child_count - 1; j >= 0; j--) {
+                            stack[stack_top++] = current->children[j];
+                        }
+                    }
+                }
+            }
+            
+            free(stack);
+        }
+    }
+    
+    if (found) {
+        // 计算节点在屏幕上的Y坐标
+        int node_y = layer->rect.y + node_index * component->item_height - layer->scroll_offset;
+        
+        // 检查节点是否完全可见
+        int visible_top = layer->rect.y;
+        int visible_bottom = layer->rect.y + layer->rect.h;
+        int node_top = node_y;
+        int node_bottom = node_y + component->item_height;
+        
+        // 如果节点不可见，滚动到使其可见
+        if (node_top < visible_top) {
+            // 节点在可视区域上方，向上滚动
+            layer->scroll_offset += (visible_top - node_top);
+            if (layer->scroll_offset < 0) layer->scroll_offset = 0;
+        } else if (node_bottom > visible_bottom) {
+            // 节点在可视区域下方，向下滚动
+            layer->scroll_offset += (node_bottom - visible_bottom);
+            
+            // 确保不超过最大滚动偏移
+            int content_height = treeview_calculate_content_height(component);
+            int max_offset = content_height - layer->rect.h;
+            if (max_offset < 0) max_offset = 0;
+            if (layer->scroll_offset > max_offset) layer->scroll_offset = max_offset;
+        }
+        
+        // 更新滚动条状态
+        treeview_update_scrollbar(component);
+    }
+}
+
 // 根据位置获取节点
 TreeNode* treeview_get_node_from_position(TreeViewComponent* component, int x, int y) {
     if (!component || component->root_count == 0) return NULL;
@@ -484,7 +597,8 @@ TreeNode* treeview_get_node_from_position(TreeViewComponent* component, int x, i
         return NULL;
     }
     
-    int item_y = component->layer->rect.y;
+    // 考虑滚动偏移
+    int item_y = component->layer->rect.y - component->layer->scroll_offset;
     
     // 遍历可见节点
     for (int i = 0; i < component->root_count; i++) {
@@ -541,8 +655,8 @@ TreeNode* treeview_get_node_from_position(TreeViewComponent* component, int x, i
 int treeview_is_expand_icon_clicked(TreeViewComponent* component, TreeNode* node, int x, int y) {
     if (!component || !node || node->child_count == 0) return 0;
     
-    // 计算节点位置
-    int item_y = component->layer->rect.y;
+    // 计算节点位置，考虑滚动偏移
+    int item_y = component->layer->rect.y - component->layer->scroll_offset;
     
     // 查找节点在可见节点中的位置
     for (int i = 0; i < component->root_count; i++) {
@@ -608,6 +722,10 @@ void treeview_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     TreeViewComponent* component = (TreeViewComponent*)layer->component;
     
     if (event->state == SDL_PRESSED && event->button == SDL_BUTTON_LEFT) {
+        // 调整鼠标坐标以考虑滚动偏移
+        int adjusted_y = event->y;
+        // 注意：treeview_get_node_from_position 内部已经处理了滚动偏移，所以这里不需要调整
+        
         TreeNode* node = treeview_get_node_from_position(component, event->x, event->y);
         
         if (node) {
@@ -617,6 +735,9 @@ void treeview_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
                 int old_expanded = node->expanded;
                 treeview_toggle_node(node);
                 
+                // 更新滚动条状态
+                treeview_update_scrollbar(component);
+                
                 // 调用回调函数
                 if (component->on_node_expanded && old_expanded != node->expanded) {
                     component->on_node_expanded(node, node->expanded, component->user_data);
@@ -624,6 +745,9 @@ void treeview_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
             } else {
                 // 选中节点
                 treeview_set_selected_node(component, node);
+                
+                // 滚动到选中的节点
+                treeview_scroll_to_node(component, node);
             }
         }
     }
@@ -684,6 +808,14 @@ void treeview_component_render(Layer* layer) {
     
     TreeViewComponent* component = (TreeViewComponent*)layer->component;
     
+    // 更新滚动条状态
+    treeview_update_scrollbar(component);
+    
+    // 设置裁剪区域
+    Rect prev_clip;
+    backend_render_get_clip_rect(&prev_clip);
+    backend_render_set_clip_rect(&layer->rect);
+    
     // 使用纹理获取实际文本高度
     int text_height = 20; // 默认高度
     if (layer->font && layer->font->default_font) {
@@ -703,11 +835,48 @@ void treeview_component_render(Layer* layer) {
     // 绘制边框
     backend_render_rounded_rect_with_border(&bg_rect, (Color){255, 255, 255, 255}, 5, 1, (Color){204, 204, 204, 255});
     
-    int item_y = layer->rect.y;
+    // 应用滚动偏移
+    int item_y = layer->rect.y - layer->scroll_offset;
     
-    // 渲染可见节点
+    // 计算可见范围
+    int visible_top = layer->rect.y;
+    int visible_bottom = layer->rect.y + layer->rect.h;
+    
+    // 渲染可见节点，应用可见性裁剪
     for (int i = 0; i < component->root_count; i++) {
         TreeNode* node = component->root_nodes[i];
+        
+        // 检查节点是否在可见范围内
+        if (item_y + component->item_height < visible_top || item_y > visible_bottom) {
+            item_y += component->item_height;
+            // 如果节点展开，需要跳过子节点
+            if (node->expanded && node->child_count > 0) {
+                // 快速跳过展开的子节点
+                TreeNode** stack = (TreeNode**)malloc(sizeof(TreeNode*) * node->child_count);
+                int stack_top = 0;
+                
+                for (int j = node->child_count - 1; j >= 0; j--) {
+                    stack[stack_top++] = node->children[j];
+                }
+                
+                while (stack_top > 0) {
+                    TreeNode* current = stack[--stack_top];
+                    item_y += component->item_height;
+                    
+                    if (current->expanded && current->child_count > 0) {
+                        TreeNode** new_stack = (TreeNode**)realloc(stack, sizeof(TreeNode*) * (stack_top + current->child_count));
+                        if (new_stack) {
+                            stack = new_stack;
+                            for (int j = current->child_count - 1; j >= 0; j--) {
+                                stack[stack_top++] = current->children[j];
+                            }
+                        }
+                    }
+                }
+                free(stack);
+            }
+            continue;
+        }
 
         // 绘制节点
         int text_x = layer->rect.x + node->level * component->indent_width + 20;
@@ -791,6 +960,23 @@ void treeview_component_render(Layer* layer) {
             while (stack_top > 0) {
                 TreeNode* current = stack[--stack_top];
                 
+                // 检查子节点是否在可见范围内
+                if (item_y + component->item_height < visible_top || item_y > visible_bottom) {
+                    item_y += component->item_height;
+                    
+                    // 如果节点展开，将子节点压入栈（继续跳过）
+                    if (current->expanded && current->child_count > 0) {
+                        TreeNode** new_stack = (TreeNode**)realloc(stack, sizeof(TreeNode*) * (stack_top + current->child_count));
+                        if (new_stack) {
+                            stack = new_stack;
+                            for (int j = current->child_count - 1; j >= 0; j--) {
+                                stack[stack_top++] = current->children[j];
+                            }
+                        }
+                    }
+                    continue;
+                }
+                
                 // 绘制节点
                 int current_text_x = layer->rect.x + current->level * component->indent_width + 20;
                 int current_text_y = item_y + (component->item_height - text_height) / 2;
@@ -873,4 +1059,7 @@ void treeview_component_render(Layer* layer) {
             free(stack);
         }
     }
+    
+    // 恢复裁剪区域
+    backend_render_set_clip_rect(&prev_clip);
 }

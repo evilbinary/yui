@@ -181,11 +181,7 @@ void render_clip_end(Layer* layer,Rect* prev_clip){
 void render_scrollbar(Layer* layer){
     int spacing = layer->layout_manager ? layer->layout_manager->spacing : 5;
     // 计算内容总高度
-    int content_height = 0;
-    for (int i = 0; i < layer->child_count; i++) {
-        content_height += layer->children[i]->rect.h;
-        if (i > 0) content_height += spacing;
-    }
+    int content_height = layer->content_height;
     
     int visible_height = layer->rect.h - layer->layout_manager->padding[0] - layer->layout_manager->padding[2];
     
@@ -217,11 +213,7 @@ void render_scrollbar(Layer* layer){
 void render_vertical_scrollbar(Layer* layer) {
     int spacing = layer->layout_manager ? layer->layout_manager->spacing : 5;
     // 计算内容总高度
-    int content_height = 0;
-    for (int i = 0; i < layer->child_count; i++) {
-        content_height += layer->children[i]->rect.h;
-        if (i > 0) content_height += spacing;
-    }
+    int content_height = layer->content_height;
     
     int visible_height = layer->rect.h;
     if (layer->layout_manager) {

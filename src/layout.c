@@ -18,7 +18,10 @@ void layout_layer(Layer* layer){
         fflush(stdout);
         return;
     }
-
+     // 计算layer的内容尺寸 - 通用算法
+     layer->content_width = layer->rect.w;
+     layer->content_height = layer->rect.h;
+     
     // 应用布局管理器
     if (layer->layout_manager && layer->child_count > 0) {
         printf("layout_layer: applying layout manager for layer %s\n", layer->id ? layer->id : "(null)");
@@ -86,6 +89,10 @@ void layout_layer(Layer* layer){
                 current_x -= layer->scroll_offset_x;
             }
             
+            // 初始化内容尺寸
+            layer->content_width = padding_left + padding_right;
+            layer->content_height = padding_top + padding_bottom;
+            
             for (int i = 0; i < layer->child_count; i++) {
                 Layer* child = layer->children[i];
                 if (!child) {
@@ -106,6 +113,14 @@ void layout_layer(Layer* layer){
                 child->rect.x = current_x;
                 child->rect.y = layer->rect.y + padding_top;
                 child->rect.h = content_height;
+                
+                // 累加内容宽度和计算最大高度
+                layer->content_width += child->rect.w;
+                if (i > 0) layer->content_width += spacing;
+                
+                if (child->rect.h > layer->content_height - padding_top - padding_bottom) {
+                    layer->content_height = child->rect.h + padding_top + padding_bottom;
+                }
                 
                 current_x += child->rect.w + spacing;
             }
@@ -158,6 +173,10 @@ void layout_layer(Layer* layer){
                                   (valid_child_count - 1) * spacing;
             int current_y = layer->rect.y + padding_top;
             
+            // 初始化内容尺寸
+            layer->content_width = padding_left + padding_right;
+            layer->content_height = padding_top + padding_bottom;
+            
             // 如果是可滚动的List类型，考虑滚动偏移量
             if (layer->scrollable == 1 || layer->scrollable == 3) {
                 current_y -= layer->scroll_offset;
@@ -193,6 +212,11 @@ void layout_layer(Layer* layer){
                 child->rect.x = layer->rect.x + padding_left;
                 child->rect.y = current_y;
                 
+                // 自动计算宽度以填充可用空间
+                if(child->rect.w<=0){
+                    child->rect.w = content_width;
+                }
+                
                 // 应用水平滚动偏移量
                 if (layer->scrollable == 2 || layer->scrollable == 3) {
                     int original_x = child->rect.x;
@@ -200,10 +224,15 @@ void layout_layer(Layer* layer){
                     printf("DEBUG: Applied horizontal scroll offset to child '%s': x=%d -> %d (offset=%d)\n", 
                            child->id ? child->id : "(null)", original_x, child->rect.x, layer->scroll_offset_x);
                 }
-                // 自动计算宽度以填充可用空间
-                if(child->rect.w<=0){
-                    child->rect.w = content_width;
+                
+                // 累加内容高度和计算最大宽度
+                layer->content_height += child->rect.h;
+                if (i > 0) layer->content_height += spacing;
+                
+                if (child->rect.w > layer->content_width - padding_left - padding_right) {
+                    layer->content_width = child->rect.w + padding_left + padding_right;
                 }
+                
                 //printf("%s %s %s %d\n",child->type,child->id,child->text,child->rect.w);
                 
                 // 检查child->layout_manager是否存在
@@ -333,6 +362,16 @@ void layout_layer(Layer* layer){
                 
                 current_y += layer->children[i]->rect.h + spacing;
             }
+            
+            // 计算LIST的内容尺寸
+            if (layer->data && layer->data->size > 0) {
+                int item_height = 30; // 默认项目高度
+                if (layer->item_template && layer->item_template->rect.h > 0) {
+                    item_height = layer->item_template->rect.h;
+                }
+                layer->content_height = layer->data->size * item_height + (layer->data->size - 1) * spacing;
+                layer->content_width = layer->rect.w;
+            }
         }
     }else if(layer->type == GRID){
         // 获取Grid布局参数
@@ -355,6 +394,22 @@ void layout_layer(Layer* layer){
         int cell_width = (available_width - (columns - 1) * spacing) / columns;
         int cell_height = (rows > 0) ? (available_height - (rows - 1) * spacing) / rows : 0;
         
+        // 计算最大列宽和行高
+        int max_col_width = 0, max_row_height = 0;
+        for (int i = 0; i < layer->child_count; i++) {
+            Layer* child = layer->children[i];
+            if (!child) continue;
+            
+            if (child->rect.w > max_col_width) max_col_width = child->rect.w;
+            if (child->rect.h > max_row_height) max_row_height = child->rect.h;
+        }
+        
+        // 计算内容尺寸
+        layer->content_width = padding_left + padding_right + 
+                              columns * max_col_width + (columns - 1) * spacing;
+        layer->content_height = padding_top + padding_bottom + 
+                               rows * max_row_height + (rows - 1) * spacing;
+        
         // 渲染子元素
         for (int i = 0; i < layer->child_count; i++) {
             if (!layer->children[i]) {
@@ -372,6 +427,12 @@ void layout_layer(Layer* layer){
             layer->children[i]->rect.h = cell_height;
             
         }
+    }
+
+    // 其他情况：如果没有计算过content尺寸，使用layer自身的尺寸
+    if (layer->content_width == 0 || layer->content_height == 0) {
+        layer->content_width = layer->rect.w;
+        layer->content_height = layer->rect.h;
     }
 
     // 检查sub指针并递归调用
@@ -405,6 +466,14 @@ void layout_layer(Layer* layer){
         printf("layout_layer: layer %s has no children\n", layer->id ? layer->id : "(null)");
         fflush(stdout);
     }
+    
+    if(layer->layout!=NULL){
+        layer->layout(layer);
+    }
+    
+    printf("layout_layer: layer %s content_size: %d x %d\n", 
+           layer->id ? layer->id : "(null)", layer->content_width, layer->content_height);
+    fflush(stdout);
     
     printf("layout_layer: finished processing layer %s\n", layer->id ? layer->id : "(null)");
     fflush(stdout);

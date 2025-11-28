@@ -129,6 +129,15 @@ void treeview_component_handle_key_event(Layer* layer, KeyEvent* event);
 // 渲染树视图
 void treeview_component_render(Layer* layer);
 
+// 计算内容总高度
+int treeview_calculate_content_height(TreeViewComponent* component);
+
+// 更新滚动条状态
+void treeview_update_scrollbar(TreeViewComponent* component);
+
+// 滚动到指定节点
+void treeview_scroll_to_node(TreeViewComponent* component, TreeNode* target_node);
+
 #ifdef __cplusplus
 }
 #endif
