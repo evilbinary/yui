@@ -62,9 +62,28 @@ void handle_scroll_event(Layer* layer,int mouse_x,int mouse_y,int scroll_deltax,
     if (!is_point_in_rect(mouse_x, mouse_y, layer->rect)) {
         return; // 鼠标不在图层内，不处理滚动事件
     }
+    
+    handler_virtical_scroll_event(layer, scroll_deltay);
+    handle_horizontal_scroll_event(layer, scroll_deltay); // 水平滚动
+
+    // 递归处理子图层的键盘事件（但只有焦点图层会实际处理事件）
+    for (int i = 0; i < layer->child_count; i++) {
+        if (layer->children[i]) {
+            handle_scroll_event(layer->children[i],mouse_x,mouse_y, scroll_deltax,scroll_deltay);
+        }
+    }
+    
+    // 处理sub图层的键盘事件
+    if (layer->sub) {
+        handle_scroll_event(layer->sub,mouse_x,mouse_y, scroll_deltax,scroll_deltay);
+    }
+}
+
+// 处理垂直滚动事件
+void handler_virtical_scroll_event(Layer* layer, int scroll_delta) {
     // 只有在垂直滚动或双向滚动模式下才处理垂直滚动
     if ((layer->scrollable == 1 || layer->scrollable == 3) && layer->scrollbar_v) {
-        layer->scroll_offset += scroll_deltay * 20; // 每次滚动20像素
+        layer->scroll_offset += scroll_delta * 20; // 每次滚动20像素
         
         // 限制滚动范围
         int content_height = 0;
@@ -97,20 +116,6 @@ void handle_scroll_event(Layer* layer,int mouse_x,int mouse_y,int scroll_deltax,
         }
         // 重新布局子元素
         layout_layer(layer);
-    }
-
-    handle_horizontal_scroll_event(layer, scroll_deltay); // 水平滚动
-
-    // 递归处理子图层的键盘事件（但只有焦点图层会实际处理事件）
-    for (int i = 0; i < layer->child_count; i++) {
-        if (layer->children[i]) {
-            handle_scroll_event(layer->children[i],mouse_x,mouse_y, scroll_deltax,scroll_deltay);
-        }
-    }
-    
-    // 处理sub图层的键盘事件
-    if (layer->sub) {
-        handle_scroll_event(layer->sub,mouse_x,mouse_y, scroll_deltax,scroll_deltay);
     }
 }
 

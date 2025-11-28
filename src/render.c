@@ -262,12 +262,7 @@ void render_horizontal_scrollbar(Layer* layer) {
     //        layer->layout_manager ? layer->layout_manager->padding[3] : -1);
     
     // 计算内容总宽度
-    int content_width = 0;
-    for (int i = 0; i < layer->child_count; i++) {
-        content_width += layer->children[i]->rect.w;
-        if (i > 0) content_width += spacing;
-        // printf("DEBUG: child[%d] width=%d, total=%d\n", i, layer->children[i]->rect.w, content_width);
-    }
+    int content_width = layer->content_width;
     
     int visible_width = layer->rect.w;
     if (layer->layout_manager) {

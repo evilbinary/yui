@@ -18,6 +18,9 @@ void handle_scroll_event(Layer* layer,int mouse_x,int mouse_y,int scroll_deltax,
 // 处理水平滚动事件
 void handle_horizontal_scroll_event(Layer* layer, int scroll_delta);
 
+// 处理垂直滚动事件
+void handler_virtical_scroll_event(Layer* layer, int scroll_delta);
+
 // Fix: Make sure KeyEvent is properly declared
 void handle_key_event(Layer* layer, struct KeyEvent* event);
 
