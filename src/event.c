@@ -86,12 +86,7 @@ void handler_virtical_scroll_event(Layer* layer, int scroll_delta) {
         layer->scroll_offset += scroll_delta * 20; // 每次滚动20像素
         
         // 限制滚动范围
-        int content_height = 0;
-        for (int i = 0; i < layer->child_count; i++) {
-            content_height += layer->children[i]->rect.h;
-            if (i > 0 && layer->layout_manager) content_height += layer->layout_manager->spacing;
-        }
-        
+        int content_height = layer->content_height;    
         int visible_height = layer->rect.h;
         if (layer->layout_manager) {
             visible_height -= layer->layout_manager->padding[0] + layer->layout_manager->padding[2];
@@ -126,11 +121,7 @@ void handle_horizontal_scroll_event(Layer* layer, int scroll_delta) {
         layer->scroll_offset_x += scroll_delta * 20; // 每次滚动20像素
         
         // 限制滚动范围
-        int content_width = 0;
-        for (int i = 0; i < layer->child_count; i++) {
-            content_width += layer->children[i]->rect.w;
-            if (i > 0 && layer->layout_manager) content_width += layer->layout_manager->spacing;
-        }
+        int content_width = layer->content_width;
         
         int visible_width = layer->rect.w;
         if (layer->layout_manager) {

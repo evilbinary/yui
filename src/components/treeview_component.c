@@ -498,11 +498,11 @@ void treeview_update_scrollbar(TreeViewComponent* component) {
     printf("DEBUG: treeview_update_scrollbar - content_height=%d, visible_height=%d, scrollable=%d\n", 
            content_height, visible_height, layer->scrollable);
     
-    // 更新滚动条可见性
-    if ((layer->scrollable == 1 || layer->scrollable == 3) && layer->scrollbar_v) {
-        layer->scrollbar_v->visible = (content_height > visible_height);
-        printf("DEBUG: scrollbar_v visible set to %d\n", layer->scrollbar_v->visible);
-    }
+    // // 更新滚动条可见性和位置
+    // if ((layer->scrollable == 1 || layer->scrollable == 3) && layer->scrollbar_v) {
+    //     layer->scrollbar_v->visible = (content_height > visible_height);
+    //     printf("DEBUG: scrollbar_v visible set to %d\n", layer->scrollbar_v->visible);
+    // }
 }
 
 // 滚动到指定节点
