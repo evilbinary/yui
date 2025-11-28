@@ -57,8 +57,11 @@ EventHandler find_event_by_name(const char* name) {
 
 // ====================== 事件处理器 ======================
 // 处理垂直滚动事件
-void handle_scroll_event(Layer* layer,int scroll_deltax,int scroll_deltay) {
-    printf("处理滚动事件: %d, %d\n", scroll_deltax, scroll_deltay);
+void handle_scroll_event(Layer* layer,int mouse_x,int mouse_y,int scroll_deltax,int scroll_deltay) {
+    // 检查鼠标是否在图层内
+    if (!is_point_in_rect(mouse_x, mouse_y, layer->rect)) {
+        return; // 鼠标不在图层内，不处理滚动事件
+    }
     // 只有在垂直滚动或双向滚动模式下才处理垂直滚动
     if ((layer->scrollable == 1 || layer->scrollable == 3) && layer->scrollbar_v) {
         layer->scroll_offset += scroll_deltay * 20; // 每次滚动20像素
@@ -101,13 +104,13 @@ void handle_scroll_event(Layer* layer,int scroll_deltax,int scroll_deltay) {
     // 递归处理子图层的键盘事件（但只有焦点图层会实际处理事件）
     for (int i = 0; i < layer->child_count; i++) {
         if (layer->children[i]) {
-            handle_scroll_event(layer->children[i], scroll_deltax,scroll_deltay);
+            handle_scroll_event(layer->children[i],mouse_x,mouse_y, scroll_deltax,scroll_deltay);
         }
     }
     
     // 处理sub图层的键盘事件
     if (layer->sub) {
-        handle_scroll_event(layer->sub, scroll_deltax,scroll_deltay);
+        handle_scroll_event(layer->sub,mouse_x,mouse_y, scroll_deltax,scroll_deltay);
     }
 }
 

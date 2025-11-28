@@ -7,6 +7,8 @@
     "source":"app/test-scrollbar-final.json",
     // "source":"app/test-treeview.json",
     // "source":"app/os-desktop.json",
+    // "source":"app/clock.json",
+    // "source":"app/test-list.json",
     "style": {
         "color": "#2C3E50"
     }

@@ -13,7 +13,7 @@ int register_event_handler(const char* name, EventHandler handler);
 EventHandler find_event_by_name(const char* name);
 
 // 处理垂直滚动事件
-void handle_scroll_event(Layer* layer, int scroll_deltax,int scroll_deltay);
+void handle_scroll_event(Layer* layer,int mouse_x,int mouse_y,int scroll_deltax,int scroll_deltay);
 
 // 处理水平滚动事件
 void handle_horizontal_scroll_event(Layer* layer, int scroll_delta);

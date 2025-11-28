@@ -187,7 +187,7 @@ void handle_event(Layer* root, SDL_Event* event) {
         SDL_Point mouse_pos = { mouse_x, mouse_y };
         if (SDL_PointInRect(&mouse_pos, &root->rect)) {
             printf("鼠标滚轮事件在图层内: %d, %d\n", event->wheel.x, event->wheel.y);
-            handle_scroll_event(root, event->wheel.x,-event->wheel.y);
+            handle_scroll_event(root,mouse_x,mouse_y, event->wheel.x,-event->wheel.y);
         }
     }
     // 触摸开始事件

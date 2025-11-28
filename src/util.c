@@ -151,3 +151,9 @@ Color color_from_hex(const char* hex) {
     
     return color;
 }
+
+// 检查点是否在矩形内
+int is_point_in_rect(int x, int y, Rect rect) {
+    return (x >= rect.x && x <= rect.x + rect.w) && 
+           (y >= rect.y && y <= rect.y + rect.h);
+}
