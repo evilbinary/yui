@@ -67,15 +67,21 @@ void scrollbar_component_update_position(ScrollbarComponent* component) {
     
     if (component->direction == SCROLLBAR_DIRECTION_VERTICAL) {
         // 计算内容高度和可见高度
-        int content_height = 0;
+        int content_height;
         int visible_height = target->rect.h;
         
-        // 计算所有子图层的总高度
-        for (int i = 0; i < target->child_count; i++) {
-            Layer* child = target->children[i];
-            if (child == NULL) continue;
-            if (child->rect.y + child->rect.h > content_height) {
-                content_height = child->rect.y + child->rect.h;
+        // 优先使用 target->content_height（如果可用），这是组件设置的内容高度
+        if (target->content_height > 0) {
+            content_height = target->content_height;
+        } else {
+            // 回退到计算所有子图层的总高度
+            content_height = 0;
+            for (int i = 0; i < target->child_count; i++) {
+                Layer* child = target->children[i];
+                if (child == NULL) continue;
+                if (child->rect.y + child->rect.h > content_height) {
+                    content_height = child->rect.y + child->rect.h;
+                }
             }
         }
         
@@ -204,13 +210,20 @@ void scrollbar_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
             component->thumb_rect.y = new_y;
             
             // 计算内容高度和可见高度
-            int content_height = 0;
+            int content_height;
             int visible_height = target->rect.h;
             
-            for (int i = 0; i < target->child_count; i++) {
-                Layer* child = target->children[i];
-                if (child && child->rect.y + child->rect.h > content_height) {
-                    content_height = child->rect.y + child->rect.h;
+            // 优先使用 target->content_height（如果可用）
+            if (target->content_height > 0) {
+                content_height = target->content_height;
+            } else {
+                // 回退到计算所有子图层的总高度
+                content_height = 0;
+                for (int i = 0; i < target->child_count; i++) {
+                    Layer* child = target->children[i];
+                    if (child && child->rect.y + child->rect.h > content_height) {
+                        content_height = child->rect.y + child->rect.h;
+                    }
                 }
             }
             
