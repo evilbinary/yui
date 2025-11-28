@@ -122,7 +122,7 @@ void handle_horizontal_scroll_event(Layer* layer, int scroll_delta) {
         
         // 限制滚动范围
         int content_width = layer->content_width;
-        
+
         int visible_width = layer->rect.w;
         if (layer->layout_manager) {
             visible_width -= layer->layout_manager->padding[1] + layer->layout_manager->padding[3];
@@ -238,13 +238,7 @@ static void process_layer_scrollbar(Layer* layer, int mouse_x, int mouse_y, SDL_
     // 处理垂直滚动条
     if (layer && (layer->scrollable == 1 || layer->scrollable == 3) && layer->scrollbar_v && layer->scrollbar_v->visible) {
         // 计算内容高度和可见高度
-        int content_height = 0;
-        for (int j = 0; j < layer->child_count; j++) {
-            content_height += layer->children[j]->rect.h;
-            if (j > 0 && layer->layout_manager) {
-                content_height += layer->layout_manager->spacing;
-            }
-        }
+        int content_height = layer->content_height;
         
         int visible_height = layer->rect.h;
         if (layer->layout_manager) {
@@ -295,14 +289,7 @@ static void process_layer_scrollbar(Layer* layer, int mouse_x, int mouse_y, SDL_
     // 处理水平滚动条
     if (layer && (layer->scrollable == 2 || layer->scrollable == 3) && layer->scrollbar_h && layer->scrollbar_h->visible) {
         // 计算内容宽度和可见宽度
-        int content_width = 0;
-        for (int j = 0; j < layer->child_count; j++) {
-            content_width += layer->children[j]->rect.w;
-            if (j > 0 && layer->layout_manager) {
-                content_width += layer->layout_manager->spacing;
-            }
-        }
-        
+        int content_width = layer->content_width;
         int visible_width = layer->rect.w;
         if (layer->layout_manager) {
             visible_width -= layer->layout_manager->padding[1] + layer->layout_manager->padding[3];
@@ -353,13 +340,8 @@ static void process_layer_scrollbar(Layer* layer, int mouse_x, int mouse_y, SDL_
     if (layer && layer->scrollable && layer->scrollbar && layer->scrollbar->visible) {
         // 旧的滚动条处理逻辑保持不变，以确保向后兼容
         // 计算内容高度和可见高度
-        int content_height = 0;
-        for (int j = 0; j < layer->child_count; j++) {
-            content_height += layer->children[j]->rect.h;
-            if (j > 0 && layer->layout_manager) {
-                content_height += layer->layout_manager->spacing;
-            }
-        }
+        int content_height = layer->content_height;
+        
         
         int visible_height = layer->rect.h;
         if (layer->layout_manager) {
