@@ -31,6 +31,85 @@ ListBoxComponent* listbox_component_create(Layer* layer) {
     return component;
 }
 
+// 从 JSON 创建列表框组件
+ListBoxComponent* listbox_component_create_from_json(Layer* layer, cJSON* json_obj) {
+    if (!layer || !json_obj) return NULL;
+    
+    ListBoxComponent* listBoxComponent = listbox_component_create(layer);
+    // 解析列表框特定属性
+    if (cJSON_HasObjectItem(json_obj, "visibleCount")) {
+        // listbox_component_set_visible_count(
+        //     listBoxComponent, cJSON_GetObjectItem(json_obj, "visibleCount")->valueint);
+    }
+    if (cJSON_HasObjectItem(json_obj, "multiSelect")) {
+        listbox_component_set_multi_select(
+            listBoxComponent, cJSON_GetObjectItem(json_obj, "multiSelect")->valueint);
+    }
+
+    // 解析列表框特定属性
+    cJSON* listboxConfig = cJSON_GetObjectItem(json_obj, "listboxConfig");
+    if (listboxConfig) {
+      ListBoxComponent* listboxComponent = (ListBoxComponent*)layer->component;
+
+      if (cJSON_HasObjectItem(listboxConfig, "multiSelect")) {
+        listbox_component_set_multi_select(
+            listboxComponent,
+            cJSON_IsTrue(cJSON_GetObjectItem(listboxConfig, "multiSelect")));
+      }
+
+      // 解析列表项数据
+      cJSON* items = cJSON_GetObjectItem(listboxConfig, "items");
+      if (items && cJSON_IsArray(items)) {
+        for (int i = 0; i < cJSON_GetArraySize(items); i++) {
+          cJSON* item = cJSON_GetArrayItem(items, i);
+          if (cJSON_IsString(item)) {
+            listbox_component_add_item(listboxComponent, item->valuestring,
+                                       NULL);
+          } else if (cJSON_IsObject(item)) {
+            const char* text = "";
+            if (cJSON_HasObjectItem(item, "text")) {
+              text = cJSON_GetObjectItem(item, "text")->valuestring;
+            }
+            listbox_component_add_item(listboxComponent, text, NULL);
+          }
+        }
+      }
+
+      // 解析列表框颜色
+      cJSON* colors = cJSON_GetObjectItem(listboxConfig, "colors");
+      if (colors) {
+        Color bgColor = {255, 255, 255, 255};
+        Color textColor = {0, 0, 0, 255};
+        Color selectedBgColor = {50, 150, 250, 255};
+        Color selectedTextColor = {255, 255, 255, 255};
+
+        if (cJSON_HasObjectItem(colors, "bgColor")) {
+          parse_color(cJSON_GetObjectItem(colors, "bgColor")->valuestring,
+                      &bgColor);
+        }
+        if (cJSON_HasObjectItem(colors, "textColor")) {
+          parse_color(cJSON_GetObjectItem(colors, "textColor")->valuestring,
+                      &textColor);
+        }
+        if (cJSON_HasObjectItem(colors, "selectedBgColor")) {
+          parse_color(
+              cJSON_GetObjectItem(colors, "selectedBgColor")->valuestring,
+              &selectedBgColor);
+        }
+        if (cJSON_HasObjectItem(colors, "selectedTextColor")) {
+          parse_color(
+              cJSON_GetObjectItem(colors, "selectedTextColor")->valuestring,
+              &selectedTextColor);
+        }
+
+        listbox_component_set_colors(listboxComponent, bgColor, textColor,
+                                     selectedBgColor, selectedTextColor);
+      }
+    }
+    
+    return listBoxComponent;
+}
+
 // 销毁列表框组件
 void listbox_component_destroy(ListBoxComponent* component) {
     if (!component) return;

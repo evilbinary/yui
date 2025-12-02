@@ -157,3 +157,33 @@ int is_point_in_rect(int x, int y, Rect rect) {
     return (x >= rect.x && x <= rect.x + rect.w) && 
            (y >= rect.y && y <= rect.y + rect.h);
 }
+
+void parse_color(char* valuestring, Color* color) {
+    // 支持多种颜色格式
+    if (strncmp(valuestring, "rgba(", 5) == 0) {
+      // 解析 rgba(r, g, b, a) 格式
+      int r, g, b;
+      float a;
+      sscanf(valuestring, "rgba(%d,%d,%d,%f)", &r, &g, &b, &a);
+      color->r = (unsigned char)r;
+      color->g = (unsigned char)g;
+      color->b = (unsigned char)b;
+      color->a = (unsigned char)(a * 255);  // 将0.0-1.0的范围转换为0-255
+    } else if (strncmp(valuestring, "rgb(", 4) == 0) {
+      // 解析 rgb(r, g, b) 格式
+      int r, g, b;
+      sscanf(valuestring, "rgb(%d,%d,%d)", &r, &g, &b);
+      color->r = (unsigned char)r;
+      color->g = (unsigned char)g;
+      color->b = (unsigned char)b;
+      color->a = 255;  // 默认不透明
+    } else if (strlen(valuestring) == 9) {
+      // 解析十六进制 #RRGGBBAA 格式
+      sscanf(valuestring, "#%02hhx%02hhx%02hhx%02hhx", &color->r, &color->g,
+             &color->b, &color->a);
+    } else {
+      // 解析十六进制 #RRGGBB 格式
+      sscanf(valuestring, "#%02hhx%02hhx%02hhx", &color->r, &color->g, &color->b);
+      color->a = 255;  // 默认不透明
+    }
+  }

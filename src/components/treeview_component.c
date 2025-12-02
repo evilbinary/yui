@@ -290,9 +290,6 @@ void treeview_set_font_size(TreeViewComponent* component, int size) {
     component->font_size = size;
 }
 
-// 从JSON创建树视图组件
-// 前向声明parse_color函数
-extern void parse_color(const char* color_string, Color* color);
 
 TreeViewComponent* treeview_component_create_from_json(Layer* layer, cJSON* json_obj) {
     // 创建基础组件

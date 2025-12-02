@@ -31,8 +31,14 @@
         {
             "id": "tabContainer",
             "type": "Tab",
-            "position": [0, 0],
-            "size": [600, 400],
+            "position": [
+                0,
+                0
+            ],
+            "size": [
+                600,
+                400
+            ],
             "tabHeight": 40,
             "activeTab": 0,
             "closable": false,
@@ -43,143 +49,158 @@
                 "activeTextColor": "#1976D2",
                 "borderColor": "#BDBDBD"
             },
-            "tabs": [
+            "children": [
                 {
                     "title": "首页",
-                    "content": {
-                        "type": "View",
-                        "layout": {
-                            "type": "vertical",
-                            "spacing": 15,
-                            "padding": [20, 20, 20, 20]
-                        },
-                        "children": [
-                            {
-                                "type": "Label",
-                                "text": "欢迎来到首页",
-                                "style": {
-                                    "type": "center",
-                                    "fontSize": 20,
-                                    "color": "#1976D2",
-                                    "marginBottom": 10
-                                }
-                            },
-                            {
-                                "type": "Label",
-                                "text": "这是首页的内容区域，可以放置各种控件和信息。",
-                                "style": {
-                                    "fontSize": 16,
-                                    "color": "#424242"
-                                }
-                            }
+                    "type": "View",
+                    "layout": {
+                        "type": "vertical",
+                        "spacing": 15,
+                        "padding": [
+                            20,
+                            20,
+                            20,
+                            20
                         ]
-                    }
+                    },
+                    "children": [
+                        {
+                            "type": "Label",
+                            "text": "欢迎来到首页",
+                            "style": {
+                                "type": "center",
+                                "fontSize": 20,
+                                "color": "#1976D2",
+                                "marginBottom": 10
+                            }
+                        },
+                        {
+                            "type": "Label",
+                            "text": "这是首页的内容区域，可以放置各种控件和信息。",
+                            "style": {
+                                "fontSize": 16,
+                                "color": "#424242"
+                            }
+                        }
+                    ]
                 },
                 {
                     "title": "设置",
-                    "content": {
-                        "type": "View",
-                        "layout": {
-                            "type": "vertical",
-                            "spacing": 15,
-                            "padding": [20, 20, 20, 20]
-                        },
-                        "children": [
-                            {
-                                "type": "Label",
-                                "text": "应用设置",
-                                "style": {
-                                    "type": "center",
-                                    "fontSize": 20,
-                                    "color": "#1976D2",
-                                    "marginBottom": 10
-                                }
-                            },
-                            {
-                                "type": "Checkbox",
-                                "label": "启用通知",
-                                "data": true,
-                                "style": {
-                                    "color": "#2196F3",
-                                    "bgColor": "#FFFFFF",
-                                    "borderColor": "#2196F3"
-                                }
-                            },
-                            {
-                                "type": "Checkbox",
-                                "label": "自动保存",
-                                "data": false,
-                                "style": {
-                                    "color": "#2196F3",
-                                    "bgColor": "#FFFFFF",
-                                    "borderColor": "#2196F3"
-                                }
-                            },
-                            {
-                                "type": "Slider",
-                                "position": [0, 0],
-                                "size": [200, 30],
-                                "data": 50,
-                                "min": 0,
-                                "max": 100,
-                                "step": 1,
-                                "orientation": 0,
-                                "style": {
-                                    "trackColor": "#E0E0E0",
-                                    "thumbColor": "#2196F3",
-                                    "activeThumbColor": "#1976D2"
-                                }
-                            }
+                    "type": "View",
+                    "layout": {
+                        "type": "vertical",
+                        "spacing": 15,
+                        "padding": [
+                            20,
+                            20,
+                            20,
+                            20
                         ]
-                    }
+                    },
+                    "children": [
+                        {
+                            "type": "Label",
+                            "text": "应用设置",
+                            "style": {
+                                "type": "center",
+                                "fontSize": 20,
+                                "color": "#1976D2",
+                                "marginBottom": 10
+                            }
+                        },
+                        {
+                            "type": "Checkbox",
+                            "label": "启用通知",
+                            "data": true,
+                            "style": {
+                                "color": "#2196F3",
+                                "bgColor": "#FFFFFF",
+                                "borderColor": "#2196F3"
+                            }
+                        },
+                        {
+                            "type": "Checkbox",
+                            "label": "自动保存",
+                            "data": false,
+                            "style": {
+                                "color": "#2196F3",
+                                "bgColor": "#FFFFFF",
+                                "borderColor": "#2196F3"
+                            }
+                        },
+                        {
+                            "type": "Slider",
+                            "position": [
+                                0,
+                                0
+                            ],
+                            "size": [
+                                200,
+                                30
+                            ],
+                            "data": 50,
+                            "min": 0,
+                            "max": 100,
+                            "step": 1,
+                            "orientation": 0,
+                            "style": {
+                                "trackColor": "#E0E0E0",
+                                "thumbColor": "#2196F3",
+                                "activeThumbColor": "#1976D2"
+                            }
+                        }
+                    ]
                 },
                 {
                     "title": "关于",
-                    "content": {
-                        "type": "View",
-                        "layout": {
-                            "type": "vertical",
-                            "spacing": 15,
-                            "padding": [20, 20, 20, 20]
-                        },
-                        "children": [
-                            {
-                                "type": "Label",
-                                "text": "关于应用",
-                                "style": {
-                                    "type": "center",
-                                    "fontSize": 20,
-                                    "color": "#1976D2",
-                                    "marginBottom": 10
-                                }
-                            },
-                            {
-                                "type": "Label",
-                                "text": "版本: 1.0.0",
-                                "style": {
-                                    "fontSize": 16,
-                                    "color": "#424242"
-                                }
-                            },
-                            {
-                                "type": "Label",
-                                "text": "作者: YUI Team",
-                                "style": {
-                                    "fontSize": 16,
-                                    "color": "#424242"
-                                }
-                            },
-                            {
-                                "type": "Label",
-                                "text": "这是一个使用YUI框架构建的示例应用。",
-                                "style": {
-                                    "fontSize": 16,
-                                    "color": "#424242",
-                                    "marginTop": 10
-                                }
-                            }
+                    "type": "View",
+                    "layout": {
+                        "type": "vertical",
+                        "spacing": 15,
+                        "padding": [
+                            20,
+                            20,
+                            20,
+                            20
                         ]
-                    }
+                    },
+                    "children": [
+                        {
+                            "type": "Label",
+                            "text": "关于应用",
+                            "style": {
+                                "type": "center",
+                                "fontSize": 20,
+                                "color": "#1976D2",
+                                "marginBottom": 10
+                            }
+                        },
+                        {
+                            "type": "Label",
+                            "text": "版本: 1.0.0",
+                            "style": {
+                                "fontSize": 16,
+                                "color": "#424242"
+                            }
+                        },
+                        {
+                            "type": "Label",
+                            "text": "作者: YUI Team",
+                            "style": {
+                                "fontSize": 16,
+                                "color": "#424242"
+                            }
+                        },
+                        {
+                            "type": "Label",
+                            "text": "这是一个使用YUI框架构建的示例应用。",
+                            "style": {
+                                "fontSize": 16,
+                                "color": "#424242",
+                                "marginTop": 10
+                            }
+                        }
+                    ]
                 }
             ],
             "events": {

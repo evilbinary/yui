@@ -27,6 +27,9 @@ typedef struct {
 
 // 函数声明
 SliderComponent* slider_component_create(Layer* layer);
+
+// 从JSON创建滑块组件
+SliderComponent* slider_component_create_from_json(Layer* layer, cJSON* json);
 void slider_component_destroy(SliderComponent* component);
 void slider_component_set_range(SliderComponent* component, float min_value, float max_value);
 void slider_component_set_value(SliderComponent* component, float value);

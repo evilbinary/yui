@@ -32,6 +32,8 @@ typedef struct {
 
 // 函数声明
 ListBoxComponent* listbox_component_create(Layer* layer);
+// 从 JSON 创建列表框组件
+ListBoxComponent* listbox_component_create_from_json(Layer* layer, cJSON* json);
 void listbox_component_destroy(ListBoxComponent* component);
 void listbox_component_add_item(ListBoxComponent* component, const char* text, void* user_data);
 void listbox_component_remove_item(ListBoxComponent* component, int index);

@@ -293,6 +293,7 @@ typedef struct Layer {
     unsigned int state;
     // 是否可获得焦点
     int focusable;
+    int visible;
 
     //动画
     Animation* animation;

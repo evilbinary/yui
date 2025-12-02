@@ -36,6 +36,9 @@ typedef struct TabComponent {
 // 创建选项卡组件
 TabComponent* tab_component_create(Layer* layer);
 
+// 从 JSON 创建选项卡组件
+TabComponent* tab_component_create_from_json(Layer* layer, cJSON* json);
+
 // 销毁选项卡组件
 void tab_component_destroy(TabComponent* component);
 

@@ -32,6 +32,77 @@ SliderComponent* slider_component_create(Layer* layer) {
     return component;
 }
 
+// 创建滑块组件，从JSON数据
+SliderComponent* slider_component_create_from_json(Layer* layer, cJSON* json) {
+    if (!layer || !json) return NULL;
+
+    SliderComponent* sliderComponent = slider_component_create(layer);
+
+        // 解析滑块特定属性
+    cJSON* sliderConfig = cJSON_GetObjectItem(json, "sliderConfig");
+    if (sliderConfig) {
+      SliderComponent* sliderComponent = (SliderComponent*)layer->component;
+
+      if (cJSON_HasObjectItem(sliderConfig, "min")) {
+        float min =
+            (float)cJSON_GetObjectItem(sliderConfig, "min")->valuedouble;
+        float max = 100.0f;
+        if (cJSON_HasObjectItem(sliderConfig, "max")) {
+          max = (float)cJSON_GetObjectItem(sliderConfig, "max")->valuedouble;
+        }
+        slider_component_set_range(sliderComponent, min, max);
+      }
+
+      if (cJSON_HasObjectItem(sliderConfig, "value")) {
+        slider_component_set_value(
+            sliderComponent,
+            (float)cJSON_GetObjectItem(sliderConfig, "value")->valuedouble);
+      }
+
+      if (cJSON_HasObjectItem(sliderConfig, "step")) {
+        slider_component_set_step(
+            sliderComponent,
+            (float)cJSON_GetObjectItem(sliderConfig, "step")->valuedouble);
+      }
+
+      if (cJSON_HasObjectItem(sliderConfig, "orientation")) {
+        if (strcmp(
+                cJSON_GetObjectItem(sliderConfig, "orientation")->valuestring,
+                "vertical") == 0) {
+          slider_component_set_orientation(sliderComponent,
+                                           SLIDER_ORIENTATION_VERTICAL);
+        }
+      }
+
+      // 解析滑块颜色
+      cJSON* colors = cJSON_GetObjectItem(sliderConfig, "colors");
+      if (colors) {
+        Color trackColor = {200, 200, 200, 255};
+        Color thumbColor = {100, 100, 100, 255};
+        Color activeThumbColor = {50, 50, 50, 255};
+
+        if (cJSON_HasObjectItem(colors, "trackColor")) {
+          parse_color(cJSON_GetObjectItem(colors, "trackColor")->valuestring,
+                      &trackColor);
+        }
+        if (cJSON_HasObjectItem(colors, "thumbColor")) {
+          parse_color(cJSON_GetObjectItem(colors, "thumbColor")->valuestring,
+                      &thumbColor);
+        }
+        if (cJSON_HasObjectItem(colors, "activeThumbColor")) {
+          parse_color(
+              cJSON_GetObjectItem(colors, "activeThumbColor")->valuestring,
+              &activeThumbColor);
+        }
+
+        slider_component_set_colors(sliderComponent, trackColor, thumbColor,
+                                    activeThumbColor);
+      }
+    }
+
+    return sliderComponent;
+}
+
 // 销毁滑块组件
 void slider_component_destroy(SliderComponent* component) {
     if (!component) return;
