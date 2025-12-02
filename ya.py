@@ -157,3 +157,33 @@ def run_test_content_size(target):
     add_files("tests/test_treeview_scroll.c"),
     on_run(run_test_content_size)
 )
+
+
+target("test_simple_scroll") 
+def run_test_simple_scroll(target):
+    targetfile = target.targetfile()
+    sourcefiles = target.sourcefiles()
+    arch=target.get_arch()
+    arch_type= target.get_arch_type()
+    mode =target.get_config('mode')
+    plat=target.plat()
+
+    test_cmd=prefix_env+"./build/"+str(plat)+"/"+str(arch)+"/"+str(mode)+"/test_simple_scroll"
+
+    print('run '+str(plat)+' test_simple_scroll',test_cmd)
+    os.shell(test_cmd)
+(
+    add_rules("mode.debug", "mode.release"),
+    set_kind("binary"),
+    add_flags(),
+    add_files("src/animate.c"),
+    add_files("src/backend_sdl.c"),
+    add_files("src/event.c"),
+    add_files("src/layer.c"),
+    add_files("src/layout.c"),
+    add_files("src/render.c"),
+    add_files("src/util.c"),
+    add_files("src/components/*.c"),
+    add_files("tests/test_simple_scroll.c"),
+    on_run(run_test_simple_scroll)
+)

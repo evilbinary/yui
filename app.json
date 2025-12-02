@@ -9,6 +9,7 @@
     // "source":"app/os-desktop.json",
     // "source":"app/clock.json",
     // "source":"app/test-list.json",
+    // "source":"app/test-animation.json",
     "style": {
         "color": "#2C3E50"
     }

@@ -846,100 +846,73 @@ void treeview_component_render(Layer* layer) {
     for (int i = 0; i < component->root_count; i++) {
         TreeNode* node = component->root_nodes[i];
         
-        // 检查节点是否在可见范围内
-        if (item_y + component->item_height < visible_top || item_y > visible_bottom) {
-            item_y += component->item_height;
-            // 如果节点展开，需要跳过子节点
-            if (node->expanded && node->child_count > 0) {
-                // 快速跳过展开的子节点
-                TreeNode** stack = (TreeNode**)malloc(sizeof(TreeNode*) * node->child_count);
-                int stack_top = 0;
+        // 简化的可见性检查：只跳过完全在可见区域外的节点
+        int should_render_node = !(item_y + component->item_height < visible_top || item_y > visible_bottom);
+        
+        if (should_render_node) {
+            // 绘制节点
+            int text_x = layer->rect.x + node->level * component->indent_width + 20;
+            int text_y = item_y + (component->item_height - text_height) / 2;
+            
+            // 绘制背景
+            if (node->selected) {
+                Rect sel_rect = {layer->rect.x, item_y, layer->rect.w, component->item_height};
+                backend_render_fill_rect(&sel_rect, component->selected_bg_color);
+            }
+            
+            // 绘制展开/折叠图标
+            if (node->child_count > 0) {
+                int icon_x = layer->rect.x + node->level * component->indent_width;
+                int icon_y = item_y + (component->item_height - 10) / 2;
                 
-                for (int j = node->child_count - 1; j >= 0; j--) {
-                    stack[stack_top++] = node->children[j];
+                // 绘制图标背景
+                Rect icon_rect = {icon_x, icon_y, 10, 10};
+                backend_render_rounded_rect(&icon_rect, component->expand_icon_color, 2);
+                
+                // 绘制图标符号
+                if (node->expanded) {
+                    // 绘制减号
+                    Rect minus_rect = {icon_x + 2, icon_y + 4, 6, 2};
+                    backend_render_rect(&minus_rect, (Color){255, 255, 255, 255});
+                } else {
+                    // 绘制加号
+                    Rect minus_rect = {icon_x + 2, icon_y + 4, 6, 2};
+                    backend_render_rect(&minus_rect, (Color){255, 255, 255, 255});
+                    Rect plus_rect = {icon_x + 4, icon_y + 2, 2, 6};
+                    backend_render_rect(&plus_rect, (Color){255, 255, 255, 255});
                 }
-                
-                while (stack_top > 0) {
-                    TreeNode* current = stack[--stack_top];
-                    item_y += component->item_height;
+            }
+            
+            // 绘制文本
+            Color text_color = node->selected ? component->selected_text_color : component->text_color;
+            if (node->text && layer->font && layer->font->default_font) {
+                Texture* text_texture = backend_render_texture(layer->font->default_font, node->text, text_color);
+                if (text_texture) {
+                    int actual_text_width, actual_text_height;
+                    backend_query_texture(text_texture, NULL, NULL, &actual_text_width, &actual_text_height);
                     
-                    if (current->expanded && current->child_count > 0) {
-                        TreeNode** new_stack = (TreeNode**)realloc(stack, sizeof(TreeNode*) * (stack_top + current->child_count));
-                        if (new_stack) {
-                            stack = new_stack;
-                            for (int j = current->child_count - 1; j >= 0; j--) {
-                                stack[stack_top++] = current->children[j];
-                            }
-                        }
+                    // 计算文本位置
+                    int text_x = layer->rect.x + node->level * component->indent_width + 20;
+                    int text_y = item_y + (component->item_height - actual_text_height / scale) / 2;
+                    
+                    Rect text_rect = {
+                        text_x,
+                        text_y,
+                        actual_text_width / scale,
+                        actual_text_height / scale
+                    };
+                    
+                    // 确保文本不会超出边界
+                    if (text_rect.x + text_rect.w > layer->rect.x + layer->rect.w) {
+                        text_rect.w = layer->rect.x + layer->rect.w - text_rect.x;
                     }
+                    if (text_rect.y + text_rect.h > item_y + component->item_height) {
+                        text_rect.h = item_y + component->item_height - text_rect.y;
+                    }
+                    
+                    backend_render_text_copy(text_texture, NULL, &text_rect);
+                    backend_render_text_destroy(text_texture);
                 }
-                free(stack);
-            }
-            continue;
-        }
-
-        // 绘制节点
-        int text_x = layer->rect.x + node->level * component->indent_width + 20;
-        int text_y = item_y + (component->item_height - text_height) / 2;
-        
-        // 绘制背景
-        if (node->selected) {
-            Rect sel_rect = {layer->rect.x, item_y, layer->rect.w, component->item_height};
-            backend_render_fill_rect(&sel_rect, component->selected_bg_color);
-        }
-        
-        // 绘制展开/折叠图标
-        if (node->child_count > 0) {
-            int icon_x = layer->rect.x + node->level * component->indent_width;
-            int icon_y = item_y + (component->item_height - 10) / 2;
-            
-            // 绘制图标背景
-            Rect icon_rect = {icon_x, icon_y, 10, 10};
-            backend_render_rounded_rect(&icon_rect, component->expand_icon_color, 2);
-            
-            // 绘制图标符号
-            if (node->expanded) {
-                // 绘制减号
-                Rect minus_rect = {icon_x + 2, icon_y + 4, 6, 2};
-                backend_render_rect(&minus_rect, (Color){255, 255, 255, 255});
-            } else {
-                // 绘制加号
-                Rect minus_rect = {icon_x + 2, icon_y + 4, 6, 2};
-                backend_render_rect(&minus_rect, (Color){255, 255, 255, 255});
-                Rect plus_rect = {icon_x + 4, icon_y + 2, 2, 6};
-                backend_render_rect(&plus_rect, (Color){255, 255, 255, 255});
-            }
-        }
-        
-        // 绘制文本
-        Color text_color = node->selected ? component->selected_text_color : component->text_color;
-        if (node->text && layer->font && layer->font->default_font) {
-            Texture* text_texture = backend_render_texture(layer->font->default_font, node->text, text_color);
-            if (text_texture) {
-                int actual_text_width, actual_text_height;
-                backend_query_texture(text_texture, NULL, NULL, &actual_text_width, &actual_text_height);
-                
-                // 计算文本位置
-                int text_x = layer->rect.x + node->level * component->indent_width + 20;
-                int text_y = item_y + (component->item_height - actual_text_height / scale) / 2;
-                
-                Rect text_rect = {
-                    text_x,
-                    text_y,
-                    actual_text_width / scale,
-                    actual_text_height / scale
-                };
-                
-                // 确保文本不会超出边界
-                if (text_rect.x + text_rect.w > layer->rect.x + layer->rect.w) {
-                    text_rect.w = layer->rect.x + layer->rect.w - text_rect.x;
-                }
-                if (text_rect.y + text_rect.h > item_y + component->item_height) {
-                    text_rect.h = item_y + component->item_height - text_rect.y;
-                }
-                
-                backend_render_text_copy(text_texture, NULL, &text_rect);
-                backend_render_text_destroy(text_texture);
             }
         }
         
@@ -960,85 +933,72 @@ void treeview_component_render(Layer* layer) {
             while (stack_top > 0) {
                 TreeNode* current = stack[--stack_top];
                 
-                // 检查子节点是否在可见范围内
-                if (item_y + component->item_height < visible_top || item_y > visible_bottom) {
-                    item_y += component->item_height;
-                    
-                    // 如果节点展开，将子节点压入栈（继续跳过）
-                    if (current->expanded && current->child_count > 0) {
-                        TreeNode** new_stack = (TreeNode**)realloc(stack, sizeof(TreeNode*) * (stack_top + current->child_count));
-                        if (new_stack) {
-                            stack = new_stack;
-                            for (int j = current->child_count - 1; j >= 0; j--) {
-                                stack[stack_top++] = current->children[j];
-                            }
-                        }
-                    }
-                    continue;
-                }
+                // 简化的子节点可见性检查：只跳过完全在可见区域外的节点
+                int should_render_current = !(item_y + component->item_height < visible_top || item_y > visible_bottom);
                 
-                // 绘制节点
-                int current_text_x = layer->rect.x + current->level * component->indent_width + 20;
-                int current_text_y = item_y + (component->item_height - text_height) / 2;
-                
-                // 绘制背景
-                if (current->selected) {
-                    Rect sel_rect = {layer->rect.x, item_y, layer->rect.w, component->item_height};
-                    backend_render_fill_rect(&sel_rect, component->selected_bg_color);
-                }
-                
-                // 绘制展开/折叠图标
-                if (current->child_count > 0) {
-                    int icon_x = layer->rect.x + current->level * component->indent_width;
-                    int icon_y = item_y + (component->item_height - 10) / 2;
-                    
-                    // 绘制图标背景
-                    Rect icon_rect = {icon_x, icon_y, 10, 10};
-                    backend_render_rounded_rect(&icon_rect, component->expand_icon_color, 2);
-                    
-                    // 绘制图标符号
-                    if (current->expanded) {
-                        // 绘制减号
-                        Rect minus_rect = {icon_x + 2, icon_y + 4, 6, 2};
-                        backend_render_rect(&minus_rect, (Color){255, 255, 255, 255});
-                    } else {
-                        // 绘制加号
-                        Rect minus_rect = {icon_x + 2, icon_y + 4, 6, 2};
-                        backend_render_rect(&minus_rect, (Color){255, 255, 255, 255});
-                        Rect plus_rect = {icon_x + 4, icon_y + 2, 2, 6};
-                        backend_render_rect(&plus_rect, (Color){255, 255, 255, 255});
-                    }
-                }
-                
-                // 绘制文本 - 修复后的代码
-                Color current_text_color = current->selected ? component->selected_text_color : component->text_color;
-                if (current->text && layer->font && layer->font->default_font) {
-                    Texture* text_texture = backend_render_texture(layer->font->default_font, current->text, current_text_color);
-                    if (text_texture) {
-                        int actual_text_width, actual_text_height;
-                        backend_query_texture(text_texture, NULL, NULL, &actual_text_width, &actual_text_height);
-                        
-                        // 计算文本位置
+                if (should_render_current) {
                         int current_text_x = layer->rect.x + current->level * component->indent_width + 20;
-                        int current_text_y = item_y + (component->item_height - actual_text_height / scale) / 2;
+                    int current_text_y = item_y + (component->item_height - text_height) / 2;
+                    
+                    // 绘制背景
+                    if (current->selected) {
+                        Rect sel_rect = {layer->rect.x, item_y, layer->rect.w, component->item_height};
+                        backend_render_fill_rect(&sel_rect, component->selected_bg_color);
+                    }
+                    
+                    // 绘制展开/折叠图标
+                    if (current->child_count > 0) {
+                        int icon_x = layer->rect.x + current->level * component->indent_width;
+                        int icon_y = item_y + (component->item_height - 10) / 2;
                         
-                        Rect text_rect = {
-                            current_text_x,
-                            current_text_y,
-                            actual_text_width / scale,
-                            actual_text_height / scale
-                        };
+                        // 绘制图标背景
+                        Rect icon_rect = {icon_x, icon_y, 10, 10};
+                        backend_render_rounded_rect(&icon_rect, component->expand_icon_color, 2);
                         
-                        // 确保文本不会超出边界
-                        if (text_rect.x + text_rect.w > layer->rect.x + layer->rect.w) {
-                            text_rect.w = layer->rect.x + layer->rect.w - text_rect.x;
+                        // 绘制图标符号
+                        if (current->expanded) {
+                            // 绘制减号
+                            Rect minus_rect = {icon_x + 2, icon_y + 4, 6, 2};
+                            backend_render_rect(&minus_rect, (Color){255, 255, 255, 255});
+                        } else {
+                            // 绘制加号
+                            Rect minus_rect = {icon_x + 2, icon_y + 4, 6, 2};
+                            backend_render_rect(&minus_rect, (Color){255, 255, 255, 255});
+                            Rect plus_rect = {icon_x + 4, icon_y + 2, 2, 6};
+                            backend_render_rect(&plus_rect, (Color){255, 255, 255, 255});
                         }
-                        if (text_rect.y + text_rect.h > item_y + component->item_height) {
-                            text_rect.h = item_y + component->item_height - text_rect.y;
+                    }
+                    
+                    // 绘制文本 - 修复后的代码
+                    Color current_text_color = current->selected ? component->selected_text_color : component->text_color;
+                    if (current->text && layer->font && layer->font->default_font) {
+                        Texture* text_texture = backend_render_texture(layer->font->default_font, current->text, current_text_color);
+                        if (text_texture) {
+                            int actual_text_width, actual_text_height;
+                            backend_query_texture(text_texture, NULL, NULL, &actual_text_width, &actual_text_height);
+                            
+                            // 计算文本位置
+                            int current_text_x = layer->rect.x + current->level * component->indent_width + 20;
+                            int current_text_y = item_y + (component->item_height - actual_text_height / scale) / 2;
+                            
+                            Rect text_rect = {
+                                current_text_x,
+                                current_text_y,
+                                actual_text_width / scale,
+                                actual_text_height / scale
+                            };
+                            
+                            // 确保文本不会超出边界
+                            if (text_rect.x + text_rect.w > layer->rect.x + layer->rect.w) {
+                                text_rect.w = layer->rect.x + layer->rect.w - text_rect.x;
+                            }
+                            if (text_rect.y + text_rect.h > item_y + component->item_height) {
+                                text_rect.h = item_y + component->item_height - text_rect.y;
+                            }
+                            
+                            backend_render_text_copy(text_texture, NULL, &text_rect);
+                            backend_render_text_destroy(text_texture);
                         }
-                        
-                        backend_render_text_copy(text_texture, NULL, &text_rect);
-                        backend_render_text_destroy(text_texture);
                     }
                 }
                 

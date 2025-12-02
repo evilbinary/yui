@@ -228,8 +228,14 @@ void scrollbar_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
             }
             
             int max_scroll_offset = content_height - visible_height;
+            if (max_scroll_offset <= 0) max_scroll_offset = 0;
             float ratio = (float)new_y / max_y;
             target->scroll_offset = (int)(ratio * max_scroll_offset);
+            
+            // 确保滚动偏移在合理范围内
+            if (target->scroll_offset < 0) target->scroll_offset = 0;
+            if (target->scroll_offset > max_scroll_offset) target->scroll_offset = max_scroll_offset;
+            
         } else {
             // 水平滚动
             int new_x = event->x - component->drag_offset - layer->rect.x;
