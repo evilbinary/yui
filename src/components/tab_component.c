@@ -5,6 +5,7 @@
 
 #include "../backend.h"
 #include "../event.h"
+#include "../render.h"
 #include "../util.h"
 
 // 创建选项卡组件
@@ -27,8 +28,11 @@ TabComponent* tab_component_create(Layer* layer) {
   component->on_tab_changed = NULL;
   component->on_tab_close = NULL;
 
-  // 设置组件类型
+  // 设置组件类型和渲染函数
   layer->component = component;
+  layer->render = tab_component_render;
+  layer->handle_mouse_event = tab_component_handle_mouse_event;
+  layer->handle_key_event = tab_component_handle_key_event;
 
   return component;
 }
@@ -109,15 +113,7 @@ TabComponent* tab_component_create_from_json(Layer* layer, cJSON* json_obj) {
           content_layer->rect.w = layer->rect.w;
           content_layer->rect.h = layer->rect.h - tabComponent->tab_height;
           content_layer->parent = layer;
-
-          // 添加到父层的子层列表
-          if (layer->child_count == 0) {
-            layer->children = (Layer**)malloc(sizeof(Layer*));
-          } else {
-            layer->children = (Layer**)realloc(
-                layer->children, (layer->child_count + 1) * sizeof(Layer*));
-          }
-          layer->children[layer->child_count++] = content_layer;
+          // 注意：不添加到父层的children中，由tab组件自己管理渲染
         }
       }
 
@@ -127,7 +123,7 @@ TabComponent* tab_component_create_from_json(Layer* layer, cJSON* json_obj) {
 
       // 设置选项卡为不可见（只有活动选项卡的内容可见）
       if (content_layer && tab_index != tabComponent->active_tab) {
-        content_layer->visible = 0;
+        SET_STATE(content_layer, LAYER_STATE_DISABLED);
       }
     }
   }
@@ -383,13 +379,13 @@ int tab_calculate_tab_width(TabComponent* component, int index) {
       component->layer->font->default_font) {
     Texture* temp_texture = backend_render_texture(
         component->layer->font->default_font, component->tabs[index].title,
-        component->layer->color);
+        component->text_color);
     if (temp_texture) {
       int temp_height;
       backend_query_texture(temp_texture, NULL, NULL, &text_width,
                             &temp_height);
       backend_render_text_destroy(temp_texture);
-      text_width /= scale;  // 考虑缩放因子
+      // text_width /= scale;  // 暂时不考虑缩放因子
     }
   }
 
@@ -501,96 +497,81 @@ void tab_component_render(Layer* layer) {
   if (!layer || !layer->component) return;
 
   TabComponent* component = (TabComponent*)layer->component;
+  if (component->tab_count <= 0) return;
 
-  // 绘制选项卡背景
-  Rect bg_rect = {layer->rect.x, layer->rect.y, layer->rect.w,
-                  component->tab_height};
-  backend_render_rounded_rect(&bg_rect, component->tab_color, 5);
+  // 绘制内容区域背景
+  Rect content_rect = {
+    layer->rect.x, 
+    layer->rect.y + component->tab_height,
+    layer->rect.w, 
+    layer->rect.h - component->tab_height
+  };
+  backend_render_fill_rect_color(&content_rect, 255, 255, 255, 255);
 
-  // 计算文本高度
-  int text_height = 20;  // 默认高度
-  if (layer->font && layer->font->default_font) {
-    Texture* temp_texture =
-        backend_render_texture(layer->font->default_font, "A", layer->color);
-    if (temp_texture) {
-      int temp_width;
-      backend_query_texture(temp_texture, NULL, NULL, &temp_width,
-                            &text_height);
-      backend_render_text_destroy(temp_texture);
-    }
-  }
-
-  // 绘制选项卡
+  // 计算每个tab的宽度（使用与点击检测相同的计算方式）
   int current_x = layer->rect.x;
+
+  // 绘制每个tab
   for (int i = 0; i < component->tab_count; i++) {
-    if (!component->tabs[i].title) continue;
-
     int tab_width = tab_calculate_tab_width(component, i);
+    int tab_x = current_x;
+    Rect tab_rect = {tab_x, layer->rect.y, tab_width, component->tab_height};
 
-    // 选择颜色
-    Color bg_color = (i == component->active_tab) ? component->active_tab_color
-                                                  : component->tab_color;
-    Color text_color =
-        (i == component->tabs[i].enabled)
-            ? ((i == component->active_tab) ? component->active_text_color
-                                            : component->text_color)
-            : (Color){153, 153, 153, 255};
+    // 选择颜色：active tab用蓝色，其他用灰色
+    if (i == component->active_tab) {
+      backend_render_fill_rect_color(&tab_rect, 33, 150, 243, 255); // 蓝色
+    } else {
+      backend_render_fill_rect_color(&tab_rect, 240, 240, 240, 255); // 灰色
+    }
 
-    // 绘制选项卡背景
-    Rect tab_rect = {current_x, layer->rect.y, tab_width,
-                     component->tab_height};
-    backend_render_rounded_rect(&tab_rect, bg_color, 5);
-
-    // 绘制选项卡文本
-    int text_x = current_x + 10;
-    int text_y = layer->rect.y + (component->tab_height - text_height) / 2;
-
-    if (layer->font && layer->font->default_font) {
+    // 绘制tab文字
+    if (layer->font && layer->font->default_font && component->tabs[i].title) {
+      Color text_color = (i == component->active_tab) ? 
+        (Color){255, 255, 255, 255} : (Color){51, 51, 51, 255}; // active用白色，其他用黑色
+      
       Texture* text_texture = backend_render_texture(
           layer->font->default_font, component->tabs[i].title, text_color);
+      
       if (text_texture) {
-        Rect text_rect = {text_x, text_y, tab_width - 20, text_height};
+        // 获取文字纹理的实际尺寸
+        int text_width, text_height;
+        backend_query_texture(text_texture, NULL, NULL, &text_width, &text_height);
+        if (text_width > tab_width - 10) text_width = tab_width - 10;
+        
+        Rect text_rect = {
+          tab_x + (tab_width - text_width / scale) / 2,
+          layer->rect.y + (component->tab_height - text_height / scale) / 2,  // 使用实际高度居中
+          text_width / scale,
+          text_height / scale
+        };
         backend_render_text_copy(text_texture, NULL, &text_rect);
         backend_render_text_destroy(text_texture);
       }
     }
-
-    // 绘制关闭按钮
-    if (component->closable) {
-      int close_x = current_x + tab_width - 18;
-      int close_y = layer->rect.y + (component->tab_height - 14) / 2;
-      Rect close_rect = {close_x, close_y, 14, 14};
-      backend_render_rounded_rect(&close_rect, (Color){255, 0, 0, 255}, 7);
-
-      if (layer->font && layer->font->default_font) {
-        Texture* close_texture = backend_render_texture(
-            layer->font->default_font, "×", (Color){255, 255, 255, 255});
-        if (close_texture) {
-          Rect close_text_rect = {close_x + 3, close_y + 1, 8, 12};
-          backend_render_text_copy(close_texture, NULL, &close_text_rect);
-          backend_render_text_destroy(close_texture);
-        }
-      }
-    }
-
-    current_x += tab_width;
+    
+    current_x += tab_width;  // 移动到下一个tab位置
   }
 
-  // 绘制内容区域背景
-  Rect content_bg_rect = {layer->rect.x, layer->rect.y + component->tab_height,
-                          layer->rect.w, layer->rect.h - component->tab_height};
-  backend_render_fill_rect(&content_bg_rect, component->active_tab_color);
-
-  // 绘制边框
-  Rect border_rect = {layer->rect.x, layer->rect.y, layer->rect.w,
-                      layer->rect.h};
-  backend_render_rounded_rect_with_border(
-      &border_rect, (Color){255, 255, 255, 255}, 5, 1, component->border_color);
-
-  // 确保只有活动选项卡的内容可见
-  for (int i = 0; i < component->tab_count; i++) {
-    if (component->tabs[i].content_layer) {
-      component->tabs[i].content_layer->visible = (i == component->active_tab);
+  // 渲染活动tab的内容
+  if (component->active_tab >= 0 && component->active_tab < component->tab_count) {
+    Layer* active_content = component->tabs[component->active_tab].content_layer;
+    if (active_content) {
+      // 设置内容区域的裁剪
+      Rect prev_clip;
+      backend_render_get_clip_rect(&prev_clip);
+      
+      Rect content_clip = {
+        layer->rect.x, 
+        layer->rect.y + component->tab_height,
+        layer->rect.w, 
+        layer->rect.h - component->tab_height
+      };
+      backend_render_set_clip_rect(&content_clip);
+      
+      render_layer(active_content);
+      
+      // 恢复裁剪区域
+      backend_render_set_clip_rect(&prev_clip);
     }
   }
 }
