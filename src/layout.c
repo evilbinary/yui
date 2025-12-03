@@ -95,6 +95,11 @@ void layout_layer(Layer* layer){
             
             for (int i = 0; i < layer->child_count; i++) {
                 Layer* child = layer->children[i];
+                if (layer->children[i]->visible == IN_VISIBLE) {
+                    printf("layout_layer: skipping invisible child[%d] of %s\n", i, layer->id ? layer->id : "(null)");
+                    fflush(stdout);
+                    continue;
+                }
                 if (!child) {
                     printf("layout_layer: WARNING: skipping NULL child[%d] in horizontal layout\n", i);
                     fflush(stdout);
@@ -139,6 +144,11 @@ void layout_layer(Layer* layer){
             fflush(stdout);
             
             for (int i = 0; i < layer->child_count; i++) {
+                if (layer->children[i]->visible == IN_VISIBLE) {
+                    printf("layout_layer: skipping invisible child[%d] of %s\n", i, layer->id ? layer->id : "(null)");
+                    fflush(stdout);
+                    continue;
+                }
                 // 添加NULL检查，防止访问无效指针
                 if (!layer->children[i]) {
                     printf("layout_layer: WARNING: child[%d] is NULL during flex calculation\n", i);
@@ -308,6 +318,11 @@ void layout_layer(Layer* layer){
             layer->children = malloc(item_count * sizeof(Layer*));
             
             for (int i = 0; i < item_count; i++) {
+                if (layer->children[i]->visible == IN_VISIBLE) {
+                    printf("layout_layer: skipping invisible child[%d] of %s\n", i, layer->id ? layer->id : "(null)");
+                    fflush(stdout);
+                    continue;
+                }
                 // 创建基于模板的新项
                 layer->children[i] = malloc(sizeof(Layer));
                 memcpy(layer->children[i], layer->item_template, sizeof(Layer));
@@ -398,6 +413,11 @@ void layout_layer(Layer* layer){
         int max_col_width = 0, max_row_height = 0;
         for (int i = 0; i < layer->child_count; i++) {
             Layer* child = layer->children[i];
+            if (child->visible == IN_VISIBLE) {
+                printf("layout_layer: skipping invisible child[%d] of %s\n", i, layer->id ? layer->id : "(null)");
+                fflush(stdout);
+                continue;
+            }
             if (!child) continue;
             
             if (child->rect.w > max_col_width) max_col_width = child->rect.w;
@@ -452,6 +472,12 @@ void layout_layer(Layer* layer){
         for (int i = 0; i < layer->child_count; i++) {
             if (!layer->children[i]) {
                 printf("layout_layer: WARNING: layer %s child[%d] is NULL!\n", layer->id ? layer->id : "(null)", i);
+                fflush(stdout);
+                continue;
+            }
+            // 跳过不可见的子层
+            if (layer->children[i]->visible == IN_VISIBLE) {
+                printf("layout_layer: skipping invisible child[%d] of %s\n", i, layer->id ? layer->id : "(null)");
                 fflush(stdout);
                 continue;
             }

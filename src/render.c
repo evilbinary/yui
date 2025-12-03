@@ -108,6 +108,9 @@ void render_layer(Layer* layer) {
             printf("render_layer: layer->children[%d] is NULL for layer %s\n", i, layer->id);
             continue;
         }
+        if(layer->children[i]->visible==IN_VISIBLE){
+            continue;
+        }
         render_layer(layer->children[i]);
     }
 
