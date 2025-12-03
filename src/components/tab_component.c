@@ -91,7 +91,10 @@ TabComponent* tab_component_create_from_json(Layer* layer, cJSON* json_obj) {
                              activeTextColor, borderColor);
   }
   // 解析选项卡数组
-  cJSON* tabs = cJSON_GetObjectItem(json_obj, "children");
+  cJSON* tabs = cJSON_GetObjectItem(json_obj, "tabs");
+  if(tabs==NULL){
+    tabs = cJSON_GetObjectItem(json_obj, "children");
+  }
   if (tabs && cJSON_IsArray(tabs)) {
     int tab_count = cJSON_GetArraySize(tabs);
 
@@ -233,19 +236,25 @@ void tab_component_remove_tab(TabComponent* component, int index) {
 
 // 设置活动选项卡
 void tab_component_set_active_tab(TabComponent* component, int index) {
+  printf("DEBUG: tab_component_set_active_tab called with index=%d (current=%d)\n", index, component->active_tab);
+  
   if (!component || index < 0 || index >= component->tab_count ||
-      !component->tabs[index].enabled)
+      !component->tabs[index].enabled) {
+    printf("DEBUG: tab_component_set_active_tab rejected - invalid parameters\n");
     return;
+  }
 
   int old_tab = component->active_tab;
 
   // 设置新的活动选项卡
   component->active_tab = index;
+  printf("DEBUG: Active tab changed from %d to %d\n", old_tab, index);
 
   // 更新内容层的可见性
   for (int i = 0; i < component->tab_count; i++) {
     if (component->tabs[i].content_layer) {
-      component->tabs[i].content_layer->visible = (i == index);
+      component->tabs[i].content_layer->visible = (i == index)?VISIBLE:IN_VISIBLE;
+      printf("DEBUG: Tab %d content_layer visible=%d\n", i, component->tabs[i].content_layer->visible);
     }
   }
 
@@ -555,7 +564,21 @@ void tab_component_render(Layer* layer) {
   // 渲染活动tab的内容
   if (component->active_tab >= 0 && component->active_tab < component->tab_count) {
     Layer* active_content = component->tabs[component->active_tab].content_layer;
+    printf("DEBUG: Active tab=%d, content_layer=%p\n", component->active_tab, active_content);
+    
     if (active_content) {
+      printf("DEBUG: Rendering content for tab %d, layer %s rect: x=%d, y=%d, w=%d, h=%d\n", 
+             component->active_tab,active_content->text, active_content->rect.x, active_content->rect.y, 
+             active_content->rect.w, active_content->rect.h);
+      
+      // 保存内容层原始位置
+      int original_x = active_content->rect.x;
+      int original_y = active_content->rect.y;
+      
+      // 设置内容层到正确的位置（tab组件内的内容区域）
+      active_content->rect.x = layer->rect.x;
+      active_content->rect.y = layer->rect.y + component->tab_height;
+      
       // 设置内容区域的裁剪
       Rect prev_clip;
       backend_render_get_clip_rect(&prev_clip);
@@ -570,8 +593,14 @@ void tab_component_render(Layer* layer) {
       
       render_layer(active_content);
       
+      // 恢复内容层的原始位置
+      active_content->rect.x = original_x;
+      active_content->rect.y = original_y;
+      
       // 恢复裁剪区域
       backend_render_set_clip_rect(&prev_clip);
+    } else {
+      printf("DEBUG: No content layer for active tab %d\n", component->active_tab);
     }
   }
 }
