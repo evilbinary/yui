@@ -46,6 +46,13 @@ CheckboxComponent* checkbox_component_create_from_json(Layer* layer, cJSON* json
     if(cJSON_HasObjectItem(json_obj, "data")) {
         default_checked = cJSON_IsTrue(cJSON_GetObjectItem(json_obj, "data"));
     }
+    cJSON* size = cJSON_GetObjectItem(json_obj, "size");
+    if (size == NULL) {
+      layer->rect.w = 20;
+      layer->rect.h = layer->rect.w;
+      layer->fixed_width = layer->rect.w;
+      layer->fixed_height = layer->rect.h;
+    }
     return checkbox_component_create(layer, default_checked);
 }
 
