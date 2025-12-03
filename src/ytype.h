@@ -114,6 +114,13 @@ typedef enum {
     IMAGE_MODE_ASPECT_FILL  // 填充整个区域（可能裁剪图片）
 } ImageMode;
 
+typedef enum {
+    VISIBLE,
+    IN_VISIBLE,
+} VisableType;
+
+
+
 // 添加图层类型枚举值 GRID
 typedef enum {
     VIEW,

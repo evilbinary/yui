@@ -49,10 +49,12 @@ Texture* render_text(Layer* layer,const char* text, Color color) {
 
 // ====================== 渲染管线 ======================
 void render_layer(Layer* layer) {
-    
     // 添加调试信息，检查layer指针是否为NULL
     if (!layer) {
         printf("render_layer: layer is NULL\n");
+        return;
+    }
+    if(layer->visible==IN_VISIBLE){
         return;
     }
     
