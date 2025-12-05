@@ -277,6 +277,20 @@ void slider_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     if (!layer || !event || !layer->component) return;
     
     SliderComponent* component = (SliderComponent*)layer->component;
+    // 只在按下事件时输出调试信息
+    if (event->state == SDL_PRESSED && event->button == SDL_BUTTON_LEFT) {
+        printf("DEBUG: Mouse CLICK on slider at (%d,%d)\n", layer->rect.x, layer->rect.y);
+    }
+    
+    // 首先检查鼠标是否在滑块区域内
+    if (event->x < layer->rect.x || event->x >= layer->rect.x + layer->rect.w ||
+        event->y < layer->rect.y || event->y >= layer->rect.y + layer->rect.h) {
+        // 鼠标不在滑块区域内，只处理拖动释放事件
+        if (event->state == SDL_RELEASED && event->button == SDL_BUTTON_LEFT) {
+            component->dragging = 0;
+        }
+        return;
+    }
     
     if (event->state == SDL_PRESSED && event->button == SDL_BUTTON_LEFT) {
         // 检查是否点击在滑块上
@@ -302,8 +316,8 @@ void slider_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
         }
     } else if (event->state == SDL_RELEASED && event->button == SDL_BUTTON_LEFT) {
         component->dragging = 0;
-    } else if (event->state == SDL_PRESSED && component->dragging) {
-        // 拖动滑块
+    } else if (event->button == SDL_BUTTON_LEFT && component->dragging) {
+        // 拖动滑块（鼠标移动时）
         float new_value = slider_calculate_value_from_position(component, event->x, event->y);
         slider_component_set_value(component, new_value);
     }
@@ -352,22 +366,9 @@ void slider_component_handle_key_event(Layer* layer, KeyEvent* event) {
 
 // 渲染滑块
 void slider_component_render(Layer* layer) {
-    printf("DEBUG: slider_component_render called\n");
-    if (!layer) {
-        printf("DEBUG: layer is NULL\n");
-        return;
-    }
-    if (!layer->component) {
-        printf("DEBUG: layer->component is NULL\n");
-        return;
-    }
+    if (!layer || !layer->component) return;
     
     SliderComponent* component = (SliderComponent*)layer->component;
-    printf("DEBUG: Slider rendering, layer rect: x=%d, y=%d, w=%d, h=%d\n", 
-           layer->rect.x, layer->rect.y, layer->rect.w, layer->rect.h);
-    printf("DEBUG: Slider value: %f, min: %f, max: %f, orientation: %s\n", 
-           component->value, component->min_value, component->max_value,
-           component->orientation == SLIDER_ORIENTATION_VERTICAL ? "VERTICAL" : "HORIZONTAL");
     
     // 检查layer的尺寸是否有效
     if (layer->rect.w <= 0 || layer->rect.h <= 0) {
@@ -383,8 +384,7 @@ void slider_component_render(Layer* layer) {
         int track_x = layer->rect.x + 10;
         int track_width = layer->rect.w - 20;
         
-        printf("DEBUG: Horizontal track rect: x=%d, y=%d, w=%d, h=%d\n", 
-               track_x, track_y, track_width, track_height);
+
         
         // 修复调用：创建Rect结构体
         Rect track_rect = {track_x, track_y, track_width, track_height};
@@ -394,25 +394,24 @@ void slider_component_render(Layer* layer) {
         int thumb_pos = slider_calculate_thumb_position(component);
         int progress_width = thumb_pos - track_x;
         if (progress_width > 0) {
-            printf("DEBUG: Horizontal progress rect: x=%d, y=%d, w=%d, h=%d\n", 
-                   track_x, track_y, progress_width, track_height);
+
             // 修复调用：创建进度条的Rect结构体
             Rect progress_rect = {track_x, track_y, progress_width, track_height};
             backend_render_rounded_rect(&progress_rect, component->thumb_color, 3);
         }
     } else {
         // 垂直轨道
-        int track_x = layer->rect.x + layer->rect.w / 2 - 3;  // 增加轨道宽度到6像素
-        int track_width = 6;  // 增加轨道宽度，使其更明显
+        int track_x = layer->rect.x + layer->rect.w / 2 - 4;  // 增加轨道宽度到8像素
+        int track_width = 8;  // 增加轨道宽度，使其更明显
         int track_y = layer->rect.y + 10;
         int track_height = layer->rect.h - 20;
         
-        printf("DEBUG: Vertical track rect: x=%d, y=%d, w=%d, h=%d\n", 
-               track_x, track_y, track_width, track_height);
+
         
-        // 修复调用：创建Rect结构体
+        // 使用更深的轨道颜色使其更明显
+        Color dark_track_color = {100, 100, 100, 255};  // 更深的灰色
         Rect track_rect = {track_x, track_y, track_width, track_height};
-        backend_render_rounded_rect(&track_rect, component->track_color, 3);
+        backend_render_rounded_rect(&track_rect, dark_track_color, 4);
         
         // 绘制进度
         int thumb_pos = slider_calculate_thumb_position(component);
@@ -422,7 +421,7 @@ void slider_component_render(Layer* layer) {
                    track_x, thumb_pos, track_width, progress_height);
             // 修复调用：创建进度条的Rect结构体
             Rect progress_rect = {track_x, thumb_pos, track_width, progress_height};
-            backend_render_rounded_rect(&progress_rect, component->thumb_color, 3);
+            backend_render_rounded_rect(&progress_rect, component->thumb_color, 4);
         }
     }
     
