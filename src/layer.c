@@ -141,11 +141,9 @@ Layer* parse_layer(cJSON* json_obj, Layer* parent) {
 
   // 解析资字体
   cJSON* font = cJSON_GetObjectItem(json_obj, "font");
-  if (font != NULL) {
+  if (font != NULL&& font->valuestring!=NULL) {
     layer->font = malloc(sizeof(Font));
-    strcpy(layer->font->path,
-           cJSON_GetObjectItem(json_obj, "font")->valuestring);
-
+    strcpy(layer->font->path,font->valuestring);
     cJSON* fontSize = cJSON_GetObjectItem(json_obj, "fontSize");
     if (fontSize != NULL) {
       layer->font->size = cJSON_GetObjectItem(json_obj, "fontSize")->valueint;
@@ -717,7 +715,12 @@ Layer* parse_layer(cJSON* json_obj, Layer* parent) {
         realloc(layer->children, layer->child_count * sizeof(Layer*));
 
     for (int i = 0; i < layer->child_count; i++) {
-      layer->children[i] = parse_layer(cJSON_GetArrayItem(children, i), layer);
+      cJSON* child =cJSON_GetArrayItem(children, i);
+      if(child==NULL){
+        printf("Warning: child is null\n");
+        continue;
+      }
+      layer->children[i] = parse_layer(child, layer);
     }
   }
 
