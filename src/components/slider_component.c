@@ -26,8 +26,11 @@ SliderComponent* slider_component_create(Layer* layer) {
     component->user_data = NULL;
     component->on_value_changed = NULL;
     
-    // 修复：设置组件类型，使用layer->component
+    // 设置组件和渲染函数
     layer->component = component;
+    layer->render = slider_component_render;
+    layer->handle_mouse_event = slider_component_handle_mouse_event;
+    layer->handle_key_event = slider_component_handle_key_event;
     
     return component;
 }
@@ -37,69 +40,64 @@ SliderComponent* slider_component_create_from_json(Layer* layer, cJSON* json) {
     if (!layer || !json) return NULL;
 
     SliderComponent* sliderComponent = slider_component_create(layer);
-
-        // 解析滑块特定属性
-    cJSON* sliderConfig = cJSON_GetObjectItem(json, "sliderConfig");
-    if (sliderConfig) {
-      SliderComponent* sliderComponent = (SliderComponent*)layer->component;
-
-      if (cJSON_HasObjectItem(sliderConfig, "min")) {
-        float min =
-            (float)cJSON_GetObjectItem(sliderConfig, "min")->valuedouble;
-        float max = 100.0f;
-        if (cJSON_HasObjectItem(sliderConfig, "max")) {
-          max = (float)cJSON_GetObjectItem(sliderConfig, "max")->valuedouble;
-        }
-        slider_component_set_range(sliderComponent, min, max);
-      }
-
-      if (cJSON_HasObjectItem(sliderConfig, "value")) {
-        slider_component_set_value(
-            sliderComponent,
-            (float)cJSON_GetObjectItem(sliderConfig, "value")->valuedouble);
-      }
-
-      if (cJSON_HasObjectItem(sliderConfig, "step")) {
-        slider_component_set_step(
-            sliderComponent,
-            (float)cJSON_GetObjectItem(sliderConfig, "step")->valuedouble);
-      }
-
-      if (cJSON_HasObjectItem(sliderConfig, "orientation")) {
-        if (strcmp(
-                cJSON_GetObjectItem(sliderConfig, "orientation")->valuestring,
-                "vertical") == 0) {
-          slider_component_set_orientation(sliderComponent,
-                                           SLIDER_ORIENTATION_VERTICAL);
-        }
-      }
-
-      // 解析滑块颜色
-      cJSON* colors = cJSON_GetObjectItem(sliderConfig, "colors");
-      if (colors) {
-        Color trackColor = {200, 200, 200, 255};
-        Color thumbColor = {100, 100, 100, 255};
-        Color activeThumbColor = {50, 50, 50, 255};
-
-        if (cJSON_HasObjectItem(colors, "trackColor")) {
-          parse_color(cJSON_GetObjectItem(colors, "trackColor")->valuestring,
-                      &trackColor);
-        }
-        if (cJSON_HasObjectItem(colors, "thumbColor")) {
-          parse_color(cJSON_GetObjectItem(colors, "thumbColor")->valuestring,
-                      &thumbColor);
-        }
-        if (cJSON_HasObjectItem(colors, "activeThumbColor")) {
-          parse_color(
-              cJSON_GetObjectItem(colors, "activeThumbColor")->valuestring,
-              &activeThumbColor);
-        }
-
-        slider_component_set_colors(sliderComponent, trackColor, thumbColor,
-                                    activeThumbColor);
-      }
+    
+    // 设置默认大小（如果没有指定size）
+    if (layer->rect.w <= 0) {
+        layer->rect.w = 200;  // 默认宽度
     }
+    if (layer->rect.h <= 0) {
+        layer->rect.h = 30;   // 默认高度
+    }
+    printf("DEBUG: Slider default size set to %dx%d\n", layer->rect.w, layer->rect.h);
 
+    // 解析滑块特定属性 - 直接从JSON对象中读取，不是从sliderConfig
+    cJSON* min = cJSON_GetObjectItem(json, "min");
+    cJSON* max = cJSON_GetObjectItem(json, "max");
+    cJSON* value = cJSON_GetObjectItem(json, "data");  // JSON中使用data字段
+    cJSON* step = cJSON_GetObjectItem(json, "step");
+    cJSON* orientation = cJSON_GetObjectItem(json, "orientation");
+    
+    // 设置范围
+    if (min && max) {
+        slider_component_set_range(sliderComponent, 
+            (float)min->valuedouble, (float)max->valuedouble);
+    }
+    
+    // 设置当前值
+    if (value) {
+        slider_component_set_value(sliderComponent, (float)value->valuedouble);
+    }
+    
+    // 设置步长
+    if (step) {
+        slider_component_set_step(sliderComponent, (float)step->valuedouble);
+    }
+    
+    // 设置方向
+    if (orientation && orientation->valuestring!=NULL&&  strcmp(orientation->valuestring, "vertical") == 0) {
+        slider_component_set_orientation(sliderComponent, SLIDER_ORIENTATION_VERTICAL);
+    }
+    
+    // 解析样式
+    cJSON* style = cJSON_GetObjectItem(json, "style");
+    if (style) {
+        Color trackColor = {224, 224, 224, 255};  // #E0E0E0
+        Color thumbColor = {33, 150, 243, 255};   // #2196F3
+        Color activeThumbColor = {25, 118, 210, 255}; // #1976D2
+        
+        if (cJSON_HasObjectItem(style, "trackColor")) {
+            parse_color(cJSON_GetObjectItem(style, "trackColor")->valuestring, &trackColor);
+        }
+        if (cJSON_HasObjectItem(style, "thumbColor")) {
+            parse_color(cJSON_GetObjectItem(style, "thumbColor")->valuestring, &thumbColor);
+        }
+        if (cJSON_HasObjectItem(style, "activeThumbColor")) {
+            parse_color(cJSON_GetObjectItem(style, "activeThumbColor")->valuestring, &activeThumbColor);
+        }
+        
+        slider_component_set_colors(sliderComponent, trackColor, thumbColor, activeThumbColor);
+    }
+    
     return sliderComponent;
 }
 
@@ -194,7 +192,15 @@ int slider_calculate_thumb_position(SliderComponent* component) {
     if (!component) return 0;
     
     float range = component->max_value - component->min_value;
-    float normalized_value = (component->value - component->min_value) / range;
+    float normalized_value = 0.5f;  // 默认在中间位置
+    
+    // 防止除零错误
+    if (range > 0) {
+        normalized_value = (component->value - component->min_value) / range;
+        // 限制在0-1范围内
+        if (normalized_value < 0.0f) normalized_value = 0.0f;
+        if (normalized_value > 1.0f) normalized_value = 1.0f;
+    }
     
     if (component->orientation == SLIDER_ORIENTATION_HORIZONTAL) {
         int track_width = component->layer->rect.w - 20;  // 留出边距
@@ -207,16 +213,18 @@ int slider_calculate_thumb_position(SliderComponent* component) {
 
 // 根据鼠标位置计算值
 float slider_calculate_value_from_position(SliderComponent* component, int mouse_x, int mouse_y) {
-    if (!component) return component->value;
+    if (!component) return 0.0f;
     
     float normalized_pos;
     
     if (component->orientation == SLIDER_ORIENTATION_HORIZONTAL) {
         int track_width = component->layer->rect.w - 20;
+        if (track_width <= 0) return component->value;  // 防止除零
         int track_x = component->layer->rect.x + 10;
         normalized_pos = (float)(mouse_x - track_x) / track_width;
     } else {
         int track_height = component->layer->rect.h - 20;
+        if (track_height <= 0) return component->value;  // 防止除零
         int track_y = component->layer->rect.y + 10;
         normalized_pos = 1.0f - (float)(mouse_y - track_y) / track_height;
     }
@@ -227,12 +235,17 @@ float slider_calculate_value_from_position(SliderComponent* component, int mouse
     
     // 转换为实际值
     float range = component->max_value - component->min_value;
-    float value = component->min_value + normalized_pos * range;
+    float value;
     
-    // 应用步长
-    if (component->step > 0) {
-        float steps = roundf((value - component->min_value) / component->step);
-        value = component->min_value + steps * component->step;
+    if (range > 0) {
+        value = component->min_value + normalized_pos * range;
+        // 应用步长
+        if (component->step > 0) {
+            float steps = roundf((value - component->min_value) / component->step);
+            value = component->min_value + steps * component->step;
+        }
+    } else {
+        value = component->value;  // 如果范围为0，返回当前值
     }
     
     return value;
@@ -318,9 +331,27 @@ void slider_component_handle_key_event(Layer* layer, KeyEvent* event) {
 
 // 渲染滑块
 void slider_component_render(Layer* layer) {
-    if (!layer || !layer->component) return;
+    printf("DEBUG: slider_component_render called\n");
+    if (!layer) {
+        printf("DEBUG: layer is NULL\n");
+        return;
+    }
+    if (!layer->component) {
+        printf("DEBUG: layer->component is NULL\n");
+        return;
+    }
     
     SliderComponent* component = (SliderComponent*)layer->component;
+    printf("DEBUG: Slider rendering, layer rect: x=%d, y=%d, w=%d, h=%d\n", 
+           layer->rect.x, layer->rect.y, layer->rect.w, layer->rect.h);
+    printf("DEBUG: Slider value: %f, min: %f, max: %f\n", 
+           component->value, component->min_value, component->max_value);
+    
+    // 检查layer的尺寸是否有效
+    if (layer->rect.w <= 0 || layer->rect.h <= 0) {
+        printf("DEBUG: Invalid layer dimensions, skipping render\n");
+        return;
+    }
     
     // 绘制轨道
     if (component->orientation == SLIDER_ORIENTATION_HORIZONTAL) {
