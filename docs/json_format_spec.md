@@ -65,9 +65,9 @@ UI定义文件采用树形结构描述界面，基本结构如下：
 
 YUI框架支持以下核心组件类型：
 
-| 组件类型 | 说明 | 关键字 |
-|----------|------|--------|
-| VIEW | 基础视图容器 | `"type": "Panel"` |
+| 组件类型 | 说明 | JSON 类型值 |
+|----------|------|-------------|
+| VIEW | 基础视图容器 | `"type": "View"` |
 | BUTTON | 按钮组件 | `"type": "Button"` |
 | INPUT | 输入框组件 | `"type": "Input"` |
 | LABEL | 文本标签组件 | `"type": "Label"` |
@@ -75,6 +75,14 @@ YUI框架支持以下核心组件类型：
 | LIST | 列表组件 | `"type": "List"` |
 | GRID | 网格布局组件 | `"type": "Grid"` |
 | PROGRESS | 进度条组件 | `"type": "Progress"` |
+| CHECKBOX | 复选框组件 | `"type": "Checkbox"` |
+| RADIOBOX | 单选框组件 | `"type": "Radiobox"` |
+| TEXT | 文本组件 | `"type": "Text"` |
+| TREEVIEW | 树形视图组件 | `"type": "Treeview"` |
+| TAB | 选项卡组件 | `"type": "Tab"` |
+| SLIDER | 滑块组件 | `"type": "Slider"` |
+| LISTBOX | 列表框组件 | `"type": "Listbox"` |
+| SCROLLBAR | 滚动条组件 | `"type": "Scrollbar"` |
 
 ## 六、通用属性
 
@@ -84,27 +92,34 @@ YUI框架支持以下核心组件类型：
 
 | 属性名 | 类型 | 说明 | 是否必需 |
 |--------|------|------|----------|
-| id | String | 组件唯一标识符 | 是 |
+| name | String | 组件名称标识符 | 是 |
 | type | String | 组件类型 | 是 |
-| position | Array | 位置坐标 [x, y] | 否 |
-| size | Array | 大小 [width, height] | 否 |
-| style | Object | 样式设置 | 否 |
-| events | Object | 事件绑定 | 否 |
+| rect | Array | 位置和大小 [x, y, width, height] | 是 |
+| color | String | 背景颜色，支持RGBA格式 | 否 |
+| radius | Number | 圆角半径 | 否 |
+| font | Object | 字体配置对象 | 否 |
 | children | Array | 子组件数组 | 否 |
-| source | String | 模块化组件引用路径 | 否 |
-| metadata | Object | 元数据信息 | 否 |
 
-### style样式属性
+### 字体配置属性
 
-组件支持以下通用样式属性：
+| 属性名 | 类型 | 说明 | 默认值 |
+|--------|------|------|--------|
+| size | Number | 字体大小 | 12 |
+| family | String | 字体族名 | "Arial" |
+| color | String | 字体颜色，支持RGBA格式 | "rgba(0, 0, 0, 255)" |
 
-| 样式属性 | 类型 | 说明 | 默认值 |
-|----------|------|------|--------|
-| color | String | 背景颜色，支持HEX格式 | "#FFFFFF" |
-| opacity | Number | 透明度，取值范围0-1 | 1 |
-| borderRadius | Number | 圆角半径 | 0 |
-| borderWidth | Number | 边框宽度 | 0 |
-| borderColor | String | 边框颜色，支持HEX格式 | "#000000" |
+### 颜色格式说明
+
+YUI框架支持RGBA颜色格式：
+- `rgba(R, G, B, A)` 其中：
+  - R、G、B：0-255 的整数值
+  - A：0-255 的透明度值（0为完全透明，255为完全不透明）
+
+示例：
+- `rgba(255, 255, 255, 255)` - 白色
+- `rgba(0, 0, 0, 255)` - 黑色
+- `rgba(0, 120, 215, 255)` - 蓝色
+- `rgba(240, 240, 240, 255)` - 浅灰色
 
 ## 七、组件特有属性
 
