@@ -56,6 +56,13 @@ SliderComponent* slider_component_create_from_json(Layer* layer, cJSON* json) {
     cJSON* value = cJSON_GetObjectItem(json, "data");  // JSON中使用data字段
     cJSON* step = cJSON_GetObjectItem(json, "step");
     cJSON* orientation = cJSON_GetObjectItem(json, "orientation");
+    printf("DEBUG: Orientation field found: %s\n", orientation ? "YES" : "NO");
+    if (orientation) {
+        printf("DEBUG: Orientation type: %d, valuestring: %s, valuedouble: %f\n", 
+               orientation->type, 
+               orientation->valuestring ? orientation->valuestring : "null", 
+               orientation->valuedouble);
+    }
     
     // 设置范围
     if (min && max) {
@@ -73,10 +80,24 @@ SliderComponent* slider_component_create_from_json(Layer* layer, cJSON* json) {
         slider_component_set_step(sliderComponent, (float)step->valuedouble);
     }
     
-    // 设置方向
-    if (orientation && orientation->valuestring!=NULL&&  strcmp(orientation->valuestring, "vertical") == 0) {
-        slider_component_set_orientation(sliderComponent, SLIDER_ORIENTATION_VERTICAL);
+    // 设置方向 - 支持字符串和数字两种格式
+    if (orientation) {
+        if (orientation->valuestring != NULL && strcmp(orientation->valuestring, "vertical") == 0) {
+            slider_component_set_orientation(sliderComponent, SLIDER_ORIENTATION_VERTICAL);
+            printf("DEBUG: Setting orientation to VERTICAL (string)\n");
+        } else if (orientation->valuedouble == 1.0) {
+            slider_component_set_orientation(sliderComponent, SLIDER_ORIENTATION_VERTICAL);
+            printf("DEBUG: Setting orientation to VERTICAL (numeric: %f)\n", orientation->valuedouble);
+        } else {
+            printf("DEBUG: Orientation value: type=%s, string=%s, double=%f\n", 
+                   orientation->string ? orientation->string : "null", 
+                   orientation->valuestring ? orientation->valuestring : "null", 
+                   orientation->valuedouble);
+        }
     }
+    printf("DEBUG: Final slider orientation: %s (value: %d)\n", 
+           sliderComponent->orientation == SLIDER_ORIENTATION_VERTICAL ? "VERTICAL" : "HORIZONTAL",
+           sliderComponent->orientation);
     
     // 解析样式
     cJSON* style = cJSON_GetObjectItem(json, "style");
@@ -344,8 +365,9 @@ void slider_component_render(Layer* layer) {
     SliderComponent* component = (SliderComponent*)layer->component;
     printf("DEBUG: Slider rendering, layer rect: x=%d, y=%d, w=%d, h=%d\n", 
            layer->rect.x, layer->rect.y, layer->rect.w, layer->rect.h);
-    printf("DEBUG: Slider value: %f, min: %f, max: %f\n", 
-           component->value, component->min_value, component->max_value);
+    printf("DEBUG: Slider value: %f, min: %f, max: %f, orientation: %s\n", 
+           component->value, component->min_value, component->max_value,
+           component->orientation == SLIDER_ORIENTATION_VERTICAL ? "VERTICAL" : "HORIZONTAL");
     
     // 检查layer的尺寸是否有效
     if (layer->rect.w <= 0 || layer->rect.h <= 0) {
@@ -356,41 +378,51 @@ void slider_component_render(Layer* layer) {
     // 绘制轨道
     if (component->orientation == SLIDER_ORIENTATION_HORIZONTAL) {
         // 水平轨道
-        int track_y = layer->rect.y + layer->rect.h / 2 - 2;
-        int track_height = 4;
+        int track_y = layer->rect.y + layer->rect.h / 2 - 3;  // 增加轨道高度到6像素
+        int track_height = 6;  // 增加轨道高度，使其更明显
         int track_x = layer->rect.x + 10;
         int track_width = layer->rect.w - 20;
         
+        printf("DEBUG: Horizontal track rect: x=%d, y=%d, w=%d, h=%d\n", 
+               track_x, track_y, track_width, track_height);
+        
         // 修复调用：创建Rect结构体
         Rect track_rect = {track_x, track_y, track_width, track_height};
-        backend_render_rounded_rect(&track_rect, component->track_color, 2);
+        backend_render_rounded_rect(&track_rect, component->track_color, 3);
         
         // 绘制进度
         int thumb_pos = slider_calculate_thumb_position(component);
         int progress_width = thumb_pos - track_x;
         if (progress_width > 0) {
+            printf("DEBUG: Horizontal progress rect: x=%d, y=%d, w=%d, h=%d\n", 
+                   track_x, track_y, progress_width, track_height);
             // 修复调用：创建进度条的Rect结构体
             Rect progress_rect = {track_x, track_y, progress_width, track_height};
-            backend_render_rounded_rect(&progress_rect, component->thumb_color, 2);
+            backend_render_rounded_rect(&progress_rect, component->thumb_color, 3);
         }
     } else {
         // 垂直轨道
-        int track_x = layer->rect.x + layer->rect.w / 2 - 2;
-        int track_width = 4;
+        int track_x = layer->rect.x + layer->rect.w / 2 - 3;  // 增加轨道宽度到6像素
+        int track_width = 6;  // 增加轨道宽度，使其更明显
         int track_y = layer->rect.y + 10;
         int track_height = layer->rect.h - 20;
         
+        printf("DEBUG: Vertical track rect: x=%d, y=%d, w=%d, h=%d\n", 
+               track_x, track_y, track_width, track_height);
+        
         // 修复调用：创建Rect结构体
         Rect track_rect = {track_x, track_y, track_width, track_height};
-        backend_render_rounded_rect(&track_rect, component->track_color, 2);
+        backend_render_rounded_rect(&track_rect, component->track_color, 3);
         
         // 绘制进度
         int thumb_pos = slider_calculate_thumb_position(component);
         int progress_height = track_y + track_height - thumb_pos;
         if (progress_height > 0) {
+            printf("DEBUG: Vertical progress rect: x=%d, y=%d, w=%d, h=%d\n", 
+                   track_x, thumb_pos, track_width, progress_height);
             // 修复调用：创建进度条的Rect结构体
             Rect progress_rect = {track_x, thumb_pos, track_width, progress_height};
-            backend_render_rounded_rect(&progress_rect, component->thumb_color, 2);
+            backend_render_rounded_rect(&progress_rect, component->thumb_color, 3);
         }
     }
     
