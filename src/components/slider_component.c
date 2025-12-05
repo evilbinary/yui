@@ -48,7 +48,7 @@ SliderComponent* slider_component_create_from_json(Layer* layer, cJSON* json) {
     if (layer->rect.h <= 0) {
         layer->rect.h = 30;   // 默认高度
     }
-    printf("DEBUG: Slider default size set to %dx%d\n", layer->rect.w, layer->rect.h);
+
 
     // 解析滑块特定属性 - 直接从JSON对象中读取，不是从sliderConfig
     cJSON* min = cJSON_GetObjectItem(json, "min");
@@ -56,13 +56,7 @@ SliderComponent* slider_component_create_from_json(Layer* layer, cJSON* json) {
     cJSON* value = cJSON_GetObjectItem(json, "data");  // JSON中使用data字段
     cJSON* step = cJSON_GetObjectItem(json, "step");
     cJSON* orientation = cJSON_GetObjectItem(json, "orientation");
-    printf("DEBUG: Orientation field found: %s\n", orientation ? "YES" : "NO");
-    if (orientation) {
-        printf("DEBUG: Orientation type: %d, valuestring: %s, valuedouble: %f\n", 
-               orientation->type, 
-               orientation->valuestring ? orientation->valuestring : "null", 
-               orientation->valuedouble);
-    }
+
     
     // 设置范围
     if (min && max) {
@@ -84,20 +78,11 @@ SliderComponent* slider_component_create_from_json(Layer* layer, cJSON* json) {
     if (orientation) {
         if (orientation->valuestring != NULL && strcmp(orientation->valuestring, "vertical") == 0) {
             slider_component_set_orientation(sliderComponent, SLIDER_ORIENTATION_VERTICAL);
-            printf("DEBUG: Setting orientation to VERTICAL (string)\n");
         } else if (orientation->valuedouble == 1.0) {
             slider_component_set_orientation(sliderComponent, SLIDER_ORIENTATION_VERTICAL);
-            printf("DEBUG: Setting orientation to VERTICAL (numeric: %f)\n", orientation->valuedouble);
         } else {
-            printf("DEBUG: Orientation value: type=%s, string=%s, double=%f\n", 
-                   orientation->string ? orientation->string : "null", 
-                   orientation->valuestring ? orientation->valuestring : "null", 
-                   orientation->valuedouble);
         }
     }
-    printf("DEBUG: Final slider orientation: %s (value: %d)\n", 
-           sliderComponent->orientation == SLIDER_ORIENTATION_VERTICAL ? "VERTICAL" : "HORIZONTAL",
-           sliderComponent->orientation);
     
     // 解析样式
     cJSON* style = cJSON_GetObjectItem(json, "style");
@@ -417,8 +402,7 @@ void slider_component_render(Layer* layer) {
         int thumb_pos = slider_calculate_thumb_position(component);
         int progress_height = track_y + track_height - thumb_pos;
         if (progress_height > 0) {
-            printf("DEBUG: Vertical progress rect: x=%d, y=%d, w=%d, h=%d\n", 
-                   track_x, thumb_pos, track_width, progress_height);
+
             // 修复调用：创建进度条的Rect结构体
             Rect progress_rect = {track_x, thumb_pos, track_width, progress_height};
             backend_render_rounded_rect(&progress_rect, component->thumb_color, 4);
