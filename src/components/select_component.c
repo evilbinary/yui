@@ -6,6 +6,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+// 外部变量声明
+extern float scale;
+
 // 创建 Select 组件
 SelectComponent* select_component_create(Layer* layer) {
     SelectComponent* component = (SelectComponent*)malloc(sizeof(SelectComponent));
@@ -95,7 +98,7 @@ SelectComponent* select_component_create_from_json(Layer* layer, cJSON* json_obj
         }
         
         // 加载组件专用字体
-        if (layer->font && layer->font->path) {
+        if (layer->font && strlen(layer->font->path) > 0) {
             char font_path[MAX_PATH];
             snprintf(font_path, sizeof(font_path), "%s", layer->font->path);
             component->font = backend_load_font(font_path, component->font_size);
@@ -140,6 +143,8 @@ SelectComponent* select_component_create_from_json(Layer* layer, cJSON* json_obj
             }
             if (cJSON_HasObjectItem(colors, "textColor")) {
                 parse_color(cJSON_GetObjectItem(colors, "textColor")->valuestring, &component->text_color);
+                printf("DEBUG: Parsed textColor: RGBA(%d,%d,%d,%d)\n", 
+                       component->text_color.r, component->text_color.g, component->text_color.b, component->text_color.a);
             }
             if (cJSON_HasObjectItem(colors, "borderColor")) {
                 parse_color(cJSON_GetObjectItem(colors, "borderColor")->valuestring, &component->border_color);
@@ -161,6 +166,8 @@ SelectComponent* select_component_create_from_json(Layer* layer, cJSON* json_obj
             }
             if (cJSON_HasObjectItem(colors, "disabledTextColor")) {
                 parse_color(cJSON_GetObjectItem(colors, "disabledTextColor")->valuestring, &component->disabled_text_color);
+                printf("DEBUG: Parsed disabledTextColor: RGBA(%d,%d,%d,%d)\n", 
+                       component->disabled_text_color.r, component->disabled_text_color.g, component->disabled_text_color.b, component->disabled_text_color.a);
             }
             if (cJSON_HasObjectItem(colors, "scrollbarColor")) {
                 parse_color(cJSON_GetObjectItem(colors, "scrollbarColor")->valuestring, &component->scrollbar_color);
@@ -185,8 +192,13 @@ SelectComponent* select_component_create_from_json(Layer* layer, cJSON* json_obj
         component->border_color = layer->color;
     }
     
+    // 如果没有设置文字颜色，使用 layer 的文字颜色
+    if (component->text_color.a == 0 && layer->color.a > 0) {
+        component->text_color = layer->color;
+    }
+    
     // 加载组件专用字体（如果还没有加载的话）
-    if (!component->font && layer->font && layer->font->path) {
+    if (!component->font && layer->font && strlen(layer->font->path) > 0) {
         char font_path[MAX_PATH];
         snprintf(font_path, sizeof(font_path), "%s", layer->font->path);
         component->font = backend_load_font(font_path, component->font_size);
@@ -492,7 +504,7 @@ void select_component_set_font_size(SelectComponent* component, int font_size) {
     component->font_size = font_size;
     
     // 重新加载字体
-    if (component->layer && component->layer->font && component->layer->font->path) {
+    if (component->layer && component->layer->font && strlen(component->layer->font->path) > 0) {
         char font_path[MAX_PATH];
         snprintf(font_path, sizeof(font_path), "%s", component->layer->font->path);
         component->font = backend_load_font(font_path, component->font_size);
@@ -726,43 +738,7 @@ void select_component_render(Layer* layer) {
                                                  component->border_width, border_color);
     }
     
-    // 绘制选中的文本
-    if (component->selected_index >= 0 && component->selected_index < component->item_count) {
-        SelectItem* item = &component->items[component->selected_index];
-        
-        // 使用占位符文本颜色或普通文本颜色
-        Color text_color = (component->selected_index == component->placeholder_index) ? 
-                           component->disabled_text_color : component->text_color;
-        
-        // 使用组件专用字体渲染文本
-        DFont* font_to_use = component->font ? component->font : layer->font->default_font;
-        if (!font_to_use) return;
-        
-        Texture* text_texture = backend_render_texture(font_to_use, item->text, text_color);
-        if (text_texture) {
-            int text_width, text_height;
-            backend_query_texture(text_texture, NULL, NULL, &text_width, &text_height);
-            
-            // 文本居中垂直对齐，左对齐
-            Rect text_rect = {
-                layer->rect.x + 12,
-                layer->rect.y + (layer->rect.h - text_height / scale) / 2,
-                text_width / scale,
-                text_height / scale
-            };
-            
-            // 文本裁剪
-            int max_text_width = layer->rect.w - 40; // 为箭头留出空间
-            if (text_width / scale > max_text_width) {
-                text_rect.w = max_text_width;
-            }
-            
-            backend_render_text_copy(text_texture, NULL, &text_rect);
-            backend_render_text_destroy(text_texture);
-        }
-        
-
-    }
+    
     
     // 绘制下拉箭头
     int arrow_size = 8;
@@ -849,7 +825,7 @@ void select_component_render(Layer* layer) {
                 Rect item_rect = {dropdown_x + 1, item_y, content_width - 2, component->item_height};
                 
                 if (item->selected) {
-                    backend_render_rect(&item_rect, component->selected_bg_color);
+                    backend_render_fill_rect(&item_rect, component->selected_bg_color);
                 } else if (item_index == component->hover_index && !item->disabled) {
                     backend_render_rect(&item_rect, component->hover_bg_color);
                 }
@@ -865,7 +841,10 @@ void select_component_render(Layer* layer) {
                 }
                 
                 // 使用组件专用字体渲染文本
-                DFont* font_to_use = component->font ? component->font : layer->font->default_font;
+                DFont* font_to_use = component->font;
+                if (!font_to_use && layer->font) {
+                    font_to_use = layer->font->default_font;
+                }
                 if (!font_to_use) return;
                 
                 Texture* text_texture = backend_render_texture(font_to_use, item->text, text_color);
@@ -932,5 +911,54 @@ void select_component_render(Layer* layer) {
             Rect thumb_rect = {scrollbar_x + 2, thumb_y, component->scrollbar_width - 4, thumb_height};
             backend_render_rounded_rect(&thumb_rect, component->scrollbar_color, (component->scrollbar_width - 4) / 2);
         }
+    }
+
+    // 绘制选中的文本
+    if (component->selected_index >= 0 && component->selected_index < component->item_count) {
+        SelectItem* item = &component->items[component->selected_index];
+        
+        // 使用占位符文本颜色或普通文本颜色
+        Color text_color = (component->selected_index == component->placeholder_index) ? 
+                           component->disabled_text_color : component->text_color;
+        
+        // 调试信息：打印文字颜色
+        printf("DEBUG: Rendering selected text '%s' with color RGBA(%d,%d,%d,%d), is_placeholder=%d\n", 
+               item->text, text_color.r, text_color.g, text_color.b, text_color.a,
+               component->selected_index == component->placeholder_index);
+        
+        // 使用组件专用字体渲染文本
+        DFont* font_to_use = component->font;
+        if (!font_to_use && layer->font) {
+            font_to_use = layer->font->default_font;
+        }
+        
+        if (!font_to_use) {
+            return;
+        }
+        
+        Texture* text_texture = backend_render_texture(font_to_use, item->text, text_color);
+        if (text_texture) {
+            int text_width, text_height;
+            backend_query_texture(text_texture, NULL, NULL, &text_width, &text_height);
+            
+            // 文本居中垂直对齐，左对齐
+            Rect text_rect = {
+                layer->rect.x + 12,
+                layer->rect.y + (layer->rect.h - text_height / scale) / 2,
+                text_width / scale,
+                text_height / scale
+            };
+            
+            // 文本裁剪
+            int max_text_width = layer->rect.w - 40; // 为箭头留出空间
+            if (text_width / scale > max_text_width) {
+                text_rect.w = max_text_width;
+            }
+            
+            backend_render_text_copy(text_texture, NULL, &text_rect);
+            backend_render_text_destroy(text_texture);
+        }
+        
+
     }
 }
