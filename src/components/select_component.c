@@ -45,6 +45,8 @@ SelectComponent* select_component_create(Layer* layer) {
     // 默认样式
     component->border_width = 1;
     component->border_radius = 4;
+    component->font_size = 14;  // 默认字体大小
+    component->font = NULL;  // 字体稍后加载
     
     component->user_data = NULL;
     component->on_selection_changed = NULL;
@@ -85,6 +87,18 @@ SelectComponent* select_component_create_from_json(Layer* layer, cJSON* json_obj
         }
         if (cJSON_HasObjectItem(selectConfig, "borderRadius")) {
             component->border_radius = cJSON_GetObjectItem(selectConfig, "borderRadius")->valueint;
+        }
+        
+        // 字体大小
+        if (cJSON_HasObjectItem(selectConfig, "fontSize")) {
+            component->font_size = cJSON_GetObjectItem(selectConfig, "fontSize")->valueint;
+        }
+        
+        // 加载组件专用字体
+        if (layer->font && layer->font->path) {
+            char font_path[MAX_PATH];
+            snprintf(font_path, sizeof(font_path), "%s", layer->font->path);
+            component->font = backend_load_font(font_path, component->font_size);
         }
         
         // 解析选项数据
@@ -171,6 +185,13 @@ SelectComponent* select_component_create_from_json(Layer* layer, cJSON* json_obj
         component->border_color = layer->color;
     }
     
+    // 加载组件专用字体（如果还没有加载的话）
+    if (!component->font && layer->font && layer->font->path) {
+        char font_path[MAX_PATH];
+        snprintf(font_path, sizeof(font_path), "%s", layer->font->path);
+        component->font = backend_load_font(font_path, component->font_size);
+    }
+    
     return component;
 }
 
@@ -192,6 +213,7 @@ void select_component_destroy(SelectComponent* component) {
     component->user_data = NULL;
     component->on_selection_changed = NULL;
     component->on_dropdown_expanded = NULL;
+    component->font = NULL;  // 字体由后端管理，不需要手动释放
     
     free(component);
 }
@@ -463,6 +485,20 @@ void select_component_set_max_visible_items(SelectComponent* component, int max_
     component->max_visible_items = max_visible;
 }
 
+// 设置字体大小
+void select_component_set_font_size(SelectComponent* component, int font_size) {
+    if (!component || font_size <= 0) return;
+    
+    component->font_size = font_size;
+    
+    // 重新加载字体
+    if (component->layer && component->layer->font && component->layer->font->path) {
+        char font_path[MAX_PATH];
+        snprintf(font_path, sizeof(font_path), "%s", component->layer->font->path);
+        component->font = backend_load_font(font_path, component->font_size);
+    }
+}
+
 // 设置用户数据
 void select_component_set_user_data(SelectComponent* component, void* data) {
     if (!component) return;
@@ -698,15 +734,11 @@ void select_component_render(Layer* layer) {
         Color text_color = (component->selected_index == component->placeholder_index) ? 
                            component->disabled_text_color : component->text_color;
         
-        // 临时设置 layer 的文本和颜色用于渲染
-        char original_text[MAX_TEXT];
-        strcpy(original_text, layer->text);
-        Color original_color = layer->color;
+        // 使用组件专用字体渲染文本
+        DFont* font_to_use = component->font ? component->font : layer->font->default_font;
+        if (!font_to_use) return;
         
-        strcpy(layer->text, item->text);
-        layer->color = text_color;
-        
-        Texture* text_texture = render_text(layer, item->text, text_color);
+        Texture* text_texture = backend_render_texture(font_to_use, item->text, text_color);
         if (text_texture) {
             int text_width, text_height;
             backend_query_texture(text_texture, NULL, NULL, &text_width, &text_height);
@@ -714,14 +746,14 @@ void select_component_render(Layer* layer) {
             // 文本居中垂直对齐，左对齐
             Rect text_rect = {
                 layer->rect.x + 12,
-                layer->rect.y + (layer->rect.h - text_height) / 2,
-                text_width,
-                text_height
+                layer->rect.y + (layer->rect.h - text_height / scale) / 2,
+                text_width / scale,
+                text_height / scale
             };
             
             // 文本裁剪
             int max_text_width = layer->rect.w - 40; // 为箭头留出空间
-            if (text_width > max_text_width) {
+            if (text_width / scale > max_text_width) {
                 text_rect.w = max_text_width;
             }
             
@@ -729,9 +761,7 @@ void select_component_render(Layer* layer) {
             backend_render_text_destroy(text_texture);
         }
         
-        // 恢复 layer 的原始文本和颜色
-        strcpy(layer->text, original_text);
-        layer->color = original_color;
+
     }
     
     // 绘制下拉箭头
@@ -834,27 +864,24 @@ void select_component_render(Layer* layer) {
                     text_color = component->text_color;
                 }
                 
-                // 临时设置 layer 的文本和颜色用于渲染
-                char original_text[MAX_TEXT];
-                Color original_color = layer->color;
+                // 使用组件专用字体渲染文本
+                DFont* font_to_use = component->font ? component->font : layer->font->default_font;
+                if (!font_to_use) return;
                 
-                strcpy(original_text, layer->text);
-                layer->color = text_color;
-                
-                Texture* text_texture = render_text(layer, item->text, text_color);
+                Texture* text_texture = backend_render_texture(font_to_use, item->text, text_color);
                 if (text_texture) {
                     int text_width, text_height;
                     backend_query_texture(text_texture, NULL, NULL, &text_width, &text_height);
                     
                     Rect text_rect = {
                         dropdown_x + 12,
-                        item_y + (component->item_height - text_height) / 2,
-                        text_width,
-                        text_height
+                        item_y + (component->item_height - text_height / scale) / 2,
+                        text_width / scale,
+                        text_height / scale
                     };
                     
                     // 文本裁剪
-                    if (text_rect.x + text_width > dropdown_x + content_width - 5) {
+                    if (text_rect.x + text_rect.w > dropdown_x + content_width - 5) {
                         text_rect.w = dropdown_x + content_width - 5 - text_rect.x;
                         if (text_rect.w > 0) {
                             backend_render_text_copy(text_texture, NULL, &text_rect);
@@ -866,9 +893,7 @@ void select_component_render(Layer* layer) {
                     backend_render_text_destroy(text_texture);
                 }
                 
-                // 恢复 layer 的原始文本和颜色
-                strcpy(layer->text, original_text);
-                layer->color = original_color;
+
                 
                 // 绘制选项分割线
                 Color line_color = {220, 220, 220, 255};

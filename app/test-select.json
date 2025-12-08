@@ -85,6 +85,7 @@
         "itemHeight": 28,
         "borderWidth": 1,
         "borderRadius": 4,
+        "fontSize": 12,
         "placeholder": "请选择一个选项",
         "items": [
           "选项 1",
@@ -158,6 +159,7 @@
       "selectConfig": {
         "maxVisibleItems": 6,
         "itemHeight": 30,
+        "fontSize": 12,
         "placeholder": "选择水果",
         "items": [
           {
@@ -253,6 +255,7 @@
         "itemHeight": 32,
         "borderWidth": 2,
         "borderRadius": 6,
+        "fontSize": 12,
         "placeholder": "请选择城市",
         "items": [
           "北京",

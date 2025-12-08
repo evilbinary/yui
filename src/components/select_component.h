@@ -50,6 +50,8 @@ typedef struct {
     int border_width;                 // 边框宽度
     int border_radius;                // 边框圆角
     int placeholder_index;            // 占位符索引 (-1 表示无占位符)
+    int font_size;                    // 字体大小
+    DFont* font;                      // 组件专用字体
     
     // 回调函数
     void* user_data;                  // 用户数据
@@ -93,6 +95,7 @@ void select_component_set_extended_colors(SelectComponent* component,
                                        Color scrollbar, Color scrollbar_bg);
 void select_component_set_border_style(SelectComponent* component, int width, int radius);
 void select_component_set_max_visible_items(SelectComponent* component, int max_visible);
+void select_component_set_font_size(SelectComponent* component, int font_size);
 
 // 回调设置
 void select_component_set_user_data(SelectComponent* component, void* data);
