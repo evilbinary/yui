@@ -35,7 +35,7 @@
 #define YUI_TREEVIEW_COMPONENT 1
 #define YUI_TAB_COMPONENT 1
 #define YUI_SLIDER_COMPONENT 1
-#define YUI_LISTBOX_COMPONENT 1
+#define YUI_SELECT_COMPONENT 1
 #define YUI_SCROLLBAR_COMPONENT 1
 
 
@@ -137,7 +137,7 @@ typedef enum {
     TREEVIEW,
     TAB,
     SLIDER,
-    LISTBOX,
+    SELECT,
     SCROLLBAR  // 添加SCROLLBAR类型
 } LayerType;
 
@@ -426,8 +426,8 @@ typedef struct {
 #include "components/slider_component.h"
 #endif
 
-#ifdef YUI_LISTBOX_COMPONENT
-#include "components/listbox_component.h"
+#ifdef YUI_SELECT_COMPONENT
+#include "components/select_component.h"
 #endif
 
 

@@ -1,0 +1,49 @@
+{
+  "type": "View",
+  "name": "testView",
+  "size": [400, 300],
+  "style": {
+    "bgColor": "#F0F0F0"
+  },
+  "children": [
+    {
+      "type": "Select",
+      "name": "colorfulSelect",
+      "position": [50, 50],
+      "size": [200, 40],
+      "style": {
+        "bgColor": "#FFFFFF",
+        "borderColor": "#FF6B6B",
+        "radius": 8
+      },
+      "selectConfig": {
+        "maxVisibleItems": 5,
+        "itemHeight": 35,
+        "borderWidth": 2,
+        "borderRadius": 8,
+        "placeholder": "选择颜色主题",
+        "items": [
+          "红色主题",
+          "蓝色主题", 
+          "绿色主题",
+          "紫色主题"
+        ],
+        "colors": {
+          "bgColor": "#FFFFFF",
+          "textColor": "#333333",
+          "borderColor": "#FF6B6B",
+          "focusBorderColor": "#4ECDC4",
+          "hoverBorderColor": "#45B7D1",
+          "arrowColor": "#FF6B6B",
+          "dropdownBgColor": "#FFFFFF",
+          "hoverBgColor": "#FFE66D",
+          "selectedBgColor": "#4ECDC4",
+          "selectedTextColor": "#FFFFFF",
+          "disabledTextColor": "#999999",
+          "scrollbarColor": "#45B7D1",
+          "scrollbarBgColor": "#F8F9FA"
+        }
+      }
+    }
+  ]
+}

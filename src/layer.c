@@ -7,7 +7,7 @@
 char* layer_type_name[] = {"View",     "Button",   "Input",   "Label",
                            "Image",    "List",     "Grid",    "Progress",
                            "Checkbox", "Radiobox", "Text",    "Treeview",
-                           "Tab",      "Slider",   "Listbox", "Scrollbar"};
+                           "Tab",      "Slider",   "Select", "Scrollbar"};
 
 Layer* focused_layer = NULL;
 
@@ -681,9 +681,11 @@ Layer* parse_layer(cJSON* json_obj, Layer* parent) {
 
   } else if (layer->type == SLIDER) {
     layer->component = slider_component_create_from_json(layer, json_obj);
-  } else if (layer->type == LISTBOX) {
-    layer->component = listbox_component_create_from_json(layer, json_obj);
+  } else if (layer->type == SELECT) {
+    layer->component = select_component_create_from_json(layer, json_obj);
     
+    // 设置可获得焦点
+    layer->focusable = 1;
   } else if (layer->type == TREEVIEW) {
     layer->component = treeview_component_create_from_json(layer, json_obj);
   } else if (layer->type == SCROLLBAR) {
@@ -725,4 +727,82 @@ Layer* parse_layer(cJSON* json_obj, Layer* parent) {
   }
 
   return layer;
+}
+
+// ====================== 销毁函数 ======================
+void destroy_layer(Layer* layer) {
+    if (!layer) return;
+    
+    // 递归销毁子图层
+    if (layer->children) {
+        for (int i = 0; i < layer->child_count; i++) {
+            destroy_layer(layer->children[i]);
+        }
+        free(layer->children);
+        layer->children = NULL;
+    }
+    
+    // 销毁子模板
+    if (layer->item_template) {
+        destroy_layer(layer->item_template);
+        layer->item_template = NULL;
+    }
+    
+    // 销毁子图层
+    if (layer->sub) {
+        destroy_layer(layer->sub);
+        layer->sub = NULL;
+    }
+    
+    // 销毁动画
+    if (layer->animation) {
+        free(layer->animation);
+        layer->animation = NULL;
+    }
+    
+    // 销毁事件
+    if (layer->event) {
+        free(layer->event);
+        layer->event = NULL;
+    }
+    
+    // 销毁数据绑定
+    if (layer->binding) {
+        free(layer->binding);
+        layer->binding = NULL;
+    }
+    
+    // 销毁数据
+    if (layer->data) {
+        if (layer->data->json) {
+            cJSON_Delete(layer->data->json);
+        }
+        free(layer->data);
+        layer->data = NULL;
+    }
+    
+    // 销毁布局管理器
+    if (layer->layout_manager) {
+        free(layer->layout_manager);
+        layer->layout_manager = NULL;
+    }
+    
+    // 销毁滚动条
+    if (layer->scrollbar) {
+        free(layer->scrollbar);
+        layer->scrollbar = NULL;
+    }
+    if (layer->scrollbar_v) {
+        free(layer->scrollbar_v);
+        layer->scrollbar_v = NULL;
+    }
+    if (layer->scrollbar_h) {
+        free(layer->scrollbar_h);
+        layer->scrollbar_h = NULL;
+    }
+    
+    // 注意：不销毁 font 和 assets，因为它们可能是共享的
+    // 这些应该由全局资源管理器负责
+    
+    free(layer);
 }

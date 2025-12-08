@@ -367,3 +367,14 @@ void scrollbar_component_set_visible(ScrollbarComponent* component, int visible)
     }
     component->visible = visible;
 }
+
+// 销毁滚动条组件
+void scrollbar_component_destroy(ScrollbarComponent* component) {
+    if (!component) return;
+    
+    // 清理指针
+    component->layer = NULL;
+    component->target_layer = NULL;
+    
+    free(component);
+}

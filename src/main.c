@@ -75,7 +75,9 @@ int main(int argc, char* argv[]) {
     layout_layer(ui_root);
     
     backend_run(ui_root);  
-
+    
+    // 清理资源
+    // destroy_layer(ui_root);  // 暂时注释掉以避免内存问题
     backend_quit();
     return 0;
 }

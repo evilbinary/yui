@@ -1,0 +1,319 @@
+{
+  "type": "View",
+  "name": "mainLayer",
+  "size": [
+    800,
+    600
+  ],
+  "style": {
+    "bgColor": "#F5F5F5"
+
+  },
+  "layout": {
+    "type": "vertical",
+    "spacing": 15,
+    "padding": [
+      20,
+      20,
+      20,
+      20
+    ]
+  },
+  "children": [
+    {
+      "type": "Label",
+      "name": "titleLabel",
+      "position": [
+        20,
+        20
+      ],
+      "size": [
+        200,
+        30
+      ],
+      "text": "Select 组件测试",
+      "font": {
+        "size": 20,
+        "family": "Arial",
+        "color": "rgba(0, 0, 0, 255)"
+      },
+      "style": {
+        "bgColor": "rgba(255, 255, 255, 255)",
+        "radius": 5
+      }
+    },
+    {
+      "type": "Label",
+      "name": "basicLabel",
+      "position": [
+        20,
+        60
+      ],
+      "size": [
+        150,
+        25
+      ],
+      "text": "基础选择器:",
+      "font": {
+        "size": 14,
+        "family": "Arial",
+        "color": "rgba(0, 0, 0, 255)"
+      },
+      "style": {
+        "bgColor": "rgba(255, 255, 255, 255)",
+        "radius": 3
+      }
+    },
+    {
+      "type": "Select",
+      "name": "basicSelect",
+      "position": [
+        20,
+        90
+      ],
+      "size": [
+        250,
+        32
+      ],
+      "style": {
+        "bgColor": "rgba(255, 255, 255, 255)",
+        "borderColor": "#FF6B6B",
+        "radius": 4
+      },
+      "selectConfig": {
+        "maxVisibleItems": 8,
+        "itemHeight": 28,
+        "borderWidth": 1,
+        "borderRadius": 4,
+        "placeholder": "请选择一个选项",
+        "items": [
+          "选项 1",
+          "选项 2",
+          "选项 3",
+          "选项 4",
+          "选项 5",
+          "选项 6",
+          "选项 7",
+          "选项 8",
+          "选项 9",
+          "选项 10",
+          "选项 11",
+          "选项 12"
+        ],
+        "colors": {
+          "bgColor": "rgba(255, 255, 255, 255)",
+          "textColor": "rgba(51, 51, 51, 255)",
+          "borderColor": "rgba(204, 204, 204, 255)",
+          "focusBorderColor": "rgba(0, 120, 215, 255)",
+          "hoverBorderColor": "rgba(0, 120, 215, 255)",
+          "arrowColor": "rgba(102, 102, 102, 255)",
+          "dropdownBgColor": "rgba(255, 255, 255, 255)",
+          "hoverBgColor": "rgba(245, 245, 245, 255)",
+          "selectedBgColor": "rgba(0, 120, 215, 255)",
+          "selectedTextColor": "rgba(255, 255, 255, 255)",
+          "disabledTextColor": "rgba(170, 170, 170, 255)",
+          "scrollbarColor": "rgba(180, 180, 180, 255)",
+          "scrollbarBgColor": "rgba(240, 240, 240, 255)"
+        }
+      }
+    },
+    {
+      "type": "Label",
+      "name": "fruitLabel",
+      "position": [
+        300,
+        60
+      ],
+      "size": [
+        150,
+        25
+      ],
+      "text": "水果选择:",
+      "font": {
+        "size": 14,
+        "family": "Arial",
+        "color": "rgba(0, 0, 0, 255)"
+      },
+      "style": {
+        "bgColor": "rgba(255, 255, 255, 255)",
+        "radius": 3
+      }
+    },
+    {
+      "type": "Select",
+      "name": "fruitSelect",
+      "position": [
+        300,
+        90
+      ],
+      "size": [
+        200,
+        32
+      ],
+      "style": {
+        "bgColor": "#FFFFFF",
+        "borderColor": "#FF6B6B",
+        "radius": 4
+      },
+      "selectConfig": {
+        "maxVisibleItems": 6,
+        "itemHeight": 30,
+        "placeholder": "选择水果",
+        "items": [
+          {
+            "text": "苹果",
+            "disabled": false
+          },
+          {
+            "text": "香蕉",
+            "disabled": false
+          },
+          {
+            "text": "橙子",
+            "disabled": false
+          },
+          {
+            "text": "葡萄",
+            "disabled": false
+          },
+          {
+            "text": "西瓜 (缺货)",
+            "disabled": true
+          },
+          {
+            "text": "草莓",
+            "disabled": false
+          },
+          {
+            "text": "芒果",
+            "disabled": false
+          },
+          {
+            "text": "菠萝",
+            "disabled": false
+          }
+        ],
+        "colors": {
+          "bgColor": "#FFFFFF",
+          "textColor": "#333333",
+          "borderColor": "#FF6B6B",
+          "focusBorderColor": "#4ECDC4",
+          "hoverBorderColor": "#45B7D1",
+          "arrowColor": "#FF6B6B",
+          "dropdownBgColor": "#FFFFFF",
+          "hoverBgColor": "#FFE66D",
+          "selectedBgColor": "#4ECDC4",
+          "selectedTextColor": "#FFFFFF",
+          "disabledTextColor": "#999999",
+          "scrollbarColor": "#45B7D1",
+          "scrollbarBgColor": "#F8F9FA"
+        }
+      }
+    },
+    {
+      "type": "Label",
+      "name": "cityLabel",
+      "position": [
+        20,
+        140
+      ],
+      "size": [
+        150,
+        25
+      ],
+      "text": "城市选择:",
+      "font": {
+        "size": 14,
+        "family": "Arial",
+        "color": "rgba(0, 0, 0, 255)"
+      },
+      "style": {
+        "bgColor": "rgba(255, 255, 255, 255)",
+        "radius": 3
+      }
+    },
+    {
+      "type": "Select",
+      "name": "citySelect",
+      "position": [
+        20,
+        170
+      ],
+      "size": [
+        300,
+        36
+      ],
+      "style": {
+        "bgColor": "#FFFFFF",
+        "borderColor": "#FF6B6B",
+        "radius": 8
+      },
+      "selectConfig": {
+        "maxVisibleItems": 10,
+        "itemHeight": 32,
+        "borderWidth": 2,
+        "borderRadius": 6,
+        "placeholder": "请选择城市",
+        "items": [
+          "北京",
+          "上海",
+          "广州",
+          "深圳",
+          "杭州",
+          "南京",
+          "苏州",
+          "成都",
+          "重庆",
+          "武汉",
+          "西安",
+          "天津",
+          "青岛",
+          "大连",
+          "厦门",
+          "宁波",
+          "无锡",
+          "长沙",
+          "郑州",
+          "佛山"
+        ],
+        "colors": {
+          "bgColor": "#FFFFFF",
+          "textColor": "#333333",
+          "borderColor": "#FF6B6B",
+          "focusBorderColor": "#4ECDC4",
+          "hoverBorderColor": "#45B7D1",
+          "arrowColor": "#FF6B6B",
+          "dropdownBgColor": "#FFFFFF",
+          "hoverBgColor": "#FFE66D",
+          "selectedBgColor": "#4ECDC4",
+          "selectedTextColor": "#FFFFFF",
+          "disabledTextColor": "#999999",
+          "scrollbarColor": "#45B7D1",
+          "scrollbarBgColor": "#F8F9FA"
+        }
+      }
+    },
+    {
+      "type": "Label",
+      "name": "statusLabel",
+      "position": [
+        20,
+        220
+      ],
+      "size": [
+        760,
+        30
+      ],
+      "text": "当前选择: 无",
+      "font": {
+        "size": 14,
+        "family": "Arial",
+        "color": "rgba(66, 66, 66, 255)"
+      },
+      "style": {
+        "bgColor": "rgba(255, 255, 255, 255)",
+        "radius": 3
+      }
+    }
+  ]
+}
