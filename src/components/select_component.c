@@ -143,8 +143,7 @@ SelectComponent* select_component_create_from_json(Layer* layer, cJSON* json_obj
             }
             if (cJSON_HasObjectItem(colors, "textColor")) {
                 parse_color(cJSON_GetObjectItem(colors, "textColor")->valuestring, &component->text_color);
-                printf("DEBUG: Parsed textColor: RGBA(%d,%d,%d,%d)\n", 
-                       component->text_color.r, component->text_color.g, component->text_color.b, component->text_color.a);
+
             }
             if (cJSON_HasObjectItem(colors, "borderColor")) {
                 parse_color(cJSON_GetObjectItem(colors, "borderColor")->valuestring, &component->border_color);
@@ -166,8 +165,7 @@ SelectComponent* select_component_create_from_json(Layer* layer, cJSON* json_obj
             }
             if (cJSON_HasObjectItem(colors, "disabledTextColor")) {
                 parse_color(cJSON_GetObjectItem(colors, "disabledTextColor")->valuestring, &component->disabled_text_color);
-                printf("DEBUG: Parsed disabledTextColor: RGBA(%d,%d,%d,%d)\n", 
-                       component->disabled_text_color.r, component->disabled_text_color.g, component->disabled_text_color.b, component->disabled_text_color.a);
+
             }
             if (cJSON_HasObjectItem(colors, "scrollbarColor")) {
                 parse_color(cJSON_GetObjectItem(colors, "scrollbarColor")->valuestring, &component->scrollbar_color);
@@ -572,11 +570,51 @@ void select_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     
     SelectComponent* component = (SelectComponent*)layer->component;
     
+    // 如果正在拖拽，优先处理拖拽逻辑
+    if (component->is_dragging && event->state == SDL_MOUSEMOTION) {
+        int dropdown_y = layer->rect.y + layer->rect.h;
+        int dropdown_height = component->item_height * component->item_count;
+        if (dropdown_height > component->max_visible_items * component->item_height) {
+            dropdown_height = component->max_visible_items * component->item_height;
+        }
+        
+        int total_items = component->item_count;
+        int visible_items = component->max_visible_items;
+        int track_height = dropdown_height;
+        
+        int mouse_delta = event->y - component->drag_start_y;
+        int scroll_delta = (mouse_delta * (total_items - visible_items)) / track_height;
+        
+        int new_scroll = component->drag_start_scroll + scroll_delta;
+        
+        if (new_scroll < 0) new_scroll = 0;
+        if (new_scroll > total_items - visible_items) new_scroll = total_items - visible_items;
+        
+        component->scroll_position = new_scroll;
+        return;
+    }
+    
     // 检查鼠标是否在 Select 区域内（用于悬停状态）
-    if (event->x >= layer->rect.x && event->x < layer->rect.x + layer->rect.w &&
-        event->y >= layer->rect.y && event->y < layer->rect.y + layer->rect.h) {
+    bool in_select_area = (event->x >= layer->rect.x && event->x < layer->rect.x + layer->rect.w &&
+                            event->y >= layer->rect.y && event->y < layer->rect.y + layer->rect.h);
+    
+    // 如果展开了下拉菜单，还要检查是否在下拉菜单区域内
+    bool in_dropdown_area = false;
+    if (component->expanded) {
+        int dropdown_x = layer->rect.x;
+        int dropdown_y = layer->rect.y + layer->rect.h;
+        int dropdown_height = component->item_height * component->item_count;
+        if (dropdown_height > component->max_visible_items * component->item_height) {
+            dropdown_height = component->max_visible_items * component->item_height;
+        }
+        
+        in_dropdown_area = (event->x >= dropdown_x && event->x < dropdown_x + layer->rect.w &&
+                           event->y >= dropdown_y && event->y < dropdown_y + dropdown_height);
+    }
+    
+    if (in_select_area || in_dropdown_area) {
         SET_STATE(layer, LAYER_STATE_HOVER);
-    } else if (!component->expanded) {
+    } else {
         CLEAR_STATE(layer, LAYER_STATE_HOVER);
     }
     
@@ -602,6 +640,7 @@ void select_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
                 content_width -= component->scrollbar_width;
             }
             
+            // 检查是否点击在下拉菜单内容区域
             if (event->x >= dropdown_x && event->x < dropdown_x + content_width &&
                 event->y >= dropdown_y && event->y < dropdown_y + dropdown_height) {
                 int clicked_index = (event->y - dropdown_y) / component->item_height + component->scroll_position;
@@ -612,13 +651,88 @@ void select_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
                     }
                 }
             }
+            // 检查是否点击在滚动条区域
+            else if (has_scrollbar && 
+                     event->x >= dropdown_x + content_width && 
+                     event->x < dropdown_x + layer->rect.w &&
+                     event->y >= dropdown_y && 
+                     event->y < dropdown_y + dropdown_height) {
+                // 点击滚动条区域，开始拖拽
+                component->is_dragging = 1;
+                component->drag_start_y = event->y;
+                component->drag_start_scroll = component->scroll_position;
+                
+                // 计算滚动条滑块位置和大小
+                int total_items = component->item_count;
+                int visible_items = component->max_visible_items;
+                int track_height = dropdown_height;
+                int thumb_height = (track_height * visible_items) / total_items;
+                if (thumb_height < 20) thumb_height = 20; // 最小高度
+                
+                int max_thumb_y = track_height - thumb_height;
+                int thumb_y;
+                if (total_items > visible_items) {
+                    thumb_y = dropdown_y + (component->scroll_position * max_thumb_y) / (total_items - visible_items);
+                } else {
+                    thumb_y = dropdown_y;
+                }
+                
+                // 检查是否点击在滑块上
+                int scrollbar_x = dropdown_x + content_width;
+                Rect thumb_rect = {scrollbar_x + 2, thumb_y, component->scrollbar_width - 4, thumb_height};
+                
+                if (event->x >= thumb_rect.x && event->x < thumb_rect.x + thumb_rect.w &&
+                    event->y >= thumb_rect.y && event->y < thumb_rect.y + thumb_rect.h) {
+                    // 点击在滑块上，开始拖拽
+                    component->is_dragging = 1;
+                } else {
+                    // 点击在滑块外，滚动到点击位置
+                    int click_y = event->y - dropdown_y;
+                    int new_scroll = (click_y * (total_items - visible_items)) / track_height;
+                    
+                    if (new_scroll < 0) new_scroll = 0;
+                    if (new_scroll > total_items - visible_items) new_scroll = total_items - visible_items;
+                    
+                    component->scroll_position = new_scroll;
+                    component->is_dragging = 1;
+                    component->drag_start_scroll = component->scroll_position;
+                }
+            }
             // 点击其他地方，收起下拉菜单
             else {
                 select_component_collapse(component);
             }
         }
+    } else if (event->state == SDL_RELEASED && event->button == SDL_BUTTON_LEFT) {
+        // 停止拖拽
+        if (component->is_dragging) {
+            component->is_dragging = 0;
+        }
     } else if (event->state == SDL_MOUSEMOTION) {
         if (component->expanded) {
+            // 处理滚动条拖拽
+            if (component->is_dragging) {
+                int dropdown_y = layer->rect.y + layer->rect.h;
+                int dropdown_height = component->item_height * component->item_count;
+                if (dropdown_height > component->max_visible_items * component->item_height) {
+                    dropdown_height = component->max_visible_items * component->item_height;
+                }
+                
+                int total_items = component->item_count;
+                int visible_items = component->max_visible_items;
+                int track_height = dropdown_height;
+                
+                int mouse_delta = event->y - component->drag_start_y;
+                int scroll_delta = (mouse_delta * (total_items - visible_items)) / track_height;
+                
+                int new_scroll = component->drag_start_scroll + scroll_delta;
+                
+                if (new_scroll < 0) new_scroll = 0;
+                if (new_scroll > total_items - visible_items) new_scroll = total_items - visible_items;
+                
+                component->scroll_position = new_scroll;
+            }
+            
             // 更新悬停状态
             int dropdown_x = layer->rect.x;
             int dropdown_y = layer->rect.y + layer->rect.h;
@@ -738,7 +852,51 @@ void select_component_render(Layer* layer) {
                                                  component->border_width, border_color);
     }
     
-    
+    // 绘制选中的文本
+    if (component->selected_index >= 0 && component->selected_index < component->item_count) {
+        SelectItem* item = &component->items[component->selected_index];
+        
+        // 使用占位符文本颜色或普通文本颜色
+        Color text_color = (component->selected_index == component->placeholder_index) ? 
+                           component->disabled_text_color : component->text_color;
+        
+
+        
+        // 使用组件专用字体渲染文本
+        DFont* font_to_use = component->font;
+        if (!font_to_use && layer->font) {
+            font_to_use = layer->font->default_font;
+        }
+        
+        if (!font_to_use) {
+            return;
+        }
+        
+        Texture* text_texture = backend_render_texture(font_to_use, item->text, text_color);
+        if (text_texture) {
+            int text_width, text_height;
+            backend_query_texture(text_texture, NULL, NULL, &text_width, &text_height);
+            
+            // 文本居中垂直对齐，左对齐
+            Rect text_rect = {
+                layer->rect.x + 12,
+                layer->rect.y + (layer->rect.h - text_height / scale) / 2,
+                text_width / scale,
+                text_height / scale
+            };
+            
+            // 文本裁剪
+            int max_text_width = layer->rect.w - 40; // 为箭头留出空间
+            if (text_width / scale > max_text_width) {
+                text_rect.w = max_text_width;
+            }
+            
+            backend_render_text_copy(text_texture, NULL, &text_rect);
+            backend_render_text_destroy(text_texture);
+        }
+        
+
+    }
     
     // 绘制下拉箭头
     int arrow_size = 8;
@@ -913,52 +1071,5 @@ void select_component_render(Layer* layer) {
         }
     }
 
-    // 绘制选中的文本
-    if (component->selected_index >= 0 && component->selected_index < component->item_count) {
-        SelectItem* item = &component->items[component->selected_index];
-        
-        // 使用占位符文本颜色或普通文本颜色
-        Color text_color = (component->selected_index == component->placeholder_index) ? 
-                           component->disabled_text_color : component->text_color;
-        
-        // 调试信息：打印文字颜色
-        printf("DEBUG: Rendering selected text '%s' with color RGBA(%d,%d,%d,%d), is_placeholder=%d\n", 
-               item->text, text_color.r, text_color.g, text_color.b, text_color.a,
-               component->selected_index == component->placeholder_index);
-        
-        // 使用组件专用字体渲染文本
-        DFont* font_to_use = component->font;
-        if (!font_to_use && layer->font) {
-            font_to_use = layer->font->default_font;
-        }
-        
-        if (!font_to_use) {
-            return;
-        }
-        
-        Texture* text_texture = backend_render_texture(font_to_use, item->text, text_color);
-        if (text_texture) {
-            int text_width, text_height;
-            backend_query_texture(text_texture, NULL, NULL, &text_width, &text_height);
-            
-            // 文本居中垂直对齐，左对齐
-            Rect text_rect = {
-                layer->rect.x + 12,
-                layer->rect.y + (layer->rect.h - text_height / scale) / 2,
-                text_width / scale,
-                text_height / scale
-            };
-            
-            // 文本裁剪
-            int max_text_width = layer->rect.w - 40; // 为箭头留出空间
-            if (text_width / scale > max_text_width) {
-                text_rect.w = max_text_width;
-            }
-            
-            backend_render_text_copy(text_texture, NULL, &text_rect);
-            backend_render_text_destroy(text_texture);
-        }
-        
-
-    }
+    
 }
