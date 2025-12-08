@@ -110,6 +110,8 @@ void select_component_toggle(SelectComponent* component);
 // 事件处理
 void select_component_handle_mouse_event(Layer* layer, MouseEvent* event);
 void select_component_handle_key_event(Layer* layer, KeyEvent* event);
+void select_component_handle_scroll_event(Layer* layer, int scroll_delta);
+void select_component_scroll_callback(Layer* layer);
 void select_component_render(Layer* layer);
 
 #endif  // YUI_SELECT_COMPONENT_H

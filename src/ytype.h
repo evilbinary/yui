@@ -356,6 +356,7 @@ typedef struct Layer {
     // 新增事件处理函数指针
     void (*handle_key_event)(Layer* layer, KeyEvent* event);
     void (*handle_mouse_event)(Layer* layer, MouseEvent* event);
+    void (*handle_scroll_event)(Layer* layer, int scroll_delta);
     void (*handle_touch_event)(Layer* layer, TouchEvent* event);
     
     // 毛玻璃效果相关属性

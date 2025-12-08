@@ -164,11 +164,22 @@ void handle_event(Layer* root, SDL_Event* event) {
         int mouse_x = event->motion.x;
         int mouse_y = event->motion.y;
         SDL_Point mouse_pos = { mouse_x, mouse_y };
+        int event_state;
+        if (event->type == SDL_MOUSEBUTTONDOWN) {
+            event_state = SDL_PRESSED;
+        } else if (event->type == SDL_MOUSEBUTTONUP) {
+            event_state = SDL_RELEASED;
+        } else if (event->type == SDL_MOUSEMOTION) {
+            event_state = SDL_MOUSEMOTION;
+        } else {
+            event_state = 0;
+        }
+        
         MouseEvent mouse_event = {
             .x = mouse_x,
             .y = mouse_y,
             .button = event->button.button,
-            .state = (event->type == SDL_MOUSEBUTTONDOWN) ? 1 : 0
+            .state = event_state
         };
         
         // 调用事件系统处理滚动条拖动
@@ -186,7 +197,7 @@ void handle_event(Layer* root, SDL_Event* event) {
         SDL_GetMouseState(&mouse_x, &mouse_y);
         SDL_Point mouse_pos = { mouse_x, mouse_y };
         if (SDL_PointInRect(&mouse_pos, &root->rect)) {
-            printf("鼠标滚轮事件在图层内: %d, %d\n", event->wheel.x, event->wheel.y);
+            printf("鼠标滚轮事件在图层内: %d %d, %d\n",root->type, event->wheel.x, event->wheel.y);
             handle_scroll_event(root,mouse_x,mouse_y, event->wheel.x,-event->wheel.y);
         }
     }

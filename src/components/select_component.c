@@ -60,6 +60,14 @@ SelectComponent* select_component_create(Layer* layer) {
     layer->render = select_component_render;
     layer->handle_mouse_event = select_component_handle_mouse_event;
     layer->handle_key_event = select_component_handle_key_event;
+    layer->handle_scroll_event = select_component_handle_scroll_event;
+    
+    // 设置滚动事件回调
+    if (!layer->event) {
+        layer->event = malloc(sizeof(Event));
+        memset(layer->event, 0, sizeof(Event));
+    }
+    layer->event->scroll = (void(*)(void*))select_component_scroll_callback;
     
     return component;
 }
@@ -571,7 +579,10 @@ void select_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     SelectComponent* component = (SelectComponent*)layer->component;
     
     // 如果正在拖拽，优先处理拖拽逻辑
-    if (component->is_dragging && event->state == SDL_MOUSEMOTION) {
+    if (component->is_dragging && (event->state == SDL_MOUSEMOTION || event->state == SDL_PRESSED)) {
+        printf("DEBUG: Dragging scrollbar, mouse_y=%d, start_y=%d, start_scroll=%d\n", 
+               event->y, component->drag_start_y, component->drag_start_scroll);
+        
         int dropdown_y = layer->rect.y + layer->rect.h;
         int dropdown_height = component->item_height * component->item_count;
         if (dropdown_height > component->max_visible_items * component->item_height) {
@@ -589,6 +600,9 @@ void select_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
         
         if (new_scroll < 0) new_scroll = 0;
         if (new_scroll > total_items - visible_items) new_scroll = total_items - visible_items;
+        
+        printf("DEBUG: mouse_delta=%d, scroll_delta=%d, new_scroll=%d\n", 
+               mouse_delta, scroll_delta, new_scroll);
         
         component->scroll_position = new_scroll;
         return;
@@ -657,10 +671,6 @@ void select_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
                      event->x < dropdown_x + layer->rect.w &&
                      event->y >= dropdown_y && 
                      event->y < dropdown_y + dropdown_height) {
-                // 点击滚动条区域，开始拖拽
-                component->is_dragging = 1;
-                component->drag_start_y = event->y;
-                component->drag_start_scroll = component->scroll_position;
                 
                 // 计算滚动条滑块位置和大小
                 int total_items = component->item_count;
@@ -681,10 +691,18 @@ void select_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
                 int scrollbar_x = dropdown_x + content_width;
                 Rect thumb_rect = {scrollbar_x + 2, thumb_y, component->scrollbar_width - 4, thumb_height};
                 
+                printf("DEBUG: Click check - event_x=%d, event_y=%d\n", event->x, event->y);
+                printf("DEBUG: Thumb rect - x=%d, y=%d, w=%d, h=%d\n", 
+                       thumb_rect.x, thumb_rect.y, thumb_rect.w, thumb_rect.h);
+                
                 if (event->x >= thumb_rect.x && event->x < thumb_rect.x + thumb_rect.w &&
                     event->y >= thumb_rect.y && event->y < thumb_rect.y + thumb_rect.h) {
                     // 点击在滑块上，开始拖拽
                     component->is_dragging = 1;
+                    component->drag_start_y = event->y;
+                    component->drag_start_scroll = component->scroll_position;
+                    printf("DEBUG: Started dragging scrollbar at y=%d, scroll=%d, thumb_rect=(%d,%d,%d,%d)\n", 
+                           event->y, component->scroll_position, thumb_rect.x, thumb_rect.y, thumb_rect.w, thumb_rect.h);
                 } else {
                     // 点击在滑块外，滚动到点击位置
                     int click_y = event->y - dropdown_y;
@@ -695,7 +713,9 @@ void select_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
                     
                     component->scroll_position = new_scroll;
                     component->is_dragging = 1;
+                    component->drag_start_y = event->y;
                     component->drag_start_scroll = component->scroll_position;
+                    printf("DEBUG: Clicked scrollbar track, scrolled to %d\n", new_scroll);
                 }
             }
             // 点击其他地方，收起下拉菜单
@@ -709,30 +729,10 @@ void select_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
             component->is_dragging = 0;
         }
     } else if (event->state == SDL_MOUSEMOTION) {
+        printf("DEBUG: Mouse motion - x=%d, y=%d, is_dragging=%d\n", 
+               event->x, event->y, component->is_dragging);
+        
         if (component->expanded) {
-            // 处理滚动条拖拽
-            if (component->is_dragging) {
-                int dropdown_y = layer->rect.y + layer->rect.h;
-                int dropdown_height = component->item_height * component->item_count;
-                if (dropdown_height > component->max_visible_items * component->item_height) {
-                    dropdown_height = component->max_visible_items * component->item_height;
-                }
-                
-                int total_items = component->item_count;
-                int visible_items = component->max_visible_items;
-                int track_height = dropdown_height;
-                
-                int mouse_delta = event->y - component->drag_start_y;
-                int scroll_delta = (mouse_delta * (total_items - visible_items)) / track_height;
-                
-                int new_scroll = component->drag_start_scroll + scroll_delta;
-                
-                if (new_scroll < 0) new_scroll = 0;
-                if (new_scroll > total_items - visible_items) new_scroll = total_items - visible_items;
-                
-                component->scroll_position = new_scroll;
-            }
-            
             // 更新悬停状态
             int dropdown_x = layer->rect.x;
             int dropdown_y = layer->rect.y + layer->rect.h;
@@ -753,6 +753,42 @@ void select_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
                 component->hover_index = -1;
             }
         }
+    }
+}
+
+// 处理滚动事件
+void select_component_handle_scroll_event(Layer* layer, int scroll_delta) {
+    if (!layer || !layer->component) return;
+    
+    SelectComponent* component = (SelectComponent*)layer->component;
+    
+    if (component->expanded) {
+        printf("DEBUG: Select scroll event - delta=%d, current_scroll=%d\n", 
+               scroll_delta, component->scroll_position);
+        
+        int total_items = component->item_count;
+        int visible_items = component->max_visible_items;
+        
+        if (total_items > visible_items) {
+            int new_scroll = component->scroll_position + scroll_delta;
+            
+            if (new_scroll < 0) new_scroll = 0;
+            if (new_scroll > total_items - visible_items) new_scroll = total_items - visible_items;
+            
+            component->scroll_position = new_scroll;
+            printf("DEBUG: Scrolled to position %d\n", new_scroll);
+        }
+    }
+}
+
+// 滚动事件回调函数（用于 layer->event->scroll）
+void select_component_scroll_callback(Layer* layer) {
+    if (!layer || !layer->component) return;
+    
+    SelectComponent* component = (SelectComponent*)layer->component;
+    if (component->expanded) {
+        printf("DEBUG: Select scroll callback triggered\n");
+        // 这个回调主要用于重新渲染
     }
 }
 
