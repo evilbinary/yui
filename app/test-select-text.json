@@ -1,0 +1,157 @@
+{
+    "layers": [
+        {
+            "id": "root",
+            "type": "View",
+            "x": 0,
+            "y": 0,
+            "width": 800,
+            "height": 600,
+            "style": {
+                "bgColor": "#F5F5F5"
+            },
+            "children": [
+                {
+                    "id": "selectDemo",
+                    "type": "Label",
+                    "x": 50,
+                    "y": 30,
+                    "width": 700,
+                    "height": 30,
+                    "text": "Select 组件测试 - 验证选中项文字显示",
+                    "style": {
+                        "color": "#333333",
+                        "fontSize": 18,
+                        "bgColor": "transparent"
+                    }
+                },
+                {
+                    "id": "select1",
+                    "type": "Label",
+                    "x": 50,
+                    "y": 80,
+                    "width": 200,
+                    "height": 40,
+                    "text": "基础选择器：",
+                    "style": {
+                        "color": "#666666",
+                        "fontSize": 14,
+                        "bgColor": "transparent"
+                    }
+                },
+                {
+                    "id": "basicSelect",
+                    "type": "Select",
+                    "x": 250,
+                    "y": 80,
+                    "width": 200,
+                    "height": 40,
+                    "font": {
+                        "path": "app/assets/Roboto-Regular.ttf",
+                        "size": 14
+                    },
+                    "selectConfig": {
+                        "maxVisibleItems": 5,
+                        "itemHeight": 32,
+                        "fontSize": 14,
+                        "borderWidth": 1,
+                        "borderRadius": 4,
+                        "placeholder": "请选择一个选项",
+                        "items": [
+                            "选项一 - Apple",
+                            "选项二 - Banana", 
+                            "选项三 - Cherry",
+                            "选项四 - Date",
+                            "选项五 - Elderberry",
+                            "选项六 - Fig",
+                            "选项七 - Grape",
+                            "选项八 - Honeydew",
+                            "选项九 - Kiwi",
+                            "选项十 - Lemon",
+                            "选项十一 - Mango",
+                            "选项十二 - Nectarine"
+                        ],
+                        "colors": {
+                            "bgColor": "#FFFFFF",
+                            "textColor": "#333333",
+                            "borderColor": "#CCCCCC",
+                            "arrowColor": "#666666",
+                            "dropdownBgColor": "#FFFFFF",
+                            "hoverBgColor": "#F0F0F0",
+                            "selectedBgColor": "#0078D7",
+                            "selectedTextColor": "#FFFFFF",
+                            "disabledTextColor": "#999999",
+                            "focusBorderColor": "#0078D7",
+                            "hoverBorderColor": "#005A9E"
+                        }
+                    }
+                },
+                {
+                    "id": "select2",
+                    "type": "Label",
+                    "x": 50,
+                    "y": 140,
+                    "width": 200,
+                    "height": 40,
+                    "text": "带默认值的选择器：",
+                    "style": {
+                        "color": "#666666",
+                        "fontSize": 14,
+                        "bgColor": "transparent"
+                    }
+                },
+                {
+                    "id": "defaultSelect",
+                    "type": "Select",
+                    "x": 250,
+                    "y": 140,
+                    "width": 200,
+                    "height": 40,
+                    "font": {
+                        "path": "app/assets/Roboto-Regular.ttf",
+                        "size": 14
+                    },
+                    "selectConfig": {
+                        "maxVisibleItems": 4,
+                        "itemHeight": 32,
+                        "fontSize": 14,
+                        "borderWidth": 1,
+                        "borderRadius": 4,
+                        "items": [
+                            {"text": "红色", "disabled": false},
+                            {"text": "绿色", "disabled": false},
+                            {"text": "蓝色", "disabled": false},
+                            {"text": "黄色", "disabled": false}
+                        ],
+                        "colors": {
+                            "bgColor": "#FFFFFF",
+                            "textColor": "#333333",
+                            "borderColor": "#CCCCCC",
+                            "arrowColor": "#666666",
+                            "dropdownBgColor": "#FFFFFF",
+                            "hoverBgColor": "#E8F4FD",
+                            "selectedBgColor": "#0078D7",
+                            "selectedTextColor": "#FFFFFF",
+                            "focusBorderColor": "#0078D7"
+                        }
+                    }
+                },
+                {
+                    "id": "instructions",
+                    "type": "Label",
+                    "x": 50,
+                    "y": 200,
+                    "width": 700,
+                    "height": 200,
+                    "text": "使用说明：\n1. 点击选择器可以展开下拉菜单\n2. 点击选项可以选择该项，选中的文字会显示在选择器中\n3. 使用上下箭头键可以导航选项\n4. 按 Enter 或 Space 键可以展开/收起下拉菜单\n5. 按 Escape 键可以收起下拉菜单",
+                    "style": {
+                        "color": "#666666",
+                        "fontSize": 12,
+                        "bgColor": "transparent",
+                        "lineHeight": 1.5
+                    }
+                }
+            ]
+        }
+    ]
+}

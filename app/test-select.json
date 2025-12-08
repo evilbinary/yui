@@ -248,7 +248,8 @@
       "style": {
         "bgColor": "#FFFFFF",
         "borderColor": "#FF6B6B",
-        "radius": 8
+        "radius": 8,
+        "color": "#FF0000"
       },
       "selectConfig": {
         "maxVisibleItems": 10,
