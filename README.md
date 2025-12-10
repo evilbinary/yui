@@ -24,6 +24,16 @@ https://github.com/evilbinary/YUI
 ya -r yui
 ```
 
+## window
+
+```sh
+pacman -S mingw-w64-x86_64-SDL2
+pacman -S mingw-w64-x86_64-SDL2_ttf
+pacman -S mingw-w64-x86_64-SDL2_image
+pacman -S mingw-w64-x86_64-cjson
+```
+
+
 ## 截图
 
 <img src="https://github.com/evilbinary/yui/blob/main/docs/scroll.png?raw=true" width="800px" />

@@ -49,8 +49,27 @@ def add_flags():
             '-F../libs/'
             )
     else:
-        print('not support windows')
-        exit(1)
+        add_cflags(
+            '-g',
+            '-ID:\\app\\msys2\\mingw64\\include\\cjson',
+            '-F../libs/',
+            '-ID:\\app\\msys2\\mingw64\\include\\SDL2',
+            '-I.',
+            '-I./src/components',
+            '-I./src/'
+            )
+        add_ldflags(
+            '-LD:\\app\\msys2\\mingw64\\lib',
+            '-LD:\\app\\msys2\\mingw64\\lib\\gcc\\x86_64-w64-mingw32\\11.2.0',
+            '-L../libs/',
+            '-lSDL2',
+            '-lSDL2_ttf',
+            '-lSDL2_image',
+            '-lcjson',
+            '-lc',
+            '-lm',
+            '-lgcc'
+            )
 
 prefix_env='export DYLD_FRAMEWORK_PATH=../libs && export DYLD_LIBRARY_PATH="../libs" && '
 
@@ -101,7 +120,7 @@ def run_test(target):
     add_files("src/layout.c"),
     add_files("src/render.c"),
     add_files("src/util.c"),
-    add_files("src/components/*.c"),
+    add_files("srccomponents/*.c"),
     add_files("tests/test_blur_cache.c"),
     on_run(run_test)
 )
