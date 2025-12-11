@@ -29,6 +29,7 @@ SelectComponent* select_component_create(Layer* layer) {
     component->scroll_position = 0;
     component->scrollbar_width = 12;
     component->is_dragging = 0;
+    component->just_expanded = 0;
     component->placeholder_index = -1;
     
     // 默认颜色配置
@@ -538,8 +539,13 @@ void select_component_set_dropdown_expanded_callback(SelectComponent* component,
 
 // 展开下拉菜单
 void select_component_expand(SelectComponent* component) {
-    if (!component || component->expanded || component->item_count == 0) return;
+    if (!component || component->expanded || component->item_count == 0) {
+        printf("DEBUG: expand early return - component=%p, expanded=%d, item_count=%d\n", 
+               component, component ? component->expanded : -1, component ? component->item_count : -1);
+        return;
+    }
     
+    // printf("DEBUG: Starting expansion - component=%p, item_count=%d\n", component, component->item_count);
     component->expanded = 1;
     component->hover_index = -1;
     component->scroll_position = 0;
@@ -571,11 +577,14 @@ void select_component_expand(SelectComponent* component) {
         }
     }
     
+    // 设置刚展开标志，防止立即关闭
+    component->just_expanded = 1;
+    
     // 添加到弹出层管理器
     if (component->dropdown_layer) {
         PopupLayer* popup = popup_layer_create(component->dropdown_layer, POPUP_TYPE_DROPDOWN, 100);
         if (popup) {
-            popup->auto_close = true;
+            popup->auto_close = false;  // 临时禁用自动关闭
             popup->close_callback = select_component_popup_close_callback;
             popup_manager_add(popup);
             printf("DEBUG: Added select dropdown to popup manager\n");
@@ -589,16 +598,17 @@ void select_component_expand(SelectComponent* component) {
 
 // 收起下拉菜单
 void select_component_collapse(SelectComponent* component) {
+    // printf("DEBUG: collapse called - component=%p, expanded=%d\n", component, component ? component->expanded : -1);
     if (!component || !component->expanded) return;
     
     component->expanded = 0;
     component->hover_index = -1;
     component->is_dragging = 0;
+    component->just_expanded = 0;
     
     // 从弹出层管理器移除
     if (component->dropdown_layer) {
         popup_manager_remove(component->dropdown_layer);
-        free(component->dropdown_layer);
         component->dropdown_layer = NULL;
         printf("DEBUG: Removed select dropdown from popup manager\n");
     }
@@ -707,6 +717,7 @@ void select_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
                 int clicked_index = (event->y - dropdown_y) / component->item_height + component->scroll_position;
                 
                 if (clicked_index >= 0 && clicked_index < component->item_count) {
+                    printf("DEBUG: Main dropdown item %d clicked: %s\n", clicked_index, component->items[clicked_index].text);
                     if (!component->items[clicked_index].disabled) {
                         select_component_set_selected(component, clicked_index);
                     }
@@ -764,10 +775,6 @@ void select_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
                     component->drag_start_scroll = component->scroll_position;
                     printf("DEBUG: Clicked scrollbar track, scrolled to %d\n", new_scroll);
                 }
-            }
-            // 点击其他地方，收起下拉菜单
-            else {
-                select_component_collapse(component);
             }
         }
     } else if (event->state == SDL_RELEASED && event->button == SDL_BUTTON_LEFT) {
@@ -1208,13 +1215,14 @@ void select_component_handle_dropdown_mouse_event(Layer* layer, MouseEvent* even
         // 检查是否点击在下拉菜单内容区域
         if (event->x >= dropdown_x && event->x < dropdown_x + content_width &&
             event->y >= dropdown_y && event->y < dropdown_y + dropdown_height) {
-            int clicked_index = (event->y - dropdown_y) / component->item_height + component->scroll_position;
-            
-            if (clicked_index >= 0 && clicked_index < component->item_count) {
-                if (!component->items[clicked_index].disabled) {
-                    select_component_set_selected(component, clicked_index);
+                int clicked_index = (event->y - dropdown_y) / component->item_height + component->scroll_position;
+                
+                if (clicked_index >= 0 && clicked_index < component->item_count) {
+                    printf("DEBUG: Dropdown item %d clicked: %s\n", clicked_index, component->items[clicked_index].text);
+                    if (!component->items[clicked_index].disabled) {
+                        select_component_set_selected(component, clicked_index);
+                    }
                 }
-            }
         }
         // 检查是否点击在滚动条区域
         else if (has_scrollbar && 
@@ -1261,10 +1269,6 @@ void select_component_handle_dropdown_mouse_event(Layer* layer, MouseEvent* even
                 component->drag_start_y = event->y;
                 component->drag_start_scroll = component->scroll_position;
             }
-        }
-        // 点击其他地方，收起下拉菜单
-        else {
-            select_component_collapse(component);
         }
     } else if (event->state == SDL_RELEASED && event->button == SDL_BUTTON_LEFT) {
         // 停止拖拽

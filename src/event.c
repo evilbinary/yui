@@ -1,6 +1,7 @@
 #include "event.h"
 #include "util.h"
 #include "backend.h"
+#include "popup_manager.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -58,6 +59,11 @@ EventHandler find_event_by_name(const char* name) {
 // ====================== 事件处理器 ======================
 // 处理垂直滚动事件
 void handle_scroll_event(Layer* layer,int mouse_x,int mouse_y,int scroll_deltax,int scroll_deltay) {
+    // 优先处理popup层的滚动事件
+    if (popup_manager_handle_scroll_event(scroll_deltay)) {
+        return;
+    }
+    
     // 检查鼠标是否在图层内
     if (!is_point_in_rect(mouse_x, mouse_y, layer->rect)) {
         return; // 鼠标不在图层内，不处理滚动事件
@@ -156,6 +162,11 @@ void handle_key_event(Layer* layer, KeyEvent* event) {
         return;
     }
 
+    // 优先处理popup层的键盘事件
+    if (popup_manager_handle_key_event(event)) {
+        return;
+    }
+
     // 只有当图层是当前焦点图层或者没有焦点图层时，才处理键盘事件
     // 这确保了键盘事件只传递给当前拥有焦点的图层
     if (focused_layer == layer && layer->handle_key_event) {
@@ -180,6 +191,12 @@ void handle_mouse_event(Layer* layer, MouseEvent* event) {
     if (!layer || !event) {
         return;
     }
+    
+    // 优先处理popup层的事件
+    if (popup_manager_handle_mouse_event(event)) {
+        return;
+    }
+    
     Point mouse_pos = {event->x, event->y};
     if (point_in_rect(mouse_pos, layer->rect)) {
         // 处理hover和pressed状态

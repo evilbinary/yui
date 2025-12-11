@@ -3,6 +3,7 @@
 
 #include "../ytype.h"
 #include "../render.h"
+#include <SDL.h>
 
 // 前向声明
 typedef struct PopupLayer PopupLayer;
@@ -33,6 +34,7 @@ typedef struct {
     int is_dragging;                  // 是否正在拖动滚动条
     int drag_start_y;                 // 拖动开始Y坐标
     int drag_start_scroll;            // 拖动开始滚动位置
+    int just_expanded;                // 刚刚展开标志
     
     // 颜色配置
     Color bg_color;                   // 背景颜色

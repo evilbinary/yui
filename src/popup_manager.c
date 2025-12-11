@@ -33,7 +33,9 @@ void popup_manager_cleanup(void) {
 }
 
 bool popup_manager_add(PopupLayer* popup) {
-    if (!g_popup_manager || !popup) return false;
+    if (!g_popup_manager || !popup) {
+        return false;
+    }
     
     // 检查是否已存在相同的layer
     PopupLayer* current = g_popup_manager->active_popups;
@@ -68,7 +70,9 @@ bool popup_manager_add(PopupLayer* popup) {
 }
 
 bool popup_manager_remove(Layer* layer) {
-    if (!g_popup_manager || !layer) return false;
+    if (!g_popup_manager || !layer) {
+        return false;
+    }
     
     PopupLayer* prev = NULL;
     PopupLayer* current = g_popup_manager->active_popups;
@@ -171,42 +175,51 @@ bool popup_manager_handle_mouse_event(MouseEvent* event) {
     if (!g_popup_manager || !event) return false;
     
     PopupLayer* current = g_popup_manager->active_popups;
+    bool handled = false;
+    
     while (current) {
         if (current->layer && current->layer->handle_mouse_event) {
             current->layer->handle_mouse_event(current->layer, event);
+            handled = true;
         }
         current = current->next;
     }
     
-    return true;
+    return handled;
 }
 
 bool popup_manager_handle_key_event(KeyEvent* event) {
     if (!g_popup_manager || !event) return false;
     
     PopupLayer* current = g_popup_manager->active_popups;
+    bool handled = false;
+    
     while (current) {
         if (current->layer && current->layer->handle_key_event) {
             current->layer->handle_key_event(current->layer, event);
+            handled = true;
         }
         current = current->next;
     }
     
-    return true;
+    return handled;
 }
 
 bool popup_manager_handle_scroll_event(int scroll_delta) {
     if (!g_popup_manager) return false;
     
     PopupLayer* current = g_popup_manager->active_popups;
+    bool handled = false;
+    
     while (current) {
         if (current->layer && current->layer->handle_scroll_event) {
             current->layer->handle_scroll_event(current->layer, scroll_delta);
+            handled = true;
         }
         current = current->next;
     }
     
-    return true;
+    return handled;
 }
 
 bool popup_manager_is_point_in_popups(int x, int y) {

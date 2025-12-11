@@ -143,13 +143,14 @@ def run_test_content_size(target):
     set_kind("binary"),
     add_flags(),
     add_files("src/layout.c"),
+    add_files("src/components/treeview_component.c"),
     add_files("src/util.c"),
     add_files("tests/test_content_size.c"),
     on_run(run_test_content_size)
 )
 
 target("test_treeview_scroll") 
-def run_test_content_size(target):
+def test_treeview_scroll(target):
     targetfile = target.targetfile()
     sourcefiles = target.sourcefiles()
     arch=target.get_arch()
@@ -174,9 +175,9 @@ def run_test_content_size(target):
     add_files("src/util.c"),
     add_files("src/components/*.c"),
     add_files("src/popup_manager.c"),
+    add_files("src/components/treeview_component.c"),
     add_files("tests/test_treeview_scroll.c"),
-    add_files("src/popup_manager.c"),
-    on_run(run_test_content_size)
+    on_run(test_treeview_scroll)
 )
 
 
