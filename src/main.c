@@ -11,6 +11,12 @@
 #include "layout.h"
 #include "backend.h"
 
+#if defined(_WIN32)
+int WinMain(int argc, char* argv[]){
+    return main(argc,argv);
+}
+#endif
+
 void hello_world(Layer* layer) {
     printf("你好，世界！ %s\n",layer->text);
 }

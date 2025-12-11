@@ -49,6 +49,9 @@ def add_flags():
             '-F../libs/'
             )
     else:
+        tool=get_toolchain_node()
+        tool['ld']='gcc'
+
         add_cflags(
             '-g',
             '-ID:\\app\\msys2\\mingw64\\include\\cjson',
@@ -60,15 +63,12 @@ def add_flags():
             )
         add_ldflags(
             '-LD:\\app\\msys2\\mingw64\\lib',
-            '-LD:\\app\\msys2\\mingw64\\lib\\gcc\\x86_64-w64-mingw32\\11.2.0',
             '-L../libs/',
             '-lSDL2',
             '-lSDL2_ttf',
             '-lSDL2_image',
             '-lcjson',
-            '-lc',
             '-lm',
-            '-lgcc'
             )
 
 prefix_env='export DYLD_FRAMEWORK_PATH=../libs && export DYLD_LIBRARY_PATH="../libs" && '
