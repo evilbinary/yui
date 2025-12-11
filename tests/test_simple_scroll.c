@@ -6,6 +6,15 @@
 #include "../src/components/treeview_component.h"
 #include "../src/components/scrollbar_component.h"
 
+#if defined(_WIN32)
+#include <windows.h>
+int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+    int argc = __argc;
+    char** argv = __argv;
+    return main(argc, argv);
+}
+#endif
+
 // 简单测试TreeView滚动
 void test_simple_scroll() {
     printf("=== 简单TreeView滚动测试 ===\n");
@@ -72,7 +81,7 @@ void test_simple_scroll() {
     printf("简单滚动测试完成\n");
 }
 
-int main() {
+int main(int argc, char *argv[]) {
     test_simple_scroll();
     return 0;
 }

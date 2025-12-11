@@ -4,6 +4,14 @@
 #include "../src/ytype.h"
 #include "../src/layout.h"
 
+#if defined(_WIN32)
+#include <windows.h>
+int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+    int argc = __argc;
+    char** argv = __argv;
+    return main(argc, argv);
+}
+#endif
 // 简单的测试函数
 void test_content_size_calculation() {
     printf("=== 测试内容尺寸计算算法 ===\n");
@@ -150,7 +158,7 @@ void test_content_size_calculation() {
     printf("\n测试完成!\n");
 }
 
-int main() {
+int main(int argc, char *argv[]) {
     test_content_size_calculation();
     return 0;
 }

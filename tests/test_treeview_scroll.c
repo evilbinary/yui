@@ -6,6 +6,15 @@
 #include "../src/components/treeview_component.h"
 #include "../src/components/scrollbar_component.h"
 
+#if defined(_WIN32)
+#include <windows.h>
+int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+    int argc = __argc;
+    char** argv = __argv;
+    return main(argc, argv);
+}
+#endif
+
 // 模拟后端函数（简化测试）
 void mock_backend_init() {
     printf("Mock backend initialized\n");
@@ -112,7 +121,7 @@ void test_treeview_scroll() {
     printf("TreeView scroll test completed\n");
 }
 
-int main() {
+int main(int argc, char *argv[]) {
     mock_backend_init();
     test_treeview_scroll();
     return 0;

@@ -650,7 +650,7 @@ Layer* parse_layer(cJSON* json_obj, Layer* parent) {
   }
 
   // 如果是INPUT类型的图层，初始化InputComponent
-  if (layer->type == INPUT) {
+  if (layer->type == INPUT_FIELD) {
     layer->component = input_component_create_from_json(layer, json_obj);
 
   } else if (layer->type == BUTTON) {

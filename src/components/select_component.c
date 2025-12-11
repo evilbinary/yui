@@ -3,6 +3,7 @@
 #include "../event.h"
 #include "../util.h"
 #include "../layer.h"
+#include "../popup_manager.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -543,6 +544,44 @@ void select_component_expand(SelectComponent* component) {
     component->hover_index = -1;
     component->scroll_position = 0;
     
+    // 创建下拉菜单弹出层
+    if (!component->dropdown_layer) {
+        component->dropdown_layer = malloc(sizeof(Layer));
+        if (component->dropdown_layer) {
+            memset(component->dropdown_layer, 0, sizeof(Layer));
+            
+            // 设置弹出层位置和大小
+            component->dropdown_layer->rect.x = component->layer->rect.x;
+            component->dropdown_layer->rect.y = component->layer->rect.y + component->layer->rect.h;
+            
+            // 计算下拉菜单高度
+            int dropdown_height = component->item_height * component->item_count;
+            if (dropdown_height > component->max_visible_items * component->item_height) {
+                dropdown_height = component->max_visible_items * component->item_height;
+            }
+            component->dropdown_layer->rect.w = component->layer->rect.w;
+            component->dropdown_layer->rect.h = dropdown_height;
+            
+            // 设置渲染函数为独立的下拉渲染函数
+            component->dropdown_layer->component = component;
+            component->dropdown_layer->render = select_component_render_dropdown_only;
+            component->dropdown_layer->handle_mouse_event = select_component_handle_dropdown_mouse_event;
+            component->dropdown_layer->handle_key_event = select_component_handle_dropdown_key_event;
+            component->dropdown_layer->handle_scroll_event = select_component_handle_dropdown_scroll_event;
+        }
+    }
+    
+    // 添加到弹出层管理器
+    if (component->dropdown_layer) {
+        PopupLayer* popup = popup_layer_create(component->dropdown_layer, POPUP_TYPE_DROPDOWN, 100);
+        if (popup) {
+            popup->auto_close = true;
+            popup->close_callback = select_component_popup_close_callback;
+            popup_manager_add(popup);
+            printf("DEBUG: Added select dropdown to popup manager\n");
+        }
+    }
+    
     if (component->on_dropdown_expanded) {
         component->on_dropdown_expanded(1, component->user_data);
     }
@@ -555,6 +594,14 @@ void select_component_collapse(SelectComponent* component) {
     component->expanded = 0;
     component->hover_index = -1;
     component->is_dragging = 0;
+    
+    // 从弹出层管理器移除
+    if (component->dropdown_layer) {
+        popup_manager_remove(component->dropdown_layer);
+        free(component->dropdown_layer);
+        component->dropdown_layer = NULL;
+        printf("DEBUG: Removed select dropdown from popup manager\n");
+    }
     
     if (component->on_dropdown_expanded) {
         component->on_dropdown_expanded(0, component->user_data);
@@ -729,8 +776,8 @@ void select_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
             component->is_dragging = 0;
         }
     } else if (event->state == SDL_MOUSEMOTION) {
-        printf("DEBUG: Mouse motion - x=%d, y=%d, is_dragging=%d\n", 
-               event->x, event->y, component->is_dragging);
+        // printf("DEBUG: Mouse motion - x=%d, y=%d, is_dragging=%d\n", 
+            //    event->x, event->y, component->is_dragging);
         
         if (component->expanded) {
             // 更新悬停状态
@@ -930,8 +977,6 @@ void select_component_render(Layer* layer) {
             backend_render_text_copy(text_texture, NULL, &text_rect);
             backend_render_text_destroy(text_texture);
         }
-        
-
     }
     
     // 绘制下拉箭头
@@ -969,126 +1014,218 @@ void select_component_render(Layer* layer) {
             backend_render_rect(&bar_rect, component->arrow_color);
         }
     }
+}
+
+// 只渲染下拉菜单部分（用于弹出层）
+void select_component_render_dropdown_only(Layer* layer) {
+    if (!layer || !layer->component) return;
     
-    // 渲染下拉菜单
-    if (component->expanded && component->item_count > 0) {
-        int dropdown_x = layer->rect.x;
-        int dropdown_y = layer->rect.y + layer->rect.h;
+    SelectComponent* component = (SelectComponent*)layer->component;
+    
+    if (!component->expanded || component->item_count == 0) return;
+    
+    int dropdown_x = component->layer->rect.x;
+    int dropdown_y = component->layer->rect.y + component->layer->rect.h;
+    
+    // 计算下拉菜单高度
+    int dropdown_height = component->item_height * component->item_count;
+    int visible_count = component->item_count;
+    int has_scrollbar = 0;
+    
+    if (dropdown_height > component->max_visible_items * component->item_height) {
+        dropdown_height = component->max_visible_items * component->item_height;
+        visible_count = component->max_visible_items;
+        has_scrollbar = 1;
+    }
+    
+    int content_width = component->layer->rect.w;
+    if (has_scrollbar) {
+        content_width -= component->scrollbar_width;
+    }
+    
+    // 绘制下拉菜单阴影
+    Color shadow_color = {0, 0, 0, 120}; // 更深的阴影表示层级更高
+    Rect shadow_rect = {dropdown_x + 3, dropdown_y + 3, component->layer->rect.w, dropdown_height};
+    backend_render_rounded_rect(&shadow_rect, shadow_color, component->border_radius);
+    
+    // 绘制下拉菜单背景和边框
+    Rect dropdown_rect = {dropdown_x, dropdown_y, component->layer->rect.w, dropdown_height};
+    backend_render_rounded_rect_with_border(&dropdown_rect, component->dropdown_bg_color, component->border_radius,
+                                             component->border_width, component->border_color);
+    
+    // 设置裁剪区域
+    Rect clip_rect = {dropdown_x, dropdown_y, content_width, dropdown_height};
+    Rect prev_clip;
+    backend_render_get_clip_rect(&prev_clip);
+    backend_render_set_clip_rect(&clip_rect);
+    
+    // 绘制可见选项
+    for (int i = 0; i < visible_count; i++) {
+        int item_index = i + component->scroll_position;
         
-        // 计算下拉菜单高度
-        int dropdown_height = component->item_height * component->item_count;
-        int visible_count = component->item_count;
-        int has_scrollbar = 0;
-        
-        if (dropdown_height > component->max_visible_items * component->item_height) {
-            dropdown_height = component->max_visible_items * component->item_height;
-            visible_count = component->max_visible_items;
-            has_scrollbar = 1;
-        }
-        
-        int content_width = layer->rect.w;
-        if (has_scrollbar) {
-            content_width -= component->scrollbar_width;
-        }
-        
-        // 绘制下拉菜单阴影
-        Color shadow_color = {0, 0, 0, 80}; // 半透明黑色阴影
-        Rect shadow_rect = {dropdown_x + 2, dropdown_y + 2, layer->rect.w, dropdown_height};
-        backend_render_rounded_rect(&shadow_rect, shadow_color, component->border_radius);
-        
-        // 绘制下拉菜单背景和边框
-        Rect dropdown_rect = {dropdown_x, dropdown_y, layer->rect.w, dropdown_height};
-        backend_render_rounded_rect_with_border(&dropdown_rect, component->dropdown_bg_color, component->border_radius,
-                                                 component->border_width, component->border_color);
-        
-        // 设置裁剪区域
-        Rect clip_rect = {dropdown_x, dropdown_y, content_width, dropdown_height};
-        Rect prev_clip;
-        backend_render_get_clip_rect(&prev_clip);
-        backend_render_set_clip_rect(&clip_rect);
-        
-        // 绘制可见选项
-        for (int i = 0; i < visible_count; i++) {
-            int item_index = i + component->scroll_position;
+        if (item_index >= 0 && item_index < component->item_count) {
+            SelectItem* item = &component->items[item_index];
+            int item_y = dropdown_y + i * component->item_height;
             
-            if (item_index >= 0 && item_index < component->item_count) {
-                SelectItem* item = &component->items[item_index];
-                int item_y = dropdown_y + i * component->item_height;
+            // 绘制选项背景
+            Rect item_rect = {dropdown_x + 1, item_y, content_width - 2, component->item_height};
+            
+            if (item->selected) {
+                backend_render_fill_rect(&item_rect, component->selected_bg_color);
+            } else if (item_index == component->hover_index && !item->disabled) {
+                backend_render_fill_rect(&item_rect, component->hover_bg_color);
+            }
+            
+            // 绘制选项文本
+            Color text_color;
+            if (item->disabled) {
+                text_color = component->disabled_text_color;
+            } else if (item->selected) {
+                text_color = component->selected_text_color;
+            } else {
+                text_color = component->text_color;
+            }
+            
+            // 使用组件专用字体渲染文本
+            DFont* font_to_use = component->font;
+            if (!font_to_use && component->layer->font) {
+                font_to_use = component->layer->font->default_font;
+            }
+            if (!font_to_use) return;
+            
+            Texture* text_texture = backend_render_texture(font_to_use, item->text, text_color);
+            if (text_texture) {
+                int text_width, text_height;
+                backend_query_texture(text_texture, NULL, NULL, &text_width, &text_height);
                 
-                // 绘制选项背景
-                Rect item_rect = {dropdown_x + 1, item_y, content_width - 2, component->item_height};
+                Rect text_rect = {
+                    dropdown_x + 12,
+                    item_y + (component->item_height - text_height / scale) / 2,
+                    text_width / scale,
+                    text_height / scale
+                };
                 
-                if (item->selected) {
-                    backend_render_fill_rect(&item_rect, component->selected_bg_color);
-                } else if (item_index == component->hover_index && !item->disabled) {
-                    backend_render_rect(&item_rect, component->hover_bg_color);
-                }
-                
-                // 绘制选项文本
-                Color text_color;
-                if (item->disabled) {
-                    text_color = component->disabled_text_color;
-                } else if (item->selected) {
-                    text_color = component->selected_text_color;
-                } else {
-                    text_color = component->text_color;
-                }
-                
-                // 使用组件专用字体渲染文本
-                DFont* font_to_use = component->font;
-                if (!font_to_use && layer->font) {
-                    font_to_use = layer->font->default_font;
-                }
-                if (!font_to_use) return;
-                
-                Texture* text_texture = backend_render_texture(font_to_use, item->text, text_color);
-                if (text_texture) {
-                    int text_width, text_height;
-                    backend_query_texture(text_texture, NULL, NULL, &text_width, &text_height);
-                    
-                    Rect text_rect = {
-                        dropdown_x + 12,
-                        item_y + (component->item_height - text_height / scale) / 2,
-                        text_width / scale,
-                        text_height / scale
-                    };
-                    
-                    // 文本裁剪
-                    if (text_rect.x + text_rect.w > dropdown_x + content_width - 5) {
-                        text_rect.w = dropdown_x + content_width - 5 - text_rect.x;
-                        if (text_rect.w > 0) {
-                            backend_render_text_copy(text_texture, NULL, &text_rect);
-                        }
-                    } else {
+                // 文本裁剪
+                if (text_rect.x + text_rect.w > dropdown_x + content_width - 5) {
+                    text_rect.w = dropdown_x + content_width - 5 - text_rect.x;
+                    if (text_rect.w > 0) {
                         backend_render_text_copy(text_texture, NULL, &text_rect);
                     }
-                    
-                    backend_render_text_destroy(text_texture);
+                } else {
+                    backend_render_text_copy(text_texture, NULL, &text_rect);
                 }
                 
-
-                
-                // 绘制选项分割线
-                Color line_color = {220, 220, 220, 255};
-                Rect line_rect = {dropdown_x + 1, item_y + component->item_height - 1, content_width - 2, 1};
-                backend_render_rect(&line_rect, line_color);
+                backend_render_text_destroy(text_texture);
             }
+            
+            // 绘制选项分割线
+            Color line_color = {220, 220, 220, 255};
+            Rect line_rect = {dropdown_x + 1, item_y + component->item_height - 1, content_width - 2, 1};
+            backend_render_rect(&line_rect, line_color);
+        }
+    }
+    
+    // 清除裁剪区域
+    backend_render_set_clip_rect(&prev_clip);
+    
+    // 绘制滚动条
+    if (has_scrollbar) {
+        int scrollbar_x = dropdown_x + component->layer->rect.w - component->scrollbar_width;
+        
+        // 绘制滚动条背景
+        Rect scrollbar_bg_rect = {scrollbar_x, dropdown_y, component->scrollbar_width, dropdown_height};
+        backend_render_fill_rect(&scrollbar_bg_rect, component->scrollbar_bg_color);
+        
+        // 计算滚动条滑块位置和大小
+        int total_items = component->item_count;
+        int visible_items = visible_count;
+        int track_height = dropdown_height;
+        int thumb_height = (track_height * visible_items) / total_items;
+        if (thumb_height < 20) thumb_height = 20; // 最小高度
+        
+        int max_thumb_y = track_height - thumb_height;
+        int thumb_y;
+        if (total_items > visible_items) {
+            thumb_y = dropdown_y + (component->scroll_position * max_thumb_y) / (total_items - visible_items);
+        } else {
+            thumb_y = dropdown_y;
         }
         
-        // 清除裁剪区域
-        backend_render_set_clip_rect(&prev_clip);
+        // 绘制滚动条滑块
+        Rect thumb_rect = {scrollbar_x + 2, thumb_y, component->scrollbar_width - 4, thumb_height};
+        backend_render_fill_rect(&thumb_rect, component->scrollbar_color);
+    }
+}
+
+// 弹出层专用鼠标事件处理
+void select_component_handle_dropdown_mouse_event(Layer* layer, MouseEvent* event) {
+    if (!layer || !event || !layer->component) return;
+    
+    SelectComponent* component = (SelectComponent*)layer->component;
+    
+    // 如果正在拖拽，优先处理拖拽逻辑
+    if (component->is_dragging && (event->state == SDL_MOUSEMOTION || event->state == SDL_PRESSED)) {
+        printf("DEBUG: Dragging scrollbar, mouse_y=%d, start_y=%d, start_scroll=%d\n", 
+               event->y, component->drag_start_y, component->drag_start_scroll);
         
-        // 绘制滚动条
-        if (has_scrollbar) {
-            int scrollbar_x = dropdown_x + layer->rect.w - component->scrollbar_width;
+        int dropdown_y = component->layer->rect.y + component->layer->rect.h;
+        int dropdown_height = component->item_height * component->item_count;
+        if (dropdown_height > component->max_visible_items * component->item_height) {
+            dropdown_height = component->max_visible_items * component->item_height;
+        }
+        
+        int total_items = component->item_count;
+        int visible_items = component->max_visible_items;
+        int track_height = dropdown_height;
+        
+        int mouse_delta = event->y - component->drag_start_y;
+        int scroll_delta = (mouse_delta * (total_items - visible_items)) / track_height;
+        
+        int new_scroll = component->drag_start_scroll + scroll_delta;
+        
+        if (new_scroll < 0) new_scroll = 0;
+        if (new_scroll > total_items - visible_items) new_scroll = total_items - visible_items;
+        
+        component->scroll_position = new_scroll;
+        return;
+    }
+    
+    int dropdown_x = component->layer->rect.x;
+    int dropdown_y = component->layer->rect.y + component->layer->rect.h;
+    int dropdown_height = component->item_height * component->item_count;
+    if (dropdown_height > component->max_visible_items * component->item_height) {
+        dropdown_height = component->max_visible_items * component->item_height;
+    }
+    
+    // 计算内容区域（排除滚动条）
+    int content_width = component->layer->rect.w;
+    int has_scrollbar = component->item_count > component->max_visible_items;
+    if (has_scrollbar) {
+        content_width -= component->scrollbar_width;
+    }
+    
+    if (event->state == SDL_PRESSED && event->button == SDL_BUTTON_LEFT) {
+        // 检查是否点击在下拉菜单内容区域
+        if (event->x >= dropdown_x && event->x < dropdown_x + content_width &&
+            event->y >= dropdown_y && event->y < dropdown_y + dropdown_height) {
+            int clicked_index = (event->y - dropdown_y) / component->item_height + component->scroll_position;
             
-            // 绘制滚动条背景
-            Rect scrollbar_bg_rect = {scrollbar_x, dropdown_y, component->scrollbar_width, dropdown_height};
-            backend_render_rounded_rect(&scrollbar_bg_rect, component->scrollbar_bg_color, component->scrollbar_width / 2);
+            if (clicked_index >= 0 && clicked_index < component->item_count) {
+                if (!component->items[clicked_index].disabled) {
+                    select_component_set_selected(component, clicked_index);
+                }
+            }
+        }
+        // 检查是否点击在滚动条区域
+        else if (has_scrollbar && 
+                 event->x >= dropdown_x + content_width && 
+                 event->x < dropdown_x + component->layer->rect.w &&
+                 event->y >= dropdown_y && 
+                 event->y < dropdown_y + dropdown_height) {
             
             // 计算滚动条滑块位置和大小
             int total_items = component->item_count;
-            int visible_items = visible_count;
+            int visible_items = component->max_visible_items;
             int track_height = dropdown_height;
             int thumb_height = (track_height * visible_items) / total_items;
             if (thumb_height < 20) thumb_height = 20; // 最小高度
@@ -1101,11 +1238,134 @@ void select_component_render(Layer* layer) {
                 thumb_y = dropdown_y;
             }
             
-            // 绘制滚动条滑块
+            // 检查是否点击在滑块上
+            int scrollbar_x = dropdown_x + content_width;
             Rect thumb_rect = {scrollbar_x + 2, thumb_y, component->scrollbar_width - 4, thumb_height};
-            backend_render_rounded_rect(&thumb_rect, component->scrollbar_color, (component->scrollbar_width - 4) / 2);
+            
+            if (event->x >= thumb_rect.x && event->x < thumb_rect.x + thumb_rect.w &&
+                event->y >= thumb_rect.y && event->y < thumb_rect.y + thumb_rect.h) {
+                // 点击在滑块上，开始拖拽
+                component->is_dragging = 1;
+                component->drag_start_y = event->y;
+                component->drag_start_scroll = component->scroll_position;
+            } else {
+                // 点击在滑块外，滚动到点击位置
+                int click_y = event->y - dropdown_y;
+                int new_scroll = (click_y * (total_items - visible_items)) / track_height;
+                
+                if (new_scroll < 0) new_scroll = 0;
+                if (new_scroll > total_items - visible_items) new_scroll = total_items - visible_items;
+                
+                component->scroll_position = new_scroll;
+                component->is_dragging = 1;
+                component->drag_start_y = event->y;
+                component->drag_start_scroll = component->scroll_position;
+            }
+        }
+        // 点击其他地方，收起下拉菜单
+        else {
+            select_component_collapse(component);
+        }
+    } else if (event->state == SDL_RELEASED && event->button == SDL_BUTTON_LEFT) {
+        // 停止拖拽
+        if (component->is_dragging) {
+            component->is_dragging = 0;
+        }
+    } else if (event->state == SDL_MOUSEMOTION) {
+        if (component->expanded) {
+            // 更新悬停状态
+            if (event->x >= dropdown_x && event->x < dropdown_x + content_width) {
+                int hover_index = (event->y - dropdown_y) / component->item_height + component->scroll_position;
+                if (hover_index >= 0 && hover_index < component->item_count) {
+                    component->hover_index = hover_index;
+                } else {
+                    component->hover_index = -1;
+                }
+            } else {
+                component->hover_index = -1;
+            }
         }
     }
+}
 
+// 弹出层专用键盘事件处理
+void select_component_handle_dropdown_key_event(Layer* layer, KeyEvent* event) {
+    if (!layer || !event || !layer->component) return;
     
+    SelectComponent* component = (SelectComponent*)layer->component;
+    
+    if (event->type == KEY_EVENT_DOWN) {
+        switch (event->data.key.key_code) {
+            case SDLK_UP:
+                // 在展开状态下向上导航
+                for (int i = component->hover_index - 1; i >= 0; i--) {
+                    if (!component->items[i].disabled) {
+                        component->hover_index = i;
+                        break;
+                    }
+                }
+                break;
+                
+            case SDLK_DOWN:
+                // 在展开状态下向下导航
+                for (int i = component->hover_index + 1; i < component->item_count; i++) {
+                    if (!component->items[i].disabled) {
+                        component->hover_index = i;
+                        break;
+                    }
+                }
+                break;
+                
+            case SDLK_RETURN:
+            case SDLK_SPACE:
+                if (component->hover_index >= 0 && 
+                    component->hover_index < component->item_count && 
+                    !component->items[component->hover_index].disabled) {
+                    select_component_set_selected(component, component->hover_index);
+                }
+                break;
+                
+            case SDLK_ESCAPE:
+                select_component_collapse(component);
+                break;
+        }
+    }
+}
+
+// 弹出层专用滚动事件处理
+void select_component_handle_dropdown_scroll_event(Layer* layer, int scroll_delta) {
+    if (!layer || !layer->component) return;
+    
+    SelectComponent* component = (SelectComponent*)layer->component;
+    
+    int total_items = component->item_count;
+    int visible_items = component->max_visible_items;
+    
+    if (total_items > visible_items) {
+        int new_scroll = component->scroll_position + scroll_delta;
+        
+        if (new_scroll < 0) new_scroll = 0;
+        if (new_scroll > total_items - visible_items) new_scroll = total_items - visible_items;
+        
+        component->scroll_position = new_scroll;
+    }
+}
+
+// 弹出层关闭回调
+void select_component_popup_close_callback(PopupLayer* popup) {
+    if (!popup || !popup->layer) return;
+    
+    SelectComponent* component = (SelectComponent*)popup->layer->component;
+    if (component) {
+        component->expanded = 0;
+        component->hover_index = -1;
+        component->is_dragging = 0;
+        
+        // 注意：dropdown_layer 会在这里被 popup_manager 释放，我们只需要设置为 NULL
+        component->dropdown_layer = NULL;
+        
+        if (component->on_dropdown_expanded) {
+            component->on_dropdown_expanded(0, component->user_data);
+        }
+    }
 }

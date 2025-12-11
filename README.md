@@ -31,6 +31,8 @@ pacman -S mingw-w64-x86_64-SDL2
 pacman -S mingw-w64-x86_64-SDL2_ttf
 pacman -S mingw-w64-x86_64-SDL2_image
 pacman -S mingw-w64-x86_64-cjson
+
+$env:Path = "D:\app\msys2\mingw64\bin;D:\app\msys2\msys64\usr\bin;" + $env:Path
 ```
 
 

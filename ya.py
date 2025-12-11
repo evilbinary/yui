@@ -173,7 +173,9 @@ def run_test_content_size(target):
     add_files("src/render.c"),
     add_files("src/util.c"),
     add_files("src/components/*.c"),
+    add_files("src/popup_manager.c"),
     add_files("tests/test_treeview_scroll.c"),
+    add_files("src/popup_manager.c"),
     on_run(run_test_content_size)
 )
 
@@ -202,6 +204,7 @@ def run_test_simple_scroll(target):
     add_files("src/layout.c"),
     add_files("src/render.c"),
     add_files("src/util.c"),
+    add_files("src/popup_manager.c"),
     add_files("src/components/*.c"),
     add_files("tests/test_simple_scroll.c"),
     on_run(run_test_simple_scroll)

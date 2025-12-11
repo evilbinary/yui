@@ -125,7 +125,7 @@ typedef enum {
 typedef enum {
     VIEW,
     BUTTON,
-    INPUT,
+    INPUT_FIELD,
     LABEL,
     IMAGE,
     LIST,

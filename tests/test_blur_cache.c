@@ -4,6 +4,15 @@
 #include <SDL_image.h>
 #include "../src/backend.h"
 
+#if defined(_WIN32)
+#include <windows.h>
+int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+    int argc = __argc;
+    char** argv = __argv;
+    return main(argc, argv);
+}
+#endif
+
 // 简单的测试函数
 void test_blur_cache() {
     printf("=== 测试毛玻璃效果缓存清理功能 ===\n");
@@ -65,7 +74,7 @@ void test_blur_cache() {
     printf("测试完成\n");
 }
 
-int main() {
+int main(int argc, char *argv[]) {
     test_blur_cache();
     return 0;
 }

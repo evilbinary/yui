@@ -2,6 +2,7 @@
 #include "event.h"
 #include "render.h"
 #include "ytype.h"
+#include "popup_manager.h"
 #include <stdbool.h>  // 添加支持bool类型
 
 #define WINDOW_WIDTH 1000
@@ -427,6 +428,9 @@ void backend_run(Layer* ui_root){
         SDL_RenderClear(renderer);
         
         render_layer(ui_root);  // 执行渲染管线
+        
+        // 渲染弹出层
+        popup_manager_render();
         
         SDL_RenderPresent(renderer);
         SDL_Delay(16);

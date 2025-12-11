@@ -10,10 +10,14 @@
 #include "render.h"
 #include "layout.h"
 #include "backend.h"
+#include "popup_manager.h"
 
 #if defined(_WIN32)
-int WinMain(int argc, char* argv[]){
-    return main(argc,argv);
+#include <windows.h>
+int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+    int argc = __argc;
+    char** argv = __argv;
+    return main(argc, argv);
 }
 #endif
 
@@ -29,6 +33,7 @@ void hello_touch(Layer* layer) {
 int main(int argc, char* argv[]) {
 
     backend_init();
+    popup_manager_init();
     
     
     char* json_path="app.json";
@@ -84,6 +89,7 @@ int main(int argc, char* argv[]) {
     
     // 清理资源
     // destroy_layer(ui_root);  // 暂时注释掉以避免内存问题
+    popup_manager_cleanup();
     backend_quit();
     return 0;
 }
