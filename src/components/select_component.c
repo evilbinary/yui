@@ -149,49 +149,49 @@ SelectComponent* select_component_create_from_json(Layer* layer, cJSON* json_obj
         cJSON* colors = cJSON_GetObjectItem(selectConfig, "colors");
         if (colors) {
             if (cJSON_HasObjectItem(colors, "bgColor")) {
-                parse_color(cJSON_GetObjectItem(colors, "bgColor")->valuestring, &component->bg_color);
+                parse_color((char*)cJSON_GetObjectItem(colors, "bgColor")->valuestring, &component->bg_color);
             }
             if (cJSON_HasObjectItem(colors, "textColor")) {
-                parse_color(cJSON_GetObjectItem(colors, "textColor")->valuestring, &component->text_color);
+                parse_color((char*)cJSON_GetObjectItem(colors, "textColor")->valuestring, &component->text_color);
 
             }
             if (cJSON_HasObjectItem(colors, "borderColor")) {
-                parse_color(cJSON_GetObjectItem(colors, "borderColor")->valuestring, &component->border_color);
+                parse_color((char*)cJSON_GetObjectItem(colors, "borderColor")->valuestring, &component->border_color);
             }
             if (cJSON_HasObjectItem(colors, "arrowColor")) {
-                parse_color(cJSON_GetObjectItem(colors, "arrowColor")->valuestring, &component->arrow_color);
+                parse_color((char*)cJSON_GetObjectItem(colors, "arrowColor")->valuestring, &component->arrow_color);
             }
             if (cJSON_HasObjectItem(colors, "dropdownBgColor")) {
-                const char* color_str = cJSON_GetObjectItem(colors, "dropdownBgColor")->valuestring;
+                char* color_str = (char*)cJSON_GetObjectItem(colors, "dropdownBgColor")->valuestring;
                 parse_color(color_str, &component->dropdown_bg_color);
                 printf("DEBUG: dropdownBgColor parsed: %s -> (%d,%d,%d,%d)\n", 
                        color_str, component->dropdown_bg_color.r, component->dropdown_bg_color.g, 
                        component->dropdown_bg_color.b, component->dropdown_bg_color.a);
             }
             if (cJSON_HasObjectItem(colors, "hoverBgColor")) {
-                parse_color(cJSON_GetObjectItem(colors, "hoverBgColor")->valuestring, &component->hover_bg_color);
+                parse_color((char*)cJSON_GetObjectItem(colors, "hoverBgColor")->valuestring, &component->hover_bg_color);
             }
             if (cJSON_HasObjectItem(colors, "selectedBgColor")) {
-                parse_color(cJSON_GetObjectItem(colors, "selectedBgColor")->valuestring, &component->selected_bg_color);
+                parse_color((char*)cJSON_GetObjectItem(colors, "selectedBgColor")->valuestring, &component->selected_bg_color);
             }
             if (cJSON_HasObjectItem(colors, "selectedTextColor")) {
-                parse_color(cJSON_GetObjectItem(colors, "selectedTextColor")->valuestring, &component->selected_text_color);
+                parse_color((char*)cJSON_GetObjectItem(colors, "selectedTextColor")->valuestring, &component->selected_text_color);
             }
             if (cJSON_HasObjectItem(colors, "disabledTextColor")) {
-                parse_color(cJSON_GetObjectItem(colors, "disabledTextColor")->valuestring, &component->disabled_text_color);
+                parse_color((char*)cJSON_GetObjectItem(colors, "disabledTextColor")->valuestring, &component->disabled_text_color);
 
             }
             if (cJSON_HasObjectItem(colors, "scrollbarColor")) {
-                parse_color(cJSON_GetObjectItem(colors, "scrollbarColor")->valuestring, &component->scrollbar_color);
+                parse_color((char*)cJSON_GetObjectItem(colors, "scrollbarColor")->valuestring, &component->scrollbar_color);
             }
             if (cJSON_HasObjectItem(colors, "scrollbarBgColor")) {
-                parse_color(cJSON_GetObjectItem(colors, "scrollbarBgColor")->valuestring, &component->scrollbar_bg_color);
+                parse_color((char*)cJSON_GetObjectItem(colors, "scrollbarBgColor")->valuestring, &component->scrollbar_bg_color);
             }
             if (cJSON_HasObjectItem(colors, "focusBorderColor")) {
-                parse_color(cJSON_GetObjectItem(colors, "focusBorderColor")->valuestring, &component->focus_border_color);
+                parse_color((char*)cJSON_GetObjectItem(colors, "focusBorderColor")->valuestring, &component->focus_border_color);
             }
             if (cJSON_HasObjectItem(colors, "hoverBorderColor")) {
-                parse_color(cJSON_GetObjectItem(colors, "hoverBorderColor")->valuestring, &component->hover_border_color);
+                parse_color((char*)cJSON_GetObjectItem(colors, "hoverBorderColor")->valuestring, &component->hover_border_color);
             }
         }
     }
@@ -605,20 +605,22 @@ void select_component_collapse(SelectComponent* component) {
     // printf("DEBUG: collapse called - component=%p, expanded=%d\n", component, component ? component->expanded : -1);
     if (!component || !component->expanded) return;
     
+    // 先设置状态，避免在 popup 移除过程中出现状态不一致
     component->expanded = 0;
     component->hover_index = -1;
     component->is_dragging = 0;
     component->just_expanded = 0;
     
+    // 触发回调
+    if (component->on_dropdown_expanded) {
+        component->on_dropdown_expanded(0, component->user_data);
+    }
+    
     // 从弹出层管理器移除
     if (component->dropdown_layer) {
         popup_manager_remove(component->dropdown_layer);
-        component->dropdown_layer = NULL;
+        // 注意：dropdown_layer 会在 popup_manager_remove 中被释放，close_callback 会设置为 NULL
         printf("DEBUG: Removed select dropdown from popup manager\n");
-    }
-    
-    if (component->on_dropdown_expanded) {
-        component->on_dropdown_expanded(0, component->user_data);
     }
 }
 
@@ -638,6 +640,8 @@ void select_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     if (!layer || !event || !layer->component) return;
     
     SelectComponent* component = (SelectComponent*)layer->component;
+    
+
     
     // 如果正在拖拽，优先处理拖拽逻辑
     if (component->is_dragging && (event->state == SDL_MOUSEMOTION || event->state == SDL_PRESSED)) {
@@ -697,6 +701,11 @@ void select_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
         // 检查是否点击在 Select 按钮上
         if (event->x >= layer->rect.x && event->x < layer->rect.x + layer->rect.w &&
             event->y >= layer->rect.y && event->y < layer->rect.y + layer->rect.h) {
+            // 如果刚刚展开，不要立即关闭
+            if (component->just_expanded) {
+                component->just_expanded = 0;
+                return;  // 不处理toggle，只是清除标志
+            }
             select_component_toggle(component);
         }
         // 检查是否点击在下拉菜单选项上
@@ -1375,15 +1384,15 @@ void select_component_popup_close_callback(PopupLayer* popup) {
     
     SelectComponent* component = (SelectComponent*)popup->layer->component;
     if (component) {
+        // 确保状态一致，但避免重复触发回调
         component->expanded = 0;
         component->hover_index = -1;
         component->is_dragging = 0;
+        component->just_expanded = 0;
         
         // 注意：dropdown_layer 会在这里被 popup_manager 释放，我们只需要设置为 NULL
         component->dropdown_layer = NULL;
         
-        if (component->on_dropdown_expanded) {
-            component->on_dropdown_expanded(0, component->user_data);
-        }
+        // 注意：不在这里触发 on_dropdown_expanded 回调，因为它应该已经在 collapse 中被调用了
     }
 }

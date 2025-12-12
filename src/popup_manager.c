@@ -177,6 +177,7 @@ bool popup_manager_handle_mouse_event(MouseEvent* event) {
     PopupLayer* current = g_popup_manager->active_popups;
     bool handled = false;
     
+    // 处理popup内部的事件
     while (current) {
         if (current->layer && current->layer->handle_mouse_event) {
             current->layer->handle_mouse_event(current->layer, event);
@@ -261,3 +262,4 @@ void popup_layer_destroy(PopupLayer* popup) {
         free(popup);
     }
 }
+
