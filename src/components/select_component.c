@@ -917,6 +917,7 @@ void select_component_render(Layer* layer) {
     if (!layer || !layer->component) return;
     
     SelectComponent* component = (SelectComponent*)layer->component;
+
     
     // 绘制 Select 背景和边框
     Rect rect = {layer->rect.x, layer->rect.y, layer->rect.w, layer->rect.h};
@@ -1029,7 +1030,13 @@ void select_component_render_dropdown_only(Layer* layer) {
     
     SelectComponent* component = (SelectComponent*)layer->component;
     
-    if (!component->expanded || component->item_count == 0) return;
+    if (!component->expanded || component->item_count == 0) {
+        printf("DEBUG: Dropdown render early return - expanded=%d, item_count=%d\n", 
+               component->expanded, component->item_count);
+        return;
+    }
+    
+
     
     int dropdown_x = component->layer->rect.x;
     int dropdown_y = component->layer->rect.y + component->layer->rect.h;
@@ -1057,6 +1064,7 @@ void select_component_render_dropdown_only(Layer* layer) {
     
     // 绘制下拉菜单背景和边框
     Rect dropdown_rect = {dropdown_x, dropdown_y, component->layer->rect.w, dropdown_height};
+    
     backend_render_rounded_rect_with_border(&dropdown_rect, component->dropdown_bg_color, component->border_radius,
                                              component->border_width, component->border_color);
     
@@ -1141,6 +1149,7 @@ void select_component_render_dropdown_only(Layer* layer) {
         
         // 绘制滚动条背景
         Rect scrollbar_bg_rect = {scrollbar_x, dropdown_y, component->scrollbar_width, dropdown_height};
+        
         backend_render_fill_rect(&scrollbar_bg_rect, component->scrollbar_bg_color);
         
         // 计算滚动条滑块位置和大小
@@ -1160,6 +1169,7 @@ void select_component_render_dropdown_only(Layer* layer) {
         
         // 绘制滚动条滑块
         Rect thumb_rect = {scrollbar_x + 2, thumb_y, component->scrollbar_width - 4, thumb_height};
+        
         backend_render_fill_rect(&thumb_rect, component->scrollbar_color);
     }
 }
