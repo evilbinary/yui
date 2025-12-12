@@ -162,7 +162,11 @@ SelectComponent* select_component_create_from_json(Layer* layer, cJSON* json_obj
                 parse_color(cJSON_GetObjectItem(colors, "arrowColor")->valuestring, &component->arrow_color);
             }
             if (cJSON_HasObjectItem(colors, "dropdownBgColor")) {
-                parse_color(cJSON_GetObjectItem(colors, "dropdownBgColor")->valuestring, &component->dropdown_bg_color);
+                const char* color_str = cJSON_GetObjectItem(colors, "dropdownBgColor")->valuestring;
+                parse_color(color_str, &component->dropdown_bg_color);
+                printf("DEBUG: dropdownBgColor parsed: %s -> (%d,%d,%d,%d)\n", 
+                       color_str, component->dropdown_bg_color.r, component->dropdown_bg_color.g, 
+                       component->dropdown_bg_color.b, component->dropdown_bg_color.a);
             }
             if (cJSON_HasObjectItem(colors, "hoverBgColor")) {
                 parse_color(cJSON_GetObjectItem(colors, "hoverBgColor")->valuestring, &component->hover_bg_color);
@@ -922,8 +926,8 @@ void select_component_render(Layer* layer) {
     // 绘制 Select 背景和边框
     Rect rect = {layer->rect.x, layer->rect.y, layer->rect.w, layer->rect.h};
     
-    // 优先使用 layer 的背景色
-    Color bg_color = layer->bg_color.a > 0 ? layer->bg_color : component->bg_color;
+    // 使用组件自己的背景色，这样确保不会被透明的 layer 背景色覆盖
+    Color bg_color = component->bg_color;
     
     // 根据状态选择边框颜色
     Color border_color = component->border_color;
@@ -1054,9 +1058,15 @@ void select_component_render_dropdown_only(Layer* layer) {
     
     int content_width = component->layer->rect.w;
     if (has_scrollbar) {
-        content_width -= component->scrollbar_width;
+        // content_width += component->scrollbar_width;
     }
     
+      // 设置裁剪区域
+    Rect clip_rect = {dropdown_x, dropdown_y, content_width, dropdown_height};
+    Rect prev_clip;
+    backend_render_get_clip_rect(&prev_clip);
+    backend_render_set_clip_rect(&clip_rect);
+
     // 绘制下拉菜单阴影
     Color shadow_color = {0, 0, 0, 120}; // 更深的阴影表示层级更高
     Rect shadow_rect = {dropdown_x + 3, dropdown_y + 3, component->layer->rect.w, dropdown_height};
@@ -1064,15 +1074,8 @@ void select_component_render_dropdown_only(Layer* layer) {
     
     // 绘制下拉菜单背景和边框
     Rect dropdown_rect = {dropdown_x, dropdown_y, component->layer->rect.w, dropdown_height};
-    
     backend_render_rounded_rect_with_border(&dropdown_rect, component->dropdown_bg_color, component->border_radius,
                                              component->border_width, component->border_color);
-    
-    // 设置裁剪区域
-    Rect clip_rect = {dropdown_x, dropdown_y, content_width, dropdown_height};
-    Rect prev_clip;
-    backend_render_get_clip_rect(&prev_clip);
-    backend_render_set_clip_rect(&clip_rect);
     
     // 绘制可见选项
     for (int i = 0; i < visible_count; i++) {
@@ -1140,8 +1143,6 @@ void select_component_render_dropdown_only(Layer* layer) {
         }
     }
     
-    // 清除裁剪区域
-    backend_render_set_clip_rect(&prev_clip);
     
     // 绘制滚动条
     if (has_scrollbar) {
@@ -1172,6 +1173,9 @@ void select_component_render_dropdown_only(Layer* layer) {
         
         backend_render_fill_rect(&thumb_rect, component->scrollbar_color);
     }
+
+    // 清除裁剪区域
+    backend_render_set_clip_rect(&prev_clip);
 }
 
 // 弹出层专用鼠标事件处理

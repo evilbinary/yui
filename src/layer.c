@@ -388,7 +388,6 @@ Layer* parse_layer(cJSON* json_obj, Layer* parent) {
     layer->bg_color.r = 0xF5;
     layer->bg_color.g = 0xF5;
     layer->bg_color.b = 0xF5;
-    layer->bg_color.a = 0;
   }
   // 解析样式
   cJSON* style = cJSON_GetObjectItem(json_obj, "style");
