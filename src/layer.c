@@ -128,7 +128,8 @@ Layer* parse_layer(cJSON* json_obj, Layer* parent) {
     strcpy(layer->id, cJSON_GetObjectItem(json_obj, "id")->valuestring);
   }
   if (cJSON_HasObjectItem(json_obj, "type")) {
-    for (int i = 0; i < LAYER_TYPE_SIZE; i++) {
+    int i=0;
+    for (i = 0; i < LAYER_TYPE_SIZE; i++) {
       // printf("cmp %s == %s\n", cJSON_GetObjectItem(json_obj,
       // "type")->valuestring,layer_type_name[i] );
       if (strcmp(cJSON_GetObjectItem(json_obj, "type")->valuestring,
@@ -137,6 +138,11 @@ Layer* parse_layer(cJSON* json_obj, Layer* parent) {
         break;
       }
     }
+    if(i>LAYER_TYPE_SIZE){
+      layer->type=VIEW;
+    }
+  }else{
+    layer->type=VIEW;
   }
 
   // 解析资字体
