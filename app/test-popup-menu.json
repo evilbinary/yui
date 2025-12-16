@@ -1,0 +1,94 @@
+{
+    "id": "popupMenuTestApp",
+    "type": "View",
+    "theme": "default",
+    "style": {
+        "color": "#2C3E50",
+        "bgColor": "#F5F5F5"
+    },
+    "layout": {
+        "type": "vertical",
+        "spacing": 20,
+        "padding": [
+            40,
+            40,
+            40,
+            40
+        ]
+    },
+    "children": [
+        {
+            "id": "title",
+            "type": "Label",
+            "text": "弹出菜单测试",
+            "style": {
+                "type": "center",
+                "color": "#1976D2",
+                "fontSize": 24,
+                "marginBottom": 30
+            }
+        },
+        {
+            "id": "showMenuBtn",
+            "type": "Button",
+            "text": "显示右键菜单",
+            "position": [50, 50],
+            "size": [200, 40],
+            "style": {
+                "bgColor": "#2196F3",
+                "textColor": "#FFFFFF",
+                "hoverColor": "#1976D2",
+                "radius": 6
+            }
+        },
+        {
+            "id": "showContextBtn",
+            "type": "Button", 
+            "text": "显示文件操作菜单",
+            "position": [270, 50],
+            "size": [200, 40],
+            "style": {
+                "bgColor": "#4CAF50",
+                "textColor": "#FFFFFF", 
+                "hoverColor": "#45a049",
+                "radius": 6
+            }
+        },
+        {
+            "id": "resultLabel",
+            "type": "Label",
+            "text": "点击按钮显示弹出菜单，或在此区域右键点击",
+            "position": [50, 120],
+            "size": [500, 30],
+            "style": {
+                "color": "#2C3E50",
+                "fontSize": 16,
+                "bgColor": "#E8F5E8",
+                "radius": 4,
+                "padding": [10, 5, 10, 5]
+            }
+        },
+        {
+            "id": "contextArea",
+            "type": "View",
+            "position": [50, 170],
+            "size": [500, 300],
+            "style": {
+                "bgColor": "#FFFFFF",
+                "borderColor": "#DDDDDD",
+                "borderWidth": 1,
+                "radius": 8
+            }
+        }
+    ],
+    "events": {
+        "onLoad": "@initApp",
+        "showMenuBtn:onClick": "@showContextMenu",
+        "showContextBtn:onClick": "@showFileMenu",
+        "contextArea:onRightClick": "@showAreaContextMenu",
+        "initApp": "function() { console.log('弹出菜单测试应用已加载'); }",
+        "showContextMenu": "function() { showPopupMenu('context', 100, 150); }",
+        "showFileMenu": "function() { showPopupMenu('file', 300, 150); }",
+        "showAreaContextMenu": "function(event) { showPopupMenu('area', event.x, event.y); }"
+    }
+}

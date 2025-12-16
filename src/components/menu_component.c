@@ -2,6 +2,7 @@
 #include "../render.h"
 #include "../backend.h"
 #include "../util.h"
+#include "../popup_manager.h"
 #include <stdlib.h>
 #include <string.h>
 #include "cJSON.h"
@@ -19,14 +20,17 @@ MenuComponent* menu_component_create(Layer* layer) {
     
     memset(component, 0, sizeof(MenuComponent));
     component->layer = layer;
+    component->popup_layer = NULL;
     component->item_count = 0;
     component->hovered_item = -1;
     component->opened_item = -1;
+    component->is_popup = 0;
     component->is_submenu = 0;
     component->parent_menu = NULL;
     component->item_height = 30;
     component->min_width = 150;
     component->user_data = NULL;
+    component->on_popup_closed = NULL;
     
     // 设置默认颜色
     component->bg_color = (Color){255, 255, 255, 255};
@@ -50,6 +54,11 @@ MenuComponent* menu_component_create(Layer* layer) {
 void menu_component_destroy(MenuComponent* component) {
     if (!component) {
         return;
+    }
+    
+    // 如果弹出菜单正在显示，先关闭它
+    if (component->is_popup && component->popup_layer) {
+        menu_component_hide_popup(component);
     }
     
     if (component->items) {
@@ -231,11 +240,12 @@ void menu_component_set_user_data(MenuComponent* component, void* data) {
 
 // 获取指定位置对应的菜单项索引
 int menu_component_get_item_at_position(MenuComponent* component, int x, int y) {
-    if (!component || !component->layer) {
+    if (!component) {
         return -1;
     }
     
-    Rect* rect = &component->layer->rect;
+    // 使用弹出菜单图层的矩形，如果没有弹出菜单则使用普通图层
+    Rect* rect = component->popup_layer ? &component->popup_layer->rect : &component->layer->rect;
     
     // 检查是否在菜单范围内
     if (x < rect->x || x >= rect->x + rect->w || 
@@ -304,11 +314,20 @@ void menu_component_handle_key_event(Layer* layer, KeyEvent* event) {
                     if (!item->separator && item->enabled && item->callback) {
                         item->callback(item->user_data);
                     }
+                    
+                    // 如果是弹出菜单，选择后自动关闭
+                    if (component->is_popup) {
+                        menu_component_hide_popup(component);
+                    }
                 }
                 break;
                 
             case 27: // ESC键
                 component->hovered_item = -1;
+                // 如果是弹出菜单，ESC键关闭菜单
+                if (component->is_popup) {
+                    menu_component_hide_popup(component);
+                }
                 break;
         }
     }
@@ -337,6 +356,11 @@ void menu_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
             MenuItem* item = &component->items[clicked_item];
             if (!item->separator && item->enabled && item->callback) {
                 item->callback(item->user_data);
+            }
+            
+            // 如果是弹出菜单，点击后自动关闭
+            if (component->is_popup) {
+                menu_component_hide_popup(component);
             }
         }
     }
@@ -442,5 +466,101 @@ void menu_component_render(Layer* layer) {
                 }
             }
         }
+    }
+}
+
+// 弹出菜单关闭回调
+static void menu_popup_close_callback(PopupLayer* popup) {
+    if (popup && popup->layer && popup->layer->component) {
+        MenuComponent* component = (MenuComponent*)popup->layer->component;
+        component->is_popup = 0;
+        component->popup_layer = NULL;
+        
+        // 调用用户自定义的关闭回调
+        if (component->on_popup_closed) {
+            component->on_popup_closed(component);
+        }
+    }
+}
+
+// 显示弹出菜单
+bool menu_component_show_popup(MenuComponent* component, int x, int y) {
+    if (!component || component->is_popup) {
+        return false;
+    }
+    
+    // 创建弹出菜单图层
+    component->popup_layer = (Layer*)malloc(sizeof(Layer));
+    if (!component->popup_layer) {
+        return false;
+    }
+    
+    memset(component->popup_layer, 0, sizeof(Layer));
+    
+    // 计算菜单大小
+    int menu_width = component->min_width;
+    int menu_height = component->item_count * component->item_height;
+    
+    // 设置弹出菜单的位置和大小
+    component->popup_layer->rect.x = x;
+    component->popup_layer->rect.y = y;
+    component->popup_layer->rect.w = menu_width;
+    component->popup_layer->rect.h = menu_height;
+    
+    // 复制基本属性
+    component->popup_layer->radius = 4;  // 默认圆角
+    component->popup_layer->component = component;
+    component->popup_layer->render = menu_component_render;
+    component->popup_layer->handle_mouse_event = menu_component_handle_mouse_event;
+    component->popup_layer->handle_key_event = menu_component_handle_key_event;
+    
+    // 创建弹出层并添加到弹出管理器
+    PopupLayer* popup = popup_layer_create(component->popup_layer, POPUP_TYPE_MENU, 100);
+    if (!popup) {
+        free(component->popup_layer);
+        component->popup_layer = NULL;
+        return false;
+    }
+    
+    // 设置关闭回调
+    popup->close_callback = menu_popup_close_callback;
+    popup->auto_close = true;
+    
+    // 添加到弹出管理器
+    if (!popup_manager_add(popup)) {
+        free(component->popup_layer);
+        component->popup_layer = NULL;
+        popup_layer_destroy(popup);
+        return false;
+    }
+    
+    component->is_popup = 1;
+    component->hovered_item = -1;
+    
+    return true;
+}
+
+// 隐藏弹出菜单
+void menu_component_hide_popup(MenuComponent* component) {
+    if (!component || !component->is_popup || !component->popup_layer) {
+        return;
+    }
+    
+    // 从弹出管理器中移除
+    popup_manager_remove(component->popup_layer);
+    
+    component->is_popup = 0;
+    component->popup_layer = NULL;
+}
+
+// 检查弹出菜单是否打开
+bool menu_component_is_popup_opened(MenuComponent* component) {
+    return component ? component->is_popup : false;
+}
+
+// 设置弹出菜单关闭回调
+void menu_component_set_popup_closed_callback(MenuComponent* component, void (*callback)(MenuComponent* menu)) {
+    if (component) {
+        component->on_popup_closed = callback;
     }
 }

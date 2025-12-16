@@ -6,6 +6,10 @@
 // 声明外部scale变量（用于DPI缩放）
 extern float scale;
 
+// 前向声明
+typedef struct PopupLayer PopupLayer;
+typedef struct MenuComponent MenuComponent;
+
 // 菜单项结构体
 typedef struct {
     char text[256];           // 菜单项文本
@@ -18,12 +22,14 @@ typedef struct {
 } MenuItem;
 
 // 菜单组件结构体
-typedef struct {
+struct MenuComponent {
     Layer* layer;              // 关联的图层
+    Layer* popup_layer;        // 弹出菜单图层
     MenuItem* items;           // 菜单项数组
     int item_count;            // 菜单项数量
     int hovered_item;          // 当前悬停的菜单项索引
     int opened_item;           // 当前打开的子菜单索引
+    int is_popup;              // 是否为弹出菜单
     int is_submenu;            // 是否为子菜单
     struct MenuComponent* parent_menu;  // 父菜单指针
     Color bg_color;            // 背景颜色
@@ -34,7 +40,8 @@ typedef struct {
     int item_height;           // 菜单项高度
     int min_width;             // 最小宽度
     void* user_data;           // 用户数据
-} MenuComponent;
+    void (*on_popup_closed)(MenuComponent* menu);  // 弹出菜单关闭回调
+};
 
 // 函数声明
 MenuComponent* menu_component_create(Layer* layer);
@@ -53,5 +60,11 @@ void menu_component_handle_mouse_event(Layer* layer, MouseEvent* event);
 void menu_component_handle_key_event(Layer* layer, KeyEvent* event);
 void menu_component_render(Layer* layer);
 int menu_component_get_item_at_position(MenuComponent* component, int x, int y);
+
+// 弹出菜单相关函数
+bool menu_component_show_popup(MenuComponent* component, int x, int y);
+void menu_component_hide_popup(MenuComponent* component);
+bool menu_component_is_popup_opened(MenuComponent* component);
+void menu_component_set_popup_closed_callback(MenuComponent* component, void (*callback)(MenuComponent* menu));
 
 #endif  // YUI_MENU_COMPONENT_H
