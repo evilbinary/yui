@@ -406,22 +406,37 @@ void menu_component_render(Layer* layer) {
             
             // 绘制菜单项文本
             int text_x = rect->x + (item->checked ? 28 : 12);
-            int text_y = item_y + (component->item_height - 16) / 2; // 假设字体高度为16
-            Rect text_rect = {text_x, text_y, rect->w - 40, 16};
-            
             Texture* text_texture = render_text(layer, item->text, text_color);
             if (text_texture) {
+                int text_width, text_height;
+                backend_query_texture(text_texture, NULL, NULL, &text_width, &text_height);
+                
+                Rect text_rect = {
+                    text_x,
+                    item_y + (component->item_height - text_height / scale) / 2,
+                    text_width / scale,
+                    text_height / scale
+                };
+                
                 backend_render_text_copy(text_texture, NULL, &text_rect);
                 backend_render_text_destroy(text_texture);
             }
             
             // 绘制快捷键文本
             if (strlen(item->shortcut) > 0) {
-                int shortcut_x = rect->x + rect->w - 100;
-                Rect shortcut_rect = {shortcut_x, text_y, 80, 16};
-                
                 Texture* shortcut_texture = render_text(layer, item->shortcut, text_color);
                 if (shortcut_texture) {
+                    int shortcut_width, shortcut_height;
+                    backend_query_texture(shortcut_texture, NULL, NULL, &shortcut_width, &shortcut_height);
+                    
+                    int shortcut_x = rect->x + rect->w - shortcut_width / scale - 12;
+                    Rect shortcut_rect = {
+                        shortcut_x,
+                        item_y + (component->item_height - shortcut_height / scale) / 2,
+                        shortcut_width / scale,
+                        shortcut_height / scale
+                    };
+                    
                     backend_render_text_copy(shortcut_texture, NULL, &shortcut_rect);
                     backend_render_text_destroy(shortcut_texture);
                 }

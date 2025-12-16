@@ -3,6 +3,9 @@
 
 #include "../ytype.h"
 
+// 声明外部scale变量（用于DPI缩放）
+extern float scale;
+
 // 菜单项结构体
 typedef struct {
     char text[256];           // 菜单项文本
