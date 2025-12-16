@@ -7,7 +7,7 @@
 char* layer_type_name[] = {"View",     "Button",   "Input",   "Label",
                            "Image",    "List",     "Grid",    "Progress",
                            "Checkbox", "Radiobox", "Text",    "Treeview",
-                           "Tab",      "Slider",   "Select", "Scrollbar", "Menu"};
+                           "Tab",      "Slider",   "Select", "Scrollbar", "Menu", "Dialog"};
 
 Layer* focused_layer = NULL;
 
@@ -714,6 +714,8 @@ Layer* parse_layer(cJSON* json_obj, Layer* parent) {
     has_custom_children = 1;
   } else if (layer->type == MENU) {
     layer->component = menu_component_create_from_json(layer, json_obj);
+  } else if (layer->type == DIALOG) {
+    layer->component = dialog_component_create_from_json(layer, json_obj);
   }
 
   // 递归解析子图层（如果不是SCROLLBAR类型）

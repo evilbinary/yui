@@ -38,6 +38,7 @@
 #define YUI_SELECT_COMPONENT 1
 #define YUI_SCROLLBAR_COMPONENT 1
 #define YUI_MENU_COMPONENT 1
+#define YUI_DIALOG_COMPONENT 1
 
 
 
@@ -140,7 +141,8 @@ typedef enum {
     SLIDER,
     SELECT,
     SCROLLBAR,  // 添加SCROLLBAR类型
-    MENU  // 添加MENU类型
+    MENU,  // 添加MENU类型
+    DIALOG  // 添加DIALOG类型
 } LayerType;
 
 extern char *layer_type_name[];
@@ -440,6 +442,10 @@ typedef struct {
 
 #ifdef YUI_MENU_COMPONENT
 #include "components/menu_component.h"
+#endif
+
+#ifdef YUI_DIALOG_COMPONENT
+#include "components/dialog_component.h"
 #endif
 
 

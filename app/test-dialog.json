@@ -1,0 +1,196 @@
+{
+  "id": "dialogTestContainer",
+  "type": "View",
+  "size": [800, 600],
+  "style": {
+    "bgColor": "#f0f0f0"
+  },
+  "children": [
+    {
+      "id": "showInfoBtn",
+      "type": "Button",
+      "position": [50, 50],
+      "size": [150, 40],
+      "text": "Show Info Dialog",
+      "style": {
+        "color": "#FFFFFF",
+        "bgColor": "#4682B4",
+        "radius": 5
+      },
+      "events": {
+        "onClick": "@showInfoDialog"
+      }
+    },
+    {
+      "id": "infoDialog",
+      "type": "Dialog",
+      "title": "Information",
+      "message": "This is an information dialog. It provides general information to the user.",
+      "dialogType": "info",
+      "modal": true,
+      "size": [450, 250],
+      "buttons": [
+        {
+          "text": "OK",
+          "default": true
+        }
+      ],
+      "style": {
+        "titleColor": "#4682B4",
+        "textColor": "#333333",
+        "bgColor": "#FFFFFF",
+        "borderColor": "#CCCCCC",
+        "buttonColor": "#4682B4",
+        "buttonHoverColor": "#5F9FD8",
+        "buttonTextColor": "#FFFFFF"
+      }
+    },
+    {
+      "id": "showWarningBtn",
+      "type": "Button",
+      "position": [50, 100],
+      "size": [150, 40],
+      "text": "Show Warning Dialog",
+      "style": {
+        "color": "#FFFFFF",
+        "bgColor": "#FFA500",
+        "radius": 5
+      },
+      "events": {
+        "onClick": "@showWarningDialog"
+      }
+    },
+    {
+      "id": "warningDialog",
+      "type": "Dialog",
+      "title": "Warning",
+      "message": "This is a warning dialog. It alerts the user about potential issues.",
+      "dialogType": "warning",
+      "modal": true,
+      "size": [480, 220],
+      "buttons": [
+        {
+          "text": "Continue",
+          "default": true
+        },
+        {
+          "text": "Cancel",
+          "cancel": true
+        }
+      ]
+    },
+    {
+      "id": "showErrorBtn",
+      "type": "Button",
+      "position": [50, 150],
+      "size": [150, 40],
+      "text": "Show Error Dialog",
+      "style": {
+        "color": "#FFFFFF",
+        "bgColor": "#DC143C",
+        "radius": 5
+      },
+      "events": {
+        "onClick": "@showErrorDialog"
+      }
+    },
+    {
+      "id": "errorDialog",
+      "type": "Dialog",
+      "title": "Error",
+      "message": "An error has occurred. The operation could not be completed successfully.",
+      "dialogType": "error",
+      "modal": true,
+      "size": [420, 200],
+      "buttons": [
+        {
+          "text": "OK",
+          "default": true
+        }
+      ]
+    },
+    {
+      "id": "showQuestionBtn",
+      "type": "Button",
+      "position": [50, 200],
+      "size": [150, 40],
+      "text": "Show Question Dialog",
+      "style": {
+        "color": "#FFFFFF",
+        "bgColor": "#3CB371",
+        "radius": 5
+      },
+      "events": {
+        "onClick": "@showQuestionDialog"
+      }
+    },
+    {
+      "id": "questionDialog",
+      "type": "Dialog",
+      "title": "Confirm",
+      "message": "Are you sure you want to proceed with this action?",
+      "dialogType": "question",
+      "modal": true,
+      "size": [400, 180],
+      "buttons": [
+        {
+          "text": "Yes",
+          "default": true
+        },
+        {
+          "text": "No",
+          "cancel": true
+        }
+      ]
+    },
+    {
+      "id": "showCustomBtn",
+      "type": "Button",
+      "position": [50, 250],
+      "size": [150, 40],
+      "text": "Show Custom Dialog",
+      "style": {
+        "color": "#FFFFFF",
+        "bgColor": "#9370DB",
+        "radius": 5
+      },
+      "events": {
+        "onClick": "@showCustomDialog"
+      }
+    },
+    {
+      "id": "customDialog",
+      "type": "Dialog",
+      "title": "Custom Dialog",
+      "message": "This is a custom dialog with personalized styling and multiple options.",
+      "dialogType": "custom",
+      "modal": false,
+      "size": [500, 280],
+      "buttons": [
+        {
+          "text": "Option 1",
+          "default": true
+        },
+        {
+          "text": "Option 2"
+        },
+        {
+          "text": "Option 3"
+        },
+        {
+          "text": "Close",
+          "cancel": true
+        }
+      ],
+      "style": {
+        "titleColor": "#9370DB",
+        "textColor": "#2C3E50",
+        "bgColor": "#F8F9FA",
+        "borderColor": "#9370DB",
+        "buttonColor": "#9370DB",
+        "buttonHoverColor": "#A688DB",
+        "buttonTextColor": "#FFFFFF"
+      }
+    }
+  ]
+}
