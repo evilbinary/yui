@@ -1,0 +1,211 @@
+{
+    "id": "menuTestApp",
+    "type": "View",
+    "theme": "default",
+    "style": {
+        "color": "#2C3E50",
+        "bgColor": "#F5F5F5"
+    },
+    "layout": {
+        "type": "vertical",
+        "spacing": 20,
+        "padding": [
+            20,
+            20,
+            20,
+            20
+        ]
+    },
+    "children": [
+        {
+            "id": "title",
+            "type": "Label",
+            "text": "菜单组件测试",
+            "style": {
+                "type": "center",
+                "color": "#1976D2",
+                "fontSize": 24,
+                "marginBottom": 20
+            }
+        },
+        {
+            "id": "mainMenu",
+            "type": "Menu",
+            "position": [50, 80],
+            "size": [200, 240],
+            "style": {
+                "bgColor": "#FFFFFF",
+                "textColor": "#2C3E50",
+                "hoverColor": "#E3F2FD",
+                "disabledColor": "#BDBDBD",
+                "separatorColor": "#E0E0E0",
+                "itemHeight": 30,
+                "radius": 4
+            },
+            "items": [
+                {
+                    "text": "新建文件",
+                    "shortcut": "Ctrl+N",
+                    "enabled": true,
+                    "checked": false,
+                    "separator": false
+                },
+                {
+                    "text": "打开文件",
+                    "shortcut": "Ctrl+O",
+                    "enabled": true,
+                    "checked": false,
+                    "separator": false
+                },
+                {
+                    "text": "保存文件",
+                    "shortcut": "Ctrl+S",
+                    "enabled": true,
+                    "checked": false,
+                    "separator": false
+                },
+                {
+                    "text": "",
+                    "shortcut": "",
+                    "enabled": true,
+                    "checked": false,
+                    "separator": true
+                },
+                {
+                    "text": "复制",
+                    "shortcut": "Ctrl+C",
+                    "enabled": true,
+                    "checked": false,
+                    "separator": false
+                },
+                {
+                    "text": "粘贴",
+                    "shortcut": "Ctrl+V",
+                    "enabled": true,
+                    "checked": false,
+                    "separator": false
+                },
+                {
+                    "text": "剪切",
+                    "shortcut": "Ctrl+X",
+                    "enabled": false,
+                    "checked": false,
+                    "separator": false
+                },
+                {
+                    "text": "",
+                    "shortcut": "",
+                    "enabled": true,
+                    "checked": false,
+                    "separator": true
+                },
+                {
+                    "text": "显示工具栏",
+                    "shortcut": "",
+                    "enabled": true,
+                    "checked": true,
+                    "separator": false
+                },
+                {
+                    "text": "显示状态栏",
+                    "shortcut": "",
+                    "enabled": true,
+                    "checked": false,
+                    "separator": false
+                },
+                {
+                    "text": "",
+                    "shortcut": "",
+                    "enabled": true,
+                    "checked": false,
+                    "separator": true
+                },
+                {
+                    "text": "退出",
+                    "shortcut": "Alt+F4",
+                    "enabled": true,
+                    "checked": false,
+                    "separator": false
+                }
+            ],
+            "events": {
+                "onItemClick": "@handleMenuClick"
+            }
+        },
+        {
+            "id": "contextMenu",
+            "type": "Menu",
+            "position": [300, 80],
+            "size": [180, 150],
+            "style": {
+                "bgColor": "#FFFFFF",
+                "textColor": "#2C3E50",
+                "hoverColor": "#FFF3E0",
+                "disabledColor": "#BDBDBD",
+                "separatorColor": "#E0E0E0",
+                "itemHeight": 30,
+                "radius": 4
+            },
+            "items": [
+                {
+                    "text": "撤销",
+                    "shortcut": "Ctrl+Z",
+                    "enabled": true,
+                    "checked": false,
+                    "separator": false
+                },
+                {
+                    "text": "重做",
+                    "shortcut": "Ctrl+Y",
+                    "enabled": false,
+                    "checked": false,
+                    "separator": false
+                },
+                {
+                    "text": "",
+                    "shortcut": "",
+                    "enabled": true,
+                    "checked": false,
+                    "separator": true
+                },
+                {
+                    "text": "刷新",
+                    "shortcut": "F5",
+                    "enabled": true,
+                    "checked": false,
+                    "separator": false
+                },
+                {
+                    "text": "属性",
+                    "shortcut": "",
+                    "enabled": true,
+                    "checked": false,
+                    "separator": false
+                }
+            ],
+            "events": {
+                "onItemClick": "@handleContextMenuClick"
+            }
+        },
+        {
+            "id": "resultLabel",
+            "type": "Label",
+            "text": "点击菜单项查看结果",
+            "position": [50, 350],
+            "size": [400, 30],
+            "style": {
+                "color": "#2C3E50",
+                "fontSize": 16,
+                "bgColor": "#E8F5E8",
+                "radius": 4,
+                "padding": [10, 5, 10, 5]
+            }
+        }
+    ],
+    "events": {
+        "onLoad": "@initMenus",
+        "handleMenuClick": "function(itemText) { document.getElementById('resultLabel').text = '主菜单点击: ' + itemText; }",
+        "handleContextMenuClick": "function(itemText) { document.getElementById('resultLabel').text = '右键菜单点击: ' + itemText; }",
+        "initMenus": "function() { console.log('菜单测试应用已加载'); }"
+    }
+}

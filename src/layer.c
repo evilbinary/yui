@@ -3,11 +3,11 @@
 
 #include "animate.h"
 
-// 更新图层类型名称数组，添加GRID、Text、Tab、Slider和Listbox
+// 更新图层类型名称数组，添加GRID、Text、Tab、Slider、Listbox和Menu
 char* layer_type_name[] = {"View",     "Button",   "Input",   "Label",
                            "Image",    "List",     "Grid",    "Progress",
                            "Checkbox", "Radiobox", "Text",    "Treeview",
-                           "Tab",      "Slider",   "Select", "Scrollbar"};
+                           "Tab",      "Slider",   "Select", "Scrollbar", "Menu"};
 
 Layer* focused_layer = NULL;
 
@@ -706,6 +706,8 @@ Layer* parse_layer(cJSON* json_obj, Layer* parent) {
 
     // 对于SCROLLBAR类型，不应该覆盖子图层数组，所以跳过后续的子图层解析
     has_custom_children = 1;
+  } else if (layer->type == MENU) {
+    layer->component = menu_component_create_from_json(layer, json_obj);
   }
 
   // 递归解析子图层（如果不是SCROLLBAR类型）
