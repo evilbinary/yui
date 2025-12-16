@@ -242,8 +242,8 @@ bool dialog_component_show(DialogComponent* component, int x, int y) {
     memset(component->popup_layer, 0, sizeof(Layer));
     
     // 使用layer的尺寸
-    int dialog_width = layer->rect.w;
-    int dialog_height = layer->rect.h;
+    int dialog_width = component->layer->rect.w;
+    int dialog_height = component->layer->rect.h;
     
     // 如果没有设置尺寸，使用默认值并自动调整
     if (dialog_width == 0 && dialog_height == 0) {

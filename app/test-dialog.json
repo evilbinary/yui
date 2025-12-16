@@ -2,6 +2,7 @@
   "id": "dialogTestContainer",
   "type": "View",
   "size": [800, 600],
+  "scrollable": 1,
   "style": {
     "bgColor": "#f0f0f0"
   },
