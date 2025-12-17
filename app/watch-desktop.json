@@ -45,8 +45,8 @@
                     "style": {
                         "textColor": "#FFFFFF",
                         "color": "#FFFFFF",
-                        "bgColor":"#333333"
-                        // "radius": 5
+                        "bgColor":"#4CAF50",
+                        "radius": 8
                     },
                     "progressConfig": {
                         "value": 85,
@@ -111,7 +111,8 @@
                         "bgColor": "#F44336",
                         "borderRadius": "8px",
                         "fontSize": "12",
-                        "color": "#FFFFFF"
+                        "color": "#FFFFFF",
+                        "radius": 8
                     }
                 },
                 {
@@ -123,7 +124,8 @@
                         "bgColor": "#2196F3",
                         "borderRadius": "8px",
                         "fontSize": "12",
-                        "color": "#FFFFFF"
+                        "color": "#FFFFFF",
+                        "radius": 8
                     }
                 },
                 {
@@ -133,9 +135,9 @@
                     "text": "音乐",
                     "style": {
                         "bgColor": "#4CAF50",
-                        "radius": "8",
                         "fontSize": "12",
-                        "color": "#FFFFFF"
+                        "color": "#FFFFFF",
+                        "radius": 8
                     }
                 },
                 {
@@ -145,9 +147,9 @@
                     "text": "天气",
                     "style": {
                         "bgColor": "#FF9800",
-                        "radius": "8",
                         "fontSize": "12",
-                        "color": "#FFFFFF"
+                        "color": "#FFFFFF",
+                        "radius": 8
                     }
                 }
             ]

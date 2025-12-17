@@ -403,8 +403,9 @@
                     "style":{
                         "bgColor": "#333333",
                         "color": "#4CAF50",
-                        "radius": "10"
+                        "radius": 10
                     },
+                    "data":84,
                     "progressConfig": {
                         "value": 84,
                         "maxValue": 100,

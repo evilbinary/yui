@@ -20,10 +20,10 @@
     // "source":"app/calc.json",
 
     // "source":"app/clock.json",
-    // "source":"app/watch-desktop.sjson",
-    // "source":"app/watch-health.json",
+    // "source":"app/watch-desktop.json",
+    "source":"app/watch-health.json",
     // "source":"app/watch-menu.json",
-    "source":"app/test-radius.json",
+    // "source":"app/test-radius.json",
 
     "style": {
         "color": "#2C3E50"
