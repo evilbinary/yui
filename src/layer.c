@@ -1,13 +1,13 @@
 #include "layer.h"
 #include "util.h"
-
 #include "animate.h"
+
 
 // 更新图层类型名称数组，添加GRID、Text、Tab、Slider、Listbox和Menu
 char* layer_type_name[] = {"View",     "Button",   "Input",   "Label",
                            "Image",    "List",     "Grid",    "Progress",
                            "Checkbox", "Radiobox", "Text",    "Treeview",
-                           "Tab",      "Slider",   "Select", "Scrollbar", "Menu", "Dialog"};
+                           "Tab",      "Slider",   "Select", "Scrollbar", "Menu", "Dialog", "Clock"};
 
 Layer* focused_layer = NULL;
 
@@ -716,6 +716,8 @@ Layer* parse_layer(cJSON* json_obj, Layer* parent) {
     layer->component = menu_component_create_from_json(layer, json_obj);
   } else if (layer->type == DIALOG) {
     layer->component = dialog_component_create_from_json(layer, json_obj);
+  } else if (layer->type == CLOCK) {
+    layer->component = clock_component_create_from_json(layer, json_obj);
   }
 
   // 递归解析子图层（如果不是SCROLLBAR类型）

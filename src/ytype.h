@@ -39,7 +39,7 @@
 #define YUI_SCROLLBAR_COMPONENT 1
 #define YUI_MENU_COMPONENT 1
 #define YUI_DIALOG_COMPONENT 1
-
+#define YUI_CLOCK_COMPONENT 1
 
 
 #ifdef YUI_ANIMATION
@@ -142,7 +142,8 @@ typedef enum {
     SELECT,
     SCROLLBAR,  // 添加SCROLLBAR类型
     MENU,  // 添加MENU类型
-    DIALOG  // 添加DIALOG类型
+    DIALOG,  // 添加DIALOG类型
+    CLOCK  // 添加CLOCK类型
 } LayerType;
 
 extern char *layer_type_name[];
@@ -448,5 +449,8 @@ typedef struct {
 #include "components/dialog_component.h"
 #endif
 
+#ifdef YUI_CLOCK_COMPONENT
+#include "components/clock_component.h"
+#endif
 
 #endif

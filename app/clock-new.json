@@ -1,0 +1,107 @@
+{
+    "id": "main",
+    "type": "View",
+    "size": [800, 600],
+    "style": {
+        "bgColor": "#F0F0F0"
+    },
+    "children": [
+        {
+            "id": "analogClock1",
+            "type": "Clock",
+            "position": [100, 100],
+            "size": [200, 200],
+            "clockConfig": {
+                "radius": 90,
+                "borderWidth": 3,
+                "hourHandLength": 60,
+                "minuteHandLength": 80,
+                "secondHandLength": 90,
+                "handWidth": 4,
+                "centerRadius": 8,
+                "showNumbers": true,
+                "fontSize": 16,
+                "smoothSecond": false,
+                "hourHandColor": "#333333",
+                "minuteHandColor": "#666666", 
+                "secondHandColor": "#FF0000",
+                "centerColor": "#FF0000",
+                "borderColor": "#333333",
+                "backgroundColor": "#FFFFFF",
+                "numberColor": "#333333"
+            }
+        },
+        {
+            "id": "analogClock2",
+            "type": "Clock",
+            "position": [350, 100],
+            "size": [150, 150],
+            "clockConfig": {
+                "radius": 70,
+                "borderWidth": 2,
+                "hourHandLength": 45,
+                "minuteHandLength": 60,
+                "secondHandLength": 65,
+                "handWidth": 3,
+                "centerRadius": 5,
+                "showNumbers": false,
+                "smoothSecond": true,
+                "hourHandColor": "#2196F3",
+                "minuteHandColor": "#4CAF50", 
+                "secondHandColor": "#FF9800",
+                "centerColor": "#9C27B0",
+                "borderColor": "#2196F3",
+                "backgroundColor": "#E3F2FD"
+            }
+        },
+        {
+            "id": "analogClock3",
+            "type": "Clock",
+            "position": [550, 100],
+            "size": [180, 180],
+            "clockConfig": {
+                "radius": 80,
+                "borderWidth": 4,
+                "hourHandLength": 50,
+                "minuteHandLength": 70,
+                "secondHandLength": 75,
+                "handWidth": 6,
+                "centerRadius": 10,
+                "showNumbers": true,
+                "fontSize": 14,
+                "smoothSecond": true,
+                "hourHandColor": "#000000",
+                "minuteHandColor": "#333333", 
+                "secondHandColor": "#FF5722",
+                "centerColor": "#000000",
+                "borderColor": "#000000",
+                "backgroundColor": "#FFFFFF",
+                "numberColor": "#000000"
+            }
+        },
+        {
+            "id": "title",
+            "type": "Label",
+            "position": [100, 50],
+            "size": [600, 30],
+            "text": "JSON时钟组件演示",
+            "style": {
+                "fontSize": "24",
+                "color": "#333333",
+                "textAlign": "center"
+            }
+        },
+        {
+            "id": "description",
+            "type": "Label",
+            "position": [100, 350],
+            "size": [600, 100],
+            "text": "这个演示展示了JSON配置的时钟组件。\n\n特点：\n• 支持自定义颜色、大小、样式\n• 可选择是否显示数字\n• 支持平滑秒针动画\n• 完全由JSON配置驱动",
+            "style": {
+                "fontSize": "14",
+                "color": "#666666",
+                "textAlign": "left"
+            }
+        }
+    ]
+}

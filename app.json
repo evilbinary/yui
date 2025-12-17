@@ -7,13 +7,16 @@
     // "source":"app/test-scrollbar-final.json",
     // "source":"app/test-treeview.json",
     // "source":"app/os-desktop.json",
-    // "source":"app/clock.json",
+    // "source":"app/clock-simple.json",
+    "source":"app/clock-new.json",
+
     // "source":"app/test-list.json",
     // "source":"app/test-animation.json",
     // "source":"app/test-tab.json",
-    "source":"app/test-select.json",
+    // "source":"app/test-select.json",
 
     // "source":"app/test-color.json",
+    // "source":"app/test-select.json",
 
     "style": {
         "color": "#2C3E50"
