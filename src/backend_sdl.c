@@ -679,16 +679,18 @@ static SDL_Texture* get_corner_texture(SDL_Renderer* renderer, int radius, SDL_C
     
     Uint32 color_key = generate_color_key(color);
     
-    // 检查缓存（匹配半径和颜色）
-    if (corner_texture_cache[radius].texture && 
-        corner_texture_cache[radius].radius == radius && 
-        corner_texture_cache[radius].color_key == color_key) {
-        return corner_texture_cache[radius].texture;
+    // 遍历所有缓存条目，查找匹配的半径和颜色
+    for (int i = 0; i < 64; i++) {
+        if (corner_texture_cache[i].texture && 
+            corner_texture_cache[i].radius == radius && 
+            corner_texture_cache[i].color_key == color_key) {
+            return corner_texture_cache[i].texture;
+        }
     }
     
-    // 创建新的圆角纹理
+    // 创建新的圆角纹理 - 使用RGBA格式
     int size = radius + 2;
-    SDL_Surface* surface = SDL_CreateRGBSurface(0, size, size, 32, 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
+    SDL_Surface* surface = SDL_CreateRGBSurface(0, size, size, 32, 0xFF000000, 0x00FF0000, 0x0000FF00, 0x000000FF);
     if (!surface) return NULL;
     
     // 绘制抗锯齿圆角到surface
@@ -697,23 +699,26 @@ static SDL_Texture* get_corner_texture(SDL_Renderer* renderer, int radius, SDL_C
     
     for (int y = 0; y < size; y++) {
         for (int x = 0; x < size; x++) {
-            // 计算到圆角的距离
-            float dx = x - radius - 0.5f;
-            float dy = y - radius - 0.5f;
+            // 计算到圆心的距离（这是左上角，圆心在radius, radius）
+            float dx = x - radius;
+            float dy = y - radius;
             float distance = sqrt(dx * dx + dy * dy);
             
             float alpha = 0.0f;
-            if (distance < radius - 0.5f) {
+            if (distance <= radius) {
                 alpha = 1.0f; // 完全在圆内
-            } else if (distance < radius + 0.5f) {
-                // 边缘抗锯齿，使用更平滑的曲线
-                float t = (distance - (radius - 0.5f));
-                alpha = 1.0f - (t * t); // 二次衰减更平滑
+            } else if (distance <= radius + 1.0f) {
+                // 边缘抗锯齿，1像素的渐变区域
+                float t = distance - radius;
+                alpha = 1.0f - t; // 线性衰减
             }
             
             if (alpha > 0.01f) {
                 Uint8 a = (Uint8)(alpha * color.a);
-                pixels[y * pitch + x] = (a << 24) | (color.b << 16) | (color.g << 8) | color.r;
+                // SDL像素格式: 0xRRGGBBAA (RGBA格式，与Surface匹配)
+                pixels[y * pitch + x] = (color.r << 24) | (color.g << 16) | (color.b << 8) | a;
+            } else {
+                pixels[y * pitch + x] = 0; // 完全透明
             }
         }
     }
@@ -722,13 +727,14 @@ static SDL_Texture* get_corner_texture(SDL_Renderer* renderer, int radius, SDL_C
     SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
     SDL_FreeSurface(surface);
     
-    // 更新缓存
-    if (corner_texture_cache[radius].texture) {
-        SDL_DestroyTexture(corner_texture_cache[radius].texture);
+    // 查找空闲位置或覆盖第一个
+    int cache_index = radius % 64; // 简单的哈希策略
+    if (corner_texture_cache[cache_index].texture) {
+        SDL_DestroyTexture(corner_texture_cache[cache_index].texture);
     }
-    corner_texture_cache[radius].texture = texture;
-    corner_texture_cache[radius].radius = radius;
-    corner_texture_cache[radius].color_key = color_key;
+    corner_texture_cache[cache_index].texture = texture;
+    corner_texture_cache[cache_index].radius = radius;
+    corner_texture_cache[cache_index].color_key = color_key;
     
     return texture;
 }
@@ -760,13 +766,13 @@ void draw_rounded_rect(SDL_Renderer* renderer, int x, int y, int w, int h, int r
         return;
     }
     
-    // 绘制中间矩形部分
-    if (w > 2 * r) {
+    // 绘制中间矩形部分（不包括圆角区域）
+    if (w > 2 * r && h > 0) {
         SDL_Rect middle_rect = {x + r, y, w - 2 * r, h};
         SDL_RenderFillRect(renderer, &middle_rect);
     }
     
-    // 绘制左右两个矩形部分
+    // 绘制左右两个矩形部分（避开圆角区域）
     if (h > 2 * r) {
         SDL_Rect left_rect = {x, y + r, r, h - 2 * r};
         SDL_Rect right_rect = {x + w - r, y + r, r, h - 2 * r};
@@ -780,11 +786,11 @@ void draw_rounded_rect(SDL_Renderer* renderer, int x, int y, int w, int h, int r
         // 设置纹理混合模式
         SDL_SetTextureBlendMode(corner_texture, SDL_BLENDMODE_BLEND);
         
-        // 精确计算源矩形和目标矩形
+        // 圆角纹理大小
         int corner_size = r + 2;
         SDL_Rect src_rect = {0, 0, corner_size, corner_size};
         
-        // 左上角
+        // 左上角 - 只绘制圆角扇形区域
         SDL_Rect dst_tl = {x, y, corner_size, corner_size};
         SDL_RenderCopy(renderer, corner_texture, &src_rect, &dst_tl);
         
@@ -815,23 +821,17 @@ void draw_rounded_rect_with_border(SDL_Renderer* renderer, int x, int y, int w, 
     if (r > w / 2) r = w / 2;
     if (r > h / 2) r = h / 2;
     
-    // 先绘制边框（外层圆角矩形）
+    // 先绘制边框（外层）
     draw_rounded_rect(renderer, x, y, w, h, r, border_color);
     
-    // 然后绘制内部填充，确保圆角朝外
+    // 然后绘制内部填充，这样背景色和圆角都是正确的
     int inner_x = x + border_width;
     int inner_y = y + border_width;
     int inner_w = w - 2 * border_width;
     int inner_h = h - 2 * border_width;
-    
-    // 内部半径应该保持与外部半径一致，这样圆角就朝外
-    // 只在尺寸不够时才减小半径
-    int inner_r = r;
-    if (inner_r > inner_w / 2) inner_r = inner_w / 2;
-    if (inner_r > inner_h / 2) inner_r = inner_h / 2;
+    int inner_r = r - border_width;
     if (inner_r < 0) inner_r = 0;
     
-    // 如果内部尺寸有效，绘制内部填充
     if (inner_w > 0 && inner_h > 0) {
         draw_rounded_rect(renderer, inner_x, inner_y, inner_w, inner_h, inner_r, bg_color);
     }
