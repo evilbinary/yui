@@ -198,7 +198,7 @@ void handle_event(Layer* root, SDL_Event* event) {
         SDL_GetMouseState(&mouse_x, &mouse_y);
         SDL_Point mouse_pos = { mouse_x, mouse_y };
         if (SDL_PointInRect(&mouse_pos, &root->rect)) {
-            printf("鼠标滚轮事件在图层内: %d %d, %d\n",root->type, event->wheel.x, event->wheel.y);
+            // printf("鼠标滚轮事件在图层内: %d %d, %d\n",root->type, event->wheel.x, event->wheel.y);
             handle_scroll_event(root,mouse_x,mouse_y, event->wheel.x,-event->wheel.y);
         }
     }
