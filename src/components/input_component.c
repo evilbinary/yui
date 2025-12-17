@@ -344,20 +344,19 @@ void input_component_render(Layer* layer) {
            HAS_STATE(layer, LAYER_STATE_FOCUSED), HAS_STATE(layer, LAYER_STATE_HOVER),
            HAS_STATE(layer, LAYER_STATE_PRESSED), HAS_STATE(layer, LAYER_STATE_DISABLED));
 
-    // 绘制背景
+    // 绘制输入框背景和边框（一步完成）
+    Color border_color = (Color){150, 150, 150, 255};
+    if (HAS_STATE(layer, LAYER_STATE_FOCUSED)) {
+        border_color = (Color){70, 130, 180, 255}; // 聚焦时使用蓝色边框
+    }
+    
     if (layer->bg_color.a > 0) {
         if (layer->radius > 0) {
-            backend_render_rounded_rect(&layer->rect, layer->bg_color, layer->radius);
+            backend_render_rounded_rect_with_border(&layer->rect, layer->bg_color, layer->radius, 2, border_color);
         } else {
             backend_render_fill_rect(&layer->rect, layer->bg_color);
+            backend_render_rect_color(&layer->rect, border_color.r, border_color.g, border_color.b, border_color.a);
         }
-    }
-
-    // 绘制输入框边框，考虑圆角
-    if (layer->radius > 0) {
-        backend_render_rounded_rect_with_border(&layer->rect, layer->bg_color, layer->radius, 2, (Color){150, 150, 150, 255});
-    } else {
-        backend_render_rect_color(&layer->rect,150, 150, 150, 255);
     }
     
     // 渲染输入框标签
@@ -391,19 +390,6 @@ void input_component_render(Layer* layer) {
             backend_render_text_destroy(text_texture);
 
         }
-    }
-    
-    // 绘制边框
-    Color border_color = {150, 150, 150, 255};
-    if (HAS_STATE(layer, LAYER_STATE_FOCUSED)) {
-        // 聚焦状态下使用高亮边框
-        border_color = (Color){50, 150, 255, 255};
-    }
-    
-    if (layer->radius > 0) {
-        backend_render_rounded_rect_with_border(&layer->rect, layer->bg_color, layer->radius, 2, border_color);
-    } else {
-        backend_render_rect_color(&layer->rect, border_color.r, border_color.g, border_color.b, border_color.a);
     }
     
     // 全局调试选项：如果启用了强制焦点，则将组件状态设置为聚焦
