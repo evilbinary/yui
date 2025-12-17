@@ -1,8 +1,8 @@
 #ifndef POPUP_MANAGER_H
 #define POPUP_MANAGER_H
 
-#include "../layer.h"
-#include "../backend.h"
+#include "layer.h"
+#include "backend.h"
 #include <stdbool.h>
 
 // 弹出层类型

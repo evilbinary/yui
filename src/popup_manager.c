@@ -1,5 +1,5 @@
 #include "popup_manager.h"
-#include "../event.h"
+#include "event.h"
 #include <stdlib.h>
 #include <string.h>
 
