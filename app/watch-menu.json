@@ -1,0 +1,374 @@
+{
+    "id": "watchMenu",
+    "type": "View",
+    "size": [320, 320],
+    "style": {
+        "bgColor": "#000000"
+    },
+    "children": [
+        {
+            "id": "header",
+            "type": "View",
+            "position": [0, 0],
+            "size": [320, 40],
+            "style": {
+                "bgColor": "#1A1A1A"
+            },
+            "children": [
+                {
+                    "id": "backBtn",
+                    "type": "Button",
+                    "position": [5, 8],
+                    "size": [40, 24],
+                    "text": "◀",
+                    "style": {
+                        "bgColor": "#333333",
+                        "borderRadius": "12px",
+                        "fontSize": "16",
+                        "color": "#FFFFFF"
+                    }
+                },
+                {
+                    "id": "menuTitle",
+                    "type": "Label",
+                    "position": [60, 10],
+                    "size": [200, 20],
+                    "text": "应用程序",
+                    "style": {
+                        "fontSize": "16",
+                        "color": "#FFFFFF",
+                        "textAlign": "center",
+                        "fontWeight": "bold"
+                    }
+                },
+                {
+                    "id": "settingsBtn",
+                    "type": "Button",
+                    "position": [275, 8],
+                    "size": [40, 24],
+                    "text": "⚙",
+                    "style": {
+                        "bgColor": "#333333",
+                        "borderRadius": "12px",
+                        "fontSize": "16",
+                        "color": "#FFFFFF"
+                    }
+                }
+            ]
+        },
+        {
+            "id": "appGrid",
+            "type": "View",
+            "position": [10, 50],
+            "size": [300, 220],
+            "style": {
+                "bgColor": "#0A0A0A"
+            },
+            "children": [
+                {
+                    "id": "row1",
+                    "type": "View",
+                    "position": [10, 10],
+                    "size": [280, 50],
+                    "children": [
+                        {
+                            "id": "dialerApp",
+                            "type": "Button",
+                            "position": [5, 5],
+                            "size": [60, 40],
+                            "text": "电话",
+                            "style": {
+                                "bgColor": "#4CAF50",
+                                "borderRadius": "20px",
+                                "fontSize": "11",
+                                "color": "#FFFFFF"
+                            }
+                        },
+                        {
+                            "id": "contactsApp",
+                            "type": "Button",
+                            "position": [75, 5],
+                            "size": [60, 40],
+                            "text": "联系人",
+                            "style": {
+                                "bgColor": "#2196F3",
+                                "borderRadius": "20px",
+                                "fontSize": "11",
+                                "color": "#FFFFFF"
+                            }
+                        },
+                        {
+                            "id": "messagesApp",
+                            "type": "Button",
+                            "position": [145, 5],
+                            "size": [60, 40],
+                            "text": "信息",
+                            "style": {
+                                "bgColor": "#FF9800",
+                                "borderRadius": "20px",
+                                "fontSize": "11",
+                                "color": "#FFFFFF"
+                            }
+                        },
+                        {
+                            "id": "cameraApp",
+                            "type": "Button",
+                            "position": [215, 5],
+                            "size": [60, 40],
+                            "text": "相机",
+                            "style": {
+                                "bgColor": "#9C27B0",
+                                "borderRadius": "20px",
+                                "fontSize": "11",
+                                "color": "#FFFFFF"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "id": "row2",
+                    "type": "View",
+                    "position": [10, 65],
+                    "size": [280, 50],
+                    "children": [
+                        {
+                            "id": "musicApp",
+                            "type": "Button",
+                            "position": [5, 5],
+                            "size": [60, 40],
+                            "text": "音乐",
+                            "style": {
+                                "bgColor": "#F44336",
+                                "borderRadius": "20px",
+                                "fontSize": "11",
+                                "color": "#FFFFFF"
+                            }
+                        },
+                        {
+                            "id": "fitnessApp",
+                            "type": "Button",
+                            "position": [75, 5],
+                            "size": [60, 40],
+                            "text": "健身",
+                            "style": {
+                                "bgColor": "#00BCD4",
+                                "borderRadius": "20px",
+                                "fontSize": "11",
+                                "color": "#FFFFFF"
+                            }
+                        },
+                        {
+                            "id": "heartApp",
+                            "type": "Button",
+                            "position": [145, 5],
+                            "size": [60, 40],
+                            "text": "心率",
+                            "style": {
+                                "bgColor": "#E91E63",
+                                "borderRadius": "20px",
+                                "fontSize": "11",
+                                "color": "#FFFFFF"
+                            }
+                        },
+                        {
+                            "id": "sleepApp",
+                            "type": "Button",
+                            "position": [215, 5],
+                            "size": [60, 40],
+                            "text": "睡眠",
+                            "style": {
+                                "bgColor": "#673AB7",
+                                "borderRadius": "20px",
+                                "fontSize": "11",
+                                "color": "#FFFFFF"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "id": "row3",
+                    "type": "View",
+                    "position": [10, 120],
+                    "size": [280, 50],
+                    "children": [
+                        {
+                            "id": "weatherApp",
+                            "type": "Button",
+                            "position": [5, 5],
+                            "size": [60, 40],
+                            "text": "天气",
+                            "style": {
+                                "bgColor": "#009688",
+                                "borderRadius": "20px",
+                                "fontSize": "11",
+                                "color": "#FFFFFF"
+                            }
+                        },
+                        {
+                            "id": "calendarApp",
+                            "type": "Button",
+                            "position": [75, 5],
+                            "size": [60, 40],
+                            "text": "日历",
+                            "style": {
+                                "bgColor": "#795548",
+                                "borderRadius": "20px",
+                                "fontSize": "11",
+                                "color": "#FFFFFF"
+                            }
+                        },
+                        {
+                            "id": "timerApp",
+                            "type": "Button",
+                            "position": [145, 5],
+                            "size": [60, 40],
+                            "text": "计时",
+                            "style": {
+                                "bgColor": "#607D8B",
+                                "borderRadius": "20px",
+                                "fontSize": "11",
+                                "color": "#FFFFFF"
+                            }
+                        },
+                        {
+                            "id": "alarmApp",
+                            "type": "Button",
+                            "position": [215, 5],
+                            "size": [60, 40],
+                            "text": "闹钟",
+                            "style": {
+                                "bgColor": "#FF5722",
+                                "borderRadius": "20px",
+                                "fontSize": "11",
+                                "color": "#FFFFFF"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "id": "row4",
+                    "type": "View",
+                    "position": [10, 175],
+                    "size": [280, 50],
+                    "children": [
+                        {
+                            "id": "mapsApp",
+                            "type": "Button",
+                            "position": [5, 5],
+                            "size": [60, 40],
+                            "text": "地图",
+                            "style": {
+                                "bgColor": "#3F51B5",
+                                "borderRadius": "20px",
+                                "fontSize": "11",
+                                "color": "#FFFFFF"
+                            }
+                        },
+                        {
+                            "id": "walletApp",
+                            "type": "Button",
+                            "position": [75, 5],
+                            "size": [60, 40],
+                            "text": "钱包",
+                            "style": {
+                                "bgColor": "#FFC107",
+                                "borderRadius": "20px",
+                                "fontSize": "11",
+                                "color": "#000000"
+                            }
+                        },
+                        {
+                            "id": "notesApp",
+                            "type": "Button",
+                            "position": [145, 5],
+                            "size": [60, 40],
+                            "text": "备忘",
+                            "style": {
+                                "bgColor": "#8BC34A",
+                                "borderRadius": "20px",
+                                "fontSize": "11",
+                                "color": "#000000"
+                            }
+                        },
+                        {
+                            "id": "moreApp",
+                            "type": "Button",
+                            "position": [215, 5],
+                            "size": [60, 40],
+                            "text": "更多",
+                            "style": {
+                                "bgColor": "#9E9E9E",
+                                "borderRadius": "20px",
+                                "fontSize": "11",
+                                "color": "#FFFFFF"
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "bottomNav",
+            "type": "View",
+            "position": [0, 280],
+            "size": [320, 40],
+            "style": {
+                "bgColor": "#1A1A1A"
+            },
+            "children": [
+                {
+                    "id": "homeNav",
+                    "type": "Button",
+                    "position": [20, 8],
+                    "size": [50, 24],
+                    "text": "主页",
+                    "style": {
+                        "bgColor": "#333333",
+                        "borderRadius": "12px",
+                        "fontSize": "10",
+                        "color": "#FFFFFF"
+                    }
+                },
+                {
+                    "id": "appsNav",
+                    "type": "Button",
+                    "position": [85, 8],
+                    "size": [50, 24],
+                    "text": "应用",
+                    "style": {
+                        "bgColor": "#4CAF50",
+                        "borderRadius": "12px",
+                        "fontSize": "10",
+                        "color": "#FFFFFF"
+                    }
+                },
+                {
+                    "id": "healthNav",
+                    "type": "Button",
+                    "position": [150, 8],
+                    "size": [50, 24],
+                    "text": "健康",
+                    "style": {
+                        "bgColor": "#333333",
+                        "borderRadius": "12px",
+                        "fontSize": "10",
+                        "color": "#FFFFFF"
+                    }
+                },
+                {
+                    "id": "settingsNav",
+                    "type": "Button",
+                    "position": [215, 8],
+                    "size": [50, 24],
+                    "text": "设置",
+                    "style": {
+                        "bgColor": "#333333",
+                        "borderRadius": "12px",
+                        "fontSize": "10",
+                        "color": "#FFFFFF"
+                    }
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,156 @@
+{
+    "id": "watchDesktop",
+    "type": "View",
+    "size": [320, 320],
+    "style": {
+        "bgColor": "#000000"
+    },
+    "layout": {
+        "type": "vertical",
+        "spacing": 10,
+        "padding": [5, 10, 5, 10]
+    },
+    "children": [
+        {
+            "id": "statusBar",
+            "type": "View",
+            "position": [0, 0],
+            "size": [300, 30],
+            "layout": {
+                "type": "horizontal",
+                "spacing": 10,
+                "padding": [5, 10, 5, 10],
+                "align": "space-between"
+            },
+            "style": {
+                "bgColor": "#1A1A1A"
+            },
+            "children": [
+                {
+                    "id": "timeDisplay",
+                    "type": "Label",
+                    "flex": 1,
+                    "text": "12:30",
+                    "style": {
+                        "fontSize": "14",
+                        "color": "#FFFFFF",
+                        "fontWeight": "bold"
+                    }
+                },
+                {
+                    "id": "batteryIcon",
+                    "type": "Progress",
+                    "size": [60, 4],
+                    "data": 30,
+                    "style": {
+                        "textColor": "#FFFFFF",
+                        "color": "#FFFFFF",
+                        "bgColor":"#333333"
+                        // "radius": 5
+                    },
+                    "progressConfig": {
+                        "value": 85,
+                        "maxValue": 100,
+                        "direction": "horizontal",
+                        "bgColor": "#333333",
+                        "fgColor": "#4CAF50",
+                        "borderRadius": "2px",
+                        "showText": false,
+                        "textColor": "#FFFFFF",
+                        "textSize": "8"
+                    }
+                }
+            ]
+        },
+        {
+            "id": "clockFace",
+            "type": "Clock",
+            "position": [160, 50],
+            "size": [200, 200],
+            "clockConfig": {
+                "radius": 95,
+                "borderWidth": 1,
+                "hourHandLength": 60,
+                "minuteHandLength": 80,
+                "secondHandLength": 90,
+                "handWidth": 3,
+                "centerRadius": 4,
+                "showNumbers": true,
+                "fontSize": 12,
+                "smoothSecond": true,
+                "hourHandColor": "#FFFFFF",
+                "minuteHandColor": "#FFFFFF", 
+                "secondHandColor": "#FF5722",
+                "centerColor": "#FFFFFF",
+                "borderColor": "#333333",
+                "backgroundColor": "#0D0D0D",
+                "numberColor": "#CCCCCC"
+            }
+        },
+        {
+            "id": "quickMenu",
+            "type": "View",
+            "position": [10, 260],
+            "size": [300, 50],
+            "layout": {
+                "type": "horizontal",
+                "spacing": 5,
+                "padding": [5, 10, 5, 10]
+            },
+            "style": {
+                "bgColor": "#1A1A1A",
+                "borderRadius": "10px"
+            },
+            "children": [
+                {
+                    "id": "healthBtn",
+                    "type": "Button",
+                    "size": [65, 40],
+                    "text": "健康",
+                    "style": {
+                        "bgColor": "#F44336",
+                        "borderRadius": "8px",
+                        "fontSize": "12",
+                        "color": "#FFFFFF"
+                    }
+                },
+                {
+                    "id": "messageBtn",
+                    "type": "Button",
+                    "size": [65, 40],
+                    "text": "消息",
+                    "style": {
+                        "bgColor": "#2196F3",
+                        "borderRadius": "8px",
+                        "fontSize": "12",
+                        "color": "#FFFFFF"
+                    }
+                },
+                {
+                    "id": "musicBtn",
+                    "type": "Button",
+                    "size": [65, 40],
+                    "text": "音乐",
+                    "style": {
+                        "bgColor": "#4CAF50",
+                        "radius": "8",
+                        "fontSize": "12",
+                        "color": "#FFFFFF"
+                    }
+                },
+                {
+                    "id": "weatherBtn",
+                    "type": "Button",
+                    "size": [65, 40],
+                    "text": "天气",
+                    "style": {
+                        "bgColor": "#FF9800",
+                        "radius": "8",
+                        "fontSize": "12",
+                        "color": "#FFFFFF"
+                    }
+                }
+            ]
+        }
+    ]
+}

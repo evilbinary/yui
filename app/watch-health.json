@@ -1,0 +1,428 @@
+{
+    "id": "watchHealth",
+    "type": "View",
+    "size": [320, 320],
+    "style": {
+        "bgColor": "#000000"
+    },
+    "layout": {
+        "type": "vertical",
+        "spacing": 10,
+        "padding": [8, 10, 8, 10]
+    },
+    "children": [
+        {
+            "id": "healthHeader",
+            "type": "View",
+            "position": [0, 0],
+            "size": [300, 40],
+            "layout": {
+                "type": "horizontal",
+                "spacing": 10,
+                "padding": [8, 10, 8, 10],
+                "align": "center"
+            },
+            "style": {
+                "bgColor": "#1A1A1A"
+            },
+            "children": [
+                {
+                    "id": "backBtn",
+                    "type": "Label",
+                    "size": [40, 24],
+                    "text": "返回",
+                    "style": {
+                        "bgColor": "#333333",
+                        "radius": "12",
+                        "fontSize": "16",
+                        "color": "#FFFFFF"
+                    }
+                },
+                {
+                    "id": "healthTitle",
+                    "type": "Label",
+                    "flex": 1,
+                    "text": "健康监测",
+                    "style": {
+                        "fontSize": "16",
+                        "color": "#FFFFFF",
+                        "textAlign": "center",
+                        "fontWeight": "bold"
+                    }
+                },
+                {
+                    "id": "headerPlaceholder",
+                    "type": "View",
+                    "size": [40, 24]
+                }
+            ]
+        },
+        {
+            "id": "healthCards",
+            "type": "Grid",
+            "position": [10, 50],
+            "size": [300, 170],
+            "layout": {
+                "type": "vertical",
+                "columns": 2,
+                "spacing": 10,
+                "padding": [0, 0, 0, 0]
+            },
+            "children": [
+                {
+                    "id": "heartRateCard",
+                    "type": "View",
+                    "size": [140, 80],
+                    "layout": {
+                        "type": "horizontal",
+                        "spacing": 5,
+                        "padding": [10, 10, 10, 10]
+                    },
+                    "style": {
+                        "bgColor": "#1A1A1A",
+                        "borderRadius": "10px"
+                    },
+                    "children": [
+                        {
+                            "id": "heartLeft",
+                            "type": "View",
+                            "layout": {
+                                "type": "vertical",
+                                "spacing": 2
+                            },
+                            "children": [
+                                {
+                                    "id": "heartIcon",
+                                    "type": "Label",
+                                    "text": "❤",
+                                    "style": {
+                                        "fontSize": "16",
+                                        "color": "#F44336"
+                                    }
+                                },
+                                {
+                                    "id": "heartLabel",
+                                    "type": "Label",
+                                    "text": "心率",
+                                    "style": {
+                                        "fontSize": "10",
+                                        "color": "#CCCCCC"
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "id": "heartRight",
+                            "type": "View",
+                            "flex": 1,
+                            "layout": {
+                                "type": "vertical",
+                                "spacing": 2,
+                                "align": "right"
+                            },
+                            "children": [
+                                {
+                                    "id": "heartValue",
+                                    "type": "Label",
+                                    "text": "72",
+                                    "style": {
+                                        "fontSize": "20",
+                                        "color": "#FFFFFF",
+                                        "fontWeight": "bold"
+                                    }
+                                },
+                                {
+                                    "id": "heartUnit",
+                                    "type": "Label",
+                                    "text": "bpm",
+                                    "style": {
+                                        "fontSize": "10",
+                                        "color": "#999999"
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "stepsCard",
+                    "type": "View",
+                    "size": [140, 80],
+                    "layout": {
+                        "type": "horizontal",
+                        "spacing": 5,
+                        "padding": [10, 10, 10, 10]
+                    },
+                    "style": {
+                        "bgColor": "#1A1A1A",
+                        "borderRadius": "10px"
+                    },
+                    "children": [
+                        {
+                            "id": "stepsLeft",
+                            "type": "View",
+                            "layout": {
+                                "type": "vertical",
+                                "spacing": 2
+                            },
+                            "children": [
+                                {
+                                    "id": "stepsIcon",
+                                    "type": "Label",
+                                    "text": "👟",
+                                    "style": {
+                                        "fontSize": "16",
+                                        "color": "#4CAF50"
+                                    }
+                                },
+                                {
+                                    "id": "stepsLabel",
+                                    "type": "Label",
+                                    "text": "步数",
+                                    "style": {
+                                        "fontSize": "10",
+                                        "color": "#CCCCCC"
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "id": "stepsRight",
+                            "type": "View",
+                            "flex": 1,
+                            "layout": {
+                                "type": "vertical",
+                                "spacing": 2,
+                                "align": "right"
+                            },
+                            "children": [
+                                {
+                                    "id": "stepsValue",
+                                    "type": "Label",
+                                    "text": "8,432",
+                                    "style": {
+                                        "fontSize": "16",
+                                        "color": "#FFFFFF",
+                                        "fontWeight": "bold"
+                                    }
+                                },
+                                {
+                                    "id": "stepsGoal",
+                                    "type": "Label",
+                                    "text": "目标: 10,000",
+                                    "style": {
+                                        "fontSize": "10",
+                                        "color": "#999999"
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "caloriesCard",
+                    "type": "View",
+                    "size": [140, 80],
+                    "layout": {
+                        "type": "horizontal",
+                        "spacing": 5,
+                        "padding": [10, 10, 10, 10]
+                    },
+                    "style": {
+                        "bgColor": "#1A1A1A",
+                        "borderRadius": "10px"
+                    },
+                    "children": [
+                        {
+                            "id": "caloriesLeft",
+                            "type": "View",
+                            "layout": {
+                                "type": "vertical",
+                                "spacing": 2
+                            },
+                            "children": [
+                                {
+                                    "id": "caloriesIcon",
+                                    "type": "Label",
+                                    "text": "🔥",
+                                    "style": {
+                                        "fontSize": "16",
+                                        "color": "#FF9800"
+                                    }
+                                },
+                                {
+                                    "id": "caloriesLabel",
+                                    "type": "Label",
+                                    "text": "卡路里",
+                                    "style": {
+                                        "fontSize": "10",
+                                        "color": "#CCCCCC"
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "id": "caloriesRight",
+                            "type": "View",
+                            "flex": 1,
+                            "layout": {
+                                "type": "vertical",
+                                "spacing": 2,
+                                "align": "right"
+                            },
+                            "children": [
+                                {
+                                    "id": "caloriesValue",
+                                    "type": "Label",
+                                    "text": "342",
+                                    "style": {
+                                        "fontSize": "18",
+                                        "color": "#FFFFFF",
+                                        "fontWeight": "bold"
+                                    }
+                                },
+                                {
+                                    "id": "caloriesUnit",
+                                    "type": "Label",
+                                    "text": "千卡",
+                                    "style": {
+                                        "fontSize": "10",
+                                        "color": "#999999"
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "sleepCard",
+                    "type": "View",
+                    "size": [140, 80],
+                    "layout": {
+                        "type": "horizontal",
+                        "spacing": 5,
+                        "padding": [10, 10, 10, 10]
+                    },
+                    "style": {
+                        "bgColor": "#1A1A1A",
+                        "borderRadius": "10px"
+                    },
+                    "children": [
+                        {
+                            "id": "sleepLeft",
+                            "type": "View",
+                            "layout": {
+                                "type": "vertical",
+                                "spacing": 2
+                            },
+                            "children": [
+                                {
+                                    "id": "sleepIcon",
+                                    "type": "Label",
+                                    "text": "🌙",
+                                    "style": {
+                                        "fontSize": "16",
+                                        "color": "#673AB7"
+                                    }
+                                },
+                                {
+                                    "id": "sleepLabel",
+                                    "type": "Label",
+                                    "text": "睡眠",
+                                    "style": {
+                                        "fontSize": "10",
+                                        "color": "#CCCCCC"
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "id": "sleepRight",
+                            "type": "View",
+                            "flex": 1,
+                            "layout": {
+                                "type": "vertical",
+                                "spacing": 2,
+                                "align": "right"
+                            },
+                            "children": [
+                                {
+                                    "id": "sleepValue",
+                                    "type": "Label",
+                                    "text": "7.5",
+                                    "style": {
+                                        "fontSize": "18",
+                                        "color": "#FFFFFF",
+                                        "fontWeight": "bold"
+                                    }
+                                },
+                                {
+                                    "id": "sleepUnit",
+                                    "type": "Label",
+                                    "text": "小时",
+                                    "style": {
+                                        "fontSize": "10",
+                                        "color": "#999999"
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "activityProgress",
+            "type": "View",
+            // "position": [10, 230],
+            "size": [300, 80],
+            "layout": {
+                "type": "vertical",
+                "spacing": 5,
+                "padding": [10, 10, 10, 10]
+            },
+            "style": {
+                "bgColor": "#1A1A1A",
+                "borderRadius": "10px"
+            },
+            "children": [
+                {
+                    "id": "progressLabel",
+                    "type": "Label",
+                    "text": "今日活动进度",
+                    "style": {
+                        "fontSize": "12",
+                        "color": "#FFFFFF",
+                        "fontWeight": "bold"
+                    }
+                },
+                {
+                    "id": "progressBar",
+                    "type": "Progress",
+                    "size": [280, 8],
+                    "style":{
+                        "bgColor": "#333333",
+                        "color": "#4CAF50",
+                        "radius": "10"
+                    },
+                    "progressConfig": {
+                        "value": 84,
+                        "maxValue": 100,
+                        "bgColor": "#333333",
+                        "fillColor": "#4CAF50",
+                        "radius": "10"
+                    }
+                },
+                {
+                    "id": "progressText",
+                    "type": "Label",
+                    "text": "84% 完成 - 还需 1,568 步达到目标",
+                    "style": {
+                        "fontSize": "10",
+                        "color": "#CCCCCC"
+                    }
+                }
+            ]
+        }
+    ]
+}

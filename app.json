@@ -8,7 +8,7 @@
     // "source":"app/test-treeview.json",
     // "source":"app/os-desktop.json",
     // "source":"app/clock-simple.json",
-    "source":"app/clock-new.json",
+    // "source":"app/clock-new.json",
 
     // "source":"app/test-list.json",
     // "source":"app/test-animation.json",
@@ -17,6 +17,13 @@
 
     // "source":"app/test-color.json",
     // "source":"app/test-select.json",
+    // "source":"app/calc.json",
+
+    // "source":"app/clock.json",
+    "source":"app/watch-desktop.json",
+    // "source":"app/watch-health.json",
+    // "source":"app/watch-menu.json",
+    
 
     "style": {
         "color": "#2C3E50"

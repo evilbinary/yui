@@ -99,7 +99,7 @@ cJSON* parse_json(char* json_path) {
   // 解析JSON
   cJSON* root_json = cJSON_Parse(cleaned_json);
 
-  // 释放内存
+  // 释放内存 bug?
   free(json_str);
   free(cleaned_json);
 
