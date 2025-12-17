@@ -119,8 +119,9 @@ def run_test(target):
     add_files("src/layer.c"),
     add_files("src/layout.c"),
     add_files("src/render.c"),
+    add_files("src/popup_manager.c"),
     add_files("src/util.c"),
-    add_files("srccomponents/*.c"),
+    add_files("src/components/*.c"),
     add_files("tests/test_blur_cache.c"),
     on_run(run_test)
 )
@@ -143,7 +144,13 @@ def run_test_content_size(target):
     set_kind("binary"),
     add_flags(),
     add_files("src/layout.c"),
-    add_files("src/components/treeview_component.c"),
+    add_files("src/backend_sdl.c"),
+    add_files("src/animate.c"),
+    add_files("src/event.c"),
+    add_files("src/layer.c"),
+    add_files("src/render.c"),
+    add_files("src/popup_manager.c"),
+    add_files("src/components/*.c"),
     add_files("src/util.c"),
     add_files("tests/test_content_size.c"),
     on_run(run_test_content_size)
@@ -173,9 +180,8 @@ def test_treeview_scroll(target):
     add_files("src/layout.c"),
     add_files("src/render.c"),
     add_files("src/util.c"),
-    add_files("src/components/*.c"),
     add_files("src/popup_manager.c"),
-    add_files("src/components/treeview_component.c"),
+    add_files("src/components/*.c"),
     add_files("tests/test_treeview_scroll.c"),
     on_run(test_treeview_scroll)
 )
