@@ -14,17 +14,18 @@ project("yui",
 
 def add_flags():
 
+    checkmem=False
+    if checkmem:
+        tool=get_toolchain_node()
+        tool['ld']='gcc'
+        add_cflags(
+            '-fsanitize=address',
+        )
+        add_ldflags(
+            '-fsanitize=address',
+        )
+
     if platform.system()=='Darwin':
-        checkmem=False
-        if checkmem:
-            tool=get_toolchain_node()
-            tool['ld']='gcc'
-            add_cflags(
-                '-fsanitize=address',
-            )
-            add_ldflags(
-                '-fsanitize=address',
-            )
         add_cflags(
             '-g',
             '-I/usr/local/Cellar/cjson/1.7.17/include/cjson',

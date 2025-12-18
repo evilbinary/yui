@@ -318,14 +318,18 @@ void layout_layer(Layer* layer){
             layer->children = malloc(item_count * sizeof(Layer*));
             
             for (int i = 0; i < item_count; i++) {
-                if (layer->children[i]->visible == IN_VISIBLE) {
-                    printf("layout_layer: skipping invisible child[%d] of %s\n", i, layer->id ? layer->id : "(null)");
-                    fflush(stdout);
-                    continue;
-                }
                 // 创建基于模板的新项
                 layer->children[i] = malloc(sizeof(Layer));
                 memcpy(layer->children[i], layer->item_template, sizeof(Layer));
+                
+                // 检查可见性（在创建之后）
+                if (layer->children[i]->visible == IN_VISIBLE) {
+                    printf("layout_layer: skipping invisible child[%d] of %s\n", i, layer->id ? layer->id : "(null)");
+                    fflush(stdout);
+                    free(layer->children[i]);
+                    layer->children[i] = NULL;
+                    continue;
+                }
                 
                 // 设置位置和尺寸
                 layer->children[i]->rect.x = current_x;
