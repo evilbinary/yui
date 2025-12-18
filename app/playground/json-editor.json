@@ -1,0 +1,216 @@
+{
+    "id": "jsonEditorApp",
+    "type": "View",
+    "size": [1200, 800],
+    "style": {
+        "bgColor": "#f5f5f5"
+    },
+    "layout": {
+        "type": "horizontal",
+        "spacing": 5,
+        "padding": [10, 10, 10, 10]
+    },
+    "children": [
+        {
+            "id": "editorPanel",
+            "type": "View",
+            "size": [600, 780],
+            "style": {
+                "bgColor": "#2b2b2b",
+                "borderRadius": 8,
+                "borderWidth": 1,
+                "borderColor": "#cccccc"
+            },
+            "layout": {
+                "type": "vertical",
+                "spacing": 0
+            },
+            "children": [
+                {
+                    "id": "editorHeader",
+                    "type": "View",
+                    "size": [600, 40],
+                    "style": {
+                        "bgColor": "#1e1e1e",
+                        "borderRadius": [8, 8, 0, 0],
+                        "borderBottomWidth": 1,
+                        "borderBottomColor": "#333333"
+                    },
+                    "layout": {
+                        "type": "horizontal",
+                        "spacing": 10,
+                        "padding": [10, 10, 10, 10],
+                        "justifyContent": "space-between"
+                    },
+                    "children": [
+                        {
+                            "type": "Label",
+                            "text": "JSON编辑器",
+                            "style": {
+                                "color": "#ffffff",
+                                "fontSize": 16,
+                                "fontWeight": "bold"
+                            }
+                        },
+                        {
+                            "type": "View",
+                            "layout": {
+                                "type": "horizontal",
+                                "spacing": 5
+                            },
+                            "children": [
+                                {
+                                    "id": "validateBtn",
+                                    "type": "Button",
+                                    "text": "验证",
+                                    "size": [60, 25],
+                                    "style": {
+                                        "bgColor": "#4caf50",
+                                        "color": "#ffffff",
+                                        "fontSize": 12,
+                                        "borderRadius": 4
+                                    }
+                                },
+                                {
+                                    "id": "formatBtn",
+                                    "type": "Button",
+                                    "text": "格式化",
+                                    "size": [60, 25],
+                                    "style": {
+                                        "bgColor": "#2196f3",
+                                        "color": "#ffffff",
+                                        "fontSize": 12,
+                                        "borderRadius": 4
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "editorContainer",
+                    "type": "View",
+                    "size": [600, 740],
+                    "layout": {
+                        "type": "horizontal",
+                        "spacing": 0
+                    },
+                    "children": [
+                        {
+                            "id": "lineNumbers",
+                            "type": "Text",
+                            "text": "1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n20\n21\n22\n23\n24\n25",
+                            "size": [40, 740],
+                            "style": {
+                                "bgColor": "#1e1e1e",
+                                "color": "#858585",
+                                "fontSize": 14,
+                                "textAlign": "right",
+                                "padding": [0, 5, 0, 5],
+                                "fontFamily": "monospace"
+                            },
+                            "editable": false
+                        },
+                        {
+                            "id": "jsonEditor",
+                            "type": "Text",
+                            "text": "",
+                            "size": [560, 740],
+                            "style": {
+                                "bgColor": "#2b2b2b",
+                                "color": "#f8f8f2",
+                                "fontSize": 14,
+                                "padding": [10, 10, 10, 10],
+                                "fontFamily": "monospace",
+                                "borderLeftWidth": 1,
+                                "borderLeftColor": "#333333"
+                            },
+                            "editable": true,
+                            "multiline": true,
+                            "syntaxHighlight": "json"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "previewPanel",
+            "type": "View",
+            "size": [590, 780],
+            "style": {
+                "bgColor": "#ffffff",
+                "borderRadius": 8,
+                "borderWidth": 1,
+                "borderColor": "#cccccc"
+            },
+            "layout": {
+                "type": "vertical",
+                "spacing": 0
+            },
+            "children": [
+                {
+                    "id": "previewHeader",
+                    "type": "View",
+                    "size": [590, 40],
+                    "style": {
+                        "bgColor": "#f8f9fa",
+                        "borderRadius": [8, 8, 0, 0],
+                        "borderBottomWidth": 1,
+                        "borderBottomColor": "#e9ecef"
+                    },
+                    "layout": {
+                        "type": "horizontal",
+                        "spacing": 10,
+                        "padding": [10, 10, 10, 10],
+                        "justifyContent": "space-between"
+                    },
+                    "children": [
+                        {
+                            "type": "Label",
+                            "text": "预览",
+                            "style": {
+                                "color": "#495057",
+                                "fontSize": 16,
+                                "fontWeight": "bold"
+                            }
+                        },
+                        {
+                            "id": "refreshBtn",
+                            "type": "Button",
+                            "text": "刷新",
+                            "size": [60, 25],
+                            "style": {
+                                "bgColor": "#6c757d",
+                                "color": "#ffffff",
+                                "fontSize": 12,
+                                "borderRadius": 4
+                            }
+                        }
+                    ]
+                },
+                {
+                    "id": "previewContainer",
+                    "type": "View",
+                    "size": [590, 740],
+                    "style": {
+                        "bgColor": "#ffffff",
+                        "padding": [20, 20, 20, 20],
+                        "scrollable": true
+                    },
+                    "layout": {
+                        "type": "vertical",
+                        "spacing": 10
+                    },
+                    "children": []
+                }
+            ]
+        }
+    ],
+    "events": {
+        "onLoad": "@initJsonEditor",
+        "jsonEditor.onChange": "@onJsonChange",
+        "validateBtn.onClick": "@validateJson",
+        "formatBtn.onClick": "@formatJson",
+        "refreshBtn.onClick": "@refreshPreview"
+    }
+}

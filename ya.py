@@ -14,7 +14,7 @@ project("yui",
 
 def add_flags():
 
-    checkmem=False
+    checkmem=True
     if checkmem:
         tool=get_toolchain_node()
         tool['ld']='gcc'
@@ -32,7 +32,8 @@ def add_flags():
             '-F../libs/',
             '-I../libs/SDL2.framework/Headers',
             '-I../libs/SDL2_ttf.framework/Headers',
-            '-I../libs/SDL2_image.framework/Headers'
+            '-I../libs/SDL2_image.framework/Headers',
+            '-Isrc'
             ),
         add_ldflags(
             '-F../libs/',
@@ -49,7 +50,8 @@ def add_flags():
             '-F../libs/',
             '-I../libs/SDL2.framework/Headers',
             '-I../libs/SDL2_ttf.framework/Headers',
-            '-I../libs/SDL2_image.framework/Headers'
+            '-I../libs/SDL2_image.framework/Headers',
+            '-Isrc'
             )
         add_ldflags(
             '-F../libs/',
@@ -84,8 +86,13 @@ def add_flags():
 
 prefix_env='export DYLD_FRAMEWORK_PATH=../libs && export DYLD_LIBRARY_PATH="../libs" && '
 
+target('yui')
+add_flags()
+set_kind('static')
+add_files("src/*.c")
+add_files("src/components/*.c")
 
-target("yui") 
+
 def run(target):
     targetfile = target.targetfile()
     sourcefiles = target.sourcefiles()
@@ -94,32 +101,34 @@ def run(target):
     mode =target.get_config('mode')
     plat=target.plat()
 
-    yui=prefix_env+"./build/"+str(plat)+"/"+str(arch)+"/"+str(mode)+"/yui"
+    yui=prefix_env+"./"+targetfile
 
-    print('run '+str(plat)+' yui',yui)
+    print('run '+yui,yui)
     os.shell(yui)
+
+target("main") 
 (
+    add_deps("yui"),
     add_rules("mode.debug", "mode.release"),
     set_kind("binary"),
     add_flags(),
-    add_files("src/*.c"),
-    add_files("src/components/*.c"),
+    add_files("app/main.c"),
     on_run(run)
 )
 
+
+target("playground") 
+(
+    add_deps("yui"),
+    add_rules("mode.debug", "mode.release"),
+    set_kind("binary"),
+    add_flags(),
+    add_files("app/playground/main.c"),
+    on_run(run)
+)
+
+
 target("test_blur_cache") 
-def run_test(target):
-    targetfile = target.targetfile()
-    sourcefiles = target.sourcefiles()
-    arch=target.get_arch()
-    arch_type= target.get_arch_type()
-    mode =target.get_config('mode')
-    plat=target.plat()
-
-    test_cmd=prefix_env+"./build/"+str(plat)+"/"+str(arch)+"/"+str(mode)+"/test_blur_cache"
-
-    print('run '+str(plat)+' test_blur_cache',test_cmd)
-    os.shell(test_cmd)
 (
     add_rules("mode.debug", "mode.release"),
     set_kind("binary"),
@@ -134,22 +143,10 @@ def run_test(target):
     add_files("src/util.c"),
     add_files("src/components/*.c"),
     add_files("tests/test_blur_cache.c"),
-    on_run(run_test)
+    on_run(run)
 )
 
 target("test_content_size") 
-def run_test_content_size(target):
-    targetfile = target.targetfile()
-    sourcefiles = target.sourcefiles()
-    arch=target.get_arch()
-    arch_type= target.get_arch_type()
-    mode =target.get_config('mode')
-    plat=target.plat()
-
-    test_cmd=prefix_env+"./build/"+str(plat)+"/"+str(arch)+"/"+str(mode)+"/test_content_size"
-
-    print('run '+str(plat)+' test_content_size',test_cmd)
-    os.shell(test_cmd)
 (
     add_rules("mode.debug", "mode.release"),
     set_kind("binary"),
@@ -164,22 +161,10 @@ def run_test_content_size(target):
     add_files("src/components/*.c"),
     add_files("src/util.c"),
     add_files("tests/test_content_size.c"),
-    on_run(run_test_content_size)
+    on_run(run)
 )
 
 target("test_treeview_scroll") 
-def test_treeview_scroll(target):
-    targetfile = target.targetfile()
-    sourcefiles = target.sourcefiles()
-    arch=target.get_arch()
-    arch_type= target.get_arch_type()
-    mode =target.get_config('mode')
-    plat=target.plat()
-
-    test_cmd=prefix_env+"./build/"+str(plat)+"/"+str(arch)+"/"+str(mode)+"/test_treeview_scroll"
-
-    print('run '+str(plat)+' test_treeview_scroll',test_cmd)
-    os.shell(test_cmd)
 (
     add_rules("mode.debug", "mode.release"),
     set_kind("binary"),
@@ -194,23 +179,11 @@ def test_treeview_scroll(target):
     add_files("src/popup_manager.c"),
     add_files("src/components/*.c"),
     add_files("tests/test_treeview_scroll.c"),
-    on_run(test_treeview_scroll)
+    on_run(run)
 )
 
 
 target("test_simple_scroll") 
-def run_test_simple_scroll(target):
-    targetfile = target.targetfile()
-    sourcefiles = target.sourcefiles()
-    arch=target.get_arch()
-    arch_type= target.get_arch_type()
-    mode =target.get_config('mode')
-    plat=target.plat()
-
-    test_cmd=prefix_env+"./build/"+str(plat)+"/"+str(arch)+"/"+str(mode)+"/test_simple_scroll"
-
-    print('run '+str(plat)+' test_simple_scroll',test_cmd)
-    os.shell(test_cmd)
 (
     add_rules("mode.debug", "mode.release"),
     set_kind("binary"),
@@ -225,5 +198,5 @@ def run_test_simple_scroll(target):
     add_files("src/popup_manager.c"),
     add_files("src/components/*.c"),
     add_files("tests/test_simple_scroll.c"),
-    on_run(run_test_simple_scroll)
+    on_run(run)
 )

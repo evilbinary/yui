@@ -1,11 +1,11 @@
-all: yui
+all: main
 
-yui:
-	ya -b yui
+main:
+	ya -b main
 
 
-run: yui
-	ya -r yui
+run: main
+	ya -r main
 
 clean:
 	rm -rf build

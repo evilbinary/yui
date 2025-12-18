@@ -29,10 +29,13 @@
     // "source":"app/test-popup-menu.json",
     // "source":"app/test-slider.json",
     
-    "source":"app/memory-game.json",
+    // "source":"app/memory-game.json",
     // "source":"app/whack-a-mole.json",  // 打地鼠
     // "source":"app/apple-catcher.json", // 接苹果
     // "source":"app/snake-game.json",
+
+    "source":"app/playground/json-editor.json",
+
 
     "style": {
         "color": "#2C3E50"
