@@ -732,8 +732,24 @@ static SDL_Texture* get_corner_texture(SDL_Renderer* renderer, int radius, SDL_C
     SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
     SDL_FreeSurface(surface);
     
+    if (!texture) return NULL;
+    
     // 查找空闲位置或最久未使用的位置
     int cache_index = -1;
+    int duplicate_found = 0;
+    
+    // 首先检查是否有重复的条目
+    for (int i = 0; i < 64; i++) {
+        if (corner_texture_cache[i].texture && 
+            corner_texture_cache[i].radius == radius && 
+            corner_texture_cache[i].color_key == color_key) {
+            // 发现重复，使用这个条目
+            SDL_DestroyTexture(texture); // 销毁新创建的纹理
+            return corner_texture_cache[i].texture;
+        }
+    }
+    
+    // 查找空闲位置
     for (int i = 0; i < 64; i++) {
         if (!corner_texture_cache[i].texture) {
             cache_index = i;
