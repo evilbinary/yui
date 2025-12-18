@@ -4,6 +4,7 @@
 #include "ytype.h"
 #include "popup_manager.h"
 #include <stdbool.h>  // 添加支持bool类型
+#include <math.h>     // 添加数学函数支持
 
 #define WINDOW_WIDTH 1000
 #define MAX_TOUCHES 10
@@ -874,10 +875,62 @@ void draw_rounded_rect_with_border(SDL_Renderer* renderer, int x, int y, int w, 
 
 // Add this function anywhere in backend_sdl.c after the global renderer declaration
 
-// 绘制线段
+// 绘制抗锯齿线段的辅助函数
+static void plot_aa_pixel(int x, int y, float alpha, Color color) {
+    if (alpha <= 0.0f) return;
+    Uint8 a = (Uint8)(alpha * color.a);
+    SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, a);
+    SDL_RenderDrawPoint(renderer, x, y);
+}
+
+// 绘制抗锯齿线段
 void backend_render_line(int x1, int y1, int x2, int y2, Color color) {
-    SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
-    SDL_RenderDrawLine(renderer, x1, y1, x2, y2);
+    // 对于水平或垂直线，使用SDL原生绘制（更快）
+    if (x1 == x2 || y1 == y2) {
+        SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
+        SDL_RenderDrawLine(renderer, x1, y1, x2, y2);
+        return;
+    }
+    
+    // 对于斜线，使用简化的抗锯齿算法
+    // 使用Bresenham算法的改进版本
+    int dx = abs(x2 - x1);
+    int dy = abs(y2 - y1);
+    int sx = (x1 < x2) ? 1 : -1;
+    int sy = (y1 < y2) ? 1 : -1;
+    int err = dx - dy;
+    
+    int x = x1, y = y1;
+    
+    while (1) {
+        // 绘制主像素
+        SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
+        SDL_RenderDrawPoint(renderer, x, y);
+        
+        // 计算误差来决定是否绘制周围的像素进行抗锯齿
+        int err2 = 2 * err;
+        float alpha_factor = 0.3f; // 抗锯齿强度
+        
+        if (err2 > -dy) {
+            // 绘制旁边像素进行抗锯齿
+            if (y + sy >= 0) {
+                plot_aa_pixel(x, y + sy, alpha_factor, color);
+            }
+            err -= dy;
+            x += sx;
+        }
+        
+        if (err2 < dx) {
+            // 绘制旁边像素进行抗锯齿
+            if (x + sx >= 0) {
+                plot_aa_pixel(x + sx, y, alpha_factor, color);
+            }
+            err += dx;
+            y += sy;
+        }
+        
+        if (x == x2 && y == y2) break;
+    }
 }
 
 // 毛玻璃效果缓存管理函数
