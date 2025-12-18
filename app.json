@@ -3,6 +3,7 @@
     "assets":"app/assets",
     "font":"Roboto-Regular.ttf",
     "fontSize":"16",
+    "size":[1200,800],
     // "source":"app/test-simple.json",
     // "source":"app/test-scrollbar-final.json",
     // "source":"app/test-treeview.json",

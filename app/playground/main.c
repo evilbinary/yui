@@ -52,6 +52,7 @@ int main(int argc, char* argv[]) {
     Layer* ui_root = parse_layer(root_json,NULL);
 
     
+    // 如果根图层没有设置宽度和高度，则根据窗口大小设置
     if (ui_root->rect.w <= 0 || ui_root->rect.h <= 0) {
         int window_width, window_height;
         backend_get_windowsize(&window_width, &window_height);
@@ -61,6 +62,8 @@ int main(int argc, char* argv[]) {
         if (ui_root->rect.h <= 0) {
             ui_root->rect.h = window_height;
         }
+    }else{
+        backend_set_windowsize(ui_root->rect.w,ui_root->rect.h);
     }
 
     // 如果根图层没有设置宽度和高度，则根据窗口大小设置

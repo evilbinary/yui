@@ -469,6 +469,11 @@ void backend_get_windowsize(int* width,int * height){
     SDL_GetWindowSize(window, width, height);
 }
 
+void backend_set_windowsize(int width,int  height){
+    SDL_SetWindowSize(window, width, height);
+}
+
+
 // 检查文件是否为SVG格式
 bool is_svg_file(const char* path) {
     const char* ext = strrchr(path, '.');

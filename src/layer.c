@@ -411,7 +411,9 @@ Layer* parse_layer(cJSON* json_obj, Layer* parent) {
     // 解析圆角半径属性
     if (cJSON_HasObjectItem(style, "radius")) {
       layer->radius = cJSON_GetObjectItem(style, "radius")->valueint;
-    } else {
+    } else if (cJSON_HasObjectItem(style, "borderRadius")) {
+      layer->radius = cJSON_GetObjectItem(style, "borderRadius")->valueint;
+    }  else {
       layer->radius = 0;  // 默认没有圆角
     }
 

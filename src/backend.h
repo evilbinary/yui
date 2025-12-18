@@ -14,6 +14,7 @@ void backend_render_rect(Rect* rect,Color color);
 void backend_render_rect_color(Rect* rect,unsigned char r,unsigned char g,unsigned char b,unsigned char a);
 
 void backend_get_windowsize(int* width,int * height);
+void backend_set_windowsize(int width,int  height);
 void backend_quit();
 void backend_render_present();
 void backend_delay(int delay);
