@@ -6,7 +6,7 @@
 // 按钮组件结构体
 typedef struct {
     Layer* layer;          // 关联的图层
-    Color colors[4];       // 不同状态下的颜色 [NORMAL, HOVER, PRESSED, DISABLED]
+    Color colors[16];       // 不同状态下的颜色 [NORMAL, HOVER, PRESSED, DISABLED]
     void* user_data;       // 用户数据
 } ButtonComponent;
 
