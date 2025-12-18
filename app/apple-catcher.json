@@ -1,0 +1,175 @@
+{
+    "id": "appleCatcherGame",
+    "type": "View",
+    "size": [400, 500],
+    "style": {
+        "bgColor": "#87CEEB"
+    },
+    "children": [
+        {
+            "id": "gameSky",
+            "type": "View",
+            "position": [0, 0],
+            "size": [400, 350],
+            "style": {
+                "bgColor": "#87CEEB"
+            },
+            "children": [
+                {
+                    "id": "scoreDisplay",
+                    "type": "Label",
+                    "position": [10, 10],
+                    "size": [150, 30],
+                    "text": "分数: 0",
+                    "style": {
+                        "fontSize": 18,
+                        "color": "#ffffff",
+                        "fontWeight": "bold"
+                    }
+                },
+                {
+                    "id": "livesDisplay",
+                    "type": "Label",
+                    "position": [240, 10],
+                    "size": [150, 30],
+                    "text": "生命: ❤️❤️❤️",
+                    "style": {
+                        "fontSize": 18,
+                        "color": "#ffffff",
+                        "fontWeight": "bold"
+                    }
+                },
+                {
+                    "id": "gameStatus",
+                    "type": "Label",
+                    "position": [100, 50],
+                    "size": [200, 30],
+                    "text": "按空格开始游戏",
+                    "style": {
+                        "fontSize": 16,
+                        "color": "#ffffff",
+                        "textAlign": "center"
+                    }
+                }
+            ]
+        },
+        {
+            "id": "basket",
+            "type": "View",
+            "position": [150, 400],
+            "size": [100, 80],
+            "style": {
+                "bgColor": "#8B4513",
+                "borderRadius": 10
+            }
+        },
+        {
+            "id": "ground",
+            "type": "View",
+            "position": [0, 480],
+            "size": [400, 20],
+            "style": {
+                "bgColor": "#228B22"
+            }
+        },
+        {
+            "id": "apple1",
+            "type": "Label",
+            "position": [50, 100],
+            "size": [30, 30],
+            "text": "🍎",
+            "style": {
+                "fontSize": 24
+            }
+        },
+        {
+            "id": "apple2",
+            "type": "Label",
+            "position": [150, 150],
+            "size": [30, 30],
+            "text": "🍎",
+            "style": {
+                "fontSize": 24
+            }
+        },
+        {
+            "id": "apple3",
+            "type": "Label",
+            "position": [250, 120],
+            "size": [30, 30],
+            "text": "🍎",
+            "style": {
+                "fontSize": 24
+            }
+        },
+        {
+            "id": "bomb1",
+            "type": "Label",
+            "position": [100, 80],
+            "size": [30, 30],
+            "text": "💣",
+            "style": {
+                "fontSize": 24
+            }
+        },
+        {
+            "id": "gameControls",
+            "type": "View",
+            "layout": {
+                "type": "horizontal",
+                "spacing": 10,
+                "justifyContent": "center"
+            },
+            "children": [
+                {
+                    "id": "startBtn",
+                    "type": "Button",
+                    "text": "🎮 开始",
+                    "size": [80, 35],
+                    "style": {
+                        "bgColor": "#4CAF50",
+                        "color": "#ffffff",
+                        "borderRadius": 5
+                    }
+                },
+                {
+                    "id": "pauseBtn",
+                    "type": "Button",
+                    "text": "⏸️ 暂停",
+                    "size": [80, 35],
+                    "style": {
+                        "bgColor": "#FF9800",
+                        "color": "#ffffff",
+                        "borderRadius": 5
+                    }
+                },
+                {
+                    "id": "resetBtn",
+                    "type": "Button",
+                    "text": "🔄 重置",
+                    "size": [80, 35],
+                    "style": {
+                        "bgColor": "#F44336",
+                        "color": "#ffffff",
+                        "borderRadius": 5
+                    }
+                }
+            ]
+        }
+    ],
+    "events": {
+        "onLoad": "@initAppleCatcherGame",
+        "onKeyDown": "@handleBasketMove",
+        "startBtn.onClick": "@startAppleCatcherGame",
+        "pauseBtn.onClick": "@pauseAppleCatcherGame",
+        "resetBtn.onClick": "@resetAppleCatcherGame"
+    },
+    "game": {
+        "basketSpeed": 15,
+        "appleSpeed": 3,
+        "bombSpeed": 4,
+        "initialLives": 3,
+        "appleScore": 10,
+        "bombPenalty": 1
+    }
+}

@@ -21,9 +21,18 @@
 
     // "source":"app/clock.json",
     // "source":"app/watch-desktop.json",
-    "source":"app/watch-health.json",
+    // "source":"app/watch-health.json",
     // "source":"app/watch-menu.json",
     // "source":"app/test-radius.json",
+    // "source":"app/clock-new.json",
+    // "source":"app/clock-simple.json",
+    // "source":"app/test-popup-menu.json",
+    // "source":"app/test-slider.json",
+    
+    "source":"app/memory-game.json",
+    // "source":"app/whack-a-mole.json",  // 打地鼠
+    // "source":"app/apple-catcher.json", // 接苹果
+    // "source":"app/snake-game.json",
 
     "style": {
         "color": "#2C3E50"

@@ -1,0 +1,346 @@
+{
+    "id": "memoryGame",
+    "type": "View",
+    "size": [500, 600],
+    "style": {
+        "bgColor": "#2C3E50"
+    },
+    "layout": {
+        "type": "vertical",
+        "spacing": 20,
+        "padding": [20, 20, 20, 20]
+    },
+    "children": [
+        {
+            "id": "gameHeader",
+            "type": "View",
+            "layout": {
+                "type": "horizontal",
+                "spacing": 20,
+                "justifyContent": "space-between"
+            },
+            "children": [
+                {
+                    "id": "movesLabel",
+                    "type": "Label",
+                    "text": "步数: 0",
+                    "style": {
+                        "fontSize": 20,
+                        "color": "#ECF0F1",
+                        "fontWeight": "bold"
+                    }
+                },
+                {
+                    "id": "pairsLabel",
+                    "type": "Label",
+                    "text": "配对: 0/8",
+                    "style": {
+                        "fontSize": 20,
+                        "color": "#ECF0F1",
+                        "fontWeight": "bold"
+                    }
+                }
+            ]
+        },
+        {
+            "id": "gameTitle",
+            "type": "Label",
+            "text": "🧠 记忆游戏 🧠",
+            "style": {
+                "fontSize": 24,
+                "color": "#3498DB",
+                "textAlign": "center",
+                "fontWeight": "bold"
+            }
+        },
+        {
+            "id": "gameBoard",
+            "type": "View",
+            "size": [460, 400],
+            "style": {
+                "bgColor": "#34495E",
+                "borderRadius": 10
+            },
+            "layout": {
+                "type": "grid",
+                "columns": 4,
+                "rows": 4,
+                "spacing": 15,
+                "padding": [20, 20, 20, 20]
+            },
+            "children": [
+                {
+                    "id": "card1",
+                    "type": "Button",
+                    "text": "?",
+                    "size": [90, 80],
+                    "style": {
+                        "bgColor": "#16A085",
+                        "color": "#ffffff",
+                        "fontSize": 24,
+                        "borderRadius": 8,
+                        "fontWeight": "bold"
+                    }
+                },
+                {
+                    "id": "card2",
+                    "type": "Button",
+                    "text": "?",
+                    "size": [90, 80],
+                    "style": {
+                        "bgColor": "#16A085",
+                        "color": "#ffffff",
+                        "fontSize": 24,
+                        "borderRadius": 8,
+                        "fontWeight": "bold"
+                    }
+                },
+                {
+                    "id": "card3",
+                    "type": "Button",
+                    "text": "?",
+                    "size": [90, 80],
+                    "style": {
+                        "bgColor": "#16A085",
+                        "color": "#ffffff",
+                        "fontSize": 24,
+                        "borderRadius": 8,
+                        "fontWeight": "bold"
+                    }
+                },
+                {
+                    "id": "card4",
+                    "type": "Button",
+                    "text": "?",
+                    "size": [90, 80],
+                    "style": {
+                        "bgColor": "#16A085",
+                        "color": "#ffffff",
+                        "fontSize": 24,
+                        "borderRadius": 8,
+                        "fontWeight": "bold"
+                    }
+                },
+                {
+                    "id": "card5",
+                    "type": "Button",
+                    "text": "?",
+                    "size": [90, 80],
+                    "style": {
+                        "bgColor": "#16A085",
+                        "color": "#ffffff",
+                        "fontSize": 24,
+                        "borderRadius": 8,
+                        "fontWeight": "bold"
+                    }
+                },
+                {
+                    "id": "card6",
+                    "type": "Button",
+                    "text": "?",
+                    "size": [90, 80],
+                    "style": {
+                        "bgColor": "#16A085",
+                        "color": "#ffffff",
+                        "fontSize": 24,
+                        "borderRadius": 8,
+                        "fontWeight": "bold"
+                    }
+                },
+                {
+                    "id": "card7",
+                    "type": "Button",
+                    "text": "?",
+                    "size": [90, 80],
+                    "style": {
+                        "bgColor": "#16A085",
+                        "color": "#ffffff",
+                        "fontSize": 24,
+                        "borderRadius": 8,
+                        "fontWeight": "bold"
+                    }
+                },
+                {
+                    "id": "card8",
+                    "type": "Button",
+                    "text": "?",
+                    "size": [90, 80],
+                    "style": {
+                        "bgColor": "#16A085",
+                        "color": "#ffffff",
+                        "fontSize": 24,
+                        "borderRadius": 8,
+                        "fontWeight": "bold"
+                    }
+                },
+                {
+                    "id": "card9",
+                    "type": "Button",
+                    "text": "?",
+                    "size": [90, 80],
+                    "style": {
+                        "bgColor": "#16A085",
+                        "color": "#ffffff",
+                        "fontSize": 24,
+                        "borderRadius": 8,
+                        "fontWeight": "bold"
+                    }
+                },
+                {
+                    "id": "card10",
+                    "type": "Button",
+                    "text": "?",
+                    "size": [90, 80],
+                    "style": {
+                        "bgColor": "#16A085",
+                        "color": "#ffffff",
+                        "fontSize": 24,
+                        "borderRadius": 8,
+                        "fontWeight": "bold"
+                    }
+                },
+                {
+                    "id": "card11",
+                    "type": "Button",
+                    "text": "?",
+                    "size": [90, 80],
+                    "style": {
+                        "bgColor": "#16A085",
+                        "color": "#ffffff",
+                        "fontSize": 24,
+                        "borderRadius": 8,
+                        "fontWeight": "bold"
+                    }
+                },
+                {
+                    "id": "card12",
+                    "type": "Button",
+                    "text": "?",
+                    "size": [90, 80],
+                    "style": {
+                        "bgColor": "#16A085",
+                        "color": "#ffffff",
+                        "fontSize": 24,
+                        "borderRadius": 8,
+                        "fontWeight": "bold"
+                    }
+                },
+                {
+                    "id": "card13",
+                    "type": "Button",
+                    "text": "?",
+                    "size": [90, 80],
+                    "style": {
+                        "bgColor": "#16A085",
+                        "color": "#ffffff",
+                        "fontSize": 24,
+                        "borderRadius": 8,
+                        "fontWeight": "bold"
+                    }
+                },
+                {
+                    "id": "card14",
+                    "type": "Button",
+                    "text": "?",
+                    "size": [90, 80],
+                    "style": {
+                        "bgColor": "#16A085",
+                        "color": "#ffffff",
+                        "fontSize": 24,
+                        "borderRadius": 8,
+                        "fontWeight": "bold"
+                    }
+                },
+                {
+                    "id": "card15",
+                    "type": "Button",
+                    "text": "?",
+                    "size": [90, 80],
+                    "style": {
+                        "bgColor": "#16A085",
+                        "color": "#ffffff",
+                        "fontSize": 24,
+                        "borderRadius": 8,
+                        "fontWeight": "bold"
+                    }
+                },
+                {
+                    "id": "card16",
+                    "type": "Button",
+                    "text": "?",
+                    "size": [90, 80],
+                    "style": {
+                        "bgColor": "#16A085",
+                        "color": "#ffffff",
+                        "fontSize": 24,
+                        "borderRadius": 8,
+                        "fontWeight": "bold"
+                    }
+                }
+            ]
+        },
+        {
+            "id": "gameControls",
+            "type": "View",
+            "layout": {
+                "type": "horizontal",
+                "spacing": 15,
+                "justifyContent": "center"
+            },
+            "children": [
+                {
+                    "id": "newGameBtn",
+                    "type": "Button",
+                    "text": "🎮 新游戏",
+                    "size": [120, 40],
+                    "style": {
+                        "bgColor": "#3498DB",
+                        "color": "#ffffff",
+                        "borderRadius": 8,
+                        "fontSize": 16,
+                        "fontWeight": "bold"
+                    }
+                },
+                {
+                    "id": "showHintBtn",
+                    "type": "Button",
+                    "text": "💡 提示",
+                    "size": [120, 40],
+                    "style": {
+                        "bgColor": "#F39C12",
+                        "color": "#ffffff",
+                        "borderRadius": 8,
+                        "fontSize": 16,
+                        "fontWeight": "bold"
+                    }
+                }
+            ]
+        }
+    ],
+    "events": {
+        "onLoad": "@initMemoryGame",
+        "newGameBtn.onClick": "@newMemoryGame",
+        "showHintBtn.onClick": "@showMemoryHint",
+        "card1.onClick": "@flipCard1",
+        "card2.onClick": "@flipCard2",
+        "card3.onClick": "@flipCard3",
+        "card4.onClick": "@flipCard4",
+        "card5.onClick": "@flipCard5",
+        "card6.onClick": "@flipCard6",
+        "card7.onClick": "@flipCard7",
+        "card8.onClick": "@flipCard8",
+        "card9.onClick": "@flipCard9",
+        "card10.onClick": "@flipCard10",
+        "card11.onClick": "@flipCard11",
+        "card12.onClick": "@flipCard12",
+        "card13.onClick": "@flipCard13",
+        "card14.onClick": "@flipCard14",
+        "card15.onClick": "@flipCard15",
+        "card16.onClick": "@flipCard16"
+    },
+    "game": {
+        "cards": ["🎈", "🎨", "🎯", "🎪", "🎭", "🎸", "🎺", "🎮"],
+        "flipDuration": 1000,
+        "maxMoves": 50
+    }
+}

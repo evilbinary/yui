@@ -1,0 +1,254 @@
+{
+    "id": "whackAMoleGame",
+    "type": "View",
+    "size": [500, 600],
+    "style": {
+        "bgColor": "#8BC34A"
+    },
+    "layout": {
+        "type": "vertical",
+        "spacing": 20,
+        "padding": [20, 20, 20, 20]
+    },
+    "children": [
+        {
+            "id": "gameHeader",
+            "type": "View",
+            "layout": {
+                "type": "horizontal",
+                "spacing": 20,
+                "justifyContent": "space-between"
+            },
+            "children": [
+                {
+                    "id": "scoreLabel",
+                    "type": "Label",
+                    "text": "得分: 0",
+                    "style": {
+                        "fontSize": 24,
+                        "color": "#ffffff",
+                        "fontWeight": "bold"
+                    }
+                },
+                {
+                    "id": "timeLabel",
+                    "type": "Label",
+                    "text": "时间: 30",
+                    "style": {
+                        "fontSize": 24,
+                        "color": "#ffffff",
+                        "fontWeight": "bold"
+                    }
+                }
+            ]
+        },
+        {
+            "id": "gameTitle",
+            "type": "Label",
+            "text": "🎯 打地鼠游戏 🎯",
+            "style": {
+                "fontSize": 28,
+                "color": "#ffffff",
+                "textAlign": "center",
+                "marginBottom": 10
+            }
+        },
+        {
+            "id": "gameBoard",
+            "type": "View",
+            "size": [460, 300],
+            "style": {
+                "bgColor": "#4CAF50",
+                "borderRadius": 15,
+                "borderWidth": 3,
+                "borderColor": "#2E7D32"
+            },
+            "layout": {
+                "type": "grid",
+                "columns": 3,
+                "rows": 3,
+                "spacing": 30,
+                "padding": [30, 30, 30, 30]
+            },
+            "children": [
+                {
+                    "id": "hole1",
+                    "type": "Button",
+                    "text": "🕳️",
+                    "size": [100, 80],
+                    "style": {
+                        "bgColor": "#3E2723",
+                        "color": "#ffffff",
+                        "fontSize": 40,
+                        "borderRadius": 50
+                    }
+                },
+                {
+                    "id": "hole2",
+                    "type": "Button",
+                    "text": "🕳️",
+                    "size": [100, 80],
+                    "style": {
+                        "bgColor": "#3E2723",
+                        "color": "#ffffff",
+                        "fontSize": 40,
+                        "borderRadius": 50
+                    }
+                },
+                {
+                    "id": "hole3",
+                    "type": "Button",
+                    "text": "🕳️",
+                    "size": [100, 80],
+                    "style": {
+                        "bgColor": "#3E2723",
+                        "color": "#ffffff",
+                        "fontSize": 40,
+                        "borderRadius": 50
+                    }
+                },
+                {
+                    "id": "hole4",
+                    "type": "Button",
+                    "text": "🕳️",
+                    "size": [100, 80],
+                    "style": {
+                        "bgColor": "#3E2723",
+                        "color": "#ffffff",
+                        "fontSize": 40,
+                        "borderRadius": 50
+                    }
+                },
+                {
+                    "id": "hole5",
+                    "type": "Button",
+                    "text": "🕳️",
+                    "size": [100, 80],
+                    "style": {
+                        "bgColor": "#3E2723",
+                        "color": "#ffffff",
+                        "fontSize": 40,
+                        "borderRadius": 50
+                    }
+                },
+                {
+                    "id": "hole6",
+                    "type": "Button",
+                    "text": "🕳️",
+                    "size": [100, 80],
+                    "style": {
+                        "bgColor": "#3E2723",
+                        "color": "#ffffff",
+                        "fontSize": 40,
+                        "borderRadius": 50
+                    }
+                },
+                {
+                    "id": "hole7",
+                    "type": "Button",
+                    "text": "🕳️",
+                    "size": [100, 80],
+                    "style": {
+                        "bgColor": "#3E2723",
+                        "color": "#ffffff",
+                        "fontSize": 40,
+                        "borderRadius": 50
+                    }
+                },
+                {
+                    "id": "hole8",
+                    "type": "Button",
+                    "text": "🕳️",
+                    "size": [100, 80],
+                    "style": {
+                        "bgColor": "#3E2723",
+                        "color": "#ffffff",
+                        "fontSize": 40,
+                        "borderRadius": 50
+                    }
+                },
+                {
+                    "id": "hole9",
+                    "type": "Button",
+                    "text": "🕳️",
+                    "size": [100, 80],
+                    "style": {
+                        "bgColor": "#3E2723",
+                        "color": "#ffffff",
+                        "fontSize": 40,
+                        "borderRadius": 50
+                    }
+                }
+            ]
+        },
+        {
+            "id": "gameControls",
+            "type": "View",
+            "layout": {
+                "type": "horizontal",
+                "spacing": 15,
+                "justifyContent": "center"
+            },
+            "children": [
+                {
+                    "id": "startBtn",
+                    "type": "Button",
+                    "text": "🎮 开始游戏",
+                    "size": [120, 45],
+                    "style": {
+                        "bgColor": "#FF9800",
+                        "color": "#ffffff",
+                        "borderRadius": 10,
+                        "fontSize": 16,
+                        "fontWeight": "bold"
+                    }
+                },
+                {
+                    "id": "stopBtn",
+                    "type": "Button",
+                    "text": "⏹️ 停止",
+                    "size": [120, 45],
+                    "style": {
+                        "bgColor": "#F44336",
+                        "color": "#ffffff",
+                        "borderRadius": 10,
+                        "fontSize": 16,
+                        "fontWeight": "bold"
+                    }
+                }
+            ]
+        },
+        {
+            "id": "gameInfo",
+            "type": "Label",
+            "text": "点击出现的地鼠来得分！地鼠会随机出现，快速点击它们！",
+            "style": {
+                "fontSize": 14,
+                "color": "#ffffff",
+                "textAlign": "center",
+                "marginTop": 10
+            }
+        }
+    ],
+    "events": {
+        "onLoad": "@initWhackAMoleGame",
+        "startBtn.onClick": "@startWhackAMoleGame",
+        "stopBtn.onClick": "@stopWhackAMoleGame",
+        "hole1.onClick": "@whackMole1",
+        "hole2.onClick": "@whackMole2",
+        "hole3.onClick": "@whackMole3",
+        "hole4.onClick": "@whackMole4",
+        "hole5.onClick": "@whackMole5",
+        "hole6.onClick": "@whackMole6",
+        "hole7.onClick": "@whackMole7",
+        "hole8.onClick": "@whackMole8",
+        "hole9.onClick": "@whackMole9"
+    },
+    "game": {
+        "duration": 30,
+        "moleAppearTime": 800,
+        "moleHideTime": 1200,
+        "scorePerHit": 10,
+        "difficulty": "normal"
+    }
+}

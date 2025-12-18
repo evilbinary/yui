@@ -1,0 +1,178 @@
+{
+    "id": "snakeGame",
+    "type": "View",
+    "size": [600, 650],
+    "style": {
+        "bgColor": "#1a1a1a"
+    },
+    "layout": {
+        "type": "vertical",
+        "spacing": 10,
+        "padding": [20, 20, 20, 20]
+    },
+    "children": [
+        {
+            "id": "gameHeader",
+            "type": "View",
+            "layout": {
+                "type": "horizontal",
+                "spacing": 20,
+                "justifyContent": "space-between"
+            },
+            "children": [
+                {
+                    "id": "scoreLabel",
+                    "type": "Label",
+                    "text": "分数: 0",
+                    "style": {
+                        "fontSize": 20,
+                        "color": "#00ff00",
+                        "fontWeight": "bold"
+                    }
+                },
+                {
+                    "id": "highScoreLabel",
+                    "type": "Label",
+                    "text": "最高分: 0",
+                    "style": {
+                        "fontSize": 20,
+                        "color": "#ff9800",
+                        "fontWeight": "bold"
+                    }
+                },
+                {
+                    "id": "gameStatus",
+                    "type": "Label",
+                    "text": "按空格开始",
+                    "style": {
+                        "fontSize": 18,
+                        "color": "#ffffff"
+                    }
+                }
+            ]
+        },
+        {
+            "id": "gameBoard",
+            "type": "View",
+            "size": [560, 400],
+            "position": [20, 80],
+            "style": {
+                "bgColor": "#0d0d0d",
+                "borderColor": "#00ff00",
+                "borderWidth": 2
+            },
+            "children": [
+                {
+                    "id": "snake",
+                    "type": "Custom",
+                    "render": "render_snake"
+                },
+                {
+                    "id": "food",
+                    "type": "Custom",
+                    "render": "render_food"
+                }
+            ]
+        },
+        {
+            "id": "gameControls",
+            "type": "View",
+            "layout": {
+                "type": "vertical",
+                "spacing": 15,
+                "alignItems": "center"
+            },
+            "children": [
+                {
+                    "id": "controlsInfo",
+                    "type": "Label",
+                    "text": "使用方向键控制蛇的移动",
+                    "style": {
+                        "fontSize": 16,
+                        "color": "#cccccc",
+                        "textAlign": "center"
+                    }
+                },
+                {
+                    "id": "controlButtons",
+                    "type": "View",
+                    "layout": {
+                        "type": "horizontal",
+                        "spacing": 10
+                    },
+                    "children": [
+                        {
+                            "id": "startBtn",
+                            "type": "Button",
+                            "text": "开始游戏",
+                            "size": [100, 40],
+                            "style": {
+                                "bgColor": "#4caf50",
+                                "color": "#ffffff",
+                                "borderRadius": 5,
+                                "fontSize": 14
+                            }
+                        },
+                        {
+                            "id": "pauseBtn",
+                            "type": "Button",
+                            "text": "暂停",
+                            "size": [100, 40],
+                            "style": {
+                                "bgColor": "#ff9800",
+                                "color": "#ffffff",
+                                "borderRadius": 5,
+                                "fontSize": 14
+                            }
+                        },
+                        {
+                            "id": "resetBtn",
+                            "type": "Button",
+                            "text": "重置",
+                            "size": [100, 40],
+                            "style": {
+                                "bgColor": "#f44336",
+                                "color": "#ffffff",
+                                "borderRadius": 5,
+                                "fontSize": 14
+                            }
+                        }
+                    ]
+                },
+                {
+                    "id": "difficultyInfo",
+                    "type": "Label",
+                    "text": "当前难度: 普通",
+                    "style": {
+                        "fontSize": 14,
+                        "color": "#9e9e9e"
+                    }
+                }
+            ]
+        }
+    ],
+    "events": {
+        "onLoad": "@initSnakeGame",
+        "onKeyDown": "@handleSnakeKeyPress",
+        "startBtn.onClick": "@startSnakeGame",
+        "pauseBtn.onClick": "@pauseSnakeGame", 
+        "resetBtn.onClick": "@resetSnakeGame"
+    },
+    "game": {
+        "snake": {
+            "initialLength": 3,
+            "initialSpeed": 150,
+            "growAmount": 2
+        },
+        "board": {
+            "gridSize": 20,
+            "cellSize": 20,
+            "cols": 28,
+            "rows": 20
+        },
+        "scores": {
+            "foodPoints": 10,
+            "bonusPoints": 50
+        }
+    }
+}

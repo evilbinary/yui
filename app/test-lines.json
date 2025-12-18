@@ -1,0 +1,17 @@
+{
+    "id": "lineTest",
+    "type": "View",
+    "size": [400, 400],
+    "style": {
+        "bgColor": "#FFFFFF"
+    },
+    "children": [
+        {
+            "id": "customLine",
+            "type": "Custom",
+            "position": [0, 0],
+            "size": [400, 400],
+            "render": "draw_test_lines"
+        }
+    ]
+}
