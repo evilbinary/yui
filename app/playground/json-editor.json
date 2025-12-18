@@ -7,8 +7,8 @@
     },
     "layout": {
         "type": "horizontal",
-        "spacing": 5,
-        "padding": [10, 10, 10, 10]
+        "spacing": 5
+        // "padding": [10, 10, 10, 10]
     },
     "children": [
         {
@@ -17,7 +17,6 @@
             "size": [600, 780],
             "style": {
                 "bgColor": "#2b2b2b",
-                "borderRadius": 8,
                 "borderWidth": 1,
                 "borderColor": "#cccccc"
             },
@@ -45,7 +44,7 @@
                     "children": [
                         {
                             "type": "Label",
-                            "text": "JSON编辑器",
+                            "text": "编辑器",
                             "style": {
                                 "color": "#ffffff",
                                 "fontSize": 16,
@@ -54,6 +53,7 @@
                         },
                         {
                             "type": "View",
+                            "size": [600, 40],
                             "layout": {
                                 "type": "horizontal",
                                 "spacing": 5
@@ -96,26 +96,14 @@
                         "spacing": 0
                     },
                     "children": [
-                        {
-                            "id": "lineNumbers",
-                            "type": "Text",
-                            "text": "1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n20\n21\n22\n23\n24\n25",
-                            "size": [40, 740],
-                            "style": {
-                                "bgColor": "#1e1e1e",
-                                "color": "#858585",
-                                "fontSize": 14,
-                                "textAlign": "right",
-                                "padding": [0, 5, 0, 5],
-                                "fontFamily": "monospace"
-                            },
-                            "editable": false
-                        },
+                        
                         {
                             "id": "jsonEditor",
                             "type": "Text",
                             "text": "",
                             "size": [560, 740],
+                            "showLineNumbers":true,
+                            "lineNumberWidth": 40,
                             "style": {
                                 "bgColor": "#2b2b2b",
                                 "color": "#f8f8f2",
@@ -139,7 +127,6 @@
             "size": [590, 780],
             "style": {
                 "bgColor": "#ffffff",
-                "borderRadius": 8,
                 "borderWidth": 1,
                 "borderColor": "#cccccc"
             },

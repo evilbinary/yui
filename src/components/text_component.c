@@ -28,6 +28,10 @@ TextComponent* text_component_create(Layer* layer) {
     component->line_height = 20;
     component->multiline = 0;
     component->editable = 1;  // 默认设置为可编辑状态
+    component->show_line_numbers = 0;  // 默认不显示行号
+    component->line_number_width = 40;  // 默认行号区域宽度
+    component->line_number_color = (Color){133, 133, 133, 255};  // 默认行号颜色
+    component->line_number_bg_color = (Color){30, 30, 30, 255};  // 默认行号背景颜色
     
     // 存储组件指针到图层的component字段中
     layer->component = component;
@@ -64,6 +68,16 @@ TextComponent* text_component_create_from_json(Layer* layer,cJSON* json_obj){
     if (cJSON_HasObjectItem(json_obj, "editable")) {
         text_component_set_editable(layer->component, cJSON_IsTrue(cJSON_GetObjectItem(json_obj, "editable")));
     }
+    
+    // 解析showLineNumbers属性
+    if (cJSON_HasObjectItem(json_obj, "showLineNumbers")) {
+        text_component_set_show_line_numbers(layer->component, cJSON_IsTrue(cJSON_GetObjectItem(json_obj, "showLineNumbers")));
+    }
+    
+    // 解析lineNumberWidth属性
+    if (cJSON_HasObjectItem(json_obj, "lineNumberWidth")) {
+        text_component_set_line_number_width(layer->component, cJSON_GetObjectItem(json_obj, "lineNumberWidth")->valueint);
+    }
 
     return component;
 
@@ -75,6 +89,10 @@ void text_component_destroy(TextComponent* component) {
         free(component);
     }
 }
+
+
+
+
 
 // 设置文本内容
 void text_component_set_text(TextComponent* component, const char* text) {
@@ -113,6 +131,10 @@ void text_component_set_max_length(TextComponent* component, int max_length) {
     }
 }
 
+
+
+
+
 // 设置光标颜色
 void text_component_set_cursor_color(TextComponent* component, Color cursor_color) {
     if (!component) {
@@ -138,6 +160,42 @@ void text_component_set_editable(TextComponent* component, int editable) {
     }
     
     component->editable = editable;
+}
+
+// 设置是否显示行号
+void text_component_set_show_line_numbers(TextComponent* component, int show_line_numbers) {
+    if (!component) {
+        return;
+    }
+    
+    component->show_line_numbers = show_line_numbers;
+}
+
+// 设置行号区域宽度
+void text_component_set_line_number_width(TextComponent* component, int width) {
+    if (!component) {
+        return;
+    }
+    
+    component->line_number_width = width;
+}
+
+// 设置行号颜色
+void text_component_set_line_number_color(TextComponent* component, Color color) {
+    if (!component) {
+        return;
+    }
+    
+    component->line_number_color = color;
+}
+
+// 设置行号背景颜色
+void text_component_set_line_number_bg_color(TextComponent* component, Color color) {
+    if (!component) {
+        return;
+    }
+    
+    component->line_number_bg_color = color;
 }
 
 // 删除选中文本
@@ -335,6 +393,10 @@ void text_component_handle_key_event(Layer* layer, KeyEvent* event) {
     }
 }
 
+
+
+
+
 // 处理鼠标事件
 void text_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     if (!layer || !event || !layer->component) {
@@ -362,6 +424,10 @@ void text_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     }
 }
 
+
+
+
+
 // 渲染文本组件
 void text_component_render(Layer* layer) {
     if (!layer || !layer->component) {
@@ -373,11 +439,94 @@ void text_component_render(Layer* layer) {
     // 绘制背景
     backend_render_fill_rect(&layer->rect, layer->bg_color);
     
+    // 如果显示行号且为多行模式，绘制行号背景和行号
+    if (component->show_line_numbers && component->multiline) {
+        // 绘制行号背景区域
+        Rect line_number_bg = {
+            layer->rect.x + 5,
+            layer->rect.y + 5,
+            component->line_number_width,
+            layer->rect.h - 10
+        };
+        backend_render_fill_rect(&line_number_bg, component->line_number_bg_color);
+        
+        // 绘制分隔线
+        Rect separator_line = {
+            line_number_bg.x + line_number_bg.w,
+            line_number_bg.y,
+            1,
+            line_number_bg.h
+        };
+        Color separator_color = {51, 51, 51, 255};
+        backend_render_fill_rect(&separator_line, separator_color);
+        
+        // 计算文本行数
+        char* text = component->text;
+        int line_count = 1;
+        if (strlen(text) > 0) {
+            for (int i = 0; i < strlen(text); i++) {
+                if (text[i] == '\n') {
+                    line_count++;
+                }
+            }
+        }
+        
+        // 获取行高用于行号定位
+        int line_height = component->line_height;
+        Texture* temp_tex = backend_render_texture(layer->font->default_font, "X", component->line_number_color);
+        if (temp_tex) {
+            int temp_width, temp_height;
+            backend_query_texture(temp_tex, NULL, NULL, &temp_width, &temp_height);
+            line_height = temp_height / scale;
+            backend_render_text_destroy(temp_tex);
+        }
+        
+        // 计算可见行范围
+        int first_visible_line = component->scroll_y / (line_height + 2);
+        int last_visible_line = (component->scroll_y + layer->rect.h - 10) / (line_height + 2) + 1;
+        if (last_visible_line > line_count) {
+            last_visible_line = line_count;
+        }
+        
+        // 渲染可见行号
+        for (int i = first_visible_line; i < last_visible_line; i++) {
+            char line_num_str[16];
+            snprintf(line_num_str, sizeof(line_num_str), "%d", i + 1);
+            
+            Texture* line_num_tex = backend_render_texture(layer->font->default_font, line_num_str, component->line_number_color);
+            if (line_num_tex) {
+                int num_width, num_height;
+                backend_query_texture(line_num_tex, NULL, NULL, &num_width, &num_height);
+                
+                Rect line_num_rect = {
+                    line_number_bg.x + line_number_bg.w - num_width / scale - 5,  // 右对齐，留5像素边距
+                    line_number_bg.y + i * (line_height + 2) - component->scroll_y,
+                    num_width / scale,
+                    num_height / scale
+                };
+                
+                // 只有当行号在可见区域内时才渲染
+                if (line_num_rect.y + line_num_rect.h > line_number_bg.y && line_num_rect.y < line_number_bg.y + line_number_bg.h) {
+                    backend_render_text_copy(line_num_tex, NULL, &line_num_rect);
+                }
+                
+                backend_render_text_destroy(line_num_tex);
+            }
+        }
+    }
+    
     // 准备渲染区域
     Rect render_rect = layer->rect;
-    render_rect.x += 5;  // 内边距
+    int left_padding = 5;
+    
+    // 如果显示行号，为行号区域预留空间并添加分隔线
+    if (component->show_line_numbers && component->multiline) {
+        left_padding += component->line_number_width;
+    }
+    
+    render_rect.x += left_padding;
     render_rect.y += 5;
-    render_rect.w -= 10;
+    render_rect.w -= (left_padding + 5);  // 左内边距 + 右内边距
     render_rect.h -= 10;
     
     // 保存当前裁剪区域
@@ -808,3 +957,6 @@ void text_component_render(Layer* layer) {
         }
     }
 }
+
+
+

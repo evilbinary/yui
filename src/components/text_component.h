@@ -21,6 +21,10 @@ typedef struct {
     int line_height;       // 行高
     int multiline;         // 是否为多行模式
     int editable;          // 是否可编辑
+    int show_line_numbers; // 是否显示行号
+    int line_number_width; // 行号区域宽度
+    Color line_number_color; // 行号颜色
+    Color line_number_bg_color; // 行号背景颜色
 } TextComponent;
 
 // 函数声明
@@ -33,6 +37,10 @@ void text_component_set_max_length(TextComponent* component, int max_length);
 void text_component_set_cursor_color(TextComponent* component, Color cursor_color);
 void text_component_set_multiline(TextComponent* component, int multiline);
 void text_component_set_editable(TextComponent* component, int editable);
+void text_component_set_show_line_numbers(TextComponent* component, int show_line_numbers);
+void text_component_set_line_number_width(TextComponent* component, int width);
+void text_component_set_line_number_color(TextComponent* component, Color color);
+void text_component_set_line_number_bg_color(TextComponent* component, Color color);
 void text_component_handle_key_event(Layer* layer, KeyEvent* event);
 void text_component_handle_mouse_event(Layer* layer, MouseEvent* event);
 void text_component_render(Layer* layer);
