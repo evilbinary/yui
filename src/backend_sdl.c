@@ -57,6 +57,8 @@ void draw_rounded_rect_with_border(SDL_Renderer* renderer, int x, int y, int w, 
 
 void draw_rounded_rect(SDL_Renderer* renderer, int x, int y, int w, int h, int radius, SDL_Color color);
 
+void cleanup_corner_texture_cache();
+
 int backend_init(){
     // 初始化SDL
     SDL_Init(SDL_INIT_VIDEO);
@@ -382,6 +384,9 @@ int find_available_cache_entry();
 void backend_quit(){
       // 清理毛玻璃缓存
       cleanup_blur_cache();
+      
+      // 清理圆角纹理缓存
+      cleanup_corner_texture_cache();
       
       // 清理资源
     IMG_Quit();
@@ -727,11 +732,25 @@ static SDL_Texture* get_corner_texture(SDL_Renderer* renderer, int radius, SDL_C
     SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
     SDL_FreeSurface(surface);
     
-    // 查找空闲位置或覆盖第一个
-    int cache_index = radius % 64; // 简单的哈希策略
-    if (corner_texture_cache[cache_index].texture) {
-        SDL_DestroyTexture(corner_texture_cache[cache_index].texture);
+    // 查找空闲位置或最久未使用的位置
+    int cache_index = -1;
+    for (int i = 0; i < 64; i++) {
+        if (!corner_texture_cache[i].texture) {
+            cache_index = i;
+            break;
+        }
     }
+    
+    // 如果没有空闲位置，使用轮转方式覆盖
+    if (cache_index == -1) {
+        static int round_robin = 0;
+        cache_index = round_robin;
+        round_robin = (round_robin + 1) % 64;
+        if (corner_texture_cache[cache_index].texture) {
+            SDL_DestroyTexture(corner_texture_cache[cache_index].texture);
+        }
+    }
+    
     corner_texture_cache[cache_index].texture = texture;
     corner_texture_cache[cache_index].radius = radius;
     corner_texture_cache[cache_index].color_key = color_key;
