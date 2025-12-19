@@ -1,0 +1,111 @@
+{
+    "type": "VIEW",
+    "rect": {"x": 0, "y": 0, "w": 800, "h": 600},
+    "bg_color": {"r": 240, "g": 240, "b": 240, "a": 255},
+    "layout_manager": {
+        "type": "LAYOUT_VERTICAL",
+        "spacing": 10,
+        "padding": [20, 20, 20, 20]
+    },
+    "children": [
+        {
+            "type": "LABEL",
+            "id": "titleLabel",
+            "text": "事件回调示例",
+            "rect": {"x": 0, "y": 0, "w": 760, "h": 40},
+            "color": {"r": 51, "g": 51, "b": 51, "a": 255},
+            "bg_color": {"r": 200, "g": 200, "b": 200, "a": 255}
+        },
+        {
+            "type": "BUTTON",
+            "id": "helloButton",
+            "text": "点击我 - Hello World",
+            "rect": {"x": 0, "y": 0, "w": 760, "h": 50},
+            "color": {"r": 255, "g": 255, "b": 255, "a": 255},
+            "bg_color": {"r": 70, "g": 130, "b": 180, "a": 255},
+            "focusable": true,
+            "event": {
+                "click_name": "@hello"
+            }
+        },
+        {
+            "type": "BUTTON",
+            "id": "touchButton",
+            "text": "触摸事件示例",
+            "rect": {"x": 0, "y": 0, "w": 760, "h": 50},
+            "color": {"r": 255, "g": 255, "b": 255, "a": 255},
+            "bg_color": {"r": 60, "g": 179, "b": 113, "a": 255},
+            "focusable": true,
+            "event": {
+                "click_name": "@helloTouch"
+            }
+        },
+        {
+            "type": "INPUT_FIELD",
+            "id": "textInput",
+            "text": "",
+            "placeholder": "在此输入文本...",
+            "rect": {"x": 0, "y": 0, "w": 760, "h": 40},
+            "color": {"r": 0, "g": 0, "b": 0, "a": 255},
+            "bg_color": {"r": 255, "g": 255, "b": 255, "a": 255},
+            "focusable": true
+        },
+        {
+            "type": "TEXT",
+            "id": "jsonEditor",
+            "text": "{\n  \"name\": \"JSON编辑器\",\n  \"version\": \"1.0\",\n  \"features\": [\n    \"行号显示\",\n    \"语法高亮\",\n    \"实时预览\"\n  ]\n}",
+            "multiline": true,
+            "showLineNumbers": true,
+            "lineNumberWidth": 40,
+            "rect": {"x": 0, "y": 0, "w": 760, "h": 200},
+            "color": {"r": 0, "g": 0, "b": 0, "a": 255},
+            "bg_color": {"r": 255, "g": 255, "b": 255, "a": 255},
+            "focusable": true,
+            "scrollable": 1
+        },
+        {
+            "type": "BUTTON",
+            "id": "advancedButton",
+            "text": "高级回调示例",
+            "rect": {"x": 0, "y": 0, "w": 760, "h": 50},
+            "color": {"r": 255, "g": 255, "b": 255, "a": 255},
+            "bg_color": {"r": 220, "g": 53, "b": 69, "a": 255},
+            "focusable": true,
+            "event": {
+                "click_name": "@advancedCallback"
+            }
+        },
+        {
+            "type": "VIEW",
+            "id": "scrollContainer",
+            "rect": {"x": 0, "y": 0, "w": 760, "h": 100},
+            "bg_color": {"r": 230, "g": 230, "b": 230, "a": 255},
+            "scrollable": 1,
+            "children": [
+                {
+                    "type": "LABEL",
+                    "text": "这是一个可滚动区域，用于测试滚动事件",
+                    "rect": {"x": 10, "y": 10, "w": 740, "h": 200},
+                    "color": {"r": 51, "g": 51, "b": 51, "a": 255}
+                }
+            ]
+        }
+    ],
+    "events": [
+        {
+            "name": "@hello",
+            "callback": "hello_world",
+            "description": "基础Hello World回调"
+        },
+        {
+            "name": "@helloTouch", 
+            "callback": "hello_touch",
+            "description": "触摸事件回调"
+        },
+        {
+            "name": "@advancedCallback",
+            "callback": "custom_callback_with_data", 
+            "description": "高级回调示例，支持自定义数据传递"
+        }
+    ]
+}
