@@ -262,7 +262,10 @@ int main(int argc, char* argv[]) {
     cJSON* root_json=parse_json(json_path);
     Layer* ui_root = parse_layer(root_json,NULL);
 
-    
+    // 初始化字体缓存（backend已经初始化）
+    // 在parse_layer后加载所有字体
+    load_all_fonts(ui_root);
+
     // 如果根图层没有设置宽度和高度，则根据窗口大小设置
     if (ui_root->rect.w <= 0 || ui_root->rect.h <= 0) {
         int window_width, window_height;
@@ -293,8 +296,7 @@ int main(int argc, char* argv[]) {
     }
 
     // 加载纹理资源
-    load_font(ui_root);
-    TTF_Font* default_font=ui_root->font->default_font;
+    // load_all_fonts 已经在 parse_layer 之后调用过了
 
     load_textures(ui_root);
     layout_layer(ui_root);

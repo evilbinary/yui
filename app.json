@@ -35,9 +35,11 @@
     // "source":"app/apple-catcher.json", // 接苹果
     // "source":"app/snake-game.json",
 
-    "source":"app/playground/json-editor.json",
-
-
+    // "source":"app/playground/json-editor.json",
+    "source":"app/tests/font_demo.json",
+    // "source":"app/tests/test_font_simple.json",
+    // "source":"app/tests/test_font_debug.json",
+    
     "style": {
         "color": "#2C3E50"
     }

@@ -21,6 +21,7 @@ void backend_delay(int delay);
 void backend_render_clear_color(unsigned char r,unsigned char g,unsigned char b,unsigned char a);
 
 DFont* backend_load_font(char* font_path,int size);
+DFont* backend_load_font_with_weight(char* font_path,int size,const char* weight);
 
 void backend_render_text_destroy(Texture * texture);
 void backend_render_text_copy(Texture * texture,

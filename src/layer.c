@@ -145,18 +145,71 @@ Layer* parse_layer(cJSON* json_obj, Layer* parent) {
     layer->type=VIEW;
   }
 
-  // 解析资字体
+  // 解析字体 - font、fontSize、fontWeight 都是独立属性，各自有默认值
   cJSON* font = cJSON_GetObjectItem(json_obj, "font");
-  if (font != NULL&& font->valuestring!=NULL) {
+  cJSON* fontSize = cJSON_GetObjectItem(json_obj, "fontSize");
+  cJSON* fontWeight = cJSON_GetObjectItem(json_obj, "fontWeight");
+  
+  // 从 style 中查找属性
+  cJSON* style = cJSON_GetObjectItem(json_obj, "style");
+  cJSON* styleFont = style ? cJSON_GetObjectItem(style, "font") : NULL;
+  cJSON* styleFontSize = style ? cJSON_GetObjectItem(style, "fontSize") : NULL;
+  cJSON* styleFontWeight = style ? cJSON_GetObjectItem(style, "fontWeight") : NULL;
+  
+  // 检查是否有定义任何字体相关属性
+  int has_font_attrs = (font && font->valuestring) || 
+                       styleFont || 
+                       fontSize || styleFontSize || 
+                       (fontWeight && fontWeight->valuestring) || styleFontWeight;
+  
+  // 如果有定义任何字体属性，创建新的 Font 对象
+  if (has_font_attrs) {
     layer->font = malloc(sizeof(Font));
-    strcpy(layer->font->path,font->valuestring);
-    cJSON* fontSize = cJSON_GetObjectItem(json_obj, "fontSize");
-    if (fontSize != NULL) {
-      layer->font->size = cJSON_GetObjectItem(json_obj, "fontSize")->valueint;
+    layer->font->default_font = NULL;
+    
+    // 设置字体路径（优先级：直接属性 > style > 默认）
+    if (font && font->valuestring) {
+      strncpy(layer->font->path, font->valuestring, MAX_PATH - 1);
+      layer->font->path[MAX_PATH - 1] = '\0';
+    } else if (styleFont && styleFont->valuestring) {
+      strncpy(layer->font->path, styleFont->valuestring, MAX_PATH - 1);
+      layer->font->path[MAX_PATH - 1] = '\0';
+    } else {
+      strcpy(layer->font->path, "Roboto-Regular.ttf");  // 默认字体
     }
+    
+    // 设置字体大小（优先级：直接属性 > style > 默认）
+    if (fontSize) {
+      layer->font->size = fontSize->valueint;
+    } else if (styleFontSize) {
+      layer->font->size = styleFontSize->valueint;
+    } else {
+      layer->font->size = 16;  // 默认字体大小
+    }
+    
+    // 设置字体粗细（优先级：直接属性 > style > 默认）
+    const char* weight_val = NULL;
+    if (fontWeight && fontWeight->valuestring) {
+      weight_val = fontWeight->valuestring;
+    } else if (styleFontWeight && styleFontWeight->valuestring) {
+      weight_val = styleFontWeight->valuestring;
+    } else {
+      weight_val = "normal";  // 默认字体粗细
+    }
+    strncpy(layer->font->weight, weight_val, sizeof(layer->font->weight) - 1);
+    layer->font->weight[sizeof(layer->font->weight) - 1] = '\0';
+    
   } else {
+    // 没有定义任何字体属性，继承父级字体
     if (parent) {
       layer->font = parent->font;
+    } else {
+      // 根节点且没有字体属性，创建默认字体
+      layer->font = malloc(sizeof(Font));
+      layer->font->default_font = NULL;
+      strcpy(layer->font->path, "Roboto-Regular.ttf");
+      layer->font->size = 16;
+      strcpy(layer->font->weight, "normal");
     }
   }
 
@@ -396,7 +449,6 @@ Layer* parse_layer(cJSON* json_obj, Layer* parent) {
     layer->bg_color.b = 0xF5;
   }
   // 解析样式
-  cJSON* style = cJSON_GetObjectItem(json_obj, "style");
   if (style) {
     if (cJSON_HasObjectItem(style, "color")) {
       parse_color(cJSON_GetObjectItem(style, "color")->valuestring,

@@ -17,7 +17,85 @@ void load_textures(Layer* root) {
     }
 }
 
+// 递归为所有图层加载字体（使用字体缓存）
+void load_all_fonts(Layer* layer) {
+    if (!layer) return;
+    
+    // 为当前图层加载字体
+    if (layer->font) {
+        // 如果字体已经加载，跳过
+        if (layer->font->default_font != NULL) {
+            if ((uintptr_t)layer->font->default_font != 0xbebebebebebebebeULL) {
+                // 有效字体，跳过
+            } else {
+                // 损坏的字体指针，重新加载
+                layer->font->default_font = NULL;
+            }
+        }
+        
+        // 构建字体路径
+        char font_path[MAX_PATH];
+        
+        if (layer->assets && layer->assets->path[0] != '\0') {
+            snprintf(font_path, sizeof(font_path), "%s/%s", layer->assets->path, layer->font->path);
+        } else {
+            snprintf(font_path, sizeof(font_path), "%s", layer->font->path);
+        }
+        
+        // 确保字体大小和粗细有效
+        if (layer->font->size == 0) {
+            layer->font->size = 16;
+        }
+        if (strlen(layer->font->weight) == 0) {
+            strcpy(layer->font->weight, "normal");
+        }
+        
+        // 加载字体（使用缓存）
+        printf("loading font for layer '%s': %s (size: %d, weight: %s)\n", 
+               layer->id, font_path, layer->font->size, layer->font->weight);
+        
+        DFont* font = backend_load_font_with_weight(font_path, layer->font->size, layer->font->weight);
+        
+        if (font) {
+            layer->font->default_font = font;
+            printf("font loaded successfully for layer '%s': %p\n", layer->id, (void*)font);
+        } else {
+            printf("error: failed to load font for layer '%s': %s\n", layer->id, font_path);
+        }
+    }
+    
+    // 递归加载子图层的字体
+    if (layer->children) {
+        for (int i = 0; i < layer->child_count; i++) {
+            load_all_fonts(layer->children[i]);
+        }
+    }
+    
+    // 处理子图层
+    if (layer->sub) {
+        load_all_fonts(layer->sub);
+    }
+}
+
 void load_font(Layer* root){
+    if (!root || !root->font) {
+        printf("error: load_font called with invalid root or font\n");
+        return;
+    }
+    
+    // 如果字体已经加载，不要重复加载
+    if (root->font->default_font != NULL) {
+        // 检查字体指针是否被破坏
+        if ((uintptr_t)root->font->default_font == 0xbebebebebebebebeULL) {
+            printf("warning: root font pointer is corrupted, reloading\n");
+            root->font->default_font = NULL;
+        } else {
+            printf("font already loaded for root layer, skipping\n");
+            printf("root font: %p\n", (void*)root->font->default_font);
+            return;
+        }
+    }
+    
     // 加载默认字体 (需要在项目目录下提供字体文件)
     char font_path[MAX_PATH];
     if(root->assets){
@@ -25,13 +103,24 @@ void load_font(Layer* root){
     }else{
         snprintf(font_path, sizeof(font_path), "%s", root->font->path);
     }
-    if(root->font&& root->font->size==0){
+    if(root->font->size==0){
         root->font->size=16;
     }
+    if(strlen(root->font->weight) == 0){
+        strcpy(root->font->weight, "normal");
+    }
 
-    DFont* default_font=backend_load_font(font_path, root->font->size);
+    printf("loading font: %s (size: %d, weight: %s)\n", font_path, root->font->size, root->font->weight);
+    DFont* default_font=backend_load_font_with_weight(font_path, root->font->size, root->font->weight);
+    
+    if (!default_font) {
+        printf("error: failed to load font %s\n", font_path);
+        return;
+    }
 
     root->font->default_font=default_font;
+    printf("font loaded successfully for root layer: %p\n", (void*)root->font->default_font);
+
 }
 
 // 添加文字渲染函数

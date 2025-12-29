@@ -1,0 +1,177 @@
+{
+    "type": "VIEW",
+    "width": 800,
+    "height": 600,
+    "font": "Roboto-Regular.ttf",
+    "style": {
+        "bgColor": "#FAFAFA"
+    },
+    "layout_manager": {
+        "type": "vertical",
+        "spacing": 15,
+        "padding": [20, 20, 20, 20]
+    },
+    "children": [
+        {
+            "type": "Label",
+            "id": "title1",
+            "text": "字体大小演示 - 16px normal",
+            "x": 0,
+            "y": 0,
+            "width": 760,
+            "height": 30,
+            "style": {
+                "fontSize": 16,
+                "fontWeight": "normal",
+                "color": "#333333"
+            }
+        },
+        {
+            "type": "Label",
+            "id": "title2",
+            "text": "字体大小演示 - 20px normal",
+            "x": 0,
+            "y": 0,
+            "width": 760,
+            "height": 40,
+            "style": {
+                "fontSize": 20,
+                "fontWeight": "normal",
+                "color": "#333333"
+            }
+        },
+        {
+            "type": "Label",
+            "id": "title3",
+            "text": "字体大小演示 - 24px bold",
+            "x": 0,
+            "y": 0,
+            "width": 760,
+            "height": 50,
+            "style": {
+                "fontSize": 24,
+                "fontWeight": "bold",
+                "color": "#DC3545"
+            }
+        },
+        {
+            "type": "Label",
+            "id": "title4",
+            "text": "字体大小演示 - 32px bold",
+            "x": 0,
+            "y": 0,
+            "width": 760,
+            "height": 60,
+            "style": {
+                "fontSize": 32,
+                "fontWeight": "bold",
+                "color": "#3498DB"
+            }
+        },
+        {
+            "type": "Label",
+            "id": "title5",
+            "text": "字体粗细演示 - light",
+            "x": 0,
+            "y": 0,
+            "width": 760,
+            "height": 40,
+            "style": {
+                "fontSize": 22,
+                "fontWeight": "light",
+                "color": "#2ECC71"
+            }
+        },
+        {
+            "type": "Button",
+            "id": "button1",
+            "text": "Normal Button (16px)",
+            "x": 0,
+            "y": 0,
+            "width": 760,
+            "height": 45,
+            "style": {
+                "fontSize": 16,
+                "fontWeight": "normal",
+                "color": "#FFFFFF",
+                "bgColor": "#4682B2"
+            },
+            "focusable": true,
+            "event": {
+                "click_name": "@hello"
+            }
+        },
+        {
+            "type": "Button",
+            "id": "button2",
+            "text": "Bold Button (20px)",
+            "x": 0,
+            "y": 0,
+            "width": 760,
+            "height": 55,
+            "style": {
+                "fontSize": 20,
+                "fontWeight": "bold",
+                "color": "#FFFFFF",
+                "bgColor": "#3CB371"
+            },
+            "focusable": true,
+            "event": {
+                "click_name": "@helloTouch"
+            }
+        },
+        {
+            "type": "Input",
+            "id": "input1",
+            "text": "",
+            "placeholder": "输入文本 - 14px normal",
+            "x": 0,
+            "y": 0,
+            "width": 760,
+            "height": 35,
+            "style": {
+                "fontSize": 14,
+                "fontWeight": "normal",
+                "color": "#000000",
+                "bgColor": "#FFFFFF"
+            },
+            "focusable": true
+        },
+        {
+            "type": "Input",
+            "id": "input2",
+            "text": "",
+            "placeholder": "输入文本 - 18px bold",
+            "x": 0,
+            "y": 0,
+            "width": 760,
+            "height": 45,
+            "style": {
+                "fontSize": 18,
+                "fontWeight": "bold",
+                "color": "#000000",
+                "bgColor": "#FFFFFF"
+            },
+            "focusable": true
+        },
+        {
+            "type": "Text",
+            "id": "textEditor",
+            "text": "多行文本编辑器\n字体大小: 16px\n字体粗细: normal\n\n支持多种字体样式：\n- normal: 正常字体\n- bold: 粗体字体\n- light: 细体字体",
+            "multiline": true,
+            "showLineNumbers": false,
+            "x": 0,
+            "y": 0,
+            "width": 760,
+            "height": 150,
+            "style": {
+                "fontSize": 16,
+                "fontWeight": "normal",
+                "color": "#000000",
+                "bgColor": "#FFFFFF"
+            },
+            "focusable": true,
+            "scrollable": 1
+        }
+    ]
+}

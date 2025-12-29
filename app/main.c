@@ -78,10 +78,10 @@ int main(int argc, char* argv[]) {
         sprintf(ui_root->assets->path,"%s","assets");
     }
 
-    // 加载纹理资源
-    load_font(ui_root);
-    TTF_Font* default_font=ui_root->font->default_font;
+    // 加载字体资源（使用字体缓存，递归加载所有图层的字体）
+    load_all_fonts(ui_root);
 
+    // 加载纹理资源
     load_textures(ui_root);
     layout_layer(ui_root);
     

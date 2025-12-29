@@ -170,6 +170,7 @@ typedef struct Data {
 } Data;
 
 typedef struct Font {
+    char weight[20];      // 字体粗细：normal, bold, light, etc.
     char path[MAX_PATH];
     int size;
     DFont* default_font;  // 添加默认字体

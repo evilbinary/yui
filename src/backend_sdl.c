@@ -15,6 +15,103 @@ float scale=1.0;
 SDL_Window* window=NULL;
 DFont* default_font=NULL;
 
+// 字体缓存结构
+typedef struct {
+    char font_path[MAX_PATH];
+    int size;
+    char weight[32];  // "normal", "bold", "light"
+    TTF_Font* font;
+    Uint32 last_used;
+} FontCacheEntry;
+
+#define MAX_FONT_CACHE_ENTRIES 50
+FontCacheEntry font_cache[MAX_FONT_CACHE_ENTRIES] = {0};
+int font_cache_initialized = 0;
+
+// ====================== 字体缓存管理 ======================
+void init_font_cache() {
+    if (font_cache_initialized) return;
+    
+    for (int i = 0; i < MAX_FONT_CACHE_ENTRIES; i++) {
+        font_cache[i].font = NULL;
+        font_cache[i].font_path[0] = '\0';
+        font_cache[i].size = 0;
+        font_cache[i].weight[0] = '\0';
+        font_cache[i].last_used = 0;
+    }
+    
+    font_cache_initialized = 1;
+}
+
+void cleanup_font_cache() {
+    printf("Cleaning up font cache...\n");
+    for (int i = 0; i < MAX_FONT_CACHE_ENTRIES; i++) {
+        if (font_cache[i].font) {
+            TTF_CloseFont(font_cache[i].font);
+            font_cache[i].font = NULL;
+        }
+        font_cache[i].font_path[0] = '\0';
+        font_cache[i].size = 0;
+        font_cache[i].weight[0] = '\0';
+    }
+    printf("Font cache cleanup completed\n");
+}
+
+// 在缓存中查找字体
+TTF_Font* find_font_in_cache(const char* font_path, int size, const char* weight) {
+    for (int i = 0; i < MAX_FONT_CACHE_ENTRIES; i++) {
+        if (font_cache[i].font &&
+            strcmp(font_cache[i].font_path, font_path) == 0 &&
+            font_cache[i].size == size &&
+            strcmp(font_cache[i].weight, weight) == 0) {
+            font_cache[i].last_used = SDL_GetTicks();
+            return font_cache[i].font;
+        }
+    }
+    return NULL;
+}
+
+// 添加字体到缓存
+void add_font_to_cache(const char* font_path, int size, const char* weight, TTF_Font* font) {
+    // 查找空闲位置或最久未使用的位置
+    int cache_index = -1;
+    Uint32 oldest_time = SDL_GetTicks();
+    
+    // 首先查找空闲位置
+    for (int i = 0; i < MAX_FONT_CACHE_ENTRIES; i++) {
+        if (!font_cache[i].font) {
+            cache_index = i;
+            break;
+        }
+    }
+    
+    // 如果没有空闲位置，查找最久未使用的位置
+    if (cache_index == -1) {
+        for (int i = 0; i < MAX_FONT_CACHE_ENTRIES; i++) {
+            if (font_cache[i].last_used < oldest_time) {
+                oldest_time = font_cache[i].last_used;
+                cache_index = i;
+            }
+        }
+    }
+    
+    if (cache_index >= 0) {
+        // 如果该位置已有字体，先关闭它
+        if (font_cache[cache_index].font) {
+            TTF_CloseFont(font_cache[cache_index].font);
+        }
+        
+        // 添加新字体到缓存
+        strncpy(font_cache[cache_index].font_path, font_path, MAX_PATH - 1);
+        font_cache[cache_index].font_path[MAX_PATH - 1] = '\0';
+        font_cache[cache_index].size = size;
+        strncpy(font_cache[cache_index].weight, weight, 31);
+        font_cache[cache_index].weight[31] = '\0';
+        font_cache[cache_index].font = font;
+        font_cache[cache_index].last_used = SDL_GetTicks();
+    }
+}
+
 // 毛玻璃效果缓存结构
 typedef struct {
     SDL_Texture* texture;
@@ -97,6 +194,9 @@ int backend_init(){
     scale = getDisplayScale(window);
 
     SDL_RenderSetScale(renderer, scale, scale);
+    
+    // 初始化字体缓存
+    init_font_cache();
     
     // 初始化触摸状态
     memset(&touchState, 0, sizeof(TouchState));
@@ -389,6 +489,9 @@ void backend_quit(){
       // 清理圆角纹理缓存
       cleanup_corner_texture_cache();
       
+      // 清理字体缓存
+      cleanup_font_cache();
+      
       // 清理资源
     IMG_Quit();
     if (default_font) {
@@ -444,9 +547,84 @@ void backend_run(Layer* ui_root){
 }
 
 DFont* backend_load_font(char* font_path,int size){
-    TTF_Font* default_font = TTF_OpenFont(font_path,size*scale);
+    return backend_load_font_with_weight(font_path, size, "normal");
+}
+
+DFont* backend_load_font_with_weight(char* font_path,int size,const char* weight){
+    // 初始化字体缓存
+    if (!font_cache_initialized) {
+        init_font_cache();
+    }
+    
+    // 先在缓存中查找字体
+    TTF_Font* cached_font = find_font_in_cache(font_path, size, weight);
+    if (cached_font) {
+        return cached_font;
+    }
+    
+    char full_path[MAX_PATH];
+    TTF_Font* default_font = NULL;
+    
+    // 根据字体粗细选择字体文件
+    if (strcmp(weight, "bold") == 0) {
+        // 尝试加载粗体字体
+        snprintf(full_path, sizeof(full_path), "%s", font_path);
+        // 如果路径中没有包含Bold，尝试添加Bold后缀
+        if (strstr(font_path, "Bold") == NULL && strstr(font_path, "bold") == NULL) {
+            char* ext = strrchr(font_path, '.');
+            if (ext) {
+                int base_len = ext - font_path;
+                snprintf(full_path, sizeof(full_path), "%.*s-Bold%s", base_len, font_path, ext);
+            }
+        }
+        default_font = TTF_OpenFont(full_path, size*scale);
+        
+        // 如果粗体字体不存在，尝试其他粗体字体
+        if (!default_font) {
+            default_font = TTF_OpenFont("assets/Roboto-Bold.ttf", size*scale);
+        }
+        if (!default_font) {
+            default_font = TTF_OpenFont("app/assets/Roboto-Bold.ttf", size*scale);
+        }
+        if (!default_font) {
+            // 如果找不到粗体字体文件，使用normal字体并设置样式
+            default_font = TTF_OpenFont(font_path, size*scale);
+            if (default_font) {
+                TTF_SetFontStyle(default_font, TTF_STYLE_BOLD);
+            }
+        }
+    } else if (strcmp(weight, "light") == 0) {
+        // 尝试加载细体字体
+        snprintf(full_path, sizeof(full_path), "%s", font_path);
+        if (strstr(font_path, "Light") == NULL && strstr(font_path, "light") == NULL) {
+            char* ext = strrchr(font_path, '.');
+            if (ext) {
+                int base_len = ext - font_path;
+                snprintf(full_path, sizeof(full_path), "%.*s-Light%s", base_len, font_path, ext);
+            }
+        }
+        default_font = TTF_OpenFont(full_path, size*scale);
+        
+        if (!default_font) {
+            default_font = TTF_OpenFont("assets/Roboto-Light.ttf", size*scale);
+        }
+        if (!default_font) {
+            default_font = TTF_OpenFont("app/assets/Roboto-Light.ttf", size*scale);
+        }
+        if (!default_font) {
+            default_font = TTF_OpenFont(font_path, size*scale);
+            if (default_font) {
+                TTF_SetFontStyle(default_font, TTF_STYLE_NORMAL);
+            }
+        }
+    } else {
+        // normal或其他情况，使用普通字体
+        default_font = TTF_OpenFont(font_path,size*scale);
+    }
+    
+    // 如果指定的字体加载失败，尝试备用字体
     if (!default_font) {
-        printf("Warning: Could not load font 'Roboto-Regular.ttf', trying other fonts\n");
+        printf("Warning: Could not load font '%s', trying fallback fonts\n", font_path);
         // 尝试加载其他西文字体
         default_font = TTF_OpenFont("arial.ttf",size*scale);
         if (!default_font) {
@@ -459,8 +637,14 @@ DFont* backend_load_font(char* font_path,int size){
             default_font = TTF_OpenFont("app/assets/Roboto-Regular.ttf",size*scale);
         }
     }
-    TTF_SetFontHinting(default_font, TTF_HINTING_LIGHT); 
-    TTF_SetFontOutline(default_font, 0); // 无轮廓
+    
+    if (default_font) {
+        TTF_SetFontHinting(default_font, TTF_HINTING_LIGHT); 
+        TTF_SetFontOutline(default_font, 0); // 无轮廓
+        
+        // 将成功加载的字体添加到缓存
+        add_font_to_cache(font_path, size, weight, default_font);
+    }
 
     return default_font;
 }
@@ -526,8 +710,22 @@ int backend_query_texture(Texture * texture,
 }
 
 Texture* backend_render_texture(DFont* font,const char* text,Color color){
+    if (!font) {
+        printf("error: backend_render_texture called with NULL font (text: '%s')\n", text ? text : "(null)");
+        return NULL;
+    }
+    
+    // 检查字体指针是否被破坏
+    if ((uintptr_t)font == 0xbebebebebebebebeULL) {
+        printf("error: corrupted font pointer in backend_render_texture (text: '%s')\n", text ? text : "(null)");
+        return NULL;
+    }
+    
      SDL_Surface* surface = TTF_RenderUTF8_Blended(font, text, color);
-    if (!surface) return NULL;
+    if (!surface) {
+        printf("error: TTF_RenderUTF8_Blended failed for text '%s': %s\n", text, TTF_GetError());
+        return NULL;
+    }
     
     
     SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
