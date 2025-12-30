@@ -868,6 +868,29 @@ void destroy_layer(Layer* layer) {
     
     // 注意：不销毁 font 和 assets，因为它们可能是共享的
     // 这些应该由全局资源管理器负责
-    
+
     free(layer);
+}
+
+// 查找图层
+Layer* find_layer_by_id(Layer* root, const char* id) {
+    if (!root || !id) return NULL;
+
+    if (strcmp(root->id, id) == 0) {
+        return root;
+    }
+
+    // 递归查找子图层
+    for (int i = 0; i < root->child_count; i++) {
+        Layer* result = find_layer_by_id(root->children[i], id);
+        if (result) return result;
+    }
+
+    // 检查sub图层
+    if (root->sub) {
+        Layer* result = find_layer_by_id(root->sub, id);
+        if (result) return result;
+    }
+
+    return NULL;
 }

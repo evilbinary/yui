@@ -29,25 +29,25 @@ def add_flags():
     if platform.system()=='Darwin':
         add_cflags(
             '-g',
-            '-I/usr/local/Cellar/cjson/1.7.17/include/cjson',
             '-F../libs/',
             '-I../libs/SDL2.framework/Headers',
             '-I../libs/SDL2_ttf.framework/Headers',
             '-I../libs/SDL2_image.framework/Headers',
-            '-Isrc'
+            '-Isrc',
+            '-Ilib',
+            '-Ilib/mquickjs',
+            '-DHAS_JS_MODULE'
             ),
         add_ldflags(
             '-F../libs/',
         '-framework SDL2',
             '-framework SDL2_ttf',
             '-framework SDL2_image ',
-            '-lcjson ',
             '-F../libs/'
             ),
     elif platform.system()=='Linux':
         add_cflags(
             '-g',
-            '-I/usr/local/Cellar/cjson/1.7.17/include/cjson',
             '-F../libs/',
             '-I../libs/SDL2.framework/Headers',
             '-I../libs/SDL2_ttf.framework/Headers',
@@ -59,7 +59,6 @@ def add_flags():
             '-framework SDL2',
             '-framework SDL2_ttf',
             '-framework SDL2_image ',
-            '-lcjson ',
             '-F../libs/'
             )
     else:
@@ -68,7 +67,6 @@ def add_flags():
 
         add_cflags(
             '-g',
-            '-ID:\\app\\msys2\\mingw64\\include\\cjson',
             '-F../libs/',
             '-ID:\\app\\msys2\\mingw64\\include\\SDL2',
             '-I.',
@@ -81,13 +79,13 @@ def add_flags():
             '-lSDL2',
             '-lSDL2_ttf',
             '-lSDL2_image',
-            '-lcjson',
             '-lm',
             )
 
 prefix_env='export DYLD_FRAMEWORK_PATH=../libs && export DYLD_LIBRARY_PATH="../libs" && '
 
 target('yui')
+add_deps("cjson")
 add_flags()
 set_kind('static')
 add_files("src/*.c")
@@ -109,7 +107,7 @@ def run(target):
 
 target("main") 
 (
-    add_deps("yui"),
+    add_deps("yui","cjson"),
     add_rules("mode.debug", "mode.release"),
     set_kind("binary"),
     add_flags(),
@@ -131,7 +129,7 @@ target("playground")
 
 target("mqjs") 
 (
-    add_deps("yui", "mquickjs"),
+    add_deps("yui", "mquickjs", "jsmodule"),
     add_rules("mode.debug", "mode.release"),
     set_kind("binary"),
     add_flags(),
@@ -142,6 +140,7 @@ target("mqjs")
 
 target("test_blur_cache") 
 (
+    add_deps("cjson"),
     add_rules("mode.debug", "mode.release"),
     set_kind("binary"),
     add_flags(),
@@ -160,8 +159,8 @@ target("test_blur_cache")
 
 target("test_content_size") 
 (
+    add_deps("cjson"),
     add_rules("mode.debug", "mode.release"),
-    set_kind("binary"),
     add_flags(),
     add_files("src/layout.c"),
     add_files("src/backend_sdl.c"),
@@ -178,6 +177,7 @@ target("test_content_size")
 
 target("test_treeview_scroll") 
 (
+    add_deps("cjson"),
     add_rules("mode.debug", "mode.release"),
     set_kind("binary"),
     add_flags(),
@@ -197,6 +197,7 @@ target("test_treeview_scroll")
 
 target("test_simple_scroll") 
 (
+    add_deps("cjson"),
     add_rules("mode.debug", "mode.release"),
     set_kind("binary"),
     add_flags(),

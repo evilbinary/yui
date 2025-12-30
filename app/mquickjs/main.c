@@ -11,6 +11,7 @@
 #include "layout.h"
 #include "backend.h"
 #include "popup_manager.h"
+#include "../lib/jsmodule/js_module.h"
 
 #if defined(_WIN32)
 #include <windows.h>
@@ -172,42 +173,51 @@ int main(int argc, char* argv[]) {
 
     backend_init();
     popup_manager_init();
-    
-    
+
+    // 初始化 JS 引擎
+    if (js_module_init() != 0) {
+        fprintf(stderr, "Failed to initialize JavaScript engine\n");
+        return -1;
+    }
+
+    // 设置查找图层函数
+    js_module_set_find_layer_func(find_layer_by_id);
+
+
     char* json_path="app.json";
     // 加载UI描述文件
     if(argc>1){
         json_path=argv[1];
     }
-    
+
     printf("DEBUG: Loading JSON from path: %s\n", json_path);
 
     // ====================== 事件注册 ======================
     // 基础事件注册
     register_event_handler("@hello", hello_world);
     register_event_handler("@helloTouch", hello_touch);
-    
+
     // 扩展事件注册 - 支持更多事件类型
     register_event_handler("@customCallback", custom_callback_with_data);
     register_event_handler("@onScroll", on_scroll_callback);
     register_event_handler("@onButtonClick", on_button_click);
     register_event_handler("@onInputChange", on_input_change);
     register_event_handler("@onFocusChange", on_focus_change);
-    
+
     // 打印所有已注册的事件（调试用）
     printf("=== 已注册的事件回调 ===\n");
     // 注意：这里需要在event.c中实现print_registered_events函数
     printf("基础事件: @hello, @helloTouch\n");
     printf("扩展事件: @customCallback, @onScroll, @onButtonClick, @onInputChange, @onFocusChange\n");
     printf("=======================\n\n");
-    
+
     // ====================== 动态回调注册示例 ======================
     // 这里可以演示如何根据配置动态注册事件
     // 例如：从JSON配置中读取事件映射并注册
-    
+
     // 示例：模拟从配置中读取的事件注册
     printf("=== 动态事件注册示例 ===\n");
-    
+
     // 可以在这里添加根据JSON配置动态注册事件的逻辑
     // 例如：
     // cJSON* events_config = cJSON_GetObjectItem(root_json, "events");
@@ -219,26 +229,26 @@ int main(int argc, char* argv[]) {
     //         // 根据callback名称找到对应的函数并注册
     //     }
     // }
-    
+
     printf("动态事件注册功能可根据JSON配置扩展\n");
     printf("========================\n\n");
-    
+
     // ====================== 高级回调管理器使用示例 ======================
     printf("=== 高级回调管理器示例 ===\n");
-    
+
     // 注册带用户数据的回调
     char* custom_data = strdup("这是自定义用户数据");
     register_event_callback_with_data("@advancedCallback", custom_callback_with_data, custom_data, 1);
-    
+
     // 注册按钮点击回调
     register_event_callback_with_data("@buttonAction", on_button_click, NULL, 0);
-    
+
     // 注册输入变化回调
     register_event_callback_with_data("@textChanged", on_input_change, NULL, 0);
-    
+
     // 模拟触发事件（在实际应用中，这些会由具体的用户交互触发）
     printf("模拟触发事件:\n");
-    
+
     // 创建一个模拟Layer用于测试（分配在栈上，确保内存有效）
     static Layer test_layer;  // 使用static确保内存持久化
     memset(&test_layer, 0, sizeof(Layer));  // 清零初始化
@@ -249,22 +259,28 @@ int main(int argc, char* argv[]) {
     test_layer.text[sizeof(test_layer.text) - 1] = '\0';
     test_layer.state = LAYER_STATE_NORMAL;
     test_layer.scroll_offset = 100;  // 设置一个测试值
-    
+
     // 触发自定义回调
     trigger_event_callbacks("@advancedCallback", &test_layer);
-    
+
     // 触发按钮点击
     trigger_event_callbacks("@buttonAction", &test_layer);
-    
+
     printf("高级回调管理器已注册 %d 个回调\n", g_callback_count);
     printf("=======================\n\n");
 
     cJSON* root_json=parse_json(json_path);
     Layer* ui_root = parse_layer(root_json,NULL);
 
+    // 设置 UI 根图层到 JS 模块
+    js_module_set_ui_root(ui_root);
+
     // 初始化字体缓存（backend已经初始化）
     // 在parse_layer后加载所有字体
     load_all_fonts(ui_root);
+
+    // 加载并执行 JS 文件
+    js_module_load_from_json(root_json);
 
     // 如果根图层没有设置宽度和高度，则根据窗口大小设置
     if (ui_root->rect.w <= 0 || ui_root->rect.h <= 0) {
@@ -282,10 +298,10 @@ int main(int argc, char* argv[]) {
 
     // 如果根图层没有设置宽度和高度，则根据窗口大小设置
     printf("ui_root %d,%d\n",ui_root->rect.w,ui_root->rect.h);
-    
-    
+
+
     cJSON_Delete(root_json);
-    
+
     if(ui_root->font==NULL){
         ui_root->font=malloc(sizeof(Font));
         sprintf(ui_root->font->path,"%s","Roboto-Regular.ttf");
@@ -300,11 +316,12 @@ int main(int argc, char* argv[]) {
 
     load_textures(ui_root);
     layout_layer(ui_root);
-    
-    backend_run(ui_root);  
-    
+
+    backend_run(ui_root);
+
     // 清理资源
     cleanup_event_callbacks();  // 清理高级回调管理器
+    js_module_cleanup();  // 清理 JS 引擎
     // destroy_layer(ui_root);  // 暂时注释掉以避免内存问题
     popup_manager_cleanup();
     backend_quit();

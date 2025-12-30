@@ -338,6 +338,7 @@
         "card15.onClick": "@flipCard15",
         "card16.onClick": "@flipCard16"
     },
+    "js":"memory-game.js",
     "game": {
         "cards": ["🎈", "🎨", "🎯", "🎪", "🎭", "🎸", "🎺", "🎮"],
         "flipDuration": 1000,

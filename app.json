@@ -27,19 +27,20 @@
     // "source":"app/test-radius.json",
     // "source":"app/clock-new.json",
     // "source":"app/clock-simple.json",
-    // "source":"app/test-popup-menu.json",
-    // "source":"app/test-slider.json",
+    // "source":"app/tests/test-popup-menu.json",
+    // "source":"app/tests/test-slider.json",
     
-    // "source":"app/memory-game.json",
-    // "source":"app/whack-a-mole.json",  // 打地鼠
-    // "source":"app/apple-catcher.json", // 接苹果
-    // "source":"app/snake-game.json",
+    "source":"app/mquickjs/memory-game.json",
+    // "source":"app/mquickjs/whack-a-mole.json",  // 打地鼠
+    // "source":"app/mquickjs/apple-catcher.json", // 接苹果
+    // "source":"app/mquickjs/snake-game.json",
 
     // "source":"app/playground/json-editor.json",
-    "source":"app/tests/font_demo.json",
+    // "source":"app/tests/font_demo.json",
     // "source":"app/tests/test_font_simple.json",
     // "source":"app/tests/test_font_debug.json",
-    
+    // "source":"app/login.json",
+
     "style": {
         "color": "#2C3E50"
     }
