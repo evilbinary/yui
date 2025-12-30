@@ -27,8 +27,8 @@ int js_module_load_file(const char* filename);
 // 注册 C 函数到 JS
 void js_module_register_api(void);
 
-// 从 JSON 中加载 JS 文件
-int js_module_load_from_json(cJSON* root_json);
+// 从 JSON 中加载 JS 文件（json_file_path 用于相对路径解析）
+int js_module_load_from_json(cJSON* root_json, const char* json_file_path);
 
 // 调用 JS 函数（通过事件名）
 int js_module_call_event(const char* event_name, Layer* layer);

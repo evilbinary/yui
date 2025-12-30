@@ -411,8 +411,9 @@ int js_module_load_file(const char* filename)
     if (JS_IsException(val)) {
         JSValue exc = JS_GetException(g_js_ctx);
         fprintf(stderr, "JS: Error executing %s:\n", filename);
-        JS_PrintValue(g_js_ctx, exc);
-        fprintf(stderr, "\n");
+        //JS_PrintValue(g_js_ctx, exc);
+        JS_PrintValueF(g_js_ctx, exc, JS_DUMP_LONG);
+        printf("\n");
         return -1;
     }
     
@@ -426,17 +427,98 @@ void js_module_set_ui_root(Layer* root)
     g_ui_root = root;
 }
 
-// 从 JSON 加载 JS 文件
-int js_module_load_from_json(cJSON* root_json)
+// 辅助函数：获取文件所在的目录
+static void get_file_dir(const char* filepath, char* dir, size_t max_len)
 {
-    cJSON* js_file = cJSON_GetObjectItem(root_json, "js");
+    if (!filepath || !dir) {
+        dir[0] = '\0';
+        return;
+    }
+
+    // 查找最后一个 '/' 或 '\' 的位置
+    const char* last_sep = strrchr(filepath, '/');
+    const char* last_sep_win = strrchr(filepath, '\\');
+
+    // 使用最后的分隔符
+    const char* sep = (last_sep_win > last_sep) ? last_sep_win : last_sep;
+
+    if (sep) {
+        size_t dir_len = sep - filepath;
+        if (dir_len >= max_len) dir_len = max_len - 1;
+        strncpy(dir, filepath, dir_len);
+        dir[dir_len] = '\0';
+    } else {
+        dir[0] = '.';  // 当前目录
+        dir[1] = '\0';
+    }
+}
+
+// 辅助函数：构建完整的 JS 文件路径（相对于 JSON 文件目录）
+static void build_js_path(const char* js_path, const char* json_dir, char* full_path, size_t max_len)
+{
+    if (js_path[0] == '/' || (js_path[0] == '.' && (js_path[1] == '/' || js_path[1] == '.'))) {
+        // 绝对路径或 ./ 开头的路径，直接使用
+        strncpy(full_path, js_path, max_len - 1);
+    } else {
+        // 相对路径，拼接 JSON 文件所在目录
+        snprintf(full_path, max_len, "%s/%s", json_dir, js_path);
+    }
+    full_path[max_len - 1] = '\0';
+}
+
+// 递归遍历 JSON 并加载所有 JS 文件
+static int load_js_recursive(cJSON* json, const char* json_dir)
+{
+    if (!json) return 0;
+
+    int loaded_count = 0;
+
+    // 检查当前节点是否有 "js" 字段
+    cJSON* js_file = cJSON_GetObjectItem(json, "js");
     if (js_file && cJSON_IsString(js_file)) {
         const char* js_path = js_file->valuestring;
         char full_path[MAX_PATH];
-        snprintf(full_path, MAX_PATH, "app/mquickjs/%s", js_path);
-        return js_module_load_file(full_path);
+        build_js_path(js_path, json_dir, full_path, MAX_PATH);
+
+        printf("JS: Loading JS file from config: %s -> %s\n", js_path, full_path);
+        if (js_module_load_file(full_path) == 0) {
+            loaded_count++;
+        }
     }
-    return 0;
+
+    // 递归遍历子对象
+    cJSON* child = json->child;
+    while (child) {
+        // 递归处理子节点
+        loaded_count += load_js_recursive(child, json_dir);
+        child = child->next;
+    }
+
+    return loaded_count;
+}
+
+// 从 JSON 加载 JS 文件（递归遍历整个 JSON 树）
+int js_module_load_from_json(cJSON* root_json, const char* json_file_path)
+{
+    if (!root_json) {
+        printf("JS: root_json is NULL\n");
+        return 0;
+    }
+
+    // 获取 JSON 文件所在目录
+    char json_dir[MAX_PATH];
+    if (json_file_path && json_file_path[0] != '\0') {
+        get_file_dir(json_file_path, json_dir, MAX_PATH);
+    } else {
+        // 默认目录：app/mquickjs/
+        strcpy(json_dir, "app/mquickjs");
+    }
+
+    printf("JS: Loading JS from JSON directory: %s\n", json_dir);
+
+    int total_loaded = load_js_recursive(root_json, json_dir);
+    printf("JS: Total %d JS file(s) loaded from JSON\n", total_loaded);
+    return total_loaded;
 }
 
 // 调用 JS 事件函数

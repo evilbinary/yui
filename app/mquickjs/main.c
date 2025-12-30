@@ -280,7 +280,29 @@ int main(int argc, char* argv[]) {
     load_all_fonts(ui_root);
 
     // 加载并执行 JS 文件
-    js_module_load_from_json(root_json);
+    printf("加载并执行 JS 文件...\n");
+    int count = js_module_load_from_json(root_json, json_path);
+
+    // 如果主 JSON 中没有找到 js 文件，检查是否有 source 属性
+    if (count <= 0) {
+        cJSON* source = cJSON_GetObjectItem(root_json, "source");
+        if (source && cJSON_IsString(source)) {
+            const char* source_path = source->valuestring;
+            printf("DEBUG: No JS found in main JSON, checking source file: %s\n", source_path);
+
+            // 加载 source 指向的 JSON 文件
+            cJSON* source_json = parse_json((char*)source_path);
+            if (source_json) {
+                // 从 source JSON 中加载 JS（传递 source 文件路径）
+                int source_count = js_module_load_from_json(source_json, source_path);
+                printf("DEBUG: Loaded %d JS file(s) from source JSON\n", source_count);
+                cJSON_Delete(source_json);
+                count += source_count;
+            } else {
+                printf("ERROR: Failed to load source JSON file: %s\n", source_path);
+            }
+        }
+    }
 
     // 如果根图层没有设置宽度和高度，则根据窗口大小设置
     if (ui_root->rect.w <= 0 || ui_root->rect.h <= 0) {
