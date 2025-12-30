@@ -33,9 +33,6 @@ int js_module_load_from_json(cJSON* root_json);
 // 调用 JS 函数（通过事件名）
 int js_module_call_event(const char* event_name, Layer* layer);
 
-// 检查并触发定时器（需要在主循环中定期调用）
-void js_module_check_timers(void);
-
 // 设置 UI 根图层
 void js_module_set_ui_root(Layer* root);
 

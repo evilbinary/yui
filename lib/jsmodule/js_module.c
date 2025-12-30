@@ -6,6 +6,10 @@
 
 // mquickjs 不提供 JS_IsArray 函数，使用 JS_GetClassID 宏来定义
 #define JS_IsArray(val) (JS_GetClassID(g_js_ctx, val) == 4) // JS_CLASS_ARRAY = 4
+
+// 前向声明 backend 函数（非侵入式调用）
+typedef void (*UpdateCallback)(void);
+extern void backend_register_update_callback(UpdateCallback callback);
 #endif
 
 #include <stdio.h>
@@ -47,22 +51,8 @@ static size_t g_js_mem_size = 256 * 1024; // 256KB 内存
 // 全局 UI 根图层
 static struct Layer* g_ui_root = NULL;
 
-// 游戏状态
-typedef struct {
-    int moves;
-    int pairs_found;
-    int total_pairs;
-    char cards[16][32];
-    int flipped[16];
-    int matched[16];
-    int first_flip;
-    int is_locked;
-    char* card_values[8];
-} GameState;
 
-static GameState g_game_state = {0};
-
-
+static void check_timers(void);
 // ====================== 辅助函数 ======================
 
 int hex_to_int(char c){
@@ -71,6 +61,8 @@ int hex_to_int(char c){
     if (c >= 'A' && c <= 'F') return c - 'A' + 10;
     return 0;
 }
+
+
 // 日期和时间 API
 static JSValue js_date_now(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
 {
@@ -278,97 +270,6 @@ static JSValue js_log(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv
     return JS_UNDEFINED;
 }
 
-// 获取游戏状态
-static JSValue js_get_state(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
-{
-    JSValue obj = JS_NewObject(ctx);
-    JS_SetPropertyStr(ctx, obj, "moves", JS_NewInt32(ctx, g_game_state.moves));
-    JS_SetPropertyStr(ctx, obj, "pairs", JS_NewInt32(ctx, g_game_state.pairs_found));
-    JS_SetPropertyStr(ctx, obj, "totalPairs", JS_NewInt32(ctx, g_game_state.total_pairs));
-    return obj;
-}
-
-// 设置游戏状态
-static JSValue js_set_state(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
-{
-    if (argc < 1) return JS_UNDEFINED;
-    
-    // moves
-    JSValue moves_val = JS_GetPropertyStr(ctx, argv[0], "moves");
-    if (!JS_IsUndefined(moves_val) && JS_IsInt(moves_val)) {
-        g_game_state.moves = JS_VALUE_GET_INT(moves_val);
-    }
-    
-    // pairs
-    JSValue pairs_val = JS_GetPropertyStr(ctx, argv[0], "pairs");
-    if (!JS_IsUndefined(pairs_val) && JS_IsInt(pairs_val)) {
-        g_game_state.pairs_found = JS_VALUE_GET_INT(pairs_val);
-    }
-    
-    return JS_UNDEFINED;
-}
-
-// ====================== 游戏特定函数 ======================
-
-// 翻转卡片
-static JSValue js_flip_card(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
-{
-    if (argc < 1) return JS_UNDEFINED;
-    
-    int card_index = -1;
-    if (JS_IsInt(argv[0])) {
-        card_index = JS_VALUE_GET_INT(argv[0]);
-    }
-    
-    if (card_index >= 0 && card_index < 16) {
-        g_game_state.flipped[card_index] = 1;
-        printf("JS: Flip card %d\n", card_index);
-    }
-    
-    return JS_UNDEFINED;
-}
-
-// 检查配对
-static JSValue js_check_pair(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
-{
-    if (argc < 2) return JS_FALSE;
-    
-    int card1 = -1, card2 = -1;
-    if (JS_IsInt(argv[0])) {
-        card1 = JS_VALUE_GET_INT(argv[0]);
-    }
-    if (JS_IsInt(argv[1])) {
-        card2 = JS_VALUE_GET_INT(argv[1]);
-    }
-    
-    if (card1 >= 0 && card1 < 16 && card2 >= 0 && card2 < 16) {
-        if (strcmp(g_game_state.cards[card1], g_game_state.cards[card2]) == 0) {
-            return JS_TRUE;
-        }
-    }
-    
-    return JS_FALSE;
-}
-
-// 标记配对
-static JSValue js_mark_matched(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
-{
-    if (argc < 1) return JS_UNDEFINED;
-    
-    int card_index = -1;
-    if (JS_IsInt(argv[0])) {
-        card_index = JS_VALUE_GET_INT(argv[0]);
-    }
-    
-    if (card_index >= 0 && card_index < 16) {
-        g_game_state.matched[card_index] = 1;
-    }
-    
-    return JS_UNDEFINED;
-}
-
-
-
 // ====================== 初始化和清理 ======================
 
 // 定义这个宏以避免编译mqjs_stdlib.c中的main函数
@@ -427,9 +328,12 @@ int js_module_init(void)
     }
     
     JS_SetLogFunc(g_js_ctx, js_log_func);
-    
+
     js_module_register_api();
-    
+
+    // 注册更新回调（非侵入式设计）
+    backend_register_update_callback(check_timers);
+
     printf("JS: JavaScript engine initialized\n");
     return 0;
 }
@@ -464,13 +368,6 @@ void js_module_register_api(void)
     JS_SetPropertyStr(g_js_ctx, yui_obj, "hide", JS_NewCFunctionParams(g_js_ctx, (int)js_hide, JS_NULL));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "show", JS_NewCFunctionParams(g_js_ctx, (int)js_show, JS_NULL));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "log", JS_NewCFunctionParams(g_js_ctx, (int)js_log, JS_NULL));
-    JS_SetPropertyStr(g_js_ctx, yui_obj, "getState", JS_NewCFunctionParams(g_js_ctx, (int)js_get_state, JS_NULL));
-    JS_SetPropertyStr(g_js_ctx, yui_obj, "setState", JS_NewCFunctionParams(g_js_ctx, (int)js_set_state, JS_NULL));
-
-    // 游戏特定 API
-    JS_SetPropertyStr(g_js_ctx, yui_obj, "flipCard", JS_NewCFunctionParams(g_js_ctx, (int)js_flip_card, JS_NULL));
-    JS_SetPropertyStr(g_js_ctx, yui_obj, "checkPair", JS_NewCFunctionParams(g_js_ctx, (int)js_check_pair, JS_NULL));
-    JS_SetPropertyStr(g_js_ctx, yui_obj, "markMatched", JS_NewCFunctionParams(g_js_ctx, (int)js_mark_matched, JS_NULL));
 
     JS_SetPropertyStr(g_js_ctx, global_obj, "YUI", yui_obj);
 
@@ -585,8 +482,8 @@ int js_module_call_event(const char* event_name, Layer* layer)
     return 0;
 }
 
-// 检查并触发定时器
-void js_module_check_timers(void)
+// 检查并触发定时器（内部静态函数）
+static void check_timers(void)
 {
     if (!g_js_ctx) return;
 
