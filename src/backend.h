@@ -40,6 +40,12 @@ int backend_query_texture(Texture * texture,
                      Uint32 * format, int *access,
                      int *w, int *h);
 
+// 主循环回调类型
+typedef void (*UpdateCallback)(void);
+
+// 注册主循环更新回调（每帧调用）
+void backend_register_update_callback(UpdateCallback callback);
+
 void backend_render_rounded_rect(Rect* rect, Color color, int radius);
 void backend_render_rounded_rect_color(Rect* rect, unsigned char r, unsigned char g, unsigned char b, unsigned char a, int radius);
 void backend_render_rounded_rect_with_border(Rect* rect, Color bg_color, int radius, int border_width, Color border_color);

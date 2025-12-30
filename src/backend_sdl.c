@@ -8,12 +8,17 @@
 
 #define WINDOW_WIDTH 1000
 #define MAX_TOUCHES 10
+#define MAX_UPDATE_CALLBACKS 16
 
 // ====================== 全局渲染器 ======================
 SDL_Renderer* renderer = NULL;
 float scale=1.0;
 SDL_Window* window=NULL;
 DFont* default_font=NULL;
+
+// 主循环更新回调管理
+static UpdateCallback update_callbacks[MAX_UPDATE_CALLBACKS] = {NULL};
+static int update_callback_count = 0;
 
 // 字体缓存结构
 typedef struct {
@@ -532,15 +537,22 @@ void backend_run(Layer* ui_root){
             if (event.type == SDL_QUIT) running = 0;
             handle_event(ui_root, &event);
         }
-        
+
+        // 调用所有注册的更新回调
+        for (int i = 0; i < update_callback_count; i++) {
+            if (update_callbacks[i]) {
+                update_callbacks[i]();
+            }
+        }
+
         SDL_SetRenderDrawColor(renderer, 30, 30, 30, 255);
         SDL_RenderClear(renderer);
-        
+
         render_layer(ui_root);  // 执行渲染管线
-        
+
         // 渲染弹出层
         popup_manager_render();
-        
+
         SDL_RenderPresent(renderer);
         SDL_Delay(16);
     }
@@ -1358,4 +1370,18 @@ void backend_render_backdrop_filter(Rect* rect, int blur_radius, float saturatio
     // 清理纹理资源
     SDL_DestroyTexture(temp_texture);
     SDL_DestroyTexture(blur_texture);
+}
+
+// ====================== 主循环回调管理 ======================
+
+// 注册主循环更新回调
+void backend_register_update_callback(UpdateCallback callback) {
+    if (!callback) return;
+
+    if (update_callback_count >= MAX_UPDATE_CALLBACKS) {
+        printf("Warning: Update callback limit reached\n");
+        return;
+    }
+
+    update_callbacks[update_callback_count++] = callback;
 }
