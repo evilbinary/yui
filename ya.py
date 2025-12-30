@@ -10,6 +10,7 @@ project("yui",
     ]
 )
 
+includes("./lib/ya.py")
 
 
 def add_flags():
@@ -124,6 +125,17 @@ target("playground")
     set_kind("binary"),
     add_flags(),
     add_files("app/playground/main.c"),
+    on_run(run)
+)
+
+
+target("mqjs") 
+(
+    add_deps("yui", "mquickjs"),
+    add_rules("mode.debug", "mode.release"),
+    set_kind("binary"),
+    add_flags(),
+    add_files("app/mquickjs/main.c"),
     on_run(run)
 )
 
