@@ -148,7 +148,7 @@ typedef enum {
 
 extern char *layer_type_name[];
 #define LAYER_TYPE_SIZE (sizeof(layer_type_name) / sizeof(layer_type_name[0]))  // 更新图层类型数量
-
+typedef struct Layer Layer;
 
 typedef struct LayoutManager {
     LayoutType type;
@@ -253,10 +253,10 @@ typedef struct MouseEvent {
 
 typedef struct Event {
     char click_name[MAX_PATH];
-    void (*click)();  // 事件回调函数指针
-    void (*press)();
+    void (*click)(Layer*);  // 事件回调函数指针
+    void (*press)(Layer*);
     // 添加滚动事件回调函数指针
-    void (*scroll)(); 
+    void (*scroll)(Layer*)    ; 
     char scroll_name[MAX_PATH];
     
     // 合并的触屏事件
@@ -277,7 +277,7 @@ typedef enum {
 } LayerState;
 
 
-typedef struct Layer Layer;
+
 
 // 辅助宏：检查状态
 // HAS_STATE - 检查layer->state中是否包含st指定的状态位

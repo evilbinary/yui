@@ -88,7 +88,7 @@ void button_component_handle_key_event(Layer* layer, KeyEvent* event) {
         SET_STATE(layer, LAYER_STATE_PRESSED);
         // 触发点击事件（如果存在）
         if (layer->event && layer->event->click) {
-            layer->event->click();
+            layer->event->click(layer);
         }
     }
     
@@ -132,7 +132,7 @@ void button_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
             SET_STATE(layer, LAYER_STATE_PRESSED);
             // 触发点击事件（如果存在）
             if (layer->event && layer->event->click) {
-                layer->event->click();
+                layer->event->click(layer);
             }
         } else {
             // 鼠标点击在按钮外，清除按下状态

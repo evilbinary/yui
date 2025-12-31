@@ -391,8 +391,11 @@ int js_module_set_layer_event(Layer* layer, const char* event_name,const char* e
 }
 
 void js_module_common_event(Layer* layer) {
-    printf("你好，世界！ %s\n",layer->id);
-
+    if (!layer) {
+        printf("JS: Event handler called with NULL layer\n");
+        return;
+    }
+    printf("JS: Event triggered for layer '%s'\n", layer->id[0] != '\0' ? layer->id : "(unnamed)");
 }
 
 
@@ -699,17 +702,17 @@ int js_module_trigger_layer_event(Layer* layer, const char* event_name)
     if (layer->event) {
         // 检查 click 事件
         if (strcmp(event_name, "click") == 0 && layer->event->click) {
-            layer->event->click();
+            layer->event->click(layer);
             return 0;
         }
         // 检查 press 事件
         if (strcmp(event_name, "press") == 0 && layer->event->press) {
-            layer->event->press();
+            layer->event->press(layer);
             return 0;
         }
         // 检查 scroll 事件
         if (strcmp(event_name, "scroll") == 0 && layer->event->scroll) {
-            layer->event->scroll();
+            layer->event->scroll(layer);
             return 0;
         }
     }
