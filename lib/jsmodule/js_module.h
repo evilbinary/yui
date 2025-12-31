@@ -51,6 +51,21 @@ void js_module_update_layer_text(Layer* layer, const char* text);
 // 设置按钮样式
 void js_module_set_button_style(Layer* layer, const char* bg_color);
 
+// C 事件处理器类型
+typedef void (*CEventHandler)(Layer* layer, const char* event_type);
+
+// 注册 C 事件处理器
+int js_module_register_c_event_handler(const char* event_name, CEventHandler handler);
+
+// 根据 layer id 和事件类型调用事件处理器
+// event_type: 事件类型，如 "onClick", "onLoad", "onPress" 等
+int js_module_call_layer_event(const char* layer_id, const char* event_type);
+
+// 从 Layer 的事件结构中触发事件（兼容旧的 Event 结构）
+// layer: 图层指针
+// event_name: 事件类型，如 "click", "press", "scroll" 等
+int js_module_trigger_layer_event(Layer* layer, const char* event_name);
+
 #ifdef __cplusplus
 }
 #endif

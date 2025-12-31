@@ -12,5 +12,5 @@ set_kind("static")
 add_files(
     'js_module.c',
 ) 
-add_cflags(' -I. -I../mquickjs -g -DHAS_JS_MODULE')
+add_cflags(' -DD_SDL -I. -I../mquickjs -g -DHAS_JS_MODULE')
 add_includedirs('.', public=true)

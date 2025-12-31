@@ -18,15 +18,27 @@ extern void backend_register_update_callback(UpdateCallback callback);
 #define MAX_TEXT 256
 #define MAX_PATH 1024
 
-// 前向声明 Layer 结构
-struct Layer {
+// 最小化的 Event 结构（用于兼容旧的 Event 结构）
+typedef struct Event {
+    char click_name[MAX_PATH];
+    void (*click)();
+    void (*press)();
+    void (*scroll)();
+    char scroll_name[MAX_PATH];
+    char touch_name[MAX_PATH];
+    void (*touch)();
+} Event;
+
+// 前向声明 YUI 的 Layer 结构（只定义我们需要的字段）
+typedef struct Layer {
     char id[50];
     char text[MAX_TEXT];
     int visible;
     struct {
         unsigned char r, g, b, a;
     } bg_color;
-};
+    Event* event;  // 添加 event 成员
+} Layer;
 
 // 查找图层的函数指针类型
 typedef struct Layer* (*FindLayerFunc)(struct Layer* root, const char* id);
@@ -45,15 +57,28 @@ static size_t g_js_mem_size = 256 * 1024; // 256KB 内存
 // 全局 UI 根图层
 static struct Layer* g_ui_root = NULL;
 
-// 事件映射表结构
-#define MAX_EVENTS 128
+// C 事件处理器类型
+typedef void (*CEventHandler)(Layer* layer, const char* event_type);
+
+// C 事件处理器注册表
+#define MAX_C_EVENT_HANDLERS 128
+typedef struct {
+    char event_name[128];
+    CEventHandler handler;
+} CEventEntry;
+
+static CEventEntry g_c_event_handlers[MAX_C_EVENT_HANDLERS];
+static int g_c_event_handler_count = 0;
+
+// JS 事件映射表（存储 JS 函数名）
+#define MAX_JS_EVENTS 128
 typedef struct {
     char event_name[128];
     char func_name[128];
-} EventMapping;
+} JSEventMapping;
 
-static EventMapping g_event_map[MAX_EVENTS];
-static int g_event_count = 0;
+static JSEventMapping g_js_event_map[MAX_JS_EVENTS];
+static int g_js_event_count = 0;
 
 static void check_timers(void);
 
@@ -351,11 +376,11 @@ static void build_js_path(const char* js_path, const char* json_dir, char* full_
     full_path[max_len - 1] = '\0';
 }
 
-// 注册事件映射
-static void register_event_mapping(const char* event_name, const char* func_name)
+// 注册事件映射（存储 JS 函数名）
+static void register_js_event_mapping(const char* event_name, const char* func_name)
 {
-    if (g_event_count >= MAX_EVENTS) {
-        printf("JS: Event map full, cannot register event: %s\n", event_name);
+    if (g_js_event_count >= MAX_JS_EVENTS) {
+        printf("JS: JS event map full, cannot register event: %s\n", event_name);
         return;
     }
 
@@ -365,13 +390,36 @@ static void register_event_mapping(const char* event_name, const char* func_name
         clean_func_name++;
     }
 
-    strncpy(g_event_map[g_event_count].event_name, event_name, 127);
-    g_event_map[g_event_count].event_name[127] = '\0';
-    strncpy(g_event_map[g_event_count].func_name, clean_func_name, 127);
-    g_event_map[g_event_count].func_name[127] = '\0';
+    strncpy(g_js_event_map[g_js_event_count].event_name, event_name, 127);
+    g_js_event_map[g_js_event_count].event_name[127] = '\0';
+    strncpy(g_js_event_map[g_js_event_count].func_name, clean_func_name, 127);
+    g_js_event_map[g_js_event_count].func_name[127] = '\0';
 
-    printf("JS: Registered event: '%s' -> '%s'\n", event_name, clean_func_name);
-    g_event_count++;
+    printf("JS: Registered JS event: '%s' -> '%s'\n", event_name, clean_func_name);
+    g_js_event_count++;
+}
+
+// 注册 C 事件处理器（内部函数）
+static int register_c_event_handler_internal(const char* event_name, CEventHandler handler)
+{
+    if (g_c_event_handler_count >= MAX_C_EVENT_HANDLERS) {
+        printf("JS: C event handler table full, cannot register: %s\n", event_name);
+        return -1;
+    }
+
+    strncpy(g_c_event_handlers[g_c_event_handler_count].event_name, event_name, 127);
+    g_c_event_handlers[g_c_event_handler_count].event_name[127] = '\0';
+    g_c_event_handlers[g_c_event_handler_count].handler = handler;
+
+    printf("JS: Registered C event handler: '%s'\n", event_name);
+    g_c_event_handler_count++;
+    return 0;
+}
+
+// 根据 layer id 和事件类型构建完整事件名称
+static void build_event_name(const char* layer_id, const char* event_type, char* event_name, size_t max_len)
+{
+    snprintf(event_name, max_len, "%s.%s", layer_id, event_type);
 }
 
 // 扫描并注册事件（从 events 或 event 对象）
@@ -386,7 +434,8 @@ static void scan_and_register_events(cJSON* json)
         cJSON* event = events_obj->child;
         while (event) {
             if (cJSON_IsString(event)) {
-                register_event_mapping(event->string, event->valuestring);
+                // 注册为 JS 事件（存储函数名）
+                register_js_event_mapping(event->string, event->valuestring);
             }
             event = event->next;
         }
@@ -399,7 +448,8 @@ static void scan_and_register_events(cJSON* json)
         cJSON* event = event_obj->child;
         while (event) {
             if (cJSON_IsString(event)) {
-                register_event_mapping(event->string, event->valuestring);
+                // 注册为 JS 事件（存储函数名）
+                register_js_event_mapping(event->string, event->valuestring);
             }
             event = event->next;
         }
@@ -526,25 +576,110 @@ int js_module_trigger_event(const char* event_name, Layer* layer)
         return -1;
     }
 
-    // 在事件映射表中查找对应的函数名
-    for (int i = 0; i < g_event_count; i++) {
-        if (strcmp(g_event_map[i].event_name, event_name) == 0) {
-            printf("JS: Triggering event '%s' -> calling function '%s'\n",
-                   event_name, g_event_map[i].func_name);
-            return js_module_call_event(g_event_map[i].func_name, layer);
+    // 在 JS 事件映射表中查找对应的函数名
+    for (int i = 0; i < g_js_event_count; i++) {
+        if (strcmp(g_js_event_map[i].event_name, event_name) == 0) {
+            printf("JS: Triggering JS event '%s' -> calling function '%s'\n",
+                   event_name, g_js_event_map[i].func_name);
+            return js_module_call_event(g_js_event_map[i].func_name, layer);
         }
     }
 
     // 未找到事件映射
-    printf("JS: Event '%s' not registered, trying direct call...\n", event_name);
+    printf("JS: JS event '%s' not registered, trying direct call...\n", event_name);
     return js_module_call_event(event_name, layer);
 }
 
 // 清空事件映射表
 void js_module_clear_events(void)
 {
-    g_event_count = 0;
-    printf("JS: Event map cleared\n");
+    g_js_event_count = 0;
+    g_c_event_handler_count = 0;
+    printf("JS: Event maps cleared\n");
+}
+
+// 根据 layer id 调用事件处理器
+// event_type: 事件类型，如 "onClick", "onLoad", "onPress" 等
+int js_module_call_layer_event(const char* layer_id, const char* event_type)
+{
+    if (!layer_id || !event_type) {
+        printf("JS: Invalid layer_id or event_type\n");
+        return -1;
+    }
+
+    // 查找图层
+    Layer* layer = NULL;
+    if (g_ui_root && g_find_layer_func) {
+        layer = g_find_layer_func(g_ui_root, layer_id);
+    }
+
+    if (!layer) {
+        printf("JS: Layer '%s' not found\n", layer_id);
+        return -1;
+    }
+
+    // 构建完整事件名称
+    char full_event_name[128];
+    build_event_name(layer_id, event_type, full_event_name, sizeof(full_event_name));
+
+    printf("JS: Calling event '%s' on layer '%s'\n", full_event_name, layer_id);
+
+    // 1. 首先尝试调用 C 事件处理器
+    for (int i = 0; i < g_c_event_handler_count; i++) {
+        if (strcmp(g_c_event_handlers[i].event_name, full_event_name) == 0) {
+            printf("JS: Found C event handler for '%s'\n", full_event_name);
+            if (g_c_event_handlers[i].handler) {
+                g_c_event_handlers[i].handler(layer, event_type);
+                return 0;
+            }
+        }
+    }
+
+    // 2. 如果没有 C 处理器，尝试调用 JS 函数
+    printf("JS: No C handler found, trying JS function for '%s'\n", full_event_name);
+    return js_module_trigger_event(full_event_name, layer);
+}
+
+// 从 Layer 的事件结构中触发事件（兼容旧的 Event 结构）
+// layer: 图层指针
+// event_name: 事件类型，如 "click", "press", "scroll" 等
+int js_module_trigger_layer_event(Layer* layer, const char* event_name)
+{
+    if (!layer || !event_name) {
+        return -1;
+    }
+
+    // 1. 首先尝试调用 Layer 的事件结构（旧的 Event 结构）
+    if (layer->event) {
+        // 检查 click 事件
+        if (strcmp(event_name, "click") == 0 && layer->event->click) {
+            layer->event->click();
+            return 0;
+        }
+        // 检查 press 事件
+        if (strcmp(event_name, "press") == 0 && layer->event->press) {
+            layer->event->press();
+            return 0;
+        }
+        // 检查 scroll 事件
+        if (strcmp(event_name, "scroll") == 0 && layer->event->scroll) {
+            layer->event->scroll();
+            return 0;
+        }
+    }
+
+    // 2. 调用新的事件系统（通过 layer id）
+    if (layer->id[0] != '\0') {
+        return js_module_call_layer_event(layer->id, event_name);
+    }
+
+    return -1;
+}
+
+// 注册 C 事件处理器（公共 API）
+int js_module_register_c_event_handler(const char* event_name, CEventHandler handler)
+{
+    return register_c_event_handler_internal(event_name, handler);
 }
 
 // 检查并触发定时器（内部静态函数）
