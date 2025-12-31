@@ -33,6 +33,12 @@ int js_module_load_from_json(cJSON* root_json, const char* json_file_path);
 // 调用 JS 函数（通过事件名）
 int js_module_call_event(const char* event_name, Layer* layer);
 
+// 触发事件（根据事件名称自动查找并调用对应的 JS 函数）
+int js_module_trigger_event(const char* event_name, Layer* layer);
+
+// 清空事件映射表
+void js_module_clear_events(void);
+
 // 设置 UI 根图层
 void js_module_set_ui_root(Layer* root);
 

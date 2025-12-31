@@ -55,7 +55,7 @@
         },
         {
             "id": "gameBoard",
-            "type": "View",
+            "type": "Grid",
             "size": [460, 300],
             "style": {
                 "bgColor": "#4CAF50",
@@ -64,7 +64,7 @@
                 "borderColor": "#2E7D32"
             },
             "layout": {
-                "type": "grid",
+                "type": "horizontal",
                 "columns": 3,
                 "rows": 3,
                 "spacing": 30,

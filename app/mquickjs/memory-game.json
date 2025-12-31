@@ -55,14 +55,14 @@
         },
         {
             "id": "gameBoard",
-            "type": "View",
+            "type": "Grid",
             "size": [460, 400],
             "style": {
                 "bgColor": "#34495E",
                 "borderRadius": 10
             },
             "layout": {
-                "type": "grid",
+                "type": "vertical",
                 "columns": 4,
                 "rows": 4,
                 "spacing": 15,

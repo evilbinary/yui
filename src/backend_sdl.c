@@ -186,7 +186,7 @@ int backend_init(){
     // 设置渲染质量为最佳（抗锯齿）
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "best");
     
-    window = SDL_CreateWindow("YUI Renderer", 
+    window = SDL_CreateWindow("YUI", 
                                         SDL_WINDOWPOS_CENTERED,
                                         SDL_WINDOWPOS_CENTERED,
                                         800, 600, SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_SHOWN);
@@ -668,6 +668,11 @@ void backend_get_windowsize(int* width,int * height){
 void backend_set_windowsize(int width,int  height){
     SDL_SetWindowSize(window, width, height);
 }
+
+void backend_set_window_size(char* title){
+    SDL_SetWindowTitle(window,title);
+}
+
 
 
 // 检查文件是否为SVG格式

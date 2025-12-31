@@ -4,9 +4,6 @@
 #include "mquickjs.h"
 #include "../cjson/cJSON.h"
 
-// mquickjs 不提供 JS_IsArray 函数，使用 JS_GetClassID 宏来定义
-#define JS_IsArray(val) (JS_GetClassID(g_js_ctx, val) == 4) // JS_CLASS_ARRAY = 4
-
 // 前向声明 backend 函数（非侵入式调用）
 typedef void (*UpdateCallback)(void);
 extern void backend_register_update_callback(UpdateCallback callback);
@@ -35,9 +32,6 @@ struct Layer {
 typedef struct Layer* (*FindLayerFunc)(struct Layer* root, const char* id);
 static FindLayerFunc g_find_layer_func = NULL;
 
-
-extern const JSSTDLibraryDef js_stdlib;
-
 // 注册查找图层函数
 void js_module_set_find_layer_func(struct Layer* (*func)(struct Layer* root, const char* id)) {
     g_find_layer_func = func;
@@ -51,8 +45,18 @@ static size_t g_js_mem_size = 256 * 1024; // 256KB 内存
 // 全局 UI 根图层
 static struct Layer* g_ui_root = NULL;
 
+// 事件映射表结构
+#define MAX_EVENTS 128
+typedef struct {
+    char event_name[128];
+    char func_name[128];
+} EventMapping;
+
+static EventMapping g_event_map[MAX_EVENTS];
+static int g_event_count = 0;
 
 static void check_timers(void);
+
 // ====================== 辅助函数 ======================
 
 int hex_to_int(char c){
@@ -62,87 +66,17 @@ int hex_to_int(char c){
     return 0;
 }
 
-
-// 日期和时间 API
-static JSValue js_date_now(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
-{
-    time_t now = time(NULL);
-    return JS_NewInt64(ctx, (int64_t)(now * 1000));
-}
-
-// Math.random
-static JSValue js_math_random(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
-{
-    return JS_NewFloat64(ctx, (double)rand() / (double)RAND_MAX);
-}
-
-// Math.floor
-static JSValue js_math_floor(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
-{
-    if (argc < 1) return JS_UNDEFINED;
-    double val = 0;
-    if (JS_ToNumber(ctx, &val, argv[0]) == 0) {
-        return JS_NewInt32(ctx, (int32_t)val);
-    }
-    return JS_UNDEFINED;
-}
-
-// setTimeout API
-static JSValue js_set_timeout(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
-{
-    if (argc < 2) return JS_UNDEFINED;
-
-    double delay = 0;
-    if (JS_ToNumber(ctx, &delay, argv[1]) != 0) {
-        return JS_UNDEFINED;
-    }
-
-    // 获取全局 timers 数组和计数器
-    JSValue global_obj = JS_GetGlobalObject(ctx);
-    JSValue timers_arr = JS_GetPropertyStr(ctx, global_obj, "_timers");
-    JSValue counter_val = JS_GetPropertyStr(ctx, global_obj, "_timerIdCounter");
-
-    int timer_id = 0;
-    if (JS_IsInt(counter_val)) {
-        timer_id = JS_VALUE_GET_INT(counter_val);
-    }
-
-    // 创建定时器对象
-    JSValue timer_obj = JS_NewObject(ctx);
-    JS_SetPropertyStr(ctx, timer_obj, "id", JS_NewInt32(ctx, timer_id));
-    JS_SetPropertyStr(ctx, timer_obj, "callback", argv[0]);
-    JS_SetPropertyStr(ctx, timer_obj, "triggerTime", JS_NewFloat64(ctx, (double)time(NULL) * 1000 + delay));
-    JS_SetPropertyStr(ctx, timer_obj, "triggered", JS_FALSE);
-
-    // 添加到 timers 数组
-    int len = 0;
-    JS_ToInt32(ctx, &len, timers_arr);
-    JS_SetPropertyUint32(ctx, timers_arr, len, timer_obj);
-
-    // 更新计数器
-    JS_SetPropertyStr(ctx, global_obj, "_timerIdCounter", JS_NewInt32(ctx, timer_id + 1));
-
-    return JS_NewInt32(ctx, timer_id);
-}
-
 // ====================== JS API 函数 ======================
 
 // 设置文本
 static JSValue js_set_text(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
 {
     if (argc < 2) return JS_UNDEFINED;
-    
-    const char* layer_id = NULL;
-    const char* text = NULL;
-    
+
     JSCStringBuf buf1, buf2;
-    if (JS_IsString(ctx, argv[0])) {
-        layer_id = JS_ToCString(ctx, argv[0], &buf1);
-    }
-    if (JS_IsString(ctx, argv[1])) {
-        text = JS_ToCString(ctx, argv[1], &buf2);
-    }
-    
+    const char* layer_id = JS_ToCString(ctx, argv[0], &buf1);
+    const char* text = JS_ToCString(ctx, argv[1], &buf2);
+
     if (layer_id && text && g_ui_root && g_find_layer_func) {
         struct Layer* layer = g_find_layer_func(g_ui_root, layer_id);
         if (layer) {
@@ -151,7 +85,7 @@ static JSValue js_set_text(JSContext *ctx, JSValue *this_val, int argc, JSValue 
             printf("JS: Set text for layer '%s': %s\n", layer_id, text);
         }
     }
-    
+
     return JS_UNDEFINED;
 }
 
@@ -159,20 +93,17 @@ static JSValue js_set_text(JSContext *ctx, JSValue *this_val, int argc, JSValue 
 static JSValue js_get_text(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
 {
     if (argc < 1) return JS_UNDEFINED;
-    
-    const char* layer_id = NULL;
+
     JSCStringBuf buf;
-    if (JS_IsString(ctx, argv[0])) {
-        layer_id = JS_ToCString(ctx, argv[0], &buf);
-    }
-    
+    const char* layer_id = JS_ToCString(ctx, argv[0], &buf);
+
     if (layer_id && g_ui_root && g_find_layer_func) {
         struct Layer* layer = g_find_layer_func(g_ui_root, layer_id);
         if (layer) {
             return JS_NewString(ctx, layer->text);
         }
     }
-    
+
     return JS_UNDEFINED;
 }
 
@@ -180,18 +111,11 @@ static JSValue js_get_text(JSContext *ctx, JSValue *this_val, int argc, JSValue 
 static JSValue js_set_bg_color(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
 {
     if (argc < 2) return JS_UNDEFINED;
-    
-    const char* layer_id = NULL;
-    const char* color_hex = NULL;
-    
+
     JSCStringBuf buf1, buf2;
-    if (JS_IsString(ctx, argv[0])) {
-        layer_id = JS_ToCString(ctx, argv[0], &buf1);
-    }
-    if (JS_IsString(ctx, argv[1])) {
-        color_hex = JS_ToCString(ctx, argv[1], &buf2);
-    }
-    
+    const char* layer_id = JS_ToCString(ctx, argv[0], &buf1);
+    const char* color_hex = JS_ToCString(ctx, argv[1], &buf2);
+
     if (layer_id && color_hex && g_ui_root && g_find_layer_func) {
         struct Layer* layer = g_find_layer_func(g_ui_root, layer_id);
         if (layer) {
@@ -205,7 +129,7 @@ static JSValue js_set_bg_color(JSContext *ctx, JSValue *this_val, int argc, JSVa
             }
         }
     }
-    
+
     return JS_UNDEFINED;
 }
 
@@ -213,13 +137,10 @@ static JSValue js_set_bg_color(JSContext *ctx, JSValue *this_val, int argc, JSVa
 static JSValue js_hide(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
 {
     if (argc < 1) return JS_UNDEFINED;
-    
-    const char* layer_id = NULL;
+
     JSCStringBuf buf;
-    if (JS_IsString(ctx, argv[0])) {
-        layer_id = JS_ToCString(ctx, argv[0], &buf);
-    }
-    
+    const char* layer_id = JS_ToCString(ctx, argv[0], &buf);
+
     if (layer_id && g_ui_root && g_find_layer_func) {
         struct Layer* layer = g_find_layer_func(g_ui_root, layer_id);
         if (layer) {
@@ -227,7 +148,7 @@ static JSValue js_hide(JSContext *ctx, JSValue *this_val, int argc, JSValue *arg
             printf("JS: Hide layer '%s'\n", layer_id);
         }
     }
-    
+
     return JS_UNDEFINED;
 }
 
@@ -235,13 +156,10 @@ static JSValue js_hide(JSContext *ctx, JSValue *this_val, int argc, JSValue *arg
 static JSValue js_show(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
 {
     if (argc < 1) return JS_UNDEFINED;
-    
-    const char* layer_id = NULL;
+
     JSCStringBuf buf;
-    if (JS_IsString(ctx, argv[0])) {
-        layer_id = JS_ToCString(ctx, argv[0], &buf);
-    }
-    
+    const char* layer_id = JS_ToCString(ctx, argv[0], &buf);
+
     if (layer_id && g_ui_root && g_find_layer_func) {
         struct Layer* layer = g_find_layer_func(g_ui_root, layer_id);
         if (layer) {
@@ -249,21 +167,19 @@ static JSValue js_show(JSContext *ctx, JSValue *this_val, int argc, JSValue *arg
             printf("JS: Show layer '%s'\n", layer_id);
         }
     }
-    
+
     return JS_UNDEFINED;
 }
 
 // 打印日志
 static JSValue js_log(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
 {
+    JSCStringBuf buf;
     for (int i = 0; i < argc; i++) {
         if (i != 0) printf(" ");
-        if (JS_IsString(ctx, argv[i])) {
-            JSCStringBuf buf;
-            const char* str = JS_ToCString(ctx, argv[i], &buf);
+        const char* str = JS_ToCString(ctx, argv[i], &buf);
+        if (str) {
             printf("%s", str);
-        } else {
-            JS_PrintValue(ctx, argv[i]);
         }
     }
     printf("\n");
@@ -271,10 +187,6 @@ static JSValue js_log(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv
 }
 
 // ====================== 初始化和清理 ======================
-
-// 定义这个宏以避免编译mqjs_stdlib.c中的main函数
-#define NO_MAIN
-#include "../mquickjs/mqjs_stdlib.c"
 
 static void js_log_func(void *opaque, const void *buf, size_t buf_len)
 {
@@ -286,13 +198,13 @@ static uint8_t* load_file(const char *filename, int *plen)
     FILE *f;
     uint8_t *buf;
     int buf_len;
-    
+
     f = fopen(filename, "rb");
     if (!f) {
         printf("JS: Cannot open file %s\n", filename);
         return NULL;
     }
-    
+
     fseek(f, 0, SEEK_END);
     buf_len = ftell(f);
     fseek(f, 0, SEEK_SET);
@@ -304,35 +216,37 @@ static uint8_t* load_file(const char *filename, int *plen)
     fread(buf, 1, buf_len, f);
     buf[buf_len] = '\0';
     fclose(f);
-    
+
     if (plen) *plen = buf_len;
     return buf;
 }
+
+extern const JSSTDLibraryDef js_stdlib;
+extern Layer* find_layer_by_id(Layer* root, const char* id);
 
 // 初始化 JS 引擎
 int js_module_init(void)
 {
     printf("JS: Initializing JavaScript engine...\n");
-    
+    // 设置查找图层函数
+    js_module_set_find_layer_func(find_layer_by_id);
+
     g_js_mem = malloc(g_js_mem_size);
     if (!g_js_mem) {
         fprintf(stderr, "JS: Failed to allocate memory\n");
         return -1;
     }
-    
+
     g_js_ctx = JS_NewContext(g_js_mem, g_js_mem_size, &js_stdlib);
     if (!g_js_ctx) {
         fprintf(stderr, "JS: Failed to create context\n");
         free(g_js_mem);
         return -1;
     }
-    
+
     JS_SetLogFunc(g_js_ctx, js_log_func);
 
     js_module_register_api();
-
-    // 注册更新回调（非侵入式设计）
-    backend_register_update_callback(check_timers);
 
     printf("JS: JavaScript engine initialized\n");
     return 0;
@@ -358,35 +272,7 @@ void js_module_register_api(void)
 
     JSValue global_obj = JS_GetGlobalObject(g_js_ctx);
 
-    // 创建 YUI API 对象
-    JSValue yui_obj = JS_NewObject(g_js_ctx);
 
-    // 注册所有 API 函数 - 使用 JS_NewCFunctionParams
-    JS_SetPropertyStr(g_js_ctx, yui_obj, "setText", JS_NewCFunctionParams(g_js_ctx, (int)js_set_text, JS_NULL));
-    JS_SetPropertyStr(g_js_ctx, yui_obj, "getText", JS_NewCFunctionParams(g_js_ctx, (int)js_get_text, JS_NULL));
-    JS_SetPropertyStr(g_js_ctx, yui_obj, "setBgColor", JS_NewCFunctionParams(g_js_ctx, (int)js_set_bg_color, JS_NULL));
-    JS_SetPropertyStr(g_js_ctx, yui_obj, "hide", JS_NewCFunctionParams(g_js_ctx, (int)js_hide, JS_NULL));
-    JS_SetPropertyStr(g_js_ctx, yui_obj, "show", JS_NewCFunctionParams(g_js_ctx, (int)js_show, JS_NULL));
-    JS_SetPropertyStr(g_js_ctx, yui_obj, "log", JS_NewCFunctionParams(g_js_ctx, (int)js_log, JS_NULL));
-
-    JS_SetPropertyStr(g_js_ctx, global_obj, "YUI", yui_obj);
-
-    // 添加 Date API
-    JSValue date_obj = JS_NewObject(g_js_ctx);
-    JS_SetPropertyStr(g_js_ctx, date_obj, "now", JS_NewCFunctionParams(g_js_ctx, (int)js_date_now, JS_NULL));
-    JS_SetPropertyStr(g_js_ctx, global_obj, "Date", date_obj);
-
-    // 添加 Math.random
-    JSValue math_obj = JS_NewObject(g_js_ctx);
-    JS_SetPropertyStr(g_js_ctx, math_obj, "random", JS_NewCFunctionParams(g_js_ctx, (int)js_math_random, JS_NULL));
-    JS_SetPropertyStr(g_js_ctx, math_obj, "floor", JS_NewCFunctionParams(g_js_ctx, (int)js_math_floor, JS_NULL));
-    JS_SetPropertyStr(g_js_ctx, global_obj, "Math", math_obj);
-
-    // 添加 setTimeout 和 timers 数组到全局
-    JSValue timers_obj = JS_NewArray(g_js_ctx, 0);
-    JS_SetPropertyStr(g_js_ctx, global_obj, "_timers", timers_obj);
-    JS_SetPropertyStr(g_js_ctx, global_obj, "_timerIdCounter", JS_NewInt32(g_js_ctx, 0));
-    JS_SetPropertyStr(g_js_ctx, global_obj, "setTimeout", JS_NewCFunctionParams(g_js_ctx, (int)js_set_timeout, JS_NULL));
 }
 
 // 加载并执行 JS 文件
@@ -396,27 +282,26 @@ int js_module_load_file(const char* filename)
         fprintf(stderr, "JS: Engine not initialized\n");
         return -1;
     }
-    
+
     printf("JS: Loading file %s...\n", filename);
-    
+
     int len = 0;
     uint8_t* buf = load_file(filename, &len);
     if (!buf) {
         return -1;
     }
-    
+
     JSValue val = JS_Eval(g_js_ctx, (const char*)buf, len, filename, 0);
     free(buf);
-    
+
     if (JS_IsException(val)) {
         JSValue exc = JS_GetException(g_js_ctx);
         fprintf(stderr, "JS: Error executing %s:\n", filename);
-        //JS_PrintValue(g_js_ctx, exc);
         JS_PrintValueF(g_js_ctx, exc, JS_DUMP_LONG);
         printf("\n");
         return -1;
     }
-    
+
     printf("JS: Successfully loaded %s\n", filename);
     return 0;
 }
@@ -466,6 +351,61 @@ static void build_js_path(const char* js_path, const char* json_dir, char* full_
     full_path[max_len - 1] = '\0';
 }
 
+// 注册事件映射
+static void register_event_mapping(const char* event_name, const char* func_name)
+{
+    if (g_event_count >= MAX_EVENTS) {
+        printf("JS: Event map full, cannot register event: %s\n", event_name);
+        return;
+    }
+
+    // 移除 @ 前缀（如果有）
+    const char* clean_func_name = func_name;
+    if (func_name[0] == '@') {
+        clean_func_name++;
+    }
+
+    strncpy(g_event_map[g_event_count].event_name, event_name, 127);
+    g_event_map[g_event_count].event_name[127] = '\0';
+    strncpy(g_event_map[g_event_count].func_name, clean_func_name, 127);
+    g_event_map[g_event_count].func_name[127] = '\0';
+
+    printf("JS: Registered event: '%s' -> '%s'\n", event_name, clean_func_name);
+    g_event_count++;
+}
+
+// 扫描并注册事件（从 events 或 event 对象）
+static void scan_and_register_events(cJSON* json)
+{
+    if (!json) return;
+
+    // 检查 "events" 对象
+    cJSON* events_obj = cJSON_GetObjectItem(json, "events");
+    if (events_obj && cJSON_IsObject(events_obj)) {
+        printf("JS: Found 'events' object, registering events...\n");
+        cJSON* event = events_obj->child;
+        while (event) {
+            if (cJSON_IsString(event)) {
+                register_event_mapping(event->string, event->valuestring);
+            }
+            event = event->next;
+        }
+    }
+
+    // 检查 "event" 对象（单数形式）
+    cJSON* event_obj = cJSON_GetObjectItem(json, "event");
+    if (event_obj && cJSON_IsObject(event_obj)) {
+        printf("JS: Found 'event' object, registering events...\n");
+        cJSON* event = event_obj->child;
+        while (event) {
+            if (cJSON_IsString(event)) {
+                register_event_mapping(event->string, event->valuestring);
+            }
+            event = event->next;
+        }
+    }
+}
+
 // 递归遍历 JSON 并加载所有 JS 文件
 static int load_js_recursive(cJSON* json, const char* json_dir)
 {
@@ -486,6 +426,9 @@ static int load_js_recursive(cJSON* json, const char* json_dir)
         }
     }
 
+    // 扫描并注册事件
+    scan_and_register_events(json);
+
     // 递归遍历子对象
     cJSON* child = json->child;
     while (child) {
@@ -505,6 +448,9 @@ int js_module_load_from_json(cJSON* root_json, const char* json_file_path)
         return 0;
     }
 
+    // 清空之前的事件映射表
+    js_module_clear_events();
+
     // 获取 JSON 文件所在目录
     char json_dir[MAX_PATH];
     if (json_file_path && json_file_path[0] != '\0') {
@@ -518,6 +464,13 @@ int js_module_load_from_json(cJSON* root_json, const char* json_file_path)
 
     int total_loaded = load_js_recursive(root_json, json_dir);
     printf("JS: Total %d JS file(s) loaded from JSON\n", total_loaded);
+
+    // 自动触发 onLoad 事件（如果有）
+    if (total_loaded > 0) {
+        printf("JS: Attempting to trigger 'onLoad' event...\n");
+        js_module_trigger_event("onLoad", NULL);
+    }
+
     return total_loaded;
 }
 
@@ -564,55 +517,38 @@ int js_module_call_event(const char* event_name, Layer* layer)
     return 0;
 }
 
+// 触发事件（根据事件名称自动查找并调用对应的 JS 函数）
+int js_module_trigger_event(const char* event_name, Layer* layer)
+{
+    if (!g_js_ctx || !event_name) {
+        return -1;
+    }
+
+    // 在事件映射表中查找对应的函数名
+    for (int i = 0; i < g_event_count; i++) {
+        if (strcmp(g_event_map[i].event_name, event_name) == 0) {
+            printf("JS: Triggering event '%s' -> calling function '%s'\n",
+                   event_name, g_event_map[i].func_name);
+            return js_module_call_event(g_event_map[i].func_name, layer);
+        }
+    }
+
+    // 未找到事件映射
+    printf("JS: Event '%s' not registered, trying direct call...\n", event_name);
+    return js_module_call_event(event_name, layer);
+}
+
+// 清空事件映射表
+void js_module_clear_events(void)
+{
+    g_event_count = 0;
+    printf("JS: Event map cleared\n");
+}
+
 // 检查并触发定时器（内部静态函数）
 static void check_timers(void)
 {
     if (!g_js_ctx) return;
-
-    time_t now_ms = time(NULL) * 1000;
-
-    JSValue global_obj = JS_GetGlobalObject(g_js_ctx);
-    JSValue timers_arr = JS_GetPropertyStr(g_js_ctx, global_obj, "_timers");
-
-    if (!JS_IsArray(timers_arr)) return;
-
-    int len = 0;
-    JS_ToInt32(g_js_ctx, &len, timers_arr);
-
-    for (int i = 0; i < len; i++) {
-        JSValue timer = JS_GetPropertyUint32(g_js_ctx, timers_arr, i);
-
-        JSValue triggered_val = JS_GetPropertyStr(g_js_ctx, timer, "triggered");
-        if (JS_IsBool(triggered_val) && triggered_val == JS_FALSE) {
-            JSValue trigger_time_val = JS_GetPropertyStr(g_js_ctx, timer, "triggerTime");
-            double trigger_time = 0;
-            if (JS_ToNumber(g_js_ctx, &trigger_time, trigger_time_val) == 0) {
-                if (now_ms >= trigger_time) {
-                    // 触发定时器
-                    JSValue callback = JS_GetPropertyStr(g_js_ctx, timer, "callback");
-
-                    if (JS_IsFunction(g_js_ctx, callback)) {
-                        if (JS_StackCheck(g_js_ctx, 0)) {
-                            continue;
-                        }
-
-                        JS_PushArg(g_js_ctx, JS_NULL); // this
-                        JSValue result = JS_Call(g_js_ctx, 0);
-
-                        if (JS_IsException(result)) {
-                            JSValue exc = JS_GetException(g_js_ctx);
-                            fprintf(stderr, "JS: Error in timer callback:\n");
-                            JS_PrintValue(g_js_ctx, exc);
-                            fprintf(stderr, "\n");
-                        }
-                    }
-
-                    // 标记为已触发
-                    JS_SetPropertyStr(g_js_ctx, timer, "triggered", JS_TRUE);
-                }
-            }
-        }
-    }
 }
 
 // 更新图层文本
