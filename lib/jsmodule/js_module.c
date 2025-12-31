@@ -467,7 +467,7 @@ int js_module_load_from_json(cJSON* root_json, const char* json_file_path)
 
     // 自动触发 onLoad 事件（如果有）
     if (total_loaded > 0) {
-        printf("JS: Attempting to trigger 'onLoad' event...\n");
+        printf("JS: Triggering 'onLoad' event...\n");
         js_module_trigger_event("onLoad", NULL);
     }
 
@@ -493,7 +493,7 @@ int js_module_call_event(const char* event_name, Layer* layer)
     }
 
     // 调用函数
-    if (JS_StackCheck(g_js_ctx, 1)) {
+    if (JS_StackCheck(g_js_ctx, 3)) {
         return -1;
     }
 
@@ -502,14 +502,16 @@ int js_module_call_event(const char* event_name, Layer* layer)
         layer_id_val = JS_NewString(g_js_ctx, layer->id);
     }
 
-    JS_PushArg(g_js_ctx, layer_id_val);
+    // 按照正确的顺序 push: 参数 -> 函数 -> this
+    JS_PushArg(g_js_ctx, layer_id_val); // 参数
+    JS_PushArg(g_js_ctx, func); // 函数对象
     JS_PushArg(g_js_ctx, JS_NULL); // this
-    JSValue result = JS_Call(g_js_ctx, 1);
+    JSValue result = JS_Call(g_js_ctx, 1); // 1 个参数
 
     if (JS_IsException(result)) {
         JSValue exc = JS_GetException(g_js_ctx);
         fprintf(stderr, "JS: Error calling event %s:\n", event_name);
-        JS_PrintValue(g_js_ctx, exc);
+        JS_PrintValueF(g_js_ctx, exc, JS_DUMP_LONG);
         fprintf(stderr, "\n");
         return -1;
     }
