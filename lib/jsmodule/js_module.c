@@ -37,6 +37,7 @@ static size_t g_js_mem_size = 256 * 1024; // 256KB 内存
 // 全局 UI 根图层
 static struct Layer* g_layer_root = NULL;
 
+
 // C 事件处理器类型
 typedef void (*CEventHandler)(Layer* layer, const char* event_type);
 
@@ -358,46 +359,110 @@ static void build_js_path(const char* js_path, const char* json_dir, char* full_
 }
 
 
-int js_module_set_layer_event(Layer* layer, const char* event_name,const char* event_func_name,void* event_handler)
+int js_module_set_layer_event(Layer* layer, const char* event_name, const char* event_func_name, void* event_handler)
 {
-    if (!layer || !event_name || !event_handler) {
+    if (!layer || !event_name) {
         return -1;
     }
 
-    // 1. 首先尝试调用 Layer 的事件结构（旧的 Event 结构）
-    if (layer->event==NULL) {
+    // 确保 layer->event 已分配
+    if (layer->event == NULL) {
         layer->event = malloc(sizeof(Event));
+        if (!layer->event) {
+            printf("JS: Failed to allocate Event structure\n");
+            return -1;
+        }
+        memset(layer->event, 0, sizeof(Event));
     }
+
     // 检查 click 事件
     if (strcmp(event_name, "click") == 0 || strcmp(event_name, "onClick") == 0) {
-        strcpy(layer->event->click_name, event_func_name);
-        layer->event->click = (void (*)())event_handler;
+        if (event_func_name) {
+            strncpy(layer->event->click_name, event_func_name, MAX_PATH - 1);
+            layer->event->click_name[MAX_PATH - 1] = '\0';
+        }
+        layer->event->click = (EventHandler)event_handler;
         return 0;
     }
-    // 检查 press 事件（YUI Event 结构没有 press_name 字段）
+    // 检查 press 事件
     if (strcmp(event_name, "press") == 0 || strcmp(event_name, "onPress") == 0) {
-        layer->event->press = (void (*)())event_handler;
+        layer->event->press = (EventHandler)event_handler;
         return 0;
     }
     // 检查 scroll 事件
     if (strcmp(event_name, "scroll") == 0 || strcmp(event_name, "onScroll") == 0) {
-        strcpy(layer->event->scroll_name, event_func_name);
-        layer->event->scroll = (void (*)())event_handler;
+        if (event_func_name) {
+            strncpy(layer->event->scroll_name, event_func_name, MAX_PATH - 1);
+            layer->event->scroll_name[MAX_PATH - 1] = '\0';
+        }
+        layer->event->scroll = (EventHandler)event_handler;
         return 0;
     }
-    
 
     return -1;
 }
 
-void js_module_common_event(Layer* layer) {
-    if (!layer) {
-        printf("JS: Event handler called with NULL layer\n");
-        return;
+// 通用的 JS 事件包装函数（用于 YUI 的 register_event_handler）
+static void js_module_common_event(void* data)
+{
+    Layer* layer = (Layer*)data;
+    if (layer && layer->event) {
+        // 查找 click_name 对应的 JS 函数并调用
+        if (layer->event->click_name[0] != '\0') {
+            printf("JS: YUI click handler calling '%s'\n", layer->event->click_name);
+            js_module_trigger_event(layer->event->click_name, layer);
+        }
     }
-    printf("JS: Event triggered for layer '%s'\n", layer->id[0] != '\0' ? layer->id : "(unnamed)");
 }
 
+// Click 事件包装函数
+static void js_module_click_event(void* data)
+{
+    Layer* layer = (Layer*)data;
+    if (layer) {
+        printf("JS: Click event on layer '%s'\n", layer->id);
+        js_module_call_layer_event(layer->id, "onClick");
+    }
+}
+
+// Press 事件包装函数
+static void js_module_press_event(void* data)
+{
+    Layer* layer = (Layer*)data;
+    if (layer) {
+        printf("JS: Press event on layer '%s'\n", layer->id);
+        js_module_call_layer_event(layer->id, "onPress");
+    }
+}
+
+// Scroll 事件包装函数
+static void js_module_scroll_event(void* data)
+{
+    Layer* layer = (Layer*)data;
+    if (layer) {
+        printf("JS: Scroll event on layer '%s'\n", layer->id);
+        js_module_call_layer_event(layer->id, "onScroll");
+    }
+}
+
+// 根据事件类型返回对应的处理函数
+static EventHandler get_event_handler_by_type(const char* event_type)
+{
+    if (!event_type) return NULL;
+
+    // 支持多种事件类型格式
+    if (strcmp(event_type, "click") == 0 || strcmp(event_type, "onClick") == 0) {
+        return js_module_click_event;
+    }
+    if (strcmp(event_type, "press") == 0 || strcmp(event_type, "onPress") == 0) {
+        return js_module_press_event;
+    }
+    if (strcmp(event_type, "scroll") == 0 || strcmp(event_type, "onScroll") == 0) {
+        return js_module_scroll_event;
+    }
+
+    return NULL;
+}
 
 
 // 注册事件映射（存储 JS 函数名）
@@ -436,13 +501,20 @@ static void register_js_event_mapping(const char* event_name, const char* func_n
         // event_type 在 . 之后的部分
         char* event_type = dot_pos + 1;
 
-        Layer * layer = g_find_layer_func(g_layer_root, layer_id);
-        if (layer != NULL) {
-            js_module_set_layer_event(layer, event_type, clean_func_name,js_module_common_event);
+        // 根据 event_type 获取对应的事件处理函数
+        EventHandler handler = get_event_handler_by_type(event_type);
+        if (handler != NULL) {
+            Layer * layer = g_find_layer_func(g_layer_root, layer_id);
+            if (layer != NULL) {
+                js_module_set_layer_event(layer, event_type, clean_func_name, handler);
+            }
+        } else {
+            printf("JS: Warning: Unknown event type '%s' for layer '%s'\n", event_type, layer_id);
         }
-        register_event_handler(clean_func_name, js_module_common_event);
     }else{
-        // 注册layer 回调用事件
+        EventHandler handler = get_event_handler_by_type(event_name);
+
+        // 注册layer 回调用事件（使用通用事件处理器）
         register_event_handler(clean_func_name, js_module_common_event);
     }
     g_js_event_count++;
