@@ -6,11 +6,12 @@
 # ********************************************************************
 
 target("jsmodule")
-add_deps("mquickjs","cjson")
+add_deps("mquickjs","cjson","yui")
 
 set_kind("static")
 add_files(
     'js_module.c',
 ) 
-add_cflags(' -DD_SDL -I. -I../mquickjs -g -DHAS_JS_MODULE')
+add_cflags(' -I. -I../mquickjs -g -DHAS_JS_MODULE')
+add_flags()
 add_includedirs('.', public=true)

@@ -8,6 +8,7 @@
 typedef void (*UpdateCallback)(void);
 extern void backend_register_update_callback(UpdateCallback callback);
 #endif
+#include "src/event.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,27 +19,6 @@ extern void backend_register_update_callback(UpdateCallback callback);
 #define MAX_TEXT 256
 #define MAX_PATH 1024
 
-// 最小化的 Event 结构（用于兼容旧的 Event 结构）
-typedef struct Event {
-    char click_name[MAX_PATH];
-    void (*click)();
-    void (*press)();
-    void (*scroll)();
-    char scroll_name[MAX_PATH];
-    char touch_name[MAX_PATH];
-    void (*touch)();
-} Event;
-
-// 前向声明 YUI 的 Layer 结构（只定义我们需要的字段）
-typedef struct Layer {
-    char id[50];
-    char text[MAX_TEXT];
-    int visible;
-    struct {
-        unsigned char r, g, b, a;
-    } bg_color;
-    Event* event;  // 添加 event 成员
-} Layer;
 
 // 查找图层的函数指针类型
 typedef struct Layer* (*FindLayerFunc)(struct Layer* root, const char* id);
@@ -376,6 +356,12 @@ static void build_js_path(const char* js_path, const char* json_dir, char* full_
     full_path[max_len - 1] = '\0';
 }
 
+
+void js_module_common_event(Layer* layer) {
+    printf("你好，世界！ %s\n",layer->text);
+
+}
+
 // 注册事件映射（存储 JS 函数名）
 static void register_js_event_mapping(const char* event_name, const char* func_name)
 {
@@ -396,6 +382,10 @@ static void register_js_event_mapping(const char* event_name, const char* func_n
     g_js_event_map[g_js_event_count].func_name[127] = '\0';
 
     printf("JS: Registered JS event: '%s' -> '%s'\n", event_name, clean_func_name);
+
+    //注册layer 回掉事件
+    register_event_handler(func_name, js_module_common_event);
+
     g_js_event_count++;
 }
 

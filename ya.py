@@ -10,7 +10,7 @@ project("yui",
     ]
 )
 
-includes("./lib/ya.py")
+
 
 
 def add_flags():
@@ -82,7 +82,12 @@ def add_flags():
             '-lm',
             )
 
+
+add_buildin('add_flags',add_flags)
+
 prefix_env='export DYLD_FRAMEWORK_PATH=../libs && export DYLD_LIBRARY_PATH="../libs" && '
+
+includes("./lib/ya.py")
 
 target('yui')
 add_deps("cjson")
