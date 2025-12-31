@@ -45,40 +45,41 @@ int main(int argc, char* argv[]) {
     printf("DEBUG: Loading JSON from path: %s\n", json_path);
 
 
-    cJSON* root_json=parse_json(json_path);
+    cJSON* root_json=parse_json(json_path);    
     Layer* ui_root = parse_layer(root_json,NULL);
 
     // 设置 UI 根图层到 JS 模块
-    js_module_set_ui_root(ui_root);
+    js_module_init_layer(ui_root);
 
     // 初始化字体缓存（backend已经初始化）
     // 在parse_layer后加载所有字体
     load_all_fonts(ui_root);
 
-    // 加载并执行 JS 文件
-    printf("加载并执行 JS 文件...\n");
-    int count = js_module_load_from_json(root_json, json_path);
-
-    // 如果主 JSON 中没有找到 js 文件，检查是否有 source 属性
-    if (count <= 0) {
-        cJSON* source = cJSON_GetObjectItem(root_json, "source");
-        if (source && cJSON_IsString(source)) {
-            const char* source_path = source->valuestring;
-            printf("DEBUG: No JS found in main JSON, checking source file: %s\n", source_path);
-
-            // 加载 source 指向的 JSON 文件
-            cJSON* source_json = parse_json((char*)source_path);
-            if (source_json) {
-                // 从 source JSON 中加载 JS（传递 source 文件路径）
-                int source_count = js_module_load_from_json(source_json, source_path);
-                printf("DEBUG: Loaded %d JS file(s) from source JSON\n", source_count);
-                cJSON_Delete(source_json);
-                count += source_count;
-            } else {
-                printf("ERROR: Failed to load source JSON file: %s\n", source_path);
-            }
-        }
-    }
+     // 加载并执行 JS 文件
+     printf("加载并执行 JS 文件...\n");
+     int count = js_module_load_from_json(root_json, json_path);
+ 
+     // 如果主 JSON 中没有找到 js 文件，检查是否有 source 属性
+     if (count <= 0) {
+         cJSON* source = cJSON_GetObjectItem(root_json, "source");
+         if (source && cJSON_IsString(source)) {
+             const char* source_path = source->valuestring;
+             printf("DEBUG: No JS found in main JSON, checking source file: %s\n", source_path);
+ 
+             // 加载 source 指向的 JSON 文件
+             cJSON* source_json = parse_json((char*)source_path);
+             if (source_json) {
+                 // 从 source JSON 中加载 JS（传递 source 文件路径）
+                 int source_count = js_module_load_from_json(source_json, source_path);
+                 printf("DEBUG: Loaded %d JS file(s) from source JSON\n", source_count);
+                 cJSON_Delete(source_json);
+                 count += source_count;
+             } else {
+                 printf("ERROR: Failed to load source JSON file: %s\n", source_path);
+             }
+         }
+     }
+     print_registered_events();
 
     // 如果根图层没有设置宽度和高度，则根据窗口大小设置
     if (ui_root->rect.w <= 0 || ui_root->rect.h <= 0) {

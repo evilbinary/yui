@@ -35,7 +35,7 @@ static uint8_t* g_js_mem = NULL;
 static size_t g_js_mem_size = 256 * 1024; // 256KB 内存
 
 // 全局 UI 根图层
-static struct Layer* g_ui_root = NULL;
+static struct Layer* g_layer_root = NULL;
 
 // C 事件处理器类型
 typedef void (*CEventHandler)(Layer* layer, const char* event_type);
@@ -82,8 +82,8 @@ static JSValue js_set_text(JSContext *ctx, JSValue *this_val, int argc, JSValue 
     const char* layer_id = JS_ToCString(ctx, argv[0], &buf1);
     const char* text = JS_ToCString(ctx, argv[1], &buf2);
 
-    if (layer_id && text && g_ui_root && g_find_layer_func) {
-        struct Layer* layer = g_find_layer_func(g_ui_root, layer_id);
+    if (layer_id && text && g_layer_root && g_find_layer_func) {
+        struct Layer* layer = g_find_layer_func(g_layer_root, layer_id);
         if (layer) {
             strncpy(layer->text, text, MAX_TEXT - 1);
             layer->text[MAX_TEXT - 1] = '\0';
@@ -102,8 +102,8 @@ static JSValue js_get_text(JSContext *ctx, JSValue *this_val, int argc, JSValue 
     JSCStringBuf buf;
     const char* layer_id = JS_ToCString(ctx, argv[0], &buf);
 
-    if (layer_id && g_ui_root && g_find_layer_func) {
-        struct Layer* layer = g_find_layer_func(g_ui_root, layer_id);
+    if (layer_id && g_layer_root && g_find_layer_func) {
+        struct Layer* layer = g_find_layer_func(g_layer_root, layer_id);
         if (layer) {
             return JS_NewString(ctx, layer->text);
         }
@@ -121,8 +121,8 @@ static JSValue js_set_bg_color(JSContext *ctx, JSValue *this_val, int argc, JSVa
     const char* layer_id = JS_ToCString(ctx, argv[0], &buf1);
     const char* color_hex = JS_ToCString(ctx, argv[1], &buf2);
 
-    if (layer_id && color_hex && g_ui_root && g_find_layer_func) {
-        struct Layer* layer = g_find_layer_func(g_ui_root, layer_id);
+    if (layer_id && color_hex && g_layer_root && g_find_layer_func) {
+        struct Layer* layer = g_find_layer_func(g_layer_root, layer_id);
         if (layer) {
             // 解析十六进制颜色 #RRGGBB
             if (strlen(color_hex) == 7 && color_hex[0] == '#') {
@@ -146,8 +146,8 @@ static JSValue js_hide(JSContext *ctx, JSValue *this_val, int argc, JSValue *arg
     JSCStringBuf buf;
     const char* layer_id = JS_ToCString(ctx, argv[0], &buf);
 
-    if (layer_id && g_ui_root && g_find_layer_func) {
-        struct Layer* layer = g_find_layer_func(g_ui_root, layer_id);
+    if (layer_id && g_layer_root && g_find_layer_func) {
+        struct Layer* layer = g_find_layer_func(g_layer_root, layer_id);
         if (layer) {
             layer->visible = 0; // IN_VISIBLE
             printf("JS: Hide layer '%s'\n", layer_id);
@@ -165,8 +165,8 @@ static JSValue js_show(JSContext *ctx, JSValue *this_val, int argc, JSValue *arg
     JSCStringBuf buf;
     const char* layer_id = JS_ToCString(ctx, argv[0], &buf);
 
-    if (layer_id && g_ui_root && g_find_layer_func) {
-        struct Layer* layer = g_find_layer_func(g_ui_root, layer_id);
+    if (layer_id && g_layer_root && g_find_layer_func) {
+        struct Layer* layer = g_find_layer_func(g_layer_root, layer_id);
         if (layer) {
             layer->visible = 1; // VISIBLE
             printf("JS: Show layer '%s'\n", layer_id);
@@ -312,9 +312,10 @@ int js_module_load_file(const char* filename)
 }
 
 // 设置 UI 根图层
-void js_module_set_ui_root(Layer* root)
+void js_module_init_layer(Layer* root)
 {
-    g_ui_root = root;
+    g_layer_root = root;
+
 }
 
 // 辅助函数：获取文件所在的目录
@@ -357,10 +358,44 @@ static void build_js_path(const char* js_path, const char* json_dir, char* full_
 }
 
 
+int js_module_set_layer_event(Layer* layer, const char* event_name,const char* event_func_name,void* event_handler)
+{
+    if (!layer || !event_name || !event_handler) {
+        return -1;
+    }
+
+    // 1. 首先尝试调用 Layer 的事件结构（旧的 Event 结构）
+    if (layer->event==NULL) {
+        layer->event = malloc(sizeof(Event));
+    }
+    // 检查 click 事件
+    if (strcmp(event_name, "click") == 0 || strcmp(event_name, "onClick") == 0) {
+        strcpy(layer->event->click_name, event_func_name);
+        layer->event->click = (void (*)())event_handler;
+        return 0;
+    }
+    // 检查 press 事件（YUI Event 结构没有 press_name 字段）
+    if (strcmp(event_name, "press") == 0 || strcmp(event_name, "onPress") == 0) {
+        layer->event->press = (void (*)())event_handler;
+        return 0;
+    }
+    // 检查 scroll 事件
+    if (strcmp(event_name, "scroll") == 0 || strcmp(event_name, "onScroll") == 0) {
+        strcpy(layer->event->scroll_name, event_func_name);
+        layer->event->scroll = (void (*)())event_handler;
+        return 0;
+    }
+    
+
+    return -1;
+}
+
 void js_module_common_event(Layer* layer) {
-    printf("你好，世界！ %s\n",layer->text);
+    printf("你好，世界！ %s\n",layer->id);
 
 }
+
+
 
 // 注册事件映射（存储 JS 函数名）
 static void register_js_event_mapping(const char* event_name, const char* func_name)
@@ -383,9 +418,30 @@ static void register_js_event_mapping(const char* event_name, const char* func_n
 
     printf("JS: Registered JS event: '%s' -> '%s'\n", event_name, clean_func_name);
 
-    //注册layer 回掉事件
-    register_event_handler(func_name, js_module_common_event);
 
+
+    // 支持event_name=id+event 这种格式 card1.onClick 这种格式的
+    char* dot_pos = strstr(event_name, ".");
+    if (dot_pos != NULL && g_layer_root && g_find_layer_func) {
+        // 复制 id（在 . 之前的部分）
+        char layer_id[128];
+        int id_len = dot_pos - event_name;
+        if (id_len > 127) id_len = 127;
+        strncpy(layer_id, event_name, id_len);
+        layer_id[id_len] = '\0';
+
+        // event_type 在 . 之后的部分
+        char* event_type = dot_pos + 1;
+
+        Layer * layer = g_find_layer_func(g_layer_root, layer_id);
+        if (layer != NULL) {
+            js_module_set_layer_event(layer, event_type, clean_func_name,js_module_common_event);
+        }
+        register_event_handler(clean_func_name, js_module_common_event);
+    }else{
+        // 注册layer 回调用事件
+        register_event_handler(clean_func_name, js_module_common_event);
+    }
     g_js_event_count++;
 }
 
@@ -599,8 +655,8 @@ int js_module_call_layer_event(const char* layer_id, const char* event_type)
 
     // 查找图层
     Layer* layer = NULL;
-    if (g_ui_root && g_find_layer_func) {
-        layer = g_find_layer_func(g_ui_root, layer_id);
+    if (g_layer_root && g_find_layer_func) {
+        layer = g_find_layer_func(g_layer_root, layer_id);
     }
 
     if (!layer) {

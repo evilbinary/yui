@@ -9,7 +9,7 @@
 typedef void (*EventHandler)(void* data);
 
 int register_event_handler(const char* name, EventHandler handler);
-
+void print_registered_events();
 EventHandler find_event_by_name(const char* name);
 
 // 处理垂直滚动事件

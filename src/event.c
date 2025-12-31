@@ -223,7 +223,7 @@ void handle_mouse_event(Layer* layer, MouseEvent* event) {
             layer->state = LAYER_STATE_FOCUSED;
         }
 
-        if (layer->event && layer->event->click) {
+        if (event->state == SDL_PRESSED && layer->event && layer->event->click) {
             layer->event->click(layer);
         }
     } else {

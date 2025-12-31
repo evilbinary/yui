@@ -40,7 +40,7 @@ int js_module_trigger_event(const char* event_name, Layer* layer);
 void js_module_clear_events(void);
 
 // 设置 UI 根图层
-void js_module_set_ui_root(Layer* root);
+void js_module_init_layer(Layer* root);
 
 // 注册查找图层函数
 void js_module_set_find_layer_func(struct Layer* (*func)(struct Layer* root, const char* id));
