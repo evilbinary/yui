@@ -79,10 +79,10 @@ function updateGameUI() {
         
         // 如果卡片已配对或已翻开，显示表情
         if (gameState.matched[i] || gameState.flipped[i]) {
-            setText(cardId, gameState.cards[i]);
+            YUI.setText(cardId, gameState.cards[i]);
         } else {
             // 否则显示问号
-            setText(cardId, "?");
+            YUI.setText(cardId, "?");
         }
     }
 }

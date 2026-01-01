@@ -170,9 +170,10 @@ static JSValue js_set_text(JSContext *ctx, JSValue *this_val, int argc, JSValue 
     if (layer_id && text && g_layer_root ) {
         Layer* layer = find_layer_by_id(g_layer_root, layer_id);
         if (layer) {
-            strncpy(layer->text, text, MAX_TEXT - 1);
-            layer->text[MAX_TEXT - 1] = '\0';
+            strcpy(layer->text, text);
             printf("YUI: Set text for layer '%s': %s\n", layer_id, text);
+            fflush(stdout);
+
         }
     }
 
