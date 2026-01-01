@@ -7,7 +7,7 @@
 target("yui-stdlib-host")
 add_deps("mquickjs","cjson","yui")
 set_kind("binary")
-add_files('yui_stdlib.c',
+add_files('yui_stdlib_build.c',
           '../mquickjs/mquickjs_build.c'
           )
 add_cflags('-DHAa')

@@ -752,7 +752,7 @@ int js_module_call_layer_event(const char* layer_id, const char* event_type)
     }
 
     // 2. 如果没有 C 处理器，尝试调用 JS 函数
-    printf("JS: No C handler found, trying JS function for '%s'\n", full_event_name);
+    // printf("JS: No C handler found, trying JS function for '%s'\n", full_event_name);
     return js_module_trigger_event(full_event_name, layer);
 }
 

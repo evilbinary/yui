@@ -321,7 +321,12 @@ static const JSPropDef js_yui_proto[] = {
 };
 
 static const JSPropDef js_yui[] = {
-    JS_CFUNC_DEF("getClosure", 1, js_yui_getClosure ),
+    JS_CFUNC_DEF("log", 1, js_log ),
+    JS_CFUNC_DEF("setText", 1, js_set_text ),
+    JS_CFUNC_DEF("getText", 1, js_get_text ),
+    JS_CFUNC_DEF("setBgColor", 1, js_set_bg_color ),
+    JS_CFUNC_DEF("hide", 1, js_hide ),
+    JS_CFUNC_DEF("show", 1, js_show ),
     JS_CFUNC_DEF("call", 2, js_yui_call ),
     JS_PROP_END,
 };
@@ -353,6 +358,15 @@ static JSValue js_yui_get_y(JSContext *ctx, JSValue *this_val, int argc,
 static JSValue js_yui_getClosure(JSContext *ctx, JSValue *this_val, int argc,
     JSValue *argv)
 {
+    printf("js_yui_getClosure\n");
+return JS_NewCFunctionParams(ctx, JS_CFUNCTION_rectangle_closure_test, argv[0]);
+}
+
+/* C closure test */
+static JSValue js_yui_test(JSContext *ctx, JSValue *this_val, int argc,
+    JSValue *argv)
+{
+    printf("js_yui_test\n");
 return JS_NewCFunctionParams(ctx, JS_CFUNCTION_rectangle_closure_test, argv[0]);
 }
 
@@ -363,14 +377,8 @@ JS_CLASS_DEF("YUI", 2, js_yui_constructor, JS_CLASS_YUI, js_yui, js_yui_proto, N
 static const JSClassDef js_yui2_class =
 JS_CLASS_DEF("Yui", 2, js_yui_constructor, JS_CLASS_YUI, js_yui, js_yui_proto, NULL, js_yui_finalizer);
 
-#ifdef CONFIG_CLASS_YUI
 
 #include "yui_stdlib.h"
-
-#endif
-/* include the full standard library too */
-#include "mqjs_stdlib.c"
-
 
 
 

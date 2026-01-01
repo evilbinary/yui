@@ -68,10 +68,10 @@ function updateGameUI() {
     YUI.log("updateGameUI: Moves=" + gameState.moves + " Pairs=" + gameState.pairsFound + "/" + gameState.totalPairs);
     
     // 更新步数标签
-    YUI.set_text("movesLabel", "步数: " + gameState.moves);
+    YUI.setText("movesLabel", "步数: " + gameState.moves);
     
     // 更新配对标签
-    set_text("pairsLabel", "配对: " + gameState.pairsFound + "/" + gameState.totalPairs);
+    YUI.setText("pairsLabel", "配对: " + gameState.pairsFound + "/" + gameState.totalPairs);
     
     // 更新每张卡片的显示
     for (var i = 0; i < 16; i++) {
@@ -79,10 +79,10 @@ function updateGameUI() {
         
         // 如果卡片已配对或已翻开，显示表情
         if (gameState.matched[i] || gameState.flipped[i]) {
-            set_text(cardId, gameState.cards[i]);
+            setText(cardId, gameState.cards[i]);
         } else {
             // 否则显示问号
-            set_text(cardId, "?");
+            setText(cardId, "?");
         }
     }
 }
@@ -120,6 +120,7 @@ function showMemoryHint() {
 
 // 翻开卡片 - cardX.onClick 事件触发
 function flipCard(cardIndex) {
+    YUI.test();
     YUI.log("flipCard: Flipping card " + cardIndex);
 
     // 检查游戏是否被锁定（等待翻回配对失败的卡片）
