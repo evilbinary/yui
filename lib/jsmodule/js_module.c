@@ -1,14 +1,10 @@
 #include "js_module.h"
 
-#ifdef HAS_JS_MODULE
-#include "mquickjs.h"
-#include "../cjson/cJSON.h"
 
-// 前向声明 backend 函数（非侵入式调用）
-typedef void (*UpdateCallback)(void);
-extern void backend_register_update_callback(UpdateCallback callback);
-#endif
-#include "src/event.h"
+#include "mquickjs.h"
+#include "../../src/ytype.h"
+
+#include "event.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,10 +20,6 @@ extern void backend_register_update_callback(UpdateCallback callback);
 typedef struct Layer* (*FindLayerFunc)(struct Layer* root, const char* id);
 static FindLayerFunc g_find_layer_func = NULL;
 
-// 注册查找图层函数
-void js_module_set_find_layer_func(struct Layer* (*func)(struct Layer* root, const char* id)) {
-    g_find_layer_func = func;
-}
 
 // 全局 JS 上下文
 static JSContext* g_js_ctx = NULL;
@@ -35,7 +27,7 @@ static uint8_t* g_js_mem = NULL;
 static size_t g_js_mem_size = 256 * 1024; // 256KB 内存
 
 // 全局 UI 根图层
-static struct Layer* g_layer_root = NULL;
+struct Layer* g_layer_root = NULL;
 
 
 // C 事件处理器类型
@@ -66,6 +58,10 @@ static void check_timers(void);
 
 extern const JSSTDLibraryDef js_yuistdlib;
   
+// 注册查找图层函数
+void js_module_set_find_layer_func(struct Layer* (*func)(struct Layer* root, const char* id)) {
+    g_find_layer_func = func;
+}
 // ====================== 辅助函数 ======================
 
 int hex_to_int(char c){

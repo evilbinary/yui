@@ -1,39 +1,6 @@
 // Memory Game JavaScript Logic
 // 记忆游戏 - 翻牌配对游戏
 
-// YUI.log 简化为使用 print
-var YUI = {
-    log: function() {
-        var args = [];
-        for (var i = 0; i < arguments.length; i++) {
-            if (i != 0) args.push(" ");
-            args.push(arguments[i]);
-        }
-        print(args.join(""));
-    }
-};
-
-// 定义全局 UI 更新函数（这些函数将在后续通过 C API 实现）
-function set_text(layerId, text) {
-    print("set_text: " + layerId + " = " + text);
-}
-
-function get_text(layerId) {
-    print("get_text: " + layerId);
-    return "";
-}
-
-function set_bg_color(layerId, color) {
-    print("set_bg_color: " + layerId + " = " + color);
-}
-
-function hide(layerId) {
-    print("hide: " + layerId);
-}
-
-function show(layerId) {
-    print("show: " + layerId);
-}
 
 // 游戏状态
 var gameState = {
@@ -101,7 +68,7 @@ function updateGameUI() {
     YUI.log("updateGameUI: Moves=" + gameState.moves + " Pairs=" + gameState.pairsFound + "/" + gameState.totalPairs);
     
     // 更新步数标签
-    set_text("movesLabel", "步数: " + gameState.moves);
+    YUI.set_text("movesLabel", "步数: " + gameState.moves);
     
     // 更新配对标签
     set_text("pairsLabel", "配对: " + gameState.pairsFound + "/" + gameState.totalPairs);

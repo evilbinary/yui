@@ -20,34 +20,63 @@
 #include "cutils.h"
 #include "mquickjs.h"
 
-#define JS_CLASS_RECTANGLE (JS_CLASS_USER + 0)
-#define JS_CLASS_FILLED_RECTANGLE (JS_CLASS_USER + 1)
+
+// YUI Layer 类型定义（最小化定义）
+#define MAX_TEXT 256
+#define MAX_PATH 1024
+
+typedef struct Layer Layer;
+typedef struct Layer {
+    char text[MAX_TEXT];
+    char path[MAX_PATH];
+    int visible;
+    struct {
+        unsigned char r, g, b, a;
+    } bg_color;
+} Layer;
+
+// 查找图层的函数指针类型
+typedef Layer* (*FindLayerFunc)(Layer* root, const char* id);
+
+// 外部变量和函数（从 js_module.c 导入）
+extern Layer* g_layer_root;
+extern FindLayerFunc find_layer_by_id;
+
+// 颜色结构体定义
+typedef struct {
+    unsigned char r, g, b, a;
+} Color;
+
+// 辅助函数
+static int hex_to_int(char c) {
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+    return 0;
+}
+
+#define JS_CLASS_YUI (JS_CLASS_USER + 0)
 
 /* total number of classes */
-#define JS_CLASS_COUNT (JS_CLASS_USER + 2)
+#define JS_CLASS_COUNT (JS_CLASS_USER + 1)
 
 #define JS_CFUNCTION_rectangle_closure_test (JS_CFUNCTION_USER + 0)
 
 typedef struct {
     int x;
     int y;
-} RectangleData;
+} YuiData;
 
-typedef struct {
-    RectangleData parent;
-    int color;
-} FilledRectangleData;
-
-static JSValue js_rectangle_constructor(JSContext *ctx, JSValue *this_val, int argc,
+static JSValue js_yui_constructor(JSContext *ctx, JSValue *this_val, int argc,
                                         JSValue *argv)
 {
     JSValue obj;
-    RectangleData *d;
+    YuiData *d;
 
     if (!(argc & FRAME_CF_CTOR))
         return JS_ThrowTypeError(ctx, "must be called with new");
     argc &= ~FRAME_CF_CTOR;
-    obj = JS_NewObjectClassUser(ctx, JS_CLASS_RECTANGLE);
+    obj = JS_NewObjectClassUser(ctx, JS_CLASS_YUI);
     d = malloc(sizeof(*d));
     JS_SetOpaque(ctx, obj, d);
     if (JS_ToInt32(ctx, &d->x, argv[0]))
@@ -57,49 +86,15 @@ static JSValue js_rectangle_constructor(JSContext *ctx, JSValue *this_val, int a
     return obj;
 }
 
-static void js_rectangle_finalizer(JSContext *ctx, void *opaque)
+static void js_yui_finalizer(JSContext *ctx, void *opaque)
 {
-    RectangleData *d = opaque;
+    YuiData *d = opaque;
     free(d);
 }
 
-static JSValue js_rectangle_get_x(JSContext *ctx, JSValue *this_val, int argc,
-                                  JSValue *argv)
-{
-    RectangleData *d;
-    int class_id = JS_GetClassID(ctx, *this_val);
-    if (class_id != JS_CLASS_RECTANGLE && class_id != JS_CLASS_FILLED_RECTANGLE)
-        return JS_ThrowTypeError(ctx, "expecting Rectangle class");
-    d = JS_GetOpaque(ctx, *this_val);
-    return JS_NewInt32(ctx, d->x);
-}
-
-static JSValue js_rectangle_get_y(JSContext *ctx, JSValue *this_val, int argc,
-                                  JSValue *argv)
-{
-    RectangleData *d;
-    int class_id = JS_GetClassID(ctx, *this_val);
-    if (class_id != JS_CLASS_RECTANGLE && class_id != JS_CLASS_FILLED_RECTANGLE)
-        return JS_ThrowTypeError(ctx, "expecting Rectangle class");
-    d = JS_GetOpaque(ctx, *this_val);
-    return JS_NewInt32(ctx, d->y);
-}
-
-static JSValue js_rectangle_closure_test(JSContext *ctx, JSValue *this_val, int argc,
-                                         JSValue *argv, JSValue params)
-{
-    return params;
-}
-
-/* C closure test */
-static JSValue js_rectangle_getClosure(JSContext *ctx, JSValue *this_val, int argc,
-                                    JSValue *argv)
-{
-    return JS_NewCFunctionParams(ctx, JS_CFUNCTION_rectangle_closure_test, argv[0]);
-}
 
 /* example to call a JS function. parameters: function to call, parameter */
-static JSValue js_rectangle_call(JSContext *ctx, JSValue *this_val, int argc,
+static JSValue js_yui_call(JSContext *ctx, JSValue *this_val, int argc,
                                  JSValue *argv)
 {
     if (JS_StackCheck(ctx, 3))
@@ -108,47 +103,6 @@ static JSValue js_rectangle_call(JSContext *ctx, JSValue *this_val, int argc,
     JS_PushArg(ctx, argv[0]); /* func name */
     JS_PushArg(ctx, JS_NULL); /* this */
     return JS_Call(ctx, 1); /* single parameter */
-}
-
-static JSValue js_filled_rectangle_constructor(JSContext *ctx, JSValue *this_val, int argc,
-                                               JSValue *argv)
-{
-    JSGCRef obj_ref;
-    JSValue *obj;
-    FilledRectangleData *d;
-
-    if (!(argc & FRAME_CF_CTOR))
-        return JS_ThrowTypeError(ctx, "must be called with new");
-    obj = JS_PushGCRef(ctx, &obj_ref);
-    
-    argc &= ~FRAME_CF_CTOR;
-    *obj = JS_NewObjectClassUser(ctx, JS_CLASS_FILLED_RECTANGLE);
-    d = malloc(sizeof(*d));
-    JS_SetOpaque(ctx, *obj, d);
-    if (JS_ToInt32(ctx, &d->parent.x, argv[0]))
-        return JS_EXCEPTION;
-    if (JS_ToInt32(ctx, &d->parent.y, argv[1]))
-        return JS_EXCEPTION;
-    if (JS_ToInt32(ctx, &d->color, argv[2]))
-        return JS_EXCEPTION;
-    JS_PopGCRef(ctx, &obj_ref);
-    return *obj;
-}
-
-static void js_filled_rectangle_finalizer(JSContext *ctx, void *opaque)
-{
-    FilledRectangleData *d = opaque;
-    free(d);
-}
-
-static JSValue js_filled_rectangle_get_color(JSContext *ctx, JSValue *this_val, int argc,
-                                             JSValue *argv)
-{
-    FilledRectangleData *d;
-    if (JS_GetClassID(ctx, *this_val) != JS_CLASS_FILLED_RECTANGLE)
-        return JS_ThrowTypeError(ctx, "expecting FilledRectangle class");
-    d = JS_GetOpaque(ctx, *this_val);
-    return JS_NewInt32(ctx, d->color);
 }
 
 static JSValue js_print(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
@@ -202,7 +156,132 @@ static JSValue js_performance_now(JSContext *ctx, JSValue *this_val, int argc, J
     return JS_NewInt64(ctx, get_time_ms());
 }
 
-#include "yui_stdlib.h"
+// ====================== YUI API 函数 ======================
+
+// 设置文本
+static JSValue js_set_text(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+{
+    if (argc < 2) return JS_UNDEFINED;
+
+    JSCStringBuf buf1, buf2;
+    const char* layer_id = JS_ToCString(ctx, argv[0], &buf1);
+    const char* text = JS_ToCString(ctx, argv[1], &buf2);
+
+    if (layer_id && text && g_layer_root ) {
+        Layer* layer = find_layer_by_id(g_layer_root, layer_id);
+        if (layer) {
+            strncpy(layer->text, text, MAX_TEXT - 1);
+            layer->text[MAX_TEXT - 1] = '\0';
+            printf("YUI: Set text for layer '%s': %s\n", layer_id, text);
+        }
+    }
+
+    return JS_UNDEFINED;
+}
+
+// 获取文本
+static JSValue js_get_text(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+{
+    if (argc < 1) return JS_UNDEFINED;
+
+    JSCStringBuf buf;
+    const char* layer_id = JS_ToCString(ctx, argv[0], &buf);
+
+    if (layer_id && g_layer_root ) {
+        Layer* layer = find_layer_by_id(g_layer_root, layer_id);
+        if (layer) {
+            return JS_NewString(ctx, layer->text);
+        }
+    }
+
+    return JS_UNDEFINED;
+}
+
+// 设置背景颜色
+static JSValue js_set_bg_color(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+{
+    if (argc < 2) return JS_UNDEFINED;
+
+    JSCStringBuf buf1, buf2;
+    const char* layer_id = JS_ToCString(ctx, argv[0], &buf1);
+    const char* color_hex = JS_ToCString(ctx, argv[1], &buf2);
+
+    if (layer_id && color_hex && g_layer_root ) {
+        Layer* layer = find_layer_by_id(g_layer_root, layer_id);
+        if (layer) {
+            // 解析十六进制颜色 #RRGGBB
+            if (strlen(color_hex) == 7 && color_hex[0] == '#') {
+                layer->bg_color.r = (hex_to_int(color_hex[1]) * 16 + hex_to_int(color_hex[2]));
+                layer->bg_color.g = (hex_to_int(color_hex[3]) * 16 + hex_to_int(color_hex[4]));
+                layer->bg_color.b = (hex_to_int(color_hex[5]) * 16 + hex_to_int(color_hex[6]));
+                layer->bg_color.a = 255;
+                printf("YUI: Set bg_color for layer '%s': %s\n", layer_id, color_hex);
+            }
+        }
+    }
+
+    return JS_UNDEFINED;
+}
+
+// 隐藏图层
+static JSValue js_hide(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+{
+    if (argc < 1) return JS_UNDEFINED;
+
+    JSCStringBuf buf;
+    const char* layer_id = JS_ToCString(ctx, argv[0], &buf);
+
+    if (layer_id && g_layer_root ) {
+        Layer* layer = find_layer_by_id(g_layer_root, layer_id);
+        if (layer) {
+            layer->visible = 0;
+            printf("YUI: Hide layer '%s'\n", layer_id);
+        }
+    }
+
+    return JS_UNDEFINED;
+}
+
+// 显示图层
+static JSValue js_show(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+{
+    if (argc < 1) return JS_UNDEFINED;
+
+    JSCStringBuf buf;
+    const char* layer_id = JS_ToCString(ctx, argv[0], &buf);
+
+    if (layer_id && g_layer_root ) {
+        Layer* layer = find_layer_by_id(g_layer_root, layer_id);
+        if (layer) {
+            layer->visible = 1;
+            printf("YUI: Show layer '%s'\n", layer_id);
+        }
+    }
+
+    return JS_UNDEFINED;
+}
+
+// 打印日志（YUI 版本）
+static JSValue js_yui_log(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+{
+    JSCStringBuf buf;
+    for (int i = 0; i < argc; i++) {
+        if (i != 0) printf(" ");
+        const char* str = JS_ToCString(ctx, argv[i], &buf);
+        if (str) {
+            printf("%s", str);
+        }
+    }
+    printf("\n");
+    return JS_UNDEFINED;
+}
+
+
+
+extern JSValue js_setTimeout(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv);
+extern JSValue js_clearTimeout(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv);
+extern JSValue js_gc(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv);
+extern JSValue js_load(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv);
 
 static void js_log_func(void *opaque, const void *buf, size_t buf_len)
 {
@@ -232,72 +311,66 @@ static uint8_t *load_file(const char *filename, int *plen)
     return buf;
 }
 
-int ymain(int argc, const char **argv)
-{
-    size_t mem_size;
-    int buf_len;
-    uint8_t *mem_buf, *buf;
-    JSContext *ctx;
-    const char *filename;
-    JSValue val;
-    
-    if (argc < 2) {
-        printf("usage: example script.js\n");
-        exit(1);
-    }
-
-    filename = argv[1];
-
-    mem_size = 65536;
-    mem_buf = malloc(mem_size);
-    ctx = JS_NewContext(mem_buf, mem_size, &js_yuistdlib);
-    JS_SetLogFunc(ctx, js_log_func);
-    
-    buf = load_file(filename, &buf_len);
-    val = JS_Eval(ctx, (const char *)buf, buf_len, filename, 0);
-    free(buf);
-    if (JS_IsException(val)) {
-        JSValue obj;
-        obj = JS_GetException(ctx);
-        JS_PrintValueF(ctx, obj, JS_DUMP_LONG);
-        printf("\n");
-        exit(1);
-    }
-    
-    JS_FreeContext(ctx);
-    free(mem_buf);
-    return 0;
-}
 
 /* simple class example */
 
-static const JSPropDef js_rectangle_proto[] = {
-    JS_CGETSET_DEF("x", js_rectangle_get_x, NULL ),
-    JS_CGETSET_DEF("y", js_rectangle_get_y, NULL ),
+static const JSPropDef js_yui_proto[] = {
+    JS_CGETSET_DEF("x", js_yui_get_x, NULL ),
+    JS_CGETSET_DEF("y", js_yui_get_y, NULL ),
     JS_PROP_END,
 };
 
-static const JSPropDef js_rectangle[] = {
-    JS_CFUNC_DEF("getClosure", 1, js_rectangle_getClosure ),
-    JS_CFUNC_DEF("call", 2, js_rectangle_call ),
+static const JSPropDef js_yui[] = {
+    JS_CFUNC_DEF("getClosure", 1, js_yui_getClosure ),
+    JS_CFUNC_DEF("call", 2, js_yui_call ),
     JS_PROP_END,
 };
 
-static const JSClassDef js_rectangle_class =
-    JS_CLASS_DEF("Rectangle", 2, js_rectangle_constructor, JS_CLASS_RECTANGLE, js_rectangle, js_rectangle_proto, NULL, js_rectangle_finalizer);
 
-static const JSPropDef js_filled_rectangle_proto[] = {
-    JS_CGETSET_DEF("color", js_filled_rectangle_get_color, NULL ),
-    JS_PROP_END,
-};
+static JSValue js_yui_get_x(JSContext *ctx, JSValue *this_val, int argc,
+    JSValue *argv)
+{
+    YuiData *d;
+    int class_id = JS_GetClassID(ctx, *this_val);
+    if (class_id != JS_CLASS_YUI )
+    return JS_ThrowTypeError(ctx, "expecting Yui class");
+    d = JS_GetOpaque(ctx, *this_val);
+    return JS_NewInt32(ctx, d->x);
+}
 
-/* inherit from Rectangle */
-static const JSClassDef js_filled_rectangle_class =
-    JS_CLASS_DEF("FilledRectangle", 3, js_filled_rectangle_constructor, JS_CLASS_FILLED_RECTANGLE, NULL, js_filled_rectangle_proto, &js_rectangle_class, js_filled_rectangle_finalizer);
+static JSValue js_yui_get_y(JSContext *ctx, JSValue *this_val, int argc,
+    JSValue *argv)
+{
+    YuiData *d;
+    int class_id = JS_GetClassID(ctx, *this_val);
+    if (class_id != JS_CLASS_YUI)
+    return JS_ThrowTypeError(ctx, "expecting Yui class");
+    d = JS_GetOpaque(ctx, *this_val);
+    return JS_NewInt32(ctx, d->y);
+}
 
+/* C closure test */
+static JSValue js_yui_getClosure(JSContext *ctx, JSValue *this_val, int argc,
+    JSValue *argv)
+{
+return JS_NewCFunctionParams(ctx, JS_CFUNCTION_rectangle_closure_test, argv[0]);
+}
+
+
+static const JSClassDef js_yui_class =
+JS_CLASS_DEF("YUI", 2, js_yui_constructor, JS_CLASS_YUI, js_yui, js_yui_proto, NULL, js_yui_finalizer);
+
+static const JSClassDef js_yui2_class =
+JS_CLASS_DEF("Yui", 2, js_yui_constructor, JS_CLASS_YUI, js_yui, js_yui_proto, NULL, js_yui_finalizer);
+
+#ifdef CONFIG_CLASS_YUI
+
+#include "yui_stdlib.h"
+
+#endif
 /* include the full standard library too */
-
-#define CONFIG_CLASS_EXAMPLE
 #include "mqjs_stdlib.c"
+
+
 
 

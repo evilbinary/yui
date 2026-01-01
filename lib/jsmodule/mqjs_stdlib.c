@@ -28,9 +28,6 @@
 
 #include "mquickjs_build.h"
 
-/* defined in mqjs_example.c */
-//#define CONFIG_CLASS_EXAMPLE
-
 static const JSPropDef js_object_proto[] = {
     JS_CFUNC_DEF("hasOwnProperty", 1, js_object_hasOwnProperty),
     JS_CFUNC_DEF("toString", 0, js_object_toString),
@@ -373,15 +370,14 @@ static const JSPropDef js_global_object[] = {
     JS_PROP_CLASS_DEF("console", &js_console_obj),
     JS_PROP_CLASS_DEF("performance", &js_performance_obj),
     JS_CFUNC_DEF("print", 1, js_print),
-#ifdef CONFIG_CLASS_EXAMPLE
-    JS_PROP_CLASS_DEF("Rectangle", &js_rectangle_class),
-    JS_PROP_CLASS_DEF("FilledRectangle", &js_filled_rectangle_class),
-#else
+    JS_PROP_CLASS_DEF("Yui", &js_yui_class),
+    JS_PROP_CLASS_DEF("YUI", &js_yui2_class),
+
     JS_CFUNC_DEF("gc", 0, js_gc),
     JS_CFUNC_DEF("load", 1, js_load),
     JS_CFUNC_DEF("setTimeout", 2, js_setTimeout),
     JS_CFUNC_DEF("clearTimeout", 1, js_clearTimeout),
-#endif
+
     JS_PROP_END,
 };
 
@@ -390,15 +386,15 @@ static const JSPropDef js_global_object[] = {
 static const JSPropDef js_c_function_decl[] = {
     /* must come first if "bind" is defined */
     JS_CFUNC_SPECIAL_DEF("bound", 0, generic_params, js_function_bound ),
-#ifdef CONFIG_CLASS_EXAMPLE
+#ifdef CONFIG_CLASS_YUI
     JS_CFUNC_SPECIAL_DEF("rectangle_closure_test", 0, generic_params, js_rectangle_closure_test ),
 #endif
     JS_PROP_END,
 };
 
-#ifndef NO_MAIN
+#ifndef DBUILD_NO_MAIN
 int main(int argc, char **argv)
 {
-    return build_atoms("js_stdlib", js_global_object, js_c_function_decl, argc, argv);
+    return build_atoms("js_yuistdlib", js_global_object, js_c_function_decl, argc, argv);
 }
 #endif

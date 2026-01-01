@@ -83,7 +83,28 @@ def add_flags():
             )
 
 
+def run(target):
+    targetfile = target.targetfile()
+    sourcefiles = target.sourcefiles()
+    arch=target.get_arch()
+    arch_type= target.get_arch_type()
+    mode =target.get_config('mode')
+    plat=target.plat()
+
+    yui=prefix_env+"./"+targetfile
+
+    print('run '+yui,yui)
+    os.shell(yui)
+
+def add_run():
+    on_run(run)
+
+def get_prefix():
+    return prefix_env
+
 add_buildin('add_flags',add_flags)
+add_buildin('add_run',add_run)
+add_buildin('get_prefix',get_prefix)
 
 prefix_env='export DYLD_FRAMEWORK_PATH=../libs && export DYLD_LIBRARY_PATH="../libs" && '
 
@@ -97,18 +118,7 @@ add_files("src/*.c")
 add_files("src/components/*.c")
 
 
-def run(target):
-    targetfile = target.targetfile()
-    sourcefiles = target.sourcefiles()
-    arch=target.get_arch()
-    arch_type= target.get_arch_type()
-    mode =target.get_config('mode')
-    plat=target.plat()
 
-    yui=prefix_env+"./"+targetfile
-
-    print('run '+yui,yui)
-    os.shell(yui)
 
 target("main") 
 (
@@ -134,7 +144,7 @@ target("playground")
 
 target("mqjs") 
 (
-    add_deps("yui", "mquickjs", "jsmodule"),
+    add_deps( "jsmodule","yui", "mquickjs",),
     add_rules("mode.debug", "mode.release"),
     set_kind("binary"),
     add_flags(),
