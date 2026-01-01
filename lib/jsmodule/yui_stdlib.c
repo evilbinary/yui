@@ -20,20 +20,13 @@
 #include "cutils.h"
 #include "mquickjs.h"
 
+#include "layer.h"
 
 // YUI Layer 类型定义（最小化定义）
 #define MAX_TEXT 256
 #define MAX_PATH 1024
 
 typedef struct Layer Layer;
-typedef struct Layer {
-    char text[MAX_TEXT];
-    char path[MAX_PATH];
-    int visible;
-    struct {
-        unsigned char r, g, b, a;
-    } bg_color;
-} Layer;
 
 // 查找图层的函数指针类型
 typedef Layer* (*FindLayerFunc)(Layer* root, const char* id);
@@ -43,9 +36,6 @@ extern Layer* g_layer_root;
 extern Layer* find_layer_by_id(Layer* root, const char* id);
 
 // 颜色结构体定义
-typedef struct {
-    unsigned char r, g, b, a;
-} Color;
 
 // 辅助函数
 static int hex_to_int(char c) {
