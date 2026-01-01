@@ -5,36 +5,36 @@
     "fontSize":"16",
     "text":"YUI App",
     "size":[800,600],
-    // "source":"app/test-simple.json",
-    // "source":"app/test-scrollbar-final.json",
-    // "source":"app/test-treeview.json",
-    "source":"app/os-desktop.json",
-    // "source":"app/clock-simple.json",
-    // "source":"app/clock-new.json",
-
+    // "source":"app/tests/test-simple.json",
+    // "source":"app/tests/test-scrollbar-final.json",
+    // "source":"app/tests/test-treeview.json",
     // "source":"app/tests/test-list.json",
     // "source":"app/tests/test-animation.json",
     // "source":"app/tests/test-tab.json",
     // "source":"app/tests/test-select.json",
-
-    // "source":"app/tests/test-color.json",
-    // "source":"app/tests/test-select.json",
-    // "source":"app/calc.json",
-
-    // "source":"app/clock.json",
-    // "source":"app/watch-desktop.json",
-    // "source":"app/watch-health.json",
-    // "source":"app/watch-menu.json",
-    // "source":"app/teststest-radius.json",
-    // "source":"app/clock-new.json",
-    // "source":"app/clock-simple.json",
     // "source":"app/tests/test-popup-menu.json",
     // "source":"app/tests/test-slider.json",
-    
+    // "source":"app/tests/test-color.json",
+    // "source":"app/tests/test-select.json",
+    // "source":"app/tests/test-radius.json",
 
     // "source":"app/tests/font_demo.json",
     // "source":"app/tests/test_font_simple.json",
     // "source":"app/tests/test_font_debug.json",
+
+    // "source":"app/calc.json",
+
+    "source":"app/os-desktop.json",
+    // "source":"app/clock-simple.json",
+    // "source":"app/clock-new.json",
+    // "source":"app/clock.json",
+    // "source":"app/watch-desktop.json",
+    // "source":"app/watch-health.json",
+    // "source":"app/watch-menu.json",
+    // "source":"app/clock-new.json",
+    // "source":"app/clock-simple.json",
+
+
     // "source":"app/login.json",
 
     "style": {

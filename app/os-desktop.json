@@ -123,70 +123,8 @@
           "events": {
             "onClick": "@openHelpMenu"
           }
-        },
-        // 桌面小部件
-        {
-          "id": "desktopWidget",
-          "type": "View",
-          "position": [
-            820,
-            60
-          ],
-          "size": [
-            360,
-            60
-          ],
-          "style": {
-            "bgColor": "rgba(255, 255, 255, 0.1)",
-            "borderRadius": 16,
-            "border": "1px solid rgba(255, 255, 255, 0.2)"
-          },
-          "layout": {
-            "type": "horizontal",
-            "spacing": 5
-            
-          },
-          "children": [
-            {
-              "id": "widgetTitle",
-              "type": "Label",
-              "text": "系统状态",
-              "style": {
-                "color": "#ffffff",
-                "fontSize": 12,
-                "fontWeight": "600"
-              }
-            },
-            {
-              "id": "widgetTime",
-              "type": "Label",
-              "text": "12:00",
-              "style": {
-                "color": "#ffffff",
-                "fontSize": 24,
-                "fontWeight": "300"
-              }
-            },
-            {
-              "id": "widgetDate",
-              "type": "Label",
-              "text": "2023年10月15日",
-              "style": {
-                "color": "#ffffff",
-                "fontSize": 12
-              }
-            },
-            {
-              "id": "widgetWeather",
-              "type": "Label",
-              "text": "晴天 25°C",
-              "style": {
-                "color": "#ffffff",
-                "fontSize": 12
-              }
-            }
-          ]
         }
+        
       ]
     },
     // 桌面快捷方式
@@ -365,8 +303,42 @@
             "onClick": "@openShortcut",
             "onDoubleClick": "@openShortcut"
           }
+        },
+
+        // 右侧桌面时钟
+        {
+          "id": "desktopClock",
+          "type": "Clock",
+          "position": [
+            830,
+            50
+          ],
+          "size": [
+            180,
+            180
+          ],
+          "clockConfig": {
+            "radius": 80,
+            "borderWidth": 3,
+            "hourHandLength": 45,
+            "minuteHandLength": 65,
+            "secondHandLength": 70,
+            "handWidth": 3,
+            "centerRadius": 6,
+            "showNumbers": true,
+            "fontSize": 12,
+            "smoothSecond": true,
+            "hourHandColor": "#ffffff",
+            "minuteHandColor": "#e0e0e0",
+            "secondHandColor": "#ff6b6b",
+            "centerColor": "#ff6b6b",
+            "borderColor": "rgba(255, 255, 255, 0.6)",
+            "backgroundColor": "rgba(255, 255, 255, 0.1)",
+            "numberColor": "#ffffff"
+          }
         }
       ]
+      
     },
     // 底部Dock栏
     {
