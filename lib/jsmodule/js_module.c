@@ -15,12 +15,6 @@
 #define MAX_TEXT 256
 #define MAX_PATH 1024
 
-
-// 查找图层的函数指针类型
-typedef struct Layer* (*FindLayerFunc)(struct Layer* root, const char* id);
-static FindLayerFunc g_find_layer_func = NULL;
-
-
 // 全局 JS 上下文
 static JSContext* g_js_ctx = NULL;
 static uint8_t* g_js_mem = NULL;
@@ -58,10 +52,6 @@ static void check_timers(void);
 
 extern const JSSTDLibraryDef js_yuistdlib;
   
-// 注册查找图层函数
-void js_module_set_find_layer_func(struct Layer* (*func)(struct Layer* root, const char* id)) {
-    g_find_layer_func = func;
-}
 // ====================== 辅助函数 ======================
 
 int hex_to_int(char c){
@@ -82,8 +72,8 @@ static JSValue js_set_text(JSContext *ctx, JSValue *this_val, int argc, JSValue 
     const char* layer_id = JS_ToCString(ctx, argv[0], &buf1);
     const char* text = JS_ToCString(ctx, argv[1], &buf2);
 
-    if (layer_id && text && g_layer_root && g_find_layer_func) {
-        struct Layer* layer = g_find_layer_func(g_layer_root, layer_id);
+    if (layer_id && text && g_layer_root ) {
+        struct Layer* layer = find_layer_by_id(g_layer_root, layer_id);
         if (layer) {
             strncpy(layer->text, text, MAX_TEXT - 1);
             layer->text[MAX_TEXT - 1] = '\0';
@@ -102,8 +92,8 @@ static JSValue js_get_text(JSContext *ctx, JSValue *this_val, int argc, JSValue 
     JSCStringBuf buf;
     const char* layer_id = JS_ToCString(ctx, argv[0], &buf);
 
-    if (layer_id && g_layer_root && g_find_layer_func) {
-        struct Layer* layer = g_find_layer_func(g_layer_root, layer_id);
+    if (layer_id && g_layer_root ) {
+        struct Layer* layer = find_layer_by_id(g_layer_root, layer_id);
         if (layer) {
             return JS_NewString(ctx, layer->text);
         }
@@ -121,8 +111,8 @@ static JSValue js_set_bg_color(JSContext *ctx, JSValue *this_val, int argc, JSVa
     const char* layer_id = JS_ToCString(ctx, argv[0], &buf1);
     const char* color_hex = JS_ToCString(ctx, argv[1], &buf2);
 
-    if (layer_id && color_hex && g_layer_root && g_find_layer_func) {
-        struct Layer* layer = g_find_layer_func(g_layer_root, layer_id);
+    if (layer_id && color_hex && g_layer_root ) {
+        struct Layer* layer = find_layer_by_id(g_layer_root, layer_id);
         if (layer) {
             // 解析十六进制颜色 #RRGGBB
             if (strlen(color_hex) == 7 && color_hex[0] == '#') {
@@ -146,8 +136,8 @@ static JSValue js_hide(JSContext *ctx, JSValue *this_val, int argc, JSValue *arg
     JSCStringBuf buf;
     const char* layer_id = JS_ToCString(ctx, argv[0], &buf);
 
-    if (layer_id && g_layer_root && g_find_layer_func) {
-        struct Layer* layer = g_find_layer_func(g_layer_root, layer_id);
+    if (layer_id && g_layer_root ) {
+        struct Layer* layer = find_layer_by_id(g_layer_root, layer_id);
         if (layer) {
             layer->visible = 0; // IN_VISIBLE
             printf("JS: Hide layer '%s'\n", layer_id);
@@ -165,8 +155,8 @@ static JSValue js_show(JSContext *ctx, JSValue *this_val, int argc, JSValue *arg
     JSCStringBuf buf;
     const char* layer_id = JS_ToCString(ctx, argv[0], &buf);
 
-    if (layer_id && g_layer_root && g_find_layer_func) {
-        struct Layer* layer = g_find_layer_func(g_layer_root, layer_id);
+    if (layer_id && g_layer_root ) {
+        struct Layer* layer = find_layer_by_id(g_layer_root, layer_id);
         if (layer) {
             layer->visible = 1; // VISIBLE
             printf("JS: Show layer '%s'\n", layer_id);
@@ -231,8 +221,6 @@ static uint8_t* load_file(const char *filename, int *plen)
 int js_module_init(void)
 {
     printf("JS: Initializing JavaScript engine...\n");
-    // 设置查找图层函数
-    js_module_set_find_layer_func(find_layer_by_id);
 
     g_js_mem = malloc(g_js_mem_size);
     if (!g_js_mem) {
@@ -485,7 +473,7 @@ static void register_js_event_mapping(const char* event_name, const char* func_n
 
     // 支持event_name=id+event 这种格式 card1.onClick 这种格式的
     char* dot_pos = strstr(event_name, ".");
-    if (dot_pos != NULL && g_layer_root && g_find_layer_func) {
+    if (dot_pos != NULL && g_layer_root ) {
         // 复制 id（在 . 之前的部分）
         char layer_id[128];
         int id_len = dot_pos - event_name;
@@ -499,7 +487,7 @@ static void register_js_event_mapping(const char* event_name, const char* func_n
         // 根据 event_type 获取对应的事件处理函数
         EventHandler handler = get_event_handler_by_type(event_type);
         if (handler != NULL) {
-            Layer * layer = g_find_layer_func(g_layer_root, layer_id);
+            Layer * layer = find_layer_by_id(g_layer_root, layer_id);
             if (layer != NULL) {
                 js_module_set_layer_event(layer, event_type, clean_func_name, handler);
             }
@@ -725,8 +713,8 @@ int js_module_call_layer_event(const char* layer_id, const char* event_type)
 
     // 查找图层
     Layer* layer = NULL;
-    if (g_layer_root && g_find_layer_func) {
-        layer = g_find_layer_func(g_layer_root, layer_id);
+    if (g_layer_root ) {
+        layer = find_layer_by_id(g_layer_root, layer_id);
     }
 
     if (!layer) {

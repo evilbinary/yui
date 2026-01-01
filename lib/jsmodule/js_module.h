@@ -42,8 +42,6 @@ void js_module_clear_events(void);
 // 设置 UI 根图层
 void js_module_init_layer(Layer* root);
 
-// 注册查找图层函数
-void js_module_set_find_layer_func(struct Layer* (*func)(struct Layer* root, const char* id));
 
 // 更新 UI 组件
 void js_module_update_layer_text(Layer* layer, const char* text);
