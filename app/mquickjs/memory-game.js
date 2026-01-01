@@ -13,6 +13,28 @@ var YUI = {
     }
 };
 
+// 定义全局 UI 更新函数（这些函数将在后续通过 C API 实现）
+function set_text(layerId, text) {
+    print("set_text: " + layerId + " = " + text);
+}
+
+function get_text(layerId) {
+    print("get_text: " + layerId);
+    return "";
+}
+
+function set_bg_color(layerId, color) {
+    print("set_bg_color: " + layerId + " = " + color);
+}
+
+function hide(layerId) {
+    print("hide: " + layerId);
+}
+
+function show(layerId) {
+    print("show: " + layerId);
+}
+
 // 游戏状态
 var gameState = {
     moves: 0,
@@ -22,6 +44,7 @@ var gameState = {
     flipped: [], // 记录哪些卡片被翻开
     matched: [], // 记录哪些卡片已配对
     firstFlip: -1,  // 第一张翻开的卡片索引
+    secondFlip: -1,  // 第二张翻开的卡片索引
     isLocked: false  // 游戏是否被锁定（等待配对检查）
 };
 
@@ -65,6 +88,7 @@ function initMemoryGame() {
     gameState.moves = 0;
     gameState.pairsFound = 0;
     gameState.firstFlip = -1;
+    gameState.secondFlip = -1;
     gameState.isLocked = false;
 
     // 更新UI显示
@@ -75,6 +99,25 @@ function initMemoryGame() {
 // 更新游戏UI显示
 function updateGameUI() {
     YUI.log("updateGameUI: Moves=" + gameState.moves + " Pairs=" + gameState.pairsFound + "/" + gameState.totalPairs);
+    
+    // 更新步数标签
+    set_text("movesLabel", "步数: " + gameState.moves);
+    
+    // 更新配对标签
+    set_text("pairsLabel", "配对: " + gameState.pairsFound + "/" + gameState.totalPairs);
+    
+    // 更新每张卡片的显示
+    for (var i = 0; i < 16; i++) {
+        var cardId = "card" + (i + 1);
+        
+        // 如果卡片已配对或已翻开，显示表情
+        if (gameState.matched[i] || gameState.flipped[i]) {
+            set_text(cardId, gameState.cards[i]);
+        } else {
+            // 否则显示问号
+            set_text(cardId, "?");
+        }
+    }
 }
 
 // 新游戏 - newGameBtn.onClick 事件触发
@@ -112,10 +155,19 @@ function showMemoryHint() {
 function flipCard(cardIndex) {
     YUI.log("flipCard: Flipping card " + cardIndex);
 
-    // 检查游戏是否被锁定
+    // 检查游戏是否被锁定（等待翻回配对失败的卡片）
     if (gameState.isLocked) {
-        YUI.log("flipCard: Game is locked, ignoring click");
-        return;
+        YUI.log("flipCard: Game is locked, flipping back mismatched cards");
+        // 翻回之前配对失败的两张卡片
+        gameState.flipped[gameState.firstFlip] = 0;
+        gameState.flipped[gameState.secondFlip] = 0;
+        gameState.firstFlip = -1;
+        gameState.secondFlip = -1;
+        gameState.isLocked = false;
+        updateGameUI();
+        
+        // 翻开当前点击的卡片
+        YUI.log("flipCard: Now flipping clicked card " + cardIndex);
     }
 
     // 检查卡片是否已经翻开或配对
@@ -136,14 +188,13 @@ function flipCard(cardIndex) {
     } else {
         // 第二次翻开，检查配对
         checkPair(gameState.firstFlip, cardIndex);
-        gameState.firstFlip = -1;
+        // 注意：不立即重置 firstFlip，因为 checkPair 可能需要它
     }
 }
 
 // 检查配对
 function checkPair(index1, index2) {
     YUI.log("checkPair: Checking " + index1 + " vs " + index2);
-    gameState.isLocked = true;
     gameState.moves++;
     updateGameUI();
 
@@ -162,11 +213,10 @@ function checkPair(index1, index2) {
             YUI.log("checkPair: CONGRATULATIONS! Game completed in " + gameState.moves + " moves!");
         }
     } else {
-        // 配对失败，延迟后翻回
-        YUI.log("checkPair: No match, flipping back");
-        gameState.isLocked = false;
-        gameState.flipped[index1] = 0;
-        gameState.flipped[index2] = 0;
+        // 配对失败，锁定游戏，等待下一次操作
+        gameState.isLocked = true;
+        gameState.secondFlip = index2;
+        YUI.log("checkPair: No match, cards will flip back on next click");
     }
 }
 

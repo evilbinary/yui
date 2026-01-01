@@ -11,6 +11,7 @@ add_deps("mquickjs","cjson","yui")
 set_kind("static")
 add_files(
     'js_module.c',
+    'yui_stdlib.c',
 ) 
 add_cflags(' -I. -I../mquickjs -g -DHAS_JS_MODULE')
 add_flags()

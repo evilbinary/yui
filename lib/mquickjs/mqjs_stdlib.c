@@ -396,9 +396,9 @@ static const JSPropDef js_c_function_decl[] = {
     JS_PROP_END,
 };
 
-#ifndef NO_MAIN
-int main(int argc, char **argv)
-{
-    return build_atoms("js_stdlib", js_global_object, js_c_function_decl, argc, argv);
-}
-#endif
+// #ifndef NO_MAIN
+// int main(int argc, char **argv)
+// {
+//     return build_atoms("js_stdlib", js_global_object, js_c_function_decl, argc, argv);
+// }
+// #endif

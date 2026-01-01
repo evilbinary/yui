@@ -63,6 +63,9 @@ static int g_js_event_count = 0;
 
 static void check_timers(void);
 
+
+extern const JSSTDLibraryDef js_yuistdlib;
+  
 // ====================== 辅助函数 ======================
 
 int hex_to_int(char c){
@@ -227,8 +230,6 @@ static uint8_t* load_file(const char *filename, int *plen)
     return buf;
 }
 
-extern const JSSTDLibraryDef js_stdlib;
-extern Layer* find_layer_by_id(Layer* root, const char* id);
 
 // 初始化 JS 引擎
 int js_module_init(void)
@@ -243,7 +244,7 @@ int js_module_init(void)
         return -1;
     }
 
-    g_js_ctx = JS_NewContext(g_js_mem, g_js_mem_size, &js_stdlib);
+    g_js_ctx = JS_NewContext(g_js_mem, g_js_mem_size, &js_yuistdlib);
     if (!g_js_ctx) {
         fprintf(stderr, "JS: Failed to create context\n");
         free(g_js_mem);
@@ -276,9 +277,7 @@ void js_module_register_api(void)
 {
     if (!g_js_ctx) return;
 
-    JSValue global_obj = JS_GetGlobalObject(g_js_ctx);
-
-
+    
 }
 
 // 加载并执行 JS 文件
