@@ -38,9 +38,9 @@ typedef struct Layer {
 // 查找图层的函数指针类型
 typedef Layer* (*FindLayerFunc)(Layer* root, const char* id);
 
-// 外部变量和函数（从 js_module.c 导入）
+// 外部变量和函数（从 js_module.c 和 layer.c 导入）
 extern Layer* g_layer_root;
-extern FindLayerFunc find_layer_by_id;
+extern Layer* find_layer_by_id(Layer* root, const char* id);
 
 // 颜色结构体定义
 typedef struct {

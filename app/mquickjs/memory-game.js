@@ -120,7 +120,6 @@ function showMemoryHint() {
 
 // 翻开卡片 - cardX.onClick 事件触发
 function flipCard(cardIndex) {
-    YUI.test();
     YUI.log("flipCard: Flipping card " + cardIndex);
 
     // 检查游戏是否被锁定（等待翻回配对失败的卡片）
