@@ -4,7 +4,7 @@
     "font":"Roboto-Regular.ttf",
     "fontSize":"16",
     "text":"YUI App",
-    "size":[600,800],
+    "size":[500,600],
     // "source":"app/test-simple.json",
     // "source":"app/test-scrollbar-final.json",
     // "source":"app/test-treeview.json",
@@ -31,10 +31,7 @@
     // "source":"app/tests/test-popup-menu.json",
     // "source":"app/tests/test-slider.json",
     
-    "source":"app/mquickjs/memory-game.json",
-    // "source":"app/mquickjs/whack-a-mole.json",  // 打地鼠
-    // "source":"app/mquickjs/apple-catcher.json", // 接苹果
-    // "source":"app/mquickjs/snake-game.json",
+
 
     // "source":"app/playground/json-editor.json",
     // "source":"app/tests/font_demo.json",

@@ -1,0 +1,18 @@
+{
+    "type":"main",
+    "assets":"app/assets",
+    "font":"Roboto-Regular.ttf",
+    "fontSize":"16",
+    "text":"YUI Event App",
+    "size":[500,600],
+    "source":"app/mquickjs/memory-game.json",
+    // "source":"app/mquickjs/whack-a-mole.json",  // 打地鼠
+    // "source":"app/mquickjs/apple-catcher.json", // 接苹果
+    // "source":"app/mquickjs/snake-game.json",
+
+
+
+    "style": {
+        "color": "#2C3E50"
+    }
+}

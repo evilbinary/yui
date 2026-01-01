@@ -36,7 +36,7 @@ int main(int argc, char* argv[]) {
     }
 
 
-    char* json_path="app.json";
+    char* json_path="app/mquickjs/app.json";
     // 加载UI描述文件
     if(argc>1){
         json_path=argv[1];

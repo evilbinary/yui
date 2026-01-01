@@ -174,7 +174,7 @@ int main(int argc, char* argv[]) {
     popup_manager_init();
     
     
-    char* json_path="app.json";
+    char* json_path="app/playground/app.json";
     // 加载UI描述文件
     if(argc>1){
         json_path=argv[1];

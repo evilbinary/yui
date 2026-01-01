@@ -1,0 +1,14 @@
+{
+    "type":"main",
+    "assets":"app/assets",
+    "font":"Roboto-Regular.ttf",
+    "fontSize":"16",
+    "text":"YUI App",
+    "size": [1200, 800],
+
+    "source":"app/playground/json-editor.json",
+
+    "style": {
+        "color": "#2C3E50"
+    }
+}
