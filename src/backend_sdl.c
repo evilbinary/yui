@@ -166,6 +166,79 @@ int backend_init(){
     // 初始化SDL
     SDL_Init(SDL_INIT_VIDEO);
     
+
+    
+    // 设置渲染质量为最佳（抗锯齿）
+    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "best");
+    
+    window = SDL_CreateWindow("YUI",
+                                        SDL_WINDOWPOS_CENTERED,
+                                        SDL_WINDOWPOS_CENTERED,
+                                        800, 600, SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_SHOWN);
+
+    // 尝试创建渲染器，优先使用硬件加速和垂直同步
+    Uint32 renderer_flags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC;
+    renderer = SDL_CreateRenderer(window, -1, renderer_flags);
+
+    if (!renderer) {
+        // 如果同时支持加速和垂直同步失败，尝试只使用硬件加速
+        printf("Warning: Failed to create renderer with ACCELERATED | PRESENTVSYNC: %s\n", SDL_GetError());
+        printf("Retrying with ACCELERATED only...\n");
+
+        renderer_flags = SDL_RENDERER_ACCELERATED;
+        renderer = SDL_CreateRenderer(window, -1, renderer_flags);
+
+        if (!renderer) {
+            // 如果硬件加速也失败，使用软件渲染器
+            printf("Warning: Failed to create hardware accelerated renderer: %s\n", SDL_GetError());
+            printf("Falling back to software renderer...\n");
+
+            renderer_flags = SDL_RENDERER_SOFTWARE;
+            renderer = SDL_CreateRenderer(window, -1, renderer_flags);
+        }
+    }
+
+    if (!renderer) {
+        printf("Error: Failed to create any renderer: %s\n", SDL_GetError());
+        return -1;
+    }
+
+    // 检查渲染器信息
+    SDL_RendererInfo renderer_info;
+    if (SDL_GetRendererInfo(renderer, &renderer_info) == 0) {
+        printf("Renderer created successfully!\n");
+        printf("  Renderer name: %s\n", renderer_info.name);
+        printf("  Renderer flags: ");
+
+        if (renderer_info.flags & SDL_RENDERER_ACCELERATED) {
+            printf("ACCELERATED ");
+        }
+        if (renderer_info.flags & SDL_RENDERER_PRESENTVSYNC) {
+            printf("PRESENTVSYNC ");
+        }
+        if (renderer_info.flags & SDL_RENDERER_SOFTWARE) {
+            printf("SOFTWARE ");
+        }
+        if (renderer_info.flags & SDL_RENDERER_TARGETTEXTURE) {
+            printf("TARGETTEXTURE ");
+        }
+        printf("\n");
+
+        // 检查是否支持垂直同步
+        if (renderer_info.flags & SDL_RENDERER_PRESENTVSYNC) {
+            printf("  Vertical Sync: Enabled\n");
+        } else {
+            printf("  Vertical Sync: Disabled (not supported)\n");
+        }
+    }
+    
+    // 启用透明度混合
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+
+    scale = getDisplayScale(window);
+
+    SDL_RenderSetScale(renderer, scale, scale);
+    
     // 初始化SDL_image库，支持多种图片格式
     int imgFlags = IMG_INIT_PNG | IMG_INIT_JPG | IMG_INIT_TIF | IMG_INIT_WEBP;
     if (!(IMG_Init(imgFlags) & imgFlags)) {
@@ -182,23 +255,6 @@ int backend_init(){
         printf("TTF initialization failed: %s\n", TTF_GetError());
         return -1;
     }
-    
-    // 设置渲染质量为最佳（抗锯齿）
-    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "best");
-    
-    window = SDL_CreateWindow("YUI", 
-                                        SDL_WINDOWPOS_CENTERED,
-                                        SDL_WINDOWPOS_CENTERED,
-                                        800, 600, SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_SHOWN);
-    renderer = SDL_CreateRenderer(window, -1, 
-                                 SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-    
-    // 启用透明度混合
-    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-
-    scale = getDisplayScale(window);
-
-    SDL_RenderSetScale(renderer, scale, scale);
     
     // 初始化字体缓存
     init_font_cache();
