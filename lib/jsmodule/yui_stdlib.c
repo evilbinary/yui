@@ -22,12 +22,11 @@
 
 #include "layer.h"
 
-// YUI Layer 类型定义（最小化定义）
 #define MAX_TEXT 256
 #define MAX_PATH 1024
 
+// YUI Layer 类型定义（最小化定义）
 typedef struct Layer Layer;
-
 // 查找图层的函数指针类型
 typedef Layer* (*FindLayerFunc)(Layer* root, const char* id);
 

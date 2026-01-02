@@ -5,12 +5,13 @@
 # * 邮箱: rootntsd@gmail.com
 # ********************************************************************
 target("yui-stdlib-host")
-add_deps("mquickjs","cjson","yui")
+add_deps("mquickjs","cjson","yui","jsmodule")
 set_kind("binary")
+add_flags()
 add_files('yui_stdlib_build.c',
           '../mquickjs/mquickjs_build.c'
           )
-add_cflags('-DHAa')
+add_cflags(' -Isrc/ -DCONFIG_CLASS_YUI  ')
 def after_build_host(target):
     # target.on_run(target)
 
