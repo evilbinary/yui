@@ -21,7 +21,7 @@ target("test_blur_cache")
     add_files("src/util.c"),
     add_files("src/components/*.c"),
     add_files("tests/test_blur_cache.c"),
-    on_run(run)
+    add_run()
 )
 
 target("test_content_size") 
@@ -39,7 +39,7 @@ target("test_content_size")
     add_files("src/components/*.c"),
     add_files("src/util.c"),
     add_files("tests/test_content_size.c"),
-    on_run(run)
+    add_run()
 )
 
 target("test_treeview_scroll") 
@@ -58,7 +58,7 @@ target("test_treeview_scroll")
     add_files("src/popup_manager.c"),
     add_files("src/components/*.c"),
     add_files("tests/test_treeview_scroll.c"),
-    on_run(run)
+    add_run()
 )
 
 
@@ -78,5 +78,5 @@ target("test_simple_scroll")
     add_files("src/popup_manager.c"),
     add_files("src/components/*.c"),
     add_files("tests/test_simple_scroll.c"),
-    on_run(run)
+    add_run()
 )

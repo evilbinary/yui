@@ -113,3 +113,4 @@ includes("./lib/ya.py")
 
 includes("./app/ya.py")
 
+includes("./tests/ya.py")
