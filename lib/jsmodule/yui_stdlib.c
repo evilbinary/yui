@@ -367,8 +367,9 @@ JS_CLASS_DEF("YUI", 2, js_yui_constructor, JS_CLASS_YUI, js_yui, js_yui_proto, N
 static const JSClassDef js_yui2_class =
 JS_CLASS_DEF("Yui", 2, js_yui_constructor, JS_CLASS_YUI, js_yui, js_yui_proto, NULL, js_yui_finalizer);
 
-
+#ifdef CONFIG_CLASS_YUI
 #include "yui_stdlib.h"
+#endif
 
 
 

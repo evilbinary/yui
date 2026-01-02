@@ -11,7 +11,7 @@ add_flags()
 add_files('yui_stdlib_build.c',
           '../mquickjs/mquickjs_build.c'
           )
-add_cflags(' -Isrc/ -DCONFIG_CLASS_YUI  ')
+add_cflags(' -Isrc/ ')
 def after_build_host(target):
     # target.on_run(target)
 
