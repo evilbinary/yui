@@ -29,6 +29,9 @@ static void check_timers(void);
 
 extern const JSSTDLibraryDef js_yuistdlib;
   
+extern uint8_t* load_file(const char *filename, int *plen);
+extern int hex_to_int(char c);
+
 
 // ====================== JS API 函数 ======================
 

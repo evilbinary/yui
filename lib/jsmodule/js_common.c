@@ -394,6 +394,14 @@ static int load_js_recursive(cJSON* json, const char* json_dir)
     return loaded_count;
 }
 
+// 清空事件映射表
+void js_module_clear_events(void)
+{
+    g_js_event_count = 0;
+    g_c_event_handler_count = 0;
+    printf("JS: Event maps cleared\n");
+}
+
 // 从 JSON 加载 JS 文件（递归遍历整个 JSON 树）
 int js_module_load_from_json(cJSON* root_json, const char* json_file_path)
 {
@@ -449,13 +457,6 @@ int js_module_trigger_event(const char* event_name, Layer* layer)
     return js_module_call_event(event_name, layer);
 }
 
-// 清空事件映射表
-void js_module_clear_events(void)
-{
-    g_js_event_count = 0;
-    g_c_event_handler_count = 0;
-    printf("JS: Event maps cleared\n");
-}
 
 // 根据 layer id 调用事件处理器
 // event_type: 事件类型，如 "onClick", "onLoad", "onPress" 等

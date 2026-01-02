@@ -1,7 +1,6 @@
-#include "../jsmodule/js_module.h"
-#include "mario.h"
+#include "lib/jsmodule/js_module.h"
+#include "../../lib/mario/mario.h"
 #include "../../src/ytype.h"
-
 #include "event.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,57 +8,75 @@
 #include <time.h>
 
 
-/* ====================== JS API 函数 ====================== */
+extern uint8_t* load_file(const char *filename, int *plen);
+extern int hex_to_int(char c);
+
+/* ====================== 全局变量 ====================== */
+
+static vm_t* g_vm = NULL;
+static Layer* g_layer_root = NULL;
+
+
+/* ====================== Mario 原生函数 ====================== */
+
+// Mario 原生函数包装器类型
+typedef var_t* (*mario_native_func_t)(vm_t* vm, var_t* env, void* data);
 
 // 设置文本
-static JSValue js_set_text(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+static var_t* mario_set_text(vm_t* vm, var_t* env, void* data)
 {
-    if (argc < 2) return JS_UNDEFINED;
+    var_t* args = get_func_args(env);
+    uint32_t argc = get_func_args_num(env);
 
-    JSCStringBuf buf1, buf2;
-    const char* layer_id = JS_ToCString(ctx, argv[0], &buf1);
-    const char* text = JS_ToCString(ctx, argv[1], &buf2);
+    if (argc < 2) return var_new_null(vm);
 
-    if (layer_id && text && g_layer_root ) {
+    const char* layer_id = get_func_arg_str(env, 0);
+    const char* text = get_func_arg_str(env, 1);
+
+    if (layer_id && text && g_layer_root) {
         struct Layer* layer = find_layer_by_id(g_layer_root, layer_id);
         if (layer) {
             strncpy(layer->text, text, MAX_TEXT - 1);
             layer->text[MAX_TEXT - 1] = '\0';
-            printf("JS: Set text for layer '%s': %s\n", layer_id, text);
+            printf("JS(Mario): Set text for layer '%s': %s\n", layer_id, text);
         }
     }
 
-    return JS_UNDEFINED;
+    return var_new_null(vm);
 }
 
 // 获取文本
-static JSValue js_get_text(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+static var_t* mario_get_text(vm_t* vm, var_t* env, void* data)
 {
-    if (argc < 1) return JS_UNDEFINED;
+    var_t* args = get_func_args(env);
+    uint32_t argc = get_func_args_num(env);
 
-    JSCStringBuf buf;
-    const char* layer_id = JS_ToCString(ctx, argv[0], &buf);
+    if (argc < 1) return var_new_null(vm);
 
-    if (layer_id && g_layer_root ) {
+    const char* layer_id = get_func_arg_str(env, 0);
+
+    if (layer_id && g_layer_root) {
         struct Layer* layer = find_layer_by_id(g_layer_root, layer_id);
         if (layer) {
-            return JS_NewString(ctx, layer->text);
+            return var_new_str(vm, layer->text);
         }
     }
 
-    return JS_UNDEFINED;
+    return var_new_null(vm);
 }
 
 // 设置背景颜色
-static JSValue js_set_bg_color(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+static var_t* mario_set_bg_color(vm_t* vm, var_t* env, void* data)
 {
-    if (argc < 2) return JS_UNDEFINED;
+    var_t* args = get_func_args(env);
+    uint32_t argc = get_func_args_num(env);
 
-    JSCStringBuf buf1, buf2;
-    const char* layer_id = JS_ToCString(ctx, argv[0], &buf1);
-    const char* color_hex = JS_ToCString(ctx, argv[1], &buf2);
+    if (argc < 2) return var_new_null(vm);
 
-    if (layer_id && color_hex && g_layer_root ) {
+    const char* layer_id = get_func_arg_str(env, 0);
+    const char* color_hex = get_func_arg_str(env, 1);
+
+    if (layer_id && color_hex && g_layer_root) {
         struct Layer* layer = find_layer_by_id(g_layer_root, layer_id);
         if (layer) {
             // 解析十六进制颜色 #RRGGBB
@@ -68,132 +85,129 @@ static JSValue js_set_bg_color(JSContext *ctx, JSValue *this_val, int argc, JSVa
                 layer->bg_color.g = (hex_to_int(color_hex[3]) * 16 + hex_to_int(color_hex[4]));
                 layer->bg_color.b = (hex_to_int(color_hex[5]) * 16 + hex_to_int(color_hex[6]));
                 layer->bg_color.a = 255;
-                printf("JS: Set bg_color for layer '%s': %s\n", layer_id, color_hex);
+                printf("JS(Mario): Set bg_color for layer '%s': %s\n", layer_id, color_hex);
             }
         }
     }
 
-    return JS_UNDEFINED;
+    return var_new_null(vm);
 }
 
 // 隐藏图层
-static JSValue js_hide(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+static var_t* mario_hide(vm_t* vm, var_t* env, void* data)
 {
-    if (argc < 1) return JS_UNDEFINED;
+    var_t* args = get_func_args(env);
+    uint32_t argc = get_func_args_num(env);
 
-    JSCStringBuf buf;
-    const char* layer_id = JS_ToCString(ctx, argv[0], &buf);
+    if (argc < 1) return var_new_null(vm);
 
-    if (layer_id && g_layer_root ) {
+    const char* layer_id = get_func_arg_str(env, 0);
+
+    if (layer_id && g_layer_root) {
         struct Layer* layer = find_layer_by_id(g_layer_root, layer_id);
         if (layer) {
             layer->visible = 0; // IN_VISIBLE
-            printf("JS: Hide layer '%s'\n", layer_id);
+            printf("JS(Mario): Hide layer '%s'\n", layer_id);
         }
     }
 
-    return JS_UNDEFINED;
+    return var_new_null(vm);
 }
 
 // 显示图层
-static JSValue js_show(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+static var_t* mario_show(vm_t* vm, var_t* env, void* data)
 {
-    if (argc < 1) return JS_UNDEFINED;
+    var_t* args = get_func_args(env);
+    uint32_t argc = get_func_args_num(env);
 
-    JSCStringBuf buf;
-    const char* layer_id = JS_ToCString(ctx, argv[0], &buf);
+    if (argc < 1) return var_new_null(vm);
 
-    if (layer_id && g_layer_root ) {
+    const char* layer_id = get_func_arg_str(env, 0);
+
+    if (layer_id && g_layer_root) {
         struct Layer* layer = find_layer_by_id(g_layer_root, layer_id);
         if (layer) {
             layer->visible = 1; // VISIBLE
-            printf("JS: Show layer '%s'\n", layer_id);
+            printf("JS(Mario): Show layer '%s'\n", layer_id);
         }
     }
 
-    return JS_UNDEFINED;
+    return var_new_null(vm);
 }
 
 // 打印日志
-static JSValue js_log(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+static var_t* mario_log(vm_t* vm, var_t* env, void* data)
 {
-    JSCStringBuf buf;
-    for (int i = 0; i < argc; i++) {
+    var_t* args = get_func_args(env);
+    uint32_t argc = get_func_args_num(env);
+
+    for (uint32_t i = 0; i < argc; i++) {
         if (i != 0) printf(" ");
-        const char* str = JS_ToCString(ctx, argv[i], &buf);
+        const char* str = get_func_arg_str(env, i);
         if (str) {
             printf("%s", str);
         }
     }
     printf("\n");
-    return JS_UNDEFINED;
+
+    return var_new_null(vm);
 }
 
-// ====================== 初始化和清理 ======================
+/* ====================== 初始化和清理 ====================== */
 
-static void js_log_func(void *opaque, const void *buf, size_t buf_len)
-{
-    fwrite(buf, 1, buf_len, stdout);
-}
-
-
-
-// 初始化 JS 引擎
+// 初始化 JS 引擎（使用 Mario）
 int js_module_init(void)
 {
-    printf("JS: Initializing JavaScript engine...\n");
+    printf("JS(Mario): Initializing Mario JavaScript engine...\n");
 
-    g_js_mem = malloc(g_js_mem_size);
-    if (!g_js_mem) {
-        fprintf(stderr, "JS: Failed to allocate memory\n");
+    // 创建 Mario 虚拟机
+    g_vm = vm_new(NULL);
+    if (!g_vm) {
+        fprintf(stderr, "JS(Mario): Failed to create VM\n");
         return -1;
     }
 
-    g_js_ctx = JS_NewContext(g_js_mem, g_js_mem_size, &js_yuistdlib);
-    if (!g_js_ctx) {
-        fprintf(stderr, "JS: Failed to create context\n");
-        free(g_js_mem);
-        return -1;
-    }
-
-    JS_SetLogFunc(g_js_ctx, js_log_func);
-
+    // 注册 API 函数
     js_module_register_api();
 
-    printf("JS: JavaScript engine initialized\n");
+    printf("JS(Mario): Mario JavaScript engine initialized\n");
     return 0;
 }
 
 // 清理 JS 引擎
 void js_module_cleanup(void)
 {
-    if (g_js_ctx) {
-        JS_FreeContext(g_js_ctx);
-        g_js_ctx = NULL;
-    }
-    if (g_js_mem) {
-        free(g_js_mem);
-        g_js_mem = NULL;
+    if (g_vm) {
+        vm_close(g_vm);
+        g_vm = NULL;
     }
 }
 
 // 注册 C API 到 JS
 void js_module_register_api(void)
 {
-    if (!g_js_ctx) return;
+    if (!g_vm) return;
 
-    
+    // 注册全局函数
+    vm_reg_native(g_vm, NULL, "setText(layerId, text)", mario_set_text, NULL);
+    vm_reg_native(g_vm, NULL, "getText(layerId)", mario_get_text, NULL);
+    vm_reg_native(g_vm, NULL, "setBgColor(layerId, color)", mario_set_bg_color, NULL);
+    vm_reg_native(g_vm, NULL, "hide(layerId)", mario_hide, NULL);
+    vm_reg_native(g_vm, NULL, "show(layerId)", mario_show, NULL);
+    vm_reg_native(g_vm, NULL, "log(...)", mario_log, NULL);
+
+    printf("JS(Mario): Registered native API functions\n");
 }
 
 // 加载并执行 JS 文件
 int js_module_load_file(const char* filename)
 {
-    if (!g_js_ctx) {
-        fprintf(stderr, "JS: Engine not initialized\n");
+    if (!g_vm) {
+        fprintf(stderr, "JS(Mario): Engine not initialized\n");
         return -1;
     }
 
-    printf("JS: Loading file %s...\n", filename);
+    printf("JS(Mario): Loading file %s...\n", filename);
 
     int len = 0;
     uint8_t* buf = load_file(filename, &len);
@@ -201,24 +215,23 @@ int js_module_load_file(const char* filename)
         return -1;
     }
 
-    JSValue val = JS_Eval(g_js_ctx, (const char*)buf, len, filename, 0);
+    // 使用 Mario 加载并运行代码
+    bool success = vm_load_run(g_vm, (const char*)buf);
     free(buf);
 
-    if (JS_IsException(val)) {
-        JSValue exc = JS_GetException(g_js_ctx);
-        fprintf(stderr, "JS: Error executing %s:\n", filename);
-        JS_PrintValueF(g_js_ctx, exc, JS_DUMP_LONG);
-        printf("\n");
+    if (!success) {
+        fprintf(stderr, "JS(Mario): Error executing %s\n", filename);
         return -1;
     }
 
-    printf("JS: Successfully loaded %s\n", filename);
+    printf("JS(Mario): Successfully loaded %s\n", filename);
     return 0;
 }
+
 // 调用 JS 事件函数
 int js_module_call_event(const char* event_name, Layer* layer)
 {
-    if (!g_js_ctx || !event_name) return -1;
+    if (!g_vm || !event_name) return -1;
 
     // 移除 @ 前缀（如果有）
     const char* func_name = event_name;
@@ -226,36 +239,32 @@ int js_module_call_event(const char* event_name, Layer* layer)
         func_name++;
     }
 
-    JSValue global_obj = JS_GetGlobalObject(g_js_ctx);
-    JSValue func = JS_GetPropertyStr(g_js_ctx, global_obj, func_name);
-
-    if (JS_IsUndefined(func) || !JS_IsFunction(g_js_ctx, func)) {
+    // 查找函数
+    node_t* func_node = vm_find(g_vm, func_name);
+    if (!func_node || !func_node->var || !var_get_func(func_node->var)) {
         return -1;
+    }
+
+    // 创建参数数组
+    var_t* args = var_new_array(g_vm);
+    if (layer) {
+        var_array_add(args, var_new_str(g_vm, layer->id));
+    } else {
+        var_array_add(args, var_new_null(g_vm));
     }
 
     // 调用函数
-    if (JS_StackCheck(g_js_ctx, 3)) {
+    var_t* result = call_m_func_by_name(g_vm, NULL, func_name, args);
+
+    var_unref(args);
+
+    if (!result) {
+        fprintf(stderr, "JS(Mario): Error calling event %s\n", event_name);
         return -1;
     }
 
-    JSValue layer_id_val = JS_NULL;
-    if (layer) {
-        layer_id_val = JS_NewString(g_js_ctx, layer->id);
-    }
-
-    // 按照正确的顺序 push: 参数 -> 函数 -> this
-    JS_PushArg(g_js_ctx, layer_id_val); // 参数
-    JS_PushArg(g_js_ctx, func); // 函数对象
-    JS_PushArg(g_js_ctx, JS_NULL); // this
-    JSValue result = JS_Call(g_js_ctx, 1); // 1 个参数
-
-    if (JS_IsException(result)) {
-        JSValue exc = JS_GetException(g_js_ctx);
-        fprintf(stderr, "JS: Error calling event %s:\n", event_name);
-        JS_PrintValueF(g_js_ctx, exc, JS_DUMP_LONG);
-        fprintf(stderr, "\n");
-        return -1;
-    }
-
+    var_unref(result);
     return 0;
 }
+
+

@@ -2,18 +2,17 @@
 #define YUI_JS_MODULE_H
 
 #include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+#include "layer.h"
 // 前向声明 Layer 类型（避免依赖 ytype.h）
 typedef struct Layer Layer;
 typedef struct cJSON cJSON;
 
-#ifdef HAS_JS_MODULE
-#include "mquickjs.h"
-#endif
 
 // 初始化 JS 引擎
 int js_module_init(void);
@@ -63,9 +62,6 @@ int js_module_call_layer_event(const char* layer_id, const char* event_type);
 // layer: 图层指针
 // event_name: 事件类型，如 "click", "press", "scroll" 等
 int js_module_trigger_layer_event(Layer* layer, const char* event_name);
-
-uint8_t* load_file(const char *filename, int *plen);
-int hex_to_int(char c);
 
 #ifdef __cplusplus
 }
