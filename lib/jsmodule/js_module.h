@@ -64,6 +64,9 @@ int js_module_call_layer_event(const char* layer_id, const char* event_type);
 // event_name: 事件类型，如 "click", "press", "scroll" 等
 int js_module_trigger_layer_event(Layer* layer, const char* event_name);
 
+uint8_t* load_file(const char *filename, int *plen);
+int hex_to_int(char c);
+
 #ifdef __cplusplus
 }
 #endif

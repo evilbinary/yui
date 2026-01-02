@@ -33,6 +33,7 @@ add_flags()
 set_kind("static")
 add_files(
     'js_module.c',
+    'js_common.c',
     'yui_stdlib.c',
 ) 
 

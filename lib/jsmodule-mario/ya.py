@@ -12,7 +12,7 @@ add_flags()
 
 set_kind("static")
 add_files(
-    'js_module.c'
+    'js_module.c',
+    '../jsmodule/js_module.c'
 ) 
-
 add_includedirs('.', public=true)

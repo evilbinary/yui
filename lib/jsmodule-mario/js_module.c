@@ -1,36 +1,15 @@
-#include "js_module.h"
-
-
-#include "mquickjs.h"
+#include "../jsmodule/js_module.h"
+#include "mario.h"
 #include "../../src/ytype.h"
 
 #include "event.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
-// Layer 结构的最小定义（只使用我们需要的字段）
-#define MAX_TEXT 256
-#define MAX_PATH 1024
 
-// 全局 JS 上下文
-static JSContext* g_js_ctx = NULL;
-static uint8_t* g_js_mem = NULL;
-static size_t g_js_mem_size = 256 * 1024; // 256KB 内存
-
-// 全局 UI 根图层
-extern struct Layer* g_layer_root;
-
-
-static void check_timers(void);
-
-
-extern const JSSTDLibraryDef js_yuistdlib;
-  
-
-// ====================== JS API 函数 ======================
+/* ====================== JS API 函数 ====================== */
 
 // 设置文本
 static JSValue js_set_text(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
@@ -280,11 +259,3 @@ int js_module_call_event(const char* event_name, Layer* layer)
 
     return 0;
 }
-
-
-// 检查并触发定时器（内部静态函数）
-static void check_timers(void)
-{
-    if (!g_js_ctx) return;
-}
-
