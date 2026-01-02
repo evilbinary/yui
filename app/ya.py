@@ -11,7 +11,7 @@ target("main")
     add_rules("mode.debug", "mode.release"),
     set_kind("binary"),
     add_flags(),
-    add_files("app/main.c"),
+    add_files("main.c"),
     add_run()
 )
 
@@ -22,7 +22,7 @@ target("playground")
     add_rules("mode.debug", "mode.release"),
     set_kind("binary"),
     add_flags(),
-    add_files("app/playground/main.c"),
+    add_files("playground/main.c"),
     add_run()
 )
 
@@ -33,6 +33,16 @@ target("mqjs")
     add_rules("mode.debug", "mode.release"),
     set_kind("binary"),
     add_flags(),
-    add_files("app/mquickjs/main.c"),
+    add_files("mquickjs/main.c"),
+    add_run()
+)
+
+target("mariojs") 
+(
+    add_deps( "jsmodule-mario","yui", "mario",),
+    add_rules("mode.debug", "mode.release"),
+    set_kind("binary"),
+    add_flags(),
+    add_files("mquickjs/main.c"),
     add_run()
 )
