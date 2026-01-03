@@ -180,6 +180,9 @@ int js_module_init(void)
         return -1;
     }
 
+    // 初始化虚拟机（这会调用 on_init 回调）
+    vm_init(g_vm, NULL, NULL);
+
     // 注册 API 函数
     js_module_register_api();
 
