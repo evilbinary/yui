@@ -161,6 +161,7 @@ static var_t* mario_log(vm_t* vm, var_t* env, void* data)
 }
 
 /* ====================== 初始化和清理 ====================== */
+extern bool compile(bytecode_t *bc, const char* input);
 
 static void out(const char* str) {
     write(1, str, strlen(str));
@@ -173,7 +174,7 @@ int js_module_init(void)
     _free = free;
     _out_func = out;
     // 创建 Mario 虚拟机
-    g_vm = vm_new(NULL);
+    g_vm = vm_new(compile);
     if (!g_vm) {
         fprintf(stderr, "JS(Mario): Failed to create VM\n");
         return -1;
@@ -195,19 +196,27 @@ void js_module_cleanup(void)
     }
 }
 
+void reg_native_yui(vm_t* vm, const char* decl, native_func_t native, void* data) {
+	var_t* cls = vm_new_class(vm, "YUI");
+    var_t* cls2 = vm_new_class(vm, "Yui");
+	vm_reg_native(vm, cls, decl, native, data); 
+	vm_reg_native(vm, cls2, decl, native, data); 
+}
+
+extern void reg_basic_natives(vm_t* vm);
 // 注册 C API 到 JS
 void js_module_register_api(void)
 {
     if (!g_vm) return;
 
+    reg_basic_natives(g_vm);
     // 注册全局函数
-    vm_reg_native(g_vm, NULL, "setText(layerId, text)", mario_set_text, NULL);
-    vm_reg_native(g_vm, NULL, "getText(layerId)", mario_get_text, NULL);
-    vm_reg_native(g_vm, NULL, "setBgColor(layerId, color)", mario_set_bg_color, NULL);
-    vm_reg_native(g_vm, NULL, "hide(layerId)", mario_hide, NULL);
-    vm_reg_native(g_vm, NULL, "show(layerId)", mario_show, NULL);
-    vm_reg_native(g_vm, NULL, "log(...)", mario_log, NULL);
-
+    reg_native_yui(g_vm, "setText(layerId, text)", mario_set_text, NULL);
+    reg_native_yui(g_vm, "getText(layerId)", mario_get_text, NULL);
+    reg_native_yui(g_vm, "setBgColor(layerId, color)", mario_set_bg_color, NULL);
+    reg_native_yui(g_vm, "hide(layerId)", mario_hide, NULL);
+    reg_native_yui(g_vm, "show(layerId)", mario_show, NULL);
+    reg_native_yui(g_vm, "log(...)", mario_log, NULL);
     printf("JS(Mario): Registered native API functions\n");
 }
 
