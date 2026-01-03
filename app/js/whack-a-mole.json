@@ -2,6 +2,7 @@
     "id": "whackAMoleGame",
     "type": "View",
     "size": [500, 600],
+    "js": "whack-a-mole.js",
     "style": {
         "bgColor": "#8BC34A"
     },
