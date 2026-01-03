@@ -148,14 +148,26 @@ static var_t* mario_log(vm_t* vm, var_t* env, void* data)
     var_t* args = get_func_args(env);
     uint32_t argc = get_func_args_num(env);
 
+    // 使用 Mario 的 var_to_str 来安全地转换任意类型为字符串
+    mstr_t* output = mstr_new("");
+    mstr_t* temp = mstr_new("");
+
     for (uint32_t i = 0; i < argc; i++) {
-        if (i != 0) printf(" ");
-        const char* str = get_func_arg_str(env, i);
-        if (str) {
-            printf("%s", str);
+        if (i != 0) {
+            mstr_append(output, " ");
+        }
+        node_t* n = var_array_get(args, i);
+        if (n != NULL && n->var != NULL) {
+            var_to_str(n->var, temp);
+            mstr_append(output, temp->cstr);
         }
     }
-    printf("\n");
+
+    mstr_add(output, '\n');
+    printf("%s", output->cstr);
+
+    mstr_free(temp);
+    mstr_free(output);
 
     return var_new_null(vm);
 }
@@ -202,8 +214,8 @@ void js_module_cleanup(void)
 void reg_native_yui(vm_t* vm, const char* decl, native_func_t native, void* data) {
 	var_t* cls = vm_new_class(vm, "YUI");
     var_t* cls2 = vm_new_class(vm, "Yui");
-	vm_reg_native(vm, cls, decl, native, data); 
-	vm_reg_native(vm, cls2, decl, native, data); 
+	vm_reg_native(vm, cls, decl, native, data);
+	vm_reg_native(vm, cls2, decl, native, data);
 }
 
 static inline var_t* vm_load_var(vm_t* vm, const char* name, bool create) {
@@ -228,13 +240,22 @@ void js_module_register_api(void)
     reg_basic_natives(g_vm);
     vm_load_basic_classes(g_vm);
 
-    // 注册全局函数
-    reg_native_yui(g_vm, "setText(layerId, text)", mario_set_text, NULL);
-    reg_native_yui(g_vm, "getText(layerId)", mario_get_text, NULL);
-    reg_native_yui(g_vm, "setBgColor(layerId, color)", mario_set_bg_color, NULL);
-    reg_native_yui(g_vm, "hide(layerId)", mario_hide, NULL);
-    reg_native_yui(g_vm, "show(layerId)", mario_show, NULL);
-    reg_native_yui(g_vm, "log(...)", mario_log, NULL);
+    // 注册 YUI 类的方法
+    var_t* yui_cls = vm_new_class(g_vm, "YUI");
+    vm_reg_native(g_vm, yui_cls, "setText(layerId, text)", mario_set_text, NULL);
+    vm_reg_native(g_vm, yui_cls, "getText(layerId)", mario_get_text, NULL);
+    vm_reg_native(g_vm, yui_cls, "setBgColor(layerId, color)", mario_set_bg_color, NULL);
+    vm_reg_native(g_vm, yui_cls, "hide(layerId)", mario_hide, NULL);
+    vm_reg_native(g_vm, yui_cls, "show(layerId)", mario_show, NULL);
+    vm_reg_native(g_vm, yui_cls, "log(...)", mario_log, NULL);
+
+    // 也注册为全局函数（为了兼容性）
+    vm_reg_static(g_vm, NULL, "setText(layerId, text)", mario_set_text, NULL);
+    vm_reg_static(g_vm, NULL, "getText(layerId)", mario_get_text, NULL);
+    vm_reg_static(g_vm, NULL, "setBgColor(layerId, color)", mario_set_bg_color, NULL);
+    vm_reg_static(g_vm, NULL, "hide(layerId)", mario_hide, NULL);
+    vm_reg_static(g_vm, NULL, "show(layerId)", mario_show, NULL);
+
     printf("JS(Mario): Registered native API functions\n");
 }
 
