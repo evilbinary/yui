@@ -203,6 +203,19 @@ void reg_native_yui(vm_t* vm, const char* decl, native_func_t native, void* data
 	vm_reg_native(vm, cls2, decl, native, data); 
 }
 
+static inline var_t* vm_load_var(vm_t* vm, const char* name, bool create) {
+	node_t* n = vm_load_node(vm, name, create);
+	if(n != NULL)
+		return n->var;
+	return NULL;
+}
+
+static void vm_load_basic_classes(vm_t* vm) {
+	vm->var_String = vm_load_var(vm, "String", false);
+	vm->var_Array = vm_load_var(vm, "Array", false);
+	vm->var_Number = vm_load_var(vm, "Number", false);
+}
+
 extern void reg_basic_natives(vm_t* vm);
 // 注册 C API 到 JS
 void js_module_register_api(void)
@@ -210,6 +223,8 @@ void js_module_register_api(void)
     if (!g_vm) return;
 
     reg_basic_natives(g_vm);
+    vm_load_basic_classes(g_vm);
+
     // 注册全局函数
     reg_native_yui(g_vm, "setText(layerId, text)", mario_set_text, NULL);
     reg_native_yui(g_vm, "getText(layerId)", mario_get_text, NULL);
