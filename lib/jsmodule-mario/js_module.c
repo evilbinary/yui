@@ -6,6 +6,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <dlfcn.h>
+#include <dirent.h>
+#include <stdlib.h>
+#include <stdio.h>
 
 
 extern uint8_t* load_file(const char *filename, int *plen);
@@ -155,11 +162,16 @@ static var_t* mario_log(vm_t* vm, var_t* env, void* data)
 
 /* ====================== 初始化和清理 ====================== */
 
+static void out(const char* str) {
+    write(1, str, strlen(str));
+}
 // 初始化 JS 引擎（使用 Mario）
 int js_module_init(void)
 {
     printf("JS(Mario): Initializing Mario JavaScript engine...\n");
-
+    _malloc = malloc;
+    _free = free;
+    _out_func = out;
     // 创建 Mario 虚拟机
     g_vm = vm_new(NULL);
     if (!g_vm) {
