@@ -3646,23 +3646,30 @@ bool vm_run(vm_t* vm) {
 				}
 				break;
 			}
-			case INSTR_SAFE_VAR:
-			case INSTR_CONST: 
-			{
-				const char* s = bc_getstr(&vm->bc, offset);
-				var_t* v = vm_get_scope_var(vm);
-				node_t *node = var_find(v, s);
-				if(node != NULL) { //find just in current scope
-					mario_error("Error: let '%s' has already existed!\n", s);
+		case INSTR_SAFE_VAR:
+		case INSTR_CONST:
+		{
+			const char* s = bc_getstr(&vm->bc, offset);
+			var_t* v = vm_get_scope_var(vm);
+			node_t *node = var_find(v, s);
+			if(node != NULL) { //find just in current scope
+				// 变量已存在，如果是常量则不允许修改
+				if(instr == INSTR_CONST && node->be_const) {
+					mario_error("Error: const '%s' cannot be redeclared!\n", s);
 					vm_terminate(vm);
 				}
+				// 否则忽略重复声明（允许像 JavaScript 一样的行为）
 				else {
-					node = var_add(v, s, NULL);
-					if(node != NULL && instr == INSTR_CONST)
-						node->be_const = true;
+					mario_debug("[debug] Warning: variable '%s' redeclared\n", s);
 				}
-				break;
 			}
+			else {
+				node = var_add(v, s, NULL);
+				if(node != NULL && instr == INSTR_CONST)
+					node->be_const = true;
+			}
+			break;
+		}
 			case INSTR_INT:
 			{
 				var_t* v = var_new_int(vm, (int)code[vm->pc++]);
