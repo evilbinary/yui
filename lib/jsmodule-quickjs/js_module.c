@@ -1,4 +1,4 @@
-#include "js_module.h"
+#include "lib/jsmodule/js_module.h"
 #include "../../lib/quickjs/quickjs.h"
 #include "../../src/layer.h"
 #include <stdio.h>
@@ -14,7 +14,7 @@
 
 static JSRuntime* g_js_rt = NULL;
 static JSContext* g_js_ctx = NULL;
-static Layer* g_layer_root = NULL;
+extern struct Layer* g_layer_root;
 
 /* ====================== QuickJS 原生函数 ====================== */
 

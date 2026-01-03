@@ -21,7 +21,7 @@ extern int hex_to_int(char c);
 /* ====================== 全局变量 ====================== */
 
 static vm_t* g_vm = NULL;
-static Layer* g_layer_root = NULL;
+extern struct Layer* g_layer_root;
 
 
 /* ====================== Mario 原生函数 ====================== */
