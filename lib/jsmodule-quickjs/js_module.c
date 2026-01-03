@@ -1,297 +1,292 @@
-#include "lib/jsmodule/js_module.h"
-#include "../../lib/mario/mario.h"
-#include "../../src/ytype.h"
-#include "event.h"
+#include "js_module.h"
+#include "../../lib/quickjs/quickjs.h"
+#include "../../src/layer.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <dlfcn.h>
-#include <dirent.h>
-#include <stdlib.h>
-#include <stdio.h>
 
-
-extern uint8_t* load_file(const char *filename, int *plen);
-extern int hex_to_int(char c);
+// Layer 结构的最小定义
+#define MAX_TEXT 256
 
 /* ====================== 全局变量 ====================== */
 
-static vm_t* g_vm = NULL;
+static JSRuntime* g_js_rt = NULL;
+static JSContext* g_js_ctx = NULL;
 static Layer* g_layer_root = NULL;
 
-
-/* ====================== Mario 原生函数 ====================== */
-
-// Mario 原生函数包装器类型
-typedef var_t* (*mario_native_func_t)(vm_t* vm, var_t* env, void* data);
+/* ====================== QuickJS 原生函数 ====================== */
 
 // 设置文本
-static var_t* mario_set_text(vm_t* vm, var_t* env, void* data)
+static JSValue js_set_text(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    var_t* args = get_func_args(env);
-    uint32_t argc = get_func_args_num(env);
+    if (argc < 2) return JS_UNDEFINED;
 
-    if (argc < 2) return var_new_null(vm);
-
-    const char* layer_id = get_func_arg_str(env, 0);
-    const char* text = get_func_arg_str(env, 1);
+    size_t len1, len2;
+    const char* layer_id = JS_ToCStringLen(ctx, &len1, argv[0]);
+    const char* text = JS_ToCStringLen(ctx, &len2, argv[1]);
 
     if (layer_id && text && g_layer_root) {
         struct Layer* layer = find_layer_by_id(g_layer_root, layer_id);
         if (layer) {
             strncpy(layer->text, text, MAX_TEXT - 1);
             layer->text[MAX_TEXT - 1] = '\0';
-            printf("JS(Mario): Set text for layer '%s': %s\n", layer_id, text);
+            printf("JS(QuickJS): Set text for layer '%s': %s\n", layer_id, text);
         }
     }
 
-    return var_new_null(vm);
+    JS_FreeCString(ctx, layer_id);
+    JS_FreeCString(ctx, text);
+    return JS_UNDEFINED;
 }
 
 // 获取文本
-static var_t* mario_get_text(vm_t* vm, var_t* env, void* data)
+static JSValue js_get_text(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    var_t* args = get_func_args(env);
-    uint32_t argc = get_func_args_num(env);
+    if (argc < 1) return JS_UNDEFINED;
 
-    if (argc < 1) return var_new_null(vm);
-
-    const char* layer_id = get_func_arg_str(env, 0);
+    size_t len;
+    const char* layer_id = JS_ToCStringLen(ctx, &len, argv[0]);
 
     if (layer_id && g_layer_root) {
         struct Layer* layer = find_layer_by_id(g_layer_root, layer_id);
         if (layer) {
-            return var_new_str(vm, layer->text);
+            JS_FreeCString(ctx, layer_id);
+            return JS_NewString(ctx, layer->text);
         }
     }
 
-    return var_new_null(vm);
+    JS_FreeCString(ctx, layer_id);
+    return JS_UNDEFINED;
 }
 
 // 设置背景颜色
-static var_t* mario_set_bg_color(vm_t* vm, var_t* env, void* data)
+static JSValue js_set_bg_color(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    var_t* args = get_func_args(env);
-    uint32_t argc = get_func_args_num(env);
+    if (argc < 2) return JS_UNDEFINED;
 
-    if (argc < 2) return var_new_null(vm);
-
-    const char* layer_id = get_func_arg_str(env, 0);
-    const char* color_hex = get_func_arg_str(env, 1);
+    size_t len1, len2;
+    const char* layer_id = JS_ToCStringLen(ctx, &len1, argv[0]);
+    const char* color_hex = JS_ToCStringLen(ctx, &len2, argv[1]);
 
     if (layer_id && color_hex && g_layer_root) {
         struct Layer* layer = find_layer_by_id(g_layer_root, layer_id);
         if (layer) {
             // 解析十六进制颜色 #RRGGBB
             if (strlen(color_hex) == 7 && color_hex[0] == '#') {
-                layer->bg_color.r = (hex_to_int(color_hex[1]) * 16 + hex_to_int(color_hex[2]));
-                layer->bg_color.g = (hex_to_int(color_hex[3]) * 16 + hex_to_int(color_hex[4]));
-                layer->bg_color.b = (hex_to_int(color_hex[5]) * 16 + hex_to_int(color_hex[6]));
+                int r = 0, g = 0, b = 0;
+                sscanf(color_hex, "#%02x%02x%02x", &r, &g, &b);
+                layer->bg_color.r = r;
+                layer->bg_color.g = g;
+                layer->bg_color.b = b;
                 layer->bg_color.a = 255;
-                printf("JS(Mario): Set bg_color for layer '%s': %s\n", layer_id, color_hex);
+                printf("JS(QuickJS): Set bg_color for layer '%s': %s\n", layer_id, color_hex);
             }
         }
     }
 
-    return var_new_null(vm);
+    JS_FreeCString(ctx, layer_id);
+    JS_FreeCString(ctx, color_hex);
+    return JS_UNDEFINED;
 }
 
 // 隐藏图层
-static var_t* mario_hide(vm_t* vm, var_t* env, void* data)
+static JSValue js_hide(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    var_t* args = get_func_args(env);
-    uint32_t argc = get_func_args_num(env);
+    if (argc < 1) return JS_UNDEFINED;
 
-    if (argc < 1) return var_new_null(vm);
-
-    const char* layer_id = get_func_arg_str(env, 0);
+    size_t len;
+    const char* layer_id = JS_ToCStringLen(ctx, &len, argv[0]);
 
     if (layer_id && g_layer_root) {
         struct Layer* layer = find_layer_by_id(g_layer_root, layer_id);
         if (layer) {
             layer->visible = 0; // IN_VISIBLE
-            printf("JS(Mario): Hide layer '%s'\n", layer_id);
+            printf("JS(QuickJS): Hide layer '%s'\n", layer_id);
         }
     }
 
-    return var_new_null(vm);
+    JS_FreeCString(ctx, layer_id);
+    return JS_UNDEFINED;
 }
 
 // 显示图层
-static var_t* mario_show(vm_t* vm, var_t* env, void* data)
+static JSValue js_show(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    var_t* args = get_func_args(env);
-    uint32_t argc = get_func_args_num(env);
+    if (argc < 1) return JS_UNDEFINED;
 
-    if (argc < 1) return var_new_null(vm);
-
-    const char* layer_id = get_func_arg_str(env, 0);
+    size_t len;
+    const char* layer_id = JS_ToCStringLen(ctx, &len, argv[0]);
 
     if (layer_id && g_layer_root) {
         struct Layer* layer = find_layer_by_id(g_layer_root, layer_id);
         if (layer) {
             layer->visible = 1; // VISIBLE
-            printf("JS(Mario): Show layer '%s'\n", layer_id);
+            printf("JS(QuickJS): Show layer '%s'\n", layer_id);
         }
     }
 
-    return var_new_null(vm);
+    JS_FreeCString(ctx, layer_id);
+    return JS_UNDEFINED;
 }
 
 // 打印日志
-static var_t* mario_log(vm_t* vm, var_t* env, void* data)
+static JSValue js_log(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    var_t* args = get_func_args(env);
-    uint32_t argc = get_func_args_num(env);
-
-    // 使用 Mario 的 var_to_str 来安全地转换任意类型为字符串
-    mstr_t* output = mstr_new("");
-    mstr_t* temp = mstr_new("");
-
-    for (uint32_t i = 0; i < argc; i++) {
-        if (i != 0) {
-            mstr_append(output, " ");
-        }
-        node_t* n = var_array_get(args, i);
-        if (n != NULL && n->var != NULL) {
-            var_to_str(n->var, temp);
-            mstr_append(output, temp->cstr);
+    for (int i = 0; i < argc; i++) {
+        if (i != 0) printf(" ");
+        const char* str = JS_ToCString(ctx, argv[i]);
+        if (str) {
+            printf("%s", str);
+            JS_FreeCString(ctx, str);
         }
     }
-
-    mstr_add(output, '\n');
-    printf("%s", output->cstr);
-
-    mstr_free(temp);
-    mstr_free(output);
-
-    return var_new_null(vm);
+    printf("\n");
+    return JS_UNDEFINED;
 }
 
 /* ====================== 初始化和清理 ====================== */
-extern bool compile(bytecode_t *bc, const char* input);
 
-static void out(const char* str) {
-    write(1, str, strlen(str));
-}
-// 初始化 JS 引擎（使用 Mario）
+// 初始化 JS 引擎（使用 QuickJS）
 int js_module_init(void)
 {
-    printf("JS(Mario): Initializing Mario JavaScript engine...\n");
-    _malloc = malloc;
-    _free = free;
-    _out_func = out;
-    // 创建 Mario 虚拟机
-    g_vm = vm_new(compile);
-    if (!g_vm) {
-        fprintf(stderr, "JS(Mario): Failed to create VM\n");
+    printf("JS(QuickJS): Initializing QuickJS engine...\n");
+    
+    // 创建 QuickJS Runtime
+    g_js_rt = JS_NewRuntime();
+    if (!g_js_rt) {
+        fprintf(stderr, "JS(QuickJS): Failed to create Runtime\n");
         return -1;
     }
 
-    // 初始化虚拟机（这会调用 on_init 回调）
-    vm_init(g_vm, NULL, NULL);
+    // 创建 QuickJS Context
+    g_js_ctx = JS_NewContext(g_js_rt);
+    if (!g_js_ctx) {
+        fprintf(stderr, "JS(QuickJS): Failed to create Context\n");
+        JS_FreeRuntime(g_js_rt);
+        g_js_rt = NULL;
+        return -1;
+    }
 
     // 注册 API 函数
     js_module_register_api();
 
-    printf("JS(Mario): Mario JavaScript engine initialized\n");
+    printf("JS(QuickJS): QuickJS engine initialized\n");
     return 0;
 }
 
 // 清理 JS 引擎
 void js_module_cleanup(void)
 {
-    if (g_vm) {
-        vm_close(g_vm);
-        g_vm = NULL;
+    if (g_js_ctx) {
+        JS_FreeContext(g_js_ctx);
+        g_js_ctx = NULL;
+    }
+    if (g_js_rt) {
+        JS_FreeRuntime(g_js_rt);
+        g_js_rt = NULL;
     }
 }
 
-void reg_native_yui(vm_t* vm, const char* decl, native_func_t native, void* data) {
-	var_t* cls = vm_new_class(vm, "YUI");
-    var_t* cls2 = vm_new_class(vm, "Yui");
-	vm_reg_native(vm, cls, decl, native, data);
-	vm_reg_native(vm, cls2, decl, native, data);
-}
-
-static inline var_t* vm_load_var(vm_t* vm, const char* name, bool create) {
-	node_t* n = vm_load_node(vm, name, create);
-	if(n != NULL)
-		return n->var;
-	return NULL;
-}
-
-static void vm_load_basic_classes(vm_t* vm) {
-	vm->var_String = vm_load_var(vm, "String", false);
-	vm->var_Array = vm_load_var(vm, "Array", false);
-	vm->var_Number = vm_load_var(vm, "Number", false);
-}
-
-extern void reg_basic_natives(vm_t* vm);
 // 注册 C API 到 JS
 void js_module_register_api(void)
 {
-    if (!g_vm) return;
+    if (!g_js_ctx) return;
 
-    reg_basic_natives(g_vm);
-    vm_load_basic_classes(g_vm);
+    // 获取全局对象
+    JSValue global_obj = JS_GetGlobalObject(g_js_ctx);
 
-    // 注册 YUI 类的方法
-    var_t* yui_cls = vm_new_class(g_vm, "YUI");
-    vm_reg_native(g_vm, yui_cls, "setText(layerId, text)", mario_set_text, NULL);
-    vm_reg_native(g_vm, yui_cls, "getText(layerId)", mario_get_text, NULL);
-    vm_reg_native(g_vm, yui_cls, "setBgColor(layerId, color)", mario_set_bg_color, NULL);
-    vm_reg_native(g_vm, yui_cls, "hide(layerId)", mario_hide, NULL);
-    vm_reg_native(g_vm, yui_cls, "show(layerId)", mario_show, NULL);
-    vm_reg_native(g_vm, yui_cls, "log(...)", mario_log, NULL);
+    // 注册 YUI 对象
+    JSValue yui_obj = JS_NewObject(g_js_ctx);
+    
+    // 设置 YUI 的方法
+    JS_SetPropertyStr(g_js_ctx, yui_obj, "setText", JS_NewCFunction(g_js_ctx, js_set_text, "setText", 2));
+    JS_SetPropertyStr(g_js_ctx, yui_obj, "getText", JS_NewCFunction(g_js_ctx, js_get_text, "getText", 1));
+    JS_SetPropertyStr(g_js_ctx, yui_obj, "setBgColor", JS_NewCFunction(g_js_ctx, js_set_bg_color, "setBgColor", 2));
+    JS_SetPropertyStr(g_js_ctx, yui_obj, "hide", JS_NewCFunction(g_js_ctx, js_hide, "hide", 1));
+    JS_SetPropertyStr(g_js_ctx, yui_obj, "show", JS_NewCFunction(g_js_ctx, js_show, "show", 1));
+    JS_SetPropertyStr(g_js_ctx, yui_obj, "log", JS_NewCFunction(g_js_ctx, js_log, "log", 1));
 
+    // 将 YUI 对象添加到全局
+    JS_SetPropertyStr(g_js_ctx, global_obj, "YUI", yui_obj);
+    
     // 也注册为全局函数（为了兼容性）
-    vm_reg_static(g_vm, NULL, "setText(layerId, text)", mario_set_text, NULL);
-    vm_reg_static(g_vm, NULL, "getText(layerId)", mario_get_text, NULL);
-    vm_reg_static(g_vm, NULL, "setBgColor(layerId, color)", mario_set_bg_color, NULL);
-    vm_reg_static(g_vm, NULL, "hide(layerId)", mario_hide, NULL);
-    vm_reg_static(g_vm, NULL, "show(layerId)", mario_show, NULL);
+    JS_SetPropertyStr(g_js_ctx, global_obj, "setText", JS_NewCFunction(g_js_ctx, js_set_text, "setText", 2));
+    JS_SetPropertyStr(g_js_ctx, global_obj, "getText", JS_NewCFunction(g_js_ctx, js_get_text, "getText", 1));
+    JS_SetPropertyStr(g_js_ctx, global_obj, "setBgColor", JS_NewCFunction(g_js_ctx, js_set_bg_color, "setBgColor", 2));
+    JS_SetPropertyStr(g_js_ctx, global_obj, "hide", JS_NewCFunction(g_js_ctx, js_hide, "hide", 1));
+    JS_SetPropertyStr(g_js_ctx, global_obj, "show", JS_NewCFunction(g_js_ctx, js_show, "show", 1));
 
-    printf("JS(Mario): Registered native API functions\n");
+    JS_FreeValue(g_js_ctx, global_obj);
+
+    printf("JS(QuickJS): Registered native API functions\n");
 }
 
 // 加载并执行 JS 文件
 int js_module_load_file(const char* filename)
 {
-    if (!g_vm) {
-        fprintf(stderr, "JS(Mario): Engine not initialized\n");
+    if (!g_js_ctx) {
+        fprintf(stderr, "JS(QuickJS): Engine not initialized\n");
         return -1;
     }
 
-    printf("JS(Mario): Loading file %s...\n", filename);
+    printf("JS(QuickJS): Loading file %s...\n", filename);
 
-    int len = 0;
-    uint8_t* buf = load_file(filename, &len);
+    // 读取文件
+    FILE* f = fopen(filename, "r");
+    if (!f) {
+        fprintf(stderr, "JS(QuickJS): Failed to open file %s\n", filename);
+        return -1;
+    }
+
+    fseek(f, 0, SEEK_END);
+    long size = ftell(f);
+    fseek(f, 0, SEEK_SET);
+
+    char* buf = (char*)malloc(size + 1);
     if (!buf) {
+        fclose(f);
         return -1;
     }
 
-    // 使用 Mario 加载并运行代码
-    bool success = vm_load_run(g_vm, (const char*)buf);
+    fread(buf, 1, size, f);
+    buf[size] = '\0';
+    fclose(f);
+
+    // 使用 QuickJS 加载并运行代码
+    JSValue val = JS_Eval(g_js_ctx, buf, size, filename, JS_EVAL_TYPE_GLOBAL);
     free(buf);
 
-    if (!success) {
-        fprintf(stderr, "JS(Mario): Error executing %s\n", filename);
+    if (JS_IsException(val)) {
+        JSValue exc = JS_GetException(g_js_ctx);
+        fprintf(stderr, "JS(QuickJS): Error executing %s:\n", filename);
+        
+        // 打印异常信息
+        JSValue val1 = JS_GetPropertyStr(g_js_ctx, exc, "message");
+        if (!JS_IsUndefined(val1)) {
+            const char* msg = JS_ToCString(g_js_ctx, val1);
+            if (msg) {
+                fprintf(stderr, "  %s\n", msg);
+                JS_FreeCString(g_js_ctx, msg);
+            }
+        }
+        JS_FreeValue(g_js_ctx, val1);
+        
+        JS_FreeValue(g_js_ctx, exc);
+        JS_FreeValue(g_js_ctx, val);
         return -1;
     }
 
-    printf("JS(Mario): Successfully loaded %s\n", filename);
+    JS_FreeValue(g_js_ctx, val);
+    printf("JS(QuickJS): Successfully loaded %s\n", filename);
     return 0;
 }
 
 // 调用 JS 事件函数
 int js_module_call_event(const char* event_name, Layer* layer)
 {
-    if (!g_vm || !event_name) return -1;
+    if (!g_js_ctx || !event_name) return -1;
 
     // 移除 @ 前缀（如果有）
     const char* func_name = event_name;
@@ -299,32 +294,53 @@ int js_module_call_event(const char* event_name, Layer* layer)
         func_name++;
     }
 
-    // 查找函数
-    node_t* func_node = vm_find(g_vm, func_name);
-    if (!func_node || !func_node->var || !var_get_func(func_node->var)) {
+    // 获取全局对象
+    JSValue global_obj = JS_GetGlobalObject(g_js_ctx);
+    JSValue func = JS_GetPropertyStr(g_js_ctx, global_obj, func_name);
+
+    if (JS_IsUndefined(func) || JS_IsNull(func)) {
+        JS_FreeValue(g_js_ctx, global_obj);
+        JS_FreeValue(g_js_ctx, func);
         return -1;
     }
 
-    // 创建参数数组
-    var_t* args = var_new_array(g_vm);
-    if (layer) {
-        var_array_add(args, var_new_str(g_vm, layer->id));
-    } else {
-        var_array_add(args, var_new_null(g_vm));
+    if (!JS_IsFunction(g_js_ctx, func)) {
+        JS_FreeValue(g_js_ctx, global_obj);
+        JS_FreeValue(g_js_ctx, func);
+        return -1;
     }
+
+    // 准备参数
+    JSValue args[1];
+    args[0] = layer ? JS_NewString(g_js_ctx, layer->id) : JS_NULL;
 
     // 调用函数
-    var_t* result = call_m_func_by_name(g_vm, NULL, func_name, args);
+    JSValue result = JS_Call(g_js_ctx, func, JS_UNDEFINED, 1, args);
 
-    var_unref(args);
+    // 清理
+    JS_FreeValue(g_js_ctx, args[0]);
+    JS_FreeValue(g_js_ctx, global_obj);
+    JS_FreeValue(g_js_ctx, func);
 
-    if (!result) {
-        fprintf(stderr, "JS(Mario): Error calling event %s\n", event_name);
+    if (JS_IsException(result)) {
+        JSValue exc = JS_GetException(g_js_ctx);
+        fprintf(stderr, "JS(QuickJS): Error calling event %s:\n", event_name);
+        
+        JSValue val1 = JS_GetPropertyStr(g_js_ctx, exc, "message");
+        if (!JS_IsUndefined(val1)) {
+            const char* msg = JS_ToCString(g_js_ctx, val1);
+            if (msg) {
+                fprintf(stderr, "  %s\n", msg);
+                JS_FreeCString(g_js_ctx, msg);
+            }
+        }
+        JS_FreeValue(g_js_ctx, val1);
+        
+        JS_FreeValue(g_js_ctx, exc);
+        JS_FreeValue(g_js_ctx, result);
         return -1;
     }
 
-    var_unref(result);
+    JS_FreeValue(g_js_ctx, result);
     return 0;
 }
-
-

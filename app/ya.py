@@ -33,16 +33,26 @@ target("mqjs")
     add_rules("mode.debug", "mode.release"),
     set_kind("binary"),
     add_flags(),
-    add_files("mquickjs/main.c"),
+    add_files("js/main.c"),
     add_run()
 )
 
-target("mariojs") 
+target("mariojs")
 (
     add_deps( "jsmodule-mario","yui", "mario",),
     add_rules("mode.debug", "mode.release"),
     set_kind("binary"),
     add_flags(),
-    add_files("mquickjs/main.c"),
+    add_files("js/main.c"),
+    add_run()
+)
+
+target("qjs")
+(
+    add_deps( "jsmodule-quickjs","yui", "quickjs",),
+    add_rules("mode.debug", "mode.release"),
+    set_kind("binary"),
+    add_flags(),
+    add_files("js/main.c"),
     add_run()
 )
