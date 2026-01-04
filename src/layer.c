@@ -914,3 +914,41 @@ Layer* find_layer_by_id(Layer* root, const char* id) {
 
     return NULL;
 }
+
+// 从 JSON 字符串解析并创建图层
+Layer* parse_layer_from_string(const char* json_str, Layer* parent) {
+    if (!json_str) {
+        printf("ERROR: json_str is NULL\n");
+        return NULL;
+    }
+
+    printf("DEBUG: Parsing layer from JSON string (length: %zu)\n", strlen(json_str));
+
+    // 移除 JSON 字符串中的注释
+    char* cleaned_json = remove_json_comments((char*)json_str);
+    if (!cleaned_json) {
+        printf("ERROR: Failed to remove JSON comments\n");
+        return NULL;
+    }
+
+    // 解析 JSON
+    cJSON* json_obj = cJSON_Parse(cleaned_json);
+    free(cleaned_json);
+
+    if (!json_obj) {
+        printf("ERROR: Failed to parse JSON string\n");
+        return NULL;
+    }
+
+    printf("DEBUG: JSON parsed successfully\n");
+
+    // 创建图层
+    Layer* layer = parse_layer(json_obj, parent);
+
+    // 删除 JSON 对象
+    cJSON_Delete(json_obj);
+
+    printf("DEBUG: Layer created successfully: %s\n", layer ? layer->id : "NULL");
+
+    return layer;
+}
