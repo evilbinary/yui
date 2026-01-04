@@ -114,12 +114,6 @@ void button_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
                      event->y >= layer->rect.y &&
                      event->y < layer->rect.y + layer->rect.h);
 
-    // 调试信息
-    printf("Button '%s': mouse=(%d,%d), rect=(%d,%d,%d,%d), is_inside=%d, state=%d\n",
-           layer->id, event->x, event->y,
-           layer->rect.x, layer->rect.y, layer->rect.w, layer->rect.h,
-           is_inside, event->state);
-
     // 更新悬停状态
     if (is_inside) {
         SET_STATE(layer, LAYER_STATE_HOVER);
@@ -130,7 +124,6 @@ void button_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     // 鼠标按下事件：设置 PRESSED 状态
     if (event->state == SDL_PRESSED) {
         if (is_inside) {
-            printf("Button '%s': PRESSED\n", layer->id);
             SET_STATE(layer, LAYER_STATE_PRESSED);
         }
     }
@@ -139,7 +132,6 @@ void button_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
         // 只要有 PRESSED 状态就触发点击，不要求释放时还在按钮内
         // 这样可以处理快速点击或鼠标轻微拖出按钮的情况
         if (HAS_STATE(layer, LAYER_STATE_PRESSED)) {
-            printf("Button '%s': CLICK TRIGGERED!\n", layer->id);
             // 触发点击事件（如果存在）
             if (layer->event && layer->event->click) {
                 layer->event->click(layer);
