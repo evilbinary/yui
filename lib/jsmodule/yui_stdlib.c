@@ -321,7 +321,7 @@ static JSValue js_render_from_json(JSContext *ctx, JSValue *this_val, int argc, 
 
             parent_layer->children[0] = new_layer;
             parent_layer->child_count = 1;
-
+            layout_layer(parent_layer);
             printf("YUI: Successfully rendered JSON to layer '%s', new layer id: '%s'\n",
                    layer_id, new_layer->id);
             return JS_NewInt32(ctx, 0);

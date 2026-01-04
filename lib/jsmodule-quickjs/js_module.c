@@ -1,6 +1,7 @@
 #include "lib/jsmodule/js_module.h"
 #include "../../lib/quickjs/quickjs.h"
 #include "../../src/layer.h"
+#include "../../src/layout.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -205,6 +206,11 @@ static JSValue js_render_from_json(JSContext *ctx, JSValueConst this_val, int ar
 
             parent_layer->children[0] = new_layer;
             parent_layer->child_count = 1;
+
+            // 重新布局父图层和新的子图层
+            printf("JS(QuickJS): Reloading layout for parent layer '%s'\n", layer_id);
+            layout_layer(parent_layer);
+            printf("JS(QuickJS): Layout updated successfully\n");
 
             printf("JS(QuickJS): Successfully rendered JSON to layer '%s', new layer id: '%s'\n",
                    layer_id, new_layer->id);
