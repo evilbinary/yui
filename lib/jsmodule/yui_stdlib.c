@@ -161,7 +161,8 @@ static JSValue js_set_text(JSContext *ctx, JSValue *this_val, int argc, JSValue 
     if (layer_id && text && g_layer_root ) {
         Layer* layer = find_layer_by_id(g_layer_root, layer_id);
         if (layer) {
-            strcpy(layer->text, text);
+            strncpy(layer->text, text, MAX_TEXT - 1);
+            layer->text[MAX_TEXT - 1] = '\0';
             printf("YUI: Set text for layer '%s': %s\n", layer_id, text);
             fflush(stdout);
 
@@ -322,6 +323,11 @@ static JSValue js_render_from_json(JSContext *ctx, JSValue *this_val, int argc, 
             parent_layer->children[0] = new_layer;
             parent_layer->child_count = 1;
             layout_layer(parent_layer);
+             // 为新创建的图层加载字体
+            printf("JS(mqjs): Loading fonts for new layer\n");
+            load_all_fonts(new_layer);
+            printf("JS(mqjs): Fonts loaded successfully\n");
+
             printf("YUI: Successfully rendered JSON to layer '%s', new layer id: '%s'\n",
                    layer_id, new_layer->id);
             return JS_NewInt32(ctx, 0);
