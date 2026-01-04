@@ -2,6 +2,7 @@
 #include "../../lib/quickjs/quickjs.h"
 #include "../../src/layer.h"
 #include "../../src/layout.h"
+#include "../../src/render.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -211,6 +212,11 @@ static JSValue js_render_from_json(JSContext *ctx, JSValueConst this_val, int ar
             printf("JS(QuickJS): Reloading layout for parent layer '%s'\n", layer_id);
             layout_layer(parent_layer);
             printf("JS(QuickJS): Layout updated successfully\n");
+
+            // 为新创建的图层加载字体
+            printf("JS(QuickJS): Loading fonts for new layer\n");
+            load_all_fonts(new_layer);
+            printf("JS(QuickJS): Fonts loaded successfully\n");
 
             printf("JS(QuickJS): Successfully rendered JSON to layer '%s', new layer id: '%s'\n",
                    layer_id, new_layer->id);
