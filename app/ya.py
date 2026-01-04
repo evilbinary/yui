@@ -27,6 +27,27 @@ target("playground")
 )
 
 
+target("playground-mario") 
+(
+    add_deps( "jsmodule-mario","yui", "mario",),
+    add_rules("mode.debug", "mode.release"),
+    set_kind("binary"),
+    add_flags(),
+    add_files("playground/main.c"),
+    add_run()
+)
+
+target("playground-mqjs") 
+(
+    add_deps( "jsmodule","yui", "mquickjs",),
+    add_rules("mode.debug", "mode.release"),
+    set_kind("binary"),
+    add_flags(),
+    add_files("playground/main.c"),
+    add_run()
+)
+
+
 target("mqjs") 
 (
     add_deps( "jsmodule","yui", "mquickjs",),

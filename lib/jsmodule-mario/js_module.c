@@ -1,6 +1,8 @@
 #include "lib/jsmodule/js_module.h"
 #include "../../lib/mario/mario.h"
 #include "../../src/ytype.h"
+#include "../../src/layer.h"
+#include "../../src/layout.h"
 #include "event.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -172,6 +174,82 @@ static var_t* mario_log(vm_t* vm, var_t* env, void* data)
     return var_new_null(vm);
 }
 
+// 从 JSON 字符串动态渲染到指定图层
+static var_t* mario_render_from_json(vm_t* vm, var_t* env, void* data)
+{
+    var_t* args = get_func_args(env);
+    uint32_t argc = get_func_args_num(env);
+
+    if (argc < 2) {
+        printf("JS(Mario): ERROR - Expected 2 arguments: layer_id and json_string\n");
+        return var_new_int(vm, -1);
+    }
+
+    const char* layer_id = get_func_arg_str(env, 0);
+    const char* json_str = get_func_arg_str(env, 1);
+
+    if (!layer_id || !json_str) {
+        printf("JS(Mario): ERROR - Invalid arguments\n");
+        return var_new_int(vm, -1);
+    }
+
+    printf("JS(Mario): renderFromJson called with layer_id='%s'\n", layer_id);
+
+    if (g_layer_root) {
+        // 查找目标图层
+        Layer* parent_layer = find_layer_by_id(g_layer_root, layer_id);
+        if (!parent_layer) {
+            printf("JS(Mario): ERROR - Layer '%s' not found\n", layer_id);
+            return var_new_int(vm, -1);
+        }
+
+        printf("JS(Mario): Found parent layer '%s'\n", layer_id);
+
+        // 清除父图层的所有子图层
+        if (parent_layer->children) {
+            for (int i = 0; i < parent_layer->child_count; i++) {
+                if (parent_layer->children[i]) {
+                    destroy_layer(parent_layer->children[i]);
+                }
+            }
+            free(parent_layer->children);
+            parent_layer->children = NULL;
+        }
+        parent_layer->child_count = 0;
+
+        // 从 JSON 字符串创建新图层
+        Layer* new_layer = parse_layer_from_string(json_str, parent_layer);
+
+        if (new_layer) {
+            // 为子图层数组分配空间（初始分配1个，可以根据需要扩展）
+            parent_layer->children = malloc(sizeof(Layer*));
+            if (!parent_layer->children) {
+                printf("JS(Mario): ERROR - Failed to allocate memory for children array\n");
+                destroy_layer(new_layer);
+                return var_new_int(vm, -2);
+            }
+
+            parent_layer->children[0] = new_layer;
+            parent_layer->child_count = 1;
+
+            // 重新布局父图层和新的子图层
+            printf("JS(Mario): Reloading layout for parent layer '%s'\n", layer_id);
+            layout_layer(parent_layer);
+            printf("JS(Mario): Layout updated successfully\n");
+
+            printf("JS(Mario): Successfully rendered JSON to layer '%s', new layer id: '%s'\n",
+                   layer_id, new_layer->id);
+            return var_new_int(vm, 0);
+        } else {
+            printf("JS(Mario): ERROR - Failed to parse JSON string\n");
+            return var_new_int(vm, -3);
+        }
+    }
+
+    printf("JS(Mario): ERROR - g_layer_root is NULL\n");
+    return var_new_int(vm, -4);
+}
+
 /* ====================== 初始化和清理 ====================== */
 extern bool compile(bytecode_t *bc, const char* input);
 
@@ -247,6 +325,7 @@ void js_module_register_api(void)
     vm_reg_native(g_vm, yui_cls, "setBgColor(layerId, color)", mario_set_bg_color, NULL);
     vm_reg_native(g_vm, yui_cls, "hide(layerId)", mario_hide, NULL);
     vm_reg_native(g_vm, yui_cls, "show(layerId)", mario_show, NULL);
+    vm_reg_native(g_vm, yui_cls, "renderFromJson(layerId, json)", mario_render_from_json, NULL);
     vm_reg_native(g_vm, yui_cls, "log(...)", mario_log, NULL);
 
     // 也注册为全局函数（为了兼容性）
