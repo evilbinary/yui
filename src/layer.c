@@ -401,7 +401,7 @@ Layer* parse_layer(cJSON* json_obj, Layer* parent) {
     }
     cJSON* layout_align = cJSON_GetObjectItem(layout, "align");
     if (layout_align) {
-      // child 行为
+      // 交叉轴对齐方式
       if (strcmp(layout_align->valuestring, "left") == 0) {
         layer->layout_manager->align = LAYOUT_ALIGN_LEFT;
       } else if (strcmp(layout_align->valuestring, "right") == 0) {
@@ -411,6 +411,26 @@ Layer* parse_layer(cJSON* json_obj, Layer* parent) {
       } else {
         layer->layout_manager->align = LAYOUT_ALIGN_LEFT;
       }
+    }
+
+    cJSON* layout_justify = cJSON_GetObjectItem(layout, "justifyContent");
+    if (layout_justify) {
+      // 主轴对齐方式
+      const char* justify_str = layout_justify->valuestring;
+      if (strcmp(justify_str, "center") == 0) {
+        layer->layout_manager->justify = LAYOUT_ALIGN_CENTER;
+      } else if (strcmp(justify_str, "left") == 0 || strcmp(justify_str, "flex-start") == 0) {
+        layer->layout_manager->justify = LAYOUT_ALIGN_LEFT;
+      } else if (strcmp(justify_str, "right") == 0 || strcmp(justify_str, "flex-end") == 0) {
+        layer->layout_manager->justify = LAYOUT_ALIGN_RIGHT;
+      } else if (strcmp(justify_str, "space-between") == 0) {
+        layer->layout_manager->justify = LAYOUT_ALIGN_CENTER;  // 暂时用 center 表示
+      } else {
+        layer->layout_manager->justify = LAYOUT_ALIGN_LEFT;  // 默认左对齐
+      }
+    } else {
+      // 默认左对齐
+      layer->layout_manager->justify = LAYOUT_ALIGN_LEFT;
     }
 
     if (cJSON_HasObjectItem(layout, "spacing")) {

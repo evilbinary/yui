@@ -155,6 +155,7 @@ typedef struct LayoutManager {
     int spacing;
     int padding[4]; // top, right, bottom, left
     LayoutType align;
+    LayoutType justify;  // 主轴对齐方式（水平布局中的水平对齐，垂直布局中的垂直对齐）
     // 添加Grid布局特有属性
     int columns;  // Grid布局列数
 } LayoutManager;
