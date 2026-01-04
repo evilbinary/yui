@@ -81,23 +81,22 @@ void button_component_handle_key_event(Layer* layer, KeyEvent* event) {
     if (!component || HAS_STATE(layer, LAYER_STATE_DISABLED)) {
         return;
     }
-    
+
     // 处理回车键或空格键按下事件
     if (event->type == KEY_EVENT_DOWN && (event->data.key.key_code == 13 || event->data.key.key_code == 32)) {
-        // 模拟按钮点击，设置Layer的PRESSED状态
+        // 设置 PRESSED 状态
         SET_STATE(layer, LAYER_STATE_PRESSED);
-        // 触发点击事件（如果存在）
-        if (layer->event && layer->event->click) {
-            layer->event->click(layer);
-        }
     }
-    
-    // 处理按键释放事件，恢复按钮状态
+
+    // 处理按键释放事件，触发点击并恢复按钮状态
     if (event->type == KEY_EVENT_UP && (event->data.key.key_code == 13 || event->data.key.key_code == 32)) {
-        // 同时设置Layer的状态，如果有焦点则保持焦点状态，否则设置为NORMAL
+        // 触发点击事件（如果存在）
         if (HAS_STATE(layer, LAYER_STATE_PRESSED)) {
             CLEAR_STATE(layer, LAYER_STATE_PRESSED);
-            // 保留焦点状态
+            // 在按键释放时触发点击事件
+            if (layer->event && layer->event->click) {
+                layer->event->click(layer);
+            }
         }
     }
 }
@@ -105,42 +104,54 @@ void button_component_handle_key_event(Layer* layer, KeyEvent* event) {
 // 处理鼠标事件
 void button_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     ButtonComponent* component = (ButtonComponent*)layer->component;
-    int is_click = (event->state == 1);
     if (!component || HAS_STATE(layer, LAYER_STATE_DISABLED)) {
         return;
     }
 
-    // printf("button_component_handle_mouse_event: %d, %d, %d, %d state:%d\n", event->x, event->y, is_click , event->button,event->state);
-    
     // 检查鼠标是否在按钮范围内
-    int is_inside = (event->x >= layer->rect.x && 
+    int is_inside = (event->x >= layer->rect.x &&
                      event->x < layer->rect.x + layer->rect.w &&
-                     event->y >= layer->rect.y && 
+                     event->y >= layer->rect.y &&
                      event->y < layer->rect.y + layer->rect.h);
-    
+
+    // 调试信息
+    printf("Button '%s': mouse=(%d,%d), rect=(%d,%d,%d,%d), is_inside=%d, state=%d\n",
+           layer->id, event->x, event->y,
+           layer->rect.x, layer->rect.y, layer->rect.w, layer->rect.h,
+           is_inside, event->state);
+
     // 更新悬停状态
     if (is_inside) {
         SET_STATE(layer, LAYER_STATE_HOVER);
     } else {
         CLEAR_STATE(layer, LAYER_STATE_HOVER);
     }
-    
-    if (is_click) {
-        // printf("button_component_handle_mouse_event click: %d, %d, %d, %d state:%d\n", event->x, event->y, is_click , event->button,event->state);
+
+    // 鼠标按下事件：设置 PRESSED 状态
+    if (event->state == SDL_PRESSED) {
         if (is_inside) {
-            // 鼠标点击在按钮上，设置Layer的PRESSED状态
+            printf("Button '%s': PRESSED\n", layer->id);
             SET_STATE(layer, LAYER_STATE_PRESSED);
+        }
+    }
+    // 鼠标释放事件：触发点击
+    else if (event->state == SDL_RELEASED) {
+        // 只要有 PRESSED 状态就触发点击，不要求释放时还在按钮内
+        // 这样可以处理快速点击或鼠标轻微拖出按钮的情况
+        if (HAS_STATE(layer, LAYER_STATE_PRESSED)) {
+            printf("Button '%s': CLICK TRIGGERED!\n", layer->id);
             // 触发点击事件（如果存在）
             if (layer->event && layer->event->click) {
                 layer->event->click(layer);
             }
-        } else {
-            // 鼠标点击在按钮外，清除按下状态
-            CLEAR_STATE(layer, LAYER_STATE_PRESSED);
         }
-    } else {
-        // 非点击事件，清除按下状态
+        // 无论是否点击成功，都清除 PRESSED 状态
         CLEAR_STATE(layer, LAYER_STATE_PRESSED);
+    }
+    // 鼠标移动事件：不清除 PRESSED 状态
+    // 只有在鼠标释放时才清除 PRESSED 状态
+    else if (event->state == SDL_MOUSEMOTION) {
+        // 移动时不清除 PRESSED 状态，保持按下状态
     }
 }
 
@@ -207,31 +218,34 @@ void button_component_render(Layer* layer) {
         if (HAS_STATE(layer, LAYER_STATE_DISABLED)) {
             text_color = (Color){255, 255, 255, 150};
         }
-        
+
         Texture* text_texture = render_text(layer, layer->text, text_color);
-        
+
         if (text_texture) {
             int text_width, text_height;
             backend_query_texture(text_texture, NULL, NULL, &text_width, &text_height);
-            
+
+            // 不需要除以scale，因为SDL_RenderSetScale已经处理了坐标缩放
+            // text_width和text_height是纹理的物理像素大小
+            // SDL会自动根据scale调整渲染
             Rect text_rect = {
                 layer->rect.x + (layer->rect.w - text_width / scale) / 2,  // 居中
                 layer->rect.y + (layer->rect.h - text_height / scale) / 2,
                 text_width / scale,
                 text_height / scale
             };
-            
+
             // 确保文本不会超出按钮边界
             if (text_rect.w > layer->rect.w - 20) {
                 text_rect.w = layer->rect.w - 20;
                 text_rect.x = layer->rect.x + 10;
             }
-            
+
             if (text_rect.h > layer->rect.h) {
                 text_rect.h = layer->rect.h;
                 text_rect.y = layer->rect.y;
             }
-            
+
             backend_render_text_copy(text_texture, NULL, &text_rect);
             backend_render_text_destroy(text_texture);
         }

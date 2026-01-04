@@ -198,40 +198,42 @@ void handle_mouse_event(Layer* layer, MouseEvent* event) {
     }
     
     Point mouse_pos = {event->x, event->y};
-    if (point_in_rect(mouse_pos, layer->rect)) {
-        // 处理hover和pressed状态
-        if (layer->state != LAYER_STATE_DISABLED) {
-            if (event->state == SDL_PRESSED) {
-                // 鼠标按下时设置为PRESSED状态
-                layer->state = LAYER_STATE_PRESSED;
-            } else {
-                // 鼠标悬停时设置为HOVER状态
-                if (layer->state != LAYER_STATE_FOCUSED) {
-                    layer->state = LAYER_STATE_HOVER;
+    // 让组件自己管理状态，不在通用事件处理中修改状态
+    // 这避免了状态冲突和覆盖组件的状态管理逻辑
+    if (!layer->handle_mouse_event) {
+        // 如果没有自定义的事件处理函数，使用默认的状态管理
+        if (point_in_rect(mouse_pos, layer->rect)) {
+            if (layer->state != LAYER_STATE_DISABLED) {
+                if (event->state == SDL_PRESSED) {
+                    // 鼠标按下时设置为PRESSED状态
+                    layer->state = LAYER_STATE_PRESSED;
+                } else {
+                    // 鼠标悬停时设置为HOVER状态
+                    if (layer->state != LAYER_STATE_FOCUSED) {
+                        layer->state = LAYER_STATE_HOVER;
+                    }
                 }
             }
-        }
-        
-        // 处理焦点切换逻辑
-        if (layer->focusable && event->state == SDL_PRESSED) {
-            // 如果当前有焦点图层，将其状态设置为NORMAL
-            if (focused_layer && focused_layer != layer) {
-                focused_layer->state = LAYER_STATE_NORMAL;
-            }
-            // 设置新的焦点图层
-            focused_layer = layer;
-            layer->state = LAYER_STATE_FOCUSED;
-        }
 
-        if (event->state == SDL_PRESSED && layer->event && layer->event->click) {
-            layer->event->click(layer);
-        }
-    } else {
-        // 鼠标离开图层时，恢复为NORMAL状态（除非是DISABLED或FOCUSED状态）
-        if (layer->state != LAYER_STATE_DISABLED && layer->state != LAYER_STATE_FOCUSED) {
-            layer->state = LAYER_STATE_NORMAL;
+            // 处理焦点切换逻辑
+            if (layer->focusable && event->state == SDL_PRESSED) {
+                // 如果当前有焦点图层，将其状态设置为NORMAL
+                if (focused_layer && focused_layer != layer) {
+                    focused_layer->state = LAYER_STATE_NORMAL;
+                }
+                // 设置新的焦点图层
+                focused_layer = layer;
+                layer->state = LAYER_STATE_FOCUSED;
+            }
+        } else {
+            // 鼠标离开图层时，恢复为NORMAL状态（除非是DISABLED或FOCUSED状态）
+            if (layer->state != LAYER_STATE_DISABLED && layer->state != LAYER_STATE_FOCUSED) {
+                layer->state = LAYER_STATE_NORMAL;
+            }
         }
     }
+
+    // 让各组件自己处理鼠标事件（包括点击）
     if (layer->handle_mouse_event) {
         layer->handle_mouse_event(layer, event);
     }
