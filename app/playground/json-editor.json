@@ -5,6 +5,7 @@
     "style": {
         "bgColor": "#f5f5f5"
     },
+    "js": "json-editor.js",
     "layout": {
         "type": "horizontal",
         "spacing": 5
@@ -188,7 +189,21 @@
                         "type": "vertical",
                         "spacing": 10
                     },
-                    "children": []
+                    "children": [
+                        {
+                            "id": "previewLabel",
+                            "type": "Label",
+                            "text": "预览区域\n在编辑器中输入JSON内容，点击验证、格式化或刷新按钮查看结果",
+                            "size": [550, 700],
+                            "style": {
+                                "color": "#333333",
+                                "fontSize": 13,
+                                "fontFamily": "monospace",
+                                "textAlign": "left",
+                                "lineHeight": 1.5
+                            }
+                        }
+                    ]
                 }
             ]
         }

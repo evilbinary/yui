@@ -1,11 +1,12 @@
 {
     "type":"main",
     "assets":"app/assets",
-    "font":"Roboto-Regular.ttf",
+    // "font":"Roboto-Regular.ttf",
+    "font":"NotoColorEmoji.ttf",
     "fontSize":"16",
     "text":"YUI Event App",
     "size":[500,600],
-    //"source":"app/js/memory-game.json",
+    // "source":"app/js/memory-game.json",
     "source":"app/js/whack-a-mole.json",  // 打地鼠
     // "source":"app/js/apple-catcher.json", // 接苹果
     // "source":"app/js/snake-game.json",

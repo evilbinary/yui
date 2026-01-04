@@ -787,6 +787,9 @@ Texture* backend_render_texture(DFont* font,const char* text,Color color){
         printf("error: backend_render_texture called with NULL font (text: '%s')\n", text ? text : "(null)");
         return NULL;
     }
+    if(strlen(text)==0){
+        return NULL;
+    }
     
     // 检查字体指针是否被破坏
     if ((uintptr_t)font == 0xbebebebebebebebeULL) {
