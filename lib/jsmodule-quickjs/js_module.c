@@ -146,6 +146,85 @@ static JSValue js_log(JSContext *ctx, JSValueConst this_val, int argc, JSValueCo
     return JS_UNDEFINED;
 }
 
+// 从 JSON 字符串动态渲染到指定图层
+static JSValue js_render_from_json(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    if (argc < 2) {
+        return JS_ThrowTypeError(ctx, "Expected 2 arguments: layer_id and json_string");
+    }
+
+    size_t len1, len2;
+    const char* layer_id = JS_ToCStringLen(ctx, &len1, argv[0]);
+    const char* json_str = JS_ToCStringLen(ctx, &len2, argv[1]);
+
+    if (!layer_id || !json_str) {
+        if (layer_id) JS_FreeCString(ctx, layer_id);
+        if (json_str) JS_FreeCString(ctx, json_str);
+        return JS_ThrowTypeError(ctx, "Invalid arguments");
+    }
+
+    printf("JS(QuickJS): renderFromJson called with layer_id='%s'\n", layer_id);
+
+    if (g_layer_root) {
+        // 查找目标图层
+        Layer* parent_layer = find_layer_by_id(g_layer_root, layer_id);
+        if (!parent_layer) {
+            printf("JS(QuickJS): ERROR - Layer '%s' not found\n", layer_id);
+            JS_FreeCString(ctx, layer_id);
+            JS_FreeCString(ctx, json_str);
+            return JS_NewInt32(ctx, -1);
+        }
+
+        printf("JS(QuickJS): Found parent layer '%s'\n", layer_id);
+
+        // 清除父图层的所有子图层
+        if (parent_layer->children) {
+            for (int i = 0; i < parent_layer->child_count; i++) {
+                if (parent_layer->children[i]) {
+                    destroy_layer(parent_layer->children[i]);
+                }
+            }
+            free(parent_layer->children);
+            parent_layer->children = NULL;
+        }
+        parent_layer->child_count = 0;
+
+        // 从 JSON 字符串创建新图层
+        Layer* new_layer = parse_layer_from_string(json_str, parent_layer);
+
+        if (new_layer) {
+            // 为子图层数组分配空间（初始分配1个，可以根据需要扩展）
+            parent_layer->children = malloc(sizeof(Layer*));
+            if (!parent_layer->children) {
+                printf("JS(QuickJS): ERROR - Failed to allocate memory for children array\n");
+                destroy_layer(new_layer);
+                JS_FreeCString(ctx, layer_id);
+                JS_FreeCString(ctx, json_str);
+                return JS_NewInt32(ctx, -2);
+            }
+
+            parent_layer->children[0] = new_layer;
+            parent_layer->child_count = 1;
+
+            printf("JS(QuickJS): Successfully rendered JSON to layer '%s', new layer id: '%s'\n",
+                   layer_id, new_layer->id);
+            JS_FreeCString(ctx, layer_id);
+            JS_FreeCString(ctx, json_str);
+            return JS_NewInt32(ctx, 0);
+        } else {
+            printf("JS(QuickJS): ERROR - Failed to parse JSON string\n");
+            JS_FreeCString(ctx, layer_id);
+            JS_FreeCString(ctx, json_str);
+            return JS_NewInt32(ctx, -3);
+        }
+    }
+
+    printf("JS(QuickJS): ERROR - g_layer_root is NULL\n");
+    JS_FreeCString(ctx, layer_id);
+    JS_FreeCString(ctx, json_str);
+    return JS_NewInt32(ctx, -4);
+}
+
 /* ====================== 初始化和清理 ====================== */
 
 // 初始化 JS 引擎（使用 QuickJS）
@@ -199,13 +278,14 @@ void js_module_register_api(void)
 
     // 注册 YUI 对象
     JSValue yui_obj = JS_NewObject(g_js_ctx);
-    
+
     // 设置 YUI 的方法
     JS_SetPropertyStr(g_js_ctx, yui_obj, "setText", JS_NewCFunction(g_js_ctx, js_set_text, "setText", 2));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "getText", JS_NewCFunction(g_js_ctx, js_get_text, "getText", 1));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "setBgColor", JS_NewCFunction(g_js_ctx, js_set_bg_color, "setBgColor", 2));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "hide", JS_NewCFunction(g_js_ctx, js_hide, "hide", 1));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "show", JS_NewCFunction(g_js_ctx, js_show, "show", 1));
+    JS_SetPropertyStr(g_js_ctx, yui_obj, "renderFromJson", JS_NewCFunction(g_js_ctx, js_render_from_json, "renderFromJson", 2));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "log", JS_NewCFunction(g_js_ctx, js_log, "log", 1));
 
     // 将 YUI 对象添加到全局

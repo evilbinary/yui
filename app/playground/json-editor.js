@@ -105,6 +105,18 @@ function refreshPreview() {
     
     var jsonText = YUI.getText("jsonEditor");
     
+    jsonText = JSON.stringify({
+        "id": "button1",
+        "type": "Button",
+        "text": "Hello World",
+        "style": {
+            "bgColor": "#4CAF50",
+            "color": "#ff0000"
+        }
+    });
+
+    YUI.log("refreshPreview: JSON Text: " + jsonText);
+    
     // 尝试解析
     var json = null;
     try {
@@ -143,13 +155,20 @@ function refreshPreviewInternal(json) {
         return;
     }
 
-    // 将JSON转换为可视化的文本表示
-    var previewText = jsonToPreviewText(json);
+    // 将 JSON 转换为字符串
+    var jsonString = JSON.stringify(json, null, 4);
 
-    // 更新预览标签
-    YUI.setText("previewLabel", previewText);
+    // 使用新的 renderFromJson 函数动态渲染 UI
+    var result = YUI.renderFromJson("previewContainer", jsonString);
 
-    YUI.log("refreshPreviewInternal: Preview updated");
+    if (result === 0) {
+        YUI.log("refreshPreviewInternal: Successfully rendered JSON to UI");
+    } else {
+        YUI.log("refreshPreviewInternal: Failed to render JSON, result = " + result);
+        // 如果渲染失败，回退到文本显示
+        var previewText = jsonToPreviewText(json);
+        YUI.setText("previewLabel", previewText);
+    }
 }
 
 // 将JSON对象转换为预览文本
