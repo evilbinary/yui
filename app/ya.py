@@ -18,7 +18,7 @@ target("main")
 
 target("playground") 
 (
-    add_deps("yui"),
+    add_deps("yui","quickjs","jsmodule-quickjs"),
     add_rules("mode.debug", "mode.release"),
     set_kind("binary"),
     add_flags(),

@@ -39,7 +39,7 @@
                         "type": "horizontal",
                         "spacing": 10,
                         "padding": [10, 10, 10, 10],
-                        "justifyContent": "space-between"
+                        "justifyContent": "left"
                     },
                     "children": [
                         {
