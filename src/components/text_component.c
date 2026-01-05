@@ -374,6 +374,52 @@ static void text_component_delete_next_char(TextComponent* component) {
     component->text[len - 1] = '\0'; // 确保字符串以null结尾
 }
 
+// 在光标位置插入文本
+static void text_component_insert_text(TextComponent* component, const char* text) {
+    if (!component || !text || !component->editable) {
+        return;
+    }
+    
+    int text_len = strlen(text);
+    if (text_len == 0) {
+        return; // 空文本，无需插入
+    }
+    
+    int current_len = strlen(component->text);
+    
+    // 如果有选中的文本，先删除
+    if (component->selection_start != -1 && component->selection_end != -1) {
+        text_component_delete_selection(component);
+        current_len = strlen(component->text);
+    }
+    
+    // 确保cursor_pos在有效范围内
+    if (component->cursor_pos < 0) component->cursor_pos = 0;
+    if (component->cursor_pos > current_len) component->cursor_pos = current_len;
+    
+    // 检查是否有足够空间插入新文本
+    if (current_len + text_len >= component->max_length) {
+        // 截断文本以适应最大长度
+        text_len = component->max_length - current_len - 1;
+        if (text_len <= 0) {
+            return; // 没有足够空间
+        }
+    }
+    
+    // 移动现有文本以腾出空间
+    memmove(component->text + component->cursor_pos + text_len, 
+            component->text + component->cursor_pos, 
+            current_len - component->cursor_pos + 1);
+    
+    // 插入新文本
+    memcpy(component->text + component->cursor_pos, text, text_len);
+    component->cursor_pos += text_len;
+    
+    // 清除选择
+    component->selection_start = -1;
+    component->selection_end = -1;
+}
+
 // 处理键盘事件
 void text_component_handle_key_event(Layer* layer, KeyEvent* event) {
     if (!layer || !event || !layer->component) {
@@ -571,10 +617,14 @@ void text_component_handle_key_event(Layer* layer, KeyEvent* event) {
                 }
                 break;
             case SDLK_v:
-                // Ctrl+V 粘贴（暂时仅从控制台读取）
+                // Ctrl+V 粘贴
                 if (event->data.key.mod & KMOD_CTRL) {
-                    // 这里应该从剪贴板读取，但暂时跳过
-                    printf("Paste not implemented yet\n");
+                    // 从剪贴板读取文本
+                    char* clipboard_text = backend_get_clipboard_text();
+                    if (clipboard_text) {
+                        text_component_insert_text(component, clipboard_text);
+                        free(clipboard_text);
+                    }
                 } else if (event->type == KEY_EVENT_TEXT_INPUT) {
                     text_component_insert_char(component, 'v');
                 }
@@ -1203,14 +1253,25 @@ void text_component_render(Layer* layer) {
                 }
                 
                 // 渲染当前行
+                // 确保split_pos >= current_pos，防止负长度
+                if (split_pos < current_pos) {
+                    split_pos = current_pos;
+                }
+                
                 char* current_line = (char*)malloc(split_pos - current_pos + 2);
                 if (current_line) {
                     // 复制当前行文本，但不包含换行符
                     int copy_len = split_pos - current_pos;
                     // 检查是否在换行符处结束
-                    if (copy_len > 0 && text[split_pos - 1] == '\n') {
+                    if (copy_len > 0 && split_pos > current_pos && text[split_pos - 1] == '\n') {
                         copy_len--; // 不包含换行符
                     }
+                    
+                    // 确保copy_len不为负数
+                    if (copy_len < 0) {
+                        copy_len = 0;
+                    }
+                    
                     strncpy(current_line, text + current_pos, copy_len);
                     current_line[copy_len] = '\0';
                       

@@ -54,5 +54,7 @@ void backend_render_rounded_rect_with_border(Rect* rect, Color bg_color, int rad
 void backend_render_line(int x1, int y1, int x2, int y2, Color color);
 // 毛玻璃效果渲染函数
 void backend_render_backdrop_filter(Rect* rect, int blur_radius, float saturation, float brightness);
+// 剪贴板操作
+char* backend_get_clipboard_text();
 
 #endif

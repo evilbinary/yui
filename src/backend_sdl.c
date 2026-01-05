@@ -1458,3 +1458,26 @@ void backend_register_update_callback(UpdateCallback callback) {
 
     update_callbacks[update_callback_count++] = callback;
 }
+
+// 获取剪贴板文本
+char* backend_get_clipboard_text() {
+    char* clipboard_text = SDL_GetClipboardText();
+    if (!clipboard_text) {
+        printf("Failed to get clipboard text: %s\n", SDL_GetError());
+        return NULL;
+    }
+    
+    // 分配内存并复制剪贴板内容
+    size_t len = strlen(clipboard_text);
+    char* result = (char*)malloc(len + 1);
+    if (!result) {
+        printf("Failed to allocate memory for clipboard text\n");
+        SDL_free(clipboard_text);
+        return NULL;
+    }
+    
+    strcpy(result, clipboard_text);
+    SDL_free(clipboard_text);
+    
+    return result;
+}
