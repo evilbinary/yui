@@ -681,34 +681,37 @@ void text_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
         // 只有在正在选择时才更新选择
         if (component->is_selecting) {
             Point pt = {event->x, event->y};
+            
+            // 计算拖动位置对应的文本位置
+            int drag_pos;
+            
             if (point_in_rect(pt, layer->rect)) {
-                // 计算拖动位置对应的文本位置
-                int drag_pos = text_component_get_position_from_point(component, pt, layer);
-                
-                // 更新选择终点和光标位置
-                component->selection_end = drag_pos;
-                component->cursor_pos = drag_pos;
+                // 在文本区域内，使用正常计算
+                drag_pos = text_component_get_position_from_point(component, pt, layer);
             } else {
-                // 如果拖出文本区域，处理边界情况
+                // 在文本区域外，根据位置估算
                 if (pt.x < layer->rect.x) {
                     // 拖到左侧，选择到行首
-                    component->selection_end = get_line_start(component, component->cursor_pos);
-                    component->cursor_pos = component->selection_end;
+                    drag_pos = get_line_start(component, component->cursor_pos);
                 } else if (pt.x > layer->rect.x + layer->rect.w) {
                     // 拖到右侧，选择到行尾
-                    component->selection_end = get_line_end(component, component->cursor_pos);
-                    component->cursor_pos = component->selection_end;
-                }
-                
-                if (pt.y < layer->rect.y) {
+                    drag_pos = get_line_end(component, component->cursor_pos);
+                } else if (pt.y < layer->rect.y) {
                     // 拖到上方，选择到文本开头
-                    component->selection_end = 0;
-                    component->cursor_pos = 0;
+                    drag_pos = 0;
                 } else if (pt.y > layer->rect.y + layer->rect.h) {
                     // 拖到下方，选择到文本末尾
-                    component->selection_end = strlen(component->text);
-                    component->cursor_pos = strlen(component->text);
+                    drag_pos = strlen(component->text);
+                } else {
+                    // 默认情况，保持当前位置
+                    drag_pos = component->cursor_pos;
                 }
+            }
+            
+            // 只有当位置实际改变时才更新
+            if (drag_pos != component->selection_end) {
+                component->selection_end = drag_pos;
+                component->cursor_pos = drag_pos;
             }
         }
     }
@@ -828,7 +831,12 @@ int text_component_get_position_from_point(TextComponent* component, Point pt, L
         // 计算行号（考虑滚动偏移）
         // 使用与渲染相同的行间距计算方式
         int line_y = pt.y - render_rect.y + component->scroll_y;
-        int line_num = line_y / (line_height + 2); // 使用与渲染相同的行间距
+        // 对于第一行，line_y应该接近0，所以line_num应该是0
+        int line_num = 0;
+        if (line_y > 0) {
+            // 减去第一个行顶部的偏移，然后除以行高+行间距
+            line_num = (line_y) / (line_height + 2);
+        }
         
         // 查找对应行的起始位置
         int current_line = 0;
