@@ -586,7 +586,10 @@ void text_component_handle_key_event(Layer* layer, KeyEvent* event) {
                 // 处理其他普通字符输入
                 if (event->type == KEY_EVENT_TEXT_INPUT) {
                     for (int i = 0; i < strlen(event->data.text.text); i++) {
-                        if (isprint(event->data.text.text[i])) {
+                        // 移除isprint限制，支持所有字符（包括中文等多字节字符）
+                        // 但过滤掉控制字符（ASCII < 32，但不包括制表符、换行符等特殊控制字符）
+                        unsigned char c = event->data.text.text[i];
+                        if (c >= 32 || c == '\t' || c == '\n') {
                             text_component_insert_char(component, event->data.text.text[i]);
                         }
                     }
@@ -596,7 +599,10 @@ void text_component_handle_key_event(Layer* layer, KeyEvent* event) {
     } else if (event->type == KEY_EVENT_TEXT_INPUT) {
         // 处理文本输入
         for (int i = 0; i < strlen(event->data.text.text); i++) {
-            if (isprint(event->data.text.text[i])) {
+            // 移除isprint限制，支持所有字符（包括中文等多字节字符）
+            // 但过滤掉控制字符（ASCII < 32，但不包括制表符、换行符等特殊控制字符）
+            unsigned char c = event->data.text.text[i];
+            if (c >= 32 || c == '\t' || c == '\n') {
                 text_component_insert_char(component, event->data.text.text[i]);
             }
         }
