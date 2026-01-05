@@ -229,8 +229,7 @@ void handle_mouse_event(Layer* layer, MouseEvent* event) {
             // 设置新的焦点图层
             focused_layer = layer;
             layer->state = LAYER_STATE_FOCUSED;
-            // 焦点设置完成后直接返回，不再让默认逻辑覆盖状态
-            return;
+            // 注意：这里不返回，继续处理自定义事件处理函数
         }
 
         // 如果没有自定义的事件处理函数，使用默认的状态管理
