@@ -105,6 +105,7 @@
                             "size": [560, 740],
                             "showLineNumbers":true,
                             "lineNumberWidth": 40,
+                            "selectionColor": "#6BAF52CC",
                             "style": {
                                 "bgColor": "#2b2b2b",
                                 "color": "#f8f8f2",

@@ -10,30 +10,33 @@ var editorState = {
 // 初始化JSON编辑器 - onLoad 事件触发
 function initJsonEditor() {
     YUI.log("initJsonEditor: Initializing JSON editor...");
-    
+
     // 设置默认的示例JSON
     var defaultJson = {
         "id": "test",
         "type": "Button",
-        "size": [600, 40],
+        "text": "Hello World",
+        "size": [200, 50],
         "style": {
-            "bgColor": "#1e1e1e",
-            "borderRadius": [8, 8, 0, 0],
-            "borderBottomWidth": 1,
-            "borderBottomColor": "#333333"
-        }  
+            "bgColor": "#4CAF50",
+            "color": "#ffffff",
+            "fontSize": 16,
+            "borderRadius": 8
+        }
     };
+
     
+
     // 格式化并设置到编辑器
     var formattedJson = JSON.stringify(defaultJson, null, 4);
     YUI.setText("jsonEditor", formattedJson);
-    
+
     // 初始验证
     validateJsonInternal(formattedJson);
-    
+
     // 初始预览
     refreshPreviewInternal(defaultJson);
-    
+
     YUI.log("initJsonEditor: JSON editor initialized!");
 }
 
@@ -105,16 +108,6 @@ function refreshPreview() {
     
     var jsonText = YUI.getText("jsonEditor");
     
-    jsonText = JSON.stringify({
-        "id": "button1",
-        "type": "Button",
-        "text": "Hello World",
-        "style": {
-            "bgColor": "#4CAF50",
-            "color": "#ff0000"
-        }
-    });
-
     YUI.log("refreshPreview: JSON Text: " + jsonText);
     
     // 尝试解析
@@ -155,8 +148,12 @@ function refreshPreviewInternal(json) {
         return;
     }
 
+    YUI.log("refreshPreviewInternal: JSON = " + JSON.stringify(json));
+
     // 将 JSON 转换为字符串
     var jsonString = JSON.stringify(json, null, 4);
+
+    YUI.log("refreshPreviewInternal: JSON Text: " + jsonString);
 
     // 使用新的 renderFromJson 函数动态渲染 UI
     var result = YUI.renderFromJson("previewContainer", jsonString);
