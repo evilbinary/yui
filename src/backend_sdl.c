@@ -326,8 +326,17 @@ void handle_event(Layer* root, SDL_Event* event) {
     
     // 处理鼠标事件
     if (event->type == SDL_MOUSEBUTTONDOWN || event->type == SDL_MOUSEBUTTONUP || event->type == SDL_MOUSEMOTION) {
-        int mouse_x = event->motion.x;
-        int mouse_y = event->motion.y;
+        int mouse_x, mouse_y;
+
+        // 根据事件类型选择正确的结构体成员
+        if (event->type == SDL_MOUSEBUTTONDOWN || event->type == SDL_MOUSEBUTTONUP) {
+            mouse_x = event->button.x;
+            mouse_y = event->button.y;
+        } else { // SDL_MOUSEMOTION
+            mouse_x = event->motion.x;
+            mouse_y = event->motion.y;
+        }
+
         SDL_Point mouse_pos = { mouse_x, mouse_y };
         int event_state;
         if (event->type == SDL_MOUSEBUTTONDOWN) {
@@ -339,17 +348,17 @@ void handle_event(Layer* root, SDL_Event* event) {
         } else {
             event_state = 0;
         }
-        
+
         MouseEvent mouse_event = {
             .x = mouse_x,
             .y = mouse_y,
             .button = event->button.button,
             .state = event_state
         };
-        
+
         // 调用事件系统处理滚动条拖动
         handle_scrollbar_drag_event(root, mouse_x, mouse_y, event->type);
-        
+
         if (SDL_PointInRect(&mouse_pos, &root->rect)) {
             handle_mouse_event(root, &mouse_event);
         }

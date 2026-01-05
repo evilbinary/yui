@@ -235,7 +235,6 @@ static void text_component_delete_selection(TextComponent* component) {
 // 在光标位置插入字符
 static void text_component_insert_char(TextComponent* component, char c) {
     if (!component->editable) {
-        printf("DEBUG: Component not editable, skipping insert\n");
         return;
     }
 
@@ -243,7 +242,6 @@ static void text_component_insert_char(TextComponent* component, char c) {
 
     // 如果达到最大长度，不插入
     if (len >= component->max_length - 1) {
-        printf("DEBUG: Max length reached, skipping insert\n");
         return;
     }
 
@@ -256,7 +254,6 @@ static void text_component_insert_char(TextComponent* component, char c) {
     memmove(component->text + component->cursor_pos + 1, component->text + component->cursor_pos, len - component->cursor_pos + 1);
     component->text[component->cursor_pos] = c;
     component->cursor_pos++;
-    printf("DEBUG: Inserted char '%c' at position %d, text now: '%s'\n", c, component->cursor_pos - 1, component->text);
 }
 
 // 删除光标前的字符
@@ -301,9 +298,6 @@ void text_component_handle_key_event(Layer* layer, KeyEvent* event) {
     if (!component->editable) {
         return;
     }
-
-    printf("DEBUG: Text component keyboard event: layer='%s', editable=%d, focused=%p\n",
-           layer->id, component->editable, focused_layer);
     
     // 处理特殊键
     if (event->type == KEY_EVENT_DOWN) {
@@ -437,10 +431,7 @@ void text_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
             component->cursor_pos = strlen(component->text);
             component->selection_start = -1;
             component->selection_end = -1;
-            // 设置焦点和状态
-            focused_layer = layer;
-            layer->state = LAYER_STATE_FOCUSED;
-            printf("DEBUG: Text component clicked, focus set to layer '%s'\n", layer->id);
+            // 注意：不在这里设置焦点，由通用的 handle_mouse_event 来管理
         }
     }
 }
