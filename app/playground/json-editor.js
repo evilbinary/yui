@@ -63,7 +63,7 @@ function validateJson() {
     var result = validateJsonInternal(jsonText);
     
     if (result) {
-        YUI.log("validateJson: JSON is valid!");
+        YUI.log("validateJson: JSON is valid! jsonText: "+jsonText);
         // 可以显示成功提示
     } else {
         YUI.log("validateJson: JSON is invalid!");

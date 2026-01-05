@@ -40,8 +40,7 @@ void label_component_set_text(LabelComponent* component, const char* text) {
         return;
     }
     
-    strncpy(component->layer->text, text, MAX_TEXT - 1);
-    component->layer->text[MAX_TEXT - 1] = '\0';
+    layer_set_text(component->layer, text);
     
     // 如果启用了自动调整大小，则更新图层大小
         if (component->auto_size && component->layer->font && component->layer->font->default_font) {
@@ -75,9 +74,10 @@ void label_component_set_auto_size(LabelComponent* component, int auto_size) {
     component->auto_size = auto_size;
     
     // 如果启用了自动调整大小且已有文本，则更新图层大小
-    if (auto_size && strlen(component->layer->text) > 0 && 
+    const char* existing_text = layer_get_text(component->layer);
+    if (auto_size && existing_text[0] != '\0' && 
         component->layer->font && component->layer->font->default_font) {
-        label_component_set_text(component, component->layer->text); // 重用设置文本的逻辑来调整大小
+        label_component_set_text(component, existing_text); // 重用设置文本的逻辑来调整大小
     }
 }
 
@@ -100,7 +100,7 @@ void label_component_render(Layer* layer) {
     
     // 渲染文本
     Color text_color = layer->color;
-    Texture* text_texture = render_text(layer, layer->text, text_color);
+    Texture* text_texture = render_text(layer, layer_get_text(layer), text_color);
     
     if (text_texture) {
         int text_width, text_height;

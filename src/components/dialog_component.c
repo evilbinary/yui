@@ -169,6 +169,7 @@ void dialog_component_add_button(DialogComponent* component, const char* text,
     
     strncpy(button->text, text, sizeof(button->text) - 1);
     button->text[sizeof(button->text) - 1] = '\0';
+    
     button->callback = callback;
     button->user_data = user_data;
     button->is_default = is_default;

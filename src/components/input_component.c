@@ -331,6 +331,7 @@ void input_component_render(Layer* layer) {
     }
     
     InputComponent* component = (InputComponent*)layer->component;
+    const char* label_text = layer_get_label(layer);
     
     printf("\n--- RENDER CYCLE START ---\n");
     printf("Rendering input component: layer address=%p, component address=%p\n", layer, component);
@@ -360,11 +361,11 @@ void input_component_render(Layer* layer) {
     }
     
     // 渲染输入框标签
-    if (strlen(layer->label) > 0) {
+    if (label_text[0] != '\0') {
         // 使用ttf渲染文本
         
         Color text_color = layer->color;
-        Texture* text_texture = render_text(layer,layer->label, text_color);
+        Texture* text_texture = render_text(layer,label_text, text_color);
         
         if (text_texture) {
             int text_width, text_height;
@@ -421,9 +422,9 @@ void input_component_render(Layer* layer) {
         int start_x = layer->rect.x + 5;  // 默认左侧留5像素边距
         
         // 如果图层有label文本，将text_rect放在label文字的右边
-        if (strlen(layer->label) > 0 && layer->font && layer->font->default_font) {
+        if (label_text[0] != '\0' && layer->font && layer->font->default_font) {
             // 计算label文本的宽度
-            Texture* label_texture = backend_render_texture(layer->font->default_font, layer->label, layer->color);
+            Texture* label_texture = backend_render_texture(layer->font->default_font, label_text, layer->color);
             if (label_texture) {
                 int label_width;
                 backend_query_texture(label_texture, NULL, NULL, &label_width, NULL);
@@ -497,8 +498,8 @@ void input_component_render(Layer* layer) {
             cursor_text[component->cursor_pos] = '\0';
             
             // 如果图层有标签文本，需要调整起始位置
-            if (strlen(layer->label) > 0 && layer->font && layer->font->default_font) {
-                Texture* label_texture = backend_render_texture(layer->font->default_font, layer->label, layer->color);
+            if (label_text[0] != '\0' && layer->font && layer->font->default_font) {
+                Texture* label_texture = backend_render_texture(layer->font->default_font, label_text, layer->color);
                 if (label_texture) {
                     int label_width;
                     backend_query_texture(label_texture, NULL, NULL, &label_width, NULL);
@@ -521,9 +522,9 @@ void input_component_render(Layer* layer) {
                     cursor_x += text_width / scale;
                 }
             }
-        } else if (strlen(layer->label) > 0 && layer->font && layer->font->default_font) {
+        } else if (label_text[0] != '\0' && layer->font && layer->font->default_font) {
             // 没有文本但有标签，将光标放在标签右侧
-            Texture* label_texture = backend_render_texture(layer->font->default_font, layer->label, layer->color);
+            Texture* label_texture = backend_render_texture(layer->font->default_font, label_text, layer->color);
             if (label_texture) {
                 int label_width;
                 backend_query_texture(label_texture, NULL, NULL, &label_width, NULL);

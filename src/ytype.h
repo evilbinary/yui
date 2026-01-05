@@ -321,8 +321,8 @@ typedef struct Layer {
     int content_width; // 内容宽度
     
     // 新增label和text字段
-    char label[MAX_TEXT];
-    char text[MAX_TEXT];
+    char* label;
+    char* text;
     
     // 添加图片模式字段
     ImageMode image_mode;

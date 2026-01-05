@@ -111,15 +111,8 @@ void checkbox_component_set_label(CheckboxComponent* component, const char* labe
     }
     
     // 直接使用layer->label
-    if (label && component->layer) {
-        strncpy(component->layer->label, label, MAX_TEXT - 1);
-        component->layer->label[MAX_TEXT - 1] = '\0'; // 确保字符串结束
-    } else if (component->layer) {
-        component->layer->label[0] = '\0'; // 清空标签
-    }
-    
-    // 使用layer->color代替component->label_color
     if (component->layer) {
+        layer_set_label(component->layer, label);
         component->layer->color = color;
     }
 }
@@ -265,7 +258,8 @@ void checkbox_component_render(Layer* layer) {
     }
     
     // 绘制标签文本，使用layer->label和layer->color
-    if (layer->label[0] != '\0' && layer->font->default_font) {
+    const char* label_text = layer_get_label(layer);
+    if (label_text[0] != '\0' && layer->font->default_font) {
         // 计算标签位置（在复选框右侧，垂直居中）
         int label_x = layer->rect.x + layer->rect.w + 5;  // 5像素间距
         
@@ -280,7 +274,7 @@ void checkbox_component_render(Layer* layer) {
         }
         
         // 使用backend_render_texture渲染文本到纹理
-        Texture* text_texture = backend_render_texture(layer->font->default_font, layer->label, text_color);
+        Texture* text_texture = backend_render_texture(layer->font->default_font, label_text, text_color);
         if (text_texture) {
             // 获取文本纹理的尺寸
             int text_width, text_height;

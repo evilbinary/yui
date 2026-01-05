@@ -46,8 +46,7 @@ static var_t* mario_set_text(vm_t* vm, var_t* env, void* data)
     if (layer_id && text && g_layer_root) {
         struct Layer* layer = find_layer_by_id(g_layer_root, layer_id);
         if (layer) {
-            strncpy(layer->text, text, MAX_TEXT - 1);
-            layer->text[MAX_TEXT - 1] = '\0';
+            layer_set_text(layer, text);
             printf("JS(Mario): Set text for layer '%s': %s\n", layer_id, text);
         }
     }

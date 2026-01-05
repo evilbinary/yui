@@ -49,8 +49,7 @@ int hex_to_int(char c){
 void js_module_update_layer_text(Layer* layer, const char* text)
 {
     if (layer && text) {
-        strncpy(layer->text, text, MAX_TEXT - 1);
-        layer->text[MAX_TEXT - 1] = '\0';
+        layer_set_text(layer, text);
     }
 }
 

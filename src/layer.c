@@ -108,6 +108,78 @@ cJSON* parse_json(char* json_path) {
 
 
 // ====================== JSON解析函数 ======================
+static void layer_init_strings(Layer* layer) {
+  layer->label = NULL;
+  layer->text = NULL;
+}
+
+static void layer_set_string(char** target, const char* value) {
+  if (!target) {
+    return;
+  }
+  if (*target) {
+    free(*target);
+    *target = NULL;
+  }
+  if (value) {
+    size_t len = strlen(value);
+    char* buf = (char*)malloc(len + 1);
+    if (!buf) {
+      return;
+    }
+    memcpy(buf, value, len + 1);
+    *target = buf;
+  }
+}
+
+static void layer_copy_strings(Layer* dest, const Layer* src) {
+  if (!dest || !src) {
+    return;
+  }
+  if (src->label) {
+    layer_set_string(&dest->label, src->label);
+  }
+  if (src->text) {
+    layer_set_string(&dest->text, src->text);
+  }
+}
+
+static void layer_free_strings(Layer* layer) {
+  if (!layer) {
+    return;
+  }
+  if (layer->label) {
+    free(layer->label);
+    layer->label = NULL;
+  }
+  if (layer->text) {
+    free(layer->text);
+    layer->text = NULL;
+  }
+}
+
+void layer_set_label(Layer* layer, const char* value) {
+  if (!layer) {
+    return;
+  }
+  layer_set_string(&layer->label, value);
+}
+
+void layer_set_text(Layer* layer, const char* value) {
+  if (!layer) {
+    return;
+  }
+  layer_set_string(&layer->text, value);
+}
+
+const char* layer_get_label(const Layer* layer) {
+  return layer && layer->label ? layer->label : "";
+}
+
+const char* layer_get_text(const Layer* layer) {
+  return layer && layer->text ? layer->text : "";
+}
+
 Layer* parse_layer(cJSON* json_obj, Layer* parent) {
   if (json_obj == NULL) {
     return NULL;
@@ -115,6 +187,7 @@ Layer* parse_layer(cJSON* json_obj, Layer* parent) {
   Layer* layer = malloc(sizeof(Layer));
   memset(layer, 0, sizeof(Layer));
   layer->parent = parent;
+  layer_init_strings(layer);
 
   // 初始化焦点相关字段
   layer->state = LAYER_STATE_NORMAL;  // 默认处于正常状态
@@ -271,10 +344,10 @@ Layer* parse_layer(cJSON* json_obj, Layer* parent) {
 
   // 解析label和text属性
   if (cJSON_HasObjectItem(json_obj, "label")) {
-    strcpy(layer->label, cJSON_GetObjectItem(json_obj, "label")->valuestring);
+    layer_set_label(layer, cJSON_GetObjectItem(json_obj, "label")->valuestring);
   }
   if (cJSON_HasObjectItem(json_obj, "text")) {
-    strcpy(layer->text, cJSON_GetObjectItem(json_obj, "text")->valuestring);
+    layer_set_text(layer, cJSON_GetObjectItem(json_obj, "text")->valuestring);
   }
 
   // 解析数据绑定
@@ -889,6 +962,7 @@ void destroy_layer(Layer* layer) {
     // 注意：不销毁 font 和 assets，因为它们可能是共享的
     // 这些应该由全局资源管理器负责
 
+    layer_free_strings(layer);
     free(layer);
 }
 

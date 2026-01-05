@@ -53,8 +53,7 @@ void button_component_set_text(ButtonComponent* component, const char* text) {
         return;
     }
     
-    strncpy(component->layer->text, text, MAX_TEXT - 1);
-    component->layer->text[MAX_TEXT - 1] = '\0';
+    layer_set_text(component->layer, text);
 }
 
 // 设置按钮颜色
@@ -205,13 +204,14 @@ void button_component_render(Layer* layer) {
     }
     
     // 渲染按钮文本
-    if (strlen(layer->text) > 0) {
+    const char* layer_text = layer_get_text(layer);
+    if (layer_text[0] != '\0') {
         Color text_color = layer->color;
         if (HAS_STATE(layer, LAYER_STATE_DISABLED)) {
             text_color = (Color){255, 255, 255, 150};
         }
 
-        Texture* text_texture = render_text(layer, layer->text, text_color);
+        Texture* text_texture = render_text(layer, layer_text, text_color);
 
         if (text_texture) {
             int text_width, text_height;

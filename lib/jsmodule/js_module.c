@@ -47,8 +47,7 @@ static JSValue js_set_text(JSContext *ctx, JSValue *this_val, int argc, JSValue 
     if (layer_id && text && g_layer_root ) {
         struct Layer* layer = find_layer_by_id(g_layer_root, layer_id);
         if (layer) {
-            strncpy(layer->text, text, MAX_TEXT - 1);
-            layer->text[MAX_TEXT - 1] = '\0';
+            layer_set_text(layer, text); //
             printf("JS: Set text for layer '%s': %s\n", layer_id, text);
         }
     }
@@ -63,11 +62,11 @@ static JSValue js_get_text(JSContext *ctx, JSValue *this_val, int argc, JSValue 
 
     JSCStringBuf buf;
     const char* layer_id = JS_ToCString(ctx, argv[0], &buf);
-
     if (layer_id && g_layer_root ) {
         struct Layer* layer = find_layer_by_id(g_layer_root, layer_id);
         if (layer) {
-            return JS_NewString(ctx, layer->text);
+            const char* layer_text = layer_get_text(layer);
+            return JS_NewString(ctx, layer_text);
         }
     }
 
