@@ -651,15 +651,10 @@ void text_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     }
     
     TextComponent* component = (TextComponent*)layer->component;
+    Point pt = {event->x, event->y};
     
-    // 处理滚轮事件
-    // 由于Layer结构体没有handle_scroll_event字段
-    // 我们需要在backend_sdl.c中特别处理文本组件的滚轮事件
-    // 这里仅作为占位
-    
-    // 鼠标按下时设置光标位置
+    // 鼠标左键按下 - 设置光标位置并开始选择
     if (event->state == SDL_PRESSED && event->button == SDL_BUTTON_LEFT) {
-        Point pt = {event->x, event->y};
         if (point_in_rect(pt, layer->rect)) {
             // 计算点击位置对应的文本位置
             int click_pos = text_component_get_position_from_point(component, pt, layer);
@@ -668,56 +663,48 @@ void text_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
             // 开始新选择
             component->selection_start = click_pos;
             component->selection_end = click_pos;
-            component->is_selecting = 1; // 标记正在选择
+            component->is_selecting = 1;
         } else {
             // 点击文本区域外，清除选择
             component->selection_start = -1;
             component->selection_end = -1;
-            component->is_selecting = 0; // 标记不再选择
+            component->is_selecting = 0;
         }
     }
-    // 鼠标拖动时更新选择
-    else if (event->state == SDL_MOUSEMOTION && (event->button == SDL_BUTTON_LEFT)) {
-        // 只有在正在选择时才更新选择
-        if (component->is_selecting) {
-            Point pt = {event->x, event->y};
-            
-            // 计算拖动位置对应的文本位置
-            int drag_pos;
-            
-            if (point_in_rect(pt, layer->rect)) {
-                // 在文本区域内，使用正常计算
-                drag_pos = text_component_get_position_from_point(component, pt, layer);
+    // 鼠标拖动 - 更新选择范围
+    else if (event->state == SDL_MOUSEMOTION && (event->button == SDL_BUTTON_LEFT) && component->is_selecting) {
+        int drag_pos;
+        
+        if (point_in_rect(pt, layer->rect)) {
+            // 在文本区域内，使用正常计算
+            drag_pos = text_component_get_position_from_point(component, pt, layer);
+        } else {
+            // 在文本区域外，根据位置估算
+            if (pt.x < layer->rect.x) {
+                // 拖到左侧，选择到当前光标所在行的行首
+                drag_pos = get_line_start(component, component->cursor_pos);
+            } else if (pt.x > layer->rect.x + layer->rect.w) {
+                // 拖到右侧，选择到当前光标所在行的行尾
+                drag_pos = get_line_end(component, component->cursor_pos);
+            } else if (pt.y < layer->rect.y) {
+                // 拖到上方，选择到文本开头
+                drag_pos = 0;
+            } else if (pt.y > layer->rect.y + layer->rect.h) {
+                // 拖到下方，选择到文本末尾
+                drag_pos = strlen(component->text);
             } else {
-                // 在文本区域外，根据位置估算
-                if (pt.x < layer->rect.x) {
-                    // 拖到左侧，选择到行首
-                    drag_pos = get_line_start(component, component->cursor_pos);
-                } else if (pt.x > layer->rect.x + layer->rect.w) {
-                    // 拖到右侧，选择到行尾
-                    drag_pos = get_line_end(component, component->cursor_pos);
-                } else if (pt.y < layer->rect.y) {
-                    // 拖到上方，选择到文本开头
-                    drag_pos = 0;
-                } else if (pt.y > layer->rect.y + layer->rect.h) {
-                    // 拖到下方，选择到文本末尾
-                    drag_pos = strlen(component->text);
-                } else {
-                    // 默认情况，保持当前位置
-                    drag_pos = component->cursor_pos;
-                }
-            }
-            
-            // 只有当位置实际改变时才更新
-            if (drag_pos != component->selection_end) {
-                component->selection_end = drag_pos;
-                component->cursor_pos = drag_pos;
+                // 默认情况，保持当前位置
+                drag_pos = component->cursor_pos;
             }
         }
+        
+        // 更新选择范围和光标位置
+        component->selection_end = drag_pos;
+        component->cursor_pos = drag_pos;
     }
-    // 鼠标释放时结束选择
+    // 鼠标释放 - 结束选择
     else if (event->state == SDL_RELEASED && event->button == SDL_BUTTON_LEFT) {
-        component->is_selecting = 0; // 标记不再选择
+        component->is_selecting = 0;
     }
 }
 
@@ -787,38 +774,22 @@ int text_component_get_position_from_point(TextComponent* component, Point pt, L
     render_rect.w -= (left_padding + 5);
     render_rect.h -= 10;
     
-    // 检查点是否在渲染区域内
-    if (!point_in_rect(pt, render_rect)) {
-        // 如果点击在文本区域上方，返回0
-        if (pt.y < render_rect.y) {
-            return 0;
-        }
-        // 如果点击在文本区域下方，返回文本末尾
-        if (pt.y > render_rect.y + render_rect.h) {
-            return strlen(component->text);
-        }
-        // 如果点击在左侧，返回0
-        if (pt.x < render_rect.x) {
-            return 0;
-        }
-        // 如果点击在右侧，返回文本末尾
-        if (pt.x > render_rect.x + render_rect.w) {
-            return strlen(component->text);
-        }
-    }
+    // 边界检查
+    if (pt.y < render_rect.y) return 0;
+    if (pt.y > render_rect.y + render_rect.h) return strlen(component->text);
+    if (pt.x < render_rect.x) return 0;
+    if (pt.x > render_rect.x + render_rect.w) return strlen(component->text);
     
     // 如果没有文本，返回0
     if (strlen(component->text) == 0) {
         return 0;
     }
     
-    // 简单实现：假设等宽字体，计算大致位置
-    if (component->multiline) {
-        // 多行模式：需要计算行和列
-        int line_height = 20; // 默认行高
-        int char_width = 8;  // 假设平均字符宽度
-        
-        // 获取实际字符宽度
+    // 获取字符宽度和行高
+    int char_width = 8;
+    int line_height = 20;
+    
+    if (layer->font && layer->font->default_font) {
         Texture* temp_tex = backend_render_texture(layer->font->default_font, "X", layer->color);
         if (temp_tex) {
             int temp_width, temp_height;
@@ -827,65 +798,48 @@ int text_component_get_position_from_point(TextComponent* component, Point pt, L
             line_height = temp_height / scale;
             backend_render_text_destroy(temp_tex);
         }
-        
-        // 计算行号（考虑滚动偏移）
-        // 使用与渲染相同的行间距计算方式
+    }
+    
+    if (component->multiline) {
+        // 多行模式处理
         int line_y = pt.y - render_rect.y + component->scroll_y;
-        // 对于第一行，line_y应该接近0，所以line_num应该是0
-        int line_num = 0;
-        if (line_y > 0) {
-            // 减去第一个行顶部的偏移，然后除以行高+行间距
-            line_num = (line_y) / (line_height + 2);
-        }
+        int line_num = line_y / (line_height + 2);
         
-        // 查找对应行的起始位置
+        // 计算总行数并限制行号
+        int total_lines = 1;
+        for (int i = 0; i < strlen(component->text); i++) {
+            if (component->text[i] == '\n') total_lines++;
+        }
+        if (line_num >= total_lines) line_num = total_lines - 1;
+        
+        // 查找目标行
         int current_line = 0;
         int pos = 0;
-        int col = 0;
         
+        // 遍历文本，找到目标行的起始位置
         for (int i = 0; i <= strlen(component->text); i++) {
             if (i == strlen(component->text) || component->text[i] == '\n') {
                 if (current_line == line_num) {
-                    // 计算列位置
-                    int line_start_pos = pos - col;
-                    col = (pt.x - render_rect.x) / char_width;
-                    
-                    // 限制列位置在行范围内
+                    // 计算行内位置
+                    int col = (pt.x - render_rect.x) / char_width;
                     if (col < 0) col = 0;
-                    if (col > strlen(component->text) - line_start_pos - (component->text[i] == '\n' ? 1 : 0)) {
-                        col = strlen(component->text) - line_start_pos - (component->text[i] == '\n' ? 1 : 0);
-                    }
                     
-                    return line_start_pos + col;
+                    // 计算当前行长度
+                    int line_length = i - pos;
+                    if (col > line_length) col = line_length;
+                    
+                    return pos + col;
                 }
                 current_line++;
                 pos = i + 1;
-                col = 0;
-            } else {
-                col++;
             }
         }
         
-        // 如果超出文本行数，返回文本末尾
+        // 如果超出范围，返回文本末尾
         return strlen(component->text);
     } else {
-        // 单行模式：计算列位置
-        int char_width = 8; // 假设平均字符宽度
-        
-        // 获取实际字符宽度
-        Texture* temp_tex = backend_render_texture(layer->font->default_font, "X", layer->color);
-        if (temp_tex) {
-            int temp_width, temp_height;
-            backend_query_texture(temp_tex, NULL, NULL, &temp_width, &temp_height);
-            char_width = temp_width / scale;
-            backend_render_text_destroy(temp_tex);
-        }
-        
-        // 计算列位置
-        // 考虑文本渲染的实际对齐方式
+        // 单行模式处理
         int col = (pt.x - render_rect.x) / char_width;
-        
-        // 限制列位置在文本范围内
         if (col < 0) col = 0;
         if (col > strlen(component->text)) col = strlen(component->text);
         
@@ -1352,106 +1306,74 @@ void text_component_render(Layer* layer) {
     
     // 如果组件可编辑，绘制光标
     if (component->editable && HAS_STATE(layer, LAYER_STATE_FOCUSED)) {
-        // 安全检查：确保光标位置在有效范围内
+        // 确保光标位置在有效范围内
         int text_len = strlen(component->text);
-        int safe_cursor_pos = component->cursor_pos;
-        if (safe_cursor_pos < 0) safe_cursor_pos = 0;
-        if (safe_cursor_pos > text_len) safe_cursor_pos = text_len;
+        if (component->cursor_pos < 0) component->cursor_pos = 0;
+        if (component->cursor_pos > text_len) component->cursor_pos = text_len;
         
-        // 简单计算光标位置（实际应用中需要更复杂的计算）
-        char* temp_text = (char*)malloc(safe_cursor_pos + 1);
+        // 创建光标前的文本片段，用于计算光标位置
+        char* temp_text = (char*)malloc(component->cursor_pos + 1);
         if (temp_text) {
-            strncpy(temp_text, component->text, safe_cursor_pos);
-            temp_text[safe_cursor_pos] = '\0';
+            strncpy(temp_text, component->text, component->cursor_pos);
+            temp_text[component->cursor_pos] = '\0';
             
-            // 计算光标位置（使用更跨平台的方法）
+            // 获取行高和字符宽度
+            int line_height = 20;
+            int char_width = 8;
+            
             if (layer->font && layer->font->default_font) {
-                // 查找最后一个换行符的位置，只计算当前行的文本宽度
+                Texture* temp_tex = backend_render_texture(layer->font->default_font, "X", layer->color);
+                if (temp_tex) {
+                    int temp_width, temp_height;
+                    backend_query_texture(temp_tex, NULL, NULL, &temp_width, &temp_height);
+                    char_width = temp_width / scale;
+                    line_height = temp_height / scale;
+                    backend_render_text_destroy(temp_tex);
+                }
+                
+                // 计算当前行文本的宽度
                 char* last_newline = strrchr(temp_text, '\n');
                 char* current_line_text = (last_newline) ? last_newline + 1 : temp_text;
                 
-                // 为了正确显示光标，特别是在新行的第一个字母前
                 Texture* cursor_text_texture = backend_render_texture(layer->font->default_font, current_line_text, layer->color);
-                
-                // 绘制光标
-                Rect cursor_rect;
-                int text_height = 20; // 默认高度，以防没有文本
-                
                 if (cursor_text_texture) {
                     int text_width;
-                    backend_query_texture(cursor_text_texture, NULL, NULL, &text_width, &text_height);
-                    
-                    cursor_rect.x = render_rect.x + text_width / scale;
-                    
-                    // 确保光标始终可见，即使在空行或新行的开头
-                    // 当光标在起始位置时，确保其不会隐藏在渲染区域左侧
-                    if (cursor_rect.x < render_rect.x) {
-                        cursor_rect.x = render_rect.x;
-                    }
-                    
-                    // 多行模式下需要计算光标所在行的Y坐标，单行模式下垂直居中
-                    if (component->multiline) {
-                        // 计算光标所在行的Y坐标
-                        int line_y = render_rect.y;
-                        int line_height = text_height / scale;
-                        
-                        // 计算光标前有多少个换行符
-                        int line_count = 0;
-                        for (int i = 0; i < component->cursor_pos; i++) {
-                            if (component->text[i] == '\n') {
-                                line_count++;
-                            }
-                        }
-                        
-                        // 根据行数计算Y坐标，并考虑滚动偏移量
-                        cursor_rect.y = render_rect.y + line_count * (line_height + 2) - layer->scroll_offset; // +2 是行间距
-                    } else {
-                        // 单行模式下垂直居中
-                        cursor_rect.y = render_rect.y + (render_rect.h - text_height / scale) / 2;
-                    }
-                    
-                    cursor_rect.w = 2;
-                    cursor_rect.h = text_height / scale;
-                    
-                    backend_render_fill_rect(&cursor_rect, component->cursor_color);
-                    
-                    // 释放临时纹理
+                    backend_query_texture(cursor_text_texture, NULL, NULL, &text_width, NULL);
+                    char_width = text_width / scale; // 更新字符宽度为实际宽度
                     backend_render_text_destroy(cursor_text_texture);
-                } else {
-                    // 特殊情况：没有文本或者文本渲染失败，确保光标显示在起始位置
-                    cursor_rect.x = render_rect.x;
-                    cursor_rect.w = 2;
-                    cursor_rect.h = 20; // 使用默认高度
-                    
-                    // 多行模式下需要计算光标所在行的Y坐标，单行模式下垂直居中
-                    if (component->multiline) {
-                        // 计算光标前有多少个换行符
-                        int line_count = 0;
-                        for (int i = 0; i < component->cursor_pos; i++) {
-                            if (component->text[i] == '\n') {
-                                line_count++;
-                            }
-                        }
-                        
-                        // 根据行数计算Y坐标，并考虑滚动偏移量
-                        cursor_rect.y = render_rect.y + line_count * 22 - layer->scroll_offset; // 使用默认行高和间距
-                    } else {
-                        // 单行模式下垂直居中
-                        cursor_rect.y = render_rect.y + (render_rect.h - 20) / 2;
-                    }
-                    
-                    backend_render_fill_rect(&cursor_rect, component->cursor_color);
                 }
-            } else {
-                // 没有字体时，使用默认光标位置和大小
-                Rect cursor_rect;
-                cursor_rect.x = render_rect.x;
-                cursor_rect.y = render_rect.y + render_rect.h / 2 - 10;
-                cursor_rect.w = 2;
-                cursor_rect.h = 20;
-                
-                backend_render_fill_rect(&cursor_rect, component->cursor_color);
             }
+            
+            // 计算光标位置
+            Rect cursor_rect = {
+                render_rect.x + char_width,
+                render_rect.y,
+                2,
+                line_height
+            };
+            
+            // 多行模式下需要计算光标所在行的Y坐标
+            if (component->multiline) {
+                // 计算光标前有多少个换行符
+                int line_count = 0;
+                for (int i = 0; i < component->cursor_pos; i++) {
+                    if (component->text[i] == '\n') {
+                        line_count++;
+                    }
+                }
+                
+                // 根据行数计算Y坐标，并考虑滚动偏移量
+                cursor_rect.y = render_rect.y + line_count * (line_height + 2) - component->scroll_y;
+            } else {
+                // 单行模式下垂直居中
+                cursor_rect.y = render_rect.y + (render_rect.h - line_height) / 2;
+            }
+            
+            // 确保光标在可见区域内
+            if (cursor_rect.x < render_rect.x) cursor_rect.x = render_rect.x;
+            
+            // 绘制光标
+            backend_render_fill_rect(&cursor_rect, component->cursor_color);
             
             free(temp_text);
         }
