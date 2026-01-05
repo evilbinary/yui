@@ -26,6 +26,7 @@ typedef struct {
     Color line_number_color; // 行号颜色
     Color line_number_bg_color; // 行号背景颜色
     Color selection_color; // 选中背景颜色
+    int is_selecting;       // 是否正在选择文本
 } TextComponent;
 
 // 函数声明
@@ -47,4 +48,8 @@ void text_component_handle_key_event(Layer* layer, KeyEvent* event);
 void text_component_handle_mouse_event(Layer* layer, MouseEvent* event);
 void text_component_render(Layer* layer);
 int text_component_get_position_from_point(TextComponent* component, Point pt, Layer* layer);
+
+// 辅助函数声明
+int get_line_start(TextComponent* component, int pos);
+int get_line_end(TextComponent* component, int pos);
 #endif  // YUI_TEXT_COMPONENT_H

@@ -36,6 +36,7 @@ TextComponent* text_component_create(Layer* layer) {
     component->line_number_color = (Color){133, 133, 133, 255};  // 默认行号颜色
     component->line_number_bg_color = (Color){30, 30, 30, 255};  // 默认行号背景颜色
     component->selection_color = (Color){70, 130, 180, 100};  // 默认选中颜色（半透明蓝色）
+    component->is_selecting = 0;  // 默认不在选择状态
     
     // 设置图层的焦点属性，使其可以获得焦点
     layer->focusable = 1;
@@ -140,9 +141,14 @@ void text_component_set_text(TextComponent* component, const char* text) {
         return;
     }
     
-    strncpy(component->text, text, component->max_length - 1);
-    component->text[component->max_length - 1] = '\0';
-    component->cursor_pos = strlen(component->text);
+    // 计算可以安全复制的最大长度
+    size_t text_len = strlen(text);
+    size_t copy_len = text_len < (size_t)(component->max_length - 1) ? text_len : (size_t)(component->max_length - 1);
+    
+    // 安全地复制文本
+    memcpy(component->text, text, copy_len);
+    component->text[copy_len] = '\0';
+    component->cursor_pos = copy_len;
     component->selection_start = -1;
     component->selection_end = -1;
 }
@@ -307,12 +313,15 @@ static void text_component_insert_char(TextComponent* component, char c) {
     if (component->cursor_pos < 0) component->cursor_pos = 0;
     if (component->cursor_pos > len) component->cursor_pos = len;
 
-    // 插入字符
+    // 插入字符，确保不会溢出缓冲区
     if (component->cursor_pos < component->max_length - 1) {
-        memmove(component->text + component->cursor_pos + 1, component->text + component->cursor_pos, len - component->cursor_pos + 1);
-        component->text[component->cursor_pos] = c;
-        component->text[component->cursor_pos + 1 + len - component->cursor_pos] = '\0'; // 确保字符串以null结尾
-        component->cursor_pos++;
+        size_t bytes_to_move = len - component->cursor_pos + 1; // 包括null终止符
+        // 确保不会超出缓冲区大小
+        if (component->cursor_pos + bytes_to_move < component->max_length) {
+            memmove(component->text + component->cursor_pos + 1, component->text + component->cursor_pos, bytes_to_move);
+            component->text[component->cursor_pos] = c;
+            component->cursor_pos++;
+        }
     }
 }
 
@@ -388,40 +397,49 @@ void text_component_handle_key_event(Layer* layer, KeyEvent* event) {
                 break;
             case SDLK_LEFT:
                 if (component->cursor_pos > 0) {
-                    component->cursor_pos--;
-                    // 如果按住Shift，则扩展选择，否则清除选择
-                    if (!(event->data.key.mod & KMOD_SHIFT)) {
-                        component->selection_start = -1;
-                        component->selection_end = -1;
-                    } else if (component->selection_start == -1) {
-                        // 开始新的选择
-                        component->selection_start = component->cursor_pos + 1;
+                    // 如果按住Shift键，需要先检查是否已有选择
+                    if (event->data.key.mod & KMOD_SHIFT) {
+                        // 如果没有选择，开始新选择
+                        if (component->selection_start == -1) {
+                            component->selection_start = component->cursor_pos;
+                        }
+                        // 移动光标
+                        component->cursor_pos--;
+                        // 更新选择结束位置
                         component->selection_end = component->cursor_pos;
                     } else {
-                        // 扩展现有选择
-                        component->selection_end = component->cursor_pos;
+                        // 如果没有按Shift，只是移动光标并清除选择
+                        component->cursor_pos--;
+                        component->selection_start = -1;
+                        component->selection_end = -1;
                     }
                 }
                 break;
             case SDLK_RIGHT:
                 if (component->cursor_pos < strlen(component->text)) {
-                    component->cursor_pos++;
-                    // 如果按住Shift，则扩展选择，否则清除选择
-                    if (!(event->data.key.mod & KMOD_SHIFT)) {
-                        component->selection_start = -1;
-                        component->selection_end = -1;
-                    } else if (component->selection_start == -1) {
-                        // 开始新的选择
-                        component->selection_start = component->cursor_pos - 1;
+                    // 如果按住Shift键，需要先检查是否已有选择
+                    if (event->data.key.mod & KMOD_SHIFT) {
+                        // 如果没有选择，开始新选择
+                        if (component->selection_start == -1) {
+                            component->selection_start = component->cursor_pos;
+                        }
+                        // 移动光标
+                        component->cursor_pos++;
+                        // 更新选择结束位置
                         component->selection_end = component->cursor_pos;
                     } else {
-                        // 扩展现有选择
-                        component->selection_end = component->cursor_pos;
+                        // 如果没有按Shift，只是移动光标并清除选择
+                        component->cursor_pos++;
+                        component->selection_start = -1;
+                        component->selection_end = -1;
                     }
                 }
                 break;
             case SDLK_UP:
                 if (component->multiline) {
+                    // 先保存当前光标位置作为选择起始点
+                    int old_cursor_pos = component->cursor_pos;
+                    
                     // 简单的向上移动光标实现
                     int pos = component->cursor_pos;
                     while (pos > 0 && component->text[pos] != '\n') {
@@ -446,20 +464,27 @@ void text_component_handle_key_event(Layer* layer, KeyEvent* event) {
                     } else {
                         component->cursor_pos = 0;
                     }
-                    // 如果按住Shift，则扩展选择，否则清除选择
-                    if (!(event->data.key.mod & KMOD_SHIFT)) {
-                        component->selection_start = -1;
-                        component->selection_end = -1;
-                    } else if (component->selection_start == -1) {
-                        component->selection_start = component->cursor_pos;
+                    
+                    // 处理选择
+                    if (event->data.key.mod & KMOD_SHIFT) {
+                        // 如果没有选择，开始新选择
+                        if (component->selection_start == -1) {
+                            component->selection_start = old_cursor_pos;
+                        }
+                        // 更新选择结束位置
                         component->selection_end = component->cursor_pos;
                     } else {
-                        component->selection_end = component->cursor_pos;
+                        // 清除选择
+                        component->selection_start = -1;
+                        component->selection_end = -1;
                     }
                 }
                 break;
             case SDLK_DOWN:
                 if (component->multiline) {
+                    // 先保存当前光标位置作为选择起始点
+                    int old_cursor_pos = component->cursor_pos;
+                    
                     // 简单的向下移动光标实现
                     int pos = component->cursor_pos;
                     while (pos < strlen(component->text) && component->text[pos] != '\n') {
@@ -484,15 +509,19 @@ void text_component_handle_key_event(Layer* layer, KeyEvent* event) {
                     } else {
                         component->cursor_pos = strlen(component->text);
                     }
-                    // 如果按住Shift，则扩展选择，否则清除选择
-                    if (!(event->data.key.mod & KMOD_SHIFT)) {
-                        component->selection_start = -1;
-                        component->selection_end = -1;
-                    } else if (component->selection_start == -1) {
-                        component->selection_start = component->cursor_pos;
+                    
+                    // 处理选择
+                    if (event->data.key.mod & KMOD_SHIFT) {
+                        // 如果没有选择，开始新选择
+                        if (component->selection_start == -1) {
+                            component->selection_start = old_cursor_pos;
+                        }
+                        // 更新选择结束位置
                         component->selection_end = component->cursor_pos;
                     } else {
-                        component->selection_end = component->cursor_pos;
+                        // 清除选择
+                        component->selection_start = -1;
+                        component->selection_end = -1;
                     }
                 }
                 break;
@@ -629,41 +658,63 @@ void text_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     // 这里仅作为占位
     
     // 鼠标按下时设置光标位置
-    if (event->state == BUTTON_PRESSED && event->button == BUTTON_LEFT) {
+    if (event->state == SDL_PRESSED && event->button == SDL_BUTTON_LEFT) {
         Point pt = {event->x, event->y};
         if (point_in_rect(pt, layer->rect)) {
             // 计算点击位置对应的文本位置
             int click_pos = text_component_get_position_from_point(component, pt, layer);
             component->cursor_pos = click_pos;
             
-            // 如果按住Shift键，则扩展选择
-            if (component->selection_start == -1) {
-                // 开始新选择
-                component->selection_start = click_pos;
-                component->selection_end = click_pos;
-            } else {
-                // 扩展现有选择
-                component->selection_end = click_pos;
-            }
+            // 开始新选择
+            component->selection_start = click_pos;
+            component->selection_end = click_pos;
+            component->is_selecting = 1; // 标记正在选择
         } else {
             // 点击文本区域外，清除选择
             component->selection_start = -1;
             component->selection_end = -1;
+            component->is_selecting = 0; // 标记不再选择
         }
     }
     // 鼠标拖动时更新选择
-    else if (event->state == SDL_MOUSEMOTION && (event->button == BUTTON_LEFT)) {
-        Point pt = {event->x, event->y};
-        if (point_in_rect(pt, layer->rect)) {
-            // 计算拖动位置对应的文本位置
-            int drag_pos = text_component_get_position_from_point(component, pt, layer);
-            
-            // 更新选择终点
-            if (component->selection_start != -1) {
+    else if (event->state == SDL_MOUSEMOTION && (event->button == SDL_BUTTON_LEFT)) {
+        // 只有在正在选择时才更新选择
+        if (component->is_selecting) {
+            Point pt = {event->x, event->y};
+            if (point_in_rect(pt, layer->rect)) {
+                // 计算拖动位置对应的文本位置
+                int drag_pos = text_component_get_position_from_point(component, pt, layer);
+                
+                // 更新选择终点和光标位置
                 component->selection_end = drag_pos;
                 component->cursor_pos = drag_pos;
+            } else {
+                // 如果拖出文本区域，处理边界情况
+                if (pt.x < layer->rect.x) {
+                    // 拖到左侧，选择到行首
+                    component->selection_end = get_line_start(component, component->cursor_pos);
+                    component->cursor_pos = component->selection_end;
+                } else if (pt.x > layer->rect.x + layer->rect.w) {
+                    // 拖到右侧，选择到行尾
+                    component->selection_end = get_line_end(component, component->cursor_pos);
+                    component->cursor_pos = component->selection_end;
+                }
+                
+                if (pt.y < layer->rect.y) {
+                    // 拖到上方，选择到文本开头
+                    component->selection_end = 0;
+                    component->cursor_pos = 0;
+                } else if (pt.y > layer->rect.y + layer->rect.h) {
+                    // 拖到下方，选择到文本末尾
+                    component->selection_end = strlen(component->text);
+                    component->cursor_pos = strlen(component->text);
+                }
             }
         }
+    }
+    // 鼠标释放时结束选择
+    else if (event->state == SDL_RELEASED && event->button == SDL_BUTTON_LEFT) {
+        component->is_selecting = 0; // 标记不再选择
     }
 }
 
@@ -672,6 +723,46 @@ void text_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
 
 
 
+
+// 辅助函数：获取指定位置所在行的起始位置
+int get_line_start(TextComponent* component, int pos) {
+    if (!component || pos < 0) {
+        return 0;
+    }
+    
+    // 限制pos在文本范围内
+    if (pos > strlen(component->text)) {
+        pos = strlen(component->text);
+    }
+    
+    // 从pos向前查找换行符
+    int start = pos;
+    while (start > 0 && component->text[start - 1] != '\n') {
+        start--;
+    }
+    
+    return start;
+}
+
+// 辅助函数：获取指定位置所在行的结束位置
+int get_line_end(TextComponent* component, int pos) {
+    if (!component || pos < 0) {
+        return 0;
+    }
+    
+    // 限制pos在文本范围内
+    if (pos > strlen(component->text)) {
+        pos = strlen(component->text);
+    }
+    
+    // 从pos向后查找换行符或文本末尾
+    int end = pos;
+    while (end < strlen(component->text) && component->text[end] != '\n') {
+        end++;
+    }
+    
+    return end;
+}
 
 // 辅助函数：根据鼠标坐标计算对应的文本位置
 int text_component_get_position_from_point(TextComponent* component, Point pt, Layer* layer) {
@@ -735,8 +826,9 @@ int text_component_get_position_from_point(TextComponent* component, Point pt, L
         }
         
         // 计算行号（考虑滚动偏移）
+        // 使用与渲染相同的行间距计算方式
         int line_y = pt.y - render_rect.y + component->scroll_y;
-        int line_num = line_y / line_height;
+        int line_num = line_y / (line_height + 2); // 使用与渲染相同的行间距
         
         // 查找对应行的起始位置
         int current_line = 0;
@@ -782,6 +874,7 @@ int text_component_get_position_from_point(TextComponent* component, Point pt, L
         }
         
         // 计算列位置
+        // 考虑文本渲染的实际对齐方式
         int col = (pt.x - render_rect.x) / char_width;
         
         // 限制列位置在文本范围内
