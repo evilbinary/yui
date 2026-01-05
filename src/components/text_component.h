@@ -25,6 +25,7 @@ typedef struct {
     int line_number_width; // 行号区域宽度
     Color line_number_color; // 行号颜色
     Color line_number_bg_color; // 行号背景颜色
+    Color selection_color; // 选中背景颜色
 } TextComponent;
 
 // 函数声明
@@ -41,8 +42,9 @@ void text_component_set_show_line_numbers(TextComponent* component, int show_lin
 void text_component_set_line_number_width(TextComponent* component, int width);
 void text_component_set_line_number_color(TextComponent* component, Color color);
 void text_component_set_line_number_bg_color(TextComponent* component, Color color);
+void text_component_set_selection_color(TextComponent* component, Color color);
 void text_component_handle_key_event(Layer* layer, KeyEvent* event);
 void text_component_handle_mouse_event(Layer* layer, MouseEvent* event);
 void text_component_render(Layer* layer);
-
+int text_component_get_position_from_point(TextComponent* component, Point pt, Layer* layer);
 #endif  // YUI_TEXT_COMPONENT_H
