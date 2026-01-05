@@ -167,15 +167,16 @@ void handle_key_event(Layer* layer, KeyEvent* event) {
         return;
     }
 
-    // 只有当图层是当前焦点图层或者没有焦点图层时，才处理键盘事件
-    // 这确保了键盘事件只传递给当前拥有焦点的图层
+    // 如果当前图层就是焦点图层且有键盘事件处理函数，则处理事件
     if (focused_layer == layer && layer->handle_key_event) {
         layer->handle_key_event(layer, event);
+        return;
     }
     
-    // 递归处理子图层的键盘事件（但只有焦点图层会实际处理事件）
+    // 递归处理子图层的键盘事件，寻找焦点图层
     for (int i = 0; i < layer->child_count; i++) {
         if (layer->children[i]) {
+            // 递归调用，不需要额外检查
             handle_key_event(layer->children[i], event);
         }
     }
@@ -198,11 +199,25 @@ void handle_mouse_event(Layer* layer, MouseEvent* event) {
     }
     
     Point mouse_pos = {event->x, event->y};
-    // 让组件自己管理状态，不在通用事件处理中修改状态
-    // 这避免了状态冲突和覆盖组件的状态管理逻辑
-    if (!layer->handle_mouse_event) {
+    // 先处理焦点切换逻辑（无论是否有自定义的鼠标事件处理函数）
+    if (point_in_rect(mouse_pos, layer->rect)) {
+        // 处理焦点切换逻辑
+        if (layer->focusable && event->state == SDL_PRESSED) {
+            printf("DEBUG: Setting focus for layer '%s', focusable=%d, type=%d\n", 
+                   layer->id, layer->focusable, layer->type);
+            // 如果当前有焦点图层，将其状态设置为NORMAL
+            if (focused_layer && focused_layer != layer) {
+                focused_layer->state = LAYER_STATE_NORMAL;
+                printf("DEBUG: Previous focused layer cleared\n");
+            }
+            // 设置新的焦点图层
+            focused_layer = layer;
+            layer->state = LAYER_STATE_FOCUSED;
+            printf("DEBUG: New focused layer set to '%s'\n", layer->id);
+        }
+
         // 如果没有自定义的事件处理函数，使用默认的状态管理
-        if (point_in_rect(mouse_pos, layer->rect)) {
+        if (!layer->handle_mouse_event) {
             if (layer->state != LAYER_STATE_DISABLED) {
                 if (event->state == SDL_PRESSED) {
                     // 鼠标按下时设置为PRESSED状态
@@ -214,22 +229,11 @@ void handle_mouse_event(Layer* layer, MouseEvent* event) {
                     }
                 }
             }
-
-            // 处理焦点切换逻辑
-            if (layer->focusable && event->state == SDL_PRESSED) {
-                // 如果当前有焦点图层，将其状态设置为NORMAL
-                if (focused_layer && focused_layer != layer) {
-                    focused_layer->state = LAYER_STATE_NORMAL;
-                }
-                // 设置新的焦点图层
-                focused_layer = layer;
-                layer->state = LAYER_STATE_FOCUSED;
-            }
-        } else {
-            // 鼠标离开图层时，恢复为NORMAL状态（除非是DISABLED或FOCUSED状态）
-            if (layer->state != LAYER_STATE_DISABLED && layer->state != LAYER_STATE_FOCUSED) {
-                layer->state = LAYER_STATE_NORMAL;
-            }
+        }
+    } else {
+        // 鼠标离开图层时，恢复为NORMAL状态（除非是DISABLED或FOCUSED状态）
+        if (!layer->handle_mouse_event && layer->state != LAYER_STATE_DISABLED && layer->state != LAYER_STATE_FOCUSED) {
+            layer->state = LAYER_STATE_NORMAL;
         }
     }
 

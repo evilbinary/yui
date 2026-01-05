@@ -33,6 +33,9 @@ TextComponent* text_component_create(Layer* layer) {
     component->line_number_color = (Color){133, 133, 133, 255};  // 默认行号颜色
     component->line_number_bg_color = (Color){30, 30, 30, 255};  // 默认行号背景颜色
     
+    // 设置图层的焦点属性，使其可以获得焦点
+    layer->focusable = 1;
+    
     // 存储组件指针到图层的component字段中
     layer->component = component;
     layer->render = text_component_render;
@@ -44,6 +47,11 @@ TextComponent* text_component_create(Layer* layer) {
 
 TextComponent* text_component_create_from_json(Layer* layer,cJSON* json_obj){
     TextComponent* component = text_component_create(layer);
+    
+    // 强制设置可编辑和可获得焦点
+    layer->focusable = 1;
+    component->editable = 1;
+    
     // 设置文本内容
     if (cJSON_HasObjectItem(json_obj, "text")) {
         text_component_set_text(layer->component, cJSON_GetObjectItem(json_obj, "text")->valuestring);
@@ -158,8 +166,13 @@ void text_component_set_editable(TextComponent* component, int editable) {
     if (!component) {
         return;
     }
-    
+
     component->editable = editable;
+
+    // 同时更新焦点属性
+    if (component->layer) {
+        component->layer->focusable = editable;
+    }
 }
 
 // 设置是否显示行号
@@ -222,25 +235,28 @@ static void text_component_delete_selection(TextComponent* component) {
 // 在光标位置插入字符
 static void text_component_insert_char(TextComponent* component, char c) {
     if (!component->editable) {
+        printf("DEBUG: Component not editable, skipping insert\n");
         return;
     }
-    
+
     int len = strlen(component->text);
-    
+
     // 如果达到最大长度，不插入
     if (len >= component->max_length - 1) {
+        printf("DEBUG: Max length reached, skipping insert\n");
         return;
     }
-    
+
     // 如果有选中的文本，先删除
     if (component->selection_start != -1 && component->selection_end != -1) {
         text_component_delete_selection(component);
     }
-    
+
     // 插入字符
     memmove(component->text + component->cursor_pos + 1, component->text + component->cursor_pos, len - component->cursor_pos + 1);
     component->text[component->cursor_pos] = c;
     component->cursor_pos++;
+    printf("DEBUG: Inserted char '%c' at position %d, text now: '%s'\n", c, component->cursor_pos - 1, component->text);
 }
 
 // 删除光标前的字符
@@ -285,6 +301,9 @@ void text_component_handle_key_event(Layer* layer, KeyEvent* event) {
     if (!component->editable) {
         return;
     }
+
+    printf("DEBUG: Text component keyboard event: layer='%s', editable=%d, focused=%p\n",
+           layer->id, component->editable, focused_layer);
     
     // 处理特殊键
     if (event->type == KEY_EVENT_DOWN) {
@@ -418,8 +437,10 @@ void text_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
             component->cursor_pos = strlen(component->text);
             component->selection_start = -1;
             component->selection_end = -1;
-            // 设置焦点
+            // 设置焦点和状态
             focused_layer = layer;
+            layer->state = LAYER_STATE_FOCUSED;
+            printf("DEBUG: Text component clicked, focus set to layer '%s'\n", layer->id);
         }
     }
 }
