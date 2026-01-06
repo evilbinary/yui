@@ -7,7 +7,8 @@ project("yui",
         'yui',
         'test_blur_cache',
         'test_content_size',
-        'test_text_render'
+        'test_text_render',
+        'test_text_simple'
     ]
 )
 
