@@ -1,6 +1,42 @@
 #include "layout.h"
 #include "util.h"
 
+static LayoutManager* clone_layout_manager(const LayoutManager* src) {
+    if (!src) {
+        return NULL;
+    }
+    LayoutManager* copy = (LayoutManager*)malloc(sizeof(LayoutManager));
+    if (!copy) {
+        return NULL;
+    }
+    memcpy(copy, src, sizeof(LayoutManager));
+    return copy;
+}
+
+static Event* clone_event(const Event* src) {
+    if (!src) {
+        return NULL;
+    }
+    Event* copy = (Event*)malloc(sizeof(Event));
+    if (!copy) {
+        return NULL;
+    }
+    memcpy(copy, src, sizeof(Event));
+    return copy;
+}
+
+static Scrollbar* clone_scrollbar(const Scrollbar* src) {
+    if (!src) {
+        return NULL;
+    }
+    Scrollbar* copy = (Scrollbar*)malloc(sizeof(Scrollbar));
+    if (!copy) {
+        return NULL;
+    }
+    memcpy(copy, src, sizeof(Scrollbar));
+    return copy;
+}
+
 void layout_layer(Layer* layer){
     // 添加调试信息，检查layer指针
     if (!layer) {
@@ -376,7 +412,7 @@ void layout_layer(Layer* layer){
         if (layer->children) {
             for (int i = 0; i < layer->child_count; i++) {
                 if (layer->children[i]) {
-                    free(layer->children[i]);
+                    destroy_layer(layer->children[i]);
                 }
             }
             free(layer->children);
@@ -395,12 +431,41 @@ void layout_layer(Layer* layer){
                 // 创建基于模板的新项
                 layer->children[i] = malloc(sizeof(Layer));
                 memcpy(layer->children[i], layer->item_template, sizeof(Layer));
+
+                Layer* child_layer = layer->children[i];
+                Layer* template_layer = layer->item_template;
+
+                // 重新绑定父节点，避免保留模板中的父指针
+                child_layer->parent = layer;
+
+                // 重建动态字符串，防止与模板共享
+                child_layer->label = NULL;
+                child_layer->text = NULL;
+                child_layer->text_size = 0;
+                layer_set_label(child_layer, layer_get_label(template_layer));
+                layer_set_text(child_layer, layer_get_text(template_layer));
+
+                // 克隆需要独立释放的结构，避免重复释放
+                child_layer->layout_manager = clone_layout_manager(template_layer->layout_manager);
+                child_layer->event = clone_event(template_layer->event);
+                child_layer->scrollbar = clone_scrollbar(template_layer->scrollbar);
+                child_layer->scrollbar_v = clone_scrollbar(template_layer->scrollbar_v);
+                child_layer->scrollbar_h = clone_scrollbar(template_layer->scrollbar_h);
+
+                // 清除不应共享的指针，防止销毁时误释放模板资源
+                child_layer->children = NULL;
+                child_layer->child_count = 0;
+                child_layer->item_template = NULL;
+                child_layer->sub = NULL;
+                child_layer->binding = NULL;
+                child_layer->data = NULL;
+                child_layer->animation = NULL;
                 
                 // 检查可见性（在创建之后）
                 if (layer->children[i]->visible == IN_VISIBLE) {
                     printf("layout_layer: skipping invisible child[%d] of %s\n", i, layer->id ? layer->id : "(null)");
                     fflush(stdout);
-                    free(layer->children[i]);
+                    destroy_layer(layer->children[i]);
                     layer->children[i] = NULL;
                     continue;
                 }
