@@ -146,8 +146,12 @@ void text_component_set_text(TextComponent* component, const char* text) {
         return;
     }
     
-    // 计算可以安全复制的最大长度
+    // 计算文本长度
     size_t text_len = strlen(text);
+    
+    // 移除最大长度限制，使用动态内存分配
+    // 注释掉最大长度检查，因为现在使用 layer_set_text_with_size 进行动态内存分配
+    /*
     size_t copy_len = text_len < (size_t)(component->max_length - 1) ? text_len : (size_t)(component->max_length - 1);
     
     // 创建临时字符串以存储截断后的文本
@@ -158,14 +162,13 @@ void text_component_set_text(TextComponent* component, const char* text) {
     
     memcpy(temp_text, text, copy_len);
     temp_text[copy_len] = '\0';
+    */
     
     // 使用 layer_set_text 设置文本（使用动态内存分配）
-    layer_set_text(component->layer, temp_text);
-    
-    free(temp_text);
+    layer_set_text(component->layer, text);
     
     // 更新组件状态
-    component->cursor_pos = copy_len;
+    component->cursor_pos = text_len;
     component->selection_start = -1;
     component->selection_end = -1;
 }
@@ -187,6 +190,9 @@ void text_component_set_max_length(TextComponent* component, int max_length) {
     }
     
     component->max_length = max_length;
+    // 移除最大长度限制，使用动态内存分配
+    // 注释掉最大长度检查，因为现在使用 layer_set_text_with_size 进行动态内存分配
+    /*
     // 确保文本不超过新的最大长度
     if (strlen(component->layer->text) >= max_length) {
         // 截断文本
@@ -199,6 +205,7 @@ void text_component_set_max_length(TextComponent* component, int max_length) {
             component->cursor_pos = max_length - 1;
         }
     }
+    */
 }
 
 
@@ -338,10 +345,13 @@ static void text_component_insert_char(TextComponent* component, char c) {
 
     int len = strlen(component->layer->text);
 
-    // 如果达到最大长度，不插入
+    // 移除最大长度限制，使用动态内存分配
+    // 注释掉最大长度检查，因为现在使用 layer_set_text_with_size 进行动态内存分配
+    /*
     if (len >= component->max_length - 1) {
         return;
     }
+    */
 
     // 如果有选中的文本，先删除
     if (component->selection_start != -1 && component->selection_end != -1) {
@@ -355,29 +365,36 @@ static void text_component_insert_char(TextComponent* component, char c) {
     if (component->cursor_pos > len) component->cursor_pos = len;
 
     // 插入字符，使用动态内存分配
+    // 移除最大长度限制，使用动态内存分配
+    // 注释掉最大长度检查，因为现在使用 layer_set_text_with_size 进行动态内存分配
+    /*
     if (component->cursor_pos < component->max_length - 1) {
-        // 计算新文本长度
-        size_t new_len = len + 1;
-        
-        // 创建临时缓冲区存储新文本
-        char* new_text = malloc(new_len + 1);
-        if (!new_text) {
-            return;
-        }
-        
-        // 复制光标位置之前的部分
-        memcpy(new_text, component->layer->text, component->cursor_pos);
-        // 插入新字符
-        new_text[component->cursor_pos] = c;
-        // 复制光标位置之后的部分
-        memcpy(new_text + component->cursor_pos + 1, component->layer->text + component->cursor_pos, len - component->cursor_pos + 1);
-        
-        // 设置新文本
-        layer_set_text(component->layer, new_text);
-        free(new_text);
-        
-        component->cursor_pos++;
+    */
+    
+    // 计算新文本长度
+    size_t new_len = len + 1;
+    
+    // 创建临时缓冲区存储新文本
+    char* new_text = malloc(new_len + 1);
+    if (!new_text) {
+        return;
     }
+    
+    // 复制光标位置之前的部分
+    memcpy(new_text, component->layer->text, component->cursor_pos);
+    // 插入新字符
+    new_text[component->cursor_pos] = c;
+    // 复制光标位置之后的部分
+    memcpy(new_text + component->cursor_pos + 1, component->layer->text + component->cursor_pos, len - component->cursor_pos + 1);
+    
+    // 设置新文本
+    layer_set_text(component->layer, new_text);
+    free(new_text);
+    
+    component->cursor_pos++;
+    /*
+    }
+    */
 }
 
 // 删除光标前的字符
@@ -484,7 +501,9 @@ static void text_component_insert_text(TextComponent* component, const char* tex
     if (component->cursor_pos < 0) component->cursor_pos = 0;
     if (component->cursor_pos > current_len) component->cursor_pos = current_len;
     
-    // 检查是否有足够空间插入新文本
+    // 移除最大长度限制，使用动态内存分配
+    // 注释掉最大长度检查，因为现在使用 layer_set_text_with_size 进行动态内存分配
+    /*
     if (current_len + text_len >= component->max_length) {
         // 截断文本以适应最大长度
         text_len = component->max_length - current_len - 1;
@@ -492,6 +511,7 @@ static void text_component_insert_text(TextComponent* component, const char* tex
             return; // 没有足够空间
         }
     }
+    */
     
     // 计算新文本长度
     size_t new_len = current_len + text_len;
@@ -804,6 +824,11 @@ void text_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     
     // 鼠标左键按下 - 设置光标位置并开始选择
     if (event->state == SDL_PRESSED && event->button == SDL_BUTTON_LEFT) {
+        // 检查组件是否可获得焦点
+        if (layer->focusable) {
+            // 设置焦点状态
+            SET_STATE(layer, LAYER_STATE_FOCUSED);
+        }
         if (point_in_rect(pt, layer->rect)) {
             // 计算点击位置对应的文本位置
             int click_pos = text_component_get_position_from_point(component, pt, layer);
