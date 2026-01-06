@@ -403,10 +403,15 @@ static void text_component_delete_prev_char(TextComponent* component) {
         return;
     }
     
-    // 如果有选中的文本，先删除
+    // 如果有选中的文本，先删除（仅当确实有选区时）
     if (component->selection_start != -1 && component->selection_end != -1) {
-        text_component_delete_selection(component);
-        return;
+        if (component->selection_start != component->selection_end) {
+            text_component_delete_selection(component);
+            return;
+        } else {
+            component->selection_start = -1;
+            component->selection_end = -1;
+        }
     }
     
     int len = strlen(component->layer->text);
@@ -445,10 +450,15 @@ static void text_component_delete_next_char(TextComponent* component) {
         return;
     }
     
-    // 如果有选中的文本，先删除
+    // 如果有选中的文本，先删除（仅当确实有选区时）
     if (component->selection_start != -1 && component->selection_end != -1) {
-        text_component_delete_selection(component);
-        return;
+        if (component->selection_start != component->selection_end) {
+            text_component_delete_selection(component);
+            return;
+        } else {
+            component->selection_start = -1;
+            component->selection_end = -1;
+        }
     }
     
     int len = strlen(component->layer->text);
