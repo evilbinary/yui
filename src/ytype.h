@@ -323,6 +323,7 @@ typedef struct Layer {
     // 新增label和text字段
     char* label;
     char* text;
+    size_t text_size;  // text字段分配的内存大小
     
     // 添加图片模式字段
     ImageMode image_mode;

@@ -111,6 +111,7 @@ cJSON* parse_json(char* json_path) {
 static void layer_init_strings(Layer* layer) {
   layer->label = NULL;
   layer->text = NULL;
+  layer->text_size = 0;
 }
 
 static void layer_set_string(char** target, const char* value) {
@@ -132,6 +133,40 @@ static void layer_set_string(char** target, const char* value) {
   }
 }
 
+// 专门用于设置Layer的text字段，并更新text_size
+static void layer_set_text_with_size(Layer* layer, const char* value) {
+  if (!layer) {
+    return;
+  }
+  if (value) {
+    size_t len = strlen(value);
+    size_t required_size = len + 1; // 包括null终止符
+    
+    // 如果现有内存足够，直接使用
+    if (layer->text && layer->text_size >= required_size) {
+      memcpy(layer->text, value, required_size);
+      return;
+    }
+    
+    // 内存不足，需要重新分配
+    char* new_buf = (char*)realloc(layer->text, required_size);
+    if (!new_buf) {
+      // 分配失败，如果原来有内存则保持不变
+      return;
+    }
+    memcpy(new_buf, value, required_size);
+    layer->text = new_buf;
+    layer->text_size = required_size;
+  } else {
+    // 如果value为NULL，释放内存并重置
+    if (layer->text) {
+      free(layer->text);
+      layer->text = NULL;
+      layer->text_size = 0;
+    }
+  }
+}
+
 static void layer_copy_strings(Layer* dest, const Layer* src) {
   if (!dest || !src) {
     return;
@@ -140,7 +175,7 @@ static void layer_copy_strings(Layer* dest, const Layer* src) {
     layer_set_string(&dest->label, src->label);
   }
   if (src->text) {
-    layer_set_string(&dest->text, src->text);
+    layer_set_text_with_size(dest, src->text);
   }
 }
 
@@ -169,7 +204,7 @@ void layer_set_text(Layer* layer, const char* value) {
   if (!layer) {
     return;
   }
-  layer_set_string(&layer->text, value);
+  layer_set_text_with_size(layer, value);
 }
 
 const char* layer_get_label(const Layer* layer) {
