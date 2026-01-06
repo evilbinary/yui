@@ -1268,21 +1268,47 @@ void text_component_render(Layer* layer) {
         if (component->multiline) {
             // 多行模式下，实现自动换行
             char* text = component->layer->text;
+            int text_len = strlen(text);
             int current_pos = 0;
-            int line_y = render_rect.y; // 不减去layer->scroll_offset，因为在渲染时已经考虑了滚动
+            int line_y = render_rect.y - component->scroll_y; // 减去滚动偏移，实现滚动效果
             int line_height = 0;
+            int char_width = 8; // 默认字符宽度
             
-            // 先获取单行文本的高度
+            // 先获取字符尺寸
             Texture* temp_tex = backend_render_texture(layer->font->default_font, "X", layer->color);
             if (temp_tex) {
                 int temp_width, temp_height;
                 backend_query_texture(temp_tex, NULL, NULL, &temp_width, &temp_height);
+                char_width = temp_width / scale;
                 line_height = temp_height / scale;
                 backend_render_text_destroy(temp_tex);
             }
             
+            // 优化：预先计算最大可见行数，避免渲染不可见行
+            int max_visible_lines = (render_rect.h + (line_height + 2) - 1) / (line_height + 2) + 1; // 向上取整
+            int first_visible_line = component->scroll_y / (line_height + 2);
+            int last_visible_line = first_visible_line + max_visible_lines;
+            
             // 循环处理每一行
-            while (current_pos < strlen(text)) {
+            int current_line = 0;
+            while (current_pos < text_len) {
+                // 优化：快速跳过不可见的行
+                if (current_line < first_visible_line) {
+                    // 快速跳过行，不需要详细渲染
+                    while (current_pos < text_len && text[current_pos] != '\n') {
+                        current_pos++;
+                    }
+                    if (current_pos < text_len && text[current_pos] == '\n') {
+                        current_pos++;
+                    }
+                    current_line++;
+                    continue;
+                }
+                
+                // 如果已经渲染了足够的可见行，退出循环
+                if (current_line >= last_visible_line) {
+                    break;
+                }
                 // 查找当前行可以显示的最大文本长度
                 int line_end = current_pos;
                 int max_width = render_rect.w;
@@ -1295,93 +1321,60 @@ void text_component_render(Layer* layer) {
                         break;
                     }
                     
-                    // 临时文本（从current_pos到line_end+1）
-                    char* temp_line = (char*)malloc(line_end - current_pos + 2);
-                    if (temp_line) {
-                        strncpy(temp_line, text + current_pos, line_end - current_pos + 1);
-                        temp_line[line_end - current_pos + 1] = '\0';
-                        
-                        // 计算临时文本宽度
-                        Texture* line_tex = backend_render_texture(layer->font->default_font, temp_line, layer->color);
-                        if (line_tex) {
-                            int line_width, line_height_ignore;
-                            backend_query_texture(line_tex, NULL, NULL, &line_width, &line_height_ignore);
-                            current_width = line_width / scale;
-                            backend_render_text_destroy(line_tex);
-                        }
-                        
-                        free(temp_line);
-                    }
-                    
-                    // 如果超出宽度，停止
-                    if (current_width > max_width && line_end > current_pos) {
-                        break;
-                    }
-                    
-                    // 记录空格位置，但只有当文本接近宽度限制时才在空格处换行
-                    if (text[line_end] == ' ') {
-                        int space_line_end = line_end;
-                        int space_width = 0;
-                        
-                        // 计算到空格位置的文本宽度
-                        char* temp_line = (char*)malloc(space_line_end - current_pos + 2);
-                        if (temp_line) {
-                            strncpy(temp_line, text + current_pos, space_line_end - current_pos + 1);
-                            temp_line[space_line_end - current_pos + 1] = '\0';
-                               
-                            Texture* line_tex = backend_render_texture(layer->font->default_font, temp_line, layer->color);
-                            if (line_tex) {
-                                int line_width, line_height_ignore;
-                                backend_query_texture(line_tex, NULL, NULL, &line_width, &line_height_ignore);
-                                space_width = line_width / scale;
-                                backend_render_text_destroy(line_tex);
-                            }
-                               
-                            free(temp_line);
-                        }
-                        
-                        // 只有当文本接近宽度限制时才在空格处换行
-                        if (space_width > max_width * 0.9) { // 当文本达到宽度的90%时考虑换行
-                            current_pos = space_line_end + 1;
-                            break;
-                        }
-                    }
-                    
                     line_end++;
+                }
+                
+                // 计算整行文本的宽度
+                char* temp_line = (char*)malloc(line_end - current_pos + 1);
+                if (temp_line) {
+                    strncpy(temp_line, text + current_pos, line_end - current_pos);
+                    temp_line[line_end - current_pos] = '\0';
+                    
+                    Texture* line_tex = backend_render_texture(layer->font->default_font, temp_line, layer->color);
+                    if (line_tex) {
+                        int line_width, line_height_ignore;
+                        backend_query_texture(line_tex, NULL, NULL, &line_width, &line_height_ignore);
+                        current_width = line_width / scale;
+                        backend_render_text_destroy(line_tex);
+                    }
+                    
+                    free(temp_line);
                 }
                 
                 // 确定当前行的结束位置
                 int split_pos = current_pos;
                 
-                // 特殊处理换行符：如果遇到换行符，直接在换行符处结束当前行
+                // 如果遇到换行符，直接在换行符处结束当前行
                 if (line_end < strlen(text) && text[line_end] == '\n') {
                     split_pos = line_end;
                 }
-                // 如果文本没有超过宽度限制，并且没有到文本末尾
-                else if (current_width <= max_width && line_end < strlen(text)) {
-                    split_pos = line_end; // 直接使用找到的line_end作为当前行的结束位置
-                } 
+                // 如果文本没有超过宽度限制，使用整行
+                else if (current_width <= max_width && line_end >= strlen(text)) {
+                    split_pos = line_end;
+                }
                 // 如果文本超过宽度限制，需要硬换行
                 else if (current_width > max_width) {
                     // 找到最大的不超过宽度的位置
                     split_pos = current_pos;
                     while (split_pos < line_end) {
-                        char* temp_line = (char*)malloc(split_pos - current_pos + 2);
-                        if (temp_line) {
-                            strncpy(temp_line, text + current_pos, split_pos - current_pos + 1);
-                            temp_line[split_pos - current_pos + 1] = '\0';
-                                  
-                            Texture* line_tex = backend_render_texture(layer->font->default_font, temp_line, layer->color);
-                            if (line_tex) {
-                                int line_width, line_height_ignore;
-                                backend_query_texture(line_tex, NULL, NULL, &line_width, &line_height_ignore);
-                                if (line_width / scale > max_width) {
+                        char* test_line = (char*)malloc(split_pos - current_pos + 1);
+                        if (test_line) {
+                            strncpy(test_line, text + current_pos, split_pos - current_pos);
+                            test_line[split_pos - current_pos] = '\0';
+                            
+                            Texture* test_tex = backend_render_texture(layer->font->default_font, test_line, layer->color);
+                            if (test_tex) {
+                                int test_width, test_height;
+                                backend_query_texture(test_tex, NULL, NULL, &test_width, &test_height);
+                                if (test_width / scale > max_width) {
+                                    backend_render_text_destroy(test_tex);
+                                    free(test_line);
                                     break;
                                 }
-                                backend_render_text_destroy(line_tex);
+                                backend_render_text_destroy(test_tex);
                             }
-                                  
-                            free(temp_line);
+                            
+                            free(test_line);
                         }
                         split_pos++;
                     } 
@@ -1391,7 +1384,7 @@ void text_component_render(Layer* layer) {
                     }
                 }
                 // 如果到达文本末尾
-                else if (line_end >= strlen(text)) {
+                else {
                     split_pos = line_end;
                 }
                 
@@ -1435,25 +1428,24 @@ void text_component_render(Layer* layer) {
                             text_rect.w = render_rect.x + render_rect.w - text_rect.x;
                         }
                           
-                        // 只有当行在可见区域内时才渲染
-                    if (line_y + actual_height / scale > render_rect.y && line_y < render_rect.y + render_rect.h) {
+                        // 渲染文本
                         backend_render_text_copy(line_tex, NULL, &text_rect);
+                        backend_render_text_destroy(line_tex);
                     }
-                    backend_render_text_destroy(line_tex);
-                } 
                 
                 free(current_line);
             }
               
             // 如果是在换行符处结束，直接跳到下一个字符
-                if (split_pos < strlen(text) && text[split_pos] == '\n') {
-                    current_pos = split_pos + 1;
-                } else {
-                    current_pos = split_pos;
-                }
-                
-                // 移动到下一行
-                line_y += line_height + 2; // 加2作为行间距
+            if (split_pos < strlen(text) && text[split_pos] == '\n') {
+                current_pos = split_pos + 1;
+            } else {
+                current_pos = split_pos;
+            }
+            
+            // 移动到下一行
+            line_y += line_height + 2; // 加2作为行间距
+            current_line++; // 增加行计数
             }
             
             // 计算文本总高度（考虑所有行的高度和间距）
@@ -1471,11 +1463,6 @@ void text_component_render(Layer* layer) {
                 // 确保滚动不会超出下边界
                 int max_scroll_y = total_text_height - render_rect.h;
                 if (component->scroll_y > max_scroll_y) {
-                    component->scroll_y = max_scroll_y;
-                }
-                // 确保即使文本内容变化，最后一行也能完整显示
-                if (line_y >= render_rect.y - component->scroll_y + total_text_height && 
-                    component->scroll_y < max_scroll_y) {
                     component->scroll_y = max_scroll_y;
                 }
             }
