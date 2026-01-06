@@ -99,3 +99,16 @@ target("test_text_render")
     add_files("test_text_render.c"),
     add_run()
 )
+
+target("test_text_simple") 
+(
+    add_deps("cjson"),
+    add_rules("mode.debug", "mode.release"),
+    set_kind("binary"),
+    add_flags(),
+    add_files("../src/layer.c"),
+    add_files("../src/util.c"),
+    add_files("../src/components/*.c"),
+    add_files("test_text_simple.c"),
+    add_run()
+)
