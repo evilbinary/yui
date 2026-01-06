@@ -501,6 +501,18 @@ static void text_component_insert_text(TextComponent* component, const char* tex
     if (component->cursor_pos < 0) component->cursor_pos = 0;
     if (component->cursor_pos > current_len) component->cursor_pos = current_len;
     
+    // 检查是否包含换行符，如果包含则设置为多行模式
+    int has_newlines = 0;
+    for (int i = 0; i < text_len; i++) {
+        if (text[i] == '\n') {
+            has_newlines = 1;
+            break;
+        }
+    }
+    if (has_newlines && !component->multiline) {
+        component->multiline = 1;
+    }
+    
     // 移除最大长度限制，使用动态内存分配
     // 注释掉最大长度检查，因为现在使用 layer_set_text_with_size 进行动态内存分配
     /*
@@ -839,10 +851,12 @@ void text_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
             component->selection_end = click_pos;
             component->is_selecting = 1;
         } else {
-            // 点击文本区域外，清除选择
+            // 点击文本区域外，清除选择并移除焦点
             component->selection_start = -1;
             component->selection_end = -1;
             component->is_selecting = 0;
+            // 移除焦点状态
+            CLEAR_STATE(layer, LAYER_STATE_FOCUSED);
         }
     }
     // 鼠标拖动 - 更新选择范围
@@ -1064,6 +1078,11 @@ void text_component_render(Layer* layer) {
             }
         }
         
+        // 确保至少有1行
+        if (line_count < 1) {
+            line_count = 1;
+        }
+        
         // 获取行高用于行号定位
         int line_height = component->line_height;
         Texture* temp_tex = backend_render_texture(layer->font->default_font, "X", component->line_number_color);
@@ -1082,7 +1101,7 @@ void text_component_render(Layer* layer) {
         }
         
         // 渲染可见行号
-        for (int i = first_visible_line; i < last_visible_line; i++) {
+        for (int i = first_visible_line; i < last_visible_line && i < line_count; i++) {
             char line_num_str[16];
             snprintf(line_num_str, sizeof(line_num_str), "%d", i + 1);
             
@@ -1093,7 +1112,7 @@ void text_component_render(Layer* layer) {
                 
                 Rect line_num_rect = {
                     line_number_bg.x + line_number_bg.w - num_width / scale - 5,  // 右对齐，留5像素边距
-                    line_number_bg.y + i * (line_height + 2) - component->scroll_y,
+                    line_number_bg.y + (i - first_visible_line) * (line_height + 2),
                     num_width / scale,
                     num_height / scale
                 };
