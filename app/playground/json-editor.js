@@ -36,6 +36,7 @@ function initJsonEditor() {
 
     // 初始预览
     refreshPreviewInternal(defaultJson);
+    YUI.setText('jsonEditor', formattedJson);
 
     YUI.log("initJsonEditor: JSON editor initialized!");
 }
@@ -57,11 +58,11 @@ function onJsonChange() {
 
 // 验证JSON - 验证按钮 onClick 事件
 function validateJson() {
-    YUI.log("validateJson: Validating JSON...");
     
     var jsonText = YUI.getText("jsonEditor");
     var result = validateJsonInternal(jsonText);
-    
+    YUI.log("validateJson: Validating JSON..."+jsonText);
+
     if (result) {
         YUI.log("validateJson: JSON is valid! jsonText: "+jsonText);
         // 可以显示成功提示
