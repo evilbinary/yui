@@ -412,7 +412,7 @@ void layout_layer(Layer* layer){
                 layer->children[i]->rect.h = 30; // 固定高度
                 
                 // 简单替换${name}为实际数据
-                if (strstr(layer->children[i]->text, "${")) {
+                if (layer->children[i]->text!=NULL && strstr(layer->children[i]->text, "${")) {
                     cJSON* item = cJSON_GetArrayItem(layer->data->json, i);
                     if (!item) {
                         printf("layout_layer: WARNING: invalid item data at index %d\n", i);
