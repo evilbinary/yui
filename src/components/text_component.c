@@ -19,7 +19,7 @@ TextComponent* text_component_create(Layer* layer) {
     }
     
     component->layer = layer;
-    component->text[0] = '\0';
+    // 文本内容现在存储在 layer->text 中，不需要初始化 component->text
     component->placeholder[0] = '\0';
     component->cursor_pos = 0;
     component->selection_start = -1;
@@ -37,6 +37,11 @@ TextComponent* text_component_create(Layer* layer) {
     component->line_number_bg_color = (Color){30, 30, 30, 255};  // 默认行号背景颜色
     component->selection_color = (Color){70, 130, 180, 100};  // 默认选中颜色（半透明蓝色）
     component->is_selecting = 0;  // 默认不在选择状态
+    
+    // 初始化图层的文本字段
+    if (!layer->text) {
+        layer_set_text(layer, "");  // 初始化为空字符串
+    }
     
     // 设置图层的焦点属性，使其可以获得焦点
     layer->focusable = 1;
@@ -145,9 +150,21 @@ void text_component_set_text(TextComponent* component, const char* text) {
     size_t text_len = strlen(text);
     size_t copy_len = text_len < (size_t)(component->max_length - 1) ? text_len : (size_t)(component->max_length - 1);
     
-    // 安全地复制文本
-    memcpy(component->text, text, copy_len);
-    component->text[copy_len] = '\0';
+    // 创建临时字符串以存储截断后的文本
+    char* temp_text = malloc(copy_len + 1);
+    if (!temp_text) {
+        return;
+    }
+    
+    memcpy(temp_text, text, copy_len);
+    temp_text[copy_len] = '\0';
+    
+    // 使用 layer_set_text 设置文本（使用动态内存分配）
+    layer_set_text(component->layer, temp_text);
+    
+    free(temp_text);
+    
+    // 更新组件状态
     component->cursor_pos = copy_len;
     component->selection_start = -1;
     component->selection_end = -1;
@@ -171,9 +188,16 @@ void text_component_set_max_length(TextComponent* component, int max_length) {
     
     component->max_length = max_length;
     // 确保文本不超过新的最大长度
-    if (strlen(component->text) >= max_length) {
-        component->text[max_length - 1] = '\0';
-        component->cursor_pos = max_length - 1;
+    if (strlen(component->layer->text) >= max_length) {
+        // 截断文本
+        char* temp_text = malloc(max_length);
+        if (temp_text) {
+            strncpy(temp_text, component->layer->text, max_length - 1);
+            temp_text[max_length - 1] = '\0';
+            layer_set_text(component->layer, temp_text);
+            free(temp_text);
+            component->cursor_pos = max_length - 1;
+        }
     }
 }
 
@@ -276,12 +300,29 @@ static void text_component_delete_selection(TextComponent* component) {
     // 确保start不为负数
     if (start < 0) start = 0;
     // 确保end不超过文本长度
-    int text_len = strlen(component->text);
+    int text_len = strlen(component->layer->text);
     if (end > text_len) end = text_len;
     
     // 只有当start < end时才执行删除操作
     if (start < end) {
-        memmove(component->text + start, component->text + end, text_len - end + 1);
+        // 计算新文本的长度
+        size_t new_len = text_len - (end - start);
+        
+        // 创建临时缓冲区存储新文本
+        char* new_text = malloc(new_len + 1);
+        if (!new_text) {
+            return;
+        }
+        
+        // 复制start之前的部分
+        memcpy(new_text, component->layer->text, start);
+        // 复制end之后的部分
+        memcpy(new_text + start, component->layer->text + end, text_len - end + 1);
+        
+        // 设置新文本
+        layer_set_text(component->layer, new_text);
+        free(new_text);
+        
         component->cursor_pos = start;
     }
     
@@ -295,7 +336,7 @@ static void text_component_insert_char(TextComponent* component, char c) {
         return;
     }
 
-    int len = strlen(component->text);
+    int len = strlen(component->layer->text);
 
     // 如果达到最大长度，不插入
     if (len >= component->max_length - 1) {
@@ -306,22 +347,36 @@ static void text_component_insert_char(TextComponent* component, char c) {
     if (component->selection_start != -1 && component->selection_end != -1) {
         text_component_delete_selection(component);
         // 更新len，因为删除选择后文本长度可能改变
-        len = strlen(component->text);
+        len = strlen(component->layer->text);
     }
     
     // 确保cursor_pos在有效范围内
     if (component->cursor_pos < 0) component->cursor_pos = 0;
     if (component->cursor_pos > len) component->cursor_pos = len;
 
-    // 插入字符，确保不会溢出缓冲区
+    // 插入字符，使用动态内存分配
     if (component->cursor_pos < component->max_length - 1) {
-        size_t bytes_to_move = len - component->cursor_pos + 1; // 包括null终止符
-        // 确保不会超出缓冲区大小
-        if (component->cursor_pos + bytes_to_move < component->max_length) {
-            memmove(component->text + component->cursor_pos + 1, component->text + component->cursor_pos, bytes_to_move);
-            component->text[component->cursor_pos] = c;
-            component->cursor_pos++;
+        // 计算新文本长度
+        size_t new_len = len + 1;
+        
+        // 创建临时缓冲区存储新文本
+        char* new_text = malloc(new_len + 1);
+        if (!new_text) {
+            return;
         }
+        
+        // 复制光标位置之前的部分
+        memcpy(new_text, component->layer->text, component->cursor_pos);
+        // 插入新字符
+        new_text[component->cursor_pos] = c;
+        // 复制光标位置之后的部分
+        memcpy(new_text + component->cursor_pos + 1, component->layer->text + component->cursor_pos, len - component->cursor_pos + 1);
+        
+        // 设置新文本
+        layer_set_text(component->layer, new_text);
+        free(new_text);
+        
+        component->cursor_pos++;
     }
 }
 
@@ -337,7 +392,7 @@ static void text_component_delete_prev_char(TextComponent* component) {
         return;
     }
     
-    int len = strlen(component->text);
+    int len = strlen(component->layer->text);
     
     // 确保不会越界
     if (component->cursor_pos > len) {
@@ -345,7 +400,24 @@ static void text_component_delete_prev_char(TextComponent* component) {
     }
     
     if (component->cursor_pos > 0) {
-        memmove(component->text + component->cursor_pos - 1, component->text + component->cursor_pos, len - component->cursor_pos + 1);
+        // 计算新文本长度
+        size_t new_len = len - 1;
+        
+        // 创建临时缓冲区存储新文本
+        char* new_text = malloc(new_len + 1);
+        if (!new_text) {
+            return;
+        }
+        
+        // 复制光标位置之前的部分（不包括要删除的字符）
+        memcpy(new_text, component->layer->text, component->cursor_pos - 1);
+        // 复制光标位置之后的部分
+        memcpy(new_text + component->cursor_pos - 1, component->layer->text + component->cursor_pos, len - component->cursor_pos + 1);
+        
+        // 设置新文本
+        layer_set_text(component->layer, new_text);
+        free(new_text);
+        
         component->cursor_pos--;
     }
 }
@@ -362,7 +434,7 @@ static void text_component_delete_next_char(TextComponent* component) {
         return;
     }
     
-    int len = strlen(component->text);
+    int len = strlen(component->layer->text);
     
     // 确保cursor_pos在有效范围内
     if (component->cursor_pos < 0) component->cursor_pos = 0;
@@ -370,8 +442,23 @@ static void text_component_delete_next_char(TextComponent* component) {
         return; // 已经在文本末尾，无需删除
     }
     
-    memmove(component->text + component->cursor_pos, component->text + component->cursor_pos + 1, len - component->cursor_pos);
-    component->text[len - 1] = '\0'; // 确保字符串以null结尾
+    // 计算新文本长度
+    size_t new_len = len - 1;
+    
+    // 创建临时缓冲区存储新文本
+    char* new_text = malloc(new_len + 1);
+    if (!new_text) {
+        return;
+    }
+    
+    // 复制光标位置之前的部分
+    memcpy(new_text, component->layer->text, component->cursor_pos);
+    // 复制光标位置之后的部分（跳过要删除的字符）
+    memcpy(new_text + component->cursor_pos, component->layer->text + component->cursor_pos + 1, len - component->cursor_pos);
+    
+    // 设置新文本
+    layer_set_text(component->layer, new_text);
+    free(new_text);
 }
 
 // 在光标位置插入文本
@@ -385,12 +472,12 @@ static void text_component_insert_text(TextComponent* component, const char* tex
         return; // 空文本，无需插入
     }
     
-    int current_len = strlen(component->text);
+    int current_len = strlen(component->layer->text);
     
     // 如果有选中的文本，先删除
     if (component->selection_start != -1 && component->selection_end != -1) {
         text_component_delete_selection(component);
-        current_len = strlen(component->text);
+        current_len = strlen(component->layer->text);
     }
     
     // 确保cursor_pos在有效范围内
@@ -406,13 +493,28 @@ static void text_component_insert_text(TextComponent* component, const char* tex
         }
     }
     
-    // 移动现有文本以腾出空间
-    memmove(component->text + component->cursor_pos + text_len, 
-            component->text + component->cursor_pos, 
-            current_len - component->cursor_pos + 1);
+    // 计算新文本长度
+    size_t new_len = current_len + text_len;
     
+    // 创建临时缓冲区存储新文本
+    char* new_text = malloc(new_len + 1);
+    if (!new_text) {
+        return;
+    }
+    
+    // 复制光标位置之前的部分
+    memcpy(new_text, component->layer->text, component->cursor_pos);
     // 插入新文本
-    memcpy(component->text + component->cursor_pos, text, text_len);
+    memcpy(new_text + component->cursor_pos, text, text_len);
+    // 复制光标位置之后的部分
+    memcpy(new_text + component->cursor_pos + text_len, 
+           component->layer->text + component->cursor_pos, 
+           current_len - component->cursor_pos + 1);
+    
+    // 设置新文本
+    layer_set_text(component->layer, new_text);
+    free(new_text);
+    
     component->cursor_pos += text_len;
     
     // 清除选择
@@ -462,7 +564,7 @@ void text_component_handle_key_event(Layer* layer, KeyEvent* event) {
                 }
                 break;
             case SDLK_RIGHT:
-                if (component->cursor_pos < strlen(component->text)) {
+                if (component->cursor_pos < strlen(component->layer->text)) {
                     // 如果按住Shift键，需要先检查是否已有选择
                     if (event->data.key.mod & KMOD_SHIFT) {
                         // 如果没有选择，开始新选择
@@ -488,7 +590,7 @@ void text_component_handle_key_event(Layer* layer, KeyEvent* event) {
                     
                     // 简单的向上移动光标实现
                     int pos = component->cursor_pos;
-                    while (pos > 0 && component->text[pos] != '\n') {
+                    while (pos > 0 && component->layer->text[pos] != '\n') {
                         pos--;
                     }
                     if (pos > 0) {
@@ -496,13 +598,13 @@ void text_component_handle_key_event(Layer* layer, KeyEvent* event) {
                         // 尽量保持在同一列
                         int col = 0;
                         int temp = component->cursor_pos;
-                        while (temp > 0 && component->text[temp - 1] != '\n') {
+                        while (temp > 0 && component->layer->text[temp - 1] != '\n') {
                             col++;
                             temp--;
                         }
                         
                         temp = pos;
-                        while (col > 0 && temp < strlen(component->text) && component->text[temp] != '\n') {
+                        while (col > 0 && temp < strlen(component->layer->text) && component->layer->text[temp] != '\n') {
                             temp++;
                             col--;
                         }
@@ -533,27 +635,27 @@ void text_component_handle_key_event(Layer* layer, KeyEvent* event) {
                     
                     // 简单的向下移动光标实现
                     int pos = component->cursor_pos;
-                    while (pos < strlen(component->text) && component->text[pos] != '\n') {
+                    while (pos < strlen(component->layer->text) && component->layer->text[pos] != '\n') {
                         pos++;
                     }
-                    if (pos < strlen(component->text)) {
+                    if (pos < strlen(component->layer->text)) {
                         pos++;
                         // 尽量保持在同一列
                         int col = 0;
                         int temp = component->cursor_pos;
-                        while (temp > 0 && component->text[temp - 1] != '\n') {
+                        while (temp > 0 && component->layer->text[temp - 1] != '\n') {
                             col++;
                             temp--;
                         }
                         
                         temp = pos;
-                        while (col > 0 && temp < strlen(component->text) && component->text[temp] != '\n') {
+                        while (col > 0 && temp < strlen(component->layer->text) && component->layer->text[temp] != '\n') {
                             temp++;
                             col--;
                         }
                         component->cursor_pos = temp;
                     } else {
-                        component->cursor_pos = strlen(component->text);
+                        component->cursor_pos = strlen(component->layer->text);
                     }
                     
                     // 处理选择
@@ -584,8 +686,8 @@ void text_component_handle_key_event(Layer* layer, KeyEvent* event) {
                 // Ctrl+A 全选
                 if (event->data.key.mod & KMOD_CTRL) {
                     component->selection_start = 0;
-                    component->selection_end = strlen(component->text);
-                    component->cursor_pos = strlen(component->text);
+                    component->selection_end = strlen(component->layer->text);
+                    component->cursor_pos = strlen(component->layer->text);
                 } else if (event->type == KEY_EVENT_TEXT_INPUT) {
                     text_component_insert_char(component, 'a');
                 }
@@ -606,7 +708,7 @@ void text_component_handle_key_event(Layer* layer, KeyEvent* event) {
                         int len = end - start;
                         char* selected_text = (char*)malloc(len + 1);
                         if (selected_text) {
-                            strncpy(selected_text, component->text + start, len);
+                            strncpy(selected_text, component->layer->text + start, len);
                             selected_text[len] = '\0';
                             printf("Copied: '%s'\n", selected_text);
                             free(selected_text);
@@ -645,16 +747,13 @@ void text_component_handle_key_event(Layer* layer, KeyEvent* event) {
                         int len = end - start;
                         char* selected_text = (char*)malloc(len + 1);
                         if (selected_text) {
-                            strncpy(selected_text, component->text + start, len);
+                            strncpy(selected_text, component->layer->text + start, len);
                             selected_text[len] = '\0';
                             printf("Cut: '%s'\n", selected_text);
                             free(selected_text);
                             
                             // 删除选中文本
-                            memmove(component->text + start, component->text + end, strlen(component->text) - end + 1);
-                            component->cursor_pos = start;
-                            component->selection_start = -1;
-                            component->selection_end = -1;
+                            text_component_delete_selection(component);
                         }
                     }
                 } else if (event->type == KEY_EVENT_TEXT_INPUT) {
@@ -741,7 +840,7 @@ void text_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
                 drag_pos = 0;
             } else if (pt.y > layer->rect.y + layer->rect.h) {
                 // 拖到下方，选择到文本末尾
-                drag_pos = strlen(component->text);
+                drag_pos = strlen(component->layer->text);
             } else {
                 // 默认情况，保持当前位置
                 drag_pos = component->cursor_pos;
@@ -771,13 +870,13 @@ int get_line_start(TextComponent* component, int pos) {
     }
     
     // 限制pos在文本范围内
-    if (pos > strlen(component->text)) {
-        pos = strlen(component->text);
+    if (pos > strlen(component->layer->text)) {
+        pos = strlen(component->layer->text);
     }
     
     // 从pos向前查找换行符
     int start = pos;
-    while (start > 0 && component->text[start - 1] != '\n') {
+    while (start > 0 && component->layer->text[start - 1] != '\n') {
         start--;
     }
     
@@ -791,13 +890,13 @@ int get_line_end(TextComponent* component, int pos) {
     }
     
     // 限制pos在文本范围内
-    if (pos > strlen(component->text)) {
-        pos = strlen(component->text);
+    if (pos > strlen(component->layer->text)) {
+        pos = strlen(component->layer->text);
     }
     
     // 从pos向后查找换行符或文本末尾
     int end = pos;
-    while (end < strlen(component->text) && component->text[end] != '\n') {
+    while (end < strlen(component->layer->text) && component->layer->text[end] != '\n') {
         end++;
     }
     
@@ -826,12 +925,12 @@ int text_component_get_position_from_point(TextComponent* component, Point pt, L
     
     // 边界检查
     if (pt.y < render_rect.y) return 0;
-    if (pt.y > render_rect.y + render_rect.h) return strlen(component->text);
+    if (pt.y > render_rect.y + render_rect.h) return strlen(component->layer->text);
     if (pt.x < render_rect.x) return 0;
-    if (pt.x > render_rect.x + render_rect.w) return strlen(component->text);
+    if (pt.x > render_rect.x + render_rect.w) return strlen(component->layer->text);
     
     // 如果没有文本，返回0
-    if (strlen(component->text) == 0) {
+    if (strlen(component->layer->text) == 0) {
         return 0;
     }
     
@@ -857,8 +956,8 @@ int text_component_get_position_from_point(TextComponent* component, Point pt, L
         
         // 计算总行数并限制行号
         int total_lines = 1;
-        for (int i = 0; i < strlen(component->text); i++) {
-            if (component->text[i] == '\n') total_lines++;
+        for (int i = 0; i < strlen(component->layer->text); i++) {
+            if (component->layer->text[i] == '\n') total_lines++;
         }
         if (line_num >= total_lines) line_num = total_lines - 1;
         
@@ -867,8 +966,8 @@ int text_component_get_position_from_point(TextComponent* component, Point pt, L
         int pos = 0;
         
         // 遍历文本，找到目标行的起始位置
-        for (int i = 0; i <= strlen(component->text); i++) {
-            if (i == strlen(component->text) || component->text[i] == '\n') {
+        for (int i = 0; i <= strlen(component->layer->text); i++) {
+            if (i == strlen(component->layer->text) || component->layer->text[i] == '\n') {
                 if (current_line == line_num) {
                     // 计算行内位置
                     int col = (pt.x - render_rect.x) / char_width;
@@ -886,12 +985,12 @@ int text_component_get_position_from_point(TextComponent* component, Point pt, L
         }
         
         // 如果超出范围，返回文本末尾
-        return strlen(component->text);
+        return strlen(component->layer->text);
     } else {
         // 单行模式处理
         int col = (pt.x - render_rect.x) / char_width;
         if (col < 0) col = 0;
-        if (col > strlen(component->text)) col = strlen(component->text);
+        if (col > strlen(component->layer->text)) col = strlen(component->layer->text);
         
         return col;
     }
@@ -930,7 +1029,7 @@ void text_component_render(Layer* layer) {
         backend_render_fill_rect(&separator_line, separator_color);
         
         // 计算文本行数
-        char* text = component->text;
+        char* text = component->layer->text;
         int line_count = 1;
         if (strlen(text) > 0) {
             for (int i = 0; i < strlen(text); i++) {
@@ -1006,7 +1105,7 @@ void text_component_render(Layer* layer) {
     backend_render_set_clip_rect(&render_rect);
     
     // 如果文本为空且有占位符，显示占位符
-    if (strlen(component->text) == 0 && strlen(component->placeholder) > 0) {
+    if (strlen(component->layer->text) == 0 && strlen(component->placeholder) > 0) {
         // 使用透明度较低的颜色绘制占位符
         Color placeholder_color = {150, 150, 150, 128};
         Texture* tex = backend_render_texture(layer->font->default_font, component->placeholder, placeholder_color);
@@ -1071,7 +1170,7 @@ void text_component_render(Layer* layer) {
             
             if (component->multiline) {
                 // 多行模式：逐行绘制选择背景
-                char* text = component->text;
+                char* text = component->layer->text;
                 int line_y = render_rect.y - component->scroll_y;
                 int current_pos = 0;
                 int line_start = 0;
@@ -1124,7 +1223,7 @@ void text_component_render(Layer* layer) {
         // 绘制文本
         if (component->multiline) {
             // 多行模式下，实现自动换行
-            char* text = component->text;
+            char* text = component->layer->text;
             int current_pos = 0;
             int line_y = render_rect.y; // 不减去layer->scroll_offset，因为在渲染时已经考虑了滚动
             int line_height = 0;
@@ -1338,7 +1437,7 @@ void text_component_render(Layer* layer) {
             }
         } else {
             // 单行模式，保持原逻辑
-            Texture* tex = backend_render_texture(layer->font->default_font, component->text, layer->color);
+            Texture* tex = backend_render_texture(layer->font->default_font, component->layer->text, layer->color);
             if (tex) {
                 int text_width, text_height;
                 backend_query_texture(tex, NULL, NULL, &text_width, &text_height);
@@ -1368,14 +1467,14 @@ void text_component_render(Layer* layer) {
     // 如果组件可编辑，绘制光标
     if (component->editable && HAS_STATE(layer, LAYER_STATE_FOCUSED)) {
         // 确保光标位置在有效范围内
-        int text_len = strlen(component->text);
+        int text_len = strlen(component->layer->text);
         if (component->cursor_pos < 0) component->cursor_pos = 0;
         if (component->cursor_pos > text_len) component->cursor_pos = text_len;
         
         // 创建光标前的文本片段，用于计算光标位置
         char* temp_text = (char*)malloc(component->cursor_pos + 1);
         if (temp_text) {
-            strncpy(temp_text, component->text, component->cursor_pos);
+            strncpy(temp_text, component->layer->text, component->cursor_pos);
             temp_text[component->cursor_pos] = '\0';
             
             // 获取行高和字符宽度
@@ -1418,7 +1517,7 @@ void text_component_render(Layer* layer) {
                 // 计算光标前有多少个换行符
                 int line_count = 0;
                 for (int i = 0; i < component->cursor_pos; i++) {
-                    if (component->text[i] == '\n') {
+                    if (component->layer->text[i] == '\n') {
                         line_count++;
                     }
                 }
@@ -1446,7 +1545,7 @@ void text_component_render(Layer* layer) {
     // 如果是多行模式且需要滚动，绘制滚动条
     if (component->multiline) {
         // 计算文本总高度以确定是否需要显示滚动条
-        char* text = component->text;
+        char* text = component->layer->text;
         int line_count = 1;
         int line_height = 20; // 默认行高
         

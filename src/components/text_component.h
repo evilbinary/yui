@@ -9,7 +9,7 @@ typedef struct KeyEvent KeyEvent;
 // 多行文本组件结构体
 typedef struct {
     Layer* layer;          // 关联的图层
-    char text[MAX_TEXT * 4];   // 输入文本（支持更多内容）
+    // 注意：文本内容现在存储在 layer->text 中，不再使用固定大小的数组
     char placeholder[MAX_TEXT];  // 占位文本
     int cursor_pos;        // 光标位置
     int selection_start;   // 选择起始位置
