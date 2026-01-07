@@ -170,6 +170,10 @@ int backend_init(){
     
     // 设置渲染质量为最佳（抗锯齿）
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "best");
+
+    // Windows：默认“点击激活窗口”会吞掉首次点击，导致控件第一次点不中（拿不到焦点）
+    // 开启 click-through 让首次点击也能送达应用侧
+    SDL_SetHint(SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1");
     
     window = SDL_CreateWindow("YUI",
                                         SDL_WINDOWPOS_CENTERED,
@@ -258,7 +262,6 @@ int backend_init(){
     
     // 初始化字体缓存
     init_font_cache();
-    
     // 初始化触摸状态
     memset(&touchState, 0, sizeof(TouchState));
     
