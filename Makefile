@@ -1,4 +1,4 @@
-all: main playground mqjs
+all: playground  # main mqjs
 mqjs:
 	ya -b mqjs
 	ya -r mqjs

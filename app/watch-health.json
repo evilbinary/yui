@@ -374,7 +374,6 @@
         {
             "id": "activityProgress",
             "type": "View",
-            // "position": [10, 230],
             "size": [300, 80],
             "layout": {
                 "type": "vertical",
