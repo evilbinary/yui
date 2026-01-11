@@ -9,7 +9,15 @@ void load_textures(Layer* root) {
     if (root->type==IMAGE&& strlen(root->source) > 0) {
         // 修改为使用image支持多种格式
         char path[MAX_PATH];
-        snprintf(path, sizeof(path), "%s/%s", root->assets->path, root->source);
+        
+        // 检查是否为绝对路径（以 '/' 开头，Unix/Linux/macOS）
+        if (root->source[0] == '/') {
+            // 使用绝对路径
+            snprintf(path, sizeof(path), "%s", root->source);
+        } else {
+            // 使用相对路径，拼接 assets 路径
+            snprintf(path, sizeof(path), "%s/%s", root->assets->path, root->source);
+        }
 
         root->texture=backend_load_texture(path);
 
@@ -36,9 +44,15 @@ void load_all_fonts(Layer* layer) {
         // 构建字体路径
         char font_path[MAX_PATH];
         
-        if (layer->assets && layer->assets->path[0] != '\0') {
+        // 检查字体路径是否为绝对路径
+        if (layer->font->path[0] == '/') {
+            // 使用绝对路径
+            snprintf(font_path, sizeof(font_path), "%s", layer->font->path);
+        } else if (layer->assets && layer->assets->path[0] != '\0') {
+            // 使用相对路径，拼接 assets 路径
             snprintf(font_path, sizeof(font_path), "%s/%s", layer->assets->path, layer->font->path);
         } else {
+            // 直接使用字体路径
             snprintf(font_path, sizeof(font_path), "%s", layer->font->path);
         }
         
@@ -98,9 +112,16 @@ void load_font(Layer* root){
     
     // 加载默认字体 (需要在项目目录下提供字体文件)
     char font_path[MAX_PATH];
-    if(root->assets){
+    
+    // 检查字体路径是否为绝对路径
+    if (root->font->path[0] == '/') {
+        // 使用绝对路径
+        snprintf(font_path, sizeof(font_path), "%s", root->font->path);
+    } else if(root->assets){
+        // 使用相对路径，拼接 assets 路径
         snprintf(font_path, sizeof(font_path), "%s/%s", root->assets->path, root->font->path);
-    }else{
+    } else{
+        // 直接使用字体路径
         snprintf(font_path, sizeof(font_path), "%s", root->font->path);
     }
     if(root->font->size==0){
