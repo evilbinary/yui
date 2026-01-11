@@ -216,3 +216,42 @@ function jsonToPreviewText(json, indent) {
     
     return String(json);
 }
+
+// 发送消息函数 - 发送按钮 onClick 事件
+function sendMessage() {
+    YUI.log("sendMessage: Sending message...");
+    
+    var messageText = YUI.getText("messageInput");
+    
+    if (!messageText || messageText.trim() === "") {
+        YUI.log("sendMessage: Empty message, not sending");
+        return;
+    }
+    
+    YUI.log("sendMessage: Message content: " + messageText);
+    
+    // 检查编辑器中的JSON是否有效
+    var jsonText = YUI.getText("jsonEditor");
+    var json = null;
+    try {
+        json = JSON.parse(jsonText);
+    } catch (e) {
+        YUI.log("sendMessage: JSON is invalid - " + e.message);
+        YUI.setText("previewLabel", "错误：请先验证JSON内容后再发送消息");
+        return;
+    }
+    
+    // 这里可以添加实际的发送逻辑
+    // 例如：发送到服务器、添加到消息历史等
+    YUI.log("sendMessage: Message sent successfully!");
+    
+    // 显示发送成功消息
+    var currentPreviewText = YUI.getText("previewLabel");
+    var newPreviewText = currentPreviewText + "\n\n===== 发送的消息 =====\n" + messageText + "\n===== 对应的JSON =====\n" + JSON.stringify(json, null, 4);
+    YUI.setText("previewLabel", newPreviewText);
+    
+    // 清空输入框
+    YUI.setText("messageInput", "");
+    
+    YUI.log("sendMessage: Message processed!");
+}
