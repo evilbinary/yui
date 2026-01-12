@@ -13,6 +13,7 @@ add_flags()
 set_kind("static")
 add_files(
     'js_module.c',
+    'js_socket.c',
     '../jsmodule/js_common.c'
 ) 
 add_includedirs('.', public=true)

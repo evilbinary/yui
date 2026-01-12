@@ -3,6 +3,7 @@
 #include "../../src/layer.h"
 #include "../../src/layout.h"
 #include "../../src/render.h"
+#include "js_socket.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -310,6 +311,9 @@ void js_module_register_api(void)
     JS_SetPropertyStr(g_js_ctx, global_obj, "setBgColor", JS_NewCFunction(g_js_ctx, js_set_bg_color, "setBgColor", 2));
     JS_SetPropertyStr(g_js_ctx, global_obj, "hide", JS_NewCFunction(g_js_ctx, js_hide, "hide", 1));
     JS_SetPropertyStr(g_js_ctx, global_obj, "show", JS_NewCFunction(g_js_ctx, js_show, "show", 1));
+
+    // 注册 Socket API
+    js_module_register_socket_api(g_js_ctx);
 
     JS_FreeValue(g_js_ctx, global_obj);
 

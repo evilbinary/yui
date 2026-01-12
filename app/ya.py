@@ -77,3 +77,35 @@ target("qjs")
     add_files("js/main.c"),
     add_run()
 )
+
+
+target("network") 
+(
+    add_deps("yui","quickjs","jsmodule-quickjs"),
+    add_rules("mode.debug", "mode.release"),
+    set_kind("binary"),
+    add_flags(),
+    add_files("network/main.c"),
+    add_run()
+)
+
+
+target("network-mario") 
+(
+    add_deps( "jsmodule-mario","yui", "mario",),
+    add_rules("mode.debug", "mode.release"),
+    set_kind("binary"),
+    add_flags(),
+    add_files("network/main.c"),
+    add_run()
+)
+
+target("network-mqjs") 
+(
+    add_deps( "jsmodule","yui", "mquickjs",),
+    add_rules("mode.debug", "mode.release"),
+    set_kind("binary"),
+    add_flags(),
+    add_files("network/main.c"),
+    add_run()
+)
