@@ -5,6 +5,8 @@
 #include "../../src/ytype.h"
 
 #include "event.h"
+#define CONFIG_CLASS_SOCKET
+#include "js_socket.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -200,12 +202,18 @@ void js_module_cleanup(void)
     }
 }
 
+// 统一的 Socket API 注册函数
+extern void js_module_register_socket_api(JSContext* ctx);
+
 // 注册 C API 到 JS
 void js_module_register_api(void)
 {
     if (!g_js_ctx) return;
-
     
+    // 调用统一的 Socket API 注册函数
+    js_module_register_socket_api(g_js_ctx);
+    
+    printf("JS(Socket): Registered Socket API through unified function\n");
 }
 
 // 加载并执行 JS 文件

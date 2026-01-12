@@ -35,6 +35,7 @@ add_files(
     'js_module.c',
     'js_common.c',
     'yui_stdlib.c',
+    'js_socket.c'
 ) 
 
 add_includedirs('.', public=true)

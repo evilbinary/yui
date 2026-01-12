@@ -49,7 +49,7 @@ static int hex_to_int(char c) {
 #define JS_CLASS_YUI (JS_CLASS_USER + 0)
 
 /* total number of classes */
-#define JS_CLASS_COUNT (JS_CLASS_USER + 1)
+#define JS_CLASS_COUNT (JS_CLASS_USER + 2)
 
 #define JS_CFUNCTION_rectangle_closure_test (JS_CFUNCTION_USER + 0)
 

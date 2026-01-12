@@ -370,8 +370,11 @@ static const JSPropDef js_global_object[] = {
     JS_PROP_CLASS_DEF("console", &js_console_obj),
     JS_PROP_CLASS_DEF("performance", &js_performance_obj),
     JS_CFUNC_DEF("print", 1, js_print),
+    
     JS_PROP_CLASS_DEF("Yui", &js_yui_class),
     JS_PROP_CLASS_DEF("YUI", &js_yui2_class),
+    JS_PROP_CLASS_DEF("Socket", &js_socket_class),
+
 
     JS_CFUNC_DEF("gc", 0, js_gc),
     JS_CFUNC_DEF("load", 1, js_load),
