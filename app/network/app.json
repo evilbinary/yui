@@ -1,0 +1,15 @@
+{
+    "type":"main",
+    "assets":"app/assets",
+    // "font":"Roboto-Regular.ttf",
+    "font":"NotoColorEmoji.ttf",
+    "fontSize":"16",
+    "text":"YUI network",
+    "size":[500,600],
+    "source":"app/network/test-net.json",
+
+
+    "style": {
+        "color": "#2C3E50"
+    }
+}

@@ -1,0 +1,23 @@
+{
+  "type": "app",
+  "title": "Socket API Test",
+  "width": 400,
+  "height": 300,
+  "components": [
+    {
+      "type": "text",
+      "id": "output",
+      "text": "Socket API Test Output:\n",
+      "x": 10,
+      "y": 10,
+      "width": 380,
+      "height": 280,
+      "backgroundColor": "#f0f0f0",
+      "fontSize": 16
+    }
+  ],
+  "events": {
+    "onLoad": "onLoad"
+  },
+  "js": "test-socket-simple.js"
+}
