@@ -10,7 +10,7 @@
 #include "system/native_system.h"
 #include "fs/native_fs.h"
 #include "dir/native_dir.h"
-//#include "socket/native_socket.h"
+#include "socket/native_socket.h"
 
 #ifdef __cplusplus /* __cplusplus */
 extern "C" {
@@ -28,7 +28,7 @@ void reg_basic_natives(vm_t* vm) {
 	reg_native_system(vm);
 	reg_native_fs(vm);
 	reg_native_dir(vm);
-	//reg_native_socket(vm);
+	reg_native_socket(vm);
 }
 
 #ifdef __cplusplus /* __cplusplus */
