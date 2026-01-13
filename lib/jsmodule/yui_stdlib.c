@@ -385,7 +385,7 @@ static const JSPropDef js_yui_proto[] = {
 };
 
 static const JSPropDef js_yui[] = {
-    JS_CFUNC_DEF("log", 1, js_log ),
+    JS_CFUNC_DEF("log", 1, js_yui_log ),
     JS_CFUNC_DEF("setText", 1, js_set_text ),
     JS_CFUNC_DEF("getText", 1, js_get_text ),
     JS_CFUNC_DEF("setBgColor", 1, js_set_bg_color ),
@@ -439,4 +439,27 @@ return JS_NewCFunctionParams(ctx, JS_CFUNCTION_rectangle_closure_test, argv[0]);
 static const JSClassDef js_yui_class =
 JS_CLASS_DEF("YUI", 2, js_yui_constructor, JS_CLASS_YUI, js_yui, js_yui_proto, NULL, js_yui_finalizer);
 
+
+
+// 注册 YUI API 到 JS（导出函数，不使用 static）
+void js_module_register_yui_api(JSContext* ctx) {
+    if (!ctx) return;
+    
+    // 获取全局对象
+    JSValue global_obj = JS_GetGlobalObject(ctx);
+    
+    // 创建 YUI 对象
+    JSValue yui_obj = JS_NewObject(ctx);
+    
+    // 注册 YUI 常量
+    
+    
+    // 注册 YUI 方法 - 使用正确的 mquickjs API
+    
+    
+    // 将 Socket 对象添加到全局
+    JS_SetPropertyStr(ctx, global_obj, "YUI", yui_obj);
+    
+    printf("JS(Socket): Registered YUI API functions\n");
+}
 

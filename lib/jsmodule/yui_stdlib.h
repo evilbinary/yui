@@ -2933,7 +2933,7 @@ static const JSCFunctionDef js_c_function_table[] = {
   { { .constructor = js_yui_constructor },
     JS_ROM_VALUE(544) /* YUI */,
     JS_CFUNC_constructor, 2, JS_CLASS_YUI },
-  { { .generic = js_log },
+  { { .generic = js_yui_log },
     JS_ROM_VALUE(386) /* log */,
     JS_CFUNC_generic, 1, 0 },
   { { .generic = js_set_text },

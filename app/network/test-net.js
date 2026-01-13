@@ -1,3 +1,5 @@
+YUI.log("test net start==");
+
 var sock = Socket.socket(Socket.TCP);
 
 YUI.log("test net",sock)
