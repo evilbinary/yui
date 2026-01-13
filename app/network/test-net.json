@@ -1,3 +1,4 @@
 {
-    "js": "test-net.js"
+    // "js": "test-net.js"
+    "js": "test-http.js"
 }
