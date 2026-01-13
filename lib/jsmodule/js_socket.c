@@ -1,8 +1,8 @@
 #define CONFIG_CLASS_SOCKET
 #include <arpa/inet.h>
 #include <errno.h>
-#include <netinet/in.h>
 #include <netdb.h>
+#include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -127,21 +127,28 @@ static JSValue js_socket_connect(JSContext* ctx, JSValue* this_val, int argc,
   char port_str[16];
   
   memset(&hints, 0, sizeof(hints));
-  hints.ai_family = AF_UNSPEC;      // 只使用 IPv4
+  hints.ai_family = AF_INET;      // 只使用 IPv4
   hints.ai_socktype = SOCK_STREAM;
   
   snprintf(port_str, sizeof(port_str), "%d", port);
   
   int gai_res = getaddrinfo(host, port_str, &hints, &res_addrs);
   if (gai_res != 0) {
-    // 解析失败
+    // 解析失败，输出错误信息
+    printf("JS(Socket): getaddrinfo failed for host '%s': %s\n", host, gai_strerror(gai_res));
     return JS_NewInt32(ctx, -1);
   }
+  
+   printf("JS(Socket): Successfully resolved host '%s', trying to connect...\n", host);
 
   // 遍历所有返回的地址，尝试连接
+  int addr_index = 0;
   for (rp = res_addrs; rp != NULL; rp = rp->ai_next) {
     if (timeout <= 0) {
       res = connect(fd, rp->ai_addr, rp->ai_addrlen);
+      if (res < 0) {
+        printf("JS(Socket): Connect attempt %d failed: %s\n", addr_index, strerror(errno));
+      }
     } else {
       // 简化的超时连接实现
       unsigned long ul = 1;
@@ -162,8 +169,14 @@ static JSValue js_socket_connect(JSContext* ctx, JSValue* this_val, int argc,
           getsockopt(fd, SOL_SOCKET, SO_ERROR, &error, (socklen_t*)&len);
           if (error == 0) {
             res = 0;
+          } else {
+            printf("JS(Socket): Connect attempt %d failed with error: %d\n", addr_index, error);
           }
+        } else {
+          printf("JS(Socket): Connect attempt %d timed out or select failed\n", addr_index);
         }
+      } else {
+        res = 0;
       }
 
       ul = 0;
@@ -172,8 +185,14 @@ static JSValue js_socket_connect(JSContext* ctx, JSValue* this_val, int argc,
     
     if (res == 0) {
       // 连接成功，跳出循环
+      printf("JS(Socket): Successfully connected to address %d\n", addr_index);
       break;
     }
+    addr_index++;
+  }
+  
+  if (res != 0) {
+    printf("JS(Socket): All %d connection attempts failed\n", addr_index);
   }
   
   // 释放地址信息链表
