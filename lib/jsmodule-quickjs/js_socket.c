@@ -11,6 +11,7 @@
 #include <netinet/in.h>
 #include <sys/ioctl.h>
 #include <errno.h>
+#include <netdb.h>
 
 /* ====================== Socket 相关的 JS 函数 ====================== */
 
@@ -73,44 +74,66 @@ static JSValue js_socket_connect(JSContext *ctx, JSValueConst this_val, int argc
         return JS_NewInt32(ctx, res);
     }
 
-    struct sockaddr_in addr;
-    memset(&addr, 0, sizeof(addr));
-    addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = inet_addr(host);
-    addr.sin_port = htons(port);
-
-    if(timeout <= 0) {
-        res = connect(fd, (struct sockaddr *)&addr, sizeof(struct sockaddr));
+    // 使用 getaddrinfo 解析主机名（支持域名和IP地址）
+    struct addrinfo hints, *res_addrs, *rp;
+    char port_str[16];
+    
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET;      // 只使用 IPv4
+    hints.ai_socktype = SOCK_STREAM;
+    
+    snprintf(port_str, sizeof(port_str), "%d", port);
+    
+    int gai_res = getaddrinfo(host, port_str, &hints, &res_addrs);
+    if (gai_res != 0) {
+        // 解析失败
+        JS_FreeCString(ctx, host);
+        return JS_NewInt32(ctx, -1);
     }
-    else {
-        // 简化的超时连接实现
-        unsigned long ul = 1;
-        //ioctl(fd, FIONBIO, &ul); //TODO
 
-        if(connect(fd, (struct sockaddr *)&addr, sizeof(struct sockaddr)) < 0) {
-            int error=-1, len;
+    // 遍历所有返回的地址，尝试连接
+    for (rp = res_addrs; rp != NULL; rp = rp->ai_next) {
+        if (timeout <= 0) {
+            res = connect(fd, rp->ai_addr, rp->ai_addrlen);
+        }
+        else {
+            // 简化的超时连接实现
+            unsigned long ul = 1;
+            //ioctl(fd, FIONBIO, &ul); //TODO
 
-            struct timeval tm;
-            tm.tv_sec = timeout;
-            tm.tv_usec = 0;
+            if (connect(fd, rp->ai_addr, rp->ai_addrlen) < 0) {
+                int error = -1, len;
 
-            fd_set set;
-            FD_ZERO(&set);
-            FD_SET(fd, &set);
+                struct timeval tm;
+                tm.tv_sec = timeout;
+                tm.tv_usec = 0;
 
-            if( select(fd+1, NULL, &set, NULL, &tm) > 0) {
-                getsockopt(fd, SOL_SOCKET, SO_ERROR, &error, (socklen_t *)&len);
-                if(error == 0) {
-                    res = 0;
+                fd_set set;
+                FD_ZERO(&set);
+                FD_SET(fd, &set);
+
+                if (select(fd + 1, NULL, &set, NULL, &tm) > 0) {
+                    getsockopt(fd, SOL_SOCKET, SO_ERROR, &error, (socklen_t *)&len);
+                    if (error == 0) {
+                        res = 0;
+                    }
                 }
             }
+
+            ul = 0;
+            //ioctl(fd, FIONBIO, &ul); //TODO
         }
-
-        ul = 0;
-        //ioctl(fd, FIONBIO, &ul); //TODO
+        
+        if (res == 0) {
+            // 连接成功，跳出循环
+            break;
+        }
     }
-
+    
+    // 释放地址信息链表
+    freeaddrinfo(res_addrs);
     JS_FreeCString(ctx, host);
+
     return JS_NewInt32(ctx, res);
 }
 

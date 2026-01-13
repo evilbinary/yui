@@ -8,7 +8,7 @@
  */
 function http_get(url, options) {
     options = options || {};
-    var timeout = options.timeout || 200;
+    var timeout = options.timeout || 5000;
     var headers = options.headers || {};
     
     // 解析URL
@@ -26,7 +26,7 @@ function http_get(url, options) {
     // 创建TCP socket
     var sock = Socket.socket(Socket.TCP);
     if (sock < 0) {
-        throw new Error("Failed to create socket");
+        throw new Error("Failed to create socket error:" + sock);
     }
     
     try {
