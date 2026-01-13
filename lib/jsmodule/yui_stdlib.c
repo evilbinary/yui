@@ -448,18 +448,19 @@ void js_module_register_yui_api(JSContext* ctx) {
     // 获取全局对象
     JSValue global_obj = JS_GetGlobalObject(ctx);
     
-    // 创建 YUI 对象
-    JSValue yui_obj = JS_NewObject(ctx);
+    // YUI 对象应该已经通过 js_yuistdlib 数据结构自动创建
+    // 这里只需要确保它可用
     
-    // 注册 YUI 常量
+    // 获取 YUI 对象（如果已经存在）
+    JSValue yui_obj = JS_GetPropertyStr(ctx, global_obj, "YUI");
     
+    // 检查 YUI 对象是否存在
+    if (JS_IsUndefined(yui_obj) || JS_IsNull(yui_obj)) {
+        printf("JS(YUI): YUI object not found, will be created by js_yuistdlib\n");
+    } else {
+        printf("JS(YUI): YUI object exists, functions should be available\n");
+    }
     
-    // 注册 YUI 方法 - 使用正确的 mquickjs API
-    
-    
-    // 将 Socket 对象添加到全局
-    JS_SetPropertyStr(ctx, global_obj, "YUI", yui_obj);
-    
-    printf("JS(Socket): Registered YUI API functions\n");
+    printf("JS(YUI): YUI API registration completed\n");
 }
 
