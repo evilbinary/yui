@@ -35,134 +35,6 @@ extern uint8_t* load_file(const char *filename, int *plen);
 extern int hex_to_int(char c);
 
 
-// ====================== JS API 函数 ======================
-
-// 设置文本
-static JSValue js_set_text(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
-{
-    if (argc < 2) return JS_UNDEFINED;
-
-    JSCStringBuf buf1, buf2;
-    const char* layer_id = JS_ToCString(ctx, argv[0], &buf1);
-    const char* text = JS_ToCString(ctx, argv[1], &buf2);
-
-    if (layer_id && text && g_layer_root ) {
-        struct Layer* layer = find_layer_by_id(g_layer_root, layer_id);
-        if (layer) {
-            layer_set_text(layer, text); //
-            printf("JS: Set text for layer '%s': %s\n", layer_id, text);
-        }
-    }
-
-    return JS_UNDEFINED;
-}
-
-// 获取文本
-static JSValue js_get_text(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
-{
-    if (argc < 1) return JS_UNDEFINED;
-
-    JSCStringBuf buf;
-    const char* layer_id = JS_ToCString(ctx, argv[0], &buf);
-    if (layer_id && g_layer_root ) {
-        struct Layer* layer = find_layer_by_id(g_layer_root, layer_id);
-        if (layer) {
-            const char* layer_text = layer_get_text(layer);
-            return JS_NewString(ctx, layer_text);
-        }
-    }
-
-    return JS_UNDEFINED;
-}
-
-// 设置背景颜色
-static JSValue js_set_bg_color(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
-{
-    if (argc < 2) return JS_UNDEFINED;
-
-    JSCStringBuf buf1, buf2;
-    const char* layer_id = JS_ToCString(ctx, argv[0], &buf1);
-    const char* color_hex = JS_ToCString(ctx, argv[1], &buf2);
-
-    if (layer_id && color_hex && g_layer_root ) {
-        struct Layer* layer = find_layer_by_id(g_layer_root, layer_id);
-        if (layer) {
-            // 解析十六进制颜色 #RRGGBB
-            if (strlen(color_hex) == 7 && color_hex[0] == '#') {
-                layer->bg_color.r = (hex_to_int(color_hex[1]) * 16 + hex_to_int(color_hex[2]));
-                layer->bg_color.g = (hex_to_int(color_hex[3]) * 16 + hex_to_int(color_hex[4]));
-                layer->bg_color.b = (hex_to_int(color_hex[5]) * 16 + hex_to_int(color_hex[6]));
-                layer->bg_color.a = 255;
-                printf("JS: Set bg_color for layer '%s': %s\n", layer_id, color_hex);
-            }
-        }
-    }
-
-    return JS_UNDEFINED;
-}
-
-// 隐藏图层
-static JSValue js_hide(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
-{
-    if (argc < 1) return JS_UNDEFINED;
-
-    JSCStringBuf buf;
-    const char* layer_id = JS_ToCString(ctx, argv[0], &buf);
-
-    if (layer_id && g_layer_root ) {
-        struct Layer* layer = find_layer_by_id(g_layer_root, layer_id);
-        if (layer) {
-            layer->visible = 0; // IN_VISIBLE
-            printf("JS: Hide layer '%s'\n", layer_id);
-        }
-    }
-
-    return JS_UNDEFINED;
-}
-
-// 显示图层
-static JSValue js_show(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
-{
-    if (argc < 1) return JS_UNDEFINED;
-
-    JSCStringBuf buf;
-    const char* layer_id = JS_ToCString(ctx, argv[0], &buf);
-
-    if (layer_id && g_layer_root ) {
-        struct Layer* layer = find_layer_by_id(g_layer_root, layer_id);
-        if (layer) {
-            layer->visible = 1; // VISIBLE
-            printf("JS: Show layer '%s'\n", layer_id);
-        }
-    }
-
-    return JS_UNDEFINED;
-}
-
-// 打印日志
-static JSValue js_log(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
-{
-    JSCStringBuf buf;
-    for (int i = 0; i < argc; i++) {
-        if (i != 0) printf(" ");
-        const char* str = JS_ToCString(ctx, argv[i], &buf);
-        if (str) {
-            printf("%s", str);
-        }
-    }
-    printf("\n");
-    return JS_UNDEFINED;
-}
-
-// ====================== 初始化和清理 ======================
-
-static void js_log_func(void *opaque, const void *buf, size_t buf_len)
-{
-    fwrite(buf, 1, buf_len, stdout);
-}
-
-
-
 // 初始化 JS 引擎
 int js_module_init(void)
 {
@@ -180,8 +52,6 @@ int js_module_init(void)
         free(g_js_mem);
         return -1;
     }
-
-    JS_SetLogFunc(g_js_ctx, js_log_func);
 
     js_module_register_api();
 
@@ -210,6 +80,7 @@ void js_module_register_api(void)
 {
     if (!g_js_ctx) return;
     
+    // JS_SetLogFunc(g_js_ctx, js_log_func);
     // 调用统一的 Socket API 注册函数
     js_module_register_socket_api(g_js_ctx);
     

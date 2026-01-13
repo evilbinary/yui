@@ -314,12 +314,12 @@ static JSValue js_socket_socketpair(JSContext *ctx, JSValue *this_val, int argc,
     int result = socketpair(domain, type, protocol, sv);
     
     if (result == 0) {
-        // 返回包含两个套接字描述符的数组
-        JSValue arr = JS_NewArray(ctx, 2);
-        JS_SetPropertyUint32(ctx, arr, 0, JS_NewInt32(ctx, sv[0]));
-        JS_SetPropertyUint32(ctx, arr, 1, JS_NewInt32(ctx, sv[1]));
+        // 返回包含两个套接字描述符的对象
+        JSValue obj = JS_NewObject(ctx);
+        JS_SetPropertyStr(ctx, obj, "0", JS_NewInt32(ctx, sv[0]));
+        JS_SetPropertyStr(ctx, obj, "1", JS_NewInt32(ctx, sv[1]));
         
-        return arr;
+        return obj;
     }
     
     return JS_NewInt32(ctx, result);
@@ -658,17 +658,36 @@ static const JSPropDef js_socket_funcs[] = {
 
 /* ====================== Socket 类定义 ====================== */
 
+typedef struct {
+    int x;
+    int y;
+} SocketData;
+
 // Socket 类的构造函数
 static JSValue js_socket_constructor(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
 {
-    // 可以在这里初始化 socket 对象
-    return JS_UNDEFINED;
+    JSValue obj;
+    SocketData *d;
+
+    if (!(argc & FRAME_CF_CTOR))
+        return JS_ThrowTypeError(ctx, "must be called with new");
+    argc &= ~FRAME_CF_CTOR;
+    obj = JS_NewObjectClassUser(ctx, JS_CLASS_SOCKET);
+    d = malloc(sizeof(*d));
+    JS_SetOpaque(ctx, obj, d);
+    if (JS_ToInt32(ctx, &d->x, argv[0]))
+        return JS_EXCEPTION;
+    if (JS_ToInt32(ctx, &d->y, argv[1]))
+        return JS_EXCEPTION;
+    return obj;
 }
 
 // Socket 类的析构函数
 static void js_socket_finalizer(JSContext *ctx, void *opaque)
 {
     // 释放 socket 资源
+    SocketData *d = opaque;
+    free(d);
 }
 
 // Socket 类原型
@@ -676,24 +695,12 @@ static const JSPropDef js_socket_proto[] = {
     JS_PROP_END,
 };
 
-// Socket 类定义
-static const JSClassDef js_socket_class = {
-    "Socket", 
-    0, 
-    "js_socket_constructor", 
-    "js_socket_finalizer", 
-    "JS_CLASS_SOCKET", 
-    js_socket_funcs, 
-    js_socket_proto, 
-    NULL, 
-    NULL
-};
 
 
 // 定义全局 Socket 命名空间
 static const JSPropDef js_socket[] = {
-    JS_PROP_STRING_DEF("TCP", "0", 0),
-    JS_PROP_STRING_DEF("UDP", "1", 0),
+    JS_PROP_STRING_DEF("TCP", "SOCK_STREAM", 0),
+    JS_PROP_STRING_DEF("UDP", "SOCK_DGRAM", 0),
     JS_CFUNC_DEF("socket", 1, js_socket_create),
     JS_CFUNC_DEF("close", 1, js_socket_close),
     JS_CFUNC_DEF("shutdown", 1, js_socket_shutdown),
@@ -716,8 +723,9 @@ static const JSPropDef js_socket[] = {
     JS_PROP_END,
 };
 
-// static const JSClassDef js_socket_class =
-// JS_CLASS_DEF("Socket", 2, js_socket_constructor, JS_CLASS_SOCKET, js_socket, js_socket_proto, NULL, js_socket_finalizer);
+
+static const JSClassDef js_socket_class =
+JS_CLASS_DEF("Socket", 2, js_socket_constructor, JS_CLASS_SOCKET, js_socket, js_socket_proto, NULL, js_socket_finalizer);
 
 
 // 注册 Socket API 到 JS（导出函数，不使用 static）
