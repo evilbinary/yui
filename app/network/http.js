@@ -1,5 +1,4 @@
 // HTTP 客户端实现，基于 Socket API
-
 /**
  * HTTP GET 请求
  * @param {string} url - URL地址，例如 "http://example.com:8080/path"
@@ -276,5 +275,7 @@ function test_http() {
     YUI.log("HTTP tests completed");
 }
 
+
+export { http_get, http_post, parse_url }
 // 运行测试（可选）
 // test_http();

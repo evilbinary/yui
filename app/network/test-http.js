@@ -1,5 +1,5 @@
-// 加载 HTTP 模块
-load("app/network/http.js");
+// 加载 HTTP 模块	
+import { http_get, http_post, parse_url }from './http.js';
 
 YUI.log("=== 开始 HTTP 测试 ===");
 

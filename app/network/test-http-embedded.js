@@ -1,5 +1,4 @@
 // HTTP 客户端实现，基于 Socket API
-
 /**
  * HTTP GET 请求
  * @param {string} url - URL地址，例如 "http://example.com:8080/path"
