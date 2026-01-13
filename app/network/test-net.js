@@ -2,7 +2,7 @@ YUI.log("test net start==");
 
 var sock = Socket.socket(Socket.TCP);
 
-YUI.log("test net",sock)
+YUI.log("test net",Socket.bind)
 
 // 绑定到本地地址
 Socket.bind(sock, "127.0.0.1", 8080);

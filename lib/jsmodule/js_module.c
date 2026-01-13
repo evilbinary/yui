@@ -86,7 +86,7 @@ void js_module_register_api(void)
     // 调用统一的 Socket API 注册函数
     js_module_register_socket_api(g_js_ctx);
     
-    printf("JS(Socket): Registered Socket API through unified function\n");
+    printf("JS(Socket): Registered API function\n");
 }
 
 // 加载并执行 JS 文件
