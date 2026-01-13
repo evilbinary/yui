@@ -86,15 +86,22 @@ static JSValue js_socket_connect(JSContext *ctx, JSValueConst this_val, int argc
     
     int gai_res = getaddrinfo(host, port_str, &hints, &res_addrs);
     if (gai_res != 0) {
-        // 解析失败
+        // 解析失败，输出错误信息
+        printf("JS(Socket): getaddrinfo failed for host '%s': %s\n", host, gai_strerror(gai_res));
         JS_FreeCString(ctx, host);
         return JS_NewInt32(ctx, -1);
     }
+    
+    printf("JS(Socket): Successfully resolved host '%s', trying to connect...\n", host);
 
     // 遍历所有返回的地址，尝试连接
+    int addr_index = 0;
     for (rp = res_addrs; rp != NULL; rp = rp->ai_next) {
         if (timeout <= 0) {
             res = connect(fd, rp->ai_addr, rp->ai_addrlen);
+            if (res < 0) {
+                printf("JS(Socket): Connect attempt %d failed: %s\n", addr_index, strerror(errno));
+            }
         }
         else {
             // 简化的超时连接实现
@@ -116,8 +123,14 @@ static JSValue js_socket_connect(JSContext *ctx, JSValueConst this_val, int argc
                     getsockopt(fd, SOL_SOCKET, SO_ERROR, &error, (socklen_t *)&len);
                     if (error == 0) {
                         res = 0;
+                    } else {
+                        printf("JS(Socket): Connect attempt %d failed with error: %d\n", addr_index, error);
                     }
+                } else {
+                    printf("JS(Socket): Connect attempt %d timed out or select failed\n", addr_index);
                 }
+            } else {
+                res = 0;
             }
 
             ul = 0;
@@ -126,8 +139,14 @@ static JSValue js_socket_connect(JSContext *ctx, JSValueConst this_val, int argc
         
         if (res == 0) {
             // 连接成功，跳出循环
+            printf("JS(Socket): Successfully connected to address %d\n", addr_index);
             break;
         }
+        addr_index++;
+    }
+    
+    if (res != 0) {
+        printf("JS(Socket): All %d connection attempts failed\n", addr_index);
     }
     
     // 释放地址信息链表
