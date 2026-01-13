@@ -454,6 +454,8 @@ void js_module_register_yui_api(JSContext* ctx) {
     // 获取 YUI 对象（如果已经存在）
     JSValue yui_obj = JS_GetPropertyStr(ctx, global_obj, "YUI");
     
+    JS_SetLogFunc(ctx, js_log_func);
+
     // 检查 YUI 对象是否存在
     if (JS_IsUndefined(yui_obj) || JS_IsNull(yui_obj)) {
         printf("JS(YUI): YUI object not found, will be created by js_yuistdlib\n");

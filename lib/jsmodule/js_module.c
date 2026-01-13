@@ -75,6 +75,7 @@ void js_module_cleanup(void)
 // 统一的 Socket API 注册函数
 extern void js_module_register_socket_api(JSContext* ctx);
 extern void js_module_register_yui_api(JSContext* ctx);
+
 // 注册 C API 到 JS
 void js_module_register_api(void)
 {
@@ -82,7 +83,6 @@ void js_module_register_api(void)
     
     // YUI API 
     js_module_register_yui_api(g_js_ctx);
-    // JS_SetLogFunc(g_js_ctx, js_log_func);
     // 调用统一的 Socket API 注册函数
     js_module_register_socket_api(g_js_ctx);
     
