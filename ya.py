@@ -114,7 +114,14 @@ add_buildin('add_flags',add_flags)
 add_buildin('add_run',add_run)
 add_buildin('get_prefix',get_prefix)
 
-prefix_env='export DYLD_FRAMEWORK_PATH=../libs && export DYLD_LIBRARY_PATH="../libs" && '
+prefix_env=''
+
+if platform.system()=='Windows':
+    prefix_env=''
+elif platform.system()=='Darwin':
+    prefix_env='export DYLD_FRAMEWORK_PATH=../libs && export DYLD_LIBRARY_PATH="../libs" && '
+elif platform.system()=='Linux':
+    prefix_env='export LD_LIBRARY_PATH="../libs" && '
 
 includes("./src/ya.py")
 includes("./lib/ya.py")
