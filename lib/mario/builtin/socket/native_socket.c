@@ -1,20 +1,50 @@
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 #include "native_socket.h"
 
+#include <errno.h>
+#include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
+
+#ifdef WIN32
+#include "../../../socket/socket.h"
+#define in_addr_t uint32_t
+#else
+#include "../../../socket/socket.h"
 #include <unistd.h>
 #include <sys/ioctl.h>
-#include <errno.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <netinet/in.h>
 #include <netdb.h>
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
+#endif
 
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
+#define V_INT    1
+
+// 引入下划线版本的socket API以实现跨平台兼容
+extern int _socket(int domain, int type, int protocol);
+extern int _close(int fd);
+extern int _shutdown(int socket, int how);
+extern int _connect(int socket, const struct sockaddr *address, socklen_t address_len);
+extern int _bind(int socket, const struct sockaddr *address, socklen_t address_len);
+extern int _listen(int socket, int backlog);
+extern int _accept(int socket, struct sockaddr *address, socklen_t *address_len);
+extern int _getsockname(int socket, struct sockaddr *address, socklen_t *address_len);
+extern int _getpeername(int socket, struct sockaddr *address, socklen_t *address_len);
+extern int _setsockopt(int socket, int level, int option_name, const void *option_value, socklen_t option_len);
+extern int _getsockopt(int socket, int level, int option_name, void *option_value, socklen_t *option_len);
+extern ssize_t _send(int socket, const void *message, size_t length, int flags);
+extern ssize_t _recv(int socket, void *buffer, size_t length, int flags);
+extern ssize_t _sendto(int socket, const void *message, size_t length, int flags, const struct sockaddr *dest_addr, socklen_t dest_len);
+extern ssize_t _recvfrom(int socket, void *buffer, size_t length, int flags, struct sockaddr *address, socklen_t *address_len);
+extern int _socketpair(int domain, int type, int protocol, int socket_vector[2]);
+extern in_addr_t _inet_addr(const char* strptr);
+extern uint32_t _ntohl(uint32_t netlong);
+extern ssize_t _read(int fildes, void *buf, size_t nbyte);
+extern ssize_t _write(int fd, const char *buf, size_t nbyte);
 
 
 /*=====socket native functions=========*/
@@ -24,10 +54,10 @@ var_t* native_socket_socket(vm_t* vm, var_t* env, void* data) {
 	int type = get_int(env, "type");
 	int fd = -1;
 	if(type == 0) { //tcp
-		fd = socket(PF_INET, SOCK_STREAM, 0);
+		fd = _socket(PF_INET, SOCK_STREAM, 0);
 	}
 	else {
-		fd = socket(PF_INET, SOCK_DGRAM, 0);
+		fd = _socket(PF_INET, SOCK_DGRAM, 0);
 	}
 
 	return var_new_int(vm, fd);
@@ -38,7 +68,7 @@ var_t* native_socket_close(vm_t* vm, var_t* env, void* data) {
 
 	int fd = get_int(env, "fd");
 
-	close(fd);
+	_close(fd);
 	return NULL;
 }
 
@@ -46,7 +76,7 @@ var_t* native_socket_shutdown(vm_t* vm, var_t* env, void* data) {
 	(void)vm; (void)data;
 
 	int fd = get_int(env, "fd");
-	shutdown(fd, SHUT_RDWR);
+	_shutdown(fd, SHUT_RDWR);
 	return NULL;
 }
 
@@ -85,7 +115,7 @@ var_t* native_socket_connect(vm_t* vm, var_t* env, void* data) {
 	int addr_index = 0;
 	for (rp = res_addrs; rp != NULL; rp = rp->ai_next) {
 		if (timeout <= 0) {
-			res = connect(fd, rp->ai_addr, rp->ai_addrlen);
+			res = _connect(fd, rp->ai_addr, rp->ai_addrlen);
 			if (res < 0) {
 				printf("JS(Socket): Connect attempt %d failed: %s\n", addr_index, strerror(errno));
 			}
@@ -94,7 +124,7 @@ var_t* native_socket_connect(vm_t* vm, var_t* env, void* data) {
 			unsigned long ul = 1;
 			//ioctl(fd, FIONBIO, &ul); //TODO
 
-			if(connect(fd, rp->ai_addr, rp->ai_addrlen) < 0) {
+			if(_connect(fd, rp->ai_addr, rp->ai_addrlen) < 0) {
 				int error=-1, len;
 
 				struct timeval tm;
@@ -106,7 +136,7 @@ var_t* native_socket_connect(vm_t* vm, var_t* env, void* data) {
 				FD_SET(fd, &set);
 
 				if( select(fd+1, NULL, &set, NULL, &tm) > 0) {
-					getsockopt(fd, SOL_SOCKET, SO_ERROR, &error, (socklen_t *)&len);
+					_getsockopt(fd, SOL_SOCKET, SO_ERROR, &error, (socklen_t *)&len);
 					if(error == 0) {
 						res = 0;
 					} else {
@@ -157,9 +187,9 @@ var_t* native_socket_bind(vm_t* vm, var_t* env, void* data) {
 	addr.sin_family = AF_INET;
 	addr.sin_port=htons(port);
 	if(host[0] != 0)
-		addr.sin_addr.s_addr = inet_addr(host);
+		addr.sin_addr.s_addr = _inet_addr(host);
 
-	res = bind(fd, (struct sockaddr *)&addr, sizeof(struct sockaddr));
+	res = _bind(fd, (struct sockaddr *)&addr, sizeof(struct sockaddr));
 	return var_new_int(vm, res);
 }
 
@@ -172,7 +202,7 @@ var_t* native_socket_accept(vm_t* vm, var_t* env, void* data) {
 	in.sin_family = AF_INET;
 	socklen_t size = sizeof(struct sockaddr);
 
-	int cid = accept(fd, (struct sockaddr *)&in, &size);
+	int cid = _accept(fd, (struct sockaddr *)&in, &size);
 	return var_new_int(vm, cid);
 }
 
@@ -182,7 +212,7 @@ var_t* native_socket_listen(vm_t* vm, var_t* env, void* data) {
 	int fd = get_int(env, "fd");
 	int backlog = get_int(env, "backlog");
 
-	int res = listen(fd, backlog);
+	int res = _listen(fd, backlog);
 	return var_new_int(vm, res);
 }
 
@@ -204,7 +234,7 @@ var_t* native_socket_write(vm_t* vm, var_t* env, void* data) {
 	if(size == 0 || size > bytesSize)
 		size = bytesSize;
 
-	int res = write(fd, (const char*)bytes->value, size);
+	int res = _write(fd, (const char*)bytes->value, size);
 	return var_new_int(vm, res);
 }
 
@@ -225,7 +255,7 @@ var_t* native_socket_read(vm_t* vm, var_t* env, void* data) {
 		size = bytesSize;
 
 	char* s = (char*)bytes->value;
-	int res = read(fd, s, size);
+	int res = _read(fd, s, size);
 	if(res >= 0)
 		s[res] = 0;
 	return var_new_int(vm, res);
@@ -241,7 +271,7 @@ var_t* native_socket_setTimeout(vm_t* vm, var_t* env, void* data) {
 	tv_timeout.tv_sec = timeout;
 	tv_timeout.tv_usec = 0;
 
-	int res = setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, (void *) &tv_timeout, sizeof(struct timeval));
+	int res = _setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, (void *) &tv_timeout, sizeof(struct timeval));
 	return var_new_int(vm, res);
 }
 
@@ -251,7 +281,7 @@ var_t* native_socket_inet_addr(vm_t* vm, var_t* env, void* data) {
 	const char* strptr = get_str(env, "strptr");
 	if (!strptr) return var_new_int(vm, -1);
 	
-	uint32_t result = inet_addr(strptr);
+	uint32_t result = _inet_addr(strptr);
 	return var_new_int(vm, result);
 }
 
@@ -259,7 +289,7 @@ var_t* native_socket_ntohl(vm_t* vm, var_t* env, void* data) {
 	(void)vm; (void)data;
 	
 	uint32_t netlong = get_int(env, "netlong");
-	uint32_t result = ntohl(netlong);
+	uint32_t result = _ntohl(netlong);
 	return var_new_int(vm, result);
 }
 
@@ -271,13 +301,13 @@ var_t* native_socket_getsockname(vm_t* vm, var_t* env, void* data) {
 	
 	struct sockaddr_in addr;
 	socklen_t len = sizeof(struct sockaddr_in);
-	int result = getsockname(fd, (struct sockaddr *)&addr, &len);
+	int result = _getsockname(fd, (struct sockaddr *)&addr, &len);
 	
 	if (result == 0) {
 		// 返回包含地址和端口的对象
 		var_t* obj = var_new_obj(vm, NULL, NULL);
 		var_t* ip_var = var_new_str(vm, inet_ntoa(addr.sin_addr));
-		var_t* port_var = var_new_int(vm, ntohs(addr.sin_port));
+		var_t* port_var = var_new_int(vm, _ntohl(addr.sin_port));
 		
 		var_add(obj, "ip", ip_var);
 		var_add(obj, "port", port_var);
@@ -296,13 +326,13 @@ var_t* native_socket_getpeername(vm_t* vm, var_t* env, void* data) {
 	
 	struct sockaddr_in addr;
 	socklen_t len = sizeof(struct sockaddr_in);
-	int result = getpeername(fd, (struct sockaddr *)&addr, &len);
+	int result = _getpeername(fd, (struct sockaddr *)&addr, &len);
 	
 	if (result == 0) {
 		// 返回包含地址和端口的对象
 		var_t* obj = var_new_obj(vm, NULL, NULL);
 		var_t* ip_var = var_new_str(vm, inet_ntoa(addr.sin_addr));
-		var_t* port_var = var_new_int(vm, ntohs(addr.sin_port));
+		var_t* port_var = var_new_int(vm, _ntohl(addr.sin_port));
 		
 		var_add(obj, "ip", ip_var);
 		var_add(obj, "port", port_var);
@@ -321,7 +351,7 @@ var_t* native_socket_socketpair(vm_t* vm, var_t* env, void* data) {
 	int protocol = get_int(env, "protocol");
 	
 	int sv[2];
-	int result = socketpair(domain, type, protocol, sv);
+	int result = _socketpair(domain, type, protocol, sv);
 	
 	if (result == 0) {
 		// 返回包含两个套接字描述符的数组
@@ -352,10 +382,10 @@ var_t* native_socket_setsockopt(vm_t* vm, var_t* env, void* data) {
 	int result;
 	if (option_value->type == V_INT) {
 		int ival = var_get_int(option_value);
-		result = setsockopt(fd, level, option_name, &ival, sizeof(int));
+		result = _setsockopt(fd, level, option_name, &ival, sizeof(int));
 	} else if (option_value->type == V_STRING) {
 		const char* sval = var_get_str(option_value);
-		result = setsockopt(fd, level, option_name, sval, strlen(sval));
+		result = _setsockopt(fd, level, option_name, sval, strlen(sval));
 	} else {
 		return var_new_int(vm, -1);
 	}
@@ -377,7 +407,7 @@ var_t* native_socket_getsockopt(vm_t* vm, var_t* env, void* data) {
 	if (option_len > sizeof(option_value))
 		len = sizeof(option_value);
 	
-	int result = getsockopt(fd, level, option_name, option_value, &len);
+	int result = _getsockopt(fd, level, option_name, option_value, &len);
 	
 	if (result == 0) {
 		// 返回选项值
@@ -402,7 +432,7 @@ var_t* native_socket_sendmsg(vm_t* vm, var_t* env, void* data) {
 	if(message->type != V_STRING)
 		return var_new_int(vm, -1);
 	
-	int result = send(fd, (const char*)message->value, message->size, flags);
+	int result = _send(fd, (const char*)message->value, message->size, flags);
 	return var_new_int(vm, result);
 }
 
@@ -420,7 +450,7 @@ var_t* native_socket_recvmsg(vm_t* vm, var_t* env, void* data) {
 	if (!buffer)
 		return var_new_int(vm, -1);
 	
-	int result = recv(fd, buffer, size-1, flags);
+	int result = _recv(fd, buffer, size-1, flags);
 	
 	if (result >= 0) {
 		buffer[result] = 0; // 确保字符串结束
@@ -447,7 +477,7 @@ var_t* native_socket_send(vm_t* vm, var_t* env, void* data) {
 	if(message->type != V_STRING)
 		return var_new_int(vm, -1);
 	
-	int result = send(fd, (const char*)message->value, message->size, flags);
+	int result = _send(fd, (const char*)message->value, message->size, flags);
 	return var_new_int(vm, result);
 }
 
@@ -465,7 +495,7 @@ var_t* native_socket_recv(vm_t* vm, var_t* env, void* data) {
 	if (!buffer)
 		return var_new_int(vm, -1);
 	
-	int result = recv(fd, buffer, size-1, flags);
+	int result = _recv(fd, buffer, size-1, flags);
 	
 	if (result >= 0) {
 		buffer[result] = 0; // 确保字符串结束
@@ -500,10 +530,10 @@ var_t* native_socket_sendto(vm_t* vm, var_t* env, void* data) {
 	struct sockaddr_in addr;
 	memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
-	addr.sin_addr.s_addr = inet_addr(host);
+	addr.sin_addr.s_addr = _inet_addr(host);
 	addr.sin_port = htons(port);
 	
-	int result = sendto(fd, (const char*)message->value, message->size, flags, 
+	int result = _sendto(fd, (const char*)message->value, message->size, flags, 
 					 (struct sockaddr *)&addr, sizeof(struct sockaddr));
 	
 	return var_new_int(vm, result);
@@ -526,7 +556,7 @@ var_t* native_socket_recvfrom(vm_t* vm, var_t* env, void* data) {
 	struct sockaddr_in from_addr;
 	socklen_t from_len = sizeof(from_addr);
 	
-	int result = recvfrom(fd, buffer, size-1, flags, 
+	int result = _recvfrom(fd, buffer, size-1, flags, 
 				(struct sockaddr *)&from_addr, &from_len);
 	
 	if (result >= 0) {
@@ -536,7 +566,7 @@ var_t* native_socket_recvfrom(vm_t* vm, var_t* env, void* data) {
 		var_t* obj = var_new_obj(vm, NULL, NULL);
 		var_t* data_var = var_new_str2(vm, buffer, result);
 		var_t* ip_var = var_new_str(vm, inet_ntoa(from_addr.sin_addr));
-		var_t* port_var = var_new_int(vm, ntohs(from_addr.sin_port));
+		var_t* port_var = var_new_int(vm, _ntohl(from_addr.sin_port));
 		
 		var_add(obj, "data", data_var);
 		var_add(obj, "ip", ip_var);
