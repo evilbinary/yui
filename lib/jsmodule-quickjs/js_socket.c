@@ -5,13 +5,40 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <errno.h>
+
+#ifdef WIN32
+#include "socket.h"
+
+#define in_addr_t uint32_t
+#else
 #include <unistd.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/ioctl.h>
-#include <errno.h>
 #include <netdb.h>
+#endif
+
+// 引入下划线版本的socket API以实现跨平台兼容
+extern int _socket(int domain, int type, int protocol);
+extern int _close(int fd);
+extern int _shutdown(int socket, int how);
+extern int _connect(int socket, const struct sockaddr *address, socklen_t address_len);
+extern int _bind(int socket, const struct sockaddr *address, socklen_t address_len);
+extern int _listen(int socket, int backlog);
+extern int _accept(int socket, struct sockaddr *address, socklen_t *address_len);
+extern int _getsockname(int socket, struct sockaddr *address, socklen_t *address_len);
+extern int _getpeername(int socket, struct sockaddr *address, socklen_t *address_len);
+extern int _setsockopt(int socket, int level, int option_name, const void *option_value, socklen_t option_len);
+extern int _getsockopt(int socket, int level, int option_name, void *option_value, socklen_t *option_len);
+extern ssize_t _send(int socket, const void *message, size_t length, int flags);
+extern ssize_t _recv(int socket, void *buffer, size_t length, int flags);
+extern ssize_t _sendto(int socket, const void *message, size_t length, int flags, const struct sockaddr *dest_addr, socklen_t dest_len);
+extern ssize_t _recvfrom(int socket, void *buffer, size_t length, int flags, struct sockaddr *address, socklen_t *address_len);
+extern in_addr_t _inet_addr(const char* strptr);
+extern uint32_t _ntohl(uint32_t netlong);
+extern void* make_sockaddr_in(int family, int addr, int port);
 
 /* ====================== Socket 相关的 JS 函数 ====================== */
 
@@ -25,10 +52,10 @@ static JSValue js_socket(JSContext *ctx, JSValueConst this_val, int argc, JSValu
     int fd = -1;
     
     if(type == 0) { //tcp
-        fd = socket(PF_INET, SOCK_STREAM, 0);
+        fd = _socket(PF_INET, SOCK_STREAM, 0);
     }
     else {
-        fd = socket(PF_INET, SOCK_DGRAM, 0);
+        fd = _socket(PF_INET, SOCK_DGRAM, 0);
     }
 
     return JS_NewInt32(ctx, fd);
@@ -41,7 +68,7 @@ static JSValue js_socket_close(JSContext *ctx, JSValueConst this_val, int argc, 
 
     int fd;
     JS_ToInt32(ctx, &fd, argv[0]);
-    close(fd);
+    _close(fd);
     return JS_UNDEFINED;
 }
 
@@ -52,7 +79,7 @@ static JSValue js_socket_shutdown(JSContext *ctx, JSValueConst this_val, int arg
 
     int fd;
     JS_ToInt32(ctx, &fd, argv[0]);
-    shutdown(fd, SHUT_RDWR);
+    _shutdown(fd, SHUT_RDWR);
     return JS_UNDEFINED;
 }
 
@@ -98,7 +125,7 @@ static JSValue js_socket_connect(JSContext *ctx, JSValueConst this_val, int argc
     int addr_index = 0;
     for (rp = res_addrs; rp != NULL; rp = rp->ai_next) {
         if (timeout <= 0) {
-            res = connect(fd, rp->ai_addr, rp->ai_addrlen);
+            res = _connect(fd, rp->ai_addr, rp->ai_addrlen);
             if (res < 0) {
                 printf("JS(Socket): Connect attempt %d failed: %s\n", addr_index, strerror(errno));
             }
@@ -108,7 +135,7 @@ static JSValue js_socket_connect(JSContext *ctx, JSValueConst this_val, int argc
             unsigned long ul = 1;
             //ioctl(fd, FIONBIO, &ul); //TODO
 
-            if (connect(fd, rp->ai_addr, rp->ai_addrlen) < 0) {
+            if (_connect(fd, rp->ai_addr, rp->ai_addrlen) < 0) {
                 int error = -1, len;
 
                 struct timeval tm;
@@ -120,7 +147,7 @@ static JSValue js_socket_connect(JSContext *ctx, JSValueConst this_val, int argc
                 FD_SET(fd, &set);
 
                 if (select(fd + 1, NULL, &set, NULL, &tm) > 0) {
-                    getsockopt(fd, SOL_SOCKET, SO_ERROR, &error, (socklen_t *)&len);
+                    _getsockopt(fd, SOL_SOCKET, SO_ERROR, &error, (socklen_t *)&len);
                     if (error == 0) {
                         res = 0;
                     } else {
@@ -178,9 +205,9 @@ static JSValue js_socket_bind(JSContext *ctx, JSValueConst this_val, int argc, J
     addr.sin_family = AF_INET;
     addr.sin_port = htons(port);
     if(host && host[0] != 0)
-        addr.sin_addr.s_addr = inet_addr(host);
+        addr.sin_addr.s_addr = _inet_addr(host);
 
-    res = bind(fd, (struct sockaddr *)&addr, sizeof(struct sockaddr));
+    res = _bind(fd, (struct sockaddr *)&addr, sizeof(struct sockaddr));
     
     JS_FreeCString(ctx, host);
     return JS_NewInt32(ctx, res);
@@ -195,7 +222,7 @@ static JSValue js_socket_listen(JSContext *ctx, JSValueConst this_val, int argc,
     JS_ToInt32(ctx, &fd, argv[0]);
     JS_ToInt32(ctx, &backlog, argv[1]);
 
-    int res = listen(fd, backlog);
+    int res = _listen(fd, backlog);
     return JS_NewInt32(ctx, res);
 }
 
@@ -211,7 +238,7 @@ static JSValue js_socket_accept(JSContext *ctx, JSValueConst this_val, int argc,
     in.sin_family = AF_INET;
     socklen_t size = sizeof(struct sockaddr);
 
-    int cid = accept(fd, (struct sockaddr *)&in, &size);
+    int cid = _accept(fd, (struct sockaddr *)&in, &size);
     return JS_NewInt32(ctx, cid);
 }
 
@@ -226,13 +253,13 @@ static JSValue js_socket_getsockname(JSContext *ctx, JSValueConst this_val, int 
     
     struct sockaddr_in addr;
     socklen_t len = sizeof(struct sockaddr_in);
-    int result = getsockname(fd, (struct sockaddr *)&addr, &len);
+    int result = _getsockname(fd, (struct sockaddr *)&addr, &len);
     
     if (result == 0) {
         // 返回包含地址和端口的对象
         JSValue obj = JS_NewObject(ctx);
         JS_SetPropertyStr(ctx, obj, "ip", JS_NewString(ctx, inet_ntoa(addr.sin_addr)));
-        JS_SetPropertyStr(ctx, obj, "port", JS_NewInt32(ctx, ntohs(addr.sin_port)));
+        JS_SetPropertyStr(ctx, obj, "port", JS_NewInt32(ctx, _ntohl(addr.sin_port)));
         
         return obj;
     }
@@ -251,13 +278,13 @@ static JSValue js_socket_getpeername(JSContext *ctx, JSValueConst this_val, int 
     
     struct sockaddr_in addr;
     socklen_t len = sizeof(struct sockaddr_in);
-    int result = getpeername(fd, (struct sockaddr *)&addr, &len);
+    int result = _getpeername(fd, (struct sockaddr *)&addr, &len);
     
     if (result == 0) {
         // 返回包含地址和端口的对象
         JSValue obj = JS_NewObject(ctx);
         JS_SetPropertyStr(ctx, obj, "ip", JS_NewString(ctx, inet_ntoa(addr.sin_addr)));
-        JS_SetPropertyStr(ctx, obj, "port", JS_NewInt32(ctx, ntohs(addr.sin_port)));
+        JS_SetPropertyStr(ctx, obj, "port", JS_NewInt32(ctx, _ntohl(addr.sin_port)));
         
         return obj;
     }
@@ -276,7 +303,7 @@ static JSValue js_socket_socketpair(JSContext *ctx, JSValueConst this_val, int a
     JS_ToInt32(ctx, &protocol, argv[2]);
     
     int sv[2];
-    int result = socketpair(domain, type, protocol, sv);
+    int result = _socketpair(domain, type, protocol, sv);
     
     if (result == 0) {
         // 返回包含两个套接字描述符的数组
@@ -305,11 +332,11 @@ static JSValue js_socket_setsockopt(JSContext *ctx, JSValueConst this_val, int a
     if (JS_IsNumber(argv[3])) {
         int ival;
         JS_ToInt32(ctx, &ival, argv[3]);
-        result = setsockopt(fd, level, option_name, &ival, sizeof(int));
+        result = _setsockopt(fd, level, option_name, &ival, sizeof(int));
     } else {
         size_t optlen;
         const char* sval = JS_ToCStringLen(ctx, &optlen, argv[3]);
-        result = setsockopt(fd, level, option_name, sval, optlen);
+        result = _setsockopt(fd, level, option_name, sval, optlen);
         JS_FreeCString(ctx, sval);
     }
     
@@ -333,7 +360,7 @@ static JSValue js_socket_getsockopt(JSContext *ctx, JSValueConst this_val, int a
     if (option_len > sizeof(option_value))
         len = sizeof(option_value);
     
-    int result = getsockopt(fd, level, option_name, option_value, &len);
+    int result = _getsockopt(fd, level, option_name, option_value, &len);
     
     if (result == 0) {
         // 返回选项值
@@ -355,7 +382,7 @@ static JSValue js_socket_send(JSContext *ctx, JSValueConst this_val, int argc, J
     size_t msg_len;
     const char* message = JS_ToCStringLen(ctx, &msg_len, argv[1]);
     
-    int result = send(fd, message, msg_len, flags);
+    int result = _send(fd, message, msg_len, flags);
     
     JS_FreeCString(ctx, message);
     return JS_NewInt32(ctx, result);
@@ -378,7 +405,7 @@ static JSValue js_socket_recv(JSContext *ctx, JSValueConst this_val, int argc, J
     if (!buffer)
         return JS_NewInt32(ctx, -1);
     
-    int result = recv(fd, buffer, size-1, flags);
+    int result = _recv(fd, buffer, size-1, flags);
     
     if (result >= 0) {
         buffer[result] = 0; // 确保字符串结束
@@ -410,10 +437,10 @@ static JSValue js_socket_sendto(JSContext *ctx, JSValueConst this_val, int argc,
     struct sockaddr_in addr;
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = inet_addr(host);
+    addr.sin_addr.s_addr = _inet_addr(host);
     addr.sin_port = htons(port);
     
-    int result = sendto(fd, message, msg_len, flags, 
+    int result = _sendto(fd, message, msg_len, flags, 
                         (struct sockaddr *)&addr, sizeof(struct sockaddr));
     
     JS_FreeCString(ctx, message);
@@ -442,7 +469,7 @@ static JSValue js_socket_recvfrom(JSContext *ctx, JSValueConst this_val, int arg
     struct sockaddr_in from_addr;
     socklen_t from_len = sizeof(from_addr);
     
-    int result = recvfrom(fd, buffer, size-1, flags, 
+    int result = _recvfrom(fd, buffer, size-1, flags, 
                          (struct sockaddr *)&from_addr, &from_len);
     
     if (result >= 0) {
@@ -471,7 +498,7 @@ static JSValue js_socket_inet_addr(JSContext *ctx, JSValueConst this_val, int ar
     const char* strptr = JS_ToCStringLen(ctx, &str_len, argv[0]);
     if (!strptr) return JS_NewInt32(ctx, -1);
     
-    uint32_t result = inet_addr(strptr);
+    uint32_t result = _inet_addr(strptr);
     
     JS_FreeCString(ctx, strptr);
     return JS_NewInt32(ctx, result);
@@ -484,7 +511,7 @@ static JSValue js_socket_ntohl(JSContext *ctx, JSValueConst this_val, int argc, 
     
     uint32_t netlong;
     JS_ToInt32(ctx, (int32_t*)&netlong, argv[0]);
-    uint32_t result = ntohl(netlong);
+    uint32_t result = _ntohl(netlong);
     
     return JS_NewInt32(ctx, result);
 }
@@ -501,14 +528,9 @@ static JSValue js_socket_make_sockaddr_in(JSContext *ctx, JSValueConst this_val,
     JS_ToInt32(ctx, &port, argv[2]);
     
     // 分配并初始化sockaddr_in结构
-    struct sockaddr_in* addr_in = (struct sockaddr_in*)malloc(sizeof(struct sockaddr_in));
+    struct sockaddr_in* addr_in = (struct sockaddr_in*)make_sockaddr_in(family, addr, port);
     if (!addr_in)
         return JS_NULL;
-    
-    memset(addr_in, 0, sizeof(struct sockaddr_in));
-    addr_in->sin_family = family;
-    addr_in->sin_addr.s_addr = htonl(addr);
-    addr_in->sin_port = htons(port);
     
     // 在JS中返回这个结构的指针表示
     JSValue obj = JS_NewObject(ctx);

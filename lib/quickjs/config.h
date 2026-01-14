@@ -11,8 +11,14 @@
 
 #define _GNU_SOURCE 1
 
+
+#ifndef _WIN32
 #include "sys/select.h"
 #include "alloca.h"
+#else
+// Windows 平台不需要这些头文件
+#include <malloc.h>  // for alloca on Windows
+#endif
 
 
 #endif /* config_h */
