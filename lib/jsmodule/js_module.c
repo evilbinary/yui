@@ -73,7 +73,9 @@ void js_module_cleanup(void)
 }
 
 // 统一的 Socket API 注册函数
+#ifdef CONFIG_CLASS_SOCKET
 extern void js_module_register_socket_api(JSContext* ctx);
+#endif
 extern void js_module_register_yui_api(JSContext* ctx);
 
 // 注册 C API 到 JS
@@ -83,8 +85,11 @@ void js_module_register_api(void)
     
     // YUI API 
     js_module_register_yui_api(g_js_ctx);
+    
+#ifdef CONFIG_CLASS_SOCKET
     // 调用统一的 Socket API 注册函数
     js_module_register_socket_api(g_js_ctx);
+#endif
     
     printf("JS(Socket): Registered API function\n");
 }
