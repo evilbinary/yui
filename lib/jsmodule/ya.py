@@ -19,7 +19,6 @@ def after_build_host(target):
     targetfile = target.targetfile()
     print('gen yui_stdlib.h by exec',target.name())
     exe=get_prefix()+"./"+targetfile
-    print('exec ===========>',exe)
     # 使用 subprocess 运行并捕获输出
     with open('lib/jsmodule/yui_stdlib.h', 'w') as f:
         result = subprocess.run([exe], stdout=f, stderr=subprocess.PIPE, text=True)

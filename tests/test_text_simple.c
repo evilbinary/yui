@@ -8,13 +8,15 @@
 #if defined(_WIN32)
 #include <windows.h>
 int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
-    int argc = __argc;
-    char** argv = __argv;
-    return main(argc, argv);
+    extern int __argc;
+    extern char** __argv;
+    return main(__argc, __argv);
 }
 #endif
 
-int main() {
+int main(int argc, char *argv[]) {
+    (void)argc;
+    (void)argv;
     printf("=== 简单测试文本设置和获取 ===\n");
     
     // 创建一个测试图层

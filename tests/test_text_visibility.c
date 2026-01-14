@@ -6,16 +6,19 @@
 #include "../src/components/text_component.h"
 #include "../src/backend.h"
 #include "../src/render.h"
+
 #if defined(_WIN32)
 #include <windows.h>
 int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
-    int argc = __argc;
-    char** argv = __argv;
-    return main(argc, argv);
+    extern int __argc;
+    extern char** __argv;
+    return main(__argc, __argv);
 }
 #endif
 
-int main() {
+int main(int argc, char *argv[]) {
+    (void)argc;
+    (void)argv;
     printf("=== 测试文本可见性 ===\n");
     
     // 初始化后端（简化版本，不创建窗口）

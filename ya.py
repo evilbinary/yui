@@ -98,8 +98,10 @@ def run(target):
     arch_type= target.get_arch_type()
     mode =target.get_config('mode')
     plat=target.plat()
-
-    yui=prefix_env+"./"+targetfile
+    if platform.system()=='Windows':
+        yui=targetfile.replace('/','\\')
+    else:
+        yui=prefix_env+"./"+targetfile
 
     print('run '+yui,yui)
     os.shell(yui)

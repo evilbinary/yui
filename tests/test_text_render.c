@@ -8,9 +8,9 @@
 #if defined(_WIN32)
 #include <windows.h>
 int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
-    int argc = __argc;
-    char** argv = __argv;
-    return main(argc, argv);
+    extern int __argc;
+    extern char** __argv;
+    return main(__argc, __argv);
 }
 #endif
 
@@ -83,7 +83,9 @@ void test_multiline_text_rendering() {
     printf("测试完成。\n");
 }
 
-int main() {
+int main(int argc, char *argv[]) {
+    (void)argc;
+    (void)argv;
     printf("开始测试文本组件渲染...\n\n");
     
     test_multiline_text_rendering();

@@ -2,8 +2,19 @@
 #include <stdlib.h>
 #include <string.h>
 
+#if defined(_WIN32)
+#include <windows.h>
+int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+    extern int __argc;
+    extern char** __argv;
+    return main(__argc, __argv);
+}
+#endif
+
 // 简化测试，只测试select组件的核心功能
-int main() {
+int main(int argc, char *argv[]) {
+    (void)argc;
+    (void)argv;
     printf("Testing select component just_expanded functionality\n");
     
     // 模拟展开和点击行为
