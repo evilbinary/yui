@@ -11,6 +11,8 @@ extern "C" {
 #ifdef WIN32
 #include "../../../socket/socket.h"
 #define in_addr_t uint32_t
+
+#define V_INT    1
 #else
 #include "../../../socket/socket.h"
 #include <unistd.h>
@@ -22,7 +24,6 @@ extern "C" {
 #include <netdb.h>
 #endif
 
-#define V_INT    1
 
 // 引入下划线版本的socket API以实现跨平台兼容
 extern int _socket(int domain, int type, int protocol);
