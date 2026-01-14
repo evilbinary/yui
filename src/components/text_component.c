@@ -976,15 +976,13 @@ int text_component_get_position_from_point(TextComponent* component, Point pt, L
     if (pt.y < render_rect.y) return 0;
     if (pt.y > render_rect.y + render_rect.h) return strlen(component->layer->text);
     if (pt.x < render_rect.x) return 0;
-    if (pt.x > render_rect.x + render_rect.w) return strlen(component->layer->text);
     
     // 如果没有文本，返回0
     if (strlen(component->layer->text) == 0) {
         return 0;
     }
     
-    // 获取字符宽度和行高
-    int char_width = 8;
+    // 获取行高
     int line_height = 20;
     
     if (layer->font && layer->font->default_font) {
@@ -992,7 +990,6 @@ int text_component_get_position_from_point(TextComponent* component, Point pt, L
         if (temp_tex) {
             int temp_width, temp_height;
             backend_query_texture(temp_tex, NULL, NULL, &temp_width, &temp_height);
-            char_width = temp_width / scale;
             line_height = temp_height / scale;
             backend_render_text_destroy(temp_tex);
         }
@@ -1009,39 +1006,105 @@ int text_component_get_position_from_point(TextComponent* component, Point pt, L
             if (component->layer->text[i] == '\n') total_lines++;
         }
         if (line_num >= total_lines) line_num = total_lines - 1;
+        if (line_num < 0) line_num = 0;
         
-        // 查找目标行
+        // 查找目标行的起始和结束位置
         int current_line = 0;
-        int pos = 0;
+        int line_start = 0;
+        int line_end = 0;
         
-        // 遍历文本，找到目标行的起始位置
+        // 遍历文本，找到目标行的起始和结束位置
         for (int i = 0; i <= strlen(component->layer->text); i++) {
             if (i == strlen(component->layer->text) || component->layer->text[i] == '\n') {
                 if (current_line == line_num) {
-                    // 计算行内位置
-                    int col = (pt.x - render_rect.x) / char_width;
-                    if (col < 0) col = 0;
+                    line_end = i;
                     
-                    // 计算当前行长度
-                    int line_length = i - pos;
-                    if (col > line_length) col = line_length;
+                    // 使用实际渲染宽度逐个测试字符位置
+                    int click_x = pt.x - render_rect.x;
+                    int best_pos = line_start;
+                    int min_distance = abs(click_x);
                     
-                    return pos + col;
+                    // 测试行内每个位置
+                    for (int pos = line_start; pos <= line_end; pos++) {
+                        // 提取从行首到当前位置的文本
+                        int len = pos - line_start;
+                        if (len < 0) len = 0;
+                        
+                        char* temp_text = (char*)malloc(len + 1);
+                        if (temp_text) {
+                            strncpy(temp_text, component->layer->text + line_start, len);
+                            temp_text[len] = '\0';
+                            
+                            // 渲染这段文本以获取实际宽度
+                            int actual_width = 0;
+                            if (len > 0) {
+                                Texture* temp_tex = backend_render_texture(layer->font->default_font, temp_text, layer->color);
+                                if (temp_tex) {
+                                    int temp_w, temp_h;
+                                    backend_query_texture(temp_tex, NULL, NULL, &temp_w, &temp_h);
+                                    actual_width = temp_w / scale;
+                                    backend_render_text_destroy(temp_tex);
+                                }
+                            }
+                            
+                            // 计算到点击位置的距离
+                            int distance = abs(click_x - actual_width);
+                            if (distance < min_distance) {
+                                min_distance = distance;
+                                best_pos = pos;
+                            }
+                            
+                            free(temp_text);
+                        }
+                    }
+                    
+                    return best_pos;
                 }
                 current_line++;
-                pos = i + 1;
+                line_start = i + 1;
             }
         }
         
         // 如果超出范围，返回文本末尾
         return strlen(component->layer->text);
     } else {
-        // 单行模式处理
-        int col = (pt.x - render_rect.x) / char_width;
-        if (col < 0) col = 0;
-        if (col > strlen(component->layer->text)) col = strlen(component->layer->text);
+        // 单行模式处理 - 使用实际渲染宽度
+        int click_x = pt.x - render_rect.x;
+        int text_len = strlen(component->layer->text);
+        int best_pos = 0;
+        int min_distance = abs(click_x);
         
-        return col;
+        // 测试每个位置
+        for (int pos = 0; pos <= text_len; pos++) {
+            char* temp_text = (char*)malloc(pos + 1);
+            if (temp_text) {
+                strncpy(temp_text, component->layer->text, pos);
+                temp_text[pos] = '\0';
+                
+                // 渲染这段文本以获取实际宽度
+                int actual_width = 0;
+                if (pos > 0) {
+                    Texture* temp_tex = backend_render_texture(layer->font->default_font, temp_text, layer->color);
+                    if (temp_tex) {
+                        int temp_w, temp_h;
+                        backend_query_texture(temp_tex, NULL, NULL, &temp_w, &temp_h);
+                        actual_width = temp_w / scale;
+                        backend_render_text_destroy(temp_tex);
+                    }
+                }
+                
+                // 计算到点击位置的距离
+                int distance = abs(click_x - actual_width);
+                if (distance < min_distance) {
+                    min_distance = distance;
+                    best_pos = pos;
+                }
+                
+                free(temp_text);
+            }
+        }
+        
+        return best_pos;
     }
 }
 
