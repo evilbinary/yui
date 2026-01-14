@@ -466,12 +466,23 @@ static void text_component_delete_next_char(TextComponent* component) {
         return;
     }
     
-    // 如果有选中的文本，先删除（仅当确实有选区时）
+    // 如果有选中的文本，先删除（只要选区存在就删除）
     if (component->selection_start != -1 && component->selection_end != -1) {
-        if (component->selection_start != component->selection_end) {
+        // 确保start和end不相等，或者都指向有效位置
+        int start = component->selection_start;
+        int end = component->selection_end;
+        if (start > end) {
+            int temp = start;
+            start = end;
+            end = temp;
+        }
+        
+        // 如果选区有效（start != end），删除选中内容
+        if (start != end) {
             text_component_delete_selection(component);
             return;
         } else {
+            // 选区无效，清除选区标记
             component->selection_start = -1;
             component->selection_end = -1;
         }
