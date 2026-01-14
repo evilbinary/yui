@@ -17,6 +17,12 @@
 #define SHUT_RD   0		/* == Win32 SD_RECEIVE */
 #define SHUT_WR   1		/* == Win32 SD_SEND    */
 #define SHUT_RDWR 2		/* == Win32 SD_BOTH    */
+
+/* On Windows, _close conflicts with MSVCRT, so map it to closesocket */
+// #ifndef _close
+// #define _close closesocket
+// #endif
+
 #else
 #include <sys/types.h>
 #include <sys/socket.h>

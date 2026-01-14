@@ -28,9 +28,13 @@ void* make_sockaddr_in(int family,int addr,int port){
   
   return addr_in;
 }
+#ifndef WIN32
+// On Windows, _close conflicts with MSVCRT, so we don't define it
+// Instead, we'll use closesocket directly for sockets
 int _close(int fd){
   return close(fd);
 }
+#endif
  size_t
  _strlen(const char *s){
    return strlen(s);

@@ -19,4 +19,4 @@ add_includedirs(
     public = true
 )
 add_includedirs('.')
-add_cflags(' -Wall -DNO_MAIN -g -MMD -D_GNU_SOURCE -fno-math-errno -fno-trapping-math ')
+add_cflags(' -I./ -Wall -DNO_MAIN -g -MMD -D_GNU_SOURCE -fno-math-errno -fno-trapping-math ')

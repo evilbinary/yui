@@ -12,6 +12,7 @@
 
 #define in_addr_t uint32_t
 #else
+#include "socket.h"
 #include <unistd.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>

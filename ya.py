@@ -88,6 +88,7 @@ def add_flags():
             '-lSDL2_ttf',
             '-lSDL2_image',
             '-lm',
+            '-lws2_32'
             )
 
 def run(target):

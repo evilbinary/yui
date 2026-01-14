@@ -26,7 +26,7 @@ after_build(after_build_host)
 
 
 target("jsmodule")
-add_deps("mquickjs","cjson","yui")
+add_deps("mquickjs","cjson","yui","socket")
 add_cflags(' -DBUILD_NO_MAIN=1 -DHAS_JS_MODULE -DCONFIG_CLASS_SOCKET -DCONFIG_CLASS_YUI  -I. -I../mquickjs -g ')
 add_flags()
 
@@ -36,7 +36,7 @@ add_files(
     'js_common.c',
     'yui_stdlib.c',
     'yui_stdlib_link.c',
-    # 'js_socket.c'
+    'js_socket.c'
 ) 
 
 add_includedirs('.', public=true)
