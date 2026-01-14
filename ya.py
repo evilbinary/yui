@@ -18,6 +18,9 @@ project("yui",
 def add_flags():
 
     checkmem=True
+    if platform.system()=='Windows':
+        checkmem=False
+        
     if checkmem:
         tool=get_toolchain_node()
         tool['ld']='gcc'
@@ -65,7 +68,10 @@ def add_flags():
             )
     else:
         tool=get_toolchain_node()
-        tool['ld']='gcc'
+        tool['cc']='D:\\app\\msys2\\mingw64\\bin\\gcc.exe'
+        tool['cxx']='D:\\app\\msys2\\mingw64\\bin\\g++.exe'
+        tool['ld']='D:\\app\\msys2\\mingw64\\bin\\gcc.exe'
+        tool['ar']='D:\\app\\msys2\\mingw64\\bin\\ar.exe'
 
         add_cflags(
             '-g',
@@ -76,14 +82,13 @@ def add_flags():
             '-I./src/'
             )
         add_ldflags(
-            '-LD:\\app\\msys2\\mingw64\\lib',
-            '-L../libs/',
+            '-LD:/app/msys2/mingw64/lib',
+            '-lSDL2main',
             '-lSDL2',
             '-lSDL2_ttf',
             '-lSDL2_image',
             '-lm',
             )
-
 
 def run(target):
     targetfile = target.targetfile()

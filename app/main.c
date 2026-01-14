@@ -15,9 +15,9 @@
 #if defined(_WIN32)
 #include <windows.h>
 int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
-    int argc = __argc;
-    char** argv = __argv;
-    return main(argc, argv);
+    extern int __argc;
+    extern char** __argv;
+    return main(__argc, __argv);
 }
 #endif
 
