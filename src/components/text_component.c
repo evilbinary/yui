@@ -1256,16 +1256,6 @@ void text_component_render(Layer* layer) {
             // 使用可配置的选择背景颜色
             Color selection_bg = component->selection_color;
             
-            // 获取字符宽度
-            int char_width = 8; // 假设平均字符宽度
-            Texture* temp_tex = backend_render_texture(layer->font->default_font, "X", layer->color);
-            if (temp_tex) {
-                int temp_width, temp_height;
-                backend_query_texture(temp_tex, NULL, NULL, &temp_width, &temp_height);
-                char_width = temp_width / scale;
-                backend_render_text_destroy(temp_tex);
-            }
-            
             // 获取行高
             int line_height = 20;
             Texture* line_tex = backend_render_texture(layer->font->default_font, "X", layer->color);
@@ -1304,11 +1294,52 @@ void text_component_render(Layer* layer) {
                             int sel_start_in_line = (start > line_start) ? start - line_start : 0;
                             int sel_end_in_line = (end < line_end) ? end - line_start : line_end - line_start;
                             
-                            // 计算选择区域的屏幕坐标
+                            // 使用实际渲染宽度计算选择区域的X坐标和宽度
+                            int sel_start_x = render_rect.x;
+                            int sel_width = 0;
+                            
+                            // 计算选择起始位置的X坐标
+                            if (sel_start_in_line > 0) {
+                                char* before_sel = (char*)malloc(sel_start_in_line + 1);
+                                if (before_sel) {
+                                    strncpy(before_sel, text + line_start, sel_start_in_line);
+                                    before_sel[sel_start_in_line] = '\0';
+                                    
+                                    Texture* before_tex = backend_render_texture(layer->font->default_font, before_sel, layer->color);
+                                    if (before_tex) {
+                                        int before_width, before_height;
+                                        backend_query_texture(before_tex, NULL, NULL, &before_width, &before_height);
+                                        sel_start_x = render_rect.x + before_width / scale;
+                                        backend_render_text_destroy(before_tex);
+                                    }
+                                    free(before_sel);
+                                }
+                            }
+                            
+                            // 计算选择区域的宽度
+                            int sel_len = sel_end_in_line - sel_start_in_line;
+                            if (sel_len > 0) {
+                                char* sel_text = (char*)malloc(sel_len + 1);
+                                if (sel_text) {
+                                    strncpy(sel_text, text + line_start + sel_start_in_line, sel_len);
+                                    sel_text[sel_len] = '\0';
+                                    
+                                    Texture* sel_tex = backend_render_texture(layer->font->default_font, sel_text, layer->color);
+                                    if (sel_tex) {
+                                        int sel_tex_width, sel_tex_height;
+                                        backend_query_texture(sel_tex, NULL, NULL, &sel_tex_width, &sel_tex_height);
+                                        sel_width = sel_tex_width / scale;
+                                        backend_render_text_destroy(sel_tex);
+                                    }
+                                    free(sel_text);
+                                }
+                            }
+                            
+                            // 绘制选择区域
                             Rect sel_rect = {
-                                render_rect.x + sel_start_in_line * char_width,
+                                sel_start_x,
                                 line_y,
-                                (sel_end_in_line - sel_start_in_line) * char_width,
+                                sel_width,
                                 line_height
                             };
                             
@@ -1325,11 +1356,51 @@ void text_component_render(Layer* layer) {
                     current_pos++;
                 }
             } else {
-                // 单行模式
+                // 单行模式 - 使用实际渲染宽度
+                int sel_start_x = render_rect.x;
+                int sel_width = 0;
+                
+                // 计算选择起始位置的X坐标
+                if (start > 0) {
+                    char* before_sel = (char*)malloc(start + 1);
+                    if (before_sel) {
+                        strncpy(before_sel, component->layer->text, start);
+                        before_sel[start] = '\0';
+                        
+                        Texture* before_tex = backend_render_texture(layer->font->default_font, before_sel, layer->color);
+                        if (before_tex) {
+                            int before_width, before_height;
+                            backend_query_texture(before_tex, NULL, NULL, &before_width, &before_height);
+                            sel_start_x = render_rect.x + before_width / scale;
+                            backend_render_text_destroy(before_tex);
+                        }
+                        free(before_sel);
+                    }
+                }
+                
+                // 计算选择区域的宽度
+                int sel_len = end - start;
+                if (sel_len > 0) {
+                    char* sel_text = (char*)malloc(sel_len + 1);
+                    if (sel_text) {
+                        strncpy(sel_text, component->layer->text + start, sel_len);
+                        sel_text[sel_len] = '\0';
+                        
+                        Texture* sel_tex = backend_render_texture(layer->font->default_font, sel_text, layer->color);
+                        if (sel_tex) {
+                            int sel_tex_width, sel_tex_height;
+                            backend_query_texture(sel_tex, NULL, NULL, &sel_tex_width, &sel_tex_height);
+                            sel_width = sel_tex_width / scale;
+                            backend_render_text_destroy(sel_tex);
+                        }
+                        free(sel_text);
+                    }
+                }
+                
                 Rect sel_rect = {
-                    render_rect.x + start * char_width,
+                    sel_start_x,
                     render_rect.y + (render_rect.h - line_height) / 2,
-                    (end - start) * char_width,
+                    sel_width,
                     line_height
                 };
                 
