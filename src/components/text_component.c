@@ -1837,71 +1837,199 @@ void text_component_render(Layer* layer) {
         if (component->cursor_pos < 0) component->cursor_pos = 0;
         if (component->cursor_pos > text_len) component->cursor_pos = text_len;
         
-        // 创建光标前的文本片段，用于计算光标位置
-        char* temp_text = (char*)malloc(component->cursor_pos + 1);
-        if (temp_text) {
-            strncpy(temp_text, component->layer->text, component->cursor_pos);
-            temp_text[component->cursor_pos] = '\0';
+        // 获取行高
+        int line_height = 20;
+        if (layer->font && layer->font->default_font) {
+            Texture* temp_tex = backend_render_texture(layer->font->default_font, "X", layer->color);
+            if (temp_tex) {
+                int temp_width, temp_height;
+                backend_query_texture(temp_tex, NULL, NULL, &temp_width, &temp_height);
+                line_height = temp_height / scale;
+                backend_render_text_destroy(temp_tex);
+            }
+        }
+        
+        if (component->multiline) {
+            // 多行模式：需要考虑自动换行来计算光标位置
+            char* text = component->layer->text;
+            int current_pos = 0;
+            int visual_line = 0;
+            int max_width = render_rect.w;
+            int cursor_x = render_rect.x;
+            int cursor_y = render_rect.y - component->scroll_y;
             
-            // 获取行高和字符宽度
-            int line_height = 20;
-            int char_width = 8;
-            
-            if (layer->font && layer->font->default_font) {
-                Texture* temp_tex = backend_render_texture(layer->font->default_font, "X", layer->color);
-                if (temp_tex) {
-                    int temp_width, temp_height;
-                    backend_query_texture(temp_tex, NULL, NULL, &temp_width, &temp_height);
-                    char_width = temp_width / scale;
-                    line_height = temp_height / scale;
-                    backend_render_text_destroy(temp_tex);
+            // 遍历文本，使用与渲染相同的算法找到光标所在的视觉行
+            while (current_pos < text_len && current_pos < component->cursor_pos) {
+                // 查找当前行可以显示的最大文本长度
+                int line_end = current_pos;
+                
+                // 尝试找到合适的换行点
+                while (line_end < text_len) {
+                    if (text[line_end] == '\n') {
+                        break;
+                    }
+                    line_end++;
                 }
                 
-                // 计算当前行文本的宽度
-                char* last_newline = strrchr(temp_text, '\n');
-                char* current_line_text = (last_newline) ? last_newline + 1 : temp_text;
+                // 计算整行文本的宽度
+                int current_width = 0;
+                char* temp_line = (char*)malloc(line_end - current_pos + 1);
+                if (temp_line) {
+                    strncpy(temp_line, text + current_pos, line_end - current_pos);
+                    temp_line[line_end - current_pos] = '\0';
+                    
+                    Texture* line_tex = backend_render_texture(layer->font->default_font, temp_line, layer->color);
+                    if (line_tex) {
+                        int line_width, line_height_ignore;
+                        backend_query_texture(line_tex, NULL, NULL, &line_width, &line_height_ignore);
+                        current_width = line_width / scale;
+                        backend_render_text_destroy(line_tex);
+                    }
+                    
+                    free(temp_line);
+                }
                 
-                Texture* cursor_text_texture = backend_render_texture(layer->font->default_font, current_line_text, layer->color);
-                if (cursor_text_texture) {
-                    int text_width;
-                    backend_query_texture(cursor_text_texture, NULL, NULL, &text_width, NULL);
-                    char_width = text_width / scale; // 更新字符宽度为实际宽度
-                    backend_render_text_destroy(cursor_text_texture);
+                // 确定当前视觉行的结束位置
+                int split_pos = current_pos;
+                
+                if (line_end < text_len && text[line_end] == '\n') {
+                    split_pos = line_end;
+                } else if (current_width <= max_width && line_end >= text_len) {
+                    split_pos = line_end;
+                } else if (current_width > max_width) {
+                    split_pos = current_pos;
+                    while (split_pos < line_end) {
+                        char* test_line = (char*)malloc(split_pos - current_pos + 1);
+                        if (test_line) {
+                            strncpy(test_line, text + current_pos, split_pos - current_pos);
+                            test_line[split_pos - current_pos] = '\0';
+                            
+                            Texture* test_tex = backend_render_texture(layer->font->default_font, test_line, layer->color);
+                            if (test_tex) {
+                                int test_width, test_height;
+                                backend_query_texture(test_tex, NULL, NULL, &test_width, &test_height);
+                                if (test_width / scale > max_width) {
+                                    backend_render_text_destroy(test_tex);
+                                    free(test_line);
+                                    break;
+                                }
+                                backend_render_text_destroy(test_tex);
+                            }
+                            
+                            free(test_line);
+                        }
+                        split_pos++;
+                    } 
+                    
+                    if (split_pos > current_pos) {
+                        split_pos--;
+                    }
+                } else {
+                    split_pos = line_end;
+                }
+                
+                if (split_pos < current_pos) {
+                    split_pos = current_pos;
+                }
+                
+                // 检查光标是否在当前视觉行内
+                if (component->cursor_pos <= split_pos) {
+                    // 光标在当前视觉行，计算X坐标
+                    int len_to_cursor = component->cursor_pos - current_pos;
+                    if (len_to_cursor > 0) {
+                        char* text_before_cursor = (char*)malloc(len_to_cursor + 1);
+                        if (text_before_cursor) {
+                            strncpy(text_before_cursor, text + current_pos, len_to_cursor);
+                            text_before_cursor[len_to_cursor] = '\0';
+                            
+                            Texture* before_tex = backend_render_texture(layer->font->default_font, text_before_cursor, layer->color);
+                            if (before_tex) {
+                                int before_width, before_height;
+                                backend_query_texture(before_tex, NULL, NULL, &before_width, &before_height);
+                                cursor_x = render_rect.x + before_width / scale;
+                                backend_render_text_destroy(before_tex);
+                            }
+                            free(text_before_cursor);
+                        }
+                    } else {
+                        cursor_x = render_rect.x;
+                    }
+                    
+                    cursor_y = render_rect.y + visual_line * (line_height + 2) - component->scroll_y;
+                    break;
+                }
+                
+                // 移动到下一视觉行
+                visual_line++;
+                if (split_pos < text_len && text[split_pos] == '\n') {
+                    current_pos = split_pos + 1;
+                } else {
+                    current_pos = split_pos;
                 }
             }
             
-            // 计算光标位置
+            // 如果光标在文本末尾
+            if (current_pos >= component->cursor_pos && component->cursor_pos == text_len) {
+                int len_to_cursor = component->cursor_pos - current_pos;
+                if (len_to_cursor > 0) {
+                    char* text_before_cursor = (char*)malloc(len_to_cursor + 1);
+                    if (text_before_cursor) {
+                        strncpy(text_before_cursor, text + current_pos, len_to_cursor);
+                        text_before_cursor[len_to_cursor] = '\0';
+                        
+                        Texture* before_tex = backend_render_texture(layer->font->default_font, text_before_cursor, layer->color);
+                        if (before_tex) {
+                            int before_width, before_height;
+                            backend_query_texture(before_tex, NULL, NULL, &before_width, &before_height);
+                            cursor_x = render_rect.x + before_width / scale;
+                            backend_render_text_destroy(before_tex);
+                        }
+                        free(text_before_cursor);
+                    }
+                } else {
+                    cursor_x = render_rect.x;
+                }
+                
+                cursor_y = render_rect.y + visual_line * (line_height + 2) - component->scroll_y;
+            }
+            
+            // 绘制光标
             Rect cursor_rect = {
-                render_rect.x + char_width,
-                render_rect.y,
+                cursor_x,
+                cursor_y,
                 2,
                 line_height
             };
             
-            // 多行模式下需要计算光标所在行的Y坐标
-            if (component->multiline) {
-                // 计算光标前有多少个换行符
-                int line_count = 0;
-                for (int i = 0; i < component->cursor_pos; i++) {
-                    if (component->layer->text[i] == '\n') {
-                        line_count++;
+            backend_render_fill_rect(&cursor_rect, component->cursor_color);
+        } else {
+            // 单行模式：计算光标前文本的宽度
+            int char_width = 0;
+            if (component->cursor_pos > 0) {
+                char* temp_text = (char*)malloc(component->cursor_pos + 1);
+                if (temp_text) {
+                    strncpy(temp_text, component->layer->text, component->cursor_pos);
+                    temp_text[component->cursor_pos] = '\0';
+                    
+                    Texture* cursor_text_texture = backend_render_texture(layer->font->default_font, temp_text, layer->color);
+                    if (cursor_text_texture) {
+                        int text_width;
+                        backend_query_texture(cursor_text_texture, NULL, NULL, &text_width, NULL);
+                        char_width = text_width / scale;
+                        backend_render_text_destroy(cursor_text_texture);
                     }
+                    free(temp_text);
                 }
-                
-                // 根据行数计算Y坐标，并考虑滚动偏移量
-                cursor_rect.y = render_rect.y + line_count * (line_height + 2) - component->scroll_y;
-            } else {
-                // 单行模式下垂直居中
-                cursor_rect.y = render_rect.y + (render_rect.h - line_height) / 2;
             }
             
-            // 确保光标在可见区域内
-            if (cursor_rect.x < render_rect.x) cursor_rect.x = render_rect.x;
+            Rect cursor_rect = {
+                render_rect.x + char_width,
+                render_rect.y + (render_rect.h - line_height) / 2,
+                2,
+                line_height
+            };
             
-            // 绘制光标
             backend_render_fill_rect(&cursor_rect, component->cursor_color);
-            
-            free(temp_text);
         }
     }
     
