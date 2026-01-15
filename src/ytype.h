@@ -372,6 +372,9 @@ typedef struct Layer {
     int blur_radius;         // 模糊半径
     float saturation;         // 饱和度 (1.0为正常，>1.0为更饱和，<1.0为不饱和)
     float brightness;        // 亮度 (1.0为正常，>1.0为更亮，<1.0为更暗)
+    
+    // 增量更新支持：脏标记
+    unsigned int dirty_flags; // 标记哪些属性被修改
 
 } Layer;
 

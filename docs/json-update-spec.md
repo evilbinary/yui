@@ -4,6 +4,10 @@
 
 通过简单的 JSON 格式增量更新 UI 组件，无需重新渲染整个 UI 树。
 
+1、统一格式：{ "target": "id", "change": {...} }
+2、路径支持：children.0、children.id、layerId.a.b.c
+3、null 表示删除，不存在则添加，存在则更新
+
 ## 基本格式
 
 ### 单个更新 

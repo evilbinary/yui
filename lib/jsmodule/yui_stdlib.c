@@ -393,6 +393,7 @@ static const JSPropDef js_yui[] = {
     JS_CFUNC_DEF("show", 1, js_show ),
     JS_CFUNC_DEF("renderFromJson", 2, js_render_from_json ),
     JS_CFUNC_DEF("call", 2, js_yui_call ),
+    JS_CFUNC_DEF("update", 1, js_yui_update ),
     JS_PROP_END,
 };
 
@@ -433,6 +434,49 @@ static JSValue js_yui_test(JSContext *ctx, JSValue *this_val, int argc,
 {
     printf("js_yui_test\n");
 return JS_NewCFunctionParams(ctx, JS_CFUNCTION_rectangle_closure_test, argv[0]);
+}
+
+// JSON 增量更新 API
+#ifndef STDLIB_BUILD
+extern int yui_update(Layer* root, const char* update_json);
+#endif
+
+// YUI.update() - JSON 增量更新
+static JSValue js_yui_update(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+{
+#ifdef STDLIB_BUILD
+    return JS_UNDEFINED;
+#else
+    if (argc < 1) {
+        printf("YUI.update: 需要至少一个参数\n");
+        return JS_NewInt32(ctx, -1);
+    }
+
+    JSCStringBuf buf;
+    const char* update_json = NULL;
+    
+    // mquickjs 中直接检查类型并转换为字符串
+    // 如果是字符串，直接使用
+    if (JS_IsString(ctx, argv[0])) {
+        update_json = JS_ToCString(ctx, argv[0], &buf);
+    } else {
+        // 如果是对象，先用内置的 JSON.stringify 转换
+        // 但 mquickjs 可能不支持，所以这里简单处理：
+        // 用户需要自己先 stringify，或者我们返回错误
+        printf("YUI.update: 参数必须是 JSON 字符串\n");
+        printf("YUI.update: 请使用 JSON.stringify() 转换对象\n");
+        return JS_NewInt32(ctx, -1);
+    }
+
+    if (update_json && g_layer_root) {
+        printf("YUI.update: 应用更新 - %s\n", update_json);
+        int result = yui_update(g_layer_root, update_json);
+        return JS_NewInt32(ctx, result);
+    }
+
+    printf("YUI.update: 无效的参数或未初始化\n");
+    return JS_NewInt32(ctx, -1);
+#endif
 }
 
 
