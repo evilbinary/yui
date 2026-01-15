@@ -1070,16 +1070,13 @@ int text_component_get_position_from_point(TextComponent* component, Point pt, L
             // 确定当前视觉行的结束位置
             int split_pos = current_pos;
             
-            // 如果遇到换行符，直接在换行符处结束当前行
-            if (line_end < text_len && text[line_end] == '\n') {
-                split_pos = line_end;
-            }
-            // 如果文本没有超过宽度限制，使用整行
-            else if (current_width <= max_width && line_end >= text_len) {
+            // 如果文本没有超过宽度限制
+            if (current_width <= max_width) {
+                // 使用整行（到\n或文本末尾）
                 split_pos = line_end;
             }
             // 如果文本超过宽度限制，需要硬换行
-            else if (current_width > max_width) {
+            else {
                 // 找到最大的不超过宽度的位置
                 split_pos = current_pos;
                 while (split_pos < line_end) {
@@ -1108,10 +1105,6 @@ int text_component_get_position_from_point(TextComponent* component, Point pt, L
                 if (split_pos > current_pos) {
                     split_pos--;
                 }
-            }
-            // 如果到达文本末尾
-            else {
-                split_pos = line_end;
             }
             
             // 确保split_pos >= current_pos，防止负长度
@@ -1422,16 +1415,13 @@ void text_component_render(Layer* layer) {
                     // 确定当前视觉行的结束位置
                     int split_pos = current_pos;
                     
-                    // 如果遇到换行符，直接在换行符处结束当前行
-                    if (line_end < text_len && text[line_end] == '\n') {
-                        split_pos = line_end;
-                    }
-                    // 如果文本没有超过宽度限制，使用整行
-                    else if (current_width <= max_width && line_end >= text_len) {
+                    // 如果文本没有超过宽度限制
+                    if (current_width <= max_width) {
+                        // 使用整行（到\n或文本末尾）
                         split_pos = line_end;
                     }
                     // 如果文本超过宽度限制，需要硬换行
-                    else if (current_width > max_width) {
+                    else {
                         // 找到最大的不超过宽度的位置
                         split_pos = current_pos;
                         while (split_pos < line_end) {
@@ -1460,10 +1450,6 @@ void text_component_render(Layer* layer) {
                         if (split_pos > current_pos) {
                             split_pos--;
                         }
-                    }
-                    // 如果到达文本末尾
-                    else {
-                        split_pos = line_end;
                     }
                     
                     // 确保split_pos >= current_pos，防止负长度
@@ -1679,16 +1665,13 @@ void text_component_render(Layer* layer) {
                 // 确定当前行的结束位置
                 int split_pos = current_pos;
                 
-                // 如果遇到换行符，直接在换行符处结束当前行
-                if (line_end < strlen(text) && text[line_end] == '\n') {
-                    split_pos = line_end;
-                }
-                // 如果文本没有超过宽度限制，使用整行
-                else if (current_width <= max_width && line_end >= strlen(text)) {
+                // 如果文本没有超过宽度限制
+                if (current_width <= max_width) {
+                    // 使用整行（到\n或文本末尾）
                     split_pos = line_end;
                 }
                 // 如果文本超过宽度限制，需要硬换行
-                else if (current_width > max_width) {
+                else {
                     // 找到最大的不超过宽度的位置
                     split_pos = current_pos;
                     while (split_pos < line_end) {
@@ -1717,10 +1700,6 @@ void text_component_render(Layer* layer) {
                     if (split_pos > current_pos) {
                         split_pos--;
                     }
-                }
-                // 如果到达文本末尾
-                else {
-                    split_pos = line_end;
                 }
                 
                 // 渲染当前行
@@ -1892,11 +1871,13 @@ void text_component_render(Layer* layer) {
                 // 确定当前视觉行的结束位置
                 int split_pos = current_pos;
                 
-                if (line_end < text_len && text[line_end] == '\n') {
+                // 如果文本没有超过宽度限制
+                if (current_width <= max_width) {
+                    // 使用整行（到\n或文本末尾）
                     split_pos = line_end;
-                } else if (current_width <= max_width && line_end >= text_len) {
-                    split_pos = line_end;
-                } else if (current_width > max_width) {
+                }
+                // 如果文本超过宽度限制，需要硬换行
+                else {
                     split_pos = current_pos;
                     while (split_pos < line_end) {
                         char* test_line = (char*)malloc(split_pos - current_pos + 1);
@@ -1924,8 +1905,6 @@ void text_component_render(Layer* layer) {
                     if (split_pos > current_pos) {
                         split_pos--;
                     }
-                } else {
-                    split_pos = line_end;
                 }
                 
                 if (split_pos < current_pos) {
