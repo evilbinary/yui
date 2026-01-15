@@ -1237,23 +1237,7 @@ void text_component_render(Layer* layer) {
         Color separator_color = {51, 51, 51, 255};
         backend_render_fill_rect(&separator_line, separator_color);
         
-        // 计算文本行数
-        char* text = component->layer->text;
-        int line_count = 1;
-        if (strlen(text) > 0) {
-            for (int i = 0; i < strlen(text); i++) {
-                if (text[i] == '\n') {
-                    line_count++;
-                }
-            }
-        }
-        
-        // 确保至少有1行
-        if (line_count < 1) {
-            line_count = 1;
-        }
-        
-        // 获取行高用于行号定位
+        // 获取行高
         int line_height = component->line_height;
         Texture* temp_tex = backend_render_texture(layer->font->default_font, "X", component->line_number_color);
         if (temp_tex) {
@@ -1263,37 +1247,122 @@ void text_component_render(Layer* layer) {
             backend_render_text_destroy(temp_tex);
         }
         
-        // 计算可见行范围
-        int first_visible_line = component->scroll_y / (line_height + 2);
-        int last_visible_line = (component->scroll_y + layer->rect.h - 10) / (line_height + 2) + 1;
-        if (last_visible_line > line_count) {
-            last_visible_line = line_count;
-        }
+        // 遍历文本，使用与渲染相同的算法，为每个逻辑行渲染行号
+        char* text = component->layer->text;
+        int text_len = strlen(text);
+        int current_pos = 0;
+        int visual_line = 0;  // 视觉行号
+        int logical_line = 1;  // 逻辑行号（从1开始）
+        // 计算文本内容区域的宽度（减去内边距和行号区域）
+        int max_width = layer->rect.w - (component->show_line_numbers ? component->line_number_width : 0) - 15;
         
-        // 渲染可见行号
-        for (int i = first_visible_line; i < last_visible_line && i < line_count; i++) {
-            char line_num_str[16];
-            snprintf(line_num_str, sizeof(line_num_str), "%d", i + 1);
+        while (current_pos < text_len) {
+            // 记录当前逻辑行的起始视觉行
+            int logical_line_visual_start = visual_line;
             
-            Texture* line_num_tex = backend_render_texture(layer->font->default_font, line_num_str, component->line_number_color);
-            if (line_num_tex) {
-                int num_width, num_height;
-                backend_query_texture(line_num_tex, NULL, NULL, &num_width, &num_height);
-                
-                Rect line_num_rect = {
-                    line_number_bg.x + line_number_bg.w - num_width / scale - 5,  // 右对齐，留5像素边距
-                    line_number_bg.y + (i - first_visible_line) * (line_height + 2),
-                    num_width / scale,
-                    num_height / scale
-                };
-                
-                // 只有当行号在可见区域内时才渲染
-                if (line_num_rect.y + line_num_rect.h > line_number_bg.y && line_num_rect.y < line_number_bg.y + line_number_bg.h) {
-                    backend_render_text_copy(line_num_tex, NULL, &line_num_rect);
+            // 查找当前逻辑行的结束位置
+            int line_end = current_pos;
+            while (line_end < text_len) {
+                if (text[line_end] == '\n') {
+                    break;
+                }
+                line_end++;
+            }
+            
+            // 处理这个逻辑行的所有视觉行（包括自动换行产生的）
+            int logical_line_pos = current_pos;
+            while (logical_line_pos < line_end) {
+                // 计算剩余文本的宽度
+                int current_width = 0;
+                char* temp_line = (char*)malloc(line_end - logical_line_pos + 1);
+                if (temp_line) {
+                    strncpy(temp_line, text + logical_line_pos, line_end - logical_line_pos);
+                    temp_line[line_end - logical_line_pos] = '\0';
+                    
+                    Texture* line_tex = backend_render_texture(layer->font->default_font, temp_line, layer->color);
+                    if (line_tex) {
+                        int line_width, line_height_ignore;
+                        backend_query_texture(line_tex, NULL, NULL, &line_width, &line_height_ignore);
+                        current_width = line_width / scale;
+                        backend_render_text_destroy(line_tex);
+                    }
+                    
+                    free(temp_line);
                 }
                 
-                backend_render_text_destroy(line_num_tex);
+                // 确定当前视觉行的结束位置
+                int split_pos = logical_line_pos;
+                if (current_width <= max_width) {
+                    split_pos = line_end;
+                } else {
+                    split_pos = logical_line_pos;
+                    while (split_pos < line_end) {
+                        char* test_line = (char*)malloc(split_pos - logical_line_pos + 1);
+                        if (test_line) {
+                            strncpy(test_line, text + logical_line_pos, split_pos - logical_line_pos);
+                            test_line[split_pos - logical_line_pos] = '\0';
+                            
+                            Texture* test_tex = backend_render_texture(layer->font->default_font, test_line, layer->color);
+                            if (test_tex) {
+                                int test_width, test_height;
+                                backend_query_texture(test_tex, NULL, NULL, &test_width, &test_height);
+                                if (test_width / scale > max_width) {
+                                    backend_render_text_destroy(test_tex);
+                                    free(test_line);
+                                    break;
+                                }
+                                backend_render_text_destroy(test_tex);
+                            }
+                            
+                            free(test_line);
+                        }
+                        split_pos++;
+                    } 
+                    
+                    if (split_pos > logical_line_pos) {
+                        split_pos--;
+                    }
+                }
+                
+                if (split_pos < logical_line_pos) {
+                    split_pos = logical_line_pos;
+                }
+                
+                logical_line_pos = split_pos;
+                visual_line++;
             }
+            
+            // 为这个逻辑行渲染行号（只在第一个视觉行的位置）
+            int line_y = line_number_bg.y + logical_line_visual_start * (line_height + 2) - component->scroll_y;
+            
+            // 检查是否在可见范围内
+            if (line_y + line_height > line_number_bg.y && line_y < line_number_bg.y + line_number_bg.h) {
+                char line_num_str[16];
+                snprintf(line_num_str, sizeof(line_num_str), "%d", logical_line);
+                
+                Texture* line_num_tex = backend_render_texture(layer->font->default_font, line_num_str, component->line_number_color);
+                if (line_num_tex) {
+                    int num_width, num_height;
+                    backend_query_texture(line_num_tex, NULL, NULL, &num_width, &num_height);
+                    
+                    Rect line_num_rect = {
+                        line_number_bg.x + line_number_bg.w - num_width / scale - 5,
+                        line_y,
+                        num_width / scale,
+                        num_height / scale
+                    };
+                    
+                    backend_render_text_copy(line_num_tex, NULL, &line_num_rect);
+                    backend_render_text_destroy(line_num_tex);
+                }
+            }
+            
+            // 移动到下一个逻辑行
+            current_pos = line_end;
+            if (current_pos < text_len && text[current_pos] == '\n') {
+                current_pos++;
+            }
+            logical_line++;
         }
     }
     

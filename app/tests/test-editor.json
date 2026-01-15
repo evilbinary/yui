@@ -60,6 +60,8 @@
                 {
                     "id": "textArea",
                     "type": "Text",
+                    "showLineNumbers": true,
+                    "lineNumberWidth": 40,
                     "placeholder": "在此输入多行文本...",
                     "multiline": true,
                     "editable": true,
