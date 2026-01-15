@@ -1,6 +1,8 @@
 #include "layout.h"
 #include "util.h"
 
+#define printf
+
 static LayoutManager* clone_layout_manager(const LayoutManager* src) {
     if (!src) {
         return NULL;

@@ -28,7 +28,8 @@ function initJsonEditor() {
     
 
     // 格式化并设置到编辑器
-    var formattedJson = JSON.stringify(defaultJson, null, 4);
+    // 注意: mquickjs 的 JSON.stringify 不支持第三个参数（缩进）
+    var formattedJson = JSON.stringify(defaultJson);
     YUI.setText("jsonEditor", formattedJson);
 
     // 初始验证
@@ -88,7 +89,8 @@ function formatJson() {
     }
     
     // 格式化为4空格缩进的JSON字符串
-    var formattedJson = JSON.stringify(json, null, 4);
+    // mquickjs 的 JSON.stringify 不支持缩进参数
+    var formattedJson = JSON.stringify(json);
     
     // 更新编辑器文本
     YUI.setText("jsonEditor", formattedJson);

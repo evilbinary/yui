@@ -45,46 +45,37 @@
                     "children": [
                         {
                             "type": "Label",
-                            "text": "编辑器",
+                            "label": "JSON编辑器",
+                            "text": "JSON编辑器",
+                            "size": [120, 20],
                             "style": {
                                 "color": "#ffffff",
-                                "fontSize": 16,
-                                "fontWeight": "bold"
+                                "fontSize": 14
                             }
                         },
                         {
-                            "type": "View",
-                            "size": [400, 40],
-                            "layout": {
-                                "type": "horizontal",
-                                "spacing": 5
-                            },
-                            "children": [
-                                {
-                                    "id": "validateBtn",
-                                    "type": "Button",
-                                    "text": "验证",
-                                    "size": [60, 25],
-                                    "style": {
-                                        "bgColor": "#4caf50",
-                                        "color": "#ffffff",
-                                        "fontSize": 12,
-                                        "borderRadius": 4
-                                    }
-                                },
-                                {
-                                    "id": "formatBtn",
-                                    "type": "Button",
-                                    "text": "格式化",
-                                    "size": [60, 25],
-                                    "style": {
-                                        "bgColor": "#2196f3",
-                                        "color": "#ffffff",
-                                        "fontSize": 12,
-                                        "borderRadius": 4
-                                    }
-                                }
-                            ]
+                            "id": "validateBtn",
+                            "type": "Button",
+                            "text": "验证",
+                            "size": [60, 25],
+                            "style": {
+                                "bgColor": "#4caf50",
+                                "color": "#ffffff",
+                                "fontSize": 12,
+                                "borderRadius": 4
+                            }
+                        },
+                        {
+                            "id": "formatBtn",
+                            "type": "Button",
+                            "text": "格式化",
+                            "size": [70, 25],
+                            "style": {
+                                "bgColor": "#2196f3",
+                                "color": "#ffffff",
+                                "fontSize": 12,
+                                "borderRadius": 4
+                            }
                         }
                     ]
                 },
