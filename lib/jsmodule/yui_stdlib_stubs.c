@@ -36,3 +36,8 @@ void layer_set_text(Layer* layer, const char* text) {
 const char* layer_get_text(const Layer* layer) {
     return "";
 }
+
+// JSON 更新存根
+int yui_update(Layer* root, const char* update_json) {
+    return -1;
+}

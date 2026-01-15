@@ -1,0 +1,138 @@
+{
+  "id": "root",
+  "type": "View",
+  "size": [800, 600],
+  "style": {
+    "bgColor": "#282c34"
+  },
+  "js": "test-json-update.js",
+  "events": {
+    "onLoad": "onPageLoad"
+  },
+  "layout": {
+    "type": "vertical",
+    "spacing": 20,
+    "padding": [20, 20, 20, 20]
+  },
+  "children": [
+    {
+      "id": "header",
+      "type": "Label",
+      "text": "JSON 增量更新测试",
+      "size": [760, 40],
+      "style": {
+        "color": "#ffffff",
+        "bgColor": "#61dafb",
+        "fontSize": 20,
+        "borderRadius": 8
+      }
+    },
+    {
+      "id": "statusLabel",
+      "type": "Label",
+      "text": "状态：就绪",
+      "size": [760, 30],
+      "style": {
+        "color": "#ffffff",
+        "fontSize": 14
+      }
+    },
+    {
+      "id": "updateBtn1",
+      "type": "Button",
+      "text": "更新单个属性",
+      "size": [200, 40],
+      "style": {
+        "bgColor": "#4caf50",
+        "color": "#ffffff",
+        "fontSize": 14,
+        "borderRadius": 4
+      },
+      "events": {
+        "onClick": "testSingleUpdate"
+      }
+    },
+    {
+      "id": "updateBtn2",
+      "type": "Button",
+      "text": "批量更新",
+      "size": [200, 40],
+      "style": {
+        "bgColor": "#2196f3",
+        "color": "#ffffff",
+        "fontSize": 14,
+        "borderRadius": 4
+      },
+      "events": {
+        "onClick": "testBatchUpdate"
+      }
+    },
+    {
+      "id": "updateBtn3",
+      "type": "Button",
+      "text": "删除元素（将自己隐藏）",
+      "size": [200, 40],
+      "style": {
+        "bgColor": "#ff5722",
+        "color": "#ffffff",
+        "fontSize": 14,
+        "borderRadius": 4
+      },
+      "events": {
+        "onClick": "testDelete"
+      }
+    },
+    {
+      "id": "testContainer",
+      "type": "View",
+      "size": [760, 200],
+      "style": {
+        "bgColor": "#1e1e1e",
+        "borderRadius": 8
+      },
+      "layout": {
+        "type": "vertical",
+        "spacing": 10,
+        "padding": [10, 10, 10, 10]
+      },
+      "children": [
+        {
+          "id": "item1",
+          "type": "Label",
+          "text": "项目 1",
+          "size": [740, 30],
+          "style": {
+            "color": "#ffffff",
+            "bgColor": "#333333",
+            "fontSize": 14,
+            "borderRadius": 4
+          }
+        },
+        {
+          "id": "item2",
+          "type": "Label",
+          "text": "项目 2",
+          "size": [740, 30],
+          "style": {
+            "color": "#ffffff",
+            "bgColor": "#333333",
+            "fontSize": 14,
+            "borderRadius": 4
+          }
+        },
+        {
+          "id": "item3",
+          "type": "Label",
+          "text": "项目 3",
+          "size": [740, 30],
+          "style": {
+            "color": "#ffffff",
+            "bgColor": "#333333",
+            "fontSize": 14,
+            "borderRadius": 4
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -39,7 +39,7 @@ add_files(
     'js_module.c',
     'js_common.c',
     'yui_stdlib.c',
-    # 'yui_stdlib_link.c',  # 不需要，yui_stdlib.c 已经包含了所有需要的东西
+    'yui_stdlib_link.c',  # 不需要，yui_stdlib.c 已经包含了所有需要的东西
     # 'js_socket.c'  # 不需要，已经在 yui_stdlib.c 中通过 #include 包含了
 ) 
 

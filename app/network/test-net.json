@@ -1,6 +1,6 @@
 {
     // "js": "test-net.js"
-    "js": "test-http.js"
+    // "js": "test-http.js"
     // "js":"test-http-embedded-ip.js"
-    // "js":"test-http-embedded.js"
+    "js":"test-http-embedded.js"
 }
