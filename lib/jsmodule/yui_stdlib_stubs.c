@@ -4,16 +4,16 @@
 
 #include "../../src/layer.h"
 
-// Windows 平台需要 WinMain 包装
-#if defined(_WIN32) || defined(WIN32)
-#include <windows.h>
-int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
-    extern int __argc;
-    extern char** __argv;
-    extern int main(int argc, char **argv);
-    return main(__argc, __argv);
-}
-#endif
+// // Windows 平台需要 WinMain 包装
+// #if defined(_WIN32) || defined(WIN32)
+// #include <windows.h>
+// int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+//     extern int __argc;
+//     extern char** __argv;
+//     extern int main(int argc, char **argv);
+//     return main(__argc, __argv);
+// }
+// #endif
 
 // 全局变量存根
 Layer* g_layer_root = NULL;
