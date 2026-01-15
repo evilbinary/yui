@@ -330,6 +330,13 @@ static void scan_and_register_events(cJSON* json)
 {
     if (!json) return;
 
+    // 获取当前 layer 的 ID
+    const char* layer_id = NULL;
+    cJSON* id_obj = cJSON_GetObjectItem(json, "id");
+    if (id_obj && cJSON_IsString(id_obj)) {
+        layer_id = id_obj->valuestring;
+    }
+
     // 检查 "events" 对象
     cJSON* events_obj = cJSON_GetObjectItem(json, "events");
     if (events_obj && cJSON_IsObject(events_obj)) {
@@ -337,8 +344,16 @@ static void scan_and_register_events(cJSON* json)
         cJSON* event = events_obj->child;
         while (event) {
             if (cJSON_IsString(event)) {
+                // 构建完整的事件名称：layerId.eventName
+                char full_event_name[256];
+                if (layer_id && layer_id[0] != '\0') {
+                    snprintf(full_event_name, sizeof(full_event_name), "%s.%s", layer_id, event->string);
+                } else {
+                    strncpy(full_event_name, event->string, sizeof(full_event_name) - 1);
+                    full_event_name[sizeof(full_event_name) - 1] = '\0';
+                }
                 // 注册为 JS 事件（存储函数名）
-                register_js_event_mapping(event->string, event->valuestring);
+                register_js_event_mapping(full_event_name, event->valuestring);
             }
             event = event->next;
         }
@@ -351,8 +366,16 @@ static void scan_and_register_events(cJSON* json)
         cJSON* event = event_obj->child;
         while (event) {
             if (cJSON_IsString(event)) {
+                // 构建完整的事件名称：layerId.eventName
+                char full_event_name[256];
+                if (layer_id && layer_id[0] != '\0') {
+                    snprintf(full_event_name, sizeof(full_event_name), "%s.%s", layer_id, event->string);
+                } else {
+                    strncpy(full_event_name, event->string, sizeof(full_event_name) - 1);
+                    full_event_name[sizeof(full_event_name) - 1] = '\0';
+                }
                 // 注册为 JS 事件（存储函数名）
-                register_js_event_mapping(event->string, event->valuestring);
+                register_js_event_mapping(full_event_name, event->valuestring);
             }
             event = event->next;
         }
