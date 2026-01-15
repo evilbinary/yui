@@ -1271,65 +1271,70 @@ void text_component_render(Layer* layer) {
             
             // 处理这个逻辑行的所有视觉行（包括自动换行产生的）
             int logical_line_pos = current_pos;
-            while (logical_line_pos < line_end) {
-                // 计算剩余文本的宽度
-                int current_width = 0;
-                char* temp_line = (char*)malloc(line_end - logical_line_pos + 1);
-                if (temp_line) {
-                    strncpy(temp_line, text + logical_line_pos, line_end - logical_line_pos);
-                    temp_line[line_end - logical_line_pos] = '\0';
-                    
-                    Texture* line_tex = backend_render_texture(layer->font->default_font, temp_line, layer->color);
-                    if (line_tex) {
-                        int line_width, line_height_ignore;
-                        backend_query_texture(line_tex, NULL, NULL, &line_width, &line_height_ignore);
-                        current_width = line_width / scale;
-                        backend_render_text_destroy(line_tex);
-                    }
-                    
-                    free(temp_line);
-                }
-                
-                // 确定当前视觉行的结束位置
-                int split_pos = logical_line_pos;
-                if (current_width <= max_width) {
-                    split_pos = line_end;
-                } else {
-                    split_pos = logical_line_pos;
-                    while (split_pos < line_end) {
-                        char* test_line = (char*)malloc(split_pos - logical_line_pos + 1);
-                        if (test_line) {
-                            strncpy(test_line, text + logical_line_pos, split_pos - logical_line_pos);
-                            test_line[split_pos - logical_line_pos] = '\0';
-                            
-                            Texture* test_tex = backend_render_texture(layer->font->default_font, test_line, layer->color);
-                            if (test_tex) {
-                                int test_width, test_height;
-                                backend_query_texture(test_tex, NULL, NULL, &test_width, &test_height);
-                                if (test_width / scale > max_width) {
-                                    backend_render_text_destroy(test_tex);
-                                    free(test_line);
-                                    break;
-                                }
-                                backend_render_text_destroy(test_tex);
-                            }
-                            
-                            free(test_line);
-                        }
-                        split_pos++;
-                    } 
-                    
-                    if (split_pos > logical_line_pos) {
-                        split_pos--;
-                    }
-                }
-                
-                if (split_pos < logical_line_pos) {
-                    split_pos = logical_line_pos;
-                }
-                
-                logical_line_pos = split_pos;
+            if (logical_line_pos >= line_end) {
+                // 空行，也占一个视觉行
                 visual_line++;
+            } else {
+                while (logical_line_pos < line_end) {
+                    // 计算剩余文本的宽度
+                    int current_width = 0;
+                    char* temp_line = (char*)malloc(line_end - logical_line_pos + 1);
+                    if (temp_line) {
+                        strncpy(temp_line, text + logical_line_pos, line_end - logical_line_pos);
+                        temp_line[line_end - logical_line_pos] = '\0';
+                        
+                        Texture* line_tex = backend_render_texture(layer->font->default_font, temp_line, layer->color);
+                        if (line_tex) {
+                            int line_width, line_height_ignore;
+                            backend_query_texture(line_tex, NULL, NULL, &line_width, &line_height_ignore);
+                            current_width = line_width / scale;
+                            backend_render_text_destroy(line_tex);
+                        }
+                        
+                        free(temp_line);
+                    }
+                    
+                    // 确定当前视觉行的结束位置
+                    int split_pos = logical_line_pos;
+                    if (current_width <= max_width) {
+                        split_pos = line_end;
+                    } else {
+                        split_pos = logical_line_pos;
+                        while (split_pos < line_end) {
+                            char* test_line = (char*)malloc(split_pos - logical_line_pos + 1);
+                            if (test_line) {
+                                strncpy(test_line, text + logical_line_pos, split_pos - logical_line_pos);
+                                test_line[split_pos - logical_line_pos] = '\0';
+                                
+                                Texture* test_tex = backend_render_texture(layer->font->default_font, test_line, layer->color);
+                                if (test_tex) {
+                                    int test_width, test_height;
+                                    backend_query_texture(test_tex, NULL, NULL, &test_width, &test_height);
+                                    if (test_width / scale > max_width) {
+                                        backend_render_text_destroy(test_tex);
+                                        free(test_line);
+                                        break;
+                                    }
+                                    backend_render_text_destroy(test_tex);
+                                }
+                                
+                                free(test_line);
+                            }
+                            split_pos++;
+                        } 
+                        
+                        if (split_pos > logical_line_pos) {
+                            split_pos--;
+                        }
+                    }
+                    
+                    if (split_pos < logical_line_pos) {
+                        split_pos = logical_line_pos;
+                    }
+                    
+                    logical_line_pos = split_pos;
+                    visual_line++;
+                }
             }
             
             // 为这个逻辑行渲染行号（只在第一个视觉行的位置）
