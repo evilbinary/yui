@@ -5,7 +5,7 @@
     "style": {
         "bgColor": "#f5f5f5"
     },
-    "js": "json-editor.js",
+    "js": ["api-client.js", "json-editor.js"],
     "layout": {
         "type": "horizontal",
         "spacing": 5

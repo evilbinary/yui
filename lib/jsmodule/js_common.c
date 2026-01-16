@@ -407,14 +407,34 @@ static int load_js_recursive(cJSON* json, const char* json_dir)
 
     // 检查当前节点是否有 "js" 字段
     cJSON* js_file = cJSON_GetObjectItem(json, "js");
-    if (js_file && cJSON_IsString(js_file)) {
-        const char* js_path = js_file->valuestring;
-        char full_path[MAX_PATH];
-        build_js_path(js_path, json_dir, full_path, MAX_PATH);
+    if (js_file) {
+        // 支持字符串格式（单个JS文件）
+        if (cJSON_IsString(js_file)) {
+            const char* js_path = js_file->valuestring;
+            char full_path[MAX_PATH];
+            build_js_path(js_path, json_dir, full_path, MAX_PATH);
 
-        printf("JS: Loading JS file from config: %s -> %s\n", js_path, full_path);
-        if (js_module_load_file(full_path) == 0) {
-            loaded_count++;
+            printf("JS: Loading JS file from config: %s -> %s\n", js_path, full_path);
+            if (js_module_load_file(full_path) == 0) {
+                loaded_count++;
+            }
+        }
+        // 支持数组格式（多个JS文件）
+        else if (cJSON_IsArray(js_file)) {
+            int array_size = cJSON_GetArraySize(js_file);
+            for (int i = 0; i < array_size; i++) {
+                cJSON* js_item = cJSON_GetArrayItem(js_file, i);
+                if (js_item && cJSON_IsString(js_item)) {
+                    const char* js_path = js_item->valuestring;
+                    char full_path[MAX_PATH];
+                    build_js_path(js_path, json_dir, full_path, MAX_PATH);
+
+                    printf("JS: Loading JS files from config[%d]: %s -> %s\n", i, js_path, full_path);
+                    if (js_module_load_file(full_path) == 0) {
+                        loaded_count++;
+                    }
+                }
+            }
         }
     }
 
