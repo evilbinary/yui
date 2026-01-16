@@ -126,7 +126,7 @@
                             "type": "Text",
                             "text": "",
                             "placeholder": "输入消息...",
-                            "size": [450, 40],
+                            "size": [320, 40],
                             "style": {
                                 "bgColor": "#ffffff",
                                 "color": "#495057",
@@ -140,10 +140,28 @@
                             "multiline": false
                         },
                         {
+                            "id": "updateModeSelect",
+                            "type": "Select",
+                            "text": "增量更新",
+                            "size": [110, 40],
+                            "style": {
+                                "bgColor": "#ffffff",
+                                "color": "#495057",
+                                "fontSize": 14,
+                                "borderWidth": 1,
+                                "borderColor": "#ced4da",
+                                "borderRadius": 4
+                            },
+                            "options": [
+                                {"label": "增量更新", "value": "incremental"},
+                                {"label": "全量更新", "value": "full"}
+                            ]
+                        },
+                        {
                             "id": "sendBtn",
                             "type": "Button",
-                            "text": "生成",
-                            "size": [100, 40],
+                            "text": "发送",
+                            "size": [80, 40],
                             "style": {
                                 "bgColor": "#007bff",
                                 "color": "#ffffff",
@@ -244,6 +262,7 @@
         "validateBtn.onClick": "@validateJson",
         "formatBtn.onClick": "@formatJson",
         "refreshBtn.onClick": "@refreshPreview",
-        "sendBtn.onClick": "@sendMessage"
+        "sendBtn.onClick": "@sendMessage",
+        "updateModeSelect.onChange": "@onUpdateModeChange"
     }
 }

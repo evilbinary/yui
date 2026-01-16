@@ -4,7 +4,9 @@
 // 编辑器状态
 var editorState = {
     jsonContent: null,
-    isValid: false
+    isValid: false,
+    updateMode: 'incremental',  // 默认更新模式：incremental 或 full
+    messageHistory: []
 };
 
 // 初始化JSON编辑器 - onLoad 事件触发
@@ -55,6 +57,13 @@ function onJsonChange() {
     if (editorState.isValid && editorState.jsonContent) {
         refreshPreviewInternal(editorState.jsonContent);
     }
+}
+
+// 更新模式变更时触发 - onChange 事件
+function onUpdateModeChange() {
+    var selectedValue = YUI.getText("updateModeSelect");
+    editorState.updateMode = selectedValue;
+    YUI.log("onUpdateModeChange: Update mode changed to " + selectedValue);
 }
 
 // 验证JSON - 验证按钮 onClick 事件
@@ -243,17 +252,104 @@ function sendMessage() {
         return;
     }
     
-    // 这里可以添加实际的发送逻辑
-    // 例如：发送到服务器、添加到消息历史等
-    YUI.log("sendMessage: Message sent successfully!");
+    // 获取更新模式（可以从配置或用户选择中获取）
+    var updateMode = editorState.updateMode || 'incremental'; // 默认为增量更新
     
-    // 显示发送成功消息
-    var currentPreviewText = YUI.getText("previewLabel");
-    var newPreviewText = currentPreviewText + "\n\n===== 发送的消息 =====\n" + messageText + "\n===== 对应的JSON =====\n" + JSON.stringify(json, null, 4);
-    YUI.setText("previewLabel", newPreviewText);
+    // 显示发送中状态
+    YUI.setText("previewLabel", "正在发送消息到服务器...\n\n消息内容: " + messageText + "\n更新模式: " + updateMode);
+    
+    // 根据更新模式调用相应的API
+    if (updateMode === 'incremental') {
+        // 使用增量更新模式
+        APIClient.sendMessageIncremental(messageText, json, function(response) {
+            handleApiResponse(response, messageText, updateMode);
+        });
+    } else if (updateMode === 'full') {
+        // 使用全量更新模式
+        APIClient.sendMessageFull(messageText, json, function(response) {
+            handleApiResponse(response, messageText, updateMode);
+        });
+    }
     
     // 清空输入框
     YUI.setText("messageInput", "");
     
-    YUI.log("sendMessage: Message processed!");
+    YUI.log("sendMessage: Message sent to API!");
+}
+
+// 处理API响应
+function handleApiResponse(response, messageText, updateMode) {
+    if (response.status === 'success') {
+        YUI.log("handleApiResponse: API response successful");
+        
+        if (updateMode === 'incremental') {
+            // 处理增量更新响应
+            if (response.updates && response.updates.length > 0) {
+                // 将更新转换为 YUI.update() 格式
+                var updateString = JSON.stringify(response.updates);
+                YUI.update(updateString);
+                
+                // 显示详细信息
+                var details = "✅ 增量更新成功！\n\n";
+                details += "消息ID: " + response.message_id + "\n";
+                details += "时间戳: " + response.timestamp + "\n\n";
+                details += "更新详情:\n";
+                response.updates.forEach(function(update, index) {
+                    details += (index + 1) + ". " + update.target + ": " + JSON.stringify(update.change) + "\n";
+                });
+                
+                YUI.setText("previewLabel", details);
+                YUI.log("handleApiResponse: Incremental updates applied: " + updateString);
+            } else {
+                YUI.setText("previewLabel", "✅ 消息已发送，但没有收到UI更新\n\n消息: " + messageText);
+            }
+        } else if (updateMode === 'full') {
+            // 处理全量更新响应
+            if (response.ui_state) {
+                // 将完整状态转换为 YUI.update() 格式
+                var fullUpdate = [];
+                for (var key in response.ui_state) {
+                    fullUpdate.push({
+                        "target": key,
+                        "change": response.ui_state[key]
+                    });
+                }
+                
+                var updateString = JSON.stringify(fullUpdate);
+                YUI.update(updateString);
+                
+                // 显示详细信息
+                var details = "✅ 全量更新成功！\n\n";
+                details += "消息ID: " + response.message_id + "\n";
+                details += "时间戳: " + response.timestamp + "\n";
+                details += "变更数量: " + (response.changes ? response.changes.length : 0) + "\n\n";
+                details += "完整状态:\n" + JSON.stringify(response.ui_state, null, 2);
+                
+                YUI.setText("previewLabel", details);
+                YUI.log("handleApiResponse: Full state update applied");
+            }
+        }
+        
+        // 记录到历史（可选）
+        var historyEntry = {
+            message: messageText,
+            mode: updateMode,
+            timestamp: new Date().toLocaleString(),
+            response: response
+        };
+        
+        if (!editorState.messageHistory) {
+            editorState.messageHistory = [];
+        }
+        editorState.messageHistory.push(historyEntry);
+        
+    } else {
+        // 处理错误
+        var errorMsg = "❌ API 请求失败\n\n";
+        errorMsg += "错误信息: " + (response.error || 'Unknown error') + "\n";
+        errorMsg += "消息内容: " + messageText;
+        
+        YUI.setText("previewLabel", errorMsg);
+        YUI.log("handleApiResponse: API request failed - " + (response.error || 'Unknown error'));
+    }
 }
