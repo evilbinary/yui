@@ -243,7 +243,7 @@ def generate_full_ui_state(message, json_config):
     base_ui = {
         "id": "root",
         "type": "View",
-        "size": [1200, 800],
+        "size": [400, 600], 
         "style": {
             "bgColor": "#f5f5f5"
         },
@@ -252,7 +252,7 @@ def generate_full_ui_state(message, json_config):
                 "id": "statusLabel",
                 "type": "Label",
                 "text": "状态：准备就绪",
-                "size": [1160, 40],
+                "size": [400, 40],
                 "position": [20, 20],
                 "style": {
                     "color": "#333333",
@@ -264,7 +264,7 @@ def generate_full_ui_state(message, json_config):
                 "id": "item1",
                 "type": "View",
                 "text": "项目 1",
-                "size": [1160, 60],
+                "size": [400, 60],
                 "position": [20, 80],
                 "style": {
                     "bgColor": "#f0f0f0",
@@ -276,7 +276,7 @@ def generate_full_ui_state(message, json_config):
                 "id": "item2",
                 "type": "View",
                 "text": "项目 2",
-                "size": [1160, 60],
+                "size": [400, 60],
                 "position": [20, 150],
                 "style": {
                     "bgColor": "#f0f0f0",
@@ -288,7 +288,7 @@ def generate_full_ui_state(message, json_config):
                 "id": "item3",
                 "type": "View",
                 "text": "项目 3",
-                "size": [1160, 60],
+                "size": [400, 60],
                 "position": [20, 220],
                 "style": {
                     "bgColor": "#f0f0f0",

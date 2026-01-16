@@ -109,7 +109,7 @@ function formatJson() {
     editorState.isValid = true;
     
     // 更新预览
-    refreshPreviewInternal(formattedJson);
+    refreshPreviewInternal(json);
     
     YUI.log("formatJson: JSON formatted successfully!");
 }
@@ -320,7 +320,7 @@ function handleApiResponse(response, messageText, updateMode) {
                 YUI.log("handleApiResponse: Full UI update applied", details);
                 
                 YUI.setText("jsonEditor", JSON.stringify(response, null, 2));
-
+                refreshPreviewInternal(response);
                 // 这里应该调用 YUI.render 或其他函数来渲染完整的 UI
                 // 例如：YUI.renderFromJson(response);
             } else {
