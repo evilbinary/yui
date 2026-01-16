@@ -280,10 +280,12 @@ static var_t* mario_update(vm_t* vm, var_t* env, void* data)
 
 /* ====================== 初始化和清理 ====================== */
 extern bool compile(bytecode_t *bc, const char* input);
+extern bool _m_debug;  // Mario 调试标志
 
 static void out(const char* str) {
     write(1, str, strlen(str));
 }
+
 // 初始化 JS 引擎（使用 Mario）
 int js_module_init(void)
 {
@@ -291,6 +293,10 @@ int js_module_init(void)
     _malloc = malloc;
     _free = free;
     _out_func = out;
+    
+    // 启用 Mario 调试模式以显示编译错误的行号和列号
+    _m_debug = true;
+    
     // 创建 Mario 虚拟机
     g_vm = vm_new(compile);
     if (!g_vm) {
@@ -335,6 +341,24 @@ static void vm_load_basic_classes(vm_t* vm) {
 	vm->var_String = vm_load_var(vm, "String", false);
 	vm->var_Array = vm_load_var(vm, "Array", false);
 	vm->var_Number = vm_load_var(vm, "Number", false);
+}
+
+// 打印 Mario 引擎错误信息
+// 注意：Mario 编译器会自动输出详细的语法错误信息（包括行号和列号）
+// 这里只需要补充引擎限制说明
+static void print_mario_error(const char* filename, const char* operation)
+{
+    printf("\nJS(Mario): Failed to %s file: %s\n", operation, filename);
+    printf("--- Mario Engine Limitations (ES3-like) ---\n");
+    printf("  Unsupported features:\n");
+    printf("    - 'typeof' operator\n");
+    printf("    - 'const' and 'let' (use 'var' only)\n");
+    printf("    - Template strings (use string concatenation)\n");
+    printf("    - Arrow functions (use 'function' keyword)\n");
+    printf("    - Spread operator, destructuring\n");
+    printf("    - Most ES5/ES6 features\n");
+    printf("  Note: See error message above for line and column numbers\n");
+    printf("-------------------------------------------\n\n");
 }
 
 extern void reg_basic_natives(vm_t* vm);
@@ -384,14 +408,16 @@ int js_module_load_file(const char* filename)
     }
 
     // 使用 Mario 加载并运行代码
+    printf("JS(Mario): Calling vm_load_run with %d bytes...\n", len);
     bool success = vm_load_run(g_vm, (const char*)buf);
     free(buf);
 
     if (!success) {
-        fprintf(stderr, "JS(Mario): Error executing %s\n", filename);
+        print_mario_error(filename, "loading");
         return -1;
     }
 
+    printf("JS(Mario): Successfully loaded %s\n", filename);
     return 0;
 }
 
@@ -428,6 +454,12 @@ int js_module_call_event(const char* event_name, Layer* layer)
     var_unref(args);
 
     if (!result) {
+        printf("JS(Mario): Error calling event '%s'\n", event_name);
+        printf("  Function '%s' execution failed\n", func_name);
+        printf("  This may be due to:\n");
+        printf("  - Runtime error in JavaScript code\n");
+        printf("  - Accessing undefined variables\n");
+        printf("  - Type errors\n");
         return -1;
     }
 
