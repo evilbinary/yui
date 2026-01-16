@@ -6,9 +6,6 @@
     "bgColor": "#282c34"
   },
   "js": "test-json-update.js",
-  "events": {
-    "onLoad": "onPageLoad"
-  },
   "layout": {
     "type": "vertical",
     "spacing": 20,
@@ -49,7 +46,7 @@
         "borderRadius": 4
       },
       "events": {
-        "onClick": "testSingleUpdate"
+        "onClick": "@testSingleUpdate"
       }
     },
     {
@@ -64,7 +61,7 @@
         "borderRadius": 4
       },
       "events": {
-        "onClick": "testBatchUpdate"
+        "onClick": "@testBatchUpdate"
       }
     },
     {
@@ -79,7 +76,7 @@
         "borderRadius": 4
       },
       "events": {
-        "onClick": "testDelete"
+        "onClick": "@testDelete"
       }
     },
     {

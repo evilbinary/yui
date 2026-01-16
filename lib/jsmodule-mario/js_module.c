@@ -255,6 +255,29 @@ static var_t* mario_render_from_json(vm_t* vm, var_t* env, void* data)
     return var_new_int(vm, -4);
 }
 
+// JSON 增量更新
+extern int yui_update(Layer* root, const char* update_json);
+
+static var_t* mario_update(vm_t* vm, var_t* env, void* data)
+{
+    var_t* args = get_func_args(env);
+    uint32_t argc = get_func_args_num(env);
+
+    if (argc < 1) {
+        printf("JS(Mario): update() requires at least 1 argument\n");
+        return var_new_int(vm, -1);
+    }
+
+    const char* update_json = get_func_arg_str(env, 0);
+
+    if (update_json && g_layer_root) {
+        int result = yui_update(g_layer_root, update_json);
+        return var_new_int(vm, result);
+    }
+
+    return var_new_int(vm, -1);
+}
+
 /* ====================== 初始化和清理 ====================== */
 extern bool compile(bytecode_t *bc, const char* input);
 
@@ -331,6 +354,7 @@ void js_module_register_api(void)
     vm_reg_native(g_vm, yui_cls, "hide(layerId)", mario_hide, NULL);
     vm_reg_native(g_vm, yui_cls, "show(layerId)", mario_show, NULL);
     vm_reg_native(g_vm, yui_cls, "renderFromJson(layerId, json)", mario_render_from_json, NULL);
+    vm_reg_native(g_vm, yui_cls, "update(jsonString)", mario_update, NULL);
     vm_reg_native(g_vm, yui_cls, "log(...)", mario_log, NULL);
 
     // 也注册为全局函数（为了兼容性）
@@ -368,14 +392,15 @@ int js_module_load_file(const char* filename)
         return -1;
     }
 
-    printf("JS(Mario): Successfully loaded %s\n", filename);
     return 0;
 }
 
 // 调用 JS 事件函数
 int js_module_call_event(const char* event_name, Layer* layer)
 {
-    if (!g_vm || !event_name) return -1;
+    if (!g_vm || !event_name) {
+        return -1;
+    }
 
     // 移除 @ 前缀（如果有）
     const char* func_name = event_name;
@@ -403,7 +428,6 @@ int js_module_call_event(const char* event_name, Layer* layer)
     var_unref(args);
 
     if (!result) {
-        fprintf(stderr, "JS(Mario): Error calling event %s\n", event_name);
         return -1;
     }
 

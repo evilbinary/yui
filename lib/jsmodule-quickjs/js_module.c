@@ -239,6 +239,30 @@ static JSValue js_render_from_json(JSContext *ctx, JSValueConst this_val, int ar
     return JS_NewInt32(ctx, -4);
 }
 
+// JSON 增量更新
+extern int yui_update(Layer* root, const char* update_json);
+
+static JSValue js_update(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    if (argc < 1) {
+        return JS_ThrowTypeError(ctx, "Expected at least 1 argument (JSON string)");
+    }
+
+    size_t len;
+    const char* update_json = JS_ToCStringLen(ctx, &len, argv[0]);
+
+    if (update_json && g_layer_root) {
+        printf("JS(QuickJS): update() applying update - %s\n", update_json);
+        int result = yui_update(g_layer_root, update_json);
+        JS_FreeCString(ctx, update_json);
+        return JS_NewInt32(ctx, result);
+    }
+
+    printf("JS(QuickJS): update() invalid argument or uninitialized\n");
+    if (update_json) JS_FreeCString(ctx, update_json);
+    return JS_NewInt32(ctx, -1);
+}
+
 /* ====================== 初始化和清理 ====================== */
 
 // 初始化 JS 引擎（使用 QuickJS）
@@ -300,6 +324,7 @@ void js_module_register_api(void)
     JS_SetPropertyStr(g_js_ctx, yui_obj, "hide", JS_NewCFunction(g_js_ctx, js_hide, "hide", 1));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "show", JS_NewCFunction(g_js_ctx, js_show, "show", 1));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "renderFromJson", JS_NewCFunction(g_js_ctx, js_render_from_json, "renderFromJson", 2));
+    JS_SetPropertyStr(g_js_ctx, yui_obj, "update", JS_NewCFunction(g_js_ctx, js_update, "update", 1));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "log", JS_NewCFunction(g_js_ctx, js_log, "log", 1));
 
     // 将 YUI 对象添加到全局
@@ -320,6 +345,65 @@ void js_module_register_api(void)
     printf("JS(QuickJS): Registered native API functions\n");
 }
 
+// 打印 QuickJS 异常信息（包括行号和堆栈）
+static void print_quickjs_exception(JSContext* ctx, JSValueConst exception, const char* filename)
+{
+    printf("JS(QuickJS): Error executing %s:\n", filename);
+    
+    // 打印错误消息
+    JSValue msg_val = JS_GetPropertyStr(ctx, exception, "message");
+    if (!JS_IsUndefined(msg_val)) {
+        const char* msg = JS_ToCString(ctx, msg_val);
+        if (msg) {
+            printf("  Message: %s\n", msg);
+            JS_FreeCString(ctx, msg);
+        }
+    }
+    JS_FreeValue(ctx, msg_val);
+    
+    // 打印文件名
+    JSValue fname_val = JS_GetPropertyStr(ctx, exception, "fileName");
+    if (!JS_IsUndefined(fname_val)) {
+        const char* fname = JS_ToCString(ctx, fname_val);
+        if (fname) {
+            printf("  File: %s\n", fname);
+            JS_FreeCString(ctx, fname);
+        }
+    }
+    JS_FreeValue(ctx, fname_val);
+    
+    // 打印行号
+    JSValue line_val = JS_GetPropertyStr(ctx, exception, "lineNumber");
+    if (!JS_IsUndefined(line_val)) {
+        int32_t line;
+        if (JS_ToInt32(ctx, &line, line_val) == 0) {
+            printf("  Line: %d\n", line);
+        }
+    }
+    JS_FreeValue(ctx, line_val);
+    
+    // 打印列号
+    JSValue col_val = JS_GetPropertyStr(ctx, exception, "columnNumber");
+    if (!JS_IsUndefined(col_val)) {
+        int32_t col;
+        if (JS_ToInt32(ctx, &col, col_val) == 0) {
+            printf("  Column: %d\n", col);
+        }
+    }
+    JS_FreeValue(ctx, col_val);
+    
+    // 打印堆栈信息
+    JSValue stack_val = JS_GetPropertyStr(ctx, exception, "stack");
+    if (!JS_IsUndefined(stack_val)) {
+        const char* stack = JS_ToCString(ctx, stack_val);
+        if (stack) {
+            printf("  Stack:\n%s\n", stack);
+            JS_FreeCString(ctx, stack);
+        }
+    }
+    JS_FreeValue(ctx, stack_val);
+}
+
 // 加载并执行 JS 文件
 int js_module_load_file(const char* filename)
 {
@@ -330,10 +414,10 @@ int js_module_load_file(const char* filename)
 
     printf("JS(QuickJS): Loading file %s...\n", filename);
 
-    // 读取文件
-    FILE* f = fopen(filename, "r");
+    // 读取文件 (使用二进制模式避免 Windows 文本模式转换)
+    FILE* f = fopen(filename, "rb");
     if (!f) {
-        fprintf(stderr, "JS(QuickJS): Failed to open file %s\n", filename);
+        printf("JS(QuickJS): Failed to open file %s\n", filename);
         return -1;
     }
 
@@ -344,32 +428,23 @@ int js_module_load_file(const char* filename)
     char* buf = (char*)malloc(size + 1);
     if (!buf) {
         fclose(f);
+        printf("JS(QuickJS): Failed to allocate memory for file\n");
         return -1;
     }
 
-    fread(buf, 1, size, f);
-    buf[size] = '\0';
+    size_t read_size = fread(buf, 1, size, f);
+    buf[read_size] = '\0';
     fclose(f);
+    
+    printf("JS(QuickJS): Read %ld bytes from file\n", (long)read_size);
 
     // 使用 QuickJS 加载并运行代码
-    JSValue val = JS_Eval(g_js_ctx, buf, size, filename, JS_EVAL_TYPE_GLOBAL);
+    JSValue val = JS_Eval(g_js_ctx, buf, read_size, filename, JS_EVAL_TYPE_GLOBAL);
     free(buf);
 
     if (JS_IsException(val)) {
         JSValue exc = JS_GetException(g_js_ctx);
-        fprintf(stderr, "JS(QuickJS): Error executing %s:\n", filename);
-        
-        // 打印异常信息
-        JSValue val1 = JS_GetPropertyStr(g_js_ctx, exc, "message");
-        if (!JS_IsUndefined(val1)) {
-            const char* msg = JS_ToCString(g_js_ctx, val1);
-            if (msg) {
-                fprintf(stderr, "  %s\n", msg);
-                JS_FreeCString(g_js_ctx, msg);
-            }
-        }
-        JS_FreeValue(g_js_ctx, val1);
-        
+        print_quickjs_exception(g_js_ctx, exc, filename);
         JS_FreeValue(g_js_ctx, exc);
         JS_FreeValue(g_js_ctx, val);
         return -1;
@@ -421,18 +496,9 @@ int js_module_call_event(const char* event_name, Layer* layer)
 
     if (JS_IsException(result)) {
         JSValue exc = JS_GetException(g_js_ctx);
-        fprintf(stderr, "JS(QuickJS): Error calling event %s:\n", event_name);
-        
-        JSValue val1 = JS_GetPropertyStr(g_js_ctx, exc, "message");
-        if (!JS_IsUndefined(val1)) {
-            const char* msg = JS_ToCString(g_js_ctx, val1);
-            if (msg) {
-                fprintf(stderr, "  %s\n", msg);
-                JS_FreeCString(g_js_ctx, msg);
-            }
-        }
-        JS_FreeValue(g_js_ctx, val1);
-        
+        char err_prefix[256];
+        snprintf(err_prefix, sizeof(err_prefix), "event '%s'", event_name);
+        print_quickjs_exception(g_js_ctx, exc, err_prefix);
         JS_FreeValue(g_js_ctx, exc);
         JS_FreeValue(g_js_ctx, result);
         return -1;

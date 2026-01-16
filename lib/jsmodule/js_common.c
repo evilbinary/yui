@@ -465,8 +465,12 @@ int js_module_trigger_event(const char* event_name, Layer* layer)
         return -1;
     }
 
+    printf("JS: Searching for event '%s' in %d registered events\n", event_name, g_js_event_count);
+
     // 在 JS 事件映射表中查找对应的函数名
     for (int i = 0; i < g_js_event_count; i++) {
+        printf("JS:   [%d] '%s' -> '%s' (comparing with '%s')\n", 
+               i, g_js_event_map[i].event_name, g_js_event_map[i].func_name, event_name);
         if (strcmp(g_js_event_map[i].event_name, event_name) == 0) {
             printf("JS: Triggering JS event '%s' -> calling function '%s'\n",
                    event_name, g_js_event_map[i].func_name);

@@ -41,7 +41,7 @@ function testDelete() {
 }
 
 // 页面加载时的初始化
-function onPageLoad() {
+function onLoad() {
     YUI.log("JSON 增量更新测试页面加载完成");
     YUI.log("支持的功能：");
     YUI.log("1. 单个属性更新");
@@ -70,3 +70,5 @@ function onPageLoad() {
         YUI.setText("statusLabel", "状态：就绪（update API 不可用）");
     }
 }
+
+

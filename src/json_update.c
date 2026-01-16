@@ -128,8 +128,10 @@ void clear_dirty_flags(Layer* layer) {
 
 void yui_set_text(Layer* layer, const char* text) {
     if (!layer || !text) return;
+    printf("yui_set_text: layer '%s' text='%s' (old='%s')\n", layer->id, text, layer_get_text(layer));
     layer_set_text(layer, text);
     mark_layer_dirty(layer, DIRTY_TEXT);
+    printf("yui_set_text: layer '%s' text updated to '%s'\n", layer->id, layer_get_text(layer));
 }
 
 void yui_set_bg_color(Layer* layer, const char* color) {
