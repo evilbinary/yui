@@ -107,7 +107,7 @@ TabComponent* tab_component_create_from_json(Layer* layer, cJSON* json_obj) {
       if (!title || !title->valuestring) continue;
 
       // 创建内容层
-      Layer* content_layer = parse_layer(tab_json, layer);
+      Layer* content_layer = layer_create_from_json(tab_json, layer);
       cJSON* content = tab_json;
       if (content) {
         if (content_layer) {

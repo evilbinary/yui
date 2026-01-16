@@ -10,9 +10,14 @@
 
 
 cJSON* parse_json(char* json_path);
-Layer* parse_layer(cJSON* json_obj,Layer* parent);
+Layer* layer_create_from_json(cJSON* json_obj,Layer* parent);
 Layer* parse_layer_from_string(const char* json_str, Layer* parent);
 Layer* find_layer_by_id(Layer* root, const char* id);
+Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent);
+Layer* layer_create_from_json(cJSON* json_obj, Layer* parent) ;
+Layer* layer_create(Layer* root_layer, int x, int y, int width, int height);
+
+
 void destroy_layer(Layer* layer);
 
 void layer_set_label(Layer* layer, const char* value);

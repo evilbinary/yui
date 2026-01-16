@@ -46,7 +46,7 @@ int main(int argc, char* argv[]) {
 
 
     cJSON* root_json=parse_json(json_path);    
-    Layer* ui_root = parse_layer(root_json,NULL);
+    Layer* ui_root = layer_create_from_json(root_json,NULL);
 
     // 设置 UI 根图层到 JS 模块
     js_module_init_layer(ui_root);
@@ -114,7 +114,7 @@ int main(int argc, char* argv[]) {
     }
 
     // 加载纹理资源
-    // load_all_fonts 已经在 parse_layer 之后调用过了
+    // load_all_fonts 已经在 layer_create_from_json 之后调用过了
 
     load_textures(ui_root);
     layout_layer(ui_root);

@@ -1,4 +1,5 @@
-#include "json_update.h"
+#include "layer_update.h"
+#include "layer_properties.h"
 #include "layer.h"
 #include "layout.h"
 #include <stdio.h>
@@ -271,79 +272,8 @@ static int update_single_property(Layer* layer, const char* key, cJSON* value) {
         return 1;
     }
     
-    // 处理普通属性更新
-    if (strcmp(key, "text") == 0 && cJSON_IsString(value)) {
-        yui_set_text(layer, value->valuestring);
-        return 1;
-    }
-    
-    if (strcmp(key, "label") == 0 && cJSON_IsString(value)) {
-        layer_set_label(layer, value->valuestring);
-        mark_layer_dirty(layer, DIRTY_TEXT);
-        return 1;
-    }
-    
-    if (strcmp(key, "color") == 0 && cJSON_IsString(value)) {
-        Color color;
-        if (parse_color_string(value->valuestring, &color) == 0) {
-            layer->color = color;
-            mark_layer_dirty(layer, DIRTY_COLOR);
-        }
-        return 1;
-    }
-    
-    if (strcmp(key, "bgColor") == 0 && cJSON_IsString(value)) {
-        yui_set_bg_color(layer, value->valuestring);
-        return 1;
-    }
-    
-    if (strcmp(key, "fontSize") == 0 && cJSON_IsNumber(value)) {
-        if (layer->font) {
-            layer->font->size = value->valueint;
-            mark_layer_dirty(layer, DIRTY_TEXT | DIRTY_LAYOUT);
-        }
-        return 1;
-    }
-    
-    if (strcmp(key, "borderRadius") == 0 && cJSON_IsNumber(value)) {
-        layer->radius = value->valueint;
-        mark_layer_dirty(layer, DIRTY_STYLE);
-        return 1;
-    }
-    
-    if (strcmp(key, "size") == 0 && cJSON_IsArray(value)) {
-        int w, h;
-        if (parse_int_array(value, &w, &h) == 0) {
-            layer->rect.w = w;
-            layer->rect.h = h;
-            layer->fixed_width = w;
-            layer->fixed_height = h;
-            mark_layer_dirty(layer, DIRTY_RECT | DIRTY_LAYOUT);
-        }
-        return 1;
-    }
-    
-    if (strcmp(key, "position") == 0 && cJSON_IsArray(value)) {
-        int x, y;
-        if (parse_int_array(value, &x, &y) == 0) {
-            layer->rect.x = x;
-            layer->rect.y = y;
-            mark_layer_dirty(layer, DIRTY_RECT);
-        }
-        return 1;
-    }
-    
-    if (strcmp(key, "visible") == 0 && cJSON_IsBool(value)) {
-        yui_set_visible(layer, cJSON_IsTrue(value));
-        return 1;
-    }
-    
-    if (strcmp(key, "enabled") == 0 && cJSON_IsBool(value)) {
-        yui_set_enabled(layer, cJSON_IsTrue(value));
-        return 1;
-    }
-    
-    return 0; // 未处理
+    // 使用共享的属性处理器（is_creating = 0 表示更新模式）
+    return layer_set_property_from_json(layer, key, value, 0);
 }
 
 /**

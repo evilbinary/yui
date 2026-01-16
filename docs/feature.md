@@ -8,7 +8,7 @@ YUI是一个专为AI设计的轻量级GUI框架，采用C语言开发，通过JS
 
 ### 1. 分层设计架构
 
-- **JSON解析层**：通过`parse_layer()`函数递归构建图层树，实现UI与逻辑分离
+- **JSON解析层**：通过`layer_create_from_json()`函数递归构建图层树，实现UI与逻辑分离
 - **资源管理层**：通过`load_textures()`函数异步加载纹理资源，支持多种图像格式
 - **渲染管线层**：通过`render_layer()`函数实现深度优先绘制，支持复杂嵌套界面
 - **事件处理层**：通过`handle_event()`函数支持事件冒泡机制，实现交互功能
@@ -121,7 +121,7 @@ YUI框架采用清晰的项目结构，主要包含以下部分：
 backend_init();
 
 // 解析UI配置
-Layer* root = parse_layer(json_string);
+Layer* root = layer_create_from_json(json_string);
 
 // 加载资源
 load_textures(root);
@@ -298,7 +298,7 @@ ya -r yui
 
 ## 附录：已有的分层设计说明
 
-JSON解析层： parse_layer()  递归构建图层树
+JSON解析层： layer_create_from_json()  递归构建图层树
 
 资源管理层： load_textures()  异步加载纹理资源
 

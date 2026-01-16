@@ -49,7 +49,7 @@ int main(int argc, char* argv[]) {
     register_event_handler("@helloTouch", hello_touch);
 
     cJSON* root_json=parse_json(json_path);
-    Layer* ui_root = parse_layer(root_json,NULL);
+    Layer* ui_root = layer_create_from_json(root_json,NULL);
 
     
     if (ui_root->rect.w <= 0 || ui_root->rect.h <= 0) {
