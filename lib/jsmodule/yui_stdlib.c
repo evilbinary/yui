@@ -454,22 +454,18 @@ static JSValue js_yui_update(JSContext *ctx, JSValue *this_val, int argc, JSValu
 
     JSCStringBuf buf;
     const char* update_json = NULL;
+    int need_free = 0;
     
-    // mquickjs 中直接检查类型并转换为字符串
-    // 如果是字符串，直接使用
+    // mquickjs 只支持字符串参数
+    // 如果 JS 代码需要传入对象，应该在 JS 层调用 JSON.stringify(obj)
     if (JS_IsString(ctx, argv[0])) {
         update_json = JS_ToCString(ctx, argv[0], &buf);
     } else {
-        // 如果是对象，先用内置的 JSON.stringify 转换
-        // 但 mquickjs 可能不支持，所以这里简单处理：
-        // 用户需要自己先 stringify，或者我们返回错误
-        printf("YUI.update: 参数必须是 JSON 字符串\n");
-        printf("YUI.update: 请使用 JSON.stringify() 转换对象\n");
+        printf("YUI.update: 参数必须是 JSON 字符串。如果要传对象，请在 JS 代码中使用 JSON.stringify(obj)\n");
         return JS_NewInt32(ctx, -1);
     }
 
     if (update_json && g_layer_root) {
-        printf("YUI.update: 应用更新 - %s\n", update_json);
         int result = yui_update(g_layer_root, update_json);
         return JS_NewInt32(ctx, result);
     }

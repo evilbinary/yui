@@ -245,22 +245,53 @@ extern int yui_update(Layer* root, const char* update_json);
 static JSValue js_update(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     if (argc < 1) {
-        return JS_ThrowTypeError(ctx, "Expected at least 1 argument (JSON string)");
+        return JS_ThrowTypeError(ctx, "Expected at least 1 argument (string or object)");
     }
 
-    size_t len;
-    const char* update_json = JS_ToCStringLen(ctx, &len, argv[0]);
+    const char* update_json = NULL;
+    int need_free = 0;
+    
+    // 支持字符串和对象两种参数类型
+    if (JS_IsString(argv[0])) {
+        // 如果是字符串，直接使用
+        update_json = JS_ToCString(ctx, argv[0]);
+        need_free = 1;
+    } else if (JS_IsObject(argv[0])) {
+        // 如果是对象，调用 JSON.stringify 转换
+        JSValue global = JS_GetGlobalObject(ctx);
+        JSValue json_obj = JS_GetPropertyStr(ctx, global, "JSON");
+        JSValue stringify_func = JS_GetPropertyStr(ctx, json_obj, "stringify");
+        
+        if (JS_IsFunction(ctx, stringify_func)) {
+            JSValue json_str = JS_Call(ctx, stringify_func, json_obj, 1, argv);
+            if (!JS_IsException(json_str) && JS_IsString(json_str)) {
+                update_json = JS_ToCString(ctx, json_str);
+                need_free = 1;
+            }
+            JS_FreeValue(ctx, json_str);
+        }
+        
+        JS_FreeValue(ctx, stringify_func);
+        JS_FreeValue(ctx, json_obj);
+        JS_FreeValue(ctx, global);
+        
+        if (!update_json) {
+            return JS_ThrowTypeError(ctx, "Failed to stringify object");
+        }
+    } else {
+        return JS_ThrowTypeError(ctx, "Argument must be string or object");
+    }
 
+    int result = -1;
     if (update_json && g_layer_root) {
-        printf("JS(QuickJS): update() applying update - %s\n", update_json);
-        int result = yui_update(g_layer_root, update_json);
-        JS_FreeCString(ctx, update_json);
-        return JS_NewInt32(ctx, result);
+        result = yui_update(g_layer_root, update_json);
     }
 
-    printf("JS(QuickJS): update() invalid argument or uninitialized\n");
-    if (update_json) JS_FreeCString(ctx, update_json);
-    return JS_NewInt32(ctx, -1);
+    if (need_free && update_json) {
+        JS_FreeCString(ctx, update_json);
+    }
+
+    return JS_NewInt32(ctx, result);
 }
 
 /* ====================== 初始化和清理 ====================== */

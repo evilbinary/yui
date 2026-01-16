@@ -268,14 +268,39 @@ static var_t* mario_update(vm_t* vm, var_t* env, void* data)
         return var_new_int(vm, -1);
     }
 
-    const char* update_json = get_func_arg_str(env, 0);
-
-    if (update_json && g_layer_root) {
-        int result = yui_update(g_layer_root, update_json);
-        return var_new_int(vm, result);
+    node_t* arg_node = var_array_get(args, 0);
+    if (!arg_node || !arg_node->var) {
+        printf("JS(Mario): update() invalid argument\n");
+        return var_new_int(vm, -1);
     }
 
-    return var_new_int(vm, -1);
+    const char* update_json = NULL;
+    mstr_t* json_str = NULL;
+    
+    // 支持字符串和对象两种参数类型
+    if (arg_node->var->type == V_STRING) {
+        // 如果是字符串，直接使用
+        update_json = get_func_arg_str(env, 0);
+    } else if (arg_node->var->type == V_OBJECT) {
+        // 如果是对象（Mario 中数组也是对象），转换为 JSON 字符串
+        json_str = mstr_new("");
+        var_to_str(arg_node->var, json_str);
+        update_json = json_str->cstr;
+    } else {
+        printf("JS(Mario): update() argument must be string or object\n");
+        return var_new_int(vm, -1);
+    }
+
+    int result = -1;
+    if (update_json && g_layer_root) {
+        result = yui_update(g_layer_root, update_json);
+    }
+    
+    if (json_str) {
+        mstr_free(json_str);
+    }
+
+    return var_new_int(vm, result);
 }
 
 /* ====================== 初始化和清理 ====================== */
