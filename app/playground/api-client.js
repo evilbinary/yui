@@ -147,12 +147,10 @@ var APIClient = {
         } else {
             YUI.log("APIClient: http_post not available");
             // 回退到模拟响应
-            setTimeout(function() {
-                var mockResponse = APIClient._getMockResponse(url, data);
-                if (callback && typeof callback === 'function') {
-                    callback(mockResponse);
-                }
-            }, 100);
+            var mockResponse = APIClient._getMockResponse(url, data);
+            if (callback && typeof callback === 'function') {
+                callback(mockResponse);
+            }
         }
     },
     
@@ -190,12 +188,10 @@ var APIClient = {
         } else {
             YUI.log("APIClient: http_get not available");
             // 回退到模拟响应
-            setTimeout(function() {
-                var mockResponse = APIClient._getMockResponse(url, null);
-                if (callback && typeof callback === 'function') {
-                    callback(mockResponse);
-                }
-            }, 100);
+            var mockResponse = APIClient._getMockResponse(url, null);
+            if (callback && typeof callback === 'function') {
+                callback(mockResponse);
+            }
         }
     },
     

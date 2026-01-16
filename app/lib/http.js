@@ -275,7 +275,5 @@ function test_http() {
     YUI.log("HTTP tests completed");
 }
 
-
-export { http_get, http_post, parse_url }
 // 运行测试（可选）
 // test_http();

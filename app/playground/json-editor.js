@@ -5,7 +5,7 @@
 var editorState = {
     jsonContent: null,
     isValid: false,
-    updateMode: 'incremental',  // 默认更新模式：incremental 或 full
+    updateMode: 'full',  // 默认更新模式：incremental 或 full
     messageHistory: []
 };
 
@@ -31,7 +31,7 @@ function initJsonEditor() {
 
     // 格式化并设置到编辑器
     // 注意: mquickjs 的 JSON.stringify 不支持第三个参数（缩进）
-    var formattedJson = JSON.stringify(defaultJson);
+    var formattedJson = JSON.stringify(defaultJson, null, 4);
     YUI.setText("jsonEditor", formattedJson);
 
     // 初始验证
@@ -300,6 +300,7 @@ function handleApiResponse(response, messageText, updateMode) {
                 
                 YUI.setText("previewLabel", details);
                 YUI.log("handleApiResponse: Incremental updates applied: " + updateString);
+                YUI.update(updateString);
             } else {
                 YUI.setText("previewLabel", "✅ 消息已发送，但没有收到UI更新\n\n消息: " + messageText);
             }
