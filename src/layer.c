@@ -231,6 +231,7 @@ Layer* layer_create(Layer* root_layer, int x, int y, int width, int height) {
 
 Layer* layer_create_from_json(cJSON* json_obj, Layer* parent) {
   Layer* layer = malloc(sizeof(Layer));
+  memset(layer, 0, sizeof(Layer));  // 初始化为0
 
   layer=parse_layer_from_json(layer, json_obj, parent);
 
