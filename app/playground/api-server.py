@@ -103,12 +103,8 @@ def send_message_incremental():
         # 应用更新到状态
         apply_updates(updates)
         
-        return jsonify({
-            "status": "success",
-            "message_id": message_entry["id"],
-            "updates": updates,
-            "timestamp": message_entry["timestamp"]
-        })
+        # 直接返回更新数组（符合 json-update-spec.md 规范）
+        return jsonify(updates)
         
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -163,13 +159,8 @@ def send_message_full():
         # 更新状态
         ui_state = new_ui_state
         
-        return jsonify({
-            "status": "success",
-            "message_id": message_entry["id"],
-            "ui_state": ui_state,
-            "changes": changes,
-            "timestamp": message_entry["timestamp"]
-        })
+        # 直接返回完整的 UI JSON 对象（符合 json-format-spec.md 规范）
+        return jsonify(ui_state)
         
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -244,28 +235,97 @@ def generate_incremental_updates(message, json_config):
 
 def generate_full_ui_state(message, json_config):
     """
-    生成完整的UI状态
-    实际应用中可以根据消息内容和配置生成全新的状态
+    生成完整的UI状态（符合 json-format-spec.md 规范的组件树结构）
     """
     lower_msg = message.lower()
     
+    # 基础组件模板（符合 json-format-spec.md）
+    base_ui = {
+        "id": "root",
+        "type": "View",
+        "size": [1200, 800],
+        "style": {
+            "bgColor": "#f5f5f5"
+        },
+        "children": [
+            {
+                "id": "statusLabel",
+                "type": "Label",
+                "text": "状态：准备就绪",
+                "size": [1160, 40],
+                "position": [20, 20],
+                "style": {
+                    "color": "#333333",
+                    "fontSize": 16,
+                    "fontWeight": "bold"
+                }
+            },
+            {
+                "id": "item1",
+                "type": "View",
+                "text": "项目 1",
+                "size": [1160, 60],
+                "position": [20, 80],
+                "style": {
+                    "bgColor": "#f0f0f0",
+                    "padding": 10,
+                    "margin": 5
+                }
+            },
+            {
+                "id": "item2",
+                "type": "View",
+                "text": "项目 2",
+                "size": [1160, 60],
+                "position": [20, 150],
+                "style": {
+                    "bgColor": "#f0f0f0",
+                    "padding": 10,
+                    "margin": 5
+                }
+            },
+            {
+                "id": "item3",
+                "type": "View",
+                "text": "项目 3",
+                "size": [1160, 60],
+                "position": [20, 220],
+                "style": {
+                    "bgColor": "#f0f0f0",
+                    "padding": 10,
+                    "margin": 5
+                }
+            }
+        ]
+    }
+    
     if "批量" in message or "batch" in lower_msg:
-        return {
-            "statusLabel": {"text": "状态：批量更新完成", "color": "#2196f3"},
-            "item1": {"text": "批量更新 - 项目 1", "bgColor": "#2196f3"},
-            "item2": {"text": "批量更新 - 项目 2", "bgColor": "#ff9800"},
-            "item3": {"text": "批量更新 - 项目 3", "bgColor": "#9c27b0"}
-        }
+        # 批量更新样式
+        base_ui["children"][0]["style"]["color"] = "#2196f3"
+        base_ui["children"][0]["text"] = "状态：批量更新完成"
+        
+        base_ui["children"][1]["style"]["bgColor"] = "#2196f3"
+        base_ui["children"][1]["text"] = "批量更新 - 项目 1"
+        
+        base_ui["children"][2]["style"]["bgColor"] = "#ff9800"
+        base_ui["children"][2]["text"] = "批量更新 - 项目 2"
+        
+        base_ui["children"][3]["style"]["bgColor"] = "#9c27b0"
+        base_ui["children"][3]["text"] = "批量更新 - 项目 3"
+        
     elif "项目1" in message or "item1" in lower_msg:
-        return {
-            "statusLabel": {"text": "状态：项目1已更新", "color": "#4caf50"},
-            "item1": {"text": f"已更新: {message}", "bgColor": "#4caf50"},
-            "item2": ui_state.get("item2", {"text": "项目 2", "bgColor": "#f0f0f0"}),
-            "item3": ui_state.get("item3", {"text": "项目 3", "bgColor": "#f0f0f0"})
-        }
-    else:
-        # 默认状态
-        return INITIAL_UI_STATE.copy()
+        # 更新项目1
+        base_ui["children"][0]["style"]["color"] = "#4caf50"
+        base_ui["children"][0]["text"] = "状态：项目1已更新"
+        
+        base_ui["children"][1]["style"]["bgColor"] = "#4caf50"
+        base_ui["children"][1]["text"] = f"已更新: {message}"
+        
+    elif "重置" in message or "reset" in lower_msg:
+        # 保持默认状态
+        pass
+        
+    return base_ui
 
 def apply_updates(updates):
     """应用增量更新到状态"""

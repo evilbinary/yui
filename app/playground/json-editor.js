@@ -99,7 +99,7 @@ function formatJson() {
     
     // 格式化为4空格缩进的JSON字符串
     // mquickjs 的 JSON.stringify 不支持缩进参数
-    var formattedJson = JSON.stringify(json);
+    var formattedJson = JSON.stringify(json, null, 4);
     
     // 更新编辑器文本
     YUI.setText("jsonEditor", formattedJson);
@@ -109,7 +109,7 @@ function formatJson() {
     editorState.isValid = true;
     
     // 更新预览
-    refreshPreviewInternal(json);
+    refreshPreviewInternal(formattedJson);
     
     YUI.log("formatJson: JSON formatted successfully!");
 }
@@ -159,8 +159,6 @@ function refreshPreviewInternal(json) {
     if (!json) {
         return;
     }
-
-    YUI.log("refreshPreviewInternal: JSON = " + JSON.stringify(json));
 
     // 将 JSON 转换为字符串
     var jsonString = JSON.stringify(json, null, 4);
@@ -279,55 +277,54 @@ function sendMessage() {
 
 // 处理API响应
 function handleApiResponse(response, messageText, updateMode) {
-    if (response.status === 'success') {
-        YUI.log("handleApiResponse: API response successful");
-        
+    YUI.log("handleApiResponse: Processing API response");
+    
+    if (response && typeof response === 'object' && !response.error) {
+        // 处理成功的响应
         if (updateMode === 'incremental') {
-            // 处理增量更新响应
-            if (response.updates && response.updates.length > 0) {
+            // 处理增量更新响应（直接是 updates 数组）
+            if (Array.isArray(response) && response.length > 0) {
                 // 将更新转换为 YUI.update() 格式
-                var updateString = JSON.stringify(response.updates);
+                var updateString = JSON.stringify(response);
                 YUI.update(updateString);
                 
                 // 显示详细信息
                 var details = "✅ 增量更新成功！\n\n";
-                details += "消息ID: " + response.message_id + "\n";
-                details += "时间戳: " + response.timestamp + "\n\n";
                 details += "更新详情:\n";
-                response.updates.forEach(function(update, index) {
+                response.forEach(function(update, index) {
                     details += (index + 1) + ". " + update.target + ": " + JSON.stringify(update.change) + "\n";
                 });
                 
                 YUI.setText("previewLabel", details);
                 YUI.log("handleApiResponse: Incremental updates applied: " + updateString);
-                YUI.update(updateString);
-            } else {
+            } else if (Array.isArray(response) && response.length === 0) {
                 YUI.setText("previewLabel", "✅ 消息已发送，但没有收到UI更新\n\n消息: " + messageText);
+            } else {
+                YUI.setText("previewLabel", "❌ 增量更新失败 - 无效的响应格式\n\n响应: " + JSON.stringify(response));
             }
         } else if (updateMode === 'full') {
-            // 处理全量更新响应
-            if (response.ui_state) {
-                // 将完整状态转换为 YUI.update() 格式
-                var fullUpdate = [];
-                for (var key in response.ui_state) {
-                    fullUpdate.push({
-                        "target": key,
-                        "change": response.ui_state[key]
-                    });
-                }
+            // 处理全量更新响应（直接是 UI JSON 对象）
+            if (response && typeof response === 'object' && response.type) {
+                // 直接渲染完整的 UI JSON（符合 json-format-spec.md 规范）
+                YUI.log("handleApiResponse: Full UI JSON received");
+                YUI.log("handleApiResponse: UI Type: " + response.type);
                 
-                var updateString = JSON.stringify(fullUpdate);
-                YUI.update(updateString);
-                
+
                 // 显示详细信息
                 var details = "✅ 全量更新成功！\n\n";
-                details += "消息ID: " + response.message_id + "\n";
-                details += "时间戳: " + response.timestamp + "\n";
-                details += "变更数量: " + (response.changes ? response.changes.length : 0) + "\n\n";
-                details += "完整状态:\n" + JSON.stringify(response.ui_state, null, 2);
+                details += "UI 类型: " + response.type + "\n";
+                details += "子组件数量: " + (response.children ? response.children.length : 0) + "\n\n";
+                details += "完整 UI JSON:\n" + JSON.stringify(response, null, 2);
                 
-                YUI.setText("previewLabel", details);
-                YUI.log("handleApiResponse: Full state update applied");
+                // /YUI.setText("previewResult", details);
+                YUI.log("handleApiResponse: Full UI update applied", details);
+                
+                YUI.setText("jsonEditor", JSON.stringify(response, null, 2));
+
+                // 这里应该调用 YUI.render 或其他函数来渲染完整的 UI
+                // 例如：YUI.renderFromJson(response);
+            } else {
+                //YUI.setText("previewResult", "❌ 全量更新失败 - 无效的响应格式\n\n响应: " + JSON.stringify(response));
             }
         }
         
@@ -343,7 +340,6 @@ function handleApiResponse(response, messageText, updateMode) {
             editorState.messageHistory = [];
         }
         editorState.messageHistory.push(historyEntry);
-        
     } else {
         // 处理错误
         var errorMsg = "❌ API 请求失败\n\n";

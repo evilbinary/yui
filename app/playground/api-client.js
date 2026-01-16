@@ -15,17 +15,19 @@ var APIClient = {
             json: jsonConfig
         };
         
-        this._postJSON(url, data, function(response) {
-            if (response.status === 'success') {
+        this._postJSON(url, data, function(updates) {
+            // 增量接口直接返回更新数组（符合 json-update-spec.md 规范）
+            if (Array.isArray(updates)) {
                 YUI.log("APIClient: Incremental update successful");
-                YUI.log("APIClient: Updates: " + JSON.stringify(response.updates));
+                YUI.log("APIClient: Updates: " + JSON.stringify(updates));
                 
                 // 应用增量更新到UI
                 if (callback && typeof callback === 'function') {
-                    callback(response);
+                    callback(updates);
                 }
             } else {
-                YUI.log("APIClient: Incremental update failed - " + (response.error || 'Unknown error'));
+                YUI.log("APIClient: Incremental update failed - Invalid response format");
+                YUI.log("APIClient: Response: " + JSON.stringify(updates));
             }
         });
     },
@@ -40,17 +42,19 @@ var APIClient = {
             json: jsonConfig
         };
         
-        this._postJSON(url, data, function(response) {
-            if (response.status === 'success') {
+        this._postJSON(url, data, function(uiJson) {
+            // 全量接口直接返回 UI JSON 对象（符合 json-format-spec.md 规范）
+            if (uiJson && typeof uiJson === 'object' && uiJson.type) {
                 YUI.log("APIClient: Full update successful");
-                YUI.log("APIClient: UI State: " + JSON.stringify(response.ui_state));
+                YUI.log("APIClient: UI JSON: " + JSON.stringify(uiJson));
                 
                 // 应用全量更新到UI
                 if (callback && typeof callback === 'function') {
-                    callback(response);
+                    callback(uiJson);
                 }
             } else {
-                YUI.log("APIClient: Full update failed - " + (response.error || 'Unknown error'));
+                YUI.log("APIClient: Full update failed - Invalid response format");
+                YUI.log("APIClient: Response: " + JSON.stringify(uiJson));
             }
         });
     },
@@ -195,30 +199,55 @@ var APIClient = {
         }
     },
     
-    // 模拟响应（用于测试）
+    // 模拟响应（用于测试）- 符合新的 JSON 规范
     _getMockResponse: function(url, data) {
         if (url.includes('/api/message/incremental')) {
-            return {
-                status: 'success',
-                message_id: 1,
-                updates: [
-                    {"target": "statusLabel", "change": {"text": "状态：模拟增量更新", "color": "#2196f3"}},
-                    {"target": "item1", "change": {"text": "模拟更新 - " + (data.message || ''), "bgColor": "#4caf50"}}
-                ],
-                timestamp: new Date().toISOString()
-            };
+            // 增量接口返回数组（符合 json-update-spec.md）
+            return [
+                {"target": "statusLabel", "change": {"text": "状态：模拟增量更新", "color": "#2196f3"}},
+                {"target": "item1", "change": {"text": "模拟更新 - " + (data.message || ''), "bgColor": "#4caf50"}}
+            ];
         } else if (url.includes('/api/message/full')) {
+            // 全量接口返回完整的 UI JSON（符合 json-format-spec.md）
             return {
-                status: 'success',
-                message_id: 2,
-                ui_state: {
-                    "statusLabel": {"text": "状态：模拟全量更新", "color": "#673ab7"},
-                    "item1": {"text": "全量更新 - " + (data.message || ''), "bgColor": "#ff9800"},
-                    "item2": {"text": "项目 2", "bgColor": "#f0f0f0"},
-                    "item3": {"text": "项目 3", "bgColor": "#f0f0f0"}
-                },
-                changes: [],
-                timestamp: new Date().toISOString()
+                "id": "root",
+                "type": "View",
+                "size": [1200, 800],
+                "style": {"bgColor": "#f5f5f5"},
+                "children": [
+                    {
+                        "id": "statusLabel",
+                        "type": "Label",
+                        "text": "状态：模拟全量更新 - " + (data.message || ''),
+                        "size": [1160, 40],
+                        "position": [20, 20],
+                        "style": {"color": "#673ab7", "fontSize": 16}
+                    },
+                    {
+                        "id": "item1",
+                        "type": "View",
+                        "text": "全量更新 - " + (data.message || ''),
+                        "size": [1160, 60],
+                        "position": [20, 80],
+                        "style": {"bgColor": "#ff9800", "padding": 10}
+                    },
+                    {
+                        "id": "item2",
+                        "type": "View",
+                        "text": "项目 2",
+                        "size": [1160, 60],
+                        "position": [20, 150],
+                        "style": {"bgColor": "#f0f0f0", "padding": 10}
+                    },
+                    {
+                        "id": "item3",
+                        "type": "View",
+                        "text": "项目 3",
+                        "size": [1160, 60],
+                        "position": [20, 220],
+                        "style": {"bgColor": "#f0f0f0", "padding": 10}
+                    }
+                ]
             };
         } else if (url.includes('/api/history')) {
             return {
@@ -245,7 +274,7 @@ var APIClient = {
                 message: '模拟状态已重置'
             };
         }
-        return {status: 'error', error: 'Unknown endpoint'};
+        return {error: 'Unknown endpoint'};
     }
 };
 

@@ -111,6 +111,21 @@
                         }
                     ]
                 },
+                // {
+                //     "id": "previewResult",
+                //     "type": "Label",
+                //     "text": "",
+                //     "style": {
+                //         "bgColor": "#ffffff",
+                //         "color": "#495057",
+                //         "fontSize": 14,
+                //         "padding": [12, 16, 12, 16],
+                //         "borderWidth": 1,
+                //         "borderColor": "#ced4da",
+                //         "borderRadius": 4
+                //     }
+                
+                // },
                 {
                     "id": "inputContainer",
                     "type": "View",
@@ -226,6 +241,7 @@
                                 "borderRadius": 4
                             }
                         }
+                        
                     ]
                 },
                 {
