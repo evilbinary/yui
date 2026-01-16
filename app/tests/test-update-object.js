@@ -66,7 +66,7 @@ function testMixedUsage() {
     }
 }
 
-function onPageLoad() {
+function onLoad() {
     YUI.log("测试页面加载完成");
     YUI.log("YUI.update 现在支持字符串和对象两种参数格式");
     
@@ -80,6 +80,6 @@ function onPageLoad() {
     };
     
     
-        YUI.update(initUpdate);
+    YUI.update(initUpdate);
     
 }

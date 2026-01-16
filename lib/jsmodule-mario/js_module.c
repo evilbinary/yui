@@ -281,13 +281,16 @@ static var_t* mario_update(vm_t* vm, var_t* env, void* data)
     if (arg_node->var->type == V_STRING) {
         // 如果是字符串，直接使用
         update_json = get_func_arg_str(env, 0);
+        printf("JS(Mario): update() received string: %s\n", update_json);
     } else if (arg_node->var->type == V_OBJECT) {
         // 如果是对象（Mario 中数组也是对象），转换为 JSON 字符串
+        printf("JS(Mario): update() received object, converting...\n");
         json_str = mstr_new("");
         var_to_str(arg_node->var, json_str);
         update_json = json_str->cstr;
+        printf("JS(Mario): update() converted to: %s\n", update_json);
     } else {
-        printf("JS(Mario): update() argument must be string or object\n");
+        printf("JS(Mario): update() argument must be string or object (type=%d)\n", arg_node->var->type);
         return var_new_int(vm, -1);
     }
 

@@ -12,7 +12,7 @@
     "padding": [20, 20, 20, 20]
   },
   "events": {
-    "onLoad": "onPageLoad",
+    "onLoad": "onLoad",
     "btn1.onClick": "testStringParam",
     "btn2.onClick": "testObjectParam",
     "btn3.onClick": "testArrayParam",

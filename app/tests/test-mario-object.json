@@ -1,0 +1,41 @@
+{
+  "id": "root",
+  "type": "View",
+  "size": [800, 600],
+  "style": {
+    "bgColor": "#282c34"
+  },
+  "js": "test-mario-object.js",
+  "events": {
+    "onLoad": "onLoad"
+  },
+  "layout": {
+    "type": "vertical",
+    "spacing": 20,
+    "padding": [20, 20, 20, 20]
+  },
+  "children": [
+    {
+      "id": "header",
+      "type": "Label",
+      "text": "Mario 对象序列化测试",
+      "size": [760, 40],
+      "style": {
+        "color": "#ffffff",
+        "bgColor": "#61dafb",
+        "fontSize": 20,
+        "borderRadius": 8
+      }
+    },
+    {
+      "id": "statusLabel",
+      "type": "Label",
+      "text": "状态：就绪",
+      "size": [760, 30],
+      "style": {
+        "color": "#ffffff",
+        "fontSize": 14
+      }
+    }
+  ]
+}
