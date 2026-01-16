@@ -82,117 +82,146 @@ SelectComponent* select_component_create_from_json(Layer* layer, cJSON* json_obj
     if (!component) return NULL;
     
     // 解析 Select 特定属性
+    // 优先从 selectConfig 读取配置（向后兼容）
     cJSON* selectConfig = cJSON_GetObjectItem(json_obj, "selectConfig");
-    if (selectConfig) {
-        // 最大可见项目数
-        if (cJSON_HasObjectItem(selectConfig, "maxVisibleItems")) {
-            component->max_visible_items = cJSON_GetObjectItem(selectConfig, "maxVisibleItems")->valueint;
-        }
-        
-        // 项目高度
-        if (cJSON_HasObjectItem(selectConfig, "itemHeight")) {
-            component->item_height = cJSON_GetObjectItem(selectConfig, "itemHeight")->valueint;
-        }
-        
-        // 边框样式
-        if (cJSON_HasObjectItem(selectConfig, "borderWidth")) {
-            component->border_width = cJSON_GetObjectItem(selectConfig, "borderWidth")->valueint;
-        }
-        if (cJSON_HasObjectItem(selectConfig, "borderRadius")) {
-            component->border_radius = cJSON_GetObjectItem(selectConfig, "borderRadius")->valueint;
-        }
-        
-        // 字体大小
-        if (cJSON_HasObjectItem(selectConfig, "fontSize")) {
-            component->font_size = cJSON_GetObjectItem(selectConfig, "fontSize")->valueint;
-        }
-        
-        // 加载组件专用字体
-        if (layer->font && strlen(layer->font->path) > 0) {
-            char font_path[MAX_PATH];
-            snprintf(font_path, sizeof(font_path), "%s", layer->font->path);
-            component->font = backend_load_font(font_path, component->font_size);
-        }
-        
-        // 解析选项数据
-        cJSON* items = cJSON_GetObjectItem(selectConfig, "items");
-        if (items && cJSON_IsArray(items)) {
-            for (int i = 0; i < cJSON_GetArraySize(items); i++) {
-                cJSON* item = cJSON_GetArrayItem(items, i);
-                if (cJSON_IsString(item)) {
-                    select_component_add_item(component, item->valuestring, NULL);
-                } else if (cJSON_IsObject(item)) {
-                    const char* text = "";
-                    int disabled = 0;
-                    
-                    if (cJSON_HasObjectItem(item, "text")) {
-                        text = cJSON_GetObjectItem(item, "text")->valuestring;
+    cJSON* config_source = selectConfig ? selectConfig : json_obj;
+    
+    // 最大可见项目数
+    if (cJSON_HasObjectItem(config_source, "maxVisibleItems")) {
+        component->max_visible_items = cJSON_GetObjectItem(config_source, "maxVisibleItems")->valueint;
+    }
+    
+    // 项目高度
+    if (cJSON_HasObjectItem(config_source, "itemHeight")) {
+        component->item_height = cJSON_GetObjectItem(config_source, "itemHeight")->valueint;
+    }
+    
+    // 边框样式
+    if (cJSON_HasObjectItem(config_source, "borderWidth")) {
+        component->border_width = cJSON_GetObjectItem(config_source, "borderWidth")->valueint;
+    }
+    if (cJSON_HasObjectItem(config_source, "borderRadius")) {
+        component->border_radius = cJSON_GetObjectItem(config_source, "borderRadius")->valueint;
+    }
+    
+    // 字体大小
+    if (cJSON_HasObjectItem(config_source, "fontSize")) {
+        component->font_size = cJSON_GetObjectItem(config_source, "fontSize")->valueint;
+    }
+    
+    // 加载组件专用字体
+    if (layer->font && strlen(layer->font->path) > 0) {
+        char font_path[MAX_PATH];
+        snprintf(font_path, sizeof(font_path), "%s", layer->font->path);
+        component->font = backend_load_font(font_path, component->font_size);
+    }
+    
+    // 解析选项数据
+    cJSON* items = cJSON_GetObjectItem(config_source, "items");
+    if (items && cJSON_IsArray(items)) {
+        for (int i = 0; i < cJSON_GetArraySize(items); i++) {
+            cJSON* item = cJSON_GetArrayItem(items, i);
+            if (cJSON_IsString(item)) {
+                select_component_add_item(component, item->valuestring, NULL);
+            } else if (cJSON_IsObject(item)) {
+                const char* text = "";
+                const char* value = NULL;
+                int disabled = 0;
+                
+                // 支持 label 字段（显示文本）
+                if (cJSON_HasObjectItem(item, "label")) {
+                    text = cJSON_GetObjectItem(item, "label")->valuestring;
+                }
+                // 兼容旧的 text 字段
+                else if (cJSON_HasObjectItem(item, "text")) {
+                    text = cJSON_GetObjectItem(item, "text")->valuestring;
+                }
+                
+                // 支持 value 字段（存储值）
+                if (cJSON_HasObjectItem(item, "value")) {
+                    cJSON* value_obj = cJSON_GetObjectItem(item, "value");
+                    if (cJSON_IsString(value_obj)) {
+                        value = value_obj->valuestring;
+                    } else {
+                        // 将非字符串值转换为字符串存储
+                        char* value_str = cJSON_Print(value_obj);
+                        if (value_str) {
+                            // 移除引号
+                            int len = strlen(value_str);
+                            if (len > 1 && value_str[0] == '"' && value_str[len-1] == '"') {
+                                value_str[len-1] = '\0';
+                                value = value_str + 1;
+                            } else {
+                                value = value_str;
+                            }
+                        }
                     }
-                    if (cJSON_HasObjectItem(item, "disabled")) {
-                        disabled = cJSON_IsTrue(cJSON_GetObjectItem(item, "disabled"));
-                    }
-                    
-                    select_component_add_item(component, text, NULL);
-                    if (disabled) {
-                        select_component_set_item_disabled(component, component->item_count - 1, 1);
-                    }
+                }
+                
+                if (cJSON_HasObjectItem(item, "disabled")) {
+                    disabled = cJSON_IsTrue(cJSON_GetObjectItem(item, "disabled"));
+                }
+                
+                select_component_add_item(component, text, (void*)value);
+                if (disabled) {
+                    select_component_set_item_disabled(component, component->item_count - 1, 1);
                 }
             }
         }
-        
-        // 解析占位符
-        if (cJSON_HasObjectItem(selectConfig, "placeholder")) {
-            select_component_add_placeholder(component, cJSON_GetObjectItem(selectConfig, "placeholder")->valuestring);
+    }
+    
+    // 解析占位符
+    if (cJSON_HasObjectItem(config_source, "placeholder")) {
+        select_component_add_placeholder(component, cJSON_GetObjectItem(config_source, "placeholder")->valuestring);
+    }
+    
+    // 解析颜色配置
+    cJSON* colors = cJSON_GetObjectItem(config_source, "colors");
+    if (colors) {
+        if (cJSON_HasObjectItem(colors, "bgColor")) {
+            parse_color((char*)cJSON_GetObjectItem(colors, "bgColor")->valuestring, &component->bg_color);
         }
-        
-        // 解析颜色配置
-        cJSON* colors = cJSON_GetObjectItem(selectConfig, "colors");
-        if (colors) {
-            if (cJSON_HasObjectItem(colors, "bgColor")) {
-                parse_color((char*)cJSON_GetObjectItem(colors, "bgColor")->valuestring, &component->bg_color);
-            }
-            if (cJSON_HasObjectItem(colors, "textColor")) {
-                parse_color((char*)cJSON_GetObjectItem(colors, "textColor")->valuestring, &component->text_color);
+        if (cJSON_HasObjectItem(colors, "textColor")) {
+            parse_color((char*)cJSON_GetObjectItem(colors, "textColor")->valuestring, &component->text_color);
 
-            }
-            if (cJSON_HasObjectItem(colors, "borderColor")) {
-                parse_color((char*)cJSON_GetObjectItem(colors, "borderColor")->valuestring, &component->border_color);
-            }
-            if (cJSON_HasObjectItem(colors, "arrowColor")) {
-                parse_color((char*)cJSON_GetObjectItem(colors, "arrowColor")->valuestring, &component->arrow_color);
-            }
-            if (cJSON_HasObjectItem(colors, "dropdownBgColor")) {
-                char* color_str = (char*)cJSON_GetObjectItem(colors, "dropdownBgColor")->valuestring;
-                parse_color(color_str, &component->dropdown_bg_color);
-                printf("DEBUG: dropdownBgColor parsed: %s -> (%d,%d,%d,%d)\n", 
-                       color_str, component->dropdown_bg_color.r, component->dropdown_bg_color.g, 
-                       component->dropdown_bg_color.b, component->dropdown_bg_color.a);
-            }
-            if (cJSON_HasObjectItem(colors, "hoverBgColor")) {
-                parse_color((char*)cJSON_GetObjectItem(colors, "hoverBgColor")->valuestring, &component->hover_bg_color);
-            }
-            if (cJSON_HasObjectItem(colors, "selectedBgColor")) {
-                parse_color((char*)cJSON_GetObjectItem(colors, "selectedBgColor")->valuestring, &component->selected_bg_color);
-            }
-            if (cJSON_HasObjectItem(colors, "selectedTextColor")) {
-                parse_color((char*)cJSON_GetObjectItem(colors, "selectedTextColor")->valuestring, &component->selected_text_color);
-            }
-            if (cJSON_HasObjectItem(colors, "disabledTextColor")) {
-                parse_color((char*)cJSON_GetObjectItem(colors, "disabledTextColor")->valuestring, &component->disabled_text_color);
+        }
+        if (cJSON_HasObjectItem(colors, "borderColor")) {
+            parse_color((char*)cJSON_GetObjectItem(colors, "borderColor")->valuestring, &component->border_color);
+        }
+        if (cJSON_HasObjectItem(colors, "arrowColor")) {
+            parse_color((char*)cJSON_GetObjectItem(colors, "arrowColor")->valuestring, &component->arrow_color);
+        }
+        if (cJSON_HasObjectItem(colors, "dropdownBgColor")) {
+            char* color_str = (char*)cJSON_GetObjectItem(colors, "dropdownBgColor")->valuestring;
+            parse_color(color_str, &component->dropdown_bg_color);
+            printf("DEBUG: dropdownBgColor parsed: %s -> (%d,%d,%d,%d)\n", 
+                   color_str, component->dropdown_bg_color.r, component->dropdown_bg_color.g, 
+                   component->dropdown_bg_color.b, component->dropdown_bg_color.a);
+        }
+        if (cJSON_HasObjectItem(colors, "hoverBgColor")) {
+            parse_color((char*)cJSON_GetObjectItem(colors, "hoverBgColor")->valuestring, &component->hover_bg_color);
+        }
+        if (cJSON_HasObjectItem(colors, "selectedBgColor")) {
+            parse_color((char*)cJSON_GetObjectItem(colors, "selectedBgColor")->valuestring, &component->selected_bg_color);
+        }
+        if (cJSON_HasObjectItem(colors, "selectedTextColor")) {
+            parse_color((char*)cJSON_GetObjectItem(colors, "selectedTextColor")->valuestring, &component->selected_text_color);
+        }
+        if (cJSON_HasObjectItem(colors, "disabledTextColor")) {
+            parse_color((char*)cJSON_GetObjectItem(colors, "disabledTextColor")->valuestring, &component->disabled_text_color);
 
-            }
-            if (cJSON_HasObjectItem(colors, "scrollbarColor")) {
-                parse_color((char*)cJSON_GetObjectItem(colors, "scrollbarColor")->valuestring, &component->scrollbar_color);
-            }
-            if (cJSON_HasObjectItem(colors, "scrollbarBgColor")) {
-                parse_color((char*)cJSON_GetObjectItem(colors, "scrollbarBgColor")->valuestring, &component->scrollbar_bg_color);
-            }
-            if (cJSON_HasObjectItem(colors, "focusBorderColor")) {
-                parse_color((char*)cJSON_GetObjectItem(colors, "focusBorderColor")->valuestring, &component->focus_border_color);
-            }
-            if (cJSON_HasObjectItem(colors, "hoverBorderColor")) {
-                parse_color((char*)cJSON_GetObjectItem(colors, "hoverBorderColor")->valuestring, &component->hover_border_color);
-            }
+        }
+        if (cJSON_HasObjectItem(colors, "scrollbarColor")) {
+            parse_color((char*)cJSON_GetObjectItem(colors, "scrollbarColor")->valuestring, &component->scrollbar_color);
+        }
+        if (cJSON_HasObjectItem(colors, "scrollbarBgColor")) {
+            parse_color((char*)cJSON_GetObjectItem(colors, "scrollbarBgColor")->valuestring, &component->scrollbar_bg_color);
+        }
+        if (cJSON_HasObjectItem(colors, "focusBorderColor")) {
+            parse_color((char*)cJSON_GetObjectItem(colors, "focusBorderColor")->valuestring, &component->focus_border_color);
+        }
+        if (cJSON_HasObjectItem(colors, "hoverBorderColor")) {
+            parse_color((char*)cJSON_GetObjectItem(colors, "hoverBorderColor")->valuestring, &component->hover_border_color);
         }
     }
     
@@ -422,6 +451,14 @@ const char* select_component_get_selected_text(SelectComponent* component) {
         return NULL;
     }
     return component->items[component->selected_index].text;
+}
+
+// 获取选中项值（从 user_data 中获取）
+const char* select_component_get_selected_value(SelectComponent* component) {
+    if (!component || component->selected_index < 0 || component->selected_index >= component->item_count) {
+        return NULL;
+    }
+    return (const char*)component->items[component->selected_index].user_data;
 }
 
 // 获取选中项用户数据

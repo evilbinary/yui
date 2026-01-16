@@ -167,7 +167,7 @@
                                 "borderColor": "#ced4da",
                                 "borderRadius": 4
                             },
-                            "options": [
+                            "items": [
                                 {"label": "增量更新", "value": "incremental"},
                                 {"label": "全量更新", "value": "full"}
                             ]

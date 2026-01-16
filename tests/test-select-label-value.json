@@ -1,0 +1,32 @@
+{
+    "id": "select_test",
+    "type": "Container",
+    "size": [400, 300],
+    "style": {
+        "bgColor": "#f5f5f5"
+    },
+    "children": [
+        {
+            "id": "testSelect",
+            "type": "Select",
+            "size": [200, 40],
+            "position": [20, 20],
+            "style": {
+                "bgColor": "#ffffff",
+                "color": "#333333",
+                "borderWidth": 1,
+                "borderColor": "#cccccc",
+                "borderRadius": 4
+            },
+            "selectConfig": {
+                "items": [
+                    {"label": "选项1", "value": "option1"},
+                    {"label": "选项2", "value": "option2"},
+                    {"label": "选项3", "value": "option3", "disabled": true},
+                    {"label": "选项4", "value": "option4"}
+                ],
+                "placeholder": "请选择一个选项"
+            }
+        }
+    ]
+}

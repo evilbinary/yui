@@ -80,6 +80,7 @@ void select_component_insert_item(SelectComponent* component, int index, const c
 void select_component_set_selected(SelectComponent* component, int index);
 int select_component_get_selected(SelectComponent* component);
 const char* select_component_get_selected_text(SelectComponent* component);
+const char* select_component_get_selected_value(SelectComponent* component);
 void* select_component_get_selected_data(SelectComponent* component);
 void select_component_clear_selection(SelectComponent* component);
 
