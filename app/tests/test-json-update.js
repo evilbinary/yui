@@ -48,27 +48,10 @@ function onLoad() {
     YUI.log("2. 批量更新");
     YUI.log("3. 删除/隐藏元素");
     
-    // 列出 YUI 的所有属性
-    YUI.log("YUI 对象属性:");
-    YUI.log("- YUI.log: " + typeof YUI.log);
-    YUI.log("- YUI.setText: " + typeof YUI.setText);
-    YUI.log("- YUI.getText: " + typeof YUI.getText);
-    YUI.log("- YUI.setBgColor: " + typeof YUI.setBgColor);
-    YUI.log("- YUI.hide: " + typeof YUI.hide);
-    YUI.log("- YUI.show: " + typeof YUI.show);
-    YUI.log("- YUI.renderFromJson: " + typeof YUI.renderFromJson);
-    YUI.log("- YUI.call: " + typeof YUI.call);
-    YUI.log("- YUI.update: " + typeof YUI.update);
-    
-    if (typeof YUI.update !== 'undefined') {
-        // 初始化状态（直接使用 JSON 字符串）
-        var initUpdate = '{"target":"statusLabel","change":{"text":"状态：就绪 - 点击按钮测试功能","color":"#61dafb"}}';
-        YUI.update(initUpdate);
-    } else {
-        YUI.log("错误: YUI.update 不存在！");
-        YUI.log("尝试使用 YUI.setText 替代...");
-        YUI.setText("statusLabel", "状态：就绪（update API 不可用）");
-    }
+ 
+    var initUpdate = '{"target":"statusLabel","change":{"text":"状态：就绪 - 点击按钮测试功能","color":"#61dafb"}}';
+    YUI.update(initUpdate);
+
 }
 
 

@@ -346,7 +346,15 @@ static void scan_and_register_events(cJSON* json)
             if (cJSON_IsString(event)) {
                 // 构建完整的事件名称：layerId.eventName
                 char full_event_name[256];
-                if (layer_id && layer_id[0] != '\0') {
+                
+                // 全局事件（如 onLoad）不添加层ID前缀
+                // 如果事件名已经包含点号（如 "newGameBtn.onClick"），说明它已经指定了目标层ID
+                // 这两种情况都直接使用事件名，不添加前缀
+                if (strchr(event->string, '.') != NULL || 
+                    strcmp(event->string, "onLoad") == 0) {
+                    strncpy(full_event_name, event->string, sizeof(full_event_name) - 1);
+                    full_event_name[sizeof(full_event_name) - 1] = '\0';
+                } else if (layer_id && layer_id[0] != '\0') {
                     snprintf(full_event_name, sizeof(full_event_name), "%s.%s", layer_id, event->string);
                 } else {
                     strncpy(full_event_name, event->string, sizeof(full_event_name) - 1);
@@ -368,7 +376,15 @@ static void scan_and_register_events(cJSON* json)
             if (cJSON_IsString(event)) {
                 // 构建完整的事件名称：layerId.eventName
                 char full_event_name[256];
-                if (layer_id && layer_id[0] != '\0') {
+                
+                // 全局事件（如 onLoad）不添加层ID前缀
+                // 如果事件名已经包含点号（如 "newGameBtn.onClick"），说明它已经指定了目标层ID
+                // 这两种情况都直接使用事件名，不添加前缀
+                if (strchr(event->string, '.') != NULL || 
+                    strcmp(event->string, "onLoad") == 0) {
+                    strncpy(full_event_name, event->string, sizeof(full_event_name) - 1);
+                    full_event_name[sizeof(full_event_name) - 1] = '\0';
+                } else if (layer_id && layer_id[0] != '\0') {
                     snprintf(full_event_name, sizeof(full_event_name), "%s.%s", layer_id, event->string);
                 } else {
                     strncpy(full_event_name, event->string, sizeof(full_event_name) - 1);
