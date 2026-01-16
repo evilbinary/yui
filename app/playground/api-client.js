@@ -113,27 +113,39 @@ var APIClient = {
     _postJSON: function(url, data, callback) {
         YUI.log("APIClient: POST " + url);
         
-        // 使用 YUI 的网络请求功能（如果可用）
-        if (typeof YUI !== 'undefined' && YUI.httpRequest) {
-            YUI.httpRequest({
-                url: url,
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                data: JSON.stringify(data),
-                success: function(responseText) {
-                    var response = JSON.parse(responseText);
+        // 使用 http.js 模块的 http_post 函数
+        if (typeof http_post !== 'undefined') {
+            try {
+                var options = {
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    contentType: 'application/json',
+                    timeout: 5000
+                };
+                
+                var response = http_post(url, JSON.stringify(data), options);
+                YUI.log("APIClient: Response status: " + response.status);
+                
+                if (response.status >= 200 && response.status < 300) {
+                    var parsedResponse = JSON.parse(response.body);
                     if (callback && typeof callback === 'function') {
-                        callback(response);
+                        callback(parsedResponse);
                     }
-                },
-                error: function(error) {
-                    YUI.log("APIClient: Request failed - " + error);
+                } else {
+                    YUI.log("APIClient: HTTP error - " + response.status);
+                    callback({status: 'error', error: 'HTTP ' + response.status});
                 }
-            });
+            } catch (e) {
+                YUI.log("APIClient: Request failed - " + e.message);
+                // 回退到模拟响应
+                var mockResponse = APIClient._getMockResponse(url, data);
+                if (callback && typeof callback === 'function') {
+                    callback(mockResponse);
+                }
+            }
         } else {
-            YUI.log("APIClient: YUI.httpRequest not available");
+            YUI.log("APIClient: http_post not available");
             // 回退到模拟响应
             setTimeout(function() {
                 var mockResponse = APIClient._getMockResponse(url, data);
@@ -148,23 +160,35 @@ var APIClient = {
     _getJSON: function(url, callback) {
         YUI.log("APIClient: GET " + url);
         
-        // 使用 YUI 的网络请求功能（如果可用）
-        if (typeof YUI !== 'undefined' && YUI.httpRequest) {
-            YUI.httpRequest({
-                url: url,
-                method: 'GET',
-                success: function(responseText) {
-                    var response = JSON.parse(responseText);
+        // 使用 http.js 模块的 http_get 函数
+        if (typeof http_get !== 'undefined') {
+            try {
+                var options = {
+                    timeout: 5000
+                };
+                
+                var response = http_get(url, options);
+                YUI.log("APIClient: Response status: " + response.status);
+                
+                if (response.status >= 200 && response.status < 300) {
+                    var parsedResponse = JSON.parse(response.body);
                     if (callback && typeof callback === 'function') {
-                        callback(response);
+                        callback(parsedResponse);
                     }
-                },
-                error: function(error) {
-                    YUI.log("APIClient: Request failed - " + error);
+                } else {
+                    YUI.log("APIClient: HTTP error - " + response.status);
+                    callback({status: 'error', error: 'HTTP ' + response.status});
                 }
-            });
+            } catch (e) {
+                YUI.log("APIClient: Request failed - " + e.message);
+                // 回退到模拟响应
+                var mockResponse = APIClient._getMockResponse(url, null);
+                if (callback && typeof callback === 'function') {
+                    callback(mockResponse);
+                }
+            }
         } else {
-            YUI.log("APIClient: YUI.httpRequest not available");
+            YUI.log("APIClient: http_get not available");
             // 回退到模拟响应
             setTimeout(function() {
                 var mockResponse = APIClient._getMockResponse(url, null);
