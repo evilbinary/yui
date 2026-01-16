@@ -1,4 +1,5 @@
 #include "layer.h"
+#include "layer_properties.h"
 #include "util.h"
 #include "animate.h"
 

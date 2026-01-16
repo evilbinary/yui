@@ -69,13 +69,55 @@ static int handle_bg_color(Layer* layer, cJSON* value, int is_creating) {
     return 1;
 }
 
-// 数值属性处理器
+// 字体相关处理器
+static int handle_font(Layer* layer, cJSON* value, int is_creating) {
+    if (!cJSON_IsString(value)) return 0;
+    if (!layer->font && is_creating) {
+        layer->font = malloc(sizeof(Font));
+        layer->font->default_font = NULL;
+        layer->font->size = 16;
+        strcpy(layer->font->weight, "normal");
+    }
+    if (layer->font) {
+        strncpy(layer->font->path, value->valuestring, MAX_PATH - 1);
+        layer->font->path[MAX_PATH - 1] = '\0';
+        if (!is_creating) {
+            mark_layer_dirty(layer, DIRTY_TEXT);
+        }
+    }
+    return 1;
+}
+
 static int handle_font_size(Layer* layer, cJSON* value, int is_creating) {
     if (!cJSON_IsNumber(value)) return 0;
+    if (!layer->font && is_creating) {
+        layer->font = malloc(sizeof(Font));
+        layer->font->default_font = NULL;
+        strcpy(layer->font->path, "Roboto-Regular.ttf");
+        strcpy(layer->font->weight, "normal");
+    }
     if (layer->font) {
         layer->font->size = value->valueint;
         if (!is_creating) {
             mark_layer_dirty(layer, DIRTY_TEXT | DIRTY_LAYOUT);
+        }
+    }
+    return 1;
+}
+
+static int handle_font_weight(Layer* layer, cJSON* value, int is_creating) {
+    if (!cJSON_IsString(value)) return 0;
+    if (!layer->font && is_creating) {
+        layer->font = malloc(sizeof(Font));
+        layer->font->default_font = NULL;
+        strcpy(layer->font->path, "Roboto-Regular.ttf");
+        layer->font->size = 16;
+    }
+    if (layer->font) {
+        strncpy(layer->font->weight, value->valuestring, sizeof(layer->font->weight) - 1);
+        layer->font->weight[sizeof(layer->font->weight) - 1] = '\0';
+        if (!is_creating) {
+            mark_layer_dirty(layer, DIRTY_TEXT);
         }
     }
     return 1;
@@ -183,10 +225,65 @@ static int handle_focusable(Layer* layer, cJSON* value, int is_creating) {
 }
 
 static int handle_scrollable(Layer* layer, cJSON* value, int is_creating) {
-    if (!cJSON_IsBool(value)) return 0;
-    layer->scrollable = cJSON_IsTrue(value) ? 1 : 0;
+    if (cJSON_IsNumber(value)) {
+        layer->scrollable = value->valueint;
+    } else if (cJSON_IsBool(value)) {
+        layer->scrollable = cJSON_IsTrue(value) ? 1 : 0;
+    } else {
+        return 0;
+    }
     if (!is_creating) {
         mark_layer_dirty(layer, DIRTY_LAYOUT);
+    }
+    return 1;
+}
+
+// 尺寸属性处理器
+static int handle_width(Layer* layer, cJSON* value, int is_creating) {
+    if (!cJSON_IsNumber(value)) return 0;
+    layer->fixed_width = value->valueint;
+    layer->rect.w = layer->fixed_width;
+    if (!is_creating) {
+        mark_layer_dirty(layer, DIRTY_RECT | DIRTY_LAYOUT);
+    }
+    return 1;
+}
+
+static int handle_height(Layer* layer, cJSON* value, int is_creating) {
+    if (!cJSON_IsNumber(value)) return 0;
+    layer->fixed_height = value->valueint;
+    layer->rect.h = layer->fixed_height;
+    if (!is_creating) {
+        mark_layer_dirty(layer, DIRTY_RECT | DIRTY_LAYOUT);
+    }
+    return 1;
+}
+
+static int handle_flex(Layer* layer, cJSON* value, int is_creating) {
+    if (!cJSON_IsNumber(value)) return 0;
+    layer->flex_ratio = (float)value->valuedouble;
+    if (!is_creating) {
+        mark_layer_dirty(layer, DIRTY_LAYOUT);
+    }
+    return 1;
+}
+
+// 其他属性处理器
+static int handle_rotation(Layer* layer, cJSON* value, int is_creating) {
+    if (!cJSON_IsNumber(value)) return 0;
+    layer->rotation = value->valueint;
+    if (!is_creating) {
+        mark_layer_dirty(layer, DIRTY_RECT);
+    }
+    return 1;
+}
+
+static int handle_source(Layer* layer, cJSON* value, int is_creating) {
+    if (!cJSON_IsString(value)) return 0;
+    strncpy(layer->source, value->valuestring, sizeof(layer->source) - 1);
+    layer->source[sizeof(layer->source) - 1] = '\0';
+    if (!is_creating) {
+        mark_layer_dirty(layer, DIRTY_STYLE);
     }
     return 1;
 }
@@ -196,23 +293,36 @@ static const PropertyHandlerEntry property_handlers[] = {
     // 基础属性
     {"id", handle_id},
     
-    // 字符串属性
+    // 文本属性
     {"text", handle_text},
     {"label", handle_label},
+    
+    // 颜色属性
     {"color", handle_color},
     {"bgColor", handle_bg_color},
-    
-    // 数值属性
-    {"fontSize", handle_font_size},
-    {"borderRadius", handle_border_radius},
     {"opacity", handle_opacity},
     
-    // 数组属性
+    // 字体属性
+    {"font", handle_font},
+    {"fontSize", handle_font_size},
+    {"fontWeight", handle_font_weight},
+    
+    // 样式属性
+    {"borderRadius", handle_border_radius},
+    {"source", handle_source},
+    
+    // 尺寸和位置属性
     {"size", handle_size},
     {"position", handle_position},
+    {"width", handle_width},
+    {"height", handle_height},
     {"padding", handle_padding},
     
-    // 布尔属性
+    // 布局属性
+    {"flex", handle_flex},
+    {"rotation", handle_rotation},
+    
+    // 状态属性
     {"visible", handle_visible},
     {"enabled", handle_enabled},
     {"focusable", handle_focusable},
