@@ -1,5 +1,5 @@
 {
-  "id": "themeTestView",
+  "id": "themeSimpleTestView",
   "type": "View",
   "size": [400, 300],
   "layout": {
@@ -16,7 +16,7 @@
     {
       "id": "themeTitle",
       "type": "Label",
-      "text": "主题系统测试",
+      "text": "主题系统简单测试",
       "style": {
         "fontSize": 24,
         "color": "#333333",
@@ -51,12 +51,8 @@
       }
     }
   ],
-
   "events": {
     "onLoad": "@delayedInit"
   },
-  "js": [
-   "../app/lib/theme.js",
-   "test-theme.js"
-  ]
+  "js": ["theme-simple-test.js"]
 }

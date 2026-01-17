@@ -193,11 +193,54 @@ static EventHandler get_event_handler_by_type(const char* event_type)
 // 辅助函数：构建完整的 JS 文件路径（相对于 JSON 文件目录）
 static void build_js_path(const char* js_path, const char* json_dir, char* full_path, size_t max_len)
 {
-    if (js_path[0] == '/' || (js_path[0] == '.' && (js_path[1] == '/' || js_path[1] == '.'))) {
-        // 绝对路径或 ./ 开头的路径，直接使用
+    if (js_path[0] == '/') {
+        // 绝对路径，直接使用
         strncpy(full_path, js_path, max_len - 1);
+    } else if (js_path[0] == '.' && js_path[1] == '/') {
+        // ./ 开头的路径，替换为当前目录
+        snprintf(full_path, max_len, "%s%s", json_dir, js_path + 1);
+    } else if (js_path[0] == '.' && js_path[1] == '.') {
+        // ../ 开头的路径，需要处理相对路径
+        char temp_dir[MAX_PATH];
+        strncpy(temp_dir, json_dir, MAX_PATH - 1);
+        temp_dir[MAX_PATH - 1] = '\0';
+        
+        const char* path_ptr = js_path;
+        
+        // 处理每个 ../ 
+        while (path_ptr[0] == '.' && path_ptr[1] == '.' && (path_ptr[2] == '/' || path_ptr[2] == '\\')) {
+            // 从目录中移除最后一部分
+            char* last_sep = strrchr(temp_dir, '/');
+            char* last_sep_win = strrchr(temp_dir, '\\');
+            
+            // 使用最后的分隔符
+            char* sep = (last_sep_win > last_sep) ? last_sep_win : last_sep;
+            
+            if (sep) {
+                *sep = '\0';  // 截断到最后一个分隔符之前
+            } else {
+                // 如果没有更多目录，使用根目录
+                strcpy(temp_dir, ".");
+                break;
+            }
+            
+            // 移动到路径的下一部分
+            path_ptr += 3;  // 跳过 "../"
+        }
+        
+        // 添加剩余的路径部分
+        if (path_ptr[0] == '/' || path_ptr[0] == '\\') {
+            path_ptr++;  // 跳过开头的分隔符
+        }
+        
+        // 构建最终路径
+        if (strlen(temp_dir) > 0 && strcmp(temp_dir, ".") != 0) {
+            snprintf(full_path, max_len, "%s/%s", temp_dir, path_ptr);
+        } else {
+            strncpy(full_path, path_ptr, max_len - 1);
+        }
     } else {
-        // 相对路径，拼接 JSON 文件所在目录
+        // 普通相对路径，拼接 JSON 文件所在目录
         snprintf(full_path, max_len, "%s/%s", json_dir, js_path);
     }
     full_path[max_len - 1] = '\0';
