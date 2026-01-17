@@ -1,0 +1,78 @@
+{
+  "name": "dark-theme",
+  "version": "1.0",
+  "description": "深色主题",
+  "styles": [
+    {
+      "selector": "View",
+      "style": {
+        "bgColor": "#2C3E50",
+        "spacing": 20,
+        "padding": [20, 20, 20, 20]
+      }
+    },
+    {
+      "selector": "Button",
+      "style": {
+        "bgColor": "#16A085",
+        "color": "#ffffff",
+        "fontSize": 24,
+        "borderRadius": 8,
+        "fontWeight": "bold"
+      }
+    },
+    {
+      "selector": "#movesLabel",
+      "style": {
+        "fontSize": 20,
+        "color": "#ECF0F1",
+        "fontWeight": "bold"
+      }
+    },
+    {
+      "selector": "#pairsLabel",
+      "style": {
+        "fontSize": 20,
+        "color": "#ECF0F1",
+        "fontWeight": "bold"
+      }
+    },
+    {
+      "selector": "#gameTitle",
+      "style": {
+        "fontSize": 24,
+        "color": "#3498DB",
+        "fontWeight": "bold"
+      }
+    },
+    {
+      "selector": "#gameBoard",
+      "style": {
+        "bgColor": "#34495E",
+        "borderRadius": 10,
+        "padding": [20, 20, 20, 20]
+      }
+    },
+    {
+      "selector": "#newGameBtn",
+      "style": {
+        "bgColor": "#3498DB",
+        "fontSize": 16
+      }
+    },
+    {
+      "selector": "#showHintBtn",
+      "style": {
+        "bgColor": "#F39C12",
+        "fontSize": 16
+      }
+    },
+    {
+      "selector": "Label",
+      "style": {
+        "color": "#ffffff",
+        "fontSize": 16
+      }
+    }
+  ]
+}

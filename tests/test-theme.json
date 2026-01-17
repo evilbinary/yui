@@ -1,0 +1,55 @@
+{
+  "id": "themeTestView",
+  "type": "View",
+  "size": [400, 300],
+  "layout": {
+    "type": "vertical",
+    "spacing": 10,
+    "padding": [20, 20, 20, 20],
+    "justifyContent": "center",
+    "alignItems": "center"
+  },
+  "style": {
+    "bgColor": "#F5F5F5"
+  },
+  "children": [
+    {
+      "id": "themeTitle",
+      "type": "Label",
+      "text": "主题系统测试",
+      "style": {
+        "fontSize": 24,
+        "color": "#333333",
+        "fontWeight": "bold"
+      }
+    },
+    {
+      "id": "testBtn1",
+      "type": "Button",
+      "text": "测试按钮1",
+      "size": [150, 40],
+      "events": {
+        "onClick": "@onTestButtonClick"
+      }
+    },
+    {
+      "id": "testBtn2",
+      "type": "Button",
+      "text": "测试按钮2",
+      "size": [150, 40]
+    },
+    {
+      "id": "themeInfo",
+      "type": "Label",
+      "text": "当前主题: 默认",
+      "style": {
+        "fontSize": 16,
+        "color": "#666666"
+      }
+    }
+  ],
+  "events": {
+    "onLoad": "@initThemeTest"
+  },
+  "js": ["app/theme/theme.js", "tests/test-theme.js"]
+}
