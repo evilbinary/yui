@@ -7,92 +7,91 @@
     },
     "js": ["../lib/http.js","api-client.js", "json-editor.js"],
     "layout": {
-        "type": "horizontal",
-        "spacing": 5
-        // "padding": [10, 10, 10, 10]
+        "type": "vertical",
+        "spacing": 0
     },
     "children": [
         {
-            "id": "editorPanel",
+            "id": "contentPanel",
             "type": "View",
-            "size": [600, 780],
-            "style": {
-                "bgColor": "#2b2b2b",
-                "borderWidth": 1,
-                "borderColor": "#cccccc"
-            },
+            "size": [1200, 750],
             "layout": {
-                "type": "vertical",
-                "spacing": 0
+                "type": "horizontal",
+                "spacing": 5
             },
             "children": [
                 {
-                    "id": "editorHeader",
+                    "id": "editorPanel",
                     "type": "View",
-                    "size": [600, 40],
+                    "size": [600, 750],
                     "style": {
-                        "bgColor": "#1e1e1e",
-                        "borderRadius": [8, 8, 0, 0],
-                        "borderBottomWidth": 1,
-                        "borderBottomColor": "#333333"
+                        "bgColor": "#2b2b2b",
+                        "borderWidth": 1,
+                        "borderColor": "#cccccc"
                     },
                     "layout": {
-                        "type": "horizontal",
-                        "spacing": 10,
-                        "padding": [10, 10, 10, 10],
-                        "justifyContent": "left"
-                    },
-                    "children": [
-                        {
-                            "type": "Label",
-                            "label": "JSON编辑器",
-                            "text": "JSON编辑器",
-                            "size": [120, 20],
-                            "style": {
-                                "color": "#ffffff",
-                                "fontSize": 14
-                            }
-                        },
-                        {
-                            "id": "validateBtn",
-                            "type": "Button",
-                            "text": "验证",
-                            "size": [60, 25],
-                            "style": {
-                                "bgColor": "#4caf50",
-                                "color": "#ffffff",
-                                "fontSize": 12,
-                                "borderRadius": 4
-                            }
-                        },
-                        {
-                            "id": "formatBtn",
-                            "type": "Button",
-                            "text": "格式化",
-                            "size": [70, 25],
-                            "style": {
-                                "bgColor": "#2196f3",
-                                "color": "#ffffff",
-                                "fontSize": 12,
-                                "borderRadius": 4
-                            }
-                        }
-                    ]
-                },
-                {
-                    "id": "editorContainer",
-                    "type": "View",
-                    "size": [600, 690],
-                    "layout": {
-                        "type": "horizontal",
+                        "type": "vertical",
                         "spacing": 0
                     },
                     "children": [
                         {
+                            "id": "editorHeader",
+                            "type": "View",
+                            "size": [600, 40],
+                            "style": {
+                                "bgColor": "#1e1e1e",
+                                "borderRadius": [8, 8, 0, 0],
+                                "borderBottomWidth": 1,
+                                "borderBottomColor": "#333333"
+                            },
+                            "layout": {
+                                "type": "horizontal",
+                                "spacing": 10,
+                                "padding": [10, 10, 10, 10],
+                                "justifyContent": "left"
+                            },
+                            "children": [
+                                {
+                                    "type": "Label",
+                                    "label": "JSON编辑器",
+                                    "text": "JSON编辑器",
+                                    "size": [120, 20],
+                                    "style": {
+                                        "color": "#ffffff",
+                                        "fontSize": 14
+                                    }
+                                },
+                                {
+                                    "id": "validateBtn",
+                                    "type": "Button",
+                                    "text": "验证",
+                                    "size": [60, 25],
+                                    "style": {
+                                        "bgColor": "#4caf50",
+                                        "color": "#ffffff",
+                                        "fontSize": 12,
+                                        "borderRadius": 4
+                                    }
+                                },
+                                {
+                                    "id": "formatBtn",
+                                    "type": "Button",
+                                    "text": "格式化",
+                                    "size": [70, 25],
+                                    "style": {
+                                        "bgColor": "#2196f3",
+                                        "color": "#ffffff",
+                                        "fontSize": 12,
+                                        "borderRadius": 4
+                                    }
+                                }
+                            ]
+                        },
+                        {
                             "id": "jsonEditor",
                             "type": "Text",
                             "text": "",
-                            "size": [560, 690],
+                            "size": [560, 710],
                             "showLineNumbers":true,
                             "lineNumberWidth": 40,
                             "selectionColor": "#6BAF52CC",
@@ -111,78 +110,74 @@
                         }
                     ]
                 },
-                // {
-                //     "id": "previewResult",
-                //     "type": "Label",
-                //     "text": "",
-                //     "style": {
-                //         "bgColor": "#ffffff",
-                //         "color": "#495057",
-                //         "fontSize": 14,
-                //         "padding": [12, 16, 12, 16],
-                //         "borderWidth": 1,
-                //         "borderColor": "#ced4da",
-                //         "borderRadius": 4
-                //     }
-                
-                // },
                 {
-                    "id": "inputContainer",
+                    "id": "previewPanel",
                     "type": "View",
-                    "size": [600, 50],
+                    "size": [590, 750],
+                    "style": {
+                        "bgColor": "#ffffff",
+                        "borderWidth": 1,
+                        "borderColor": "#cccccc"
+                    },
                     "layout": {
-                        "type": "horizontal",
-                        "spacing": 10,
-                        "padding": [0, 0, 10, 10]
+                        "type": "vertical",
+                        "spacing": 0
                     },
                     "children": [
                         {
-                            "id": "messageInput",
-                            "type": "Text",
-                            "text": "",
-                            "placeholder": "输入消息...",
-                            "size": [320, 40],
+                            "id": "previewHeader",
+                            "type": "View",
+                            "size": [590, 40],
                             "style": {
-                                "bgColor": "#ffffff",
-                                "color": "#495057",
-                                "fontSize": 14,
-                                "padding": [12, 16, 12, 16],
-                                "borderWidth": 1,
-                                "borderColor": "#ced4da",
-                                "borderRadius": 4
+                                "bgColor": "#f8f9fa",
+                                "borderRadius": [8, 8, 0, 0],
+                                "borderBottomWidth": 1,
+                                "borderBottomColor": "#e9ecef"
                             },
-                            "editable": true,
-                            "multiline": false
-                        },
-                        {
-                            "id": "updateModeSelect",
-                            "type": "Select",
-                            "text": "增量更新",
-                            "size": [110, 40],
-                            "style": {
-                                "bgColor": "#ffffff",
-                                "color": "#495057",
-                                "fontSize": 14,
-                                "borderWidth": 1,
-                                "borderColor": "#ced4da",
-                                "borderRadius": 4
+                            "layout": {
+                                "type": "horizontal",
+                                "spacing": 10,
+                                "padding": [10, 10, 10, 10],
+                                "justifyContent": "space-between"
                             },
-                            "items": [
-                                {"label": "增量更新", "value": "incremental"},
-                                {"label": "全量更新", "value": "full"}
+                            "children": [
+                                {
+                                    "type": "Label",
+                                    "text": "预览",
+                                    "style": {
+                                        "color": "#495057",
+                                        "fontSize": 16,
+                                        "fontWeight": "bold"
+                                    }
+                                },
+                                {
+                                    "id": "refreshBtn",
+                                    "type": "Button",
+                                    "text": "刷新",
+                                    "size": [60, 25],
+                                    "style": {
+                                        "bgColor": "#6c757d",
+                                        "color": "#ffffff",
+                                        "fontSize": 12,
+                                        "borderRadius": 4
+                                    }
+                                }
                             ]
                         },
                         {
-                            "id": "sendBtn",
-                            "type": "Button",
-                            "text": "发送",
-                            "size": [80, 40],
+                            "id": "previewLabel",
+                            "type": "Label",
+                            "text": "预览区域\n在编辑器中输入JSON内容，点击验证、格式化或刷新按钮查看结果",
+                            "size": [550, 710],
                             "style": {
-                                "bgColor": "#007bff",
-                                "color": "#ffffff",
-                                "fontSize": 14,
-                                "borderRadius": 4,
-                                "fontWeight": "bold"
+                                "bgColor": "#ffffff",
+                                "color": "#333333",
+                                "fontSize": 13,
+                                "fontFamily": "monospace",
+                                "textAlign": "left",
+                                "lineHeight": 1.5,
+                                "padding": [20, 20, 20, 20],
+                                "scrollable": true
                             }
                         }
                     ]
@@ -190,84 +185,70 @@
             ]
         },
         {
-            "id": "previewPanel",
+            "id": "inputContainer",
             "type": "View",
-            "size": [590, 780],
-            "style": {
-                "bgColor": "#ffffff",
-                "borderWidth": 1,
-                "borderColor": "#cccccc"
-            },
+            "size": [1200, 50],
             "layout": {
-                "type": "vertical",
-                "spacing": 0
+                "type": "horizontal",
+                "spacing": 10,
+                "padding": [10, 10, 10, 10],
+                "justifyContent": "center",
+                "alignItems": "center"
+            },
+            "style": {
+                "bgColor": "#2b2b2b",
+                "borderTopWidth": 1,
+                "borderTopColor": "#333333"
             },
             "children": [
                 {
-                    "id": "previewHeader",
-                    "type": "View",
-                    "size": [590, 40],
+                    "id": "messageInput",
+                    "type": "Text",
+                    "text": "",
+                    "placeholder": "输入消息...",
+                    "size": [400, 35],
                     "style": {
-                        "bgColor": "#f8f9fa",
-                        "borderRadius": [8, 8, 0, 0],
-                        "borderBottomWidth": 1,
-                        "borderBottomColor": "#e9ecef"
-                    },
-                    "layout": {
-                        "type": "horizontal",
-                        "spacing": 10,
+                        "bgColor": "#ffffff",
+                        "color": "#495057",
+                        "fontSize": 13,
                         "padding": [10, 10, 10, 10],
-                        "justifyContent": "space-between"
+                        "borderWidth": 1,
+                        "borderColor": "#ced4da",
+                        "borderRadius": 4
                     },
-                    "children": [
-                        {
-                            "type": "Label",
-                            "text": "预览",
-                            "style": {
-                                "color": "#495057",
-                                "fontSize": 16,
-                                "fontWeight": "bold"
-                            }
-                        },
-                        {
-                            "id": "refreshBtn",
-                            "type": "Button",
-                            "text": "刷新",
-                            "size": [60, 25],
-                            "style": {
-                                "bgColor": "#6c757d",
-                                "color": "#ffffff",
-                                "fontSize": 12,
-                                "borderRadius": 4
-                            }
-                        }
-                        
+                    "editable": true,
+                    "multiline": false
+                },
+                {
+                    "id": "updateModeSelect",
+                    "type": "Select",
+                    "text": "增量更新",
+                    "size": [130, 35],
+                    "style": {
+                        "bgColor": "#ffffff",
+                        "color": "#495057",
+                        "fontSize": 13,
+                        "borderWidth": 1,
+                        "borderColor": "#ced4da",
+                        "borderRadius": 4
+                    },
+                    "items": [
+                        {"label": "增量更新", "value": "incremental"},
+                        {"label": "全量更新", "value": "full"}
                     ]
                 },
                 {
-                    "id": "previewContainer",
-                    "type": "View",
-                    "size": [590, 740],
+                    "id": "sendBtn",
+                    "type": "Button",
+                    "text": "发送",
+                    "size": [100, 35],
                     "style": {
-                        "bgColor": "#ffffff",
-                        "padding": [20, 20, 20, 20],
-                        "scrollable": true
-                    },
-                    "children": [
-                        {
-                            "id": "previewLabel",
-                            "type": "Label",
-                            "text": "预览区域\n在编辑器中输入JSON内容，点击验证、格式化或刷新按钮查看结果",
-                            "size": [550, 680],
-                            "style": {
-                                "color": "#333333",
-                                "fontSize": 13,
-                                "fontFamily": "monospace",
-                                "textAlign": "left",
-                                "lineHeight": 1.5
-                            }
-                        }
-                    ]
+                        "bgColor": "#2196f3",
+                        "color": "#ffffff",
+                        "fontSize": 13,
+                        "borderRadius": 4,
+                        "fontWeight": "bold"
+                    }
                 }
             ]
         }

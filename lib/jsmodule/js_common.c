@@ -106,6 +106,13 @@ int js_module_set_layer_event(Layer* layer, const char* event_name, const char* 
         layer->event->scroll = (EventHandler)event_handler;
         return 0;
     }
+    // 检查 change 事件
+    if (strcmp(event_name, "change") == 0 || strcmp(event_name, "onChange") == 0) {
+         layer->register_event(layer, event_name, event_func_name, (EventHandler)event_handler);
+        return 0;
+    
+    }
+
 
     return -1;
 }
@@ -153,6 +160,16 @@ static void js_module_scroll_event(void* data)
     }
 }
 
+// Change 事件包装函数
+static void js_module_change_event(void* data)
+{
+    Layer* layer = (Layer*)data;
+    if (layer) {
+        printf("JS: Scroll event on layer '%s'\n", layer->id);
+        js_module_call_layer_event(layer->id, "onChange");
+    }
+}
+
 // 根据事件类型返回对应的处理函数
 static EventHandler get_event_handler_by_type(const char* event_type)
 {
@@ -161,13 +178,14 @@ static EventHandler get_event_handler_by_type(const char* event_type)
     // 支持多种事件类型格式
     if (strcmp(event_type, "click") == 0 || strcmp(event_type, "onClick") == 0) {
         return js_module_click_event;
-    }
-    if (strcmp(event_type, "press") == 0 || strcmp(event_type, "onPress") == 0) {
+    }else if (strcmp(event_type, "press") == 0 || strcmp(event_type, "onPress") == 0) {
         return js_module_press_event;
-    }
-    if (strcmp(event_type, "scroll") == 0 || strcmp(event_type, "onScroll") == 0) {
+    }else if (strcmp(event_type, "scroll") == 0 || strcmp(event_type, "onScroll") == 0) {
         return js_module_scroll_event;
+    } else if (strcmp(event_type, "change") == 0 || strcmp(event_type, "onChange") == 0) {
+        return js_module_change_event;
     }
+    printf("JS: Unknown event type: %s\n", event_type);
 
     return NULL;
 }

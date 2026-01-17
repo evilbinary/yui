@@ -14,6 +14,7 @@
 // 创建文本组件
 TextComponent* text_component_create(Layer* layer) {
     TextComponent* component = (TextComponent*)malloc(sizeof(TextComponent));
+    memset(component, 0, sizeof(TextComponent));
     if (!component) {
         return NULL;
     }
@@ -51,7 +52,8 @@ TextComponent* text_component_create(Layer* layer) {
     layer->render = text_component_render;
     layer->handle_key_event = text_component_handle_key_event;
     layer->handle_mouse_event = text_component_handle_mouse_event;
-    
+    layer->register_event = text_component_register_event;
+
     return component;
 }
 
@@ -124,6 +126,22 @@ TextComponent* text_component_create_from_json(Layer* layer,cJSON* json_obj){
             text_component_set_selection_color(layer->component, selection_color);
         }
     }
+    
+      // 解析事件绑定
+    cJSON* events = cJSON_GetObjectItem(json_obj, "events");
+    if (events) {
+        // 解析onChange事件
+        if (cJSON_HasObjectItem(events, "onChange")) {
+            cJSON* on_change_obj = cJSON_GetObjectItem(events, "onChange");
+            if (cJSON_IsString(on_change_obj)) {
+                const char* event_name = on_change_obj->valuestring;
+                // 将事件名称存储在 user_data 中，稍后由事件系统处理
+                component->change_name = strdup(event_name);
+                EventHandler handler = find_event_by_name(event_name);
+                component->on_change = handler;
+            }
+        }
+    }
 
     return component;
 
@@ -171,6 +189,9 @@ void text_component_set_text(TextComponent* component, const char* text) {
     component->cursor_pos = text_len;
     component->selection_start = -1;
     component->selection_end = -1;
+    
+    // 触发 onChange 事件
+    text_component_trigger_on_change(component);
 }
 
 // 设置占位符
@@ -289,6 +310,39 @@ void text_component_set_selection_color(TextComponent* component, Color color) {
     component->selection_color = color;
 }
 
+// 注册事件处理函数
+void text_component_register_event(Layer* layer, const char* event_name, const char* event_func_name, EventHandler event_handler){
+    if(strcmp(event_name,"change")==0 || strcmp(event_name,"onChange")==0){
+        TextComponent* component = (TextComponent*)layer->component;
+        component->on_change = event_handler;
+        component->change_name = strdup(event_func_name);
+    }
+}
+
+// 设置 onChange 回调函数
+void text_component_set_on_change(TextComponent* component, EventHandler callback, void* user_data) {
+    if (!component) {
+        return;
+    }
+    
+    component->on_change = callback;
+    component->change_name = user_data;
+}
+
+// 调用 onChange 回调函数
+void text_component_trigger_on_change(TextComponent* component) {
+    if(component->on_change==NULL){
+        EventHandler handler = find_event_by_name(component->change_name);
+        component->on_change = handler;
+    }
+    if (!component || !component->on_change) {
+        printf("text_component_trigger_on_change not found onchange event %s\n",component->change_name);
+        print_registered_events();
+        return;
+    }
+    component->on_change(component->layer);
+}
+
 // 删除选中文本
 static void text_component_delete_selection(TextComponent* component) {
     if (component->selection_start == -1 || component->selection_end == -1) {
@@ -331,6 +385,9 @@ static void text_component_delete_selection(TextComponent* component) {
         free(new_text);
         
         component->cursor_pos = start;
+        
+        // 触发 onChange 事件
+        text_component_trigger_on_change(component);
     }
     
     component->selection_start = -1;
@@ -391,7 +448,13 @@ static void text_component_insert_char(TextComponent* component, char c) {
     layer_set_text(component->layer, new_text);
     free(new_text);
     
+    // 触发 onChange 事件
+    text_component_trigger_on_change(component);
+    
     component->cursor_pos++;
+    
+    // 触发 onChange 事件
+    text_component_trigger_on_change(component);
     /*
     }
     */
@@ -457,6 +520,9 @@ static void text_component_delete_prev_char(TextComponent* component) {
         free(new_text);
         
         component->cursor_pos--;
+        
+        // 触发 onChange 事件
+        text_component_trigger_on_change(component);
     }
 }
 
@@ -513,6 +579,9 @@ static void text_component_delete_next_char(TextComponent* component) {
     // 设置新文本
     layer_set_text(component->layer, new_text);
     free(new_text);
+    
+    // 触发 onChange 事件
+    text_component_trigger_on_change(component);
 }
 
 // 在光标位置插入文本
@@ -583,6 +652,9 @@ static void text_component_insert_text(TextComponent* component, const char* tex
     // 设置新文本
     layer_set_text(component->layer, new_text);
     free(new_text);
+    
+    // 触发 onChange 事件
+    text_component_trigger_on_change(component);
     
     component->cursor_pos += text_len;
     

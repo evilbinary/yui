@@ -47,6 +47,10 @@ int main(int argc, char* argv[]) {
 
     cJSON* root_json=parse_json(json_path);    
     Layer* ui_root = layer_create_from_json(root_json,NULL);
+    if(ui_root==NULL){
+        fprintf(stderr, "Failed to create UI from JSON: %s\n", json_path);
+        return -1;
+    }
 
     // 设置 UI 根图层到 JS 模块
     js_module_init_layer(ui_root);

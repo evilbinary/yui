@@ -252,6 +252,18 @@ typedef struct MouseEvent {
     Uint32 timestamp;
 } MouseEvent;
 
+#define MAX_EVENT 512
+
+// 定义事件处理函数类型
+typedef void (*EventHandler)(void* data);
+
+
+typedef struct {
+    char name[50];          // 事件名称
+    EventHandler handler;   // 事件处理函数
+} EventEntry;
+
+
 typedef struct Event {
     char click_name[MAX_PATH];
     void (*click)(Layer*);  // 事件回调函数指针
@@ -366,7 +378,11 @@ typedef struct Layer {
     void (*handle_mouse_event)(Layer* layer, MouseEvent* event);
     void (*handle_scroll_event)(Layer* layer, int scroll_delta);
     void (*handle_touch_event)(Layer* layer, TouchEvent* event);
-    
+
+    //事件注册
+    int (*register_event)(Layer* layer, const char* event_name, const char* event_func_name, EventHandler event_handler);
+    int (*unregister_event)(Layer* layer, const char* event_name);
+
     // 毛玻璃效果相关属性
     int backdrop_filter;     // 是否启用毛玻璃效果
     int blur_radius;         // 模糊半径
@@ -382,16 +398,6 @@ typedef struct Layer {
 extern Layer* focused_layer;
 
 
-#define MAX_EVENT 512
-
-// 定义事件处理函数类型
-typedef void (*EventHandler)(void* data);
-
-
-typedef struct {
-    char name[50];          // 事件名称
-    EventHandler handler;   // 事件处理函数
-} EventEntry;
 
 #ifdef YUI_INPUT_COMPONENT
 #include "components/input_component.h"

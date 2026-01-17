@@ -1,0 +1,49 @@
+{
+    "id": "testTextOnChange",
+    "type": "View",
+    "size": [800, 600],
+    "style": {
+        "bgColor": "#f5f5f5"
+    },
+    "js": ["test-text-onchange.js"],
+    "children": [
+        {
+            "id": "inputText",
+            "type": "Text",
+            "text": "",
+            "placeholder": "请输入文本...",
+            "size": [400, 40],
+            "position": [50, 50],
+            "style": {
+                "bgColor": "#333333",
+                "color": "#ffffff",
+                "fontSize": 14,
+                "borderWidth": 1,
+                "borderColor": "#cccccc",
+                "borderRadius": 4,
+                "padding": [10, 10, 10, 10]
+            },
+            "editable": true,
+            "multiline": false,
+            "events": {
+                "onChange": "@onTextChange"
+            }
+        },
+        {
+            "id": "outputLabel",
+            "type": "Label",
+            "text": "输出将显示在这里",
+            "size": [400, 200],
+            "position": [50, 120],
+            "style": {
+                "bgColor": "#e9ecef",
+                "color": "#333333",
+                "fontSize": 13,
+                "padding": [10, 10, 10, 10],
+                "borderWidth": 1,
+                "borderColor": "#cccccc",
+                "borderRadius": 4
+            }
+        }
+    ]
+}
