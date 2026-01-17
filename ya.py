@@ -101,7 +101,7 @@ def run(target):
     if platform.system()=='Windows':
         yui=targetfile.replace('/','\\')
     else:
-        yui=prefix_env+"./"+targetfile
+        yui=prefix_env+" && ./"+targetfile
 
     print('run '+yui,yui)
     os.shell(yui)
