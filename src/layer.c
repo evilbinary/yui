@@ -2,6 +2,7 @@
 #include "layer_properties.h"
 #include "util.h"
 #include "animate.h"
+#include "theme_manager.h"
 
 
 // 更新图层类型名称数组，添加GRID、Text、Tab、Slider、Listbox和Menu
@@ -942,6 +943,14 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
       }
       layer->children[i] = parse_layer_from_json(NULL,child, layer);
     }
+  }
+
+  // 应用主题样式（在解析完所有属性后，但在返回前）
+  // 主题样式会作为基础样式，可以被组件JSON中的style属性覆盖
+  Theme* current_theme = theme_manager_get_current();
+  if (current_theme) {
+    const char* type_name = layer_type_name[layer->type];
+    theme_apply_to_layer(current_theme, layer, layer->id, type_name);
   }
 
   return layer;
