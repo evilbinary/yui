@@ -51,8 +51,11 @@ void text_component_handle_key_event(Layer* layer, KeyEvent* event);
 void text_component_handle_mouse_event(Layer* layer, MouseEvent* event);
 void text_component_render(Layer* layer);
 int text_component_get_position_from_point(TextComponent* component, Point pt, Layer* layer);
+void text_component_register_event(Layer* layer, const char* event_name, const char* event_func_name, EventHandler event_handler);
+void text_component_trigger_on_change(TextComponent* component);
 void text_component_trigger_on_change(TextComponent* component);
 void text_component_register_event(Layer* layer, const char* event_name, const char* event_func_name, EventHandler event_handler);
+void text_component_update_scroll_for_cursor(TextComponent* component);
 // 辅助函数声明
 int get_line_start(TextComponent* component, int pos);
 int get_line_end(TextComponent* component, int pos);

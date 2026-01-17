@@ -458,6 +458,98 @@ static void text_component_insert_char(TextComponent* component, char c) {
     /*
     }
     */
+    
+    // 更新滚动位置，确保光标可见
+    text_component_update_scroll_for_cursor(component);
+}
+
+// 更新滚动位置以确保光标可见
+void text_component_update_scroll_for_cursor(TextComponent* component) {
+    if (!component || !component->layer || !component->layer->font || !component->layer->font->default_font) {
+        return;
+    }
+    
+    // 只在单行模式下处理水平滚动
+    if (component->multiline) {
+        return;
+    }
+    
+    // 准备渲染区域（与渲染函数中的逻辑一致）
+    Rect render_rect = component->layer->rect;
+    int left_padding = 5;
+    render_rect.x += left_padding;
+    render_rect.y += 5;
+    render_rect.w -= (left_padding + 5);
+    render_rect.h -= 10;
+    
+    // 计算整个文本的宽度
+    int full_text_width = 0;
+    if (strlen(component->layer->text) > 0) {
+        Texture* full_tex = backend_render_texture(component->layer->font->default_font, component->layer->text, component->layer->color);
+        if (full_tex) {
+            int full_width, full_height;
+            backend_query_texture(full_tex, NULL, NULL, &full_width, &full_height);
+            full_text_width = full_width / scale;
+            backend_render_text_destroy(full_tex);
+        }
+    }
+    
+    // 获取可视区域宽度
+    int visible_width = render_rect.w;
+    
+    // 如果文本没有超过宽度，不需要滚动
+    if (full_text_width <= visible_width) {
+        component->scroll_x = 0;
+        return;
+    }
+    
+    // 获取光标位置之前的文本
+    if (component->cursor_pos <= 0) {
+        component->scroll_x = 0;
+        return;
+    }
+    
+    char* before_cursor = (char*)malloc(component->cursor_pos + 1);
+    if (!before_cursor) {
+        return;
+    }
+    
+    strncpy(before_cursor, component->layer->text, component->cursor_pos);
+    before_cursor[component->cursor_pos] = '\0';
+    
+    // 计算光标位置的X坐标
+    int cursor_x = render_rect.x;
+    if (component->cursor_pos > 0) {
+        Texture* text_tex = backend_render_texture(component->layer->font->default_font, before_cursor, component->layer->color);
+        if (text_tex) {
+            int text_width, text_height;
+            backend_query_texture(text_tex, NULL, NULL, &text_width, &text_height);
+            cursor_x = render_rect.x + text_width / scale;
+            backend_render_text_destroy(text_tex);
+        }
+    }
+    
+    free(before_cursor);
+    
+    // 确保光标在可视区域内
+    int cursor_pixel_x = cursor_x - render_rect.x + component->scroll_x;
+    
+    // 如果光标在可视区域左侧，向左滚动
+    if (cursor_pixel_x < component->scroll_x) {
+        component->scroll_x = cursor_pixel_x;
+    }
+    // 如果光标在可视区域右侧，向右滚动
+    else if (cursor_pixel_x > component->scroll_x + visible_width) {
+        component->scroll_x = cursor_pixel_x - visible_width;
+    }
+    
+    // 限制滚动范围
+    if (component->scroll_x < 0) {
+        component->scroll_x = 0;
+    }
+    if (component->scroll_x > full_text_width - visible_width) {
+        component->scroll_x = full_text_width - visible_width;
+    }
 }
 
 // 删除光标前的字符
@@ -523,6 +615,9 @@ static void text_component_delete_prev_char(TextComponent* component) {
         
         // 触发 onChange 事件
         text_component_trigger_on_change(component);
+        
+        // 更新滚动位置，确保光标可见
+        text_component_update_scroll_for_cursor(component);
     }
 }
 
@@ -702,6 +797,9 @@ void text_component_handle_key_event(Layer* layer, KeyEvent* event) {
                         component->selection_start = -1;
                         component->selection_end = -1;
                     }
+                    
+                    // 更新滚动位置，确保光标可见
+                    text_component_update_scroll_for_cursor(component);
                 }
                 break;
             case SDLK_RIGHT:
@@ -722,6 +820,9 @@ void text_component_handle_key_event(Layer* layer, KeyEvent* event) {
                         component->selection_start = -1;
                         component->selection_end = -1;
                     }
+                    
+                    // 更新滚动位置，确保光标可见
+                    text_component_update_scroll_for_cursor(component);
                 }
                 break;
             case SDLK_UP:
@@ -959,6 +1060,9 @@ void text_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
             component->selection_start = click_pos;
             component->selection_end = click_pos;
             component->is_selecting = 1;
+            
+            // 更新滚动位置，确保光标可见
+            text_component_update_scroll_for_cursor(component);
         } else {
             // 点击文本区域外，清除选择并移除焦点
             component->selection_start = -1;
@@ -998,6 +1102,9 @@ void text_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
         // 更新选择范围和光标位置
         component->selection_end = drag_pos;
         component->cursor_pos = drag_pos;
+        
+        // 更新滚动位置，确保光标可见
+        text_component_update_scroll_for_cursor(component);
     }
     // 鼠标释放 - 结束选择
     else if (event->state == SDL_RELEASED && event->button == SDL_BUTTON_LEFT) {
@@ -1927,15 +2034,15 @@ void text_component_render(Layer* layer) {
                 }
             }
         } else {
-            // 单行模式，保持原逻辑
+            // 单行模式，应用水平滚动
             Texture* tex = backend_render_texture(layer->font->default_font, component->layer->text, layer->color);
             if (tex) {
                 int text_width, text_height;
                 backend_query_texture(tex, NULL, NULL, &text_width, &text_height);
                 
-                // 计算文本位置
+                // 计算文本位置，应用滚动偏移
                 Rect text_rect = {
-                    render_rect.x,
+                    render_rect.x - component->scroll_x,  // 应用水平滚动
                     render_rect.y + (render_rect.h - text_height / scale) / 2,  // 单行模式下垂直居中
                     text_width / scale,
                     text_height / scale
@@ -2128,7 +2235,7 @@ void text_component_render(Layer* layer) {
             
             backend_render_fill_rect(&cursor_rect, component->cursor_color);
         } else {
-            // 单行模式：计算光标前文本的宽度
+            // 单行模式：计算光标前文本的宽度，并应用滚动偏移
             int char_width = 0;
             if (component->cursor_pos > 0) {
                 char* temp_text = (char*)malloc(component->cursor_pos + 1);
@@ -2148,7 +2255,7 @@ void text_component_render(Layer* layer) {
             }
             
             Rect cursor_rect = {
-                render_rect.x + char_width,
+                render_rect.x + char_width - component->scroll_x,  // 应用水平滚动偏移
                 render_rect.y + (render_rect.h - line_height) / 2,
                 2,
                 line_height

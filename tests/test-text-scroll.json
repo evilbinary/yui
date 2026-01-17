@@ -1,0 +1,60 @@
+{
+    "id": "testTextScroll",
+    "type": "View",
+    "size": [800, 600],
+    "style": {
+        "bgColor": "#f5f5f5"
+    },
+    "children": [
+        {
+            "id": "inputText",
+            "type": "Text",
+            "text": "",
+            "placeholder": "输入长文本测试滚动...",
+            "size": [300, 40],
+            "position": [50, 50],
+            "style": {
+                "bgColor": "#ffffff",
+                "color": "#333333",
+                "fontSize": 14,
+                "borderWidth": 1,
+                "borderColor": "#cccccc",
+                "borderRadius": 4,
+                "padding": [10, 10, 10, 10]
+            },
+            "editable": true,
+            "multiline": false
+        },
+        {
+            "id": "multilineText",
+            "type": "Text",
+            "text": "",
+            "placeholder": "多行文本不受影响...",
+            "size": [300, 100],
+            "position": [50, 120],
+            "style": {
+                "bgColor": "#ffffff",
+                "color": "#333333",
+                "fontSize": 14,
+                "borderWidth": 1,
+                "borderColor": "#cccccc",
+                "borderRadius": 4,
+                "padding": [10, 10, 10, 10]
+            },
+            "editable": true,
+            "multiline": true
+        },
+        {
+            "id": "infoLabel",
+            "type": "Label",
+            "text": "测试说明：\n1. 在第一个输入框中输入长文本\n2. 当文本超过输入框宽度时，文本会自动向左滚动\n3. 光标始终保持在可视区域内\n4. 多行文本框不受影响",
+            "size": [400, 150],
+            "position": [50, 250],
+            "style": {
+                "color": "#666666",
+                "fontSize": 13,
+                "lineHeight": 1.5
+            }
+        }
+    ]
+}
