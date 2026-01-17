@@ -1,0 +1,30 @@
+{
+  "id": "scopeTestView",
+  "type": "View",
+  "size": [400, 300],
+  "layout": {
+    "type": "vertical",
+    "spacing": 10,
+    "padding": [20, 20, 20, 20],
+    "justifyContent": "center",
+    "alignItems": "center"
+  },
+  "children": [
+    {
+      "id": "infoLabel",
+      "type": "Label",
+      "text": "检查变量作用域",
+      "style": {
+        "fontSize": 16,
+        "color": "#333333"
+      }
+    }
+  ],
+  "events": {
+    "onLoad": "@onLoad"
+  },
+  "js": [
+    "scope-test-first.js",
+    "scope-test-second.js"
+  ]
+}
