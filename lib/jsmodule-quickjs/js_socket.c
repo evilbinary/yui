@@ -37,6 +37,7 @@ extern ssize_t _send(int socket, const void *message, size_t length, int flags);
 extern ssize_t _recv(int socket, void *buffer, size_t length, int flags);
 extern ssize_t _sendto(int socket, const void *message, size_t length, int flags, const struct sockaddr *dest_addr, socklen_t dest_len);
 extern ssize_t _recvfrom(int socket, void *buffer, size_t length, int flags, struct sockaddr *address, socklen_t *address_len);
+extern int _socketpair(int domain, int type, int protocol, int socket_vector[2]);
 extern in_addr_t _inet_addr(const char* strptr);
 extern uint32_t _ntohl(uint32_t netlong);
 extern void* make_sockaddr_in(int family, int addr, int port);

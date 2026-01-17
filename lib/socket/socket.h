@@ -30,6 +30,10 @@
 #include <sys/ioctl.h>
 #include<netinet/in.h>
 #include <unistd.h>
+
+#include <arpa/inet.h>
+#include <stdlib.h>
+#include <string.h>
 #endif
 
 #ifdef ANDROID
@@ -42,5 +46,19 @@
 
 #include <stdio.h>
 
+
+
+int _socket(int domain, int type, int protocol);
+int _close(int fd);
+int _shutdown(int socket, int how);
+int _connect(int socket, const struct sockaddr *address, socklen_t address_len);
+int _bind(int socket, const struct sockaddr *address, socklen_t address_len);
+int _listen(int socket, int backlog);
+int _accept(int socket, struct sockaddr *address, socklen_t *address_len);
+int _getsockname(int socket, struct sockaddr *address, socklen_t *address_len);
+int _getpeername(int socket, struct sockaddr *address, socklen_t *address_len);
+int _setsockopt(int socket, int level, int option_name, const void *option_value, socklen_t option_len);
+int _getsockopt(int socket, int level, int option_name, void *option_value, socklen_t *option_len);
+ssize_t _send(int socket, const void *buffer, size_t length, int flags);
 
 #endif
