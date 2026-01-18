@@ -706,7 +706,7 @@ void layer_set_event(Layer* layer, EventType event_type, EventHandler handler);
 int yui_update(Layer* root, const char* update_json);
 
 // 解析颜色字符串
-int parse_color_string(const char* color_str, Color* color);
+int parse_color(const char* color_str, Color* color);
 ```
 
 ### 图层属性 API (src/layer_properties.h)

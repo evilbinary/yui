@@ -108,10 +108,6 @@ void clear_dirty_flags(Layer* layer);
 
 // ====================== 辅助函数 ======================
 
-/**
- * 解析颜色字符串 "#RRGGBB"
- */
-int parse_color_string(const char* color_str, Color* color);
 
 /**
  * 解析数组 [a, b]

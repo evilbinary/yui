@@ -1,5 +1,6 @@
 #include "theme.h"
 #include "util.h"
+#include "layer_update.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -179,13 +180,13 @@ ThemeRule* theme_rule_create_from_json(cJSON* json) {
     // 颜色
     cJSON* color_obj = cJSON_GetObjectItem(style_obj, "color");
     if (color_obj && cJSON_IsString(color_obj)) {
-        parse_color_string(color_obj->valuestring, &rule->color);
+        parse_color(color_obj->valuestring, &rule->color);
     }
     
     // 背景颜色
     cJSON* bg_color_obj = cJSON_GetObjectItem(style_obj, "bgColor");
     if (bg_color_obj && cJSON_IsString(bg_color_obj)) {
-        parse_color_string(bg_color_obj->valuestring, &rule->bg_color);
+        parse_color(bg_color_obj->valuestring, &rule->bg_color);
     }
     
     // 字体大小
@@ -219,7 +220,7 @@ ThemeRule* theme_rule_create_from_json(cJSON* json) {
     // 边框颜色
     cJSON* border_color_obj = cJSON_GetObjectItem(style_obj, "borderColor");
     if (border_color_obj && cJSON_IsString(border_color_obj)) {
-        parse_color_string(border_color_obj->valuestring, &rule->border_color);
+        parse_color(border_color_obj->valuestring, &rule->border_color);
     }
     
     // 间距

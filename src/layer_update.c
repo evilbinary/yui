@@ -61,38 +61,6 @@ static Layer* resolve_path(Layer* root, const char* path) {
 }
 
 /**
- * 解析颜色字符串 "#RRGGBB" 或 "#RRGGBBAA"
- */
-int parse_color_string(const char* color_str, Color* color) {
-    if (!color_str || !color || color_str[0] != '#') {
-        return -1;
-    }
-    
-    int len = strlen(color_str);
-    if (len != 7 && len != 9) {
-        return -1;
-    }
-    
-    // 解析 RGB
-    unsigned int r, g, b, a = 255;
-    if (sscanf(color_str + 1, "%02x%02x%02x", &r, &g, &b) != 3) {
-        return -1;
-    }
-    
-    // 解析 Alpha（如果有）
-    if (len == 9) {
-        sscanf(color_str + 7, "%02x", &a);
-    }
-    
-    color->r = r;
-    color->g = g;
-    color->b = b;
-    color->a = a;
-    
-    return 0;
-}
-
-/**
  * 解析整数数组 [a, b]
  */
 int parse_int_array(cJSON* array, int* a, int* b) {
@@ -139,7 +107,7 @@ void yui_set_bg_color(Layer* layer, const char* color) {
     if (!layer || !color) return;
     
     Color parsed_color;
-    if (parse_color_string(color, &parsed_color) == 0) {
+    if (parse_color(color, &parsed_color) == 0) {
         layer->bg_color = parsed_color;
         mark_layer_dirty(layer, DIRTY_COLOR);
     }
