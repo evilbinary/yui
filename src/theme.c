@@ -180,13 +180,17 @@ ThemeRule* theme_rule_create_from_json(cJSON* json) {
     // 颜色
     cJSON* color_obj = cJSON_GetObjectItem(style_obj, "color");
     if (color_obj && cJSON_IsString(color_obj)) {
+        printf("[Theme] Parsing color: %s\n", color_obj->valuestring);
         parse_color(color_obj->valuestring, &rule->color);
+        printf("[Theme] Parsed color RGBA: %d, %d, %d, %d\n", rule->color.r, rule->color.g, rule->color.b, rule->color.a);
     }
     
     // 背景颜色
     cJSON* bg_color_obj = cJSON_GetObjectItem(style_obj, "bgColor");
     if (bg_color_obj && cJSON_IsString(bg_color_obj)) {
+        printf("[Theme] Parsing bgColor: %s\n", bg_color_obj->valuestring);
         parse_color(bg_color_obj->valuestring, &rule->bg_color);
+        printf("[Theme] Parsed bgColor RGBA: %d, %d, %d, %d\n", rule->bg_color.r, rule->bg_color.g, rule->bg_color.b, rule->bg_color.a);
     }
     
     // 字体大小
@@ -279,8 +283,11 @@ void theme_apply_to_layer(Theme* theme, Layer* layer, const char* id, const char
     
     // 遍历所有规则，应用匹配的规则
     ThemeRule* current = theme->rules;
+    printf("[Theme] Applying theme to layer id='%s', type='%s'\n", id, type);
     while (current) {
         int should_apply = 0;
+        
+        printf("[Theme] Checking rule selector='%s', type=%d\n", current->selector, current->selector_type);
         
         // 检查选择器是否匹配
         if (current->selector_type == THEME_SELECTOR_ID) {
@@ -291,13 +298,16 @@ void theme_apply_to_layer(Theme* theme, Layer* layer, const char* id, const char
             }
         } else if (current->selector_type == THEME_SELECTOR_TYPE) {
             // 类型选择器：直接比较
+            printf("[Theme] Comparing selector '%s' with type '%s'\n", current->selector, type);
             if (strcmp(current->selector, type) == 0) {
                 should_apply = 1;
+                printf("[Theme] MATCH! Applying rule to layer id='%s'\n", id);
             }
         }
         
         // 如果匹配，应用样式
         if (should_apply) {
+            printf("[Theme] Merging style for layer id='%s'\n", id);
             theme_merge_style(current, layer);
         }
         
@@ -311,6 +321,9 @@ void theme_merge_style(ThemeRule* rule, Layer* layer) {
         return;
     }
     
+    printf("[Theme] Merging style: rule bg_color RGBA=%d,%d,%d,%d, layer id='%s'\n", 
+           rule->bg_color.r, rule->bg_color.g, rule->bg_color.b, rule->bg_color.a, layer->id);
+    
     // 颜色
     if (rule->color.a > 0) {
         layer->color = rule->color;
@@ -318,7 +331,14 @@ void theme_merge_style(ThemeRule* rule, Layer* layer) {
     
     // 背景颜色
     if (rule->bg_color.a > 0) {
+        printf("[Theme] Applying bg_color to layer id='%s'\n", layer->id);
         layer->bg_color = rule->bg_color;
+        printf("[Theme] Layer bg_color set to RGBA=%d,%d,%d,%d\n", 
+               layer->bg_color.r, layer->bg_color.g, layer->bg_color.b, layer->bg_color.a);
+        
+        // 标记图层需要重绘
+        mark_layer_dirty(layer, DIRTY_COLOR);
+        printf("[Theme] Layer marked dirty for redraw: id='%s'\n", layer->id);
     }
     
     // 圆角半径
