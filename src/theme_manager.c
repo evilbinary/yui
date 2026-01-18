@@ -98,6 +98,59 @@ Theme* theme_manager_load_theme(const char* theme_path) {
     return theme;
 }
 
+// 从JSON字符串加载主题
+Theme* theme_manager_load_theme_from_json(const char* json_str) {
+    if (!json_str) {
+        return NULL;
+    }
+    
+    ThemeManager* manager = theme_manager_get_instance();
+    if (!manager) {
+        return NULL;
+    }
+    
+    // 解析JSON字符串
+    cJSON* json = cJSON_Parse(json_str);
+    if (!json) {
+        printf("Failed to parse theme JSON string\n");
+        return NULL;
+    }
+    
+    // 从JSON创建主题
+    Theme* theme = theme_load_from_json(json);
+    cJSON_Delete(json);
+    
+    if (!theme) {
+        printf("Failed to load theme from JSON string\n");
+        return NULL;
+    }
+    
+    // 检查是否需要扩展数组
+    if (manager->theme_count >= manager->theme_capacity) {
+        int new_capacity = manager->theme_capacity * 2;
+        Theme** new_themes = (Theme**)realloc(manager->themes, sizeof(Theme*) * new_capacity);
+        if (!new_themes) {
+            theme_destroy(theme);
+            return NULL;
+        }
+        
+        manager->themes = new_themes;
+        manager->theme_capacity = new_capacity;
+        
+        // 初始化新分配的空间
+        for (int i = manager->theme_count; i < new_capacity; i++) {
+            manager->themes[i] = NULL;
+        }
+    }
+    
+    // 添加到数组
+    manager->themes[manager->theme_count++] = theme;
+    
+    printf("Loaded theme from JSON: %s (version: %s)\n", theme->name, theme->version);
+    
+    return theme;
+}
+
 // 设置当前主题
 int theme_manager_set_current(const char* theme_name) {
     if (!theme_name) {

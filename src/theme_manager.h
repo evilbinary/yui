@@ -20,6 +20,9 @@ void theme_manager_destroy(void);
 // 加载主题文件
 Theme* theme_manager_load_theme(const char* theme_path);
 
+// 从JSON字符串加载主题
+Theme* theme_manager_load_theme_from_json(const char* json_str);
+
 // 设置当前主题
 int theme_manager_set_current(const char* theme_name);
 

@@ -188,7 +188,7 @@ var Theme = {
             var result;
             
             if (isJsonObject) {
-                // 处理JSON对象
+                // 处理JSON对象 - 将对象转换为JSON字符串，调用C函数
                 log('[Theme] Loading theme from JSON object: ' + themeName);
                 
                 // 验证主题对象结构
@@ -198,18 +198,16 @@ var Theme = {
                     return;
                 }
                 
-                // 保存主题对象到内部存储
-                if (!_themeObjects) {
-                    _themeObjects = {};
+                // 将JSON对象转换为字符串
+                var themeJsonStr = JSON.stringify(themeSource);
+                if (!themeJsonStr) {
+                    error('[Theme] Failed to stringify theme JSON object: ' + themeName);
+                    if (callback) callback(false, null);
+                    return;
                 }
-                _themeObjects[themeName] = themeSource;
                 
-                // 返回成功结果
-                result = {
-                    success: true,
-                    name: themeName,
-                    version: themeSource.version || '1.0'
-                };
+                // 调用C函数加载主题（传入JSON字符串）
+                result = _themeLoad(themeJsonStr);
             } else {
                 // 处理文件路径 - 调用C函数加载主题
                 result = _themeLoad(themeSource);
@@ -382,19 +380,7 @@ var Theme = {
             return false;
         }
         
-        // 检查是否是JSON对象主题
-        if (currentThemeInfo.isObject) {
-            // JSON对象主题，已经在JavaScript层面处理
-            // 触发事件并返回成功
-            ThemeManager.emit('themeApplied', {
-                theme: currentThemeInfo
-            });
-            
-            log('[Theme] Applied JSON object theme: ' + ThemeManager.currentTheme);
-            return true;
-        }
-        
-        // 文件主题，调用C函数
+        // 调用C函数应用主题到图层树
         try {
             var result = _themeApplyToTree();
             
@@ -564,25 +550,6 @@ function _themeLoad(themePath) {
  * @returns {boolean} - 是否成功
  */
 function _themeSetCurrent(themeName) {
-    // 检查是否是JSON对象主题
-    if (_themeObjects && _themeObjects[themeName]) {
-        // 对于JSON对象主题，在JavaScript层面处理
-        try {
-            // 模拟应用主题到全局样式
-            var themeObj = _themeObjects[themeName];
-            if (themeObj.styles && themeObj.styles.length > 0) {
-                log('[Theme] Applied theme styles from JSON object: ' + themeName);
-                // 这里可以添加将样式应用到UI的代码
-                // 实际应用中，这应该由C代码处理
-            }
-            return true;
-        } catch (e) {
-            error('[Theme] Failed to set theme from JSON object: ' + e.message);
-            return false;
-        }
-    }
-    
-    // 对于文件主题，使用C实现
     try {
         // 检查YUI对象和themeSetCurrent函数是否存在
         if (typeof YUI !== 'undefined' && typeof YUI.themeSetCurrent === 'function') {

@@ -310,31 +310,41 @@ static var_t* mario_update(vm_t* vm, var_t* env, void* data)
 
 #include "../../src/theme_manager.h"
 
-// 加载主题文件
+// 加载主题文件或JSON字符串
 static var_t* mario_theme_load(vm_t* vm, var_t* env, void* data)
 {
     var_t* args = get_func_args(env);
     uint32_t argc = get_func_args_num(env);
 
     if (argc < 1) {
-        printf("JS(Mario): themeLoad() requires 1 argument: theme_path\n");
+        printf("JS(Mario): themeLoad() requires 1 argument: theme_path or theme_json\n");
         return var_new_int(vm, -1);
     }
 
-    const char* theme_path = get_func_arg_str(env, 0);
-    if (!theme_path) {
-        printf("JS(Mario): themeLoad() invalid theme path\n");
+    const char* theme_input = get_func_arg_str(env, 0);
+    if (!theme_input) {
+        printf("JS(Mario): themeLoad() invalid theme input\n");
         return var_new_int(vm, -1);
     }
 
     ThemeManager* manager = theme_manager_get_instance();
-    Theme* theme = theme_manager_load_theme(theme_path);
+    Theme* theme = NULL;
+    
+    // 检查输入是文件路径还是JSON字符串
+    // 如果是JSON字符串，应该以 '{' 或 '[' 开头
+    if (theme_input[0] == '{' || theme_input[0] == '[') {
+        // 是JSON字符串，从JSON加载
+        theme = theme_manager_load_theme_from_json(theme_input);
+    } else {
+        // 是文件路径，从文件加载
+        theme = theme_manager_load_theme(theme_input);
+    }
 
     if (theme) {
         printf("JS(Mario): Loaded theme: %s (v%s)\n", theme->name, theme->version);
         return var_new_int(vm, 0);  // Success
     } else {
-        printf("JS(Mario): Failed to load theme from: %s\n", theme_path);
+        printf("JS(Mario): Failed to load theme from: %s\n", theme_input);
         return var_new_int(vm, -1);  // Failure
     }
 }

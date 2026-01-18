@@ -51,6 +51,10 @@ Theme* theme_manager_load_theme(const char* theme_path) {
     return NULL;
 }
 
+Theme* theme_manager_load_theme_from_json(const char* json_str) {
+    return NULL;
+}
+
 int theme_manager_set_current(const char* theme_name) {
     return 0;
 }

@@ -298,23 +298,33 @@ static JSValue js_update(JSContext *ctx, JSValueConst this_val, int argc, JSValu
 
 #include "../../src/theme_manager.h"
 
-// 加载主题文件
+// 加载主题文件或JSON字符串
 static JSValue js_theme_load(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     if (argc < 1) {
-        return JS_ThrowTypeError(ctx, "themeLoad requires 1 argument: theme_path");
+        return JS_ThrowTypeError(ctx, "themeLoad requires 1 argument: theme_path or theme_json");
     }
 
     size_t len;
-    const char* theme_path = JS_ToCStringLen(ctx, &len, argv[0]);
-    if (!theme_path) {
-        return JS_ThrowTypeError(ctx, "Invalid theme path");
+    const char* theme_input = JS_ToCStringLen(ctx, &len, argv[0]);
+    if (!theme_input) {
+        return JS_ThrowTypeError(ctx, "Invalid theme input");
     }
 
     ThemeManager* manager = theme_manager_get_instance();
-    Theme* theme = theme_manager_load_theme(theme_path);
+    Theme* theme = NULL;
+    
+    // 检查输入是文件路径还是JSON字符串
+    // 如果是JSON字符串，应该以 '{' 或 '[' 开头
+    if (len > 0 && (theme_input[0] == '{' || theme_input[0] == '[')) {
+        // 是JSON字符串，从JSON加载
+        theme = theme_manager_load_theme_from_json(theme_input);
+    } else {
+        // 是文件路径，从文件加载
+        theme = theme_manager_load_theme(theme_input);
+    }
 
-    JS_FreeCString(ctx, theme_path);
+    JS_FreeCString(ctx, theme_input);
 
     if (theme) {
         JSValue result = JS_NewObject(ctx);
