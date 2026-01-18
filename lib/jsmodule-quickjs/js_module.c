@@ -347,13 +347,13 @@ static JSValue js_theme_set_current(JSContext *ctx, JSValueConst this_val, int a
 
     int result = theme_manager_set_current(theme_name);
     
-    JS_FreeCString(ctx, theme_name);
-    
     if (result) {
         printf("JS(QuickJS): Current theme set to: %s\n", theme_name);
     } else {
         printf("JS(QuickJS): Failed to set current theme: %s\n", theme_name);
     }
+    
+    JS_FreeCString(ctx, theme_name);
     
     return JS_NewBool(ctx, result);
 }

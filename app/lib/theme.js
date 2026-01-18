@@ -376,13 +376,31 @@ var Theme = {
             return false;
         }
         
+        var currentThemeInfo = ThemeManager.loadedThemes[ThemeManager.currentTheme];
+        if (!currentThemeInfo) {
+            error('[Theme] Current theme info not found: ' + ThemeManager.currentTheme);
+            return false;
+        }
+        
+        // 检查是否是JSON对象主题
+        if (currentThemeInfo.isObject) {
+            // JSON对象主题，已经在JavaScript层面处理
+            // 触发事件并返回成功
+            ThemeManager.emit('themeApplied', {
+                theme: currentThemeInfo
+            });
+            
+            log('[Theme] Applied JSON object theme: ' + ThemeManager.currentTheme);
+            return true;
+        }
+        
+        // 文件主题，调用C函数
         try {
-            // 调用C函数应用主题到图层树
             var result = _themeApplyToTree();
             
             if (result) {
                 ThemeManager.emit('themeApplied', {
-                    theme: ThemeManager.loadedThemes[ThemeManager.currentTheme]
+                    theme: currentThemeInfo
                 });
                 
                 log('[Theme] Applied: ' + ThemeManager.currentTheme);
