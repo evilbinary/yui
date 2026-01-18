@@ -14,18 +14,20 @@ YUI 对象是所有 YUI 原生 API 的命名空间。
 
 | 方法 | 参数 | 返回值 | 描述 | 支持引擎 |
 |------|------|--------|------|---------|
-| `YUI.log(...)` | `...args` | `undefined` | 打印日志到控制台 | 全部 |
-| `YUI.setText(layerId, text)` | `layerId: string`, `text: string` | `undefined` | 设置图层文本内容 | 全部 |
-| `YUI.getText(layerId)` | `layerId: string` | `string` | 获取图层文本内容 | 全部 |
-| `YUI.setBgColor(layerId, color)` | `layerId: string`, `color: string` | `undefined` | 设置图层背景色 (#RRGGBB) | 全部 |
-| `YUI.hide(layerId)` | `layerId: string` | `undefined` | 隐藏图层 | 全部 |
-| `YUI.show(layerId)` | `layerId: string` | `undefined` | 显示图层 | 全部 |
+| `YUI.log(...)` | `...args` | `undefined\|number` | 打印日志到控制台 | 全部 |
+| `YUI.setText(layerId, text)` | `layerId: string`, `text: string` | `undefined\|number` | 设置图层文本内容 | 全部 |
+| `YUI.getText(layerId)` | `layerId: string` | `string\|null` | 获取图层文本内容 | 全部 |
+| `YUI.setBgColor(layerId, color)` | `layerId: string`, `color: string` | `undefined\|number` | 设置图层背景色 (#RRGGBB) | 全部 |
+| `YUI.hide(layerId)` | `layerId: string` | `undefined\|number` | 隐藏图层 | 全部 |
+| `YUI.show(layerId)` | `layerId: string` | `undefined\|number` | 显示图层 | 全部 |
 | `YUI.renderFromJson(layerId, json)` | `layerId: string`, `json: string` | `number` | 从JSON渲染图层树 | 全部 |
 | `YUI.update(jsonString)` | `jsonString: string\|object` | `number` | JSON增量更新 | 全部 |
 | `YUI.themeLoad(path)` | `path: string` | `object\|number` | 加载主题文件 | 全部 |
 | `YUI.themeSetCurrent(name)` | `name: string` | `boolean\|number` | 设置当前主题 | 全部 |
 | `YUI.themeUnload(name)` | `name: string` | `boolean\|number` | 卸载主题 | 全部 |
 | `YUI.themeApplyToTree()` | - | `boolean\|number` | 应用主题到图层树 | 全部 |
+
+**注意：** 返回值类型取决于引擎，mquickjs 返回 `undefined`，QuickJS 返回 `undefined`，Mario 返回 `number`（0=成功，-1=失败）
 
 #### Socket API (mquickjs & QuickJS)
 
@@ -52,6 +54,437 @@ Socket API 在 mquickjs 和 QuickJS 引擎中可用。
 | `Socket.inet_addr(ip)` | `ip: string` | `number` | IP地址转换 |
 | `Socket.ntohl(value)` | `value: number` | `number` | 网络字节序转换 |
 | `Socket.make_sockaddr_in(ip, port)` | `ip: string`, `port: number` | `{ptr: number, size: number}` | 创建sockaddr结构 |
+
+
+#### naive api 接口
+
+##### mquickjs 引擎 (lib/jsmodule/yui_stdlib.c)
+
+**YUI Native 函数定义**
+
+```c
+// 核心YUI函数
+static JSValue js_yui_log(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+static JSValue js_set_text(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+static JSValue js_get_text(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+static JSValue js_set_bg_color(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+static JSValue js_hide(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+static JSValue js_show(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+static JSValue js_render_from_json(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+static JSValue js_yui_call(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+static JSValue js_yui_update(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+
+// 主题管理函数
+static JSValue js_yui_themeLoad(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+static JSValue js_yui_themeSetCurrent(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+static JSValue js_yui_themeUnload(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+static JSValue js_yui_themeApplyToTree(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+
+// Socket API (lib/jsmodule/js_socket.c)
+static JSValue js_socket_create(JSContext* ctx, JSValue* this_val, int argc, JSValue* argv)
+static JSValue js_socket_close(JSContext* ctx, JSValue* this_val, int argc, JSValue* argv)
+static JSValue js_socket_shutdown(JSContext* ctx, JSValue* this_val, int argc, JSValue* argv)
+static JSValue js_socket_connect(JSContext* ctx, JSValue* this_val, int argc, JSValue* argv)
+static JSValue js_socket_bind(JSContext* ctx, JSValue* this_val, int argc, JSValue* argv)
+static JSValue js_socket_listen(JSContext* ctx, JSValue* this_val, int argc, JSValue* argv)
+static JSValue js_socket_accept(JSContext* ctx, JSValue* this_val, int argc, JSValue* argv)
+static JSValue js_socket_getsockname(JSContext* ctx, JSValue* this_val, int argc, JSValue* argv)
+static JSValue js_socket_getpeername(JSContext* ctx, JSValue* this_val, int argc, JSValue* argv)
+static JSValue js_socket_socketpair(JSContext* ctx, JSValue* this_val, int argc, JSValue* argv)
+static JSValue js_socket_setsockopt(JSContext* ctx, JSValue* this_val, int argc, JSValue* argv)
+static JSValue js_socket_getsockopt(JSContext* ctx, JSValue* this_val, int argc, JSValue* argv)
+static JSValue js_socket_send(JSContext* ctx, JSValue* this_val, int argc, JSValue* argv)
+static JSValue js_socket_recv(JSContext* ctx, JSValue* this_val, int argc, JSValue* argv)
+static JSValue js_socket_sendto(JSContext* ctx, JSValue* this_val, int argc, JSValue* argv)
+static JSValue js_socket_recvfrom(JSContext* ctx, JSValue* this_val, int argc, JSValue* argv)
+static JSValue js_socket_inet_addr(JSContext* ctx, JSValue* this_val, int argc, JSValue* argv)
+static JSValue js_socket_ntohl(JSContext* ctx, JSValue* this_val, int argc, JSValue* argv)
+static JSValue js_socket_make_sockaddr_in(JSContext* ctx, JSValue* this_val, int argc, JSValue* argv)
+```
+
+**注册到JavaScript的方式**
+```c
+static const JSPropDef js_yui[] = {
+    JS_CFUNC_DEF("log", 1, js_yui_log ),
+    JS_CFUNC_DEF("setText", 1, js_set_text ),
+    JS_CFUNC_DEF("getText", 1, js_get_text ),
+    JS_CFUNC_DEF("setBgColor", 1, js_set_bg_color ),
+    JS_CFUNC_DEF("hide", 1, js_hide ),
+    JS_CFUNC_DEF("show", 1, js_show ),
+    JS_CFUNC_DEF("renderFromJson", 2, js_render_from_json ),
+    JS_CFUNC_DEF("call", 2, js_yui_call ),
+    JS_CFUNC_DEF("update", 1, js_yui_update ),
+    JS_CFUNC_DEF("themeLoad", 1, js_yui_themeLoad ),
+    JS_CFUNC_DEF("themeSetCurrent", 1, js_yui_themeSetCurrent ),
+    JS_CFUNC_DEF("themeUnload", 1, js_yui_themeUnload ),
+    JS_CFUNC_DEF("themeApplyToTree", 0, js_yui_themeApplyToTree ),
+    JS_PROP_END,
+};
+```
+
+**函数签名**
+```c
+static JSValue js_func(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+```
+
+**特点**
+- 使用 `JS_CFUNC_DEF` 宏注册函数
+- 参数：`JSValue *argv` 数组
+- 字符串转换：`JS_ToCString(ctx, value, &buf)`
+- **不支持** `JS_FreeCString()`
+- 返回 `JSValue` 类型
+- 使用 `JSCStringBuf` 结构体处理字符串
+
+**暴露的JavaScript API**
+```javascript
+YUI.log(...)
+YUI.setText(layerId, text)
+YUI.getText(layerId)
+YUI.setBgColor(layerId, color)
+YUI.hide(layerId)
+YUI.show(layerId)
+YUI.renderFromJson(layerId, json)
+YUI.call(func, param)
+YUI.update(jsonString)
+YUI.themeLoad(path)
+YUI.themeSetCurrent(name)
+YUI.themeUnload(name)
+YUI.themeApplyToTree()
+
+// Socket API (Socket对象)
+Socket.socket(type)
+Socket.close(fd)
+Socket.shutdown(fd)
+Socket.connect(fd, host, port, timeout)
+Socket.bind(fd, host, port)
+Socket.listen(fd, backlog)
+Socket.accept(fd)
+Socket.getsockname(fd)
+Socket.getpeername(fd)
+Socket.socketpair(domain, type, protocol)
+Socket.setsockopt(fd, level, option_name, option_value, option_len)
+Socket.getsockopt(fd, level, option_name, option_len)
+Socket.send(fd, data, flags)
+Socket.recv(fd, len, flags)
+Socket.sendto(fd, data, flags, host, port)
+Socket.recvfrom(fd, len, flags)
+Socket.inet_addr(ip)
+Socket.ntohl(value)
+Socket.make_sockaddr_in(ip, port)
+```
+
+##### QuickJS 引擎 (lib/jsmodule-quickjs/js_module.c)
+
+**YUI Native 函数定义**
+
+```c
+// 核心YUI函数
+static JSValue js_set_text(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+static JSValue js_get_text(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+static JSValue js_set_bg_color(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+static JSValue js_hide(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+static JSValue js_show(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+static JSValue js_log(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+static JSValue js_render_from_json(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+static JSValue js_update(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+
+// 主题管理函数
+static JSValue js_theme_load(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+static JSValue js_theme_set_current(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+static JSValue js_theme_unload(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+static JSValue js_theme_apply_to_tree(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+
+// Socket API (lib/jsmodule-quickjs/js_socket.c)
+static JSValue js_socket(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+static JSValue js_socket_close(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+static JSValue js_socket_shutdown(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+static JSValue js_socket_connect(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+static JSValue js_socket_bind(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+static JSValue js_socket_listen(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+static JSValue js_socket_accept(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+static JSValue js_socket_getsockname(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+static JSValue js_socket_getpeername(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+static JSValue js_socket_socketpair(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+static JSValue js_socket_setsockopt(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+static JSValue js_socket_getsockopt(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+static JSValue js_socket_send(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+static JSValue js_socket_recv(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+static JSValue js_socket_sendto(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+static JSValue js_socket_recvfrom(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+static JSValue js_socket_inet_addr(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+static JSValue js_socket_ntohl(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+static JSValue js_socket_make_sockaddr_in(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+```
+
+**注册到JavaScript的方式**
+```c
+// 创建 YUI 对象
+JSValue yui_obj = JS_NewObject(g_js_ctx);
+
+// 注册方法到 YUI 对象
+JS_SetPropertyStr(g_js_ctx, yui_obj, "setText", 
+    JS_NewCFunction(g_js_ctx, js_set_text, "setText", 2));
+JS_SetPropertyStr(g_js_ctx, yui_obj, "getText", 
+    JS_NewCFunction(g_js_ctx, js_get_text, "getText", 1));
+JS_SetPropertyStr(g_js_ctx, yui_obj, "setBgColor", 
+    JS_NewCFunction(g_js_ctx, js_set_bg_color, "setBgColor", 2));
+JS_SetPropertyStr(g_js_ctx, yui_obj, "hide", 
+    JS_NewCFunction(g_js_ctx, js_hide, "hide", 1));
+JS_SetPropertyStr(g_js_ctx, yui_obj, "show", 
+    JS_NewCFunction(g_js_ctx, js_show, "show", 1));
+JS_SetPropertyStr(g_js_ctx, yui_obj, "renderFromJson", 
+    JS_NewCFunction(g_js_ctx, js_render_from_json, "renderFromJson", 2));
+JS_SetPropertyStr(g_js_ctx, yui_obj, "update", 
+    JS_NewCFunction(g_js_ctx, js_update, "update", 1));
+JS_SetPropertyStr(g_js_ctx, yui_obj, "log", 
+    JS_NewCFunction(g_js_ctx, js_log, "log", 1));
+JS_SetPropertyStr(g_js_ctx, yui_obj, "themeLoad", 
+    JS_NewCFunction(g_js_ctx, js_theme_load, "themeLoad", 1));
+JS_SetPropertyStr(g_js_ctx, yui_obj, "themeSetCurrent", 
+    JS_NewCFunction(g_js_ctx, js_theme_set_current, "themeSetCurrent", 1));
+JS_SetPropertyStr(g_js_ctx, yui_obj, "themeUnload", 
+    JS_NewCFunction(g_js_ctx, js_theme_unload, "themeUnload", 1));
+JS_SetPropertyStr(g_js_ctx, yui_obj, "themeApplyToTree", 
+    JS_NewCFunction(g_js_ctx, js_theme_apply_to_tree, "themeApplyToTree", 0));
+
+// 将 YUI 对象添加到全局
+JS_SetPropertyStr(g_js_ctx, global_obj, "YUI", yui_obj);
+
+// 也注册为全局函数（兼容性）
+JS_SetPropertyStr(g_js_ctx, global_obj, "setText", 
+    JS_NewCFunction(g_js_ctx, js_set_text, "setText", 2));
+JS_SetPropertyStr(g_js_ctx, global_obj, "getText", 
+    JS_NewCFunction(g_js_ctx, js_get_text, "getText", 1));
+JS_SetPropertyStr(g_js_ctx, global_obj, "setBgColor", 
+    JS_NewCFunction(g_js_ctx, js_set_bg_color, "setBgColor", 2));
+JS_SetPropertyStr(g_js_ctx, global_obj, "hide", 
+    JS_NewCFunction(g_js_ctx, js_hide, "hide", 1));
+JS_SetPropertyStr(g_js_ctx, global_obj, "show", 
+    JS_NewCFunction(g_js_ctx, js_show, "show", 1));
+```
+
+**函数签名**
+```c
+static JSValue js_func(JSContext *ctx, JSValueConst this_val, 
+                      int argc, JSValueConst *argv)
+```
+
+**特点**
+- 使用 `JS_NewCFunction()` 创建函数对象
+- 使用 `JS_SetPropertyStr()` 注册到对象
+- 参数：`JSValueConst *argv` 数组
+- 字符串转换：`JS_ToCStringLen(ctx, &len, value)`
+- **需要** `JS_FreeCString(ctx, str)` 释放字符串
+- 返回 `JSValue` 类型
+- 支持常量参数（`JSValueConst`）
+
+**暴露的JavaScript API**
+```javascript
+YUI.log(...)
+YUI.setText(layerId, text)
+YUI.getText(layerId)
+YUI.setBgColor(layerId, color)
+YUI.hide(layerId)
+YUI.show(layerId)
+YUI.renderFromJson(layerId, json)
+YUI.update(jsonString)
+YUI.themeLoad(path)
+YUI.themeSetCurrent(name)
+YUI.themeUnload(name)
+YUI.themeApplyToTree()
+
+// 兼容性全局函数
+setText(layerId, text)
+getText(layerId)
+setBgColor(layerId, color)
+hide(layerId)
+show(layerId)
+
+// Socket API (Socket对象)
+Socket.socket(type)
+Socket.close(fd)
+Socket.shutdown(fd)
+Socket.connect(fd, host, port, timeout)
+Socket.bind(fd, host, port)
+Socket.listen(fd, backlog)
+Socket.accept(fd)
+Socket.getsockname(fd)
+Socket.getpeername(fd)
+Socket.socketpair(domain, type, protocol)
+Socket.setsockopt(fd, level, option_name, option_value, option_len)
+Socket.getsockopt(fd, level, option_name, option_len)
+Socket.send(fd, data, flags)
+Socket.recv(fd, len, flags)
+Socket.sendto(fd, data, flags, host, port)
+Socket.recvfrom(fd, len, flags)
+Socket.inet_addr(ip)
+Socket.ntohl(value)
+Socket.make_sockaddr_in(ip, port)
+```
+
+##### Mario 引擎 (lib/jsmodule-mario/js_module.c)
+
+**YUI Native 函数定义（共12个）**
+
+```c
+// 核心YUI函数（8个）
+static var_t* mario_set_text(vm_t* vm, var_t* env, void* data)        // 设置文本
+static var_t* mario_get_text(vm_t* vm, var_t* env, void* data)        // 获取文本
+static var_t* mario_set_bg_color(vm_t* vm, var_t* env, void* data)    // 设置背景色
+static var_t* mario_hide(vm_t* vm, var_t* env, void* data)            // 隐藏图层
+static var_t* mario_show(vm_t* vm, var_t* env, void* data)            // 显示图层
+static var_t* mario_render_from_json(vm_t* vm, var_t* env, void* data)// JSON渲染
+static var_t* mario_update(vm_t* vm, var_t* env, void* data)          // 增量更新
+static var_t* mario_log(vm_t* vm, var_t* env, void* data)             // 日志输出
+
+// 主题管理函数（4个）
+static var_t* mario_theme_load(vm_t* vm, var_t* env, void* data)              // 加载主题
+static var_t* mario_theme_set_current(vm_t* vm, var_t* env, void* data)       // 设置当前主题
+static var_t* mario_theme_unload(vm_t* vm, var_t* env, void* data)            // 卸载主题
+static var_t* mario_theme_apply_to_tree(vm_t* vm, var_t* env, void* data)     // 应用主题到树
+```
+
+**注册到JavaScript的方式**
+```c
+// 注册 YUI 类的方法（12个）
+vm_reg_native(g_vm, yui_cls, "setText(layerId, text)", mario_set_text, NULL);
+vm_reg_native(g_vm, yui_cls, "getText(layerId)", mario_get_text, NULL);
+vm_reg_native(g_vm, yui_cls, "setBgColor(layerId, color)", mario_set_bg_color, NULL);
+vm_reg_native(g_vm, yui_cls, "hide(layerId)", mario_hide, NULL);
+vm_reg_native(g_vm, yui_cls, "show(layerId)", mario_show, NULL);
+vm_reg_native(g_vm, yui_cls, "renderFromJson(layerId, json)", mario_render_from_json, NULL);
+vm_reg_native(g_vm, yui_cls, "update(jsonString)", mario_update, NULL);
+vm_reg_native(g_vm, yui_cls, "log(...)", mario_log, NULL);
+vm_reg_native(g_vm, yui_cls, "themeLoad(path)", mario_theme_load, NULL);
+vm_reg_native(g_vm, yui_cls, "themeSetCurrent(name)", mario_theme_set_current, NULL);
+vm_reg_native(g_vm, yui_cls, "themeUnload(name)", mario_theme_unload, NULL);
+vm_reg_native(g_vm, yui_cls, "themeApplyToTree()", mario_theme_apply_to_tree, NULL);
+
+// 也注册为全局函数（5个，仅基础操作）
+vm_reg_static(g_vm, NULL, "setText(layerId, text)", mario_set_text, NULL);
+vm_reg_static(g_vm, NULL, "getText(layerId)", mario_get_text, NULL);
+vm_reg_static(g_vm, NULL, "setBgColor(layerId, color)", mario_set_bg_color, NULL);
+vm_reg_static(g_vm, NULL, "hide(layerId)", mario_hide, NULL);
+vm_reg_static(g_vm, NULL, "show(layerId)", mario_show, NULL);
+```
+
+**函数签名**
+```c
+static var_t* mario_func(vm_t* vm, var_t* env, void* data)
+```
+
+**特点**
+- 使用 `vm_reg_native()` 注册函数到 YUI 类
+- 使用 `vm_reg_static()` 注册为全局函数（仅5个基础操作）
+- 函数声明包含参数类型（用于文档和提示）
+- 使用 `get_func_arg_str(env, index)` 获取字符串参数
+- **不支持**复杂对象操作
+- 返回 `var_t*` 类型
+- 使用 `var_new_int()`, `var_new_str()`, `var_new_null()` 创建返回值
+- 引擎限制：ES3-like，不支持现代JS特性
+
+**暴露的JavaScript API（实际可用）**
+```javascript
+// YUI 对象方法（12个）
+YUI.log(...)
+YUI.setText(layerId, text)
+YUI.getText(layerId)
+YUI.setBgColor(layerId, color)
+YUI.hide(layerId)
+YUI.show(layerId)
+YUI.renderFromJson(layerId, json)
+YUI.update(jsonString)
+YUI.themeLoad(path)
+YUI.themeSetCurrent(name)
+YUI.themeUnload(name)
+YUI.themeApplyToTree()
+
+// 全局函数（5个，仅基础操作）
+setText(layerId, text)
+getText(layerId)
+setBgColor(layerId, color)
+hide(layerId)
+show(layerId)
+
+// 注意：Mario 引擎不支持 Socket API
+```
+
+**Native函数实现示例**
+
+mquickjs版本：
+```c
+static JSValue js_yui_themeLoad(JSContext *ctx, JSValue *this_val, 
+                                int argc, JSValue *argv) {
+    const char *theme_path = NULL;
+    JSCStringBuf buf;
+    
+    if (argc < 1) {
+        return JS_ThrowTypeError(ctx, "themeLoad requires 1 argument");
+    }
+    
+    theme_path = JS_ToCString(ctx, argv[0], &buf);
+    ThemeManager* manager = theme_manager_get_instance();
+    Theme* theme = theme_manager_load_theme(theme_path);
+    
+    if (theme) {
+        JSValue result = JS_NewObject(ctx);
+        JS_SetPropertyStr(ctx, result, "success", JS_NewBool(1));
+        JS_SetPropertyStr(ctx, result, "name", 
+                         JS_NewString(ctx, theme->name));
+        return result;
+    }
+    // ...
+}
+```
+
+QuickJS版本：
+```c
+static JSValue js_theme_load(JSContext *ctx, JSValueConst this_val, 
+                            int argc, JSValueConst *argv) {
+    if (argc < 1) {
+        return JS_ThrowTypeError(ctx, "themeLoad requires 1 argument");
+    }
+
+    size_t len;
+    const char* theme_path = JS_ToCStringLen(ctx, &len, argv[0]);
+    ThemeManager* manager = theme_manager_get_instance();
+    Theme* theme = theme_manager_load_theme(theme_path);
+
+    JS_FreeCString(ctx, theme_path);  // 必须释放
+    
+    if (theme) {
+        JSValue result = JS_NewObject(ctx);
+        JS_SetPropertyStr(ctx, result, "success", JS_NewBool(ctx, 1));
+        JS_SetPropertyStr(ctx, result, "name", 
+                         JS_NewString(ctx, theme->name));
+        return result;
+    }
+    // ...
+}
+```
+
+Mario版本：
+```c
+static var_t* mario_theme_load(vm_t* vm, var_t* env, void* data) {
+    var_t* args = get_func_args(env);
+    uint32_t argc = get_func_args_num(env);
+
+    if (argc < 1) {
+        return var_new_int(vm, -1);  // 返回错误码
+    }
+
+    const char* theme_path = get_func_arg_str(env, 0);
+    ThemeManager* manager = theme_manager_get_instance();
+    Theme* theme = theme_manager_load_theme(theme_path);
+
+    if (theme) {
+        printf("JS(Mario): Loaded theme: %s\n", theme->name);
+        return var_new_int(vm, 0);  // 成功返回0
+    } else {
+        return var_new_int(vm, -1);  // 失败返回-1
+    }
+}
+```
 
 #### 标准库函数 (mquickjs)
 
@@ -315,31 +748,31 @@ void animate_update(Layer* root, uint32_t delta_time);
 Animation* animate_add(Layer* layer, AnimationType type, float from, float to, uint32_t duration);
 ```
 
-## 引擎特定实现差异
+## 引擎差异总结
 
-### mquickjs (lib/jsmodule/yui_stdlib.c)
+| 特性 | mquickjs | QuickJS | Mario |
+|------|----------|---------|-------|
+| **注册方式** | `JS_CFUNC_DEF` 宏数组 | `JS_NewCFunction` + `JS_SetPropertyStr` | `vm_reg_native` |
+| **函数签名** | `JSValue func(JSContext*, JSValue*, int, JSValue*)` | `JSValue func(JSContext*, JSValueConst, int, JSValueConst*)` | `var_t* func(vm_t*, var_t*, void*)` |
+| **参数类型** | `JSValue*` | `JSValueConst*` | `var_t* env` |
+| **字符串转换** | `JS_ToCString(ctx, val, &buf)` | `JS_ToCStringLen(ctx, &len, val)` | `get_func_arg_str(env, idx)` |
+| **字符串释放** | ❌ 不需要 | ✅ 需要 `JS_FreeCString` | ❌ 不需要 |
+| **返回值** | `JSValue` | `JSValue` | `var_t*` |
+| **对象操作** | ✅ 完整支持 | ✅ 完整支持 | ❌ 仅简单类型 |
+| **引擎特性** | 轻量级 | 完整ES2020 | ES3-like |
 
-- 使用 `JS_CFUNC_DEF` 宏注册函数
-- 函数参数使用 `JSValue *argv`
-- 返回 `JSValue` 类型
-- 字符串转换使用 `JS_ToCString(ctx, value, &buf)`
-- 不支持 `JS_FreeCString`
+## API可用性对比
 
-### QuickJS (lib/jsmodule-quickjs/js_module.c)
-
-- 使用 `JS_NewCFunction` 创建函数
-- 函数参数使用 `JSValueConst *argv`
-- 返回 `JSValue` 类型
-- 字符串转换使用 `JS_ToCStringLen(ctx, &len, value)`
-- 需要使用 `JS_FreeCString(ctx, str)` 释放字符串
-
-### Mario (lib/jsmodule-mario/js_module.c)
-
-- 使用 `vm_reg_native` 注册函数
-- 函数签名：`var_t* func(vm_t* vm, var_t* env, void* data)`
-- 使用 `get_func_arg_str(env, index)` 获取字符串参数
-- 返回 `var_t*` 类型（使用 `var_new_int`, `var_new_str`, `var_new_null` 等创建）
-- 不支持复杂的对象操作，返回简单类型
+| API | mquickjs | QuickJS | Mario |
+|-----|----------|---------|-------|
+| **YUI Core** | ✅ | ✅ | ✅ |
+| **Socket API** | ✅ | ✅ | ❌ |
+| **标准库** | ✅ 完整 | ✅ 完整 | ❌ 基础 |
+| **Theme Mgmt** | ✅ | ✅ | ✅ |
+| **JSON** | ✅ | ✅ | ⚠️ 有限 |
+| **Array** | ✅ | ✅ | ⚠️ 有限 |
+| **Promise** | ❌ | ✅ | ❌ |
+| **ES6+** | ❌ | ✅ | ❌ |
 
 ## 使用示例
 
