@@ -504,7 +504,8 @@ static JSValue js_yui_themeLoad(JSContext *ctx, JSValue *this_val, int argc, JSV
     
     // 检查输入是文件路径还是JSON字符串
     // 如果是JSON字符串，应该以 '{' 或 '[' 开头
-    if (buf.len > 0 && (theme_input[0] == '{' || theme_input[0] == '[')) {
+    size_t input_len = strlen(theme_input);
+    if (input_len > 0 && (theme_input[0] == '{' || theme_input[0] == '[')) {
         // 是JSON字符串，从JSON加载
         theme = theme_manager_load_theme_from_json(theme_input);
     } else {

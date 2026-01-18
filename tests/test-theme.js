@@ -345,7 +345,7 @@ function switchToTheme(themeKey) {
         // 修复：使用TEST_THEMES而不是GAME_THEMES
         if (TEST_THEMES[themeKey]) {
             // 使用从JSON对象加载主题的方式
-            var jsonThemeName = 'json-' + themeKey;
+            var jsonThemeName = themeKey;
             
             try {
                 // 检查主题是否已经加载
