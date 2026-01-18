@@ -502,8 +502,6 @@ static JSValue js_yui_themeLoad(JSContext *ctx, JSValue *this_val, int argc, JSV
     ThemeManager* manager = theme_manager_get_instance();
     Theme* theme = theme_manager_load_theme(theme_path);
     
-    JS_FreeCString(ctx, theme_path);
-    
     if (theme) {
         // 创建返回对象
         JSValue result = JS_NewObject(ctx);
@@ -542,8 +540,6 @@ static JSValue js_yui_themeSetCurrent(JSContext *ctx, JSValue *this_val, int arg
     // 调用主题管理器的设置函数
     int result = theme_manager_set_current(theme_name);
     
-    JS_FreeCString(ctx, theme_name);
-    
     return JS_NewBool(result == 0 ? 1 : 0);
 }
 
@@ -566,8 +562,6 @@ static JSValue js_yui_themeUnload(JSContext *ctx, JSValue *this_val, int argc, J
     
     // 调用主题管理器的卸载函数
     theme_manager_unload_theme(theme_name);
-    
-    JS_FreeCString(ctx, theme_name);
     
     return JS_NewBool(1);
 }

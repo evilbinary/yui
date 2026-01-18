@@ -294,6 +294,107 @@ static JSValue js_update(JSContext *ctx, JSValueConst this_val, int argc, JSValu
     return JS_NewInt32(ctx, result);
 }
 
+/* ====================== 主题管理函数 ====================== */
+
+#include "../../src/theme_manager.h"
+
+// 加载主题文件
+static JSValue js_theme_load(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    if (argc < 1) {
+        return JS_ThrowTypeError(ctx, "themeLoad requires 1 argument: theme_path");
+    }
+
+    size_t len;
+    const char* theme_path = JS_ToCStringLen(ctx, &len, argv[0]);
+    if (!theme_path) {
+        return JS_ThrowTypeError(ctx, "Invalid theme path");
+    }
+
+    ThemeManager* manager = theme_manager_get_instance();
+    Theme* theme = theme_manager_load_theme(theme_path);
+
+    JS_FreeCString(ctx, theme_path);
+
+    if (theme) {
+        JSValue result = JS_NewObject(ctx);
+        JS_SetPropertyStr(ctx, result, "success", JS_NewBool(ctx, 1));
+        JS_SetPropertyStr(ctx, result, "name", JS_NewString(ctx, theme->name));
+        JS_SetPropertyStr(ctx, result, "version", JS_NewString(ctx, theme->version));
+        printf("JS(QuickJS): Loaded theme: %s (v%s)\n", theme->name, theme->version);
+        return result;
+    } else {
+        JSValue result = JS_NewObject(ctx);
+        JS_SetPropertyStr(ctx, result, "success", JS_NewBool(ctx, 0));
+        JS_SetPropertyStr(ctx, result, "error", JS_NewString(ctx, "Failed to load theme"));
+        printf("JS(QuickJS): Failed to load theme\n");
+        return result;
+    }
+}
+
+// 设置当前主题
+static JSValue js_theme_set_current(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    if (argc < 1) {
+        return JS_ThrowTypeError(ctx, "themeSetCurrent requires 1 argument: theme_name");
+    }
+
+    size_t len;
+    const char* theme_name = JS_ToCStringLen(ctx, &len, argv[0]);
+    if (!theme_name) {
+        return JS_ThrowTypeError(ctx, "Invalid theme name");
+    }
+
+    int result = theme_manager_set_current(theme_name);
+    
+    JS_FreeCString(ctx, theme_name);
+    
+    if (result) {
+        printf("JS(QuickJS): Current theme set to: %s\n", theme_name);
+    } else {
+        printf("JS(QuickJS): Failed to set current theme: %s\n", theme_name);
+    }
+    
+    return JS_NewBool(ctx, result);
+}
+
+// 卸载主题
+static JSValue js_theme_unload(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    if (argc < 1) {
+        return JS_ThrowTypeError(ctx, "themeUnload requires 1 argument: theme_name");
+    }
+
+    size_t len;
+    const char* theme_name = JS_ToCStringLen(ctx, &len, argv[0]);
+    if (!theme_name) {
+        return JS_ThrowTypeError(ctx, "Invalid theme name");
+    }
+
+    theme_manager_unload_theme(theme_name);
+    
+    JS_FreeCString(ctx, theme_name);
+    
+    printf("JS(QuickJS): Unloaded theme: %s\n", theme_name);
+    return JS_NewBool(ctx, 1);
+}
+
+// 应用主题到图层树
+static JSValue js_theme_apply_to_tree(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    ThemeManager* manager = theme_manager_get_instance();
+    Theme* current = theme_manager_get_current();
+    
+    if (current && g_layer_root) {
+        theme_manager_apply_to_tree(g_layer_root);
+        printf("JS(QuickJS): Applied theme '%s' to layer tree\n", current->name);
+        return JS_NewBool(ctx, 1);
+    }
+    
+    printf("JS(QuickJS): No current theme set or no layer root\n");
+    return JS_NewBool(ctx, 0);
+}
+
 /* ====================== 初始化和清理 ====================== */
 
 // 初始化 JS 引擎（使用 QuickJS）
@@ -357,6 +458,10 @@ void js_module_register_api(void)
     JS_SetPropertyStr(g_js_ctx, yui_obj, "renderFromJson", JS_NewCFunction(g_js_ctx, js_render_from_json, "renderFromJson", 2));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "update", JS_NewCFunction(g_js_ctx, js_update, "update", 1));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "log", JS_NewCFunction(g_js_ctx, js_log, "log", 1));
+    JS_SetPropertyStr(g_js_ctx, yui_obj, "themeLoad", JS_NewCFunction(g_js_ctx, js_theme_load, "themeLoad", 1));
+    JS_SetPropertyStr(g_js_ctx, yui_obj, "themeSetCurrent", JS_NewCFunction(g_js_ctx, js_theme_set_current, "themeSetCurrent", 1));
+    JS_SetPropertyStr(g_js_ctx, yui_obj, "themeUnload", JS_NewCFunction(g_js_ctx, js_theme_unload, "themeUnload", 1));
+    JS_SetPropertyStr(g_js_ctx, yui_obj, "themeApplyToTree", JS_NewCFunction(g_js_ctx, js_theme_apply_to_tree, "themeApplyToTree", 0));
 
     // 将 YUI 对象添加到全局
     JS_SetPropertyStr(g_js_ctx, global_obj, "YUI", yui_obj);

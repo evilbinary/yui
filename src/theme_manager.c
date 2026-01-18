@@ -125,7 +125,7 @@ int theme_manager_set_current(const char* theme_name) {
 }
 
 // 获取当前主题
-Theme* theme_manager_get_current() {
+Theme* theme_manager_get_current(void) {
     ThemeManager* manager = theme_manager_get_instance();
     if (!manager) {
         return NULL;

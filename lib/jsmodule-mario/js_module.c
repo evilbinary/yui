@@ -306,6 +306,106 @@ static var_t* mario_update(vm_t* vm, var_t* env, void* data)
     return var_new_int(vm, result);
 }
 
+/* ====================== 主题管理函数 ====================== */
+
+#include "../../src/theme_manager.h"
+
+// 加载主题文件
+static var_t* mario_theme_load(vm_t* vm, var_t* env, void* data)
+{
+    var_t* args = get_func_args(env);
+    uint32_t argc = get_func_args_num(env);
+
+    if (argc < 1) {
+        printf("JS(Mario): themeLoad() requires 1 argument: theme_path\n");
+        return var_new_int(vm, -1);
+    }
+
+    const char* theme_path = get_func_arg_str(env, 0);
+    if (!theme_path) {
+        printf("JS(Mario): themeLoad() invalid theme path\n");
+        return var_new_int(vm, -1);
+    }
+
+    ThemeManager* manager = theme_manager_get_instance();
+    Theme* theme = theme_manager_load_theme(theme_path);
+
+    if (theme) {
+        printf("JS(Mario): Loaded theme: %s (v%s)\n", theme->name, theme->version);
+        return var_new_int(vm, 0);  // Success
+    } else {
+        printf("JS(Mario): Failed to load theme from: %s\n", theme_path);
+        return var_new_int(vm, -1);  // Failure
+    }
+}
+
+// 设置当前主题
+static var_t* mario_theme_set_current(vm_t* vm, var_t* env, void* data)
+{
+    var_t* args = get_func_args(env);
+    uint32_t argc = get_func_args_num(env);
+
+    if (argc < 1) {
+        printf("JS(Mario): themeSetCurrent() requires 1 argument: theme_name\n");
+        return var_new_int(vm, 0);
+    }
+
+    const char* theme_name = get_func_arg_str(env, 0);
+    if (!theme_name) {
+        printf("JS(Mario): themeSetCurrent() invalid theme name\n");
+        return var_new_int(vm, 0);
+    }
+
+    int result = theme_manager_set_current(theme_name);
+    
+    if (result) {
+        printf("JS(Mario): Current theme set to: %s\n", theme_name);
+    } else {
+        printf("JS(Mario): Failed to set current theme: %s\n", theme_name);
+    }
+    
+    return var_new_int(vm, result);
+}
+
+// 卸载主题
+static var_t* mario_theme_unload(vm_t* vm, var_t* env, void* data)
+{
+    var_t* args = get_func_args(env);
+    uint32_t argc = get_func_args_num(env);
+
+    if (argc < 1) {
+        printf("JS(Mario): themeUnload() requires 1 argument: theme_name\n");
+        return var_new_int(vm, 0);
+    }
+
+    const char* theme_name = get_func_arg_str(env, 0);
+    if (!theme_name) {
+        printf("JS(Mario): themeUnload() invalid theme name\n");
+        return var_new_int(vm, 0);
+    }
+
+    theme_manager_unload_theme(theme_name);
+    printf("JS(Mario): Unloaded theme: %s\n", theme_name);
+    
+    return var_new_int(vm, 1);
+}
+
+// 应用主题到图层树
+static var_t* mario_theme_apply_to_tree(vm_t* vm, var_t* env, void* data)
+{
+    ThemeManager* manager = theme_manager_get_instance();
+    Theme* current = theme_manager_get_current();
+    
+    if (current && g_layer_root) {
+        theme_manager_apply_to_tree(g_layer_root);
+        printf("JS(Mario): Applied theme '%s' to layer tree\n", current->name);
+        return var_new_int(vm, 1);
+    }
+    
+    printf("JS(Mario): No current theme set or no layer root\n");
+    return var_new_int(vm, 0);
+}
+
 /* ====================== 初始化和清理 ====================== */
 extern bool compile(bytecode_t *bc, const char* input);
 extern bool _m_debug;  // Mario 调试标志
@@ -408,6 +508,10 @@ void js_module_register_api(void)
     vm_reg_native(g_vm, yui_cls, "renderFromJson(layerId, json)", mario_render_from_json, NULL);
     vm_reg_native(g_vm, yui_cls, "update(jsonString)", mario_update, NULL);
     vm_reg_native(g_vm, yui_cls, "log(...)", mario_log, NULL);
+    vm_reg_native(g_vm, yui_cls, "themeLoad(path)", mario_theme_load, NULL);
+    vm_reg_native(g_vm, yui_cls, "themeSetCurrent(name)", mario_theme_set_current, NULL);
+    vm_reg_native(g_vm, yui_cls, "themeUnload(name)", mario_theme_unload, NULL);
+    vm_reg_native(g_vm, yui_cls, "themeApplyToTree()", mario_theme_apply_to_tree, NULL);
 
     // 也注册为全局函数（为了兼容性）
     vm_reg_static(g_vm, NULL, "setText(layerId, text)", mario_set_text, NULL);
