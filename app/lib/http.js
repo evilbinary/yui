@@ -268,8 +268,8 @@ function test_http() {
         var response = http_post("http://httpbin.org/post", postData);
         YUI.log("POST Response status: " + response.status);
         YUI.log("POST Response body length: " + response.body.length);
-    } catch (e) {
-        YUI.log("POST request failed: " + e.message);
+    } catch (e1) {
+        YUI.log("POST request failed: " + e1.message);
     }
     
     YUI.log("HTTP tests completed");

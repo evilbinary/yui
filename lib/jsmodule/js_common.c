@@ -108,7 +108,9 @@ int js_module_set_layer_event(Layer* layer, const char* event_name, const char* 
     }
     // 检查 change 事件
     if (strcmp(event_name, "change") == 0 || strcmp(event_name, "onChange") == 0) {
-         layer->register_event(layer, event_name, event_func_name, (EventHandler)event_handler);
+        if(layer->register_event!=NULL){
+            layer->register_event(layer, event_name, event_func_name, (EventHandler)event_handler);
+        }
         return 0;
     
     }
