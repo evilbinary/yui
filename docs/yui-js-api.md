@@ -406,7 +406,8 @@ setBgColor(layerId, color)
 hide(layerId)
 show(layerId)
 
-// 注意：Mario 引擎不支持 Socket API
+// Socket API: 在 lib/mario/builtin/socket/native_socket.c 中提供（23个函数）
+// 使用方式: Socket.socket(type), Socket.connect(fd, host, port, timeout) 等
 ```
 
 **Native函数实现示例**
@@ -766,7 +767,7 @@ Animation* animate_add(Layer* layer, AnimationType type, float from, float to, u
 | API | mquickjs | QuickJS | Mario |
 |-----|----------|---------|-------|
 | **YUI Core** | ✅ | ✅ | ✅ |
-| **Socket API** | ✅ | ✅ | ❌ |
+| **Socket API** | ✅ | ✅ | ✅ |
 | **标准库** | ✅ 完整 | ✅ 完整 | ❌ 基础 |
 | **Theme Mgmt** | ✅ | ✅ | ✅ |
 | **JSON** | ✅ | ✅ | ⚠️ 有限 |
@@ -874,7 +875,7 @@ make clean         # 清理构建文件
 
 ## 注意事项
 
-1. **引擎兼容性**：部分 API 只在特定引擎中可用，Socket API 仅在 mquickjs 和 QuickJS 中可用
+1. **引擎兼容性**：所有核心 API 和 Socket API 在三个引擎中都可用，Mario 引擎的 Socket API 更加强大（23个函数）
 2. **内存管理**：QuickJS 需要手动释放字符串，mquickjs 和 Mario 不需要
 3. **错误处理**：不同引擎的错误返回值类型不同，mquickjs/Mario 返回整数代码，QuickJS 返回布尔值
 4. **异步支持**：目前只支持同步 API，异步操作需要使用定时器模拟
