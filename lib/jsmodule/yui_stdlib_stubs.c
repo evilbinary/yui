@@ -3,7 +3,7 @@
 // 这个工具只是用来生成头文件，不需要实际的 YUI 运行时功能
 
 #include "../../src/layer.h"
-
+#include "../../src/theme_manager.h"
 
 // 全局变量存根
 Layer* g_layer_root = NULL;
@@ -40,4 +40,29 @@ const char* layer_get_text(const Layer* layer) {
 // JSON 更新存根
 int yui_update(Layer* root, const char* update_json) {
     return -1;
+}
+
+// 主题管理器存根函数
+ThemeManager* theme_manager_get_instance(void) {
+    return NULL;
+}
+
+Theme* theme_manager_load_theme(const char* theme_path) {
+    return NULL;
+}
+
+int theme_manager_set_current(const char* theme_name) {
+    return 0;
+}
+
+void theme_manager_unload_theme(const char* theme_name) {
+    // 空函数
+}
+
+Theme* theme_manager_get_current(void) {
+    return NULL;
+}
+
+void theme_manager_apply_to_tree(Layer* root) {
+    // 空函数
 }

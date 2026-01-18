@@ -584,9 +584,9 @@ function _themeSetCurrent(themeName) {
             error('YUI.themeSetCurrent function not available');
             return false;
         }
-    } catch (e) {
+    } catch (e1) {
         // 捕获异常
-        error('Exception in _themeSetCurrent: ' + e.message);
+        error('Exception in _themeSetCurrent: ' + e1.message);
         return false;
     }
 }

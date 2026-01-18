@@ -159,19 +159,19 @@ function initThemeTest() {
             return this.Theme;
         }
         
-        // 方法6: 在QuickJS环境中，尝试使用eval获取
-        if (typeof std !== 'undefined' && typeof os !== 'undefined') {
-            try {
-                // 尝试通过eval获取Theme
-                var themeFromEval = eval('Theme');
-                if (typeof themeFromEval !== 'undefined') {
-                    YUI.log('[ThemeTest] Found Theme using eval');
-                    return themeFromEval;
-                }
-            } catch (e) {
-                YUI.log('[ThemeTest] Failed to get Theme using eval: ' + e.message);
-            }
-        }
+        // // 方法6: 在QuickJS环境中，尝试使用eval获取
+        // if (typeof std !== 'undefined' && typeof os !== 'undefined') {
+        //     try {
+        //         // 尝试通过eval获取Theme
+        //         var themeFromEval = eval('Theme');
+        //         if (typeof themeFromEval !== 'undefined') {
+        //             YUI.log('[ThemeTest] Found Theme using eval');
+        //             return themeFromEval;
+        //         }
+        //     } catch (e) {
+        //         YUI.log('[ThemeTest] Failed to get Theme using eval: ' + e.message);
+        //     }
+        // }
         
         return null;
     }
@@ -235,8 +235,8 @@ function initThemeTest() {
                 YUI.setText('themeInfo', '主题系统测试（使用模拟对象）');
                 // 继续执行剩余代码，不提前返回
             }
-        } catch (e) {
-            YUI.log('[ThemeTest] Exception loading theme module: ' + e.message);
+        } catch (e2) {
+            YUI.log('[ThemeTest] Exception loading theme module: ' + e2.message);
         }
     } else {
         // 使用获取到的Theme对象
