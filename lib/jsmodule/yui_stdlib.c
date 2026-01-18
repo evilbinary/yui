@@ -20,7 +20,9 @@
 #include "cutils.h"
 #include "mquickjs.h"
 
+#include "theme_manager.h"
 #include "layer.h"
+
 
 #define MAX_TEXT 256
 #define MAX_PATH 1024
@@ -394,6 +396,10 @@ static const JSPropDef js_yui[] = {
     JS_CFUNC_DEF("renderFromJson", 2, js_render_from_json ),
     JS_CFUNC_DEF("call", 2, js_yui_call ),
     JS_CFUNC_DEF("update", 1, js_yui_update ),
+    JS_CFUNC_DEF("themeLoad", 1, js_yui_themeLoad ),
+    JS_CFUNC_DEF("themeSetCurrent", 1, js_yui_themeSetCurrent ),
+    JS_CFUNC_DEF("themeUnload", 1, js_yui_themeUnload ),
+    JS_CFUNC_DEF("themeApplyToTree", 0, js_yui_themeApplyToTree ),
     JS_PROP_END,
 };
 
@@ -475,11 +481,114 @@ static JSValue js_yui_update(JSContext *ctx, JSValue *this_val, int argc, JSValu
 #endif
 }
 
+// 主题加载函数 - JS 接口
+static JSValue js_yui_themeLoad(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+{
+    const char *theme_path = NULL;
+    JSCStringBuf buf;
+    
+    // 检查参数
+    if (argc < 1) {
+        return JS_ThrowTypeError(ctx, "themeLoad requires 1 argument: theme_path");
+    }
+    
+    // 获取主题路径
+    theme_path = JS_ToCString(ctx, argv[0], &buf);
+    if (!theme_path) {
+        return JS_ThrowTypeError(ctx, "Invalid theme path");
+    }
+    
+    // 调用主题管理器的加载函数
+    ThemeManager* manager = theme_manager_get_instance();
+    Theme* theme = theme_manager_load_theme(theme_path);
+    
+    JS_FreeCString(ctx, theme_path);
+    
+    if (theme) {
+        // 创建返回对象
+        JSValue result = JS_NewObject(ctx);
+        JS_SetPropertyStr(ctx, result, "success", JS_NewBool(1));
+        JS_SetPropertyStr(ctx, result, "name", JS_NewString(ctx, theme->name));
+        JS_SetPropertyStr(ctx, result, "version", JS_NewString(ctx, theme->version));
+        return result;
+    } else {
+        // 创建返回对象
+        JSValue result = JS_NewObject(ctx);
+        JS_SetPropertyStr(ctx, result, "success", JS_NewBool(0));
+        JS_SetPropertyStr(ctx, result, "name", JS_NewString(ctx, ""));
+        JS_SetPropertyStr(ctx, result, "version", JS_NewString(ctx, ""));
+        JS_SetPropertyStr(ctx, result, "error", JS_NewString(ctx, "Failed to load theme"));
+        return result;
+    }
+}
+
+// 设置当前主题函数 - JS 接口
+static JSValue js_yui_themeSetCurrent(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+{
+    const char *theme_name = NULL;
+    JSCStringBuf buf;
+    
+    // 检查参数
+    if (argc < 1) {
+        return JS_ThrowTypeError(ctx, "themeSetCurrent requires 1 argument: theme_name");
+    }
+    
+    // 获取主题名称
+    theme_name = JS_ToCString(ctx, argv[0], &buf);
+    if (!theme_name) {
+        return JS_ThrowTypeError(ctx, "Invalid theme name");
+    }
+    
+    // 调用主题管理器的设置函数
+    int result = theme_manager_set_current(theme_name);
+    
+    JS_FreeCString(ctx, theme_name);
+    
+    return JS_NewBool(result == 0 ? 1 : 0);
+}
+
+// 卸载主题函数 - JS 接口
+static JSValue js_yui_themeUnload(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+{
+    const char *theme_name = NULL;
+    JSCStringBuf buf;
+    
+    // 检查参数
+    if (argc < 1) {
+        return JS_ThrowTypeError(ctx, "themeUnload requires 1 argument: theme_name");
+    }
+    
+    // 获取主题名称
+    theme_name = JS_ToCString(ctx, argv[0], &buf);
+    if (!theme_name) {
+        return JS_ThrowTypeError(ctx, "Invalid theme name");
+    }
+    
+    // 调用主题管理器的卸载函数
+    theme_manager_unload_theme(theme_name);
+    
+    JS_FreeCString(ctx, theme_name);
+    
+    return JS_NewBool(1);
+}
+
+// 应用主题到图层树函数 - JS 接口
+static JSValue js_yui_themeApplyToTree(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+{
+    // 调用主题管理器的应用函数
+    ThemeManager* manager = theme_manager_get_instance();
+    Theme* current = theme_manager_get_current();
+    
+    if (current && g_layer_root) {
+        theme_manager_apply_to_tree(g_layer_root);
+        return JS_NewBool(1);
+    }
+    
+    return JS_NewBool(0);
+}
 
 static const JSClassDef js_yui_class =
 JS_CLASS_DEF("YUI", 1, js_yui_constructor, JS_CLASS_YUI, js_yui, js_yui_proto, NULL, js_yui_finalizer);
-
-
 
 // 注册 YUI API 到 JS（导出函数，不使用 static）
 void js_module_register_yui_api(JSContext* ctx) {

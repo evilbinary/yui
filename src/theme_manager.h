@@ -24,7 +24,7 @@ Theme* theme_manager_load_theme(const char* theme_path);
 int theme_manager_set_current(const char* theme_name);
 
 // 获取当前主题
-Theme* theme_manager_get_current(void);
+Theme* theme_manager_get_current();
 
 // 获取主题（按名称）
 Theme* theme_manager_get_theme(const char* theme_name);

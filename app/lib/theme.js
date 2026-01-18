@@ -494,15 +494,50 @@ var _themeObjects = {};
  * @returns {Object} - {success: boolean, name: string, version: string}
  */
 function _themeLoad(themePath) {
-    // 注意：此函数需要在C代码中实现
-    // 这里返回失败，确保调用者知道需要C实现
-    error('_themeLoad is not implemented. Please implement in C code.');
-    return {
-        success: false,
-        name: '',
-        version: '',
-        error: 'Not implemented in C'
-    };
+    try {
+        // 检查YUI对象和themeLoad函数是否存在
+        if (typeof YUI !== 'undefined' && typeof YUI.themeLoad === 'function') {
+            // 调用原生主题加载函数
+            var result = YUI.themeLoad(themePath);
+            
+            // 检查返回结果
+            if (result && typeof result === 'object') {
+                return {
+                    success: !!result.success,
+                    name: result.name || '',
+                    version: result.version || '1.0',
+                    error: result.error || null
+                };
+            } else {
+                // 如果返回值不是预期格式
+                error('Unexpected return value from YUI.themeLoad');
+                return {
+                    success: false,
+                    name: '',
+                    version: '',
+                    error: 'Unexpected return value from native function'
+                };
+            }
+        } else {
+            // YUI.themeLoad函数不存在
+            error('YUI.themeLoad function not available');
+            return {
+                success: false,
+                name: '',
+                version: '',
+                error: 'YUI.themeLoad function not available'
+            };
+        }
+    } catch (e) {
+        // 捕获异常
+        error('Exception in _themeLoad: ' + e.message);
+        return {
+            success: false,
+            name: '',
+            version: '',
+            error: e.message
+        };
+    }
 }
 
 /**
@@ -530,17 +565,62 @@ function _themeSetCurrent(themeName) {
     }
     
     // 对于文件主题，使用C实现
-    error('_themeSetCurrent is not implemented. Please implement in C code.');
-    return false;
+    try {
+        // 检查YUI对象和themeSetCurrent函数是否存在
+        if (typeof YUI !== 'undefined' && typeof YUI.themeSetCurrent === 'function') {
+            // 调用原生主题设置函数
+            var result = YUI.themeSetCurrent(themeName);
+            
+            // 检查返回结果
+            if (typeof result === 'boolean') {
+                return result;
+            } else {
+                // 如果返回值不是预期格式
+                error('Unexpected return value from YUI.themeSetCurrent');
+                return false;
+            }
+        } else {
+            // YUI.themeSetCurrent函数不存在
+            error('YUI.themeSetCurrent function not available');
+            return false;
+        }
+    } catch (e) {
+        // 捕获异常
+        error('Exception in _themeSetCurrent: ' + e.message);
+        return false;
+    }
 }
 
 /**
  * 卸载主题（C实现）
  * @param {string} themeName - 主题名称
+ * @returns {boolean} - 是否成功
  */
 function _themeUnload(themeName) {
-    // 注意：此函数需要在C代码中实现
-    error('_themeUnload is not implemented. Please implement in C code.');
+    try {
+        // 检查YUI对象和themeUnload函数是否存在
+        if (typeof YUI !== 'undefined' && typeof YUI.themeUnload === 'function') {
+            // 调用原生主题卸载函数
+            var result = YUI.themeUnload(themeName);
+            
+            // 检查返回结果
+            if (typeof result === 'boolean') {
+                return result;
+            } else {
+                // 如果返回值不是预期格式
+                error('Unexpected return value from YUI.themeUnload');
+                return false;
+            }
+        } else {
+            // YUI.themeUnload函数不存在
+            error('YUI.themeUnload function not available');
+            return false;
+        }
+    } catch (e) {
+        // 捕获异常
+        error('Exception in _themeUnload: ' + e.message);
+        return false;
+    }
 }
 
 /**
@@ -548,9 +628,30 @@ function _themeUnload(themeName) {
  * @returns {boolean} - 是否成功
  */
 function _themeApplyToTree() {
-    // 注意：此函数需要在C代码中实现
-    error('_themeApplyToTree is not implemented. Please implement in C code.');
-    return false;
+    try {
+        // 检查YUI对象和themeApplyToTree函数是否存在
+        if (typeof YUI !== 'undefined' && typeof YUI.themeApplyToTree === 'function') {
+            // 调用原生主题应用函数
+            var result = YUI.themeApplyToTree();
+            
+            // 检查返回结果
+            if (typeof result === 'boolean') {
+                return result;
+            } else {
+                // 如果返回值不是预期格式
+                error('Unexpected return value from YUI.themeApplyToTree');
+                return false;
+            }
+        } else {
+            // YUI.themeApplyToTree函数不存在
+            error('YUI.themeApplyToTree function not available');
+            return false;
+        }
+    } catch (e) {
+        // 捕获异常
+        error('Exception in _themeApplyToTree: ' + e.message);
+        return false;
+    }
 }
 
 // ==================== 初始化 ====================

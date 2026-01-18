@@ -3,6 +3,8 @@
 #include "util.h"
 #include "animate.h"
 #include "theme_manager.h"
+#include "theme.h"
+
 
 
 // 更新图层类型名称数组，添加GRID、Text、Tab、Slider、Listbox和Menu
