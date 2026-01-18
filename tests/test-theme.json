@@ -53,7 +53,7 @@
   ],
 
   "events": {
-    "onLoad": "@delayedInit"
+    "onLoad": "@onLoad"
   },
   "js": [
    "../app/lib/theme.js",

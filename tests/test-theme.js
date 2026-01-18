@@ -291,6 +291,10 @@ function runThemeTest() {
 /**
  * 创建主题测试按钮
  */
+/**
+ * 创建主题测试按钮并设置按钮文本
+ * @function
+ */
 function createThemeTestButtons() {
     YUI.setText('testBtn1', '🌙 深色主题');
     YUI.setText('testBtn2', '☀️ 浅色主题');
@@ -491,6 +495,7 @@ function cleanupThemeTest() {
 }
 
 function onLoad() {
+    YUI.log('[ThemeTest] onLoad');
     createThemeTestButtons();
 }
 
