@@ -551,7 +551,7 @@ static JSValue js_yui_themeSetCurrent(JSContext *ctx, JSValue *this_val, int arg
     // 调用主题管理器的设置函数
     int result = theme_manager_set_current(theme_name);
     
-    return JS_NewBool(result == 0 ? 1 : 0);
+    return JS_NewBool(result);
 }
 
 // 卸载主题函数 - JS 接口
