@@ -198,8 +198,18 @@ var Theme = {
                     return;
                 }
                 
+                // 重要：修改JSON对象中的name字段，使其与themeName参数一致
+                // 这样C代码加载后，主题名称就是themeName
+                var themeObjForC = {};
+                for (var key in themeSource) {
+                    if (themeSource.hasOwnProperty(key)) {
+                        themeObjForC[key] = themeSource[key];
+                    }
+                }
+                themeObjForC.name = themeName;  // 使用传入的themeName作为主题名称
+                
                 // 将JSON对象转换为字符串
-                var themeJsonStr = JSON.stringify(themeSource);
+                var themeJsonStr = JSON.stringify(themeObjForC);
                 if (!themeJsonStr) {
                     error('[Theme] Failed to stringify theme JSON object: ' + themeName);
                     if (callback) callback(false, null);
