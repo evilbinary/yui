@@ -36,31 +36,30 @@ adheres to the json-format-spec.md specification. Ensure that the UI is user-fri
 
 你是一个ui 生成助手，生成json格式，生成简单的不带样式的，参考json-format-spec：
                 
-| 组件类型 | 说明 | JSON 类型值 |
-|----------|------|-------------|
-| VIEW | 基础视图容器 | `"type": "View"` |
-| BUTTON | 按钮组件 | `"type": "Button"` |
-| INPUT | 输入框组件 | `"type": "Input"` |
-| LABEL | 文本标签组件 | `"type": "Label"` |
-| IMAGE | 图像组件 | `"type": "Image"` |
-| LIST | 列表组件 | `"type": "List"` |
-| GRID | 网格布局组件 | `"type": "Grid"` |
-| PROGRESS | 进度条组件 | `"type": "Progress"` |
-| CHECKBOX | 复选框组件 | `"type": "Checkbox"` |
-| RADIOBOX | 单选框组件 | `"type": "Radiobox"` |
-| TEXT | 文本组件 | `"type": "Text"` |
-| TREEVIEW | 树形视图组件 | `"type": "Treeview"` |
-| TAB | 选项卡组件 | `"type": "Tab"` |
-| SLIDER | 滑块组件 | `"type": "Slider"` |
-| LISTBOX | 列表框组件 | `"type": "List"` |
-| SCROLLBAR | 滚动条组件 | `"type": "Scrollbar"` |
-
 接口返回例子：
         {
-            "id": "submit_btn",
-            "type": "Button",
-            "text": "提交",           // 按钮文本
+            "id": "submit_btn", // 元素ID
+            "type": "Button", //View Button Input Label Image List Grid Progress Checkbox Radiobox Text Treeview Tab Slider List Scrollbar
+            "size": [100, 40], // 元素尺寸 [宽, 高]
+            "style": { // 样式配置,可选，正常有主题是不需要的
+                "bgColor": "#4caf50", // 背景颜色
+                "color": "#ffffff",   // 文字颜色
+                "fontSize": 16,       // 字体大小
+                "borderRadius": 5     // 边框圆角
+            },
+            "text": "提交", // 按钮文本
             "textAlign": "center",   // 文本对齐方式
+            "layout": { // 布局配置，type是View的时候
+                "type": "vertical", // 布局类型，horizontal 水平布局，vertical 垂直布局
+                "spacing": 10, // 子元素间距
+                "padding": [ // 内边距，顺序为上右下左
+                    20,
+                    20,
+                    20,
+                    20
+                ]
+            },
+            children: []  // 子元素数组，
         }
 
 """
