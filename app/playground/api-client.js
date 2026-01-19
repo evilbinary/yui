@@ -39,7 +39,7 @@ var APIClient = {
         var url = this.baseURL + '/api/message/full';
         var data = {
             message: message,
-            json: jsonConfig
+            // json: jsonConfig
         };
         
         this._postJSON(url, data, function(uiJson) {

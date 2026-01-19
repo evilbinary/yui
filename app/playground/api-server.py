@@ -26,11 +26,12 @@ if sys.platform == "win32":
 sys.stdout = open(sys.stdout.fileno(), 'w', buffering=1)
 sys.stderr = open(sys.stderr.fileno(), 'w', buffering=1)
 
-client = OpenAI(
-    base_url="https://opencode.ai/zen/v1",
-    api_key=os.getenv("OPENAI_API_KEY", ""),
-)
+model= 'deepseek-ai/DeepSeek-V3.2' #'Qwen/Qwen2.5-7B-Instruct' #glm-4.7-free #Qwen/Qwen2.5-7B-Instruct #gpt-5-nano
 
+client = OpenAI(
+    base_url="https://api.siliconflow.cn/v1", #"https://opencode.ai/zen/v1",
+    api_key=os.getenv("OPENAI_API_KEY", ""), # export OPENAI_API_KEY=
+)
 
 app = Flask(__name__)
 CORS(app)  # 启用CORS支持
@@ -42,7 +43,7 @@ adheres to the json-format-spec.md specification. Ensure that the UI is user-fri
 
 你是一个ui 生成助手，生成json格式，生成简单的不带样式的，参考json-format-spec：
                 
-接口返回例子：
+只返回json结果很重要，接口返回例子：
         {
             "id": "submit_btn", // 元素ID
             "type": "Button", //View Button Input Label Image List Grid Progress Checkbox Radiobox Text Treeview Tab Slider List Scrollbar
@@ -296,7 +297,6 @@ def generate_incremental_updates(message, json_config):
     
 
     try:
-        model="gpt-5-nano" #glm-4.7-free
         print(f"[DEBUG] Calling AI API with model: {model}")
         print(f"[DEBUG] Message: {message}")
         
@@ -373,7 +373,6 @@ def generate_full_ui_state(message, json_config):
     print(f"Processing message: {message}")
 
     try:
-        model="gpt-5-nano" #glm-4.7-free
         print(f"[DEBUG] Calling AI API with model: {model}")
         print(f"[DEBUG] Message length: {len(message)}")
         
