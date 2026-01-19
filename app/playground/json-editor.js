@@ -235,7 +235,7 @@ function sendMessage() {
     var updateMode = editorState.updateMode || 'incremental'; // 默认为增量更新
     
     // 显示发送中状态
-    YUI.setText("previewLabel", "正在发送消息到服务器...\n\n消息内容: " + messageText + "\n更新模式: " + updateMode);
+    YUI.setText("inputLabel", "消息内容: " + messageText + " 更新模式: " + updateMode);
     
     // 根据更新模式调用相应的API
     if (updateMode === 'incremental') {

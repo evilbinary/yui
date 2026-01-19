@@ -26,7 +26,7 @@ if sys.platform == "win32":
 sys.stdout = open(sys.stdout.fileno(), 'w', buffering=1)
 sys.stderr = open(sys.stderr.fileno(), 'w', buffering=1)
 
-model= 'deepseek-ai/DeepSeek-V3.2' #'Qwen/Qwen2.5-7B-Instruct' #glm-4.7-free #Qwen/Qwen2.5-7B-Instruct #gpt-5-nano
+model= 'Qwen/Qwen3-VL-235B-A22B-Instruct' #'deepseek-ai/DeepSeek-V3.2' #'Qwen/Qwen2.5-7B-Instruct' #glm-4.7-free #Qwen/Qwen2.5-7B-Instruct #gpt-5-nano
 
 client = OpenAI(
     base_url="https://api.siliconflow.cn/v1", #"https://opencode.ai/zen/v1",

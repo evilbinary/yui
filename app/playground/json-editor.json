@@ -167,8 +167,24 @@
                         {
                             "id": "previewLabel",
                             "type": "Label",
-                            "text": "预览区域\n在编辑器中输入JSON内容，点击验证、格式化或刷新按钮查看结果",
-                            "size": [590, 710],
+                            "text": "",
+                            "size": [590, 670],
+                            "style": {
+                                "bgColor": "#ffffff",
+                                "color": "#333333",
+                                "fontSize": 13,
+                                "fontFamily": "monospace",
+                                "textAlign": "left",
+                                "lineHeight": 1.5,
+                                "padding": [20, 20, 20, 20],
+                                "scrollable": true
+                            }
+                        },
+                        {
+                            "id": "inputLabel",
+                            "type": "Label",
+                            "text": "",
+                            "size": [590, 40],
                             "style": {
                                 "bgColor": "#ffffff",
                                 "color": "#333333",
