@@ -107,10 +107,9 @@ void yui_set_bg_color(Layer* layer, const char* color) {
     if (!layer || !color) return;
     
     Color parsed_color;
-    if (parse_color(color, &parsed_color) == 0) {
-        layer->bg_color = parsed_color;
-        mark_layer_dirty(layer, DIRTY_COLOR);
-    }
+    parse_color((char*)color, &parsed_color);
+    layer->bg_color = parsed_color;
+    mark_layer_dirty(layer, DIRTY_COLOR);
 }
 
 void yui_set_visible(Layer* layer, int visible) {

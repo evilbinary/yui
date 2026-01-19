@@ -47,11 +47,10 @@ static int handle_id(Layer* layer, cJSON* value, int is_creating) {
 static int handle_color(Layer* layer, cJSON* value, int is_creating) {
     if (!cJSON_IsString(value)) return 0;
     Color color;
-    if (parse_color(value->valuestring, &color) == 0) {
-        layer->color = color;
-        if (!is_creating) {
-            mark_layer_dirty(layer, DIRTY_COLOR);
-        }
+    parse_color(value->valuestring, &color);
+    layer->color = color;
+    if (!is_creating) {
+        mark_layer_dirty(layer, DIRTY_COLOR);
     }
     return 1;
 }
@@ -60,9 +59,9 @@ static int handle_bg_color(Layer* layer, cJSON* value, int is_creating) {
     if (!cJSON_IsString(value)) return 0;
     if (is_creating) {
         Color color;
-        if (parse_color(value->valuestring, &color) == 0) {
-            layer->bg_color = color;
-        }
+        parse_color(value->valuestring, &color);
+        layer->bg_color = color;
+        mark_layer_dirty(layer, DIRTY_COLOR);
     } else {
         yui_set_bg_color(layer, value->valuestring);
     }

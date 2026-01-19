@@ -3,7 +3,7 @@
     "type": "View",
     "size": [1200, 800],
     "style": {
-        "bgColor": "#f5f5f5"
+        "bgColor": "#ffffff"
     },
     "js": ["../lib/http.js","api-client.js", "json-editor.js"],
     "layout": {
@@ -168,7 +168,7 @@
                             "id": "previewLabel",
                             "type": "Label",
                             "text": "预览区域\n在编辑器中输入JSON内容，点击验证、格式化或刷新按钮查看结果",
-                            "size": [550, 710],
+                            "size": [590, 710],
                             "style": {
                                 "bgColor": "#ffffff",
                                 "color": "#333333",

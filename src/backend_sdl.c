@@ -171,14 +171,20 @@ int backend_init(){
     // 设置渲染质量为最佳（抗锯齿）
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "best");
 
-    // Windows：默认“点击激活窗口”会吞掉首次点击，导致控件第一次点不中（拿不到焦点）
+    // Windows：默认"点击激活窗口"会吞掉首次点击，导致控件第一次点不中（拿不到焦点）
     // 开启 click-through 让首次点击也能送达应用侧
     SDL_SetHint(SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1");
+    
+    // Windows: 强制使用 OpenGL 渲染器以避免 Direct3D 的颜色问题
+    #ifdef _WIN32
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "opengl");
+    printf("Windows detected: Forcing OpenGL renderer to avoid Direct3D color issues\n");
+    #endif
     
     window = SDL_CreateWindow("YUI",
                                         SDL_WINDOWPOS_CENTERED,
                                         SDL_WINDOWPOS_CENTERED,
-                                        800, 600, SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_SHOWN);
+                                        800, 600, SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
 
     // 尝试创建渲染器，优先使用硬件加速和垂直同步
     Uint32 renderer_flags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC;
@@ -234,6 +240,14 @@ int backend_init(){
         } else {
             printf("  Vertical Sync: Disabled (not supported)\n");
         }
+        
+        // 打印支持的纹理格式
+        printf("  Supported texture formats (%d): ", renderer_info.num_texture_formats);
+        for (int i = 0; i < renderer_info.num_texture_formats; i++) {
+            Uint32 format = renderer_info.texture_formats[i];
+            printf("%s ", SDL_GetPixelFormatName(format));
+        }
+        printf("\n");
     }
     
     // 启用透明度混合
@@ -985,10 +999,24 @@ static SDL_Texture* get_corner_texture(SDL_Renderer* renderer, int radius, SDL_C
         }
     }
     
-    // 创建新的圆角纹理 - 使用RGBA格式
+    // 获取渲染器信息以确定像素格式
+    Uint32 pixel_format = SDL_PIXELFORMAT_RGBA8888;
+    SDL_RendererInfo renderer_info;
+    if (SDL_GetRendererInfo(renderer, &renderer_info) == 0 && renderer_info.num_texture_formats > 0) {
+        pixel_format = renderer_info.texture_formats[0];
+    }
+    
+    printf("DEBUG: Creating corner texture with format %s\n", SDL_GetPixelFormatName(pixel_format));
+    
+    // 创建新的圆角纹理 - 使用渲染器支持的格式
     int size = radius + 2;
-    SDL_Surface* surface = SDL_CreateRGBSurface(0, size, size, 32, 0xFF000000, 0x00FF0000, 0x0000FF00, 0x000000FF);
+    SDL_Surface* surface = SDL_CreateRGBSurfaceWithFormat(0, size, size, 32, pixel_format);
     if (!surface) return NULL;
+    
+    // 获取表面格式信息
+    Uint32 rmask, gmask, bmask, amask;
+    int bpp;
+    SDL_PixelFormatEnumToMasks(pixel_format, &bpp, &rmask, &gmask, &bmask, &amask);
     
     // 绘制抗锯齿圆角到surface
     Uint32* pixels = (Uint32*)surface->pixels;
@@ -1012,8 +1040,16 @@ static SDL_Texture* get_corner_texture(SDL_Renderer* renderer, int radius, SDL_C
             
             if (alpha > 0.01f) {
                 Uint8 a = (Uint8)(alpha * color.a);
-                // SDL像素格式: 0xRRGGBBAA (RGBA格式，与Surface匹配)
-                pixels[y * pitch + x] = (color.r << 24) | (color.g << 16) | (color.b << 8) | a;
+                // 根据像素格式设置颜色值
+                Uint32 pixel = 0;
+                if (pixel_format == SDL_PIXELFORMAT_ARGB8888) {
+                    // ARGB格式: AARRGGBB
+                    pixel = (a << 24) | (color.r << 16) | (color.g << 8) | color.b;
+                } else {
+                    // 默认RGBA格式: RRGGBBAA
+                    pixel = (color.r << 24) | (color.g << 16) | (color.b << 8) | a;
+                }
+                pixels[y * pitch + x] = pixel;
             } else {
                 pixels[y * pitch + x] = 0; // 完全透明
             }
@@ -1328,9 +1364,18 @@ void backend_render_backdrop_filter(Rect* rect, int blur_radius, float saturatio
     if (blur_radius > 20) blur_radius = 20;
     
     // 创建一个临时纹理来捕获当前屏幕内容
+    // 使用渲染器支持的像素格式（Windows Direct3D需要ARGB8888）
+    Uint32 pixel_format = SDL_PIXELFORMAT_RGBA8888;
+    SDL_RendererInfo renderer_info;
+    if (SDL_GetRendererInfo(renderer, &renderer_info) == 0 && renderer_info.num_texture_formats > 0) {
+        // 使用第一个支持的纹理格式（通常是ARGB8888或RGBA8888）
+        pixel_format = renderer_info.texture_formats[0];
+        printf("DEBUG: Using pixel format %s for blur texture\n", SDL_GetPixelFormatName(pixel_format));
+    }
+    
     SDL_Texture* temp_texture = SDL_CreateTexture(
         renderer, 
-        SDL_PIXELFORMAT_RGBA8888, 
+        pixel_format, 
         SDL_TEXTUREACCESS_TARGET, 
         rect->w, 
         rect->h
@@ -1359,7 +1404,7 @@ void backend_render_backdrop_filter(Rect* rect, int blur_radius, float saturatio
     // 创建模糊纹理（只创建一次）
     SDL_Texture* blur_texture = SDL_CreateTexture(
         renderer, 
-        SDL_PIXELFORMAT_RGBA8888, 
+        pixel_format, 
         SDL_TEXTUREACCESS_TARGET, 
         rect->w, 
         rect->h
@@ -1418,7 +1463,7 @@ void backend_render_backdrop_filter(Rect* rect, int blur_radius, float saturatio
         // 创建一个新的纹理作为缓存副本
         blur_cache[cache_index].texture = SDL_CreateTexture(
             renderer, 
-            SDL_PIXELFORMAT_RGBA8888, 
+            pixel_format, 
             SDL_TEXTUREACCESS_TARGET, 
             rect->w, 
             rect->h

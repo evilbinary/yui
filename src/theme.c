@@ -324,14 +324,14 @@ void theme_merge_style(ThemeRule* rule, Layer* layer) {
     printf("[Theme] Merging style: rule bg_color RGBA=%d,%d,%d,%d, layer id='%s'\n", 
            rule->bg_color.r, rule->bg_color.g, rule->bg_color.b, rule->bg_color.a, layer->id);
     
-    // 颜色
-    if (rule->color.a > 0) {
+    // 颜色（只在图层没有设置文字颜色时才应用主题）
+    if (rule->color.a > 0 && layer->color.a == 0) {
         layer->color = rule->color;
     }
     
-    // 背景颜色
-    if (rule->bg_color.a > 0) {
-        printf("[Theme] Applying bg_color to layer id='%s'\n", layer->id);
+    // 背景颜色（只在图层没有设置背景色时才应用主题）
+    if (rule->bg_color.a > 0 && layer->bg_color.a == 0) {
+        printf("[Theme] Applying bg_color to layer id='%s' (layer had no bg)\n", layer->id);
         layer->bg_color = rule->bg_color;
         printf("[Theme] Layer bg_color set to RGBA=%d,%d,%d,%d\n", 
                layer->bg_color.r, layer->bg_color.g, layer->bg_color.b, layer->bg_color.a);

@@ -276,7 +276,7 @@ def generate_incremental_updates(message, json_config):
         completion = client.chat.completions.create(
             model =model,
             messages=[
-                {"role": "user", "content": f"生成{message},不需要样式,最简洁的json输出" }
+                {"role": "user", "content": f"生成{message},基本的布局，简洁的json输出" }
             ]
         )
 

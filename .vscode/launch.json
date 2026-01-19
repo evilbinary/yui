@@ -9,7 +9,27 @@
             "request": "launch",
             "name": "playground",
             "program": "${workspaceFolder}/build/None/None/None/playground.exe",
-            "args": ["tests/test-text-onchange.json"],
+            "args": ["tests/test-theme.json"],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": true,
+            "MIMode": "gdb",
+            "miDebuggerPath": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "type": "cppdbg",
+            "request": "launch",
+            "name": "playground-mqjs",
+            "program": "${workspaceFolder}/build/None/None/None/playground-mqjs.exe",
+            "args": ["tests/test-theme.json"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],
