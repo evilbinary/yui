@@ -223,7 +223,7 @@
                     "id": "updateModeSelect",
                     "type": "Select",
                     "text": "增量更新",
-                    "size": [130, 35],
+                    "size": [100, 35],
                     "style": {
                         "bgColor": "#ffffff",
                         "color": "#495057",

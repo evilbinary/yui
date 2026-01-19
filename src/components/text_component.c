@@ -331,7 +331,7 @@ void text_component_set_on_change(TextComponent* component, EventHandler callbac
 
 // 调用 onChange 回调函数
 void text_component_trigger_on_change(TextComponent* component) {
-    if(component->on_change==NULL){
+    if(component->on_change==NULL && component->change_name!=NULL){
         EventHandler handler = find_event_by_name(component->change_name);
         component->on_change = handler;
     }

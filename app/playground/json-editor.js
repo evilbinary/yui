@@ -166,7 +166,7 @@ function refreshPreviewInternal(json) {
     YUI.log("refreshPreviewInternal: JSON Text: " + jsonString);
 
     // 使用新的 renderFromJson 函数动态渲染 UI
-    var result = YUI.renderFromJson("previewContainer", jsonString);
+    var result = YUI.renderFromJson("previewLabel", jsonString);
 
     if (result === 0) {
         YUI.log("refreshPreviewInternal: Successfully rendered JSON to UI");
