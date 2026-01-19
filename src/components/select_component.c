@@ -599,7 +599,6 @@ void select_component_expand(SelectComponent* component) {
             
             // 设置弹出层位置和大小
             component->dropdown_layer->rect.x = component->layer->rect.x;
-            component->dropdown_layer->rect.y = component->layer->rect.y + component->layer->rect.h;
             
             // 计算下拉菜单高度
             int dropdown_height = component->item_height * component->item_count;
@@ -608,6 +607,27 @@ void select_component_expand(SelectComponent* component) {
             }
             component->dropdown_layer->rect.w = component->layer->rect.w;
             component->dropdown_layer->rect.h = dropdown_height;
+            
+            // 智能判断展开方向：检查下方是否有足够空间
+            int window_width, window_height;
+            backend_get_windowsize(&window_width, &window_height);
+            
+            int space_below = window_height - (component->layer->rect.y + component->layer->rect.h);
+            int space_above = component->layer->rect.y;
+            
+            // 判断是否有足够空间向下展开
+            if (space_below >= dropdown_height || space_below >= space_above) {
+                // 向下展开
+                component->dropdown_open_upward = 0;
+                component->dropdown_layer->rect.y = component->layer->rect.y + component->layer->rect.h;
+                printf("DEBUG: Dropdown opening DOWNWARD - space_below=%d, dropdown_height=%d\n", space_below, dropdown_height);
+            } else {
+                // 向上展开
+                component->dropdown_open_upward = 1;
+                component->dropdown_layer->rect.y = component->layer->rect.y - dropdown_height;
+                printf("DEBUG: Dropdown opening UPWARD - space_below=%d, space_above=%d, dropdown_height=%d\n", 
+                       space_below, space_above, dropdown_height);
+            }
             
             // 设置渲染函数为独立的下拉渲染函数
             component->dropdown_layer->component = component;
@@ -685,8 +705,17 @@ void select_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
         printf("DEBUG: Dragging scrollbar, mouse_y=%d, start_y=%d, start_scroll=%d\n", 
                event->y, component->drag_start_y, component->drag_start_scroll);
         
-        int dropdown_y = layer->rect.y + layer->rect.h;
+        int dropdown_y;
         int dropdown_height = component->item_height * component->item_count;
+        if (dropdown_height > component->max_visible_items * component->item_height) {
+            dropdown_height = component->max_visible_items * component->item_height;
+        }
+        
+        if (component->dropdown_open_upward) {
+            dropdown_y = layer->rect.y - dropdown_height;
+        } else {
+            dropdown_y = layer->rect.y + layer->rect.h;
+        }
         if (dropdown_height > component->max_visible_items * component->item_height) {
             dropdown_height = component->max_visible_items * component->item_height;
         }
@@ -718,8 +747,17 @@ void select_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     bool in_dropdown_area = false;
     if (component->expanded) {
         int dropdown_x = layer->rect.x;
-        int dropdown_y = layer->rect.y + layer->rect.h;
+        int dropdown_y;
         int dropdown_height = component->item_height * component->item_count;
+        if (dropdown_height > component->max_visible_items * component->item_height) {
+            dropdown_height = component->max_visible_items * component->item_height;
+        }
+        
+        if (component->dropdown_open_upward) {
+            dropdown_y = layer->rect.y - dropdown_height;
+        } else {
+            dropdown_y = layer->rect.y + layer->rect.h;
+        }
         if (dropdown_height > component->max_visible_items * component->item_height) {
             dropdown_height = component->max_visible_items * component->item_height;
         }
@@ -748,8 +786,17 @@ void select_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
         // 检查是否点击在下拉菜单选项上
         else if (component->expanded) {
             int dropdown_x = layer->rect.x;
-            int dropdown_y = layer->rect.y + layer->rect.h;
+            int dropdown_y;
             int dropdown_height = component->item_height * component->item_count;
+            if (dropdown_height > component->max_visible_items * component->item_height) {
+                dropdown_height = component->max_visible_items * component->item_height;
+            }
+            
+            if (component->dropdown_open_upward) {
+                dropdown_y = layer->rect.y - dropdown_height;
+            } else {
+                dropdown_y = layer->rect.y + layer->rect.h;
+            }
             if (dropdown_height > component->max_visible_items * component->item_height) {
                 dropdown_height = component->max_visible_items * component->item_height;
             }
@@ -839,7 +886,18 @@ void select_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
         if (component->expanded) {
             // 更新悬停状态
             int dropdown_x = layer->rect.x;
-            int dropdown_y = layer->rect.y + layer->rect.h;
+            int dropdown_y;
+            int dropdown_height = component->item_height * component->item_count;
+            if (dropdown_height > component->max_visible_items * component->item_height) {
+                dropdown_height = component->max_visible_items * component->item_height;
+            }
+            
+            if (component->dropdown_open_upward) {
+                dropdown_y = layer->rect.y - dropdown_height;
+            } else {
+                dropdown_y = layer->rect.y + layer->rect.h;
+            }
+            
             int content_width = layer->rect.w;
             int has_scrollbar = component->item_count > component->max_visible_items;
             if (has_scrollbar) {
@@ -1089,7 +1147,22 @@ void select_component_render_dropdown_only(Layer* layer) {
 
     
     int dropdown_x = component->layer->rect.x;
-    int dropdown_y = component->layer->rect.y + component->layer->rect.h;
+    int dropdown_y;
+    
+    // 根据展开方向确定Y坐标
+    if (component->dropdown_open_upward) {
+        // 向上展开：计算高度并从select组件上方开始
+        int dropdown_height = component->item_height * component->item_count;
+        if (dropdown_height > component->max_visible_items * component->item_height) {
+            dropdown_height = component->max_visible_items * component->item_height;
+        }
+        dropdown_y = component->layer->rect.y - dropdown_height;
+        // printf("DEBUG: Rendering dropdown UPWARD at y=%d\n", dropdown_y);
+    } else {
+        // 向下展开：从select组件下方开始
+        dropdown_y = component->layer->rect.y + component->layer->rect.h;
+        // printf("DEBUG: Rendering dropdown DOWNWARD at y=%d\n", dropdown_y);
+    }
     
     // 计算下拉菜单高度
     int dropdown_height = component->item_height * component->item_count;
@@ -1230,16 +1303,23 @@ void select_component_handle_dropdown_mouse_event(Layer* layer, MouseEvent* even
     
     SelectComponent* component = (SelectComponent*)layer->component;
     
+    // 计算下拉菜单Y坐标（根据展开方向）
+    int dropdown_y;
+    int dropdown_height = component->item_height * component->item_count;
+    if (dropdown_height > component->max_visible_items * component->item_height) {
+        dropdown_height = component->max_visible_items * component->item_height;
+    }
+    
+    if (component->dropdown_open_upward) {
+        dropdown_y = component->layer->rect.y - dropdown_height;
+    } else {
+        dropdown_y = component->layer->rect.y + component->layer->rect.h;
+    }
+    
     // 如果正在拖拽，优先处理拖拽逻辑
     if (component->is_dragging && (event->state == SDL_MOUSEMOTION || event->state == SDL_PRESSED)) {
-        printf("DEBUG: Dragging scrollbar, mouse_y=%d, start_y=%d, start_scroll=%d\n", 
-               event->y, component->drag_start_y, component->drag_start_scroll);
-        
-        int dropdown_y = component->layer->rect.y + component->layer->rect.h;
-        int dropdown_height = component->item_height * component->item_count;
-        if (dropdown_height > component->max_visible_items * component->item_height) {
-            dropdown_height = component->max_visible_items * component->item_height;
-        }
+        // printf("DEBUG: Dragging scrollbar, mouse_y=%d, start_y=%d, start_scroll=%d\n", 
+        //       event->y, component->drag_start_y, component->drag_start_scroll);
         
         int total_items = component->item_count;
         int visible_items = component->max_visible_items;
@@ -1258,11 +1338,6 @@ void select_component_handle_dropdown_mouse_event(Layer* layer, MouseEvent* even
     }
     
     int dropdown_x = component->layer->rect.x;
-    int dropdown_y = component->layer->rect.y + component->layer->rect.h;
-    int dropdown_height = component->item_height * component->item_count;
-    if (dropdown_height > component->max_visible_items * component->item_height) {
-        dropdown_height = component->max_visible_items * component->item_height;
-    }
     
     // 计算内容区域（排除滚动条）
     int content_width = component->layer->rect.w;

@@ -205,7 +205,7 @@
                     "id": "messageInput",
                     "type": "Text",
                     "text": "",
-                    "placeholder": "输入消息...",
+                    "placeholder": "输入需要生成的UI内容...",
                     "size": [400, 35],
                     "style": {
                         "bgColor": "#ffffff",
@@ -240,7 +240,7 @@
                 {
                     "id": "sendBtn",
                     "type": "Button",
-                    "text": "发送",
+                    "text": "生成",
                     "size": [100, 35],
                     "style": {
                         "bgColor": "#2196f3",

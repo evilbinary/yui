@@ -14,18 +14,7 @@ function initJsonEditor() {
     YUI.log("initJsonEditor: Initializing JSON editor...");
 
     // 设置默认的示例JSON
-    var defaultJson = {
-        "id": "test",
-        "type": "Button",
-        "text": "Hello World",
-        "size": [200, 50],
-        "style": {
-            "bgColor": "#4CAF50",
-            "color": "#ffffff",
-            "fontSize": 16,
-            "borderRadius": 8
-        }
-    };
+    var defaultJson = {};
 
     
 
