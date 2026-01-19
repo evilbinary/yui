@@ -49,7 +49,7 @@ UI定义文件采用树形结构描述界面，基本结构如下：
     "color": "#2C3E50"
   },
   "events": {                 // 事件绑定
-    "onClick": "handlePanelClick"
+    "onClick": "@handlePanelClick"
   },
   "children": [               // 子组件数组
     // 子组件定义...
@@ -81,7 +81,7 @@ YUI框架支持以下核心组件类型：
 | TREEVIEW | 树形视图组件 | `"type": "Treeview"` |
 | TAB | 选项卡组件 | `"type": "Tab"` |
 | SLIDER | 滑块组件 | `"type": "Slider"` |
-| LISTBOX | 列表框组件 | `"type": "Listbox"` |
+| LISTBOX | 列表框组件 | `"type": "List"` |
 | SCROLLBAR | 滚动条组件 | `"type": "Scrollbar"` |
 
 ## 六、通用属性

@@ -9,10 +9,62 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import json
 import time
+import traceback
+import sys
+import os
 from datetime import datetime
+
+from openai import OpenAI
+
+# 全局禁用输出缓冲，确保日志实时显示
+sys.stdout = open(sys.stdout.fileno(), 'w', buffering=1)
+sys.stderr = open(sys.stderr.fileno(), 'w', buffering=1)
+
+client = OpenAI(
+    base_url="https://opencode.ai/zen/v1",
+    api_key=os.getenv("OPENAI_API_KEY", ""),
+)
+
 
 app = Flask(__name__)
 CORS(app)  # 启用CORS支持
+
+
+full_system_prompt = """You are a professional UI designer. Based on the user's instructions, generate a complete UI JSON structure that
+
+adheres to the json-format-spec.md specification. Ensure that the UI is user-friendly and visually appealing.
+
+你是一个ui 生成助手，生成json格式，生成简单的不带样式的，参考json-format-spec：
+                
+| 组件类型 | 说明 | JSON 类型值 |
+|----------|------|-------------|
+| VIEW | 基础视图容器 | `"type": "View"` |
+| BUTTON | 按钮组件 | `"type": "Button"` |
+| INPUT | 输入框组件 | `"type": "Input"` |
+| LABEL | 文本标签组件 | `"type": "Label"` |
+| IMAGE | 图像组件 | `"type": "Image"` |
+| LIST | 列表组件 | `"type": "List"` |
+| GRID | 网格布局组件 | `"type": "Grid"` |
+| PROGRESS | 进度条组件 | `"type": "Progress"` |
+| CHECKBOX | 复选框组件 | `"type": "Checkbox"` |
+| RADIOBOX | 单选框组件 | `"type": "Radiobox"` |
+| TEXT | 文本组件 | `"type": "Text"` |
+| TREEVIEW | 树形视图组件 | `"type": "Treeview"` |
+| TAB | 选项卡组件 | `"type": "Tab"` |
+| SLIDER | 滑块组件 | `"type": "Slider"` |
+| LISTBOX | 列表框组件 | `"type": "List"` |
+| SCROLLBAR | 滚动条组件 | `"type": "Scrollbar"` |
+
+接口返回例子：
+        {
+            "id": "submit_btn",
+            "type": "Button",
+            "text": "提交",           // 按钮文本
+            "textAlign": "center",   // 文本对齐方式
+        }
+
+"""
+
 
 # 模拟数据存储（实际应用中应该使用数据库）
 message_history = []
@@ -88,6 +140,10 @@ def send_message_incremental():
         if not message:
             return jsonify({"error": "Message cannot be empty"}), 400
         
+        print(f"[DEBUG] Received message: '{message}' (length: {len(message)})")
+        
+        print(f"[DEBUG] Received message: '{message}' (length: {len(message)})")
+        
         # 记录消息
         message_entry = {
             "id": len(message_history) + 1,
@@ -107,6 +163,8 @@ def send_message_incremental():
         return jsonify(updates)
         
     except Exception as e:
+        print(f"[ERROR] Exception in /api/message/incremental: {str(e)}")
+        print(traceback.format_exc())
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/message/full', methods=['POST'])
@@ -131,15 +189,22 @@ def send_message_full():
     """
     global ui_state
     try:
+
         data = request.get_json()
         if not data:
             return jsonify({"error": "Invalid JSON"}), 400
         
+        
+
         message = data.get('message', '').strip()
         json_config = data.get('json', {})
         
         if not message:
             return jsonify({"error": "Message cannot be empty"}), 400
+        
+        print(f"[DEBUG] Received message: '{message}' (length: {len(message)})")
+        
+        print(f"[DEBUG] Received message: '{message}' (length: {len(message)})")
         
         # 记录消息
         message_entry = {
@@ -163,6 +228,8 @@ def send_message_full():
         return jsonify(ui_state)
         
     except Exception as e:
+        print(f"[ERROR] Exception in /api/message/full: {str(e)}")
+        print(traceback.format_exc())
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/history', methods=['GET'])
@@ -200,6 +267,45 @@ def generate_incremental_updates(message, json_config):
     updates = []
     lower_msg = message.lower()
     
+    
+
+    try:
+        model="gpt-5-nano" #glm-4.7-free
+        print(f"[DEBUG] Calling AI API with model: {model}")
+        print(f"[DEBUG] Message: {message}")
+        
+        completion = client.chat.completions.create(
+            model =model,
+            messages=[
+                {"role": "user", "content": f"生成{message},不需要样式,最简洁的json输出" }
+            ]
+        )
+
+        print(f"[DEBUG] AI API call succeeded")
+
+        # 获取推理思考过程（Reasoner特有字段，可能不存在）
+        if hasattr(completion.choices[0].message, 'reasoning_content'):
+            reasoning_content = completion.choices[0].message.reasoning_content
+            print(f"===== 模型推理过程 =====\n{reasoning_content}")
+
+        # 获取模型回复内容
+        content = completion.choices[0].message.content
+        print(f"===== 模型回复 =====\n{content}")
+
+        # 尝试解析为JSON数组
+        try:
+            updates = json.loads(content) if isinstance(content, str) else content
+            if not isinstance(updates, list):
+                print(f"[ERROR] Parsed content is not a list, using empty updates")
+                updates = []
+        except json.JSONDecodeError as json_err:
+            print(f"[ERROR] Failed to parse model response as JSON: {json_err}")
+            print(f"[ERROR] Response content: {content}")
+            updates = []
+    except Exception as ai_err:
+        print(f"[ERROR] AI API call failed: {type(ai_err).__name__}: {str(ai_err)}")
+        print(traceback.format_exc())
+        updates = []
     # 关键词到更新的映射
     if "批量" in message or "batch" in lower_msg:
         updates = [
@@ -238,92 +344,67 @@ def generate_full_ui_state(message, json_config):
     生成完整的UI状态（符合 json-format-spec.md 规范的组件树结构）
     """
     lower_msg = message.lower()
-    
-    # 基础组件模板（符合 json-format-spec.md）
-    base_ui = {
-        "id": "root",
-        "type": "View",
-        "size": [400, 600], 
-        "style": {
-            "bgColor": "#f5f5f5"
-        },
-        "children": [
-            {
-                "id": "statusLabel",
-                "type": "Label",
-                "text": "状态：准备就绪",
-                "size": [400, 40],
-                "position": [20, 20],
-                "style": {
-                    "color": "#333333",
-                    "fontSize": 16,
-                    "fontWeight": "bold"
+    print(f"Processing message: {message}")
+
+    try:
+        model="gpt-5-nano" #glm-4.7-free
+        print(f"[DEBUG] Calling AI API with model: {model}")
+        print(f"[DEBUG] Message length: {len(message)}")
+        
+        completion = client.chat.completions.create(
+            model =model,
+            messages=[
+                {
+                    "role": "system",
+                    "content": full_system_prompt
+                },
+                {"role": "user", "content": message}  # 移除多余的""+
+            ]
+        )
+
+        print(f"[DEBUG] AI API call succeeded")
+
+        # 获取推理思考过程（Reasoner特有字段，可能不存在）
+        if hasattr(completion.choices[0].message, 'reasoning_content'):
+            reasoning_content = completion.choices[0].message.reasoning_content
+            print(f"===== 模型推理过程 =====\n{reasoning_content}")
+
+        # 获取模型回复内容
+        content = completion.choices[0].message.content
+        print(f"===== 模型回复 =====\n{content}")
+        content=content.replace('```json','').replace('```','')
+        # 尝试解析为JSON对象
+        try:
+            base_ui = json.loads(content) if isinstance(content, str) else content
+            if not isinstance(base_ui, dict):
+                print(f"[ERROR] Parsed content is not a dict, using default UI")
+                base_ui = {
+                    "id": "root",
+                    "type": "View",
+                    "size": [400, 600], 
+                    "style": {"bgColor": "#f5f5f5"},
+                    "children": []
                 }
-            },
-            {
-                "id": "item1",
+        except json.JSONDecodeError as json_err:
+            print(f"[ERROR] Failed to parse model response as JSON: {json_err}")
+            print(f"[ERROR] Response content: {content}")
+            base_ui = {
+                "id": "root",
                 "type": "View",
-                "text": "项目 1",
-                "size": [400, 60],
-                "position": [20, 80],
-                "style": {
-                    "bgColor": "#f0f0f0",
-                    "padding": 10,
-                    "margin": 5
-                }
-            },
-            {
-                "id": "item2",
-                "type": "View",
-                "text": "项目 2",
-                "size": [400, 60],
-                "position": [20, 150],
-                "style": {
-                    "bgColor": "#f0f0f0",
-                    "padding": 10,
-                    "margin": 5
-                }
-            },
-            {
-                "id": "item3",
-                "type": "View",
-                "text": "项目 3",
-                "size": [400, 60],
-                "position": [20, 220],
-                "style": {
-                    "bgColor": "#f0f0f0",
-                    "padding": 10,
-                    "margin": 5
-                }
+                "size": [400, 600], 
+                "style": {"bgColor": "#f5f5f5"},
+                "children": []
             }
-        ]
-    }
-    
-    if "批量" in message or "batch" in lower_msg:
-        # 批量更新样式
-        base_ui["children"][0]["style"]["color"] = "#2196f3"
-        base_ui["children"][0]["text"] = "状态：批量更新完成"
-        
-        base_ui["children"][1]["style"]["bgColor"] = "#2196f3"
-        base_ui["children"][1]["text"] = "批量更新 - 项目 1"
-        
-        base_ui["children"][2]["style"]["bgColor"] = "#ff9800"
-        base_ui["children"][2]["text"] = "批量更新 - 项目 2"
-        
-        base_ui["children"][3]["style"]["bgColor"] = "#9c27b0"
-        base_ui["children"][3]["text"] = "批量更新 - 项目 3"
-        
-    elif "项目1" in message or "item1" in lower_msg:
-        # 更新项目1
-        base_ui["children"][0]["style"]["color"] = "#4caf50"
-        base_ui["children"][0]["text"] = "状态：项目1已更新"
-        
-        base_ui["children"][1]["style"]["bgColor"] = "#4caf50"
-        base_ui["children"][1]["text"] = f"已更新: {message}"
-        
-    elif "重置" in message or "reset" in lower_msg:
-        # 保持默认状态
-        pass
+    except Exception as ai_err:
+        print(f"[ERROR] AI API call failed: {type(ai_err).__name__}: {str(ai_err)}")
+        print(traceback.format_exc())
+        base_ui = {
+            "id": "root",
+            "type": "View",
+            "size": [400, 600], 
+            "style": {"bgColor": "#f5f5f5"},
+            "children": []
+        }
         
     return base_ui
 

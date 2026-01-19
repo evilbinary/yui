@@ -230,15 +230,7 @@ function sendMessage() {
     
     // 检查编辑器中的JSON是否有效
     var jsonText = YUI.getText("jsonEditor");
-    var json = null;
-    try {
-        json = JSON.parse(jsonText);
-    } catch (e) {
-        YUI.log("sendMessage: JSON is invalid - " + e.message);
-        YUI.setText("previewLabel", "错误：请先验证JSON内容后再发送消息");
-        return;
-    }
-    
+    var json = jsonText;
     // 获取更新模式（可以从配置或用户选择中获取）
     var updateMode = editorState.updateMode || 'incremental'; // 默认为增量更新
     

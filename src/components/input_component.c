@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-
+#define printf 
 
 // 创建输入组件
 InputComponent* input_component_create(Layer* layer) {
