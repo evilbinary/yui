@@ -16,6 +16,12 @@ from datetime import datetime
 
 from openai import OpenAI
 
+# 设置 UTF-8 编码（解决 Windows 控制台 Unicode 问题）
+if sys.platform == "win32":
+    import codecs
+    sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer, 'strict')
+    sys.stderr = codecs.getwriter('utf-8')(sys.stderr.buffer, 'strict')
+
 # 全局禁用输出缓冲，确保日志实时显示
 sys.stdout = open(sys.stdout.fileno(), 'w', buffering=1)
 sys.stderr = open(sys.stderr.fileno(), 'w', buffering=1)
@@ -129,7 +135,18 @@ def send_message_incremental():
     }
     """
     try:
-        data = request.get_json()
+        # 改进JSON解析错误处理
+        try:
+            data = request.get_json()
+        except Exception as json_error:
+            print(f"[ERROR] JSON解析失败: {str(json_error)}")
+            print(f"[ERROR] 请求数据: {request.data.decode('utf-8', errors='replace')}")
+            return jsonify({
+                "error": "Invalid JSON format", 
+                "details": str(json_error),
+                "hint": "请检查JSON格式是否正确，特别是字符串是否闭合"
+            }), 400
+            
         if not data:
             return jsonify({"error": "Invalid JSON"}), 400
         
@@ -188,8 +205,18 @@ def send_message_full():
     """
     global ui_state
     try:
-
-        data = request.get_json()
+        # 改进JSON解析错误处理
+        try:
+            data = request.get_json()
+        except Exception as json_error:
+            print(f"[ERROR] JSON解析失败: {str(json_error)}")
+            print(f"[ERROR] 请求数据: {request.data.decode('utf-8', errors='replace')}")
+            return jsonify({
+                "error": "Invalid JSON format",
+                "details": str(json_error),
+                "hint": "请检查JSON格式是否正确，特别是字符串是否闭合"
+            }), 400
+            
         if not data:
             return jsonify({"error": "Invalid JSON"}), 400
         
