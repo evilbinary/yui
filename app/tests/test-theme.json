@@ -1,18 +1,19 @@
 {
-  "id": "themeTestView",
+  "id": "rootView",
   "type": "View",
-  "size": [400, 300],
-  "layout": {
-    "type": "vertical",
-    "spacing": 10,
-    "padding": [20, 20, 20, 20],
-    "justifyContent": "center",
-    "alignItems": "center"
-  },
-  "style": {
-    "bgColor": "#F5F5F5"
-  },
   "children": [
+    {
+      "id": "themeTestView",
+      "type": "View",
+      "size": [400, 300],
+      "layout": {
+        "type": "vertical",
+        "spacing": 10,
+        "padding": [20, 20, 20, 20],
+        "justifyContent": "center",
+        "alignItems": "center"
+      },
+      "children": [
     {
       "id": "themeTitle",
       "type": "Label",
@@ -49,7 +50,9 @@
         "fontSize": 16,
         "color": "#666666"
       }
-    }
+      }
+    ]
+  }
   ],
 
   "events": {
