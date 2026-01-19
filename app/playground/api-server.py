@@ -26,7 +26,7 @@ if sys.platform == "win32":
 sys.stdout = open(sys.stdout.fileno(), 'w', buffering=1)
 sys.stderr = open(sys.stderr.fileno(), 'w', buffering=1)
 
-model= 'Qwen/Qwen3-VL-235B-A22B-Instruct' #'deepseek-ai/DeepSeek-V3.2' #'Qwen/Qwen2.5-7B-Instruct' #glm-4.7-free #Qwen/Qwen2.5-7B-Instruct #gpt-5-nano
+model= 'Pro/zai-org/GLM-4.7' #'Qwen/Qwen3-VL-235B-A22B-Instruct' #'deepseek-ai/DeepSeek-V3.2' #'Qwen/Qwen2.5-7B-Instruct' #glm-4.7-free #Qwen/Qwen2.5-7B-Instruct #gpt-5-nano
 
 client = OpenAI(
     base_url="https://api.siliconflow.cn/v1", #"https://opencode.ai/zen/v1",
@@ -41,9 +41,7 @@ full_system_prompt = """You are a professional UI designer. Based on the user's 
 
 adheres to the json-format-spec.md specification. Ensure that the UI is user-friendly and visually appealing.
 
-你是一个ui 生成助手，生成json格式，生成简单的不带样式的，参考json-format-spec：
-                
-只返回json结果很重要，接口返回例子：
+你是一个ui 生成助手，生成json格式，生成完整得ui，只返回json结果很重要，接口返回例子：
         {
             "id": "submit_btn", // 元素ID
             "type": "Button", //View Button Input Label Image List Grid Progress Checkbox Radiobox Text Treeview Tab Slider List Scrollbar

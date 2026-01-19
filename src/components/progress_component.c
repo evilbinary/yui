@@ -5,6 +5,8 @@
 #include <string.h>
 #include <stdio.h>
 
+#define printf
+
 // 创建进度条组件
 ProgressComponent* progress_component_create(Layer* layer) {
     if (!layer) {
