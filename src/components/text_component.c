@@ -188,10 +188,7 @@ void text_component_set_text(TextComponent* component, const char* text) {
     component->selection_start = -1;
     component->selection_end = -1;
     
-    // 更新内容高度
-    text_component_update_content_height(component);
-    
-    // 更新内容高度
+    // 更新内容高度（只调用一次）
     text_component_update_content_height(component);
     
     // 触发 onChange 事件
@@ -458,28 +455,13 @@ static void text_component_insert_char(TextComponent* component, char c) {
     layer_set_text(component->layer, new_text);
     free(new_text);
     
-    // 更新内容高度
-    text_component_update_content_height(component);
-    
-    // 触发 onChange 事件
-    text_component_trigger_on_change(component);
-    
     component->cursor_pos++;
     
-    // 更新内容高度
+    // 更新内容高度（只调用一次）
     text_component_update_content_height(component);
     
     // 触发 onChange 事件
     text_component_trigger_on_change(component);
-    /*
-    }
-    */
-    
-    // 更新内容高度
-    text_component_update_content_height(component);
-    
-    // 更新内容高度
-    text_component_update_content_height(component);
     
     // 更新滚动位置，确保光标可见
     text_component_update_scroll_for_cursor(component);
@@ -604,7 +586,12 @@ int text_component_calculate_content_height(TextComponent* component) {
     }
     
     // 计算文本内容区域的宽度（减去内边距和行号区域）
-    int max_width = component->layer->rect.w - (component->show_line_numbers ? component->line_number_width : 0) - 15;
+    // 与渲染函数中的计算保持一致
+    int left_padding = 5;
+    if (component->show_line_numbers && component->multiline) {
+        left_padding += component->line_number_width;
+    }
+    int max_width = component->layer->rect.w - (left_padding + 5); // 左内边距 + 右内边距
     
     // 如果没有文本，返回一行的高度
     if (text_len == 0) {
@@ -643,7 +630,7 @@ int text_component_calculate_content_height(TextComponent* component) {
             line_count++;
         } else {
             // 需要自动换行，计算需要多少行
-            int needed_lines = 1;
+            int needed_lines = 0;
             int segment_start = current_pos;
             
             while (segment_start < line_end) {
@@ -689,7 +676,7 @@ int text_component_calculate_content_height(TextComponent* component) {
                 }
             }
             
-            line_count += needed_lines;
+            line_count += needed_lines; // 添加计算出的行数
         }
         
         // 移动到下一行
@@ -701,6 +688,10 @@ int text_component_calculate_content_height(TextComponent* component) {
     }
     
     // 返回总高度（行高 + 行间距）
+    // 确保至少有一行的高度
+    if (line_count == 0) {
+        return line_height + 2;
+    }
     return line_count * (line_height + 2);
 }
 
@@ -905,16 +896,13 @@ static void text_component_insert_text(TextComponent* component, const char* tex
     layer_set_text(component->layer, new_text);
     free(new_text);
     
-    // 更新内容高度
+    component->cursor_pos += text_len;
+    
+    // 更新内容高度（只调用一次）
     text_component_update_content_height(component);
     
     // 触发 onChange 事件
     text_component_trigger_on_change(component);
-    
-    component->cursor_pos += text_len;
-    
-    // 更新内容高度
-    text_component_update_content_height(component);
     
     // 清除选择
     component->selection_start = -1;
@@ -2490,13 +2478,16 @@ void text_component_render(Layer* layer) {
             backend_render_fill_rect(&scrollbar_bg, scrollbar_bg_color);
             
             // 计算滚动条滑块位置和大小
-            float scroll_percent = (float)layer->scroll_offset / (total_text_height - visible_height);
-            int slider_height = visible_height * visible_height / total_text_height;
+            float scroll_percent = 0;
+            if (total_text_height > visible_height) {
+                scroll_percent = (float)layer->scroll_offset / (total_text_height - visible_height);
+            }
+            int slider_height = (int)(visible_height * (float)visible_height / total_text_height);
             if (slider_height < 20) slider_height = 20; // 滑块最小高度
             
             Rect scrollbar_slider = {
                 scrollbar_bg.x,
-                scrollbar_bg.y + scroll_percent * (scrollbar_bg.h - slider_height),
+                scrollbar_bg.y + (int)(scroll_percent * (scrollbar_bg.h - slider_height)),
                 scrollbar_bg.w,
                 slider_height
             };
@@ -2518,8 +2509,9 @@ void text_component_update_content_height(TextComponent* component) {
     int content_height = text_component_calculate_content_height(component);
     component->layer->content_height = content_height;
     
-    // 如果内容高度小于可见区域高度，重置滚动偏移
-    if (content_height <= component->layer->rect.h) {
+    // 如果内容高度小于可见区域高度（减去内边距），重置滚动偏移
+    int visible_height = component->layer->rect.h - 10; // 与滚动条计算保持一致
+    if (content_height <= visible_height) {
         component->layer->scroll_offset = 0;
     }
 }
