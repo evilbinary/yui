@@ -2022,50 +2022,91 @@ void text_component_render(Layer* layer) {
             // 循环处理每一行
             int current_line = 0;
             while (current_pos < text_len) {
-                // 优化：快速跳过不可见的行
-                if (current_line < first_visible_line) {
-                    // 快速跳过行，不需要详细渲染
-                    // 先计算当前行会分成多少视觉行
-                    int line_end = current_pos;
-                    while (line_end < text_len && text[line_end] != '\n') {
-                        line_end++;
+            // 优化：快速跳过不可见的行
+            if (current_line < first_visible_line) {
+                // 快速跳过行，不需要详细渲染
+                // 使用与高度计算相同的精确算法计算当前行会分成多少视觉行
+                int line_end = current_pos;
+                while (line_end < text_len && text[line_end] != '\n') {
+                    line_end++;
+                }
+                
+                // 计算整行文本的宽度
+                int current_width = 0;
+                char* temp_line = (char*)malloc(line_end - current_pos + 1);
+                if (temp_line) {
+                    strncpy(temp_line, text + current_pos, line_end - current_pos);
+                    temp_line[line_end - current_pos] = '\0';
+                    
+                    Texture* line_tex = backend_render_texture(layer->font->default_font, temp_line, layer->color);
+                    if (line_tex) {
+                        int line_width, line_height_ignore;
+                        backend_query_texture(line_tex, NULL, NULL, &line_width, &line_height_ignore);
+                        current_width = line_width / scale;
+                        backend_render_text_destroy(line_tex);
                     }
                     
-                    // 计算当前行的宽度
-                    int current_width = 0;
-                    char* temp_line = (char*)malloc(line_end - current_pos + 1);
-                    if (temp_line) {
-                        strncpy(temp_line, text + current_pos, line_end - current_pos);
-                        temp_line[line_end - current_pos] = '\0';
+                    free(temp_line);
+                }
+                
+                // 计算当前行会分成多少视觉行（使用与高度计算相同的精确算法）
+                int visual_lines_in_this_line = 1;
+                if (current_width > render_rect.w) {
+                    // 使用与 text_component_calculate_content_height 相同的精确算法
+                    int segment_start = current_pos;
+                    int needed_lines = 0;
+                    
+                    while (segment_start < line_end) {
+                        int segment_end = segment_start;
+                        int test_width = 0;
                         
-                        Texture* line_tex = backend_render_texture(layer->font->default_font, temp_line, layer->color);
-                        if (line_tex) {
-                            int line_width, line_height_ignore;
-                            backend_query_texture(line_tex, NULL, NULL, &line_width, &line_height_ignore);
-                            current_width = line_width / scale;
-                            backend_render_text_destroy(line_tex);
+                        while (segment_end < line_end) {
+                            char* test_segment = (char*)malloc(segment_end - segment_start + 1);
+                            if (test_segment) {
+                                strncpy(test_segment, text + segment_start, segment_end - segment_start);
+                                test_segment[segment_end - segment_start] = '\0';
+                                
+                                Texture* test_tex = backend_render_texture(layer->font->default_font, test_segment, layer->color);
+                                if (test_tex) {
+                                    int test_w, test_h;
+                                    backend_query_texture(test_tex, NULL, NULL, &test_w, &test_h);
+                                    test_width = test_w / scale;
+                                    backend_render_text_destroy(test_tex);
+                                }
+                                
+                                free(test_segment);
+                                
+                                if (test_width > render_rect.w && segment_end > segment_start) {
+                                    segment_end--;
+                                    break;
+                                }
+                            }
+                            segment_end++;
                         }
                         
-                        free(temp_line);
+                        if (segment_end > segment_start) {
+                            needed_lines++;
+                            segment_start = segment_end;
+                        } else {
+                            needed_lines++;
+                            segment_start++;
+                        }
                     }
                     
-                    // 计算当前行会分成多少视觉行
-                    int visual_lines_in_this_line = 1;
-                    if (current_width > render_rect.w) {
-                        visual_lines_in_this_line = (current_width + render_rect.w - 1) / render_rect.w;
-                    }
-                    
-                    // 跳过这些视觉行
-                    current_line += visual_lines_in_this_line;
-                    
-                    // 移动到下一逻辑行
-                    if (line_end < text_len && text[line_end] == '\n') {
-                        current_pos = line_end + 1;
-                    } else {
-                        current_pos = line_end;
-                    }
-                    continue;
+                    visual_lines_in_this_line = needed_lines;
                 }
+                
+                // 跳过这些视觉行
+                current_line += visual_lines_in_this_line;
+                
+                // 移动到下一逻辑行
+                if (line_end < text_len && text[line_end] == '\n') {
+                    current_pos = line_end + 1;
+                } else {
+                    current_pos = line_end;
+                }
+                continue;
+            }
                 
                 // 如果已经渲染了足够的可见行，退出循环
                 if (current_line >= last_visible_line) {
