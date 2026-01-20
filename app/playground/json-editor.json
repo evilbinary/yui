@@ -176,6 +176,7 @@
                                 "justifyContent": "center",
                                 "padding": [0, 0, 0, 0]
                             },
+                            "scrollable": 2,
                             "style": {
                                 "bgColor": "#ffffff",
                                 "color": "#333333",
