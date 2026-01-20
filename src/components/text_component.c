@@ -1554,9 +1554,8 @@ void text_component_render(Layer* layer) {
     if (!layer || !layer->component) {
         return;
     }
-    
     TextComponent* component = (TextComponent*)layer->component;
-    
+    text_component_update_content_height(component);
     // 绘制背景
     backend_render_fill_rect(&layer->rect, layer->bg_color);
     
