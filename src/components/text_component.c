@@ -1375,8 +1375,12 @@ int text_component_get_position_from_point(TextComponent* component, Point pt, L
         int max_width = render_rect.w;
         
         // 计算点击位置对应的视觉行号
-        int click_y = pt.y - render_rect.y + component->scroll_y;
+        int click_y = pt.y - render_rect.y;
         int target_visual_line = click_y / (line_height + 2);
+        
+        // 考虑滚动偏移，计算实际的目标视觉行
+        int actual_scroll_line = layer->scroll_offset / (line_height + 2);
+        target_visual_line += actual_scroll_line;
         if (target_visual_line < 0) target_visual_line = 0;
         
         // 遍历文本，模拟渲染过程（与文本渲染使用相同的算法）
@@ -1681,7 +1685,7 @@ void text_component_render(Layer* layer) {
             }
             
             // 为这个逻辑行渲染行号（只在第一个视觉行的位置）
-            int line_y = line_number_bg.y + logical_line_visual_start * (line_height + 2) - component->scroll_y;
+            int line_y = line_number_bg.y + logical_line_visual_start * (line_height + 2) - layer->scroll_offset;
             
             // 检查是否在可见范围内
             if (line_y + line_height > line_number_bg.y && line_y < line_number_bg.y + line_number_bg.h) {
@@ -1793,7 +1797,7 @@ void text_component_render(Layer* layer) {
                 // 多行模式：需要考虑自动换行，使用与文本渲染完全相同的逻辑
                 char* text = component->layer->text;
                 int text_len = strlen(text);
-                int line_y = render_rect.y - component->scroll_y;
+                int line_y = render_rect.y - layer->scroll_offset;
                 int current_pos = 0;
                 int max_width = render_rect.w;
                 
@@ -2008,7 +2012,7 @@ void text_component_render(Layer* layer) {
             char* text = component->layer->text;
             int text_len = strlen(text);
             int current_pos = 0;
-            int line_y = render_rect.y - component->scroll_y; // 减去滚动偏移，实现滚动效果
+            int line_y = render_rect.y - layer->scroll_offset; // 减去滚动偏移，实现滚动效果
             int line_height = 0;
             int char_width = 8; // 默认字符宽度
             
@@ -2024,7 +2028,7 @@ void text_component_render(Layer* layer) {
             
             // 优化：预先计算最大可见行数，避免渲染不可见行
             int max_visible_lines = (render_rect.h + (line_height + 2) - 1) / (line_height + 2) + 1; // 向上取整
-            int first_visible_line = component->scroll_y / (line_height + 2);
+            int first_visible_line = layer->scroll_offset / (line_height + 2);
             int last_visible_line = first_visible_line + max_visible_lines;
             
             // 循环处理每一行
@@ -2033,13 +2037,45 @@ void text_component_render(Layer* layer) {
                 // 优化：快速跳过不可见的行
                 if (current_line < first_visible_line) {
                     // 快速跳过行，不需要详细渲染
-                    while (current_pos < text_len && text[current_pos] != '\n') {
-                        current_pos++;
+                    // 先计算当前行会分成多少视觉行
+                    int line_end = current_pos;
+                    while (line_end < text_len && text[line_end] != '\n') {
+                        line_end++;
                     }
-                    if (current_pos < text_len && text[current_pos] == '\n') {
-                        current_pos++;
+                    
+                    // 计算当前行的宽度
+                    int current_width = 0;
+                    char* temp_line = (char*)malloc(line_end - current_pos + 1);
+                    if (temp_line) {
+                        strncpy(temp_line, text + current_pos, line_end - current_pos);
+                        temp_line[line_end - current_pos] = '\0';
+                        
+                        Texture* line_tex = backend_render_texture(layer->font->default_font, temp_line, layer->color);
+                        if (line_tex) {
+                            int line_width, line_height_ignore;
+                            backend_query_texture(line_tex, NULL, NULL, &line_width, &line_height_ignore);
+                            current_width = line_width / scale;
+                            backend_render_text_destroy(line_tex);
+                        }
+                        
+                        free(temp_line);
                     }
-                    current_line++;
+                    
+                    // 计算当前行会分成多少视觉行
+                    int visual_lines_in_this_line = 1;
+                    if (current_width > render_rect.w) {
+                        visual_lines_in_this_line = (current_width + render_rect.w - 1) / render_rect.w;
+                    }
+                    
+                    // 跳过这些视觉行
+                    current_line += visual_lines_in_this_line;
+                    
+                    // 移动到下一逻辑行
+                    if (line_end < text_len && text[line_end] == '\n') {
+                        current_pos = line_end + 1;
+                    } else {
+                        current_pos = line_end;
+                    }
                     continue;
                 }
                 
@@ -2180,21 +2216,21 @@ void text_component_render(Layer* layer) {
             }
             
             // 计算文本总高度（考虑所有行的高度和间距）
-            // 修正计算方式，确保准确性
-            int total_text_height = line_y - (render_rect.y - component->scroll_y);
+            // 使用content_height而不是line_y计算
+            int total_text_height = layer->content_height;
             
             // 限制滚动范围
             if (total_text_height <= render_rect.h) {
-                component->scroll_y = 0; // 文本高度小于可见区域，不需要滚动
+                layer->scroll_offset = 0; // 文本高度小于可见区域，不需要滚动
             } else {
                 // 确保滚动不会超出上边界
-                if (component->scroll_y < 0) {
-                    component->scroll_y = 0;
+                if (layer->scroll_offset < 0) {
+                    layer->scroll_offset = 0;
                 }
                 // 确保滚动不会超出下边界
                 int max_scroll_y = total_text_height - render_rect.h;
-                if (component->scroll_y > max_scroll_y) {
-                    component->scroll_y = max_scroll_y;
+                if (layer->scroll_offset > max_scroll_y) {
+                    layer->scroll_offset = max_scroll_y;
                 }
             }
         } else {
@@ -2252,7 +2288,7 @@ void text_component_render(Layer* layer) {
             int visual_line = 0;
             int max_width = render_rect.w;
             int cursor_x = render_rect.x;
-            int cursor_y = render_rect.y - component->scroll_y;
+            int cursor_y = render_rect.y - layer->scroll_offset;
             
             // 遍历文本，使用与渲染相同的算法找到光标所在的视觉行
             while (current_pos < text_len && current_pos < component->cursor_pos) {
@@ -2351,7 +2387,7 @@ void text_component_render(Layer* layer) {
                         cursor_x = render_rect.x;
                     }
                     
-                    cursor_y = render_rect.y + visual_line * (line_height + 2) - component->scroll_y;
+                    cursor_y = render_rect.y + visual_line * (line_height + 2) - layer->scroll_offset;
                     break;
                 }
                 
@@ -2366,27 +2402,30 @@ void text_component_render(Layer* layer) {
             
             // 如果光标在文本末尾
             if (current_pos >= component->cursor_pos && component->cursor_pos == text_len) {
-                int len_to_cursor = component->cursor_pos - current_pos;
-                if (len_to_cursor > 0) {
-                    char* text_before_cursor = (char*)malloc(len_to_cursor + 1);
-                    if (text_before_cursor) {
-                        strncpy(text_before_cursor, text + current_pos, len_to_cursor);
-                        text_before_cursor[len_to_cursor] = '\0';
+                // 计算文本最后一行
+                cursor_x = render_rect.x;
+                
+                // 获取最后一行文本（从当前pos到文本末尾）
+                int remaining_len = text_len - current_pos;
+                if (remaining_len > 0) {
+                    char* last_line = (char*)malloc(remaining_len + 1);
+                    if (last_line) {
+                        strncpy(last_line, text + current_pos, remaining_len);
+                        last_line[remaining_len] = '\0';
                         
-                        Texture* before_tex = backend_render_texture(layer->font->default_font, text_before_cursor, layer->color);
-                        if (before_tex) {
-                            int before_width, before_height;
-                            backend_query_texture(before_tex, NULL, NULL, &before_width, &before_height);
-                            cursor_x = render_rect.x + before_width / scale;
-                            backend_render_text_destroy(before_tex);
+                        // 计算最后一行文本的宽度
+                        Texture* last_tex = backend_render_texture(layer->font->default_font, last_line, layer->color);
+                        if (last_tex) {
+                            int last_width, last_height;
+                            backend_query_texture(last_tex, NULL, NULL, &last_width, &last_height);
+                            cursor_x = render_rect.x + last_width / scale;
+                            backend_render_text_destroy(last_tex);
                         }
-                        free(text_before_cursor);
+                        free(last_line);
                     }
-                } else {
-                    cursor_x = render_rect.x;
                 }
                 
-                cursor_y = render_rect.y + visual_line * (line_height + 2) - component->scroll_y;
+                cursor_y = render_rect.y + visual_line * (line_height + 2) - layer->scroll_offset;
             }
             
             // 绘制光标
@@ -2471,7 +2510,7 @@ void text_component_render(Layer* layer) {
             backend_render_fill_rect(&scrollbar_bg, scrollbar_bg_color);
             
             // 计算滚动条滑块位置和大小
-            float scroll_percent = (float)component->scroll_y / (total_text_height - visible_height);
+            float scroll_percent = (float)layer->scroll_offset / (total_text_height - visible_height);
             int slider_height = visible_height * visible_height / total_text_height;
             if (slider_height < 20) slider_height = 20; // 滑块最小高度
             
