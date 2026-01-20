@@ -68,11 +68,14 @@ YUI框架支持以下核心组件类型：
 |--------|------|------|----------|
 | name | String | 组件名称标识符 | 是 |
 | type | String | 组件类型 | 是 |
-| rect | Array | 位置和大小 [x, y, width, height] | 是 |
-| color | String | 背景颜色，支持RGBA格式 | 否 |
-| radius | Number | 圆角半径 | 否 |
-| font | Object | 字体配置对象 | 否 |
+| size | Array | 大小 [width, height] | 是 |
+| position | Array | 位置 [x, y] | 是 |
+| style | Object | 样式配置对象 | 否 |
+| - color | String | 背景颜色，支持RGBA格式 | 否 |
+| - fontSize | Integer | 字体大小 | 否 |
+| - textColor | String | 文本颜色，支持RGBA格式 | 否 |
 | children | Array | 子组件数组 | 否 |
+
 
 ### 1. Button组件特有属性
 

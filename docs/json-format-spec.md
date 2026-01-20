@@ -90,23 +90,19 @@ YUI框架支持以下核心组件类型：
 
 ### 基本属性
 
+
 | 属性名 | 类型 | 说明 | 是否必需 |
 |--------|------|------|----------|
 | name | String | 组件名称标识符 | 是 |
 | type | String | 组件类型 | 是 |
-| rect | Array | 位置和大小 [x, y, width, height] | 是 |
-| color | String | 背景颜色，支持RGBA格式 | 否 |
-| radius | Number | 圆角半径 | 否 |
-| font | Object | 字体配置对象 | 否 |
+| size | Array | 大小 [width, height] | 是 |
+| position | Array | 位置 [x, y] | 是 |
+| style | Object | 样式配置对象 | 否 |
+| - color | String | 背景颜色，支持RGBA格式 | 否 |
+| - fontSize | Integer | 字体大小 | 否 |
+| - textColor | String | 文本颜色，支持RGBA格式 | 否 |
 | children | Array | 子组件数组 | 否 |
 
-### 字体配置属性
-
-| 属性名 | 类型 | 说明 | 默认值 |
-|--------|------|------|--------|
-| size | Number | 字体大小 | 12 |
-| family | String | 字体族名 | "Arial" |
-| color | String | 字体颜色，支持RGBA格式 | "rgba(0, 0, 0, 255)" |
 
 ### 颜色格式说明
 
