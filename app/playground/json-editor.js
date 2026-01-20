@@ -14,10 +14,10 @@ function initJsonEditor() {
     YUI.log("initJsonEditor: Initializing JSON editor...");
 
     // 设置默认的示例JSON
-    var defaultJson = {};
-
-    
-
+    var defaultJson = {
+        "type": "Label",
+        "text": "Hello World"
+    };
     // 格式化并设置到编辑器
     // 注意: mquickjs 的 JSON.stringify 不支持第三个参数（缩进）
     var formattedJson = JSON.stringify(defaultJson, null, 4);
@@ -235,7 +235,7 @@ function sendMessage() {
     var updateMode = editorState.updateMode || 'incremental'; // 默认为增量更新
     
     // 显示发送中状态
-    YUI.setText("inputLabel", "消息内容: " + messageText + " 更新模式: " + updateMode);
+    YUI.setText("inputLabel", "生成文本: " + messageText + " 更新模式: " + updateMode);
     
     // 根据更新模式调用相应的API
     if (updateMode === 'incremental') {

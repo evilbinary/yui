@@ -497,6 +497,7 @@ function cleanupThemeTest() {
 function onLoad() {
     YUI.log('[ThemeTest] onLoad');
     createThemeTestButtons();
+    switchToTheme('test-dark');
 }
 
 
