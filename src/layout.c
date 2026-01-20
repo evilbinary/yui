@@ -144,51 +144,49 @@ void layout_layer(Layer* layer){
                    layer->layout_manager->justify, content_width, spacing);
             fflush(stdout);
 
-            if (layer->layout_manager->justify == LAYOUT_ALIGN_CENTER) {
-                // 水平居中：计算所有子元素总宽度，然后调整起始位置
-                // 对于 center 对齐，我们需要先分配宽度，然后计算总宽度
-                int total_children_width = 0;
-                int temp_current_x = layer->rect.x + padding_left;
+            // 先计算所有子元素的总宽度（使用之前计算的valid_child_count）
+            int total_children_width = 0;
+            for (int i = 0; i < layer->child_count; i++) {
+                if (layer->children[i]->visible == IN_VISIBLE) continue;
+                if (!layer->children[i]) continue;
 
-                for (int i = 0; i < layer->child_count; i++) {
-                    if (layer->children[i]->visible == IN_VISIBLE) continue;
-                    if (!layer->children[i]) continue;
-
-                    int child_width = 50; // 默认宽度
-                    if (layer->children[i]->fixed_width > 0) {
-                        child_width = layer->children[i]->fixed_width;
-                    }
-
-                    total_children_width += child_width;
-                    if (i > 0) total_children_width += spacing;
+                int child_width = 50; // 默认宽度
+                if (layer->children[i]->fixed_width > 0) {
+                    child_width = layer->children[i]->fixed_width;
                 }
 
-                current_x = layer->rect.x + padding_left + (content_width - total_children_width) / 2;
-                printf("layout_layer: HORIZONTAL - CENTER alignment, total_children_width=%d, current_x=%d\n", total_children_width, current_x);
-                fflush(stdout);
-            } else if (layer->layout_manager->justify == LAYOUT_ALIGN_RIGHT) {
-                // 右对齐：从右边开始计算起始位置
-                int total_children_width = 0;
-                for (int i = 0; i < layer->child_count; i++) {
-                    if (layer->children[i]->visible == IN_VISIBLE) continue;
-                    if (!layer->children[i]) continue;
+                total_children_width += child_width;
+            }
 
-                    int child_width = 50;
-                    if (layer->children[i]->fixed_width > 0) {
-                        child_width = layer->children[i]->fixed_width;
+            if (valid_child_count > 0) {
+                if (layer->layout_manager->justify == LAYOUT_ALIGN_CENTER) {
+                    // 水平居中
+                    current_x = layer->rect.x + padding_left + (content_width - total_children_width - (valid_child_count - 1) * spacing) / 2;
+                    printf("layout_layer: HORIZONTAL - CENTER alignment, current_x=%d\n", current_x);
+                    fflush(stdout);
+                } else if (layer->layout_manager->justify == LAYOUT_ALIGN_RIGHT) {
+                    // 右对齐
+                    current_x = layer->rect.x + padding_left + content_width - total_children_width - (valid_child_count - 1) * spacing;
+                    printf("layout_layer: HORIZONTAL - RIGHT alignment, current_x=%d\n", current_x);
+                    fflush(stdout);
+                } else if (layer->layout_manager->justify == LAYOUT_ALIGN_SPACE_BETWEEN) {
+                    // space-between: 两端对齐，子组件之间间距相等
+                    if (valid_child_count > 1) {
+                        spacing = (content_width - total_children_width) / (valid_child_count - 1);
                     }
-
-                    total_children_width += child_width;
-                    if (i > 0) total_children_width += spacing;
+                    printf("layout_layer: HORIZONTAL - SPACE-BETWEEN alignment, spacing=%d\n", spacing);
+                    fflush(stdout);
+                } else if (layer->layout_manager->justify == LAYOUT_ALIGN_SPACE_AROUND) {
+                    // space-around: 每个子组件两侧间距相等
+                    spacing = (content_width - total_children_width) / valid_child_count;
+                    current_x = layer->rect.x + padding_left + spacing / 2; // 前面加一半间距
+                    printf("layout_layer: HORIZONTAL - SPACE-AROUND alignment, spacing=%d, current_x=%d\n", spacing, current_x);
+                    fflush(stdout);
+                } else {
+                    // 左对齐保持默认值
+                    printf("layout_layer: HORIZONTAL - LEFT alignment, current_x=%d\n", current_x);
+                    fflush(stdout);
                 }
-
-                current_x = layer->rect.x + padding_left + content_width - total_children_width;
-                printf("layout_layer: HORIZONTAL - RIGHT alignment, total_children_width=%d, current_x=%d\n", total_children_width, current_x);
-                fflush(stdout);
-            } else {
-                // 左对齐保持默认值
-                printf("layout_layer: HORIZONTAL - LEFT alignment, current_x=%d\n", current_x);
-                fflush(stdout);
             }
 
             for (int i = 0; i < layer->child_count; i++) {
@@ -304,21 +302,36 @@ void layout_layer(Layer* layer){
                    layer->layout_manager->justify, content_height, spacing);
             fflush(stdout);
             
-            // 计算所有子元素的总高度
-            int total_children_height = fixed_height_sum + (valid_child_count - 1) * spacing;
+            // 计算所有子元素的总高度（不包括间距）
+            int total_children_height_no_spacing = fixed_height_sum;
             if (total_flex > 0) {
-                total_children_height += available_height; // flex 元素会填满可用空间
+                total_children_height_no_spacing += available_height; // flex 元素会填满可用空间
             }
             
             if (layer->layout_manager->justify == LAYOUT_ALIGN_CENTER) {
-                // 垂直居中：调整起始位置
-                current_y = layer->rect.y + padding_top + (content_height - total_children_height) / 2;
-                printf("layout_layer: VERTICAL - CENTER alignment, total_height=%d, current_y=%d\n", total_children_height, current_y);
+                // 垂直居中
+                int total_height_with_spacing = total_children_height_no_spacing + (valid_child_count - 1) * spacing;
+                current_y = layer->rect.y + padding_top + (content_height - total_height_with_spacing) / 2;
+                printf("layout_layer: VERTICAL - CENTER alignment, current_y=%d\n", current_y);
                 fflush(stdout);
             } else if (layer->layout_manager->justify == LAYOUT_ALIGN_RIGHT) {
-                // 底部对齐：从底部开始
-                current_y = layer->rect.y + padding_top + content_height - total_children_height;
-                printf("layout_layer: VERTICAL - BOTTOM alignment, total_height=%d, current_y=%d\n", total_children_height, current_y);
+                // 底部对齐
+                int total_height_with_spacing = total_children_height_no_spacing + (valid_child_count - 1) * spacing;
+                current_y = layer->rect.y + padding_top + content_height - total_height_with_spacing;
+                printf("layout_layer: VERTICAL - BOTTOM alignment, current_y=%d\n", current_y);
+                fflush(stdout);
+            } else if (layer->layout_manager->justify == LAYOUT_ALIGN_SPACE_BETWEEN) {
+                // space-between: 两端对齐，子组件之间间距相等
+                if (valid_child_count > 1) {
+                    spacing = (content_height - total_children_height_no_spacing) / (valid_child_count - 1);
+                }
+                printf("layout_layer: VERTICAL - SPACE-BETWEEN alignment, spacing=%d\n", spacing);
+                fflush(stdout);
+            } else if (layer->layout_manager->justify == LAYOUT_ALIGN_SPACE_AROUND) {
+                // space-around: 每个子组件两侧间距相等
+                spacing = (content_height - total_children_height_no_spacing) / valid_child_count;
+                current_y = layer->rect.y + padding_top + spacing / 2; // 前面加一半间距
+                printf("layout_layer: VERTICAL - SPACE-AROUND alignment, spacing=%d, current_y=%d\n", spacing, current_y);
                 fflush(stdout);
             } else {
                 // 顶部对齐保持默认值

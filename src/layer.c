@@ -560,7 +560,9 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
       } else if (strcmp(justify_str, "right") == 0 || strcmp(justify_str, "flex-end") == 0) {
         layer->layout_manager->justify = LAYOUT_ALIGN_RIGHT;
       } else if (strcmp(justify_str, "space-between") == 0) {
-        layer->layout_manager->justify = LAYOUT_ALIGN_CENTER;  // 暂时用 center 表示
+        layer->layout_manager->justify = LAYOUT_ALIGN_SPACE_BETWEEN;
+      } else if (strcmp(justify_str, "space-around") == 0) {
+        layer->layout_manager->justify = LAYOUT_ALIGN_SPACE_AROUND;
       } else {
         layer->layout_manager->justify = LAYOUT_ALIGN_LEFT;  // 默认左对齐
       }

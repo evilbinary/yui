@@ -1,0 +1,91 @@
+{
+  "id": "main_container",
+  "type": "View",
+  "size": [800, 600],
+  "style": {
+    "bgColor": "rgba(240, 240, 240, 255)",
+    "borderRadius": 10
+  },
+  "children": [
+    {
+      "id": "horizontal_space_between",
+      "type": "View",
+      "rect": [50, 50, 700, 80],
+      "style": {
+        "bgColor": "rgba(255, 255, 255, 255)",
+        "borderRadius": 5
+      },
+      "layout": {
+        "type": "horizontal",
+        "spacing": 10,
+        "padding": [10, 10, 10, 10],
+        "justifyContent": "space-between"
+      },
+      "children": [
+        {"type": "Button", "text": "按钮1", "width": 100, "height": 40},
+        {"type": "Button", "text": "按钮2", "width": 100, "height": 40},
+        {"type": "Button", "text": "按钮3", "width": 100, "height": 40}
+      ]
+    },
+    {
+      "id": "horizontal_space_around",
+      "type": "View",
+      "rect": [50, 150, 700, 80],
+      "style": {
+        "bgColor": "rgba(255, 255, 255, 255)",
+        "borderRadius": 5
+      },
+      "layout": {
+        "type": "horizontal",
+        "spacing": 10,
+        "padding": [10, 10, 10, 10],
+        "justifyContent": "space-around"
+      },
+      "children": [
+        {"type": "Button", "text": "按钮A", "width": 100, "height": 40},
+        {"type": "Button", "text": "按钮B", "width": 100, "height": 40},
+        {"type": "Button", "text": "按钮C", "width": 100, "height": 40}
+      ]
+    },
+    {
+      "id": "vertical_space_between",
+      "type": "View",
+      "rect": [50, 250, 300, 200],
+      "style": {
+        "bgColor": "rgba(255, 255, 255, 255)",
+        "borderRadius": 5
+      },
+      "layout": {
+        "type": "vertical",
+        "spacing": 10,
+        "padding": [10, 10, 10, 10],
+        "justifyContent": "space-between"
+      },
+      "children": [
+        {"type": "Button", "text": "项目1", "width": 150, "height": 40},
+        {"type": "Button", "text": "项目2", "width": 150, "height": 40},
+        {"type": "Button", "text": "项目3", "width": 150, "height": 40}
+      ]
+    },
+    {
+      "id": "vertical_space_around",
+      "type": "View",
+      "rect": [400, 250, 300, 200],
+      "style": {
+        "bgColor": "rgba(255, 255, 255, 255)",
+        "borderRadius": 5
+      },
+      "layout": {
+        "type": "vertical",
+        "spacing": 10,
+        "padding": [10, 10, 10, 10],
+        "justifyContent": "space-around"
+      },
+      "children": [
+        {"type": "Button", "text": "选项1", "width": 150, "height": 40},
+        {"type": "Button", "text": "选项2", "width": 150, "height": 40},
+        {"type": "Button", "text": "选项3", "width": 150, "height": 40}
+      ]
+    }
+  ]
+}

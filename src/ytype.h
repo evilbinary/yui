@@ -106,7 +106,9 @@ typedef enum {
     LAYOUT_RIGHT,
     LAYOUT_ALIGN_CENTER,
     LAYOUT_ALIGN_LEFT,
-    LAYOUT_ALIGN_RIGHT
+    LAYOUT_ALIGN_RIGHT,
+    LAYOUT_ALIGN_SPACE_BETWEEN,  // space-between: 两端对齐，子组件之间间距相等
+    LAYOUT_ALIGN_SPACE_AROUND    // space-around: 每个子组件两侧间距相等
 } LayoutType;
 
 // 添加图片渲染模式枚举
