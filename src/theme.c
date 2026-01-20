@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define printf
+
 // 创建主题对象
 Theme* theme_create(const char* name, const char* version) {
     Theme* theme = (Theme*)malloc(sizeof(Theme));
@@ -324,14 +326,18 @@ void theme_merge_style(ThemeRule* rule, Layer* layer) {
     printf("[Theme] Merging style: rule bg_color RGBA=%d,%d,%d,%d, layer id='%s'\n", 
            rule->bg_color.r, rule->bg_color.g, rule->bg_color.b, rule->bg_color.a, layer->id);
     
-    // 颜色（只在图层没有设置文字颜色时才应用主题）
-    if (rule->color.a > 0 && layer->color.a == 0) {
+    // 颜色（主题总是覆盖图层文字颜色）
+    if (rule->color.a > 0) {
+        printf("[Theme] Applying color to layer id='%s' (rule color RGBA=%d,%d,%d,%d)\n", 
+               layer->id, rule->color.r, rule->color.g, rule->color.b, rule->color.a);
         layer->color = rule->color;
     }
     
-    // 背景颜色（只在图层没有设置背景色时才应用主题）
-    if (rule->bg_color.a > 0 && layer->bg_color.a == 0) {
-        printf("[Theme] Applying bg_color to layer id='%s' (layer had no bg)\n", layer->id);
+    // 背景颜色（主题总是覆盖图层背景色）
+    if (rule->bg_color.a > 0) {
+        printf("[Theme] Applying bg_color to layer id='%s' (rule bg_color RGBA=%d,%d,%d,%d, old bg_color RGBA=%d,%d,%d,%d)\n", 
+               layer->id, rule->bg_color.r, rule->bg_color.g, rule->bg_color.b, rule->bg_color.a,
+               layer->bg_color.r, layer->bg_color.g, layer->bg_color.b, layer->bg_color.a);
         layer->bg_color = rule->bg_color;
         printf("[Theme] Layer bg_color set to RGBA=%d,%d,%d,%d\n", 
                layer->bg_color.r, layer->bg_color.g, layer->bg_color.b, layer->bg_color.a);

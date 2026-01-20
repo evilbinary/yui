@@ -59,7 +59,7 @@
     "onLoad": "@onLoad"
   },
   "js": [
-   "../app/lib/theme.js",
+   "../lib/theme.js",
    "test-theme.js"
   ]
 }
