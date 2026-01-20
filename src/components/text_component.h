@@ -59,4 +59,6 @@ void text_component_update_scroll_for_cursor(TextComponent* component);
 // 辅助函数声明
 int get_line_start(TextComponent* component, int pos);
 int get_line_end(TextComponent* component, int pos);
+int text_component_calculate_content_height(TextComponent* component);
+void text_component_update_content_height(TextComponent* component);
 #endif  // YUI_TEXT_COMPONENT_H

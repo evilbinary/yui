@@ -156,8 +156,6 @@ void text_component_destroy(TextComponent* component) {
 
 
 
-
-
 // 设置文本内容
 void text_component_set_text(TextComponent* component, const char* text) {
     if (!component || !text) {
@@ -189,6 +187,12 @@ void text_component_set_text(TextComponent* component, const char* text) {
     component->cursor_pos = text_len;
     component->selection_start = -1;
     component->selection_end = -1;
+    
+    // 更新内容高度
+    text_component_update_content_height(component);
+    
+    // 更新内容高度
+    text_component_update_content_height(component);
     
     // 触发 onChange 事件
     text_component_trigger_on_change(component);
@@ -319,6 +323,9 @@ void text_component_register_event(Layer* layer, const char* event_name, const c
     }
 }
 
+
+
+
 // 设置 onChange 回调函数
 void text_component_set_on_change(TextComponent* component, EventHandler callback, void* user_data) {
     if (!component) {
@@ -386,6 +393,9 @@ static void text_component_delete_selection(TextComponent* component) {
         
         component->cursor_pos = start;
         
+        // 更新内容高度
+        text_component_update_content_height(component);
+        
         // 触发 onChange 事件
         text_component_trigger_on_change(component);
     }
@@ -448,16 +458,28 @@ static void text_component_insert_char(TextComponent* component, char c) {
     layer_set_text(component->layer, new_text);
     free(new_text);
     
+    // 更新内容高度
+    text_component_update_content_height(component);
+    
     // 触发 onChange 事件
     text_component_trigger_on_change(component);
     
     component->cursor_pos++;
+    
+    // 更新内容高度
+    text_component_update_content_height(component);
     
     // 触发 onChange 事件
     text_component_trigger_on_change(component);
     /*
     }
     */
+    
+    // 更新内容高度
+    text_component_update_content_height(component);
+    
+    // 更新内容高度
+    text_component_update_content_height(component);
     
     // 更新滚动位置，确保光标可见
     text_component_update_scroll_for_cursor(component);
@@ -551,6 +573,138 @@ void text_component_update_scroll_for_cursor(TextComponent* component) {
         component->scroll_x = full_text_width - visible_width;
     }
 }
+
+// 计算文本内容总高度
+int text_component_calculate_content_height(TextComponent* component) {
+    if (!component || !component->layer || !component->layer->text) {
+        return 0;
+    }
+    
+    // 如果不是多行模式，内容高度就是可见区域高度
+    if (!component->multiline) {
+        return component->layer->rect.h;
+    }
+    
+    // 多行模式需要计算实际行数
+    char* text = component->layer->text;
+    int text_len = strlen(text);
+    int current_pos = 0;
+    int line_count = 0;
+    
+    // 获取实际行高
+    int line_height = component->line_height;
+    if (component->layer->font && component->layer->font->default_font) {
+        Texture* temp_tex = backend_render_texture(component->layer->font->default_font, "X", component->layer->color);
+        if (temp_tex) {
+            int temp_width, temp_height;
+            backend_query_texture(temp_tex, NULL, NULL, &temp_width, &temp_height);
+            line_height = temp_height / scale;
+            backend_render_text_destroy(temp_tex);
+        }
+    }
+    
+    // 计算文本内容区域的宽度（减去内边距和行号区域）
+    int max_width = component->layer->rect.w - (component->show_line_numbers ? component->line_number_width : 0) - 15;
+    
+    // 如果没有文本，返回一行的高度
+    if (text_len == 0) {
+        return line_height + 2;
+    }
+    
+    // 遍历文本，计算视觉行数
+    while (current_pos < text_len) {
+        // 查找当前行的结束位置
+        int line_end = current_pos;
+        while (line_end < text_len && text[line_end] != '\n') {
+            line_end++;
+        }
+        
+        // 计算这段文本的宽度
+        int current_width = 0;
+        char* temp_line = (char*)malloc(line_end - current_pos + 1);
+        if (temp_line) {
+            strncpy(temp_line, text + current_pos, line_end - current_pos);
+            temp_line[line_end - current_pos] = '\0';
+            
+            Texture* line_tex = backend_render_texture(component->layer->font->default_font, temp_line, component->layer->color);
+            if (line_tex) {
+                int line_width, line_height_ignore;
+                backend_query_texture(line_tex, NULL, NULL, &line_width, &line_height_ignore);
+                current_width = line_width / scale;
+                backend_render_text_destroy(line_tex);
+            }
+            
+            free(temp_line);
+        }
+        
+        // 如果文本超过宽度限制，需要计算需要多少视觉行
+        if (current_width <= max_width) {
+            // 不需要换行，只有一行
+            line_count++;
+        } else {
+            // 需要自动换行，计算需要多少行
+            int needed_lines = 1;
+            int segment_start = current_pos;
+            
+            while (segment_start < line_end) {
+                int segment_end = segment_start;
+                
+                // 找到最大的不超过宽度的位置
+                int test_width = 0;
+                while (segment_end < line_end) {
+                    // 计算当前段的宽度
+                    char* test_segment = (char*)malloc(segment_end - segment_start + 1);
+                    if (test_segment) {
+                        strncpy(test_segment, text + segment_start, segment_end - segment_start);
+                        test_segment[segment_end - segment_start] = '\0';
+                        
+                        Texture* test_tex = backend_render_texture(component->layer->font->default_font, test_segment, component->layer->color);
+                        if (test_tex) {
+                            int test_w, test_h;
+                            backend_query_texture(test_tex, NULL, NULL, &test_w, &test_h);
+                            test_width = test_w / scale;
+                            backend_render_text_destroy(test_tex);
+                        }
+                        
+                        free(test_segment);
+                        
+                        // 如果超过宽度，回退到上一个字符
+                        if (test_width > max_width && segment_end > segment_start) {
+                            segment_end--;
+                            break;
+                        }
+                    }
+                    
+                    segment_end++;
+                }
+                
+                // 如果找到了一个有效的段
+                if (segment_end > segment_start) {
+                    needed_lines++;
+                    segment_start = segment_end;
+                } else {
+                    // 单个字符就超过了宽度，至少需要一行
+                    needed_lines++;
+                    segment_start++;
+                }
+            }
+            
+            line_count += needed_lines;
+        }
+        
+        // 移动到下一行
+        if (line_end < text_len && text[line_end] == '\n') {
+            current_pos = line_end + 1;
+        } else {
+            current_pos = line_end;
+        }
+    }
+    
+    // 返回总高度（行高 + 行间距）
+    return line_count * (line_height + 2);
+}
+
+
 
 // 删除光标前的字符
 static void text_component_delete_prev_char(TextComponent* component) {
@@ -675,6 +829,9 @@ static void text_component_delete_next_char(TextComponent* component) {
     layer_set_text(component->layer, new_text);
     free(new_text);
     
+    // 更新内容高度
+    text_component_update_content_height(component);
+    
     // 触发 onChange 事件
     text_component_trigger_on_change(component);
 }
@@ -748,10 +905,16 @@ static void text_component_insert_text(TextComponent* component, const char* tex
     layer_set_text(component->layer, new_text);
     free(new_text);
     
+    // 更新内容高度
+    text_component_update_content_height(component);
+    
     // 触发 onChange 事件
     text_component_trigger_on_change(component);
     
     component->cursor_pos += text_len;
+    
+    // 更新内容高度
+    text_component_update_content_height(component);
     
     // 清除选择
     component->selection_start = -1;
@@ -1111,6 +1274,8 @@ void text_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
         component->is_selecting = 0;
     }
 }
+
+
 
 
 
@@ -2322,6 +2487,26 @@ void text_component_render(Layer* layer) {
         }
     }
 }
+
+ 
+
+// 更新图层的内容高度
+void text_component_update_content_height(TextComponent* component) {
+    if (!component || !component->layer) {
+        return;
+    }
+    
+    // 计算并设置内容高度
+    int content_height = text_component_calculate_content_height(component);
+    component->layer->content_height = content_height;
+    
+    // 如果内容高度小于可见区域高度，重置滚动偏移
+    if (content_height <= component->layer->rect.h) {
+        component->layer->scroll_offset = 0;
+    }
+}
+
+
 
 
 
