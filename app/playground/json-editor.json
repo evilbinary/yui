@@ -170,6 +170,12 @@
                             "type": "Label",
                             "text": "",
                             "size": [590, 670],
+                            "layout":{
+                                "type": "vertical",
+                                "align": "center",
+                                "justifyContent": "center",
+                                "padding": [0, 0, 0, 0]
+                            },
                             "style": {
                                 "bgColor": "#ffffff",
                                 "color": "#333333",

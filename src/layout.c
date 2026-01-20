@@ -299,6 +299,33 @@ void layout_layer(Layer* layer){
             layer->content_width = padding_left + padding_right;
             layer->content_height = padding_top + padding_bottom;
             
+            // 应用主轴对齐（justifyContent）- 垂直方向
+            printf("layout_layer: VERTICAL - justify=%d, content_height=%d, spacing=%d\n",
+                   layer->layout_manager->justify, content_height, spacing);
+            fflush(stdout);
+            
+            // 计算所有子元素的总高度
+            int total_children_height = fixed_height_sum + (valid_child_count - 1) * spacing;
+            if (total_flex > 0) {
+                total_children_height += available_height; // flex 元素会填满可用空间
+            }
+            
+            if (layer->layout_manager->justify == LAYOUT_ALIGN_CENTER) {
+                // 垂直居中：调整起始位置
+                current_y = layer->rect.y + padding_top + (content_height - total_children_height) / 2;
+                printf("layout_layer: VERTICAL - CENTER alignment, total_height=%d, current_y=%d\n", total_children_height, current_y);
+                fflush(stdout);
+            } else if (layer->layout_manager->justify == LAYOUT_ALIGN_RIGHT) {
+                // 底部对齐：从底部开始
+                current_y = layer->rect.y + padding_top + content_height - total_children_height;
+                printf("layout_layer: VERTICAL - BOTTOM alignment, total_height=%d, current_y=%d\n", total_children_height, current_y);
+                fflush(stdout);
+            } else {
+                // 顶部对齐保持默认值
+                printf("layout_layer: VERTICAL - TOP alignment, current_y=%d\n", current_y);
+                fflush(stdout);
+            }
+            
             // 如果是可滚动的List类型，考虑滚动偏移量
             if (layer->scrollable == 1 || layer->scrollable == 3) {
                 current_y -= layer->scroll_offset;
@@ -357,24 +384,16 @@ void layout_layer(Layer* layer){
                 
                 //printf("%s %s %s %d\n",child->type,child->id,child->text,child->rect.w);
                 
-                // 检查child->layout_manager是否存在
-                if (child->layout_manager) {
-                    if(child->layout_manager->type == LAYOUT_CENTER){
-                        child->rect.x=layer->rect.x+ child->rect.w/2 + padding_left/2;
-                    }else if(child->layout_manager->type == LAYOUT_LEFT){
-                        child->rect.x =layer->rect.x+ padding_left;
-                    }else if(child->layout_manager->type == LAYOUT_RIGHT){
-                        child->rect.x =layer->rect.x + child->rect.w -padding_left/2;
-                    }else{
-                        //对齐
-                        if(layer->layout_manager->align==LAYOUT_ALIGN_CENTER){
-                            child->rect.x=layer->rect.x+ child->rect.w/2 + padding_left/2;
-                        }else if(layer->layout_manager->align==LAYOUT_ALIGN_LEFT){
-                            child->rect.x =layer->rect.x+ padding_left;
-                        }else if(layer->layout_manager->align==LAYOUT_ALIGN_RIGHT){
-                            child->rect.x =layer->rect.x + child->rect.w -padding_left/2;
-                        }
-                    }
+                // 应用水平方向对齐（align属性）
+                if (layer->layout_manager->align == LAYOUT_ALIGN_CENTER) {
+                    // 水平居中对齐
+                    child->rect.x = layer->rect.x + padding_left + (content_width - child->rect.w) / 2;
+                } else if (layer->layout_manager->align == LAYOUT_ALIGN_LEFT) {
+                    // 左对齐
+                    child->rect.x = layer->rect.x + padding_left;
+                } else if (layer->layout_manager->align == LAYOUT_ALIGN_RIGHT) {
+                    // 右对齐
+                    child->rect.x = layer->rect.x + padding_left + (content_width - child->rect.w);
                 }
                 current_y += child->rect.h + spacing;
             }

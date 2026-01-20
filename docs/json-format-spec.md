@@ -135,8 +135,8 @@ YUI框架提供强大的布局管理器，通过 `layout` 属性控制子组件�
     "type": "vertical",              // 布局类型
     "spacing": 10,                    // 子组件间距
     "padding": [10, 10, 10, 10],      // 内边距 [上, 右, 下, 左]
-    "align": "center",                // 对齐方式
-    "justifyContent": "center"        // 主轴对齐方式
+    "align": "center",                // 对齐方式 
+    "justifyContent": "center"        // 主轴对齐方式 应用主轴对齐- 垂直方向
   },
   "children": [
     // 子组件
@@ -151,7 +151,8 @@ YUI框架提供强大的布局管理器，通过 `layout` 属性控制子组件�
 | `horizontal` | 水平排列，子组件从左到右排列 | 工具栏、按钮组 |
 | `vertical` | 垂直排列，子组件从上到下排列 | 表单、列表 |
 | `center` | 居中布局，子组件在容器中心 | 对话框、提示信息 |
-| `grid` | 网格布局，子组件按网格排列 | 表格、卡片 |
+| `left` |  居左布局，子组件在容器左侧 | 菜单、导航栏 |
+| `right` | 居右布局，子组件在容器右侧 | 侧边栏、工具栏 |
 
 ### 布局属性
 
@@ -160,8 +161,8 @@ YUI框架提供强大的布局管理器，通过 `layout` 属性控制子组件�
 | `type` | String | 布局类型 | `absolute` |
 | `spacing` | Number | 子组件之间的间距 | `0` |
 | `padding` | Array | 内边距 `[上, 右, 下, 左]` | `[0, 0, 0, 0]` |
-| `align` | String | 交叉轴对齐方式 | `left` |
-| `justifyContent` | String | 主轴对齐方式 | `flex-start` |
+| `align` | String | 垂直于排列方向的对齐(交叉轴) | `left` |
+| `justifyContent` | String | 主轴对齐方式, 沿着排列方向的对齐(主轴) | `flex-start` |
 
 ### 对齐方式选项
 

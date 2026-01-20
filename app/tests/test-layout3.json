@@ -1,0 +1,30 @@
+
+
+{
+  "id": "watch_os_root",
+  "type": "View",
+  "size": [400, 500],
+  "style": {
+    "bgColor": "#ffffff",
+    "borderRadius": 45,
+    "shadow": "0 0 20px rgba(0, 243, 255, 0.2)"
+  },
+  "layout": {
+    "type": "horizontal",
+    "padding": [20, 15, 20, 15],
+    "spacing": 15,
+    "align": "center",
+    "justifyContent": "center"
+  },
+   "children": [
+    {
+      "id": "status_bar",
+      "type": "View",
+      "size": [70, 30],
+      "style": {
+        "bgColor": "#ffffff",
+        "borderRadius": 15
+      }
+    }
+  ]
+}
