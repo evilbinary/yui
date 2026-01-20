@@ -2473,28 +2473,8 @@ void text_component_render(Layer* layer) {
     
     // 如果是多行模式且需要滚动，绘制滚动条
     if (component->multiline) {
-        // 计算文本总高度以确定是否需要显示滚动条
-        char* text = component->layer->text;
-        int line_count = 1;
-        int line_height = 20; // 默认行高
-        
-        // 计算换行符数量
-        for (int i = 0; i < strlen(text); i++) {
-            if (text[i] == '\n') {
-                line_count++;
-            }
-        }
-        
-        // 获取实际行高
-        Texture* temp_tex = backend_render_texture(layer->font->default_font, "X", layer->color);
-        if (temp_tex) {
-            int temp_width, temp_height;
-            backend_query_texture(temp_tex, NULL, NULL, &temp_width, &temp_height);
-            line_height = temp_height / scale;
-            backend_render_text_destroy(temp_tex);
-        }
-        
-        int total_text_height = line_count * (line_height + 2); // 2为行间距
+        // 使用已经计算好的内容高度，而不是重新计算
+        int total_text_height = layer->content_height;
         int visible_height = layer->rect.h - 10; // 减去内边距
         
         // 只有当文本总高度大于可见高度时才显示滚动条
