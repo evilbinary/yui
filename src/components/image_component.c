@@ -57,6 +57,25 @@ void image_component_set_source(ImageComponent* component, const char* source) {
         backend_render_text_destroy(component->layer->texture);
         component->layer->texture = NULL;
     }
+    
+    // 检查是否为 data URI (base64)
+    if (strncmp(source, "data:image/", 11) == 0) {
+        // 查找 base64 标记
+        const char* base64_marker = "base64,";
+        char* base64_pos = strstr(source, base64_marker);
+        if (base64_pos) {
+            // 跳过 base64 标记
+            const char* base64_data = base64_pos + strlen(base64_marker);
+            size_t data_len = strlen(base64_data);
+            
+            printf("Loading image from base64 data URI, length: %zu\n", data_len);
+            component->layer->texture = backend_load_texture_from_base64(base64_data, data_len);
+            
+            if (!component->layer->texture) {
+                printf("Failed to load texture from base64 data\n");
+            }
+        }
+    }
 }
 
 // 设置图片显示模式

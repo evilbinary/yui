@@ -8,6 +8,7 @@ extern float scale;
 int backend_init();
 void backend_quit();
 Texture* backend_load_texture(char* path);
+Texture* backend_load_texture_from_base64(const char* base64_data, size_t data_len);
 Texture* backend_render_texture(DFont* font,const char* text,Color color);
 void backend_render_fill_rect(Rect* rect,Color color);
 void backend_render_rect(Rect* rect,Color color);

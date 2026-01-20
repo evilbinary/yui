@@ -7,21 +7,40 @@
 // ====================== 资源加载器 ======================
 void load_textures(Layer* root) {
     if (root->type==IMAGE&& strlen(root->source) > 0) {
-        // 修改为使用image支持多种格式
-        char path[MAX_PATH];
-        
-        // 检查是否为绝对路径（以 '/' 开头，Unix/Linux/macOS）
-        if (root->source[0] == '/') {
-            // 使用绝对路径
-            snprintf(path, sizeof(path), "%s", root->source);
+        // 检查是否为 data URI (base64)
+        if (strncmp(root->source, "data:image/", 11) == 0) {
+            // 查找 base64 标记
+            const char* base64_marker = "base64,";
+            char* base64_pos = strstr(root->source, base64_marker);
+            if (base64_pos) {
+                // 跳过 base64 标记
+                const char* base64_data = base64_pos + strlen(base64_marker);
+                size_t data_len = strlen(base64_data);
+                
+                printf("Loading image from base64 data URI, length: %zu\n", data_len);
+                root->texture = backend_load_texture_from_base64(base64_data, data_len);
+                
+                if (!root->texture) {
+                    printf("Failed to load texture from base64 data\n");
+                }
+            } else {
+                printf("Unsupported data URI format (not base64)\n");
+            }
         } else {
-            // 使用相对路径，拼接 assets 路径
-            snprintf(path, sizeof(path), "%s/%s", root->assets->path, root->source);
+            // 修改为使用image支持多种格式
+            char path[MAX_PATH];
+            
+            // 检查是否为绝对路径（以 '/' 开头，Unix/Linux/macOS）
+            if (root->source[0] == '/') {
+                // 使用绝对路径
+                snprintf(path, sizeof(path), "%s", root->source);
+            } else {
+                // 使用相对路径，拼接 assets 路径
+                snprintf(path, sizeof(path), "%s/%s", root->assets->path, root->source);
+            }
+
+            root->texture=backend_load_texture(path);
         }
-
-        root->texture=backend_load_texture(path);
-
-       
     }
 }
 

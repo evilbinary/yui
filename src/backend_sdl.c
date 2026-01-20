@@ -1508,6 +1508,96 @@ void backend_register_update_callback(UpdateCallback callback) {
 }
 
 // 获取剪贴板文本
+// Base64 解码表
+static const unsigned char base64_decode_table[256] = {
+    255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,
+    255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,
+    255,255,255,255,255,255,255,255,255,255,255, 62,255,255,255, 63,
+     52, 53, 54, 55, 56, 57, 58, 59, 60, 61,255,255,255,255,255,255,
+    255,  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14,
+     15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,255,255,255,255,255,
+    255, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
+     41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51,255,255,255,255,255
+};
+
+// Base64 解码函数
+static size_t base64_decode(const char* input, unsigned char** output) {
+    if (!input || !output) return 0;
+    
+    size_t input_len = strlen(input);
+    if (input_len == 0) return 0;
+    
+    // 计算输出缓冲区大小
+    size_t output_len = (input_len / 4) * 3;
+    if (input_len > 0 && input[input_len - 1] == '=') output_len--;
+    if (input_len > 1 && input[input_len - 2] == '=') output_len--;
+    
+    // 分配输出缓冲区
+    *output = (unsigned char*)malloc(output_len);
+    if (!*output) return 0;
+    
+    size_t i, j;
+    for (i = 0, j = 0; i < input_len; i += 4) {
+        // 获取4个字符的base64值
+        unsigned char a = base64_decode_table[(unsigned char)input[i]];
+        unsigned char b = base64_decode_table[(unsigned char)input[i + 1]];
+        unsigned char c = base64_decode_table[(unsigned char)input[i + 2]];
+        unsigned char d = base64_decode_table[(unsigned char)input[i + 3]];
+        
+        // 解码为3个字节
+        (*output)[j++] = (a << 2) | (b >> 4);
+        if (j < output_len) (*output)[j++] = (b << 4) | (c >> 2);
+        if (j < output_len) (*output)[j++] = (c << 6) | d;
+    }
+    
+    return output_len;
+}
+
+// 从 base64 数据加载纹理
+Texture* backend_load_texture_from_base64(const char* base64_data, size_t data_len) {
+    if (!base64_data || data_len == 0) {
+        printf("Invalid base64 data\n");
+        return NULL;
+    }
+    
+    // 解码 base64 数据
+    unsigned char* decoded_data = NULL;
+    size_t decoded_len = base64_decode(base64_data, &decoded_data);
+    
+    if (decoded_len == 0 || !decoded_data) {
+        printf("Failed to decode base64 data\n");
+        return NULL;
+    }
+    
+    // 使用 SDL_RWops 从内存加载图片
+    SDL_RWops* rw = SDL_RWFromMem(decoded_data, decoded_len);
+    if (!rw) {
+        printf("Failed to create SDL_RWops: %s\n", SDL_GetError());
+        free(decoded_data);
+        return NULL;
+    }
+    
+    // 加载图片
+    SDL_Surface* surface = IMG_Load_RW(rw, 1);  // 1 表示自动释放 rw
+    free(decoded_data);  // 解码后的数据已经被复制到 surface，可以释放
+    
+    if (!surface) {
+        printf("Failed to load image from base64 data: %s\n", IMG_GetError());
+        return NULL;
+    }
+    
+    // 创建纹理
+    SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
+    SDL_FreeSurface(surface);
+    
+    if (!texture) {
+        printf("Failed to create texture from base64 data: %s\n", SDL_GetError());
+        return NULL;
+    }
+    
+    return (Texture*)texture;
+}
+
 char* backend_get_clipboard_text() {
     char* clipboard_text = SDL_GetClipboardText();
     if (!clipboard_text) {
