@@ -1,0 +1,83 @@
+{
+    "id": "progressDemoApp",
+    "type": "View",
+    "size": [800, 600],
+    "style": {
+        "bgColor": "#ffffff"
+    },
+    "layout": {
+        "type": "vertical",
+        "spacing": 20,
+        "padding": [20, 20, 20, 20],
+        "align": "center",
+        "justifyContent": "center"
+    },
+    "children": [
+        {
+            "id": "title",
+            "type": "Label",
+            "text": "Progress 组件示例",
+            "size": [300, 40],
+            "style": {
+                "color": "#333333",
+                "fontSize": 24,
+                "fontWeight": "bold"
+            }
+        },
+        {
+            "id": "circleProgress",
+            "type": "Progress",
+            "text": "圆形进度",
+            "size": [150, 150],
+            "style": {
+                "bgColor": "#e0e0e0",
+                "borderRadius": 75
+            },
+            "value": 75,
+            "shape": "circle"
+        },
+        {
+            "id": "horizontalProgress",
+            "type": "Progress",
+            "text": "水平进度",
+            "size": [300, 30],
+            "style": {
+                "bgColor": "#e0e0e0",
+                "borderRadius": 15,
+                "borderWidth": 1,
+                "borderColor": "#cccccc"
+            },
+            "value": 60,
+            "showPercentage": true,
+            "fillColor": "#4caf50"
+        },
+        {
+            "id": "verticalProgress",
+            "type": "Progress",
+            "text": "垂直进度",
+            "size": [30, 150],
+            "style": {
+                "bgColor": "#e0e0e0",
+                "borderRadius": 15,
+                "borderWidth": 1,
+                "borderColor": "#cccccc"
+            },
+            "value": 45,
+            "direction": "vertical",
+            "fillColor": "#ff9800"
+        },
+        {
+            "id": "noPercentageProgress",
+            "type": "Progress",
+            "text": "无百分比",
+            "size": [200, 20],
+            "style": {
+                "bgColor": "#e0e0e0",
+                "borderRadius": 10
+            },
+            "value": 80,
+            "showPercentage": false,
+            "fillColor": "#2196f3"
+        }
+    ]
+}

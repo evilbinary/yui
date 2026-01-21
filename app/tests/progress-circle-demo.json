@@ -1,0 +1,89 @@
+{
+    "id": "progressDemo",
+    "type": "View",
+    "size": [800, 600],
+    "style": {
+        "bgColor": "#f0f0f0"
+    },
+    "layout": {
+        "type": "vertical",
+        "spacing": 20,
+        "padding": [20, 20, 20, 20],
+        "align": "center",
+        "justifyContent": "center"
+    },
+    "children": [
+        {
+            "id": "title",
+            "type": "Label",
+            "text": "Progress 组件示例",
+            "size": [300, 40],
+            "style": {
+                "color": "#333333",
+                "fontSize": 24,
+                "fontWeight": "bold"
+            }
+        },
+        {
+            "id": "circleProgress",
+            "type": "Progress",
+            "size": [150, 150],
+            "style": {
+                "bgColor": "#e0e0e0",
+                "borderRadius": 75
+            },
+            "value": 75,
+            "shape": "circle"
+        },
+        {
+            "id": "label1",
+            "type": "Label",
+            "text": "圆形进度条 (75%)",
+            "size": [200, 30],
+            "style": {
+                "color": "#666666",
+                "fontSize": 16
+            }
+        },
+        {
+            "id": "horizontalProgress",
+            "type": "Progress",
+            "size": [300, 30],
+            "style": {
+                "bgColor": "#e0e0e0",
+                "borderRadius": 15
+            },
+            "value": 60
+        },
+        {
+            "id": "label2",
+            "type": "Label",
+            "text": "水平进度条 (60%)",
+            "size": [200, 30],
+            "style": {
+                "color": "#666666",
+                "fontSize": 16
+            }
+        },
+        {
+            "id": "verticalProgress",
+            "type": "Progress",
+            "size": [30, 150],
+            "style": {
+                "bgColor": "#e0e0e0",
+                "borderRadius": 15
+            },
+            "value": 45
+        },
+        {
+            "id": "label3",
+            "type": "Label",
+            "text": "垂直进度条 (45%)",
+            "size": [200, 30],
+            "style": {
+                "color": "#666666",
+                "fontSize": 16
+            }
+        }
+    ]
+}

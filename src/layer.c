@@ -892,7 +892,7 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
     layer->component = image_component_create(layer);
 
   } else if (layer->type == PROGRESS) {
-    layer->component = progress_component_create(layer);
+    layer->component = progress_component_create_from_json(layer, json_obj);
 
   } else if (layer->type == CHECKBOX) {
     layer->component = checkbox_component_create_from_json(layer, json_obj);
