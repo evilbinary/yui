@@ -26,6 +26,7 @@ typedef struct {
     ProgressDirection direction; // 进度条方向（用于长条形）
     Color fill_color;      // 填充颜色
     int show_percentage;   // 是否显示百分比文本
+    int circle_width;      // 圆形进度条宽度（圆环厚度）
 } ProgressComponent;
 
 // 函数声明
@@ -39,6 +40,7 @@ void progress_component_set_background_color(ProgressComponent* component, Color
 void progress_component_set_show_percentage(ProgressComponent* component, int show);
 void progress_component_set_animation_speed(ProgressComponent* component, float speed);
 void progress_component_set_shape(ProgressComponent* component, ProgressShape shape);
+void progress_component_set_circle_width(ProgressComponent* component, int width);
 void progress_component_render(Layer* layer);
 
 #endif  // YUI_PROGRESS_COMPONENT_H

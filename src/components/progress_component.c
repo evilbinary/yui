@@ -12,7 +12,7 @@
 #define printf
 
 // 辅助函数：绘制圆弧（用于圆形进度条）
-static void render_circle_arc(int center_x, int center_y, int radius, int start_angle, int end_angle, Color color) {
+static void render_circle_arc(int center_x, int center_y, int radius, int start_angle, int end_angle, Color color, int line_width) {
     // 将角度转换为弧度，并调整坐标系（0度在上方）
     float start_rad = (start_angle - 90) * M_PI / 180.0f;
     float end_rad = (end_angle - 90) * M_PI / 180.0f;
@@ -29,18 +29,55 @@ static void render_circle_arc(int center_x, int center_y, int radius, int start_
     
     float angle_step = (end_rad - start_rad) / num_segments;
     
-    // 绘制圆弧线段
+    // 绘制圆弧线段（支持宽度）
     for (int i = 0; i < num_segments; i++) {
         float angle1 = start_rad + i * angle_step;
         float angle2 = start_rad + (i + 1) * angle_step;
         
+        // 计算线段起点和终点
         int x1 = center_x + (int)(radius * cos(angle1));
         int y1 = center_y + (int)(radius * sin(angle1));
         int x2 = center_x + (int)(radius * cos(angle2));
         int y2 = center_y + (int)(radius * sin(angle2));
         
-        // 绘制线段（使用 backend 接口）
-        backend_render_line(x1, y1, x2, y2, color);
+        // 如果线宽为1，使用简单的线条绘制
+        if (line_width <= 1) {
+            backend_render_line(x1, y1, x2, y2, color);
+        } else {
+            // 计算线段的角度
+            float line_angle = atan2(y2 - y1, x2 - x1);
+            
+            // 计算垂直方向的偏移（用于创建宽度）
+            float perp_angle = line_angle + M_PI / 2;
+            int half_width = line_width / 2;
+            
+            int dx = (int)(half_width * cos(perp_angle));
+            int dy = (int)(half_width * sin(perp_angle));
+            
+            // 创建矩形顶点
+            int rx1 = x1 - dx;
+            int ry1 = y1 - dy;
+            int rx2 = x2 - dx;
+            int ry2 = y2 - dy;
+            int rx3 = x2 + dx;
+            int ry3 = y2 + dy;
+            int rx4 = x1 + dx;
+            int ry4 = y1 + dy;
+            
+            // 使用填充矩形绘制粗线条段
+            // 计算边界框
+            int min_x = (rx1 < rx2) ? (rx1 < rx3 ? (rx1 < rx4 ? rx1 : rx4) : (rx3 < rx4 ? rx3 : rx4)) : 
+                        (rx2 < rx3 ? (rx2 < rx4 ? rx2 : rx4) : (rx3 < rx4 ? rx3 : rx4));
+            int max_x = (rx1 > rx2) ? (rx1 > rx3 ? (rx1 > rx4 ? rx1 : rx4) : (rx3 > rx4 ? rx3 : rx4)) : 
+                        (rx2 > rx3 ? (rx2 > rx4 ? rx2 : rx4) : (rx3 > rx4 ? rx3 : rx4));
+            int min_y = (ry1 < ry2) ? (ry1 < ry3 ? (ry1 < ry4 ? ry1 : ry4) : (ry3 < ry4 ? ry3 : ry4)) : 
+                        (ry2 < ry3 ? (ry2 < ry4 ? ry2 : ry4) : (ry3 < ry4 ? ry3 : ry4));
+            int max_y = (ry1 > ry2) ? (ry1 > ry3 ? (ry1 > ry4 ? ry1 : ry4) : (ry3 > ry4 ? ry3 : ry4)) : 
+                        (ry2 > ry3 ? (ry2 > ry4 ? ry2 : ry4) : (ry3 > ry4 ? ry3 : ry4));
+            
+            Rect line_rect = {min_x, min_y, max_x - min_x, max_y - min_y};
+            backend_render_fill_rect(&line_rect, color);
+        }
     }
 }
 
@@ -65,6 +102,7 @@ ProgressComponent* progress_component_create(Layer* layer) {
     component->direction = PROGRESS_DIRECTION_HORIZONTAL;
     component->fill_color = (Color){50, 150, 255, 255};
     component->show_percentage = 1;
+    component->circle_width = 8; // 默认圆形宽度为8px
     
     // 设置组件指针和自定义渲染函数
     layer->component = component;
@@ -147,6 +185,17 @@ ProgressComponent* progress_component_create_from_json(Layer* layer, cJSON* json
             cJSON* speed_item = cJSON_GetObjectItem(json_obj, "animationSpeed");
             if (cJSON_IsNumber(speed_item)) {
                 component->animation_speed = speed_item->valuedouble;
+            }
+        }
+        
+        // 读取圆形进度条宽度
+        if (cJSON_HasObjectItem(json_obj, "circleWidth")) {
+            cJSON* width_item = cJSON_GetObjectItem(json_obj, "circleWidth");
+            if (cJSON_IsNumber(width_item)) {
+                component->circle_width = width_item->valueint;
+                if (component->circle_width < 1) {
+                    component->circle_width = 1;
+                }
             }
         }
     }
@@ -240,6 +289,18 @@ void progress_component_set_shape(ProgressComponent* component, ProgressShape sh
     component->shape = shape;
 }
 
+// 设置圆形进度条宽度
+void progress_component_set_circle_width(ProgressComponent* component, int width) {
+    if (!component) {
+        return;
+    }
+    
+    component->circle_width = width;
+    if (component->circle_width < 1) {
+        component->circle_width = 1;
+    }
+}
+
 // 渲染进度条组件
 void progress_component_render(Layer* layer) {
     if (!layer || !layer->component) {
@@ -285,12 +346,12 @@ void progress_component_render(Layer* layer) {
         }
         
         // 绘制背景圆环（灰色）
-        render_circle_arc(center_x, center_y, radius, 0, 360, layer->bg_color);
+        render_circle_arc(center_x, center_y, radius, 0, 360, layer->bg_color, component->circle_width);
         
         // 绘制进度圆环（填充色）
         int angle = (int)(component->progress * 360.0f); // 将进度转换为角度
         if (angle > 0) {
-            render_circle_arc(center_x, center_y, radius, -90, angle - 90, component->fill_color);
+            render_circle_arc(center_x, center_y, radius, -90, angle - 90, component->fill_color, component->circle_width);
         }
         
     } else {
