@@ -405,6 +405,83 @@ static JSValue js_theme_apply_to_tree(JSContext *ctx, JSValueConst this_val, int
     return JS_NewBool(ctx, 0);
 }
 
+/* ====================== Inspect 调试函数 ====================== */
+
+// Inspect 启用函数
+static JSValue js_inspect_enable(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    extern int yui_inspect_mode_enabled;
+    yui_inspect_mode_enabled = 1;
+    printf("JS(QuickJS): Enabled global inspect mode\n");
+    return JS_NewBool(ctx, 1);
+}
+
+// Inspect 禁用函数
+static JSValue js_inspect_disable(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    extern int yui_inspect_mode_enabled;
+    yui_inspect_mode_enabled = 0;
+    printf("JS(QuickJS): Disabled global inspect mode\n");
+    return JS_NewBool(ctx, 1);
+}
+
+// Inspect 设置图层函数
+static JSValue js_inspect_set_layer(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    if (argc < 2) {
+        return JS_ThrowTypeError(ctx, "inspect.setLayer requires 2 arguments: layer_id and enabled");
+    }
+    
+    size_t len;
+    const char* layer_id = JS_ToCStringLen(ctx, &len, argv[0]);
+    int enabled = JS_ToBool(ctx, argv[1]);
+    
+    if (layer_id && g_layer_root) {
+        struct Layer* layer = find_layer_by_id(g_layer_root, layer_id);
+        if (layer) {
+            layer->inspect_enabled = enabled;
+            printf("JS(QuickJS): Set layer '%s' inspect enabled = %d\n", layer_id, enabled);
+            JS_FreeCString(ctx, layer_id);
+            return JS_NewBool(ctx, 1);
+        } else {
+            printf("JS(QuickJS): Layer '%s' not found\n", layer_id);
+            JS_FreeCString(ctx, layer_id);
+            return JS_NewBool(ctx, 0);
+        }
+    }
+    
+    if (layer_id) JS_FreeCString(ctx, layer_id);
+    return JS_NewBool(ctx, 0);
+}
+
+// Inspect 设置显示边界函数
+static JSValue js_inspect_set_show_bounds(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    if (argc < 1) {
+        return JS_ThrowTypeError(ctx, "inspect.setShowBounds requires 1 argument: show_bounds");
+    }
+    
+    int show_bounds = JS_ToBool(ctx, argv[0]);
+    extern int yui_inspect_show_bounds;
+    yui_inspect_show_bounds = show_bounds;
+    printf("JS(QuickJS): Set show bounds = %d\n", show_bounds);
+    return JS_NewBool(ctx, 1);
+}
+
+// Inspect 设置显示信息函数
+static JSValue js_inspect_set_show_info(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    if (argc < 1) {
+        return JS_ThrowTypeError(ctx, "inspect.setShowInfo requires 1 argument: show_info");
+    }
+    
+    int show_info = JS_ToBool(ctx, argv[0]);
+    extern int yui_inspect_show_info;
+    yui_inspect_show_info = show_info;
+    printf("JS(QuickJS): Set show info = %d\n", show_info);
+    return JS_NewBool(ctx, 1);
+}
+
 /* ====================== 初始化和清理 ====================== */
 
 // 初始化 JS 引擎（使用 QuickJS）
@@ -472,6 +549,15 @@ void js_module_register_api(void)
     JS_SetPropertyStr(g_js_ctx, yui_obj, "themeSetCurrent", JS_NewCFunction(g_js_ctx, js_theme_set_current, "themeSetCurrent", 1));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "themeUnload", JS_NewCFunction(g_js_ctx, js_theme_unload, "themeUnload", 1));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "themeApplyToTree", JS_NewCFunction(g_js_ctx, js_theme_apply_to_tree, "themeApplyToTree", 0));
+
+    // 创建并注册 Inspect 对象
+    JSValue inspect_obj = JS_NewObject(g_js_ctx);
+    JS_SetPropertyStr(g_js_ctx, inspect_obj, "enable", JS_NewCFunction(g_js_ctx, js_inspect_enable, "enable", 0));
+    JS_SetPropertyStr(g_js_ctx, inspect_obj, "disable", JS_NewCFunction(g_js_ctx, js_inspect_disable, "disable", 0));
+    JS_SetPropertyStr(g_js_ctx, inspect_obj, "setLayer", JS_NewCFunction(g_js_ctx, js_inspect_set_layer, "setLayer", 2));
+    JS_SetPropertyStr(g_js_ctx, inspect_obj, "setShowBounds", JS_NewCFunction(g_js_ctx, js_inspect_set_show_bounds, "setShowBounds", 1));
+    JS_SetPropertyStr(g_js_ctx, inspect_obj, "setShowInfo", JS_NewCFunction(g_js_ctx, js_inspect_set_show_info, "setShowInfo", 1));
+    JS_SetPropertyStr(g_js_ctx, yui_obj, "inspect", inspect_obj);
 
     // 将 YUI 对象添加到全局
     JS_SetPropertyStr(g_js_ctx, global_obj, "YUI", yui_obj);

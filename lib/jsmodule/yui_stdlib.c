@@ -400,6 +400,11 @@ static const JSPropDef js_yui[] = {
     JS_CFUNC_DEF("themeSetCurrent", 1, js_yui_themeSetCurrent ),
     JS_CFUNC_DEF("themeUnload", 1, js_yui_themeUnload ),
     JS_CFUNC_DEF("themeApplyToTree", 0, js_yui_themeApplyToTree ),
+    JS_CFUNC_DEF("inspect.enable", 0, js_yui_inspect_enable ),
+    JS_CFUNC_DEF("inspect.disable", 0, js_yui_inspect_disable ),
+    JS_CFUNC_DEF("inspect.setLayer", 2, js_yui_inspect_setLayer ),
+    JS_CFUNC_DEF("inspect.setShowBounds", 1, js_yui_inspect_setShowBounds ),
+    JS_CFUNC_DEF("inspect.setShowInfo", 1, js_yui_inspect_setShowInfo ),
     JS_PROP_END,
 };
 
@@ -523,7 +528,7 @@ static JSValue js_yui_themeLoad(JSContext *ctx, JSValue *this_val, int argc, JSV
     } else {
         // 创建返回对象
         JSValue result = JS_NewObject(ctx);
-        JS_SetPropertyStr(ctx, result, "success", JS_NewBool(0));
+        JS_SetPropertyStr(ctx, result, "success", JS_NewBool( 0));
         JS_SetPropertyStr(ctx, result, "name", JS_NewString(ctx, ""));
         JS_SetPropertyStr(ctx, result, "version", JS_NewString(ctx, ""));
         JS_SetPropertyStr(ctx, result, "error", JS_NewString(ctx, "Failed to load theme"));
@@ -551,7 +556,7 @@ static JSValue js_yui_themeSetCurrent(JSContext *ctx, JSValue *this_val, int arg
     // 调用主题管理器的设置函数
     int result = theme_manager_set_current(theme_name);
     
-    return JS_NewBool(result);
+    return JS_NewBool( result);
 }
 
 // 卸载主题函数 - JS 接口
@@ -574,7 +579,7 @@ static JSValue js_yui_themeUnload(JSContext *ctx, JSValue *this_val, int argc, J
     // 调用主题管理器的卸载函数
     theme_manager_unload_theme(theme_name);
     
-    return JS_NewBool(1);
+    return JS_NewBool( 1);
 }
 
 // 应用主题到图层树函数 - JS 接口
@@ -586,10 +591,138 @@ static JSValue js_yui_themeApplyToTree(JSContext *ctx, JSValue *this_val, int ar
     
     if (current && g_layer_root) {
         theme_manager_apply_to_tree(g_layer_root);
-        return JS_NewBool(1);
+        return JS_NewBool( 1);
     }
     
-    return JS_NewBool(0);
+    return JS_NewBool( 0);
+}
+
+// Inspect 启用函数 - JS 接口
+static JSValue js_yui_inspect_enable(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+{
+    // 启用全局 inspect 模式
+    extern int yui_inspect_mode_enabled;
+    yui_inspect_mode_enabled = 1;
+    printf("YUI Inspect: Enabled global inspect mode\n");
+    return JS_NewBool( 1);
+}
+
+// Inspect 禁用函数 - JS 接口
+static JSValue js_yui_inspect_disable(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+{
+    // 禁用全局 inspect 模式
+    extern int yui_inspect_mode_enabled;
+    yui_inspect_mode_enabled = 0;
+    printf("YUI Inspect: Disabled global inspect mode\n");
+    return JS_NewBool( 1);
+}
+
+// Inspect 设置图层函数 - JS 接口
+static JSValue js_yui_inspect_setLayer(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+{
+    if (argc < 2) {
+        return JS_ThrowTypeError(ctx, "inspect_setLayer requires 2 arguments: layer_id and enabled");
+    }
+    
+    JSCStringBuf buf;
+    const char* layer_id = JS_ToCString(ctx, argv[0], &buf);
+    
+    // mquickjs 不支持 JS_ToBool 和 JS_IsTruthy，直接检查值的类型
+    int enabled = 0;
+    if (JS_IsBool(argv[1])) {
+        // 对于布尔值，检查特殊值的实际值
+        enabled = JS_VALUE_GET_SPECIAL_VALUE(argv[1]) != 0;
+    } else if (JS_IsInt(argv[1])) {
+        enabled = JS_VALUE_GET_INT(argv[1]) != 0;
+#ifdef JS_USE_SHORT_FLOAT
+    } else if (JS_IsShortFloat(argv[1])) {
+        // 短浮点值，需要获取实际的双精度值
+        // 在 mquickjs 中，短浮点值存储为特殊值，需要转换为 double
+        // 简化处理：短浮点非零即为真
+        enabled = 1;
+#endif
+    } else {
+        // 其他类型（字符串、对象等），非空即为真
+        enabled = !JS_IsNull(argv[1]) && !JS_IsUndefined(argv[1]);
+    }
+    
+    if (layer_id && g_layer_root) {
+        Layer* layer = find_layer_by_id(g_layer_root, layer_id);
+        if (layer) {
+            layer->inspect_enabled = enabled;
+            printf("YUI Inspect: Set layer '%s' inspect enabled = %d\n", layer_id, enabled);
+            return JS_NewBool( 1);
+        } else {
+            printf("YUI Inspect: Layer '%s' not found\n", layer_id);
+            return JS_NewBool( 0);
+        }
+    }
+    
+    return JS_NewBool( 0);
+}
+
+// Inspect 设置显示边界函数 - JS 接口
+static JSValue js_yui_inspect_setShowBounds(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+{
+    if (argc < 1) {
+        return JS_ThrowTypeError(ctx, "inspect_setShowBounds requires 1 argument: show_bounds");
+    }
+    
+    // mquickjs 不支持 JS_ToBool 和 JS_IsTruthy，直接检查值的类型
+    int show_bounds = 0;
+    if (JS_IsBool(argv[0])) {
+        // 对于布尔值，检查特殊值的实际值
+        show_bounds = JS_VALUE_GET_SPECIAL_VALUE(argv[0]) != 0;
+    } else if (JS_IsInt(argv[0])) {
+        show_bounds = JS_VALUE_GET_INT(argv[0]) != 0;
+#ifdef JS_USE_SHORT_FLOAT
+    } else if (JS_IsShortFloat(argv[0])) {
+        // 短浮点值，需要获取实际的双精度值
+        // 在 mquickjs 中，短浮点值存储为特殊值，需要转换为 double
+        // 简化处理：短浮点非零即为真
+        show_bounds = 1;
+#endif
+    } else {
+        // 其他类型（字符串、对象等），非空即为真
+        show_bounds = !JS_IsNull(argv[0]) && !JS_IsUndefined(argv[0]);
+    }
+    
+    extern int yui_inspect_show_bounds;
+    yui_inspect_show_bounds = show_bounds;
+    printf("YUI Inspect: Set show bounds = %d\n", show_bounds);
+    return JS_NewBool( 1);
+}
+
+// Inspect 设置显示信息函数 - JS 接口
+static JSValue js_yui_inspect_setShowInfo(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+{
+    if (argc < 1) {
+        return JS_ThrowTypeError(ctx, "inspect_setShowInfo requires 1 argument: show_info");
+    }
+    
+    // mquickjs 不支持 JS_ToBool 和 JS_IsTruthy，直接检查值的类型
+    int show_info = 0;
+    if (JS_IsBool(argv[0])) {
+        // 对于布尔值，检查特殊值的实际值
+        show_info = JS_VALUE_GET_SPECIAL_VALUE(argv[0]) != 0;
+    } else if (JS_IsInt(argv[0])) {
+        show_info = JS_VALUE_GET_INT(argv[0]) != 0;
+#ifdef JS_USE_SHORT_FLOAT
+    } else if (JS_IsShortFloat(argv[0])) {
+        // 短浮点值，需要获取实际的双精度值
+        // 在 mquickjs 中，短浮点值存储为特殊值，需要转换为 double
+        // 简化处理：短浮点非零即为真
+        show_info = 1;
+#endif
+    } else {
+        // 其他类型（字符串、对象等），非空即为真
+        show_info = !JS_IsNull(argv[0]) && !JS_IsUndefined(argv[0]);
+    }
+    
+    extern int yui_inspect_show_info;
+    yui_inspect_show_info = show_info;
+    printf("YUI Inspect: Set show info = %d\n", show_info);
+    return JS_NewBool( 1);
 }
 
 static const JSClassDef js_yui_class =

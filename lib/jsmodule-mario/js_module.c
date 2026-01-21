@@ -416,6 +416,91 @@ static var_t* mario_theme_apply_to_tree(vm_t* vm, var_t* env, void* data)
     return var_new_int(vm, 0);
 }
 
+/* ====================== Inspect 调试函数 ====================== */
+
+// Inspect 启用函数
+static var_t* mario_inspect_enable(vm_t* vm, var_t* env, void* data)
+{
+    extern int yui_inspect_mode_enabled;
+    yui_inspect_mode_enabled = 1;
+    printf("JS(Mario): Enabled global inspect mode\n");
+    return var_new_int(vm, 1);
+}
+
+// Inspect 禁用函数
+static var_t* mario_inspect_disable(vm_t* vm, var_t* env, void* data)
+{
+    extern int yui_inspect_mode_enabled;
+    yui_inspect_mode_enabled = 0;
+    printf("JS(Mario): Disabled global inspect mode\n");
+    return var_new_int(vm, 1);
+}
+
+// Inspect 设置图层函数
+static var_t* mario_inspect_set_layer(vm_t* vm, var_t* env, void* data)
+{
+    var_t* args = get_func_args(env);
+    uint32_t argc = get_func_args_num(env);
+
+    if (argc < 2) {
+        printf("JS(Mario): inspect_setLayer requires 2 arguments: layer_id and enabled\n");
+        return var_new_int(vm, 0);
+    }
+
+    const char* layer_id = get_func_arg_str(env, 0);
+    int enabled = get_func_arg_int(env, 1);
+
+    if (layer_id && g_layer_root) {
+        struct Layer* layer = find_layer_by_id(g_layer_root, layer_id);
+        if (layer) {
+            layer->inspect_enabled = enabled;
+            printf("JS(Mario): Set layer '%s' inspect enabled = %d\n", layer_id, enabled);
+            return var_new_int(vm, 1);
+        } else {
+            printf("JS(Mario): Layer '%s' not found\n", layer_id);
+            return var_new_int(vm, 0);
+        }
+    }
+
+    return var_new_int(vm, 0);
+}
+
+// Inspect 设置显示边界函数
+static var_t* mario_inspect_set_show_bounds(vm_t* vm, var_t* env, void* data)
+{
+    var_t* args = get_func_args(env);
+    uint32_t argc = get_func_args_num(env);
+
+    if (argc < 1) {
+        printf("JS(Mario): inspect_setShowBounds requires 1 argument: show_bounds\n");
+        return var_new_int(vm, 0);
+    }
+
+    int show_bounds = get_func_arg_int(env, 0);
+    extern int yui_inspect_show_bounds;
+    yui_inspect_show_bounds = show_bounds;
+    printf("JS(Mario): Set show bounds = %d\n", show_bounds);
+    return var_new_int(vm, 1);
+}
+
+// Inspect 设置显示信息函数
+static var_t* mario_inspect_set_show_info(vm_t* vm, var_t* env, void* data)
+{
+    var_t* args = get_func_args(env);
+    uint32_t argc = get_func_args_num(env);
+
+    if (argc < 1) {
+        printf("JS(Mario): inspect_setShowInfo requires 1 argument: show_info\n");
+        return var_new_int(vm, 0);
+    }
+
+    int show_info = get_func_arg_int(env, 0);
+    extern int yui_inspect_show_info;
+    yui_inspect_show_info = show_info;
+    printf("JS(Mario): Set show info = %d\n", show_info);
+    return var_new_int(vm, 1);
+}
+
 /* ====================== 初始化和清理 ====================== */
 extern bool compile(bytecode_t *bc, const char* input);
 extern bool _m_debug;  // Mario 调试标志
@@ -522,6 +607,11 @@ void js_module_register_api(void)
     vm_reg_native(g_vm, yui_cls, "themeSetCurrent(name)", mario_theme_set_current, NULL);
     vm_reg_native(g_vm, yui_cls, "themeUnload(name)", mario_theme_unload, NULL);
     vm_reg_native(g_vm, yui_cls, "themeApplyToTree()", mario_theme_apply_to_tree, NULL);
+    vm_reg_native(g_vm, yui_cls, "inspect.enable()", mario_inspect_enable, NULL);
+    vm_reg_native(g_vm, yui_cls, "inspect.disable()", mario_inspect_disable, NULL);
+    vm_reg_native(g_vm, yui_cls, "inspect.setLayer(layerId, enabled)", mario_inspect_set_layer, NULL);
+    vm_reg_native(g_vm, yui_cls, "inspect.setShowBounds(show)", mario_inspect_set_show_bounds, NULL);
+    vm_reg_native(g_vm, yui_cls, "inspect.setShowInfo(show)", mario_inspect_set_show_info, NULL);
 
     // 也注册为全局函数（为了兼容性）
     vm_reg_static(g_vm, NULL, "setText(layerId, text)", mario_set_text, NULL);

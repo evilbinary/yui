@@ -148,8 +148,11 @@ typedef enum {
     CLOCK  // 添加CLOCK类型
 } LayerType;
 
-extern char *layer_type_name[];
-#define LAYER_TYPE_SIZE (sizeof(layer_type_name) / sizeof(layer_type_name[0]))  // 更新图层类型数量
+ 
+extern char* layer_type_name[];
+extern int layer_type_size ;
+
+
 typedef struct Layer Layer;
 
 typedef struct LayoutManager {
@@ -394,8 +397,13 @@ typedef struct Layer {
     // 增量更新支持：脏标记
     unsigned int dirty_flags; // 标记哪些属性被修改
 
-} Layer;
+    // inspect
+    int inspect_enabled;     // 是否启用Inspect调试模式
+    int inspect_mode;         // Inspect模式
+    int inspect_show_bounds; // 是否显示边界
+    int inspect_show_info;   // 是否显示信息
 
+} Layer;
 // 全局变量：当前拥有焦点的图层
 extern Layer* focused_layer;
 

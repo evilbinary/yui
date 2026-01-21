@@ -3,6 +3,9 @@
 #include "animate.h"
 #include <limits.h>
 
+extern int yui_inspect_mode_enabled;
+extern int yui_inspect_show_bounds;
+extern int yui_inspect_show_info;
 
 // ====================== 资源加载器 ======================
 void load_textures(Layer* root) {
@@ -268,6 +271,76 @@ void render_layer(Layer* layer) {
     }
     
     render_clip_end(layer,&prev_clip);
+
+// Inspect 调试模式绘制
+if ((yui_inspect_mode_enabled || layer->inspect_enabled) && 
+    (layer->inspect_show_bounds || layer->inspect_show_info || yui_inspect_show_bounds || yui_inspect_show_info)) {
+    
+    // 显示边界框
+    if ((yui_inspect_show_bounds || layer->inspect_show_bounds) && layer->rect.w > 0 && layer->rect.h > 0) {
+        // 绘制边界矩形（半透明红色）
+        Color bounds_color = {255, 0, 0, 100}; // 半透明红色
+        backend_render_rect(&layer->rect, bounds_color);
+        
+        // 绘制四个角的标记点
+        int corner_size = 4;
+        Color corner_color = {255, 0, 0, 200}; // 不透明红色
+        
+        // 左上角
+        Rect corner1 = {layer->rect.x - corner_size/2, layer->rect.y - corner_size/2, corner_size, corner_size};
+        backend_render_fill_rect(&corner1, corner_color);
+        
+        // 右上角
+        Rect corner2 = {layer->rect.x + layer->rect.w - corner_size/2, layer->rect.y - corner_size/2, corner_size, corner_size};
+        backend_render_fill_rect(&corner2, corner_color);
+        
+        // 左下角
+        Rect corner3 = {layer->rect.x - corner_size/2, layer->rect.y + layer->rect.h - corner_size/2, corner_size, corner_size};
+        backend_render_fill_rect(&corner3, corner_color);
+        
+        // 右下角
+        Rect corner4 = {layer->rect.x + layer->rect.w - corner_size/2, layer->rect.y + layer->rect.h - corner_size/2, corner_size, corner_size};
+        backend_render_fill_rect(&corner4, corner_color);
+    }
+    
+    // 显示详细信息
+    if ((yui_inspect_show_info || layer->inspect_show_info) && strlen(layer->id) > 0) {
+        // 绘制信息背景（半透明黑色）
+        int info_width = 200;
+        int info_height = 60;
+        int info_x = layer->rect.x + 5;
+        int info_y = layer->rect.y + 5;
+        
+        // 确保信息显示在屏幕内
+        if (info_x + info_width > layer->rect.x + layer->rect.w) {
+            info_x = layer->rect.x + layer->rect.w - info_width - 5;
+        }
+        if (info_y + info_height > layer->rect.y + layer->rect.h) {
+            info_y = layer->rect.y + layer->rect.h - info_height - 5;
+        }
+        
+        Rect info_bg = {info_x, info_y, info_width, info_height};
+        Color bg_color = {0, 0, 0, 180}; // 半透明黑色
+        backend_render_fill_rect(&info_bg, bg_color);
+        
+        // 准备信息文本
+        char info_text[256];
+        snprintf(info_text, sizeof(info_text), "ID: %s\nType: %s\nPos: (%d,%d)\nSize: (%d,%d)",
+                 layer->id, 
+                 layer->type >= 0 && layer->type < layer_type_size ? layer_type_name[layer->type] : "Unknown",
+                 layer->rect.x, layer->rect.y,
+                 layer->rect.w, layer->rect.h);
+        
+        // 渲染文本（白色）
+        Color text_color = {255, 255, 255, 255};
+        Texture* text_texture = render_text(layer, info_text, text_color);
+        if (text_texture) {
+            Rect text_rect = {info_x + 5, info_y + 5, info_width - 10, info_height - 10};
+            backend_render_text_copy(text_texture, NULL, &text_rect);
+            backend_render_text_destroy(text_texture);
+        }
+    }
+}
 
 #if DEBUG_VIEW
     Texture* text_texture = render_text(layer,layer->id, (Color){strlen(layer->id)*40%255, 0, 0, 255});

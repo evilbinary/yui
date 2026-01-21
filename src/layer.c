@@ -7,13 +7,20 @@
 
 
 
+Layer* focused_layer = NULL;
+
 // 更新图层类型名称数组，添加GRID、Text、Tab、Slider、Listbox和Menu
 char* layer_type_name[] = {"View",     "Button",   "Input",   "Label",
                            "Image",    "List",     "Grid",    "Progress",
                            "Checkbox", "Radiobox", "Text",    "Treeview",
                            "Tab",      "Slider",   "Select", "Scrollbar", "Menu", "Dialog", "Clock"};
 
-Layer* focused_layer = NULL;
+int layer_type_size = (sizeof(layer_type_name) / sizeof(layer_type_name[0]));  // 更新图层类型数量
+
+// 全局 Inspect 模式开关
+int yui_inspect_mode_enabled = 0;
+int yui_inspect_show_bounds = 1;
+int yui_inspect_show_info = 1;
 
 // 移除JSON字符串中的注释
 static char* remove_json_comments(char* json_str) {
@@ -255,6 +262,11 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
   // 初始化焦点相关字段
   layer->state = LAYER_STATE_NORMAL;  // 默认处于正常状态
   layer->focusable = 0;               // 默认不可获得焦点
+  
+  // 初始化inspect相关字段
+  layer->inspect_enabled = 0;         // 默认不启用inspect
+  layer->inspect_show_bounds = 1;     // 默认显示边界
+  layer->inspect_show_info = 1;       // 默认显示信息
 
   // 用于标记是否已经自定义处理了子图层（如SCROLLBAR类型）
   int has_custom_children = 0;
@@ -265,7 +277,7 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
   }
   if (cJSON_HasObjectItem(json_obj, "type")) {
     int i=0;
-    for (i = 0; i < LAYER_TYPE_SIZE; i++) {
+    for (i = 0; i < layer_type_size; i++) {
       // printf("cmp %s == %s\n", cJSON_GetObjectItem(json_obj,
       // "type")->valuestring,layer_type_name[i] );
       if (strcmp(cJSON_GetObjectItem(json_obj, "type")->valuestring,
@@ -274,7 +286,7 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
         break;
       }
     }
-    if(i>LAYER_TYPE_SIZE){
+    if(i>layer_type_size){
       layer->type=VIEW;
     }
   }else{

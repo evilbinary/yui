@@ -26,6 +26,11 @@ YUI 对象是所有 YUI 原生 API 的命名空间。
 | `YUI.themeSetCurrent(name)` | `name: string` | `boolean\|number` | 设置当前主题 | 全部 |
 | `YUI.themeUnload(name)` | `name: string` | `boolean\|number` | 卸载主题 | 全部 |
 | `YUI.themeApplyToTree()` | - | `boolean\|number` | 应用主题到图层树 | 全部 |
+| `YUI.inspect.enable()` | - | `boolean\|number` | 启用全局 inspect 调试模式 | 全部 |
+| `YUI.inspect.disable()` | - | `boolean\|number` | 禁用全局 inspect 调试模式 | 全部 |
+| `YUI.inspect.setLayer(layerId, enabled)` | `layerId: string`, `enabled: boolean` | `boolean\|number` | 为特定图层设置 inspect 模式 | 全部 |
+| `YUI.inspect.setShowBounds(show)` | `show: boolean` | `boolean\|number` | 设置是否显示边界框 | 全部 |
+| `YUI.inspect.setShowInfo(show)` | `show: boolean` | `boolean\|number` | 设置是否显示详细信息 | 全部 |
 
 **注意：** 返回值类型取决于引擎，mquickjs 返回 `undefined`，QuickJS 返回 `undefined`，Mario 返回 `number`（0=成功，-1=失败）
 
@@ -150,6 +155,13 @@ YUI.themeLoad(path)
 YUI.themeSetCurrent(name)
 YUI.themeUnload(name)
 YUI.themeApplyToTree()
+
+// Inspect API (Inspect对象)
+YUI.inspect.enable()
+YUI.inspect.disable()
+YUI.inspect.setLayer(layerId, enabled)
+YUI.inspect.setShowBounds(show)
+YUI.inspect.setShowInfo(show)
 
 // Socket API (Socket对象)
 Socket.socket(type)
@@ -798,6 +810,23 @@ if (result && result.success) {
 
 // 卸载主题
 YUI.themeUnload('old-theme');
+```
+
+### Inspect 调试示例
+
+```javascript
+// 启用全局 inspect 模式
+YUI.inspect.enable();
+
+// 为特定图层启用 inspect
+YUI.inspect.setLayer('button1', true);
+
+// 设置显示选项
+YUI.inspect.setShowBounds(true);  // 显示边界框
+YUI.inspect.setShowInfo(true);    // 显示详细信息
+
+// 禁用 inspect 模式
+YUI.inspect.disable();
 ```
 
 ### 图层操作示例
