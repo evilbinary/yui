@@ -666,3 +666,37 @@ int js_module_register_c_event_handler(const char* event_name, CEventHandler han
 {
     return register_c_event_handler_internal(event_name, handler);
 }
+
+// YUI.setEvent() 的公共实现
+// layer_id: 图层ID
+// event_name: 事件名称（如 "click", "onClick"）
+// event_func_name: JS 函数名
+int js_module_set_event(const char* layer_id, const char* event_name, const char* event_func_name)
+{
+    if (!layer_id || !event_name || !event_func_name || !g_layer_root) {
+        printf("JS: set_event invalid parameters\n");
+        return -1;
+    }
+
+    // 查找图层
+    Layer* layer = find_layer_by_id(g_layer_root, layer_id);
+    if (!layer) {
+        printf("JS: Layer '%s' not found\n", layer_id);
+        return -1;
+    }
+
+    // 获取事件处理器
+    EventHandler handler = get_event_handler_by_type(event_name);
+    if (!handler) {
+        printf("JS: Unknown event type: %s\n", event_name);
+        return -1;
+    }
+
+    // 设置图层事件
+    int result = js_module_set_layer_event(layer, event_name, event_func_name, handler);
+    if (result == 0) {
+        printf("JS: Set event '%s' for layer '%s' -> '%s'\n", event_name, layer_id, event_func_name);
+    }
+
+    return result;
+}

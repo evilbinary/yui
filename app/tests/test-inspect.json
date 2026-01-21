@@ -1,0 +1,88 @@
+{
+  "id": "main_container",
+  "type": "View",
+  "size": [800, 600],
+  "js": "test-inspect.js",
+  "style": {
+    "bgColor": "rgba(240, 240, 240, 255)",
+    "borderRadius": 10
+  },
+  "children": [
+    {
+      "id": "header",
+      "type": "View",
+      "rect": [50, 50, 700, 80],
+      "style": {
+        "bgColor": "rgba(255, 255, 255, 255)",
+        "borderRadius": 5
+      },
+      "layout": {
+        "type": "horizontal",
+        "spacing": 10,
+        "padding": [10, 10, 10, 10],
+        "justifyContent": "space-between"
+      },
+      "children": [
+        {"id": "btn1", "type": "Button", "text": "按钮1", "width": 100, "height": 40},
+        {"id": "btn2", "type": "Button", "text": "按钮2", "width": 100, "height": 40},
+        {"id": "btn3", "type": "Button", "text": "按钮3", "width": 100, "height": 40}
+      ]
+    },
+    {
+      "id": "content",
+      "type": "View",
+      "rect": [50, 150, 700, 300],
+      "style": {
+        "bgColor": "rgba(255, 255, 255, 255)",
+        "borderRadius": 5
+      },
+      "layout": {
+        "type": "vertical",
+        "spacing": 15,
+        "padding": [20, 20, 20, 20],
+        "align": "center"
+      },
+      "children": [
+        {
+          "id": "label1",
+          "type": "Label",
+          "text": "测试 Inspect 功能",
+          "style": {
+            "textColor": "#333333",
+            "fontSize": 24,
+            "textAlign": "center"
+          }
+        },
+        {
+          "id": "label2",
+          "type": "Label",
+          "text": "使用 YUI.inspect.enable() 启用调试模式",
+          "style": {
+            "textColor": "#666666",
+            "fontSize": 16
+          }
+        }
+      ]
+    },
+    {
+      "id": "footer",
+      "type": "View",
+      "rect": [50, 470, 700, 80],
+      "style": {
+        "bgColor": "rgba(255, 255, 255, 255)",
+        "borderRadius": 5
+      },
+      "layout": {
+        "type": "horizontal",
+        "spacing": 20,
+        "padding": [10, 10, 10, 10],
+        "justifyContent": "center"
+      },
+      "children": [
+        {"id": "toggle_inspect", "type": "Button", "text": "切换Inspect", "width": 120, "height": 40},
+        {"id": "toggle_bounds", "type": "Button", "text": "切换边界", "width": 120, "height": 40},
+        {"id": "toggle_info", "type": "Button", "text": "切换信息", "width": 120, "height": 40}
+      ]
+    }
+  ]
+}

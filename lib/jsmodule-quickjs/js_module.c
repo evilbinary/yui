@@ -482,6 +482,35 @@ static JSValue js_inspect_set_show_info(JSContext *ctx, JSValueConst this_val, i
     return JS_NewBool(ctx, 1);
 }
 
+// YUI.setEvent() - 设置图层事件回调
+static JSValue js_set_event(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    if (argc < 3) {
+        return JS_ThrowTypeError(ctx, "setEvent requires 3 arguments: layer_id, event_name, callback");
+    }
+    
+    size_t len1, len2, len3;
+    const char* layer_id = JS_ToCStringLen(ctx, &len1, argv[0]);
+    const char* event_name = JS_ToCStringLen(ctx, &len2, argv[1]);
+    const char* func_name = JS_ToCStringLen(ctx, &len3, argv[2]);
+    
+    if (!layer_id || !event_name || !func_name) {
+        JS_FreeCString(ctx, layer_id);
+        JS_FreeCString(ctx, event_name);
+        JS_FreeCString(ctx, func_name);
+        return JS_ThrowTypeError(ctx, "Invalid arguments");
+    }
+    
+    // 调用公共实现
+    int result = js_module_set_event(layer_id, event_name, func_name);
+    
+    JS_FreeCString(ctx, layer_id);
+    JS_FreeCString(ctx, event_name);
+    JS_FreeCString(ctx, func_name);
+    
+    return JS_NewBool(ctx, result == 0 ? 1 : 0);
+}
+
 /* ====================== 初始化和清理 ====================== */
 
 // 初始化 JS 引擎（使用 QuickJS）
@@ -558,6 +587,9 @@ void js_module_register_api(void)
     JS_SetPropertyStr(g_js_ctx, inspect_obj, "setShowBounds", JS_NewCFunction(g_js_ctx, js_inspect_set_show_bounds, "setShowBounds", 1));
     JS_SetPropertyStr(g_js_ctx, inspect_obj, "setShowInfo", JS_NewCFunction(g_js_ctx, js_inspect_set_show_info, "setShowInfo", 1));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "inspect", inspect_obj);
+    
+    // 添加 setEvent 到 YUI 对象
+    JS_SetPropertyStr(g_js_ctx, yui_obj, "setEvent", JS_NewCFunction(g_js_ctx, js_set_event, "setEvent", 3));
 
     // 将 YUI 对象添加到全局
     JS_SetPropertyStr(g_js_ctx, global_obj, "YUI", yui_obj);
@@ -568,6 +600,7 @@ void js_module_register_api(void)
     JS_SetPropertyStr(g_js_ctx, global_obj, "setBgColor", JS_NewCFunction(g_js_ctx, js_set_bg_color, "setBgColor", 2));
     JS_SetPropertyStr(g_js_ctx, global_obj, "hide", JS_NewCFunction(g_js_ctx, js_hide, "hide", 1));
     JS_SetPropertyStr(g_js_ctx, global_obj, "show", JS_NewCFunction(g_js_ctx, js_show, "show", 1));
+    JS_SetPropertyStr(g_js_ctx, global_obj, "setEvent", JS_NewCFunction(g_js_ctx, js_set_event, "setEvent", 3));
 
     // 注册 Socket API
     js_module_register_socket_api(g_js_ctx);

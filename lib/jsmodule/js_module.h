@@ -63,6 +63,12 @@ int js_module_call_layer_event(const char* layer_id, const char* event_type);
 // event_name: 事件类型，如 "click", "press", "scroll" 等
 int js_module_trigger_layer_event(Layer* layer, const char* event_name);
 
+// YUI.setEvent() 的公共实现
+// layer_id: 图层ID
+// event_name: 事件名称（如 "click", "onClick"）
+// event_func_name: JS 函数名
+int js_module_set_event(const char* layer_id, const char* event_name, const char* event_func_name);
+
 #ifdef __cplusplus
 }
 #endif

@@ -501,6 +501,32 @@ static var_t* mario_inspect_set_show_info(vm_t* vm, var_t* env, void* data)
     return var_new_int(vm, 1);
 }
 
+// YUI.setEvent() - 设置图层事件回调
+static var_t* mario_set_event(vm_t* vm, var_t* env, void* data)
+{
+    var_t* args = get_func_args(env);
+    uint32_t argc = get_func_args_num(env);
+
+    if (argc < 3) {
+        printf("JS(Mario): setEvent requires 3 arguments: layer_id, event_name, callback\n");
+        return var_new_int(vm, 0);
+    }
+
+    const char* layer_id = get_func_arg_str(env, 0);
+    const char* event_name = get_func_arg_str(env, 1);
+    const char* func_name = get_func_arg_str(env, 2);
+
+    if (!layer_id || !event_name || !func_name) {
+        printf("JS(Mario): setEvent invalid arguments\n");
+        return var_new_int(vm, 0);
+    }
+
+    // 调用公共实现
+    int result = js_module_set_event(layer_id, event_name, func_name);
+
+    return var_new_int(vm, result == 0 ? 1 : 0);
+}
+
 /* ====================== 初始化和清理 ====================== */
 extern bool compile(bytecode_t *bc, const char* input);
 extern bool _m_debug;  // Mario 调试标志
@@ -612,6 +638,7 @@ void js_module_register_api(void)
     vm_reg_native(g_vm, yui_cls, "inspect.setLayer(layerId, enabled)", mario_inspect_set_layer, NULL);
     vm_reg_native(g_vm, yui_cls, "inspect.setShowBounds(show)", mario_inspect_set_show_bounds, NULL);
     vm_reg_native(g_vm, yui_cls, "inspect.setShowInfo(show)", mario_inspect_set_show_info, NULL);
+    vm_reg_native(g_vm, yui_cls, "setEvent(layerId, eventName, callback)", mario_set_event, NULL);
 
     // 也注册为全局函数（为了兼容性）
     vm_reg_static(g_vm, NULL, "setText(layerId, text)", mario_set_text, NULL);
@@ -619,6 +646,7 @@ void js_module_register_api(void)
     vm_reg_static(g_vm, NULL, "setBgColor(layerId, color)", mario_set_bg_color, NULL);
     vm_reg_static(g_vm, NULL, "hide(layerId)", mario_hide, NULL);
     vm_reg_static(g_vm, NULL, "show(layerId)", mario_show, NULL);
+    vm_reg_static(g_vm, NULL, "setEvent(layerId, eventName, callback)", mario_set_event, NULL);
 
     printf("JS(Mario): Registered native API functions\n");
 }

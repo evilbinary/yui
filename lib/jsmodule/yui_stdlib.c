@@ -405,6 +405,7 @@ static const JSPropDef js_yui[] = {
     JS_CFUNC_DEF("inspect.setLayer", 2, js_yui_inspect_setLayer ),
     JS_CFUNC_DEF("inspect.setShowBounds", 1, js_yui_inspect_setShowBounds ),
     JS_CFUNC_DEF("inspect.setShowInfo", 1, js_yui_inspect_setShowInfo ),
+    JS_CFUNC_DEF("setEvent", 3, js_yui_set_event ),
     JS_PROP_END,
 };
 
@@ -723,6 +724,28 @@ static JSValue js_yui_inspect_setShowInfo(JSContext *ctx, JSValue *this_val, int
     yui_inspect_show_info = show_info;
     printf("YUI Inspect: Set show info = %d\n", show_info);
     return JS_NewBool( 1);
+}
+
+// YUI.setEvent() - 设置图层事件回调
+static JSValue js_yui_set_event(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+{
+    if (argc < 3) {
+        return JS_ThrowTypeError(ctx, "setEvent requires 3 arguments: layer_id, event_name, callback");
+    }
+    
+    JSCStringBuf buf1, buf2, buf3;
+    const char* layer_id = JS_ToCString(ctx, argv[0], &buf1);
+    const char* event_name = JS_ToCString(ctx, argv[1], &buf2);
+    const char* func_name = JS_ToCString(ctx, argv[2], &buf3);
+    
+    if (!layer_id || !event_name || !func_name) {
+        return JS_ThrowTypeError(ctx, "Invalid arguments");
+    }
+    
+    // 调用公共实现
+    int result = js_module_set_event(layer_id, event_name, func_name);
+    
+    return JS_NewBool(result == 0 ? 1 : 0);
 }
 
 static const JSClassDef js_yui_class =
