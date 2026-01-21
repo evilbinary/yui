@@ -146,6 +146,259 @@ YUI框架支持以下核心组件类型：
   ]
 }
 ```
+### 6. Progress组件特有属性
+
+```json
+{
+  "id": "progress",
+  "type": "Progress",
+  "data": 30,// 进度值%，范围0-100
+  "style": {
+              "color": "#2C3E50",
+              "bgColor":"#CCCCCC",
+              "radius": 40
+          }
+}
+
+```
+
+### 7. CheckBox组件特有属性
+
+```json
+{
+  "id": "checkbox",
+  "type": "Checkbox",
+  "data": true,              // 是否选中
+  "label": "选项文本",      // 标签文本
+  "style": {
+    "color": "#2C3E50"      // 文本颜色
+  }
+}
+```
+
+### 8. RadioBox组件特有属性
+
+```json
+{
+  "id": "radio1",
+  "type": "Radiobox",
+  "group": "group1",         // 单选框组ID
+  "checked": true,           // 是否选中
+  "label": "选项文本",      // 标签文本
+  "style": {
+    "color": "#2C3E50"      // 文本颜色
+  }
+}
+```
+
+### 9. Text组件特有属性
+
+```json
+{
+  "id": "text_content",
+  "type": "Text",
+  "text": "文本内容",        // 文本内容
+  "style": {
+    "textColor": "#333333", // 文本颜色
+    "fontSize": 16,          // 字体大小
+    "textAlign": "left"     // 文本对齐方式
+  }
+}
+```
+
+### 10. TreeView组件特有属性
+
+```json
+{
+  "id": "treeview",
+  "type": "Treeview",
+  "itemHeight": 30,          // 项目高度
+  "indentWidth": 20,         // 缩进宽度
+  "style": {
+    "textColor": "#000000",              // 文本颜色
+    "selectedTextColor": "#FFFFFF",      // 选中文本颜色
+    "selectedBgColor": "#3399FF",        // 选中背景颜色
+    "hoverBgColor": "#DCDCDC",          // 悬停背景颜色
+    "expandIconColor": "#000000"        // 展开图标颜色
+  },
+  "data": [                  // 树节点数据
+    {
+      "text": "节点1",
+      "expanded": true,
+      "children": [
+        {"text": "子节点1"},
+        {"text": "子节点2"}
+      ]
+    }
+  ]
+}
+```
+
+### 11. Tab组件特有属性
+
+```json
+{
+  "id": "tab_container",
+  "type": "Tab",
+  "tabHeight": 30,           // 标签高度
+  "activeTab": 0,            // 当前激活的标签索引
+  "closable": false,         // 是否可关闭
+  "style": {
+    "tabColor": "#F0F0F0",           // 标签背景颜色
+    "activeTabColor": "#FFFFFF",     // 激活标签背景颜色
+    "textColor": "#333333",          // 文本颜色
+    "activeTextColor": "#000000",    // 激活文本颜色
+    "borderColor": "#CCCCCC"         // 边框颜色
+  },
+  "data": [                  // 标签页数据
+    {"text": "标签页1"},
+    {"text": "标签页2"}
+  ]
+}
+```
+
+### 12. Slider组件特有属性
+
+```json
+{
+  "id": "slider",
+  "type": "Slider",
+  "min": 0,                  // 最小值
+  "max": 100,                // 最大值
+  "data": 50,                // 当前值
+  "step": 1,                 // 步长
+  "orientation": "horizontal",  // 方向：horizontal/vertical
+  "style": {
+    "trackColor": "#E0E0E0",     // 轨道颜色
+    "thumbColor": "#0078D7",     // 滑块颜色
+    "activeThumbColor": "#005A9E" // 激活滑块颜色
+  }
+}
+```
+
+### 13. Select组件特有属性
+
+```json
+{
+  "id": "select",
+  "type": "Select",
+  "maxVisibleItems": 5,      // 最大可见项目数
+  "itemHeight": 30,          // 项目高度
+  "borderWidth": 1,          // 边框宽度
+  "borderRadius": 4,         // 边框圆角
+  "fontSize": 14,            // 字体大小
+  "data": [                  // 选项数据
+    {"text": "选项1", "value": "value1"},
+    {"text": "选项2", "value": "value2"}
+  ],
+  "style": {
+    "textColor": "#333333",              // 文本颜色
+    "selectedTextColor": "#FFFFFF",      // 选中文本颜色
+    "selectedBgColor": "#3399FF",        // 选中背景颜色
+    "disabledTextColor": "#AAAAAA",      // 禁用文本颜色
+    "hoverBgColor": "#F5F5F5"            // 悬停背景颜色
+  }
+}
+```
+
+### 14. Menu组件特有属性
+
+```json
+{
+  "id": "menu",
+  "type": "Menu",
+  "items": [                 // 菜单项数组
+    {
+      "text": "菜单项1",    // 显示文本
+      "shortcut": "Ctrl+N",  // 快捷键提示
+      "enabled": true,       // 是否启用
+      "checked": false,      // 是否选中（勾选）
+      "separator": false     // 是否为分隔线
+    },
+    {
+      "text": "分隔线",
+      "separator": true
+    }
+  ],
+  "style": {
+    "textColor": "#323232",   // 文本颜色
+    "hoverColor": "#4682B4",  // 悬停颜色
+    "disabledColor": "#969696" // 禁用颜色
+  }
+}
+```
+
+### 15. Dialog组件特有属性
+
+```json
+{
+  "id": "dialog",
+  "type": "Dialog",
+  "title": "对话框标题",     // 标题文本
+  "message": "消息内容",     // 消息内容
+  "type": "info",            // 类型：info/warning/error/question/custom
+  "modal": true,             // 是否为模态对话框
+  "buttons": [               // 按钮配置
+    {
+      "text": "确定",
+      "default": true,
+      "cancel": false
+    },
+    {
+      "text": "取消",
+      "default": false,
+      "cancel": true
+    }
+  ],
+  "style": {
+    "textColor": "#000000",          // 文本颜色
+    "buttonTextColor": "#FFFFFF"     // 按钮文本颜色
+  }
+}
+```
+
+### 16. ScrollBar组件特有属性
+
+```json
+{
+  "id": "scrollbar",
+  "type": "Scrollbar",
+  "direction": "vertical",   // 方向：vertical/horizontal
+  "thickness": 10,           // 滚动条厚度
+  "trackColor": "#F0F0F0",   // 轨道颜色
+  "thumbColor": "#B4B4B4"    // 滑块颜色
+}
+```
+
+### 17. Clock组件特有属性
+
+```json
+{
+  "id": "clock",
+  "type": "Clock",
+  "clockConfig": {
+    "radius": 100,           // 时钟半径
+    "borderWidth": 3,        // 边框宽度
+    "hourHandLength": 60,    // 时针长度
+    "minuteHandLength": 80,  // 分针长度
+    "secondHandLength": 85,  // 秒针长度
+    "handWidth": 4,          // 指针宽度
+    "centerRadius": 8,       // 中心圆半径
+    "showNumbers": true,     // 是否显示数字
+    "fontSize": 12,          // 字体大小
+    "smoothSecond": true     // 秒针是否平滑移动
+  },
+  "style": {
+    "hourHandColor": "#000000",      // 时针颜色
+    "minuteHandColor": "#000000",    // 分针颜色
+    "secondHandColor": "#FF0000",    // 秒针颜色
+    "centerColor": "#000000",        // 中心圆颜色
+    "borderColor": "#000000",        // 边框颜色
+    "backgroundColor": "#FFFFFF",    // 背景颜色
+    "numberColor": "#000000"         // 数字颜色
+  }
+}
+```
 
 ## 七、布局管理器
 

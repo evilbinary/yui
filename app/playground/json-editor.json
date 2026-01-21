@@ -1,7 +1,7 @@
 {
     "id": "jsonEditorApp",
     "type": "View",
-    "size": [1200, 800],
+    "size": [1800, 900],
     "style": {
         "bgColor": "#ffffff"
     },
@@ -125,46 +125,7 @@
                         "spacing": 0
                     },
                     "children": [
-                        {
-                            "id": "previewHeader",
-                            "type": "View",
-                            "size": [590, 40],
-                            "style": {
-                                "bgColor": "#f8f9fa",
-                                "borderRadius": [8, 8, 0, 0],
-                                "borderBottomWidth": 1,
-                                "borderBottomColor": "#e9ecef"
-                            },
-                            "layout": {
-                                "type": "horizontal",
-                                "spacing": 10,
-                                "padding": [10, 10, 10, 10],
-                                "justifyContent": "space-between"
-                            },
-                            "children": [
-                                {
-                                    "type": "Label",
-                                    "text": "预览",
-                                    "style": {
-                                        "color": "#495057",
-                                        "fontSize": 16,
-                                        "fontWeight": "bold"
-                                    }
-                                },
-                                {
-                                    "id": "refreshBtn",
-                                    "type": "Button",
-                                    "text": "刷新",
-                                    "size": [60, 25],
-                                    "style": {
-                                        "bgColor": "#6c757d",
-                                        "color": "#ffffff",
-                                        "fontSize": 12,
-                                        "borderRadius": 4
-                                    }
-                                }
-                            ]
-                        },
+                        
                         {
                             "id": "previewLabel",
                             "type": "Label",
