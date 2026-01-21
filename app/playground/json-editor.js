@@ -6,7 +6,8 @@ var editorState = {
     jsonContent: null,
     isValid: false,
     updateMode: 'full',  // 默认更新模式：incremental 或 full
-    messageHistory: []
+    messageHistory: [],
+    inspectEnabled: false  // Inspect 模式状态
 };
 
 // 初始化JSON编辑器 - onLoad 事件触发
@@ -329,5 +330,23 @@ function handleApiResponse(response, messageText, updateMode) {
         
         YUI.setText("previewLabel", errorMsg);
         YUI.log("handleApiResponse: API request failed - " + (response.error || 'Unknown error'));
+    }
+}
+
+// Toggle Inspect 模式 - inspectBtn.onClick 事件
+function toggleInspect() {
+    YUI.log("toggleInspect: Toggling inspect mode...");
+    
+    // 切换状态
+    if (editorState.inspectEnabled) {
+        YUI.inspect.disable();
+        editorState.inspectEnabled = false;
+        YUI.setText("inspectBtn", "Inspect");
+        YUI.log("toggleInspect: Inspect mode disabled");
+    } else {
+        YUI.inspect.enable();
+        editorState.inspectEnabled = true;
+        YUI.setText("inspectBtn", "Inspect ✓");
+        YUI.log("toggleInspect: Inspect mode enabled");
     }
 }

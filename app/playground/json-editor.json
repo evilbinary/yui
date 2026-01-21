@@ -84,6 +84,18 @@
                                         "fontSize": 12,
                                         "borderRadius": 4
                                     }
+                                },
+                                {
+                                    "id": "inspectBtn",
+                                    "type": "Button",
+                                    "text": "Inspect",
+                                    "size": [60, 25],
+                                    "style": {
+                                        "bgColor": "#ff9800",
+                                        "color": "#ffffff",
+                                        "fontSize": 12,
+                                        "borderRadius": 4
+                                    }
                                 }
                             ]
                         },
@@ -245,6 +257,7 @@
         "formatBtn.onClick": "@formatJson",
         "refreshBtn.onClick": "@refreshPreview",
         "sendBtn.onClick": "@sendMessage",
-        "updateModeSelect.onChange": "@onUpdateModeChange"
+        "updateModeSelect.onChange": "@onUpdateModeChange",
+        "inspectBtn.onClick": "@toggleInspect"
     }
 }
