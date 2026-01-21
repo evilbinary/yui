@@ -337,37 +337,33 @@ if ((yui_inspect_mode_enabled || layer->inspect_enabled) &&
             int padding = 10;
             int info_width = max_width + padding * 2;
             int info_height = total_height + padding * 2;
-            int info_x = layer->rect.x + 5;
-            int info_y = layer->rect.y + 5;
+            int info_x = layer->rect.x;
+            int info_y = layer->rect.y;
             
-            // 确保信息显示在屏幕内
-            if (info_x + info_width > layer->rect.x + layer->rect.w) {
-                info_x = layer->rect.x + layer->rect.w - info_width - 5;
-            }
-            if (info_y + info_height > layer->rect.y + layer->rect.h) {
-                info_y = layer->rect.y + layer->rect.h - info_height - 5;
-            }
+            // 确保信息显示在屏幕内（相对于整个窗口）
+            // 这里可以添加屏幕边界检查逻辑，如果需要的话
             
             // 绘制信息背景（半透明黑色）
             Rect info_bg = {info_x, info_y, info_width, info_height};
             Color bg_color = {0, 0, 0, 180}; // 半透明黑色
             backend_render_fill_rect(&info_bg, bg_color);
             
-            // 渲染每一行文本
+            // 渲染每一行文本（缩放80%）
+            float scale = 0.8f; // 缩放比例
             int current_y = info_y + padding;
-            Rect rect1 = {info_x + padding, current_y, w1, h1};
+            Rect rect1 = {info_x + padding, current_y, (int)(w1 * scale), (int)(h1 * scale)};
             backend_render_text_copy(tex1, NULL, &rect1);
-            current_y += h1 + line_spacing;
+            current_y += (int)(h1 * scale) + line_spacing;
             
-            Rect rect2 = {info_x + padding, current_y, w2, h2};
+            Rect rect2 = {info_x + padding, current_y, (int)(w2 * scale), (int)(h2 * scale)};
             backend_render_text_copy(tex2, NULL, &rect2);
-            current_y += h2 + line_spacing;
+            current_y += (int)(h2 * scale) + line_spacing;
             
-            Rect rect3 = {info_x + padding, current_y, w3, h3};
+            Rect rect3 = {info_x + padding, current_y, (int)(w3 * scale), (int)(h3 * scale)};
             backend_render_text_copy(tex3, NULL, &rect3);
-            current_y += h3 + line_spacing;
+            current_y += (int)(h3 * scale) + line_spacing;
             
-            Rect rect4 = {info_x + padding, current_y, w4, h4};
+            Rect rect4 = {info_x + padding, current_y, (int)(w4 * scale), (int)(h4 * scale)};
             backend_render_text_copy(tex4, NULL, &rect4);
             
             // 清理
