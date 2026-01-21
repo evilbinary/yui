@@ -277,7 +277,7 @@ if ((yui_inspect_mode_enabled || layer->inspect_enabled) &&
     (layer->inspect_show_bounds || layer->inspect_show_info || yui_inspect_show_bounds || yui_inspect_show_info)) {
     
     // 显示边界框
-    if ((yui_inspect_show_bounds || layer->inspect_show_bounds) && layer->rect.w > 0 && layer->rect.h > 0) {
+    if (yui_inspect_show_bounds && layer->inspect_show_bounds && layer->rect.w > 0 && layer->rect.h > 0) {
         // 绘制边界矩形（半透明红色）
         Color bounds_color = {255, 0, 0, 100}; // 半透明红色
         backend_render_rect(&layer->rect, bounds_color);
@@ -304,26 +304,39 @@ if ((yui_inspect_mode_enabled || layer->inspect_enabled) &&
     }
     
     // 显示详细信息
-    if ((yui_inspect_show_info || layer->inspect_show_info) && strlen(layer->id) > 0) {
-        // 准备信息文本
-        char info_text[256];
-        snprintf(info_text, sizeof(info_text), "ID: %s\nType: %s\nPos: (%d,%d)\nSize: (%d,%d)",
-                 layer->id, 
-                 layer->type >= 0 && layer->type < layer_type_size ? layer_type_name[layer->type] : "Unknown",
-                 layer->rect.x, layer->rect.y,
-                 layer->rect.w, layer->rect.h);
+    if (yui_inspect_show_info && layer->inspect_show_info && strlen(layer->id) > 0) {
+        // 准备信息文本（多行）
+        char line1[128], line2[128], line3[128], line4[128];
+        snprintf(line1, sizeof(line1), "ID: %s", layer->id);
+        snprintf(line2, sizeof(line2), "Type: %s", 
+                 layer->type >= 0 && layer->type < layer_type_size ? layer_type_name[layer->type] : "Unknown");
+        snprintf(line3, sizeof(line3), "Pos: (%d,%d)", layer->rect.x, layer->rect.y);
+        snprintf(line4, sizeof(line4), "Size: (%d,%d)", layer->rect.w, layer->rect.h);
         
-        // 渲染文本（白色）以获取实际尺寸
+        // 渲染每一行以计算总尺寸
         Color text_color = {255, 255, 255, 255};
-        Texture* text_texture = render_text(layer, info_text, text_color);
-        if (text_texture) {
-            int text_width, text_height;
-            backend_query_texture(text_texture, NULL, NULL, &text_width, &text_height);
+        Texture* tex1 = render_text(layer, line1, text_color);
+        Texture* tex2 = render_text(layer, line2, text_color);
+        Texture* tex3 = render_text(layer, line3, text_color);
+        Texture* tex4 = render_text(layer, line4, text_color);
+        
+        if (tex1 && tex2 && tex3 && tex4) {
+            int w1, h1, w2, h2, w3, h3, w4, h4;
+            backend_query_texture(tex1, NULL, NULL, &w1, &h1);
+            backend_query_texture(tex2, NULL, NULL, &w2, &h2);
+            backend_query_texture(tex3, NULL, NULL, &w3, &h3);
+            backend_query_texture(tex4, NULL, NULL, &w4, &h4);
+            
+            // 计算最大宽度和总高度
+            int max_width = w1 > w2 ? (w1 > w3 ? (w1 > w4 ? w1 : w4) : (w3 > w4 ? w3 : w4)) : (w2 > w3 ? (w2 > w4 ? w2 : w4) : (w3 > w4 ? w3 : w4));
+            int total_height = h1 + h2 + h3 + h4;
+            int line_spacing = 2; // 行间距
+            total_height += line_spacing * 3;
             
             // 添加边距
             int padding = 10;
-            int info_width = text_width + padding * 2;
-            int info_height = text_height + padding * 2;
+            int info_width = max_width + padding * 2;
+            int info_height = total_height + padding * 2;
             int info_x = layer->rect.x + 5;
             int info_y = layer->rect.y + 5;
             
@@ -340,10 +353,34 @@ if ((yui_inspect_mode_enabled || layer->inspect_enabled) &&
             Color bg_color = {0, 0, 0, 180}; // 半透明黑色
             backend_render_fill_rect(&info_bg, bg_color);
             
-            // 渲染文本（保持原始尺寸，不拉伸）
-            Rect text_rect = {info_x + padding, info_y + padding, text_width, text_height};
-            backend_render_text_copy(text_texture, NULL, &text_rect);
-            backend_render_text_destroy(text_texture);
+            // 渲染每一行文本
+            int current_y = info_y + padding;
+            Rect rect1 = {info_x + padding, current_y, w1, h1};
+            backend_render_text_copy(tex1, NULL, &rect1);
+            current_y += h1 + line_spacing;
+            
+            Rect rect2 = {info_x + padding, current_y, w2, h2};
+            backend_render_text_copy(tex2, NULL, &rect2);
+            current_y += h2 + line_spacing;
+            
+            Rect rect3 = {info_x + padding, current_y, w3, h3};
+            backend_render_text_copy(tex3, NULL, &rect3);
+            current_y += h3 + line_spacing;
+            
+            Rect rect4 = {info_x + padding, current_y, w4, h4};
+            backend_render_text_copy(tex4, NULL, &rect4);
+            
+            // 清理
+            backend_render_text_destroy(tex1);
+            backend_render_text_destroy(tex2);
+            backend_render_text_destroy(tex3);
+            backend_render_text_destroy(tex4);
+        } else {
+            // 清理已创建的纹理
+            if (tex1) backend_render_text_destroy(tex1);
+            if (tex2) backend_render_text_destroy(tex2);
+            if (tex3) backend_render_text_destroy(tex3);
+            if (tex4) backend_render_text_destroy(tex4);
         }
     }
 }
