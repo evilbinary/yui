@@ -696,6 +696,23 @@ int js_module_set_event(const char* layer_id, const char* event_name, const char
     int result = js_module_set_layer_event(layer, event_name, event_func_name, handler);
     if (result == 0) {
         printf("JS: Set event '%s' for layer '%s' -> '%s'\n", event_name, layer_id, event_func_name);
+        
+        // 构建完整事件名称（如 "toggle_bounds.onClick"）
+        char full_event_name[128];
+        char event_type_buf[128];
+        const char* event_type = event_name;
+        
+        // 如果 event_name 不是以 "on" 开头，则自动添加 "on" 前缀并首字母大写
+        if (strncmp(event_name, "on", 2) != 0) {
+            snprintf(event_type_buf, sizeof(event_type_buf), "on%c%s", 
+                     toupper(event_name[0]), event_name + 1);
+            event_type = event_type_buf;
+        }
+        
+        build_event_name(layer_id, event_type, full_event_name, sizeof(full_event_name));
+        
+        // 注册事件映射到全局事件表
+        register_js_event_mapping(full_event_name, event_func_name);
     }
 
     return result;

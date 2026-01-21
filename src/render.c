@@ -305,24 +305,6 @@ if ((yui_inspect_mode_enabled || layer->inspect_enabled) &&
     
     // 显示详细信息
     if ((yui_inspect_show_info || layer->inspect_show_info) && strlen(layer->id) > 0) {
-        // 绘制信息背景（半透明黑色）
-        int info_width = 200;
-        int info_height = 60;
-        int info_x = layer->rect.x + 5;
-        int info_y = layer->rect.y + 5;
-        
-        // 确保信息显示在屏幕内
-        if (info_x + info_width > layer->rect.x + layer->rect.w) {
-            info_x = layer->rect.x + layer->rect.w - info_width - 5;
-        }
-        if (info_y + info_height > layer->rect.y + layer->rect.h) {
-            info_y = layer->rect.y + layer->rect.h - info_height - 5;
-        }
-        
-        Rect info_bg = {info_x, info_y, info_width, info_height};
-        Color bg_color = {0, 0, 0, 180}; // 半透明黑色
-        backend_render_fill_rect(&info_bg, bg_color);
-        
         // 准备信息文本
         char info_text[256];
         snprintf(info_text, sizeof(info_text), "ID: %s\nType: %s\nPos: (%d,%d)\nSize: (%d,%d)",
@@ -331,11 +313,35 @@ if ((yui_inspect_mode_enabled || layer->inspect_enabled) &&
                  layer->rect.x, layer->rect.y,
                  layer->rect.w, layer->rect.h);
         
-        // 渲染文本（白色）
+        // 渲染文本（白色）以获取实际尺寸
         Color text_color = {255, 255, 255, 255};
         Texture* text_texture = render_text(layer, info_text, text_color);
         if (text_texture) {
-            Rect text_rect = {info_x + 5, info_y + 5, info_width - 10, info_height - 10};
+            int text_width, text_height;
+            backend_query_texture(text_texture, NULL, NULL, &text_width, &text_height);
+            
+            // 添加边距
+            int padding = 10;
+            int info_width = text_width + padding * 2;
+            int info_height = text_height + padding * 2;
+            int info_x = layer->rect.x + 5;
+            int info_y = layer->rect.y + 5;
+            
+            // 确保信息显示在屏幕内
+            if (info_x + info_width > layer->rect.x + layer->rect.w) {
+                info_x = layer->rect.x + layer->rect.w - info_width - 5;
+            }
+            if (info_y + info_height > layer->rect.y + layer->rect.h) {
+                info_y = layer->rect.y + layer->rect.h - info_height - 5;
+            }
+            
+            // 绘制信息背景（半透明黑色）
+            Rect info_bg = {info_x, info_y, info_width, info_height};
+            Color bg_color = {0, 0, 0, 180}; // 半透明黑色
+            backend_render_fill_rect(&info_bg, bg_color);
+            
+            // 渲染文本（保持原始尺寸，不拉伸）
+            Rect text_rect = {info_x + padding, info_y + padding, text_width, text_height};
             backend_render_text_copy(text_texture, NULL, &text_rect);
             backend_render_text_destroy(text_texture);
         }
