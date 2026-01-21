@@ -2,8 +2,8 @@
 
 // 切换全局 inspect 模式的标志
 var inspectEnabled = false;
-var showBounds = false;
-var showInfo = false;
+var showBounds = true;  // 与 C 代码默认一致
+var showInfo = true;    // 与 C 代码默认一致
 
 // 为按钮绑定事件
 function bindEvents() {
