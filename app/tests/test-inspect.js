@@ -2,6 +2,8 @@
 
 // 切换全局 inspect 模式的标志
 var inspectEnabled = false;
+var showBounds = false;
+var showInfo = false;
 
 // 为按钮绑定事件
 function bindEvents() {
@@ -56,16 +58,16 @@ function toggleInspect() {
 
 // 切换边界显示
 function toggleBounds() {
-    var current = YUI.inspect.setShowBounds ? true : false; // 这里应该获取当前状态
-    YUI.inspect.setShowBounds(!current);
-    YUI.log('边界显示: ' + (!current ? '开启' : '关闭'));
+    showBounds = !showBounds;
+    YUI.inspect.setShowBounds(showBounds);
+    YUI.log('边界显示: ' + (showBounds ? '开启' : '关闭'));
 }
 
 // 切换信息显示
 function toggleInfo() {
-    var current = YUI.inspect.setShowInfo ? true : false; // 这里应该获取当前状态
-    YUI.inspect.setShowInfo(!current);
-    YUI.log('信息显示: ' + (!current ? '开启' : '关闭'));
+    showInfo = !showInfo;
+    YUI.inspect.setShowInfo(showInfo);
+    YUI.log('信息显示: ' + (showInfo ? '开启' : '关闭'));
 }
 
 // 初始化
