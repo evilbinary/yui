@@ -565,26 +565,26 @@ void tab_component_render(Layer* layer) {
   // 渲染活动tab的内容
   if (component->active_tab >= 0 && component->active_tab < component->tab_count) {
     Layer* active_content = component->tabs[component->active_tab].content_layer;
-    printf("DEBUG: Active tab=%d, content_layer=%p\n", component->active_tab, active_content);
+    // printf("DEBUG: Active tab=%d, content_layer=%p\n", component->active_tab, active_content);
     
     if (active_content) {
-      printf("DEBUG: Rendering content for tab %d, layer %s rect: x=%d, y=%d, w=%d, h=%d\n", 
-             component->active_tab, active_content->id, active_content->rect.x, active_content->rect.y, 
-             active_content->rect.w, active_content->rect.h);
-      printf("DEBUG: Content layer has %d children\n", active_content->child_count);
-      printf("DEBUG: Content layer visible=%d\n", active_content->visible);
+      // printf("DEBUG: Rendering content for tab %d, layer %s rect: x=%d, y=%d, w=%d, h=%d\n", 
+      //        component->active_tab, active_content->id, active_content->rect.x, active_content->rect.y, 
+      //        active_content->rect.w, active_content->rect.h);
+      // printf("DEBUG: Content layer has %d children\n", active_content->child_count);
+      // printf("DEBUG: Content layer visible=%d\n", active_content->visible);
       
       // 打印子元素信息
-      for (int i = 0; i < active_content->child_count; i++) {
-        Layer* child = active_content->children[i];
-        if (child) {
-          printf("DEBUG: Child %d: %s, type=%d, rect: x=%d, y=%d, w=%d, h=%d, visible=%d\n", 
-                 i, child->id, child->type, child->rect.x, child->rect.y, child->rect.w, child->rect.h, child->visible);
-          if (child->type == LABEL && child->text) {
-            printf("DEBUG: Child %d text: %s\n", i, child->text);
-          }
-        }
-      }
+      // for (int i = 0; i < active_content->child_count; i++) {
+      //   Layer* child = active_content->children[i];
+      //   if (child) {
+      //     printf("DEBUG: Child %d: %s, type=%d, rect: x=%d, y=%d, w=%d, h=%d, visible=%d\n", 
+      //            i, child->id, child->type, child->rect.x, child->rect.y, child->rect.w, child->rect.h, child->visible);
+      //     if (child->type == LABEL && child->text) {
+      //       printf("DEBUG: Child %d text: %s\n", i, child->text);
+      //     }
+      //   }
+      // }
       
       // 设置内容区域的裁剪
       Rect prev_clip;
@@ -596,8 +596,8 @@ void tab_component_render(Layer* layer) {
         layer->rect.w, 
         layer->rect.h - component->tab_height
       };
-      printf("DEBUG: Content clip rect: x=%d, y=%d, w=%d, h=%d\n", 
-             content_clip.x, content_clip.y, content_clip.w, content_clip.h);
+      // printf("DEBUG: Content clip rect: x=%d, y=%d, w=%d, h=%d\n", 
+      //        content_clip.x, content_clip.y, content_clip.w, content_clip.h);
       backend_render_set_clip_rect(&content_clip);
       
       // 保存内容层原始位置
@@ -610,25 +610,25 @@ void tab_component_render(Layer* layer) {
       active_content->rect.w = layer->rect.w;
       active_content->rect.h = layer->rect.h - component->tab_height;
       
-      printf("DEBUG: After position adjustment - content rect: x=%d, y=%d, w=%d, h=%d\n", 
-             active_content->rect.x, active_content->rect.y, active_content->rect.w, active_content->rect.h);
+      // printf("DEBUG: After position adjustment - content rect: x=%d, y=%d, w=%d, h=%d\n", 
+      //        active_content->rect.x, active_content->rect.y, active_content->rect.w, active_content->rect.h);
       
       // 确保内容层及其子元素都可见
       active_content->visible = VISIBLE;
       for (int i = 0; i < active_content->child_count; i++) {
         if (active_content->children[i]) {
           active_content->children[i]->visible = VISIBLE;
-          printf("DEBUG: Setting child %d visible to VISIBLE\n", i);
+          //printf("DEBUG: Setting child %d visible to VISIBLE\n", i);
         }
       }
       
       // 手动触发布局计算
-      printf("DEBUG: Checking layout manager: %p\n", (void*)active_content->layout_manager);
+      //printf("DEBUG: Checking layout manager: %p\n", (void*)active_content->layout_manager);
       if (active_content->layout_manager) {
-        printf("DEBUG: Triggering layout calculation for content layer\n");
+        //printf("DEBUG: Triggering layout calculation for content layer\n");
         layout_layer(active_content);
       } else {
-        printf("DEBUG: No layout manager found for content layer\n");
+        // printf("DEBUG: No layout manager found for content layer\n");
         // 手动设置子元素位置作为备选方案
         for (int i = 0; i < active_content->child_count; i++) {
           Layer* child = active_content->children[i];
@@ -638,8 +638,8 @@ void tab_component_render(Layer* layer) {
             child->rect.y = active_content->rect.y + 20 + i * 30;
             child->rect.w = active_content->rect.w - 40;
             child->rect.h = 25;
-            printf("DEBUG: Manually positioned child %d: x=%d, y=%d, w=%d, h=%d\n", 
-                   i, child->rect.x, child->rect.y, child->rect.w, child->rect.h);
+            // printf("DEBUG: Manually positioned child %d: x=%d, y=%d, w=%d, h=%d\n", 
+            //        i, child->rect.x, child->rect.y, child->rect.w, child->rect.h);
           }
         }
       }

@@ -1289,7 +1289,7 @@ void cleanup_blur_cache() {
 
 // 查找匹配的缓存条目
 int find_matching_cache_entry(Rect* rect, int blur_radius, float saturation, float brightness) {
-    printf("Searching for matching cache entry...\n");
+    //printf("Searching for matching cache entry...\n");
     for (int i = 0; i < MAX_BLUR_CACHE_ENTRIES; i++) {
         if (blur_cache[i].in_use &&
             blur_cache[i].x == rect->x &&
@@ -1299,7 +1299,7 @@ int find_matching_cache_entry(Rect* rect, int blur_radius, float saturation, flo
             blur_cache[i].blur_radius == blur_radius &&
             blur_cache[i].saturation == saturation &&
             blur_cache[i].brightness == brightness) {
-            printf("Found matching cache entry at index %d\n", i);
+            //printf("Found matching cache entry at index %d\n", i);
             return i;
         }
     }
