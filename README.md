@@ -1,49 +1,171 @@
-# YUI
-YUI is a GUI for AI
+# YUI - Yet another User Interface
 
-https://github.com/evilbinary/YUI
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Language](https://img.shields.io/badge/language-C-blue.svg)](https://en.wikipedia.org/wiki/C_(programming_language))
+[![Platform](https://img.shields.io/badge/platform-cross--platform-brightgreen.svg)](#)
 
-## 使用
+YUI is a lightweight GUI framework designed for AI applications, built with C language and configured via JSON. It features high performance, easy extensibility, and cross-platform support.
 
+## 🌟 Key Features
 
-```json
-{
+- **Lightweight & High Performance**: Optimized rendering pipeline with dirty rectangle rendering
+- **Declarative UI**: Describe interfaces using intuitive JSON configuration
+- **Cross Platform**: Supports Windows, macOS, and Linux
+- **Rich Components**: Built-in support for buttons, inputs, lists, grids, dialogs, and more
+- **Animation System**: Smooth animations with various easing functions
+- **Theme System**: Dynamic theme switching with JSON-based styling
+- **Multiple JS Engines**: Support for QuickJS, mquickjs, and Mario JavaScript engines
+- **Network Support**: Built-in socket and HTTP client capabilities
 
-    "type":"main",
-    "assets":"app/assets",
-    "font":"Roboto-Regular.ttf",
-    "fontSize":"16",
-    "source":"app/test.json"
-}
+## 🚀 Quick Start
 
-```
+### Installation
 
-## 运行
+Clone the repository:
 
 ```bash
-ya -r yui
+git clone https://github.com/evilbinary/YUI.git
+cd YUI
 ```
 
-## window
+### Dependencies
 
-```sh
+Install required libraries:
+
+**Windows (MSYS2)**:
+```bash
 pacman -S mingw-w64-x86_64-SDL2
 pacman -S mingw-w64-x86_64-SDL2_ttf
 pacman -S mingw-w64-x86_64-SDL2_image
 pacman -S mingw-w64-x86_64-cjson
 pacman -S mingw-w64-x86_64-dlfcn
-
-
-$env:Path = "D:\app\msys2\mingw64\bin;D:\app\msys2\msys64\usr\bin;" + $env:Path
 ```
 
+**macOS**:
+```bash
+brew install sdl2 sdl2_ttf sdl2_image cjson
+```
 
-## 截图
+**Linux (Ubuntu/Debian)**:
+```bash
+sudo apt-get install libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev libcjson-dev
+```
 
-<img src="https://github.com/evilbinary/yui/blob/main/docs/inspect-demo.png?raw=true" width="800px" />
+### Build & Run
 
+```bash
+# Build the project
+python ya.py -b yui
 
-<img src="https://github.com/evilbinary/yui/blob/main/docs/scroll.png?raw=true" width="800px" />
+# Run the application
+python ya.py -r yui
+```
 
-<img src="https://github.com/evilbinary/yui/blob/main/docs/login.png?raw=true" width="800px" />
+### Basic Configuration
+
+Create a main configuration file (`app.json`):
+
+```json
+{
+    "type": "main",
+    "assets": "app/assets",
+    "font": "Roboto-Regular.ttf",
+    "fontSize": "16",
+    "source": "app/ui/main.json"
+}
+```
+
+Create your UI definition (`app/ui/main.json`):
+
+```json
+{
+    "id": "main_window",
+    "type": "View",
+    "position": [0, 0],
+    "size": [800, 600],
+    "style": {
+        "bgColor": "#2C3E50"
+    },
+    "children": [
+        {
+            "id": "hello_label",
+            "type": "Label",
+            "position": [300, 250],
+            "size": [200, 50],
+            "text": "Hello, YUI!",
+            "style": {
+                "color": "#ECF0F1",
+                "fontSize": 24
+            }
+        }
+    ]
+}
+```
+
+## 📚 Documentation
+
+### Core Documentation
+
+- [Framework Features](docs/feature.md) - Detailed feature documentation
+- [JSON Format Specification](docs/json-format-spec.md) - Complete JSON configuration guide
+- [JavaScript API Reference](docs/yui-js-api.md) - Full JS API documentation
+- [Theme System Guide](docs/theme.md) - Theme management and customization
+
+### Component Guides
+
+- [Dialog Component](docs/dialog-component.md) - Modal and non-modal dialogs
+- [Select Component](docs/select-component.md) - Dropdown selection controls
+- [Layout System](docs/layout.md) - Flexible layout management
+
+### Advanced Topics
+
+- [Performance Optimization](docs/blur-performance-optimization.md) - Rendering performance tips
+- [Glass Effect Guide](docs/glass-effect-guide.md) - Visual effects implementation
+- [Transparent Support](docs/transparent-support-guide.md) - Transparency handling
+
+## 🖼️ Screenshots
+
+<div style="display: flex; gap: 20px; flex-wrap: wrap;">
+  <img src="docs/inspect-demo.png" alt="Inspector Demo" width="260" />
+  <img src="docs/scroll.png" alt="Scroll Demo" width="260" />
+  <img src="docs/login.png" alt="Login Demo" width="260" />
+</div>
+
+## 🏗️ Architecture Overview
+
+YUI follows a layered architecture design:
+
+```
+┌─────────────────────────────────────┐
+│           Application Layer         │  ← Your App Logic
+├─────────────────────────────────────┤
+│           JavaScript Engine         │  ← QuickJS/mquickjs/Mario
+├─────────────────────────────────────┤
+│            Event System             │  ← Input Handling
+├─────────────────────────────────────┤
+│           Layout Manager            │  ← UI Layout Calculation
+├─────────────────────────────────────┤
+│          Render Pipeline            │  ← Graphics Rendering
+├─────────────────────────────────────┤
+│           Backend Layer             │  ← SDL2/Graphics API
+└─────────────────────────────────────┘
+```
+
+## 🤝 Contributing
+
+Contributions are welcome! Please read our [Contribution Guidelines](CONTRIBUTING.md) before submitting pull requests.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- [SDL2](https://www.libsdl.org/) - Cross-platform development library
+- [cJSON](https://github.com/DaveGamble/cJSON) - Ultralightweight JSON parser
+- [QuickJS](https://bellard.org/quickjs/) - Small and embeddable JavaScript engine
+
+---
+
+<p align="center">Made with ❤️ for the open-source community</p>
 
