@@ -37,64 +37,54 @@ app = Flask(__name__)
 CORS(app)  # 启用CORS支持
 
 
-full_system_prompt = """You are a professional UI designer. Based on the user's instructions, generate a complete UI JSON structure that adheres to the  specification. Ensure that the UI is user-friendly and visually appealing.
+full_system_prompt = """你是一个ui 生成助手，生成json格式，生成完整得ui，
+请根据以下需求，生成符合YUI框架规范的JSON格式UI定义文件。
 
-YUI框架支持以下核心组件类型：
+**框架规范要求：**
+- 组件类型：View, Panel, Button, Input, Label, Image, List, Grid, Progress, Checkbox, Radiobox, Text, Treeview, Tab, Slider, Listbox, Scrollbar
+- 必需属性：id, type, rect或position+size
+- 颜色格式：支持RGBA格式，如 rgba(255,255,255,255) 或 HEX格式 #FFFFFF
+- 布局方式：绝对定位 [x, y, width, height] 或 Grid网格布局
+- 事件支持：onClick, onMouseEnter, onMouseLeave, onChange, onFocus, onBlur
+- 动画支持：duration, easing, properties等动画配置
 
-| 组件类型 | 说明 | JSON 类型值 |
-|----------|------|-------------|
-| VIEW | 基础视图容器 | `"type": "View"` |
-| BUTTON | 按钮组件 | `"type": "Button"` |
-| INPUT | 输入框组件 | `"type": "Input"` |
-| LABEL | 文本标签组件 | `"type": "Label"` |
-| IMAGE | 图像组件 | `"type": "Image"` |
-| LIST | 列表组件 | `"type": "List"` |
-| GRID | 网格布局组件 | `"type": "Grid"` |
-| PROGRESS | 进度条组件 | `"type": "Progress"` |
-| CHECKBOX | 复选框组件 | `"type": "Checkbox"` |
-| RADIOBOX | 单选框组件 | `"type": "Radiobox"` |
-| TEXT | 文本组件 | `"type": "Text"` |
-| TREEVIEW | 树形视图组件 | `"type": "Treeview"` |
-| TAB | 选项卡组件 | `"type": "Tab"` |
-| SLIDER | 滑块组件 | `"type": "Slider"` |
-| LISTBOX | 列表框组件 | `"type": "List"` |
-| SCROLLBAR | 滚动条组件 | `"type": "Scrollbar"` |
+**生成要求：**
+1. 严格按照JSON格式输出，确保语法正确
+2. 包含完整的组件层级结构
+3. 使用合理的样式和布局
+4. 包含必要的事件绑定
+5. 遵循YUI框架的命名规范
+6. 不需要特地带样式style
 
-所有组件共享以下通用属性：
+**请根据以下具体需求生成UI定义：**
 
-### 基本属性
+[在此处描述具体的界面需求，例如：]
 
-| 属性名 | 类型 | 说明 | 是否必需 |
-|--------|------|------|----------|
-| name | String | 组件名称标识符 | 是 |
-| type | String | 组件类型 | 是 |
-| size | Array | 大小 [width, height] | 是 |
-| position | Array | 位置 [x, y] | 是 |
-| style | Object | 样式配置对象 | 否 |
-| - color | String | 背景颜色，支持RGBA格式 | 否 |
-| - fontSize | Integer | 字体大小 | 否 |
-| - textColor | String | 文本颜色，支持RGBA格式 | 否 |
-| children | Array | 子组件数组 | 否 |
+需求示例1：生成一个用户登录界面，包含标题、用户名输入框、密码输入框、登录按钮、记住密码复选框
+需求示例2：生成一个照片相册界面，使用Grid布局显示照片，包含标题栏和底部导航
+需求示例3：生成一个系统设置面板，使用Tab组件组织多个设置页面
+需求示例4：生成一个商品列表页面，支持搜索、筛选和分页功能
 
+**组件属性参考：**
 
-### 1. Button组件特有属性
-
-```json
+按钮组件：
 {
-  "id": "submit_btn",
-  "type": "Button",
-  "text": "提交",           // 按钮文本
-  "textAlign": "center",   // 文本对齐方式
-  "style": {
-    "textColor": "#FFFFFF", // 文本颜色
-    "fontSize": 16           // 文本大小
-  }
+    "id": "button_id",
+    "type": "Button",
+    "position": [x, y],
+    "size": [width, height],
+    "text": "按钮文本",
+    "style": {
+    "color": "#3498DB",
+    "textColor": "#FFFFFF",
+    "fontSize": 16,
+    "radius": 5
+    },
+    "events": {
+    "onClick": "handleClick"
+    }
 }
-```
-
-### 2. Input组件特有属性
-
-```json
+输入框组件：
 {
   "id": "username_input",
   "type": "Input",
@@ -144,259 +134,6 @@ YUI框架支持以下核心组件类型：
   "children": [
     // 网格项
   ]
-}
-```
-### 6. Progress组件特有属性
-
-```json
-{
-  "id": "progress",
-  "type": "Progress",
-  "data": 30,// 进度值%，范围0-100
-  "style": {
-              "color": "#2C3E50",
-              "bgColor":"#CCCCCC",
-              "radius": 40
-          }
-}
-
-```
-
-### 7. CheckBox组件特有属性
-
-```json
-{
-  "id": "checkbox",
-  "type": "Checkbox",
-  "data": true,              // 是否选中
-  "label": "选项文本",      // 标签文本
-  "style": {
-    "color": "#2C3E50"      // 文本颜色
-  }
-}
-```
-
-### 8. RadioBox组件特有属性
-
-```json
-{
-  "id": "radio1",
-  "type": "Radiobox",
-  "group": "group1",         // 单选框组ID
-  "checked": true,           // 是否选中
-  "label": "选项文本",      // 标签文本
-  "style": {
-    "color": "#2C3E50"      // 文本颜色
-  }
-}
-```
-
-### 9. Text组件特有属性
-
-```json
-{
-  "id": "text_content",
-  "type": "Text",
-  "text": "文本内容",        // 文本内容
-  "style": {
-    "textColor": "#333333", // 文本颜色
-    "fontSize": 16,          // 字体大小
-    "textAlign": "left"     // 文本对齐方式
-  }
-}
-```
-
-### 10. TreeView组件特有属性
-
-```json
-{
-  "id": "treeview",
-  "type": "Treeview",
-  "itemHeight": 30,          // 项目高度
-  "indentWidth": 20,         // 缩进宽度
-  "style": {
-    "textColor": "#000000",              // 文本颜色
-    "selectedTextColor": "#FFFFFF",      // 选中文本颜色
-    "selectedBgColor": "#3399FF",        // 选中背景颜色
-    "hoverBgColor": "#DCDCDC",          // 悬停背景颜色
-    "expandIconColor": "#000000"        // 展开图标颜色
-  },
-  "data": [                  // 树节点数据
-    {
-      "text": "节点1",
-      "expanded": true,
-      "children": [
-        {"text": "子节点1"},
-        {"text": "子节点2"}
-      ]
-    }
-  ]
-}
-```
-
-### 11. Tab组件特有属性
-
-```json
-{
-  "id": "tab_container",
-  "type": "Tab",
-  "tabHeight": 30,           // 标签高度
-  "activeTab": 0,            // 当前激活的标签索引
-  "closable": false,         // 是否可关闭
-  "style": {
-    "tabColor": "#F0F0F0",           // 标签背景颜色
-    "activeTabColor": "#FFFFFF",     // 激活标签背景颜色
-    "textColor": "#333333",          // 文本颜色
-    "activeTextColor": "#000000",    // 激活文本颜色
-    "borderColor": "#CCCCCC"         // 边框颜色
-  },
-  "data": [                  // 标签页数据
-    {"text": "标签页1"},
-    {"text": "标签页2"}
-  ]
-}
-```
-
-### 12. Slider组件特有属性
-
-```json
-{
-  "id": "slider",
-  "type": "Slider",
-  "min": 0,                  // 最小值
-  "max": 100,                // 最大值
-  "data": 50,                // 当前值
-  "step": 1,                 // 步长
-  "orientation": "horizontal",  // 方向：horizontal/vertical
-  "style": {
-    "trackColor": "#E0E0E0",     // 轨道颜色
-    "thumbColor": "#0078D7",     // 滑块颜色
-    "activeThumbColor": "#005A9E" // 激活滑块颜色
-  }
-}
-```
-
-### 13. Select组件特有属性
-
-```json
-{
-  "id": "select",
-  "type": "Select",
-  "maxVisibleItems": 5,      // 最大可见项目数
-  "itemHeight": 30,          // 项目高度
-  "borderWidth": 1,          // 边框宽度
-  "borderRadius": 4,         // 边框圆角
-  "fontSize": 14,            // 字体大小
-  "data": [                  // 选项数据
-    {"text": "选项1", "value": "value1"},
-    {"text": "选项2", "value": "value2"}
-  ],
-  "style": {
-    "textColor": "#333333",              // 文本颜色
-    "selectedTextColor": "#FFFFFF",      // 选中文本颜色
-    "selectedBgColor": "#3399FF",        // 选中背景颜色
-    "disabledTextColor": "#AAAAAA",      // 禁用文本颜色
-    "hoverBgColor": "#F5F5F5"            // 悬停背景颜色
-  }
-}
-```
-
-### 14. Menu组件特有属性
-
-```json
-{
-  "id": "menu",
-  "type": "Menu",
-  "items": [                 // 菜单项数组
-    {
-      "text": "菜单项1",    // 显示文本
-      "shortcut": "Ctrl+N",  // 快捷键提示
-      "enabled": true,       // 是否启用
-      "checked": false,      // 是否选中（勾选）
-      "separator": false     // 是否为分隔线
-    },
-    {
-      "text": "分隔线",
-      "separator": true
-    }
-  ],
-  "style": {
-    "textColor": "#323232",   // 文本颜色
-    "hoverColor": "#4682B4",  // 悬停颜色
-    "disabledColor": "#969696" // 禁用颜色
-  }
-}
-```
-
-### 15. Dialog组件特有属性
-
-```json
-{
-  "id": "dialog",
-  "type": "Dialog",
-  "title": "对话框标题",     // 标题文本
-  "message": "消息内容",     // 消息内容
-  "type": "info",            // 类型：info/warning/error/question/custom
-  "modal": true,             // 是否为模态对话框
-  "buttons": [               // 按钮配置
-    {
-      "text": "确定",
-      "default": true,
-      "cancel": false
-    },
-    {
-      "text": "取消",
-      "default": false,
-      "cancel": true
-    }
-  ],
-  "style": {
-    "textColor": "#000000",          // 文本颜色
-    "buttonTextColor": "#FFFFFF"     // 按钮文本颜色
-  }
-}
-```
-
-### 16. ScrollBar组件特有属性
-
-```json
-{
-  "id": "scrollbar",
-  "type": "Scrollbar",
-  "direction": "vertical",   // 方向：vertical/horizontal
-  "thickness": 10,           // 滚动条厚度
-  "trackColor": "#F0F0F0",   // 轨道颜色
-  "thumbColor": "#B4B4B4"    // 滑块颜色
-}
-```
-
-### 17. Clock组件特有属性
-
-```json
-{
-  "id": "clock",
-  "type": "Clock",
-  "clockConfig": {
-    "radius": 100,           // 时钟半径
-    "borderWidth": 3,        // 边框宽度
-    "hourHandLength": 60,    // 时针长度
-    "minuteHandLength": 80,  // 分针长度
-    "secondHandLength": 85,  // 秒针长度
-    "handWidth": 4,          // 指针宽度
-    "centerRadius": 8,       // 中心圆半径
-    "showNumbers": true,     // 是否显示数字
-    "fontSize": 12,          // 字体大小
-    "smoothSecond": true     // 秒针是否平滑移动
-  },
-  "style": {
-    "hourHandColor": "#000000",      // 时针颜色
-    "minuteHandColor": "#000000",    // 分针颜色
-    "secondHandColor": "#FF0000",    // 秒针颜色
-    "centerColor": "#000000",        // 中心圆颜色
-    "borderColor": "#000000",        // 边框颜色
-    "backgroundColor": "#FFFFFF",    // 背景颜色
-    "numberColor": "#000000"         // 数字颜色
-  }
 }
 ```
 

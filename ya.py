@@ -66,30 +66,80 @@ def add_flags():
             '-framework SDL2_image ',
             '-F../libs/'
             )
-    else:
-        tool=get_toolchain_node()
-        tool['cc']='D:\\app\\msys2\\mingw64\\bin\\gcc.exe'
-        tool['cxx']='D:\\app\\msys2\\mingw64\\bin\\g++.exe'
-        tool['ld']='D:\\app\\msys2\\mingw64\\bin\\gcc.exe'
-        tool['ar']='D:\\app\\msys2\\mingw64\\bin\\ar.exe'
-
-        add_cflags(
+    elif platform.system()=='Windows':
+        mingw64='E:\\soft\\msys2\\mingw64'
+        if get_plat() in['emscripten','em']:
+            tool=get_toolchain_node()
+            tool['cc']='emcc'
+            tool['cxx']='emcc'
+            tool['ld']='emcc'
+            tool['ar']='emar'
+            add_cflags(
+            # '--use-port=sdl2 ',
             '-g',
+            '-Wno-incompatible-pointer-types -Wno-implicit-function-declaration',
             '-F../libs/',
-            '-ID:\\app\\msys2\\mingw64\\include\\SDL2',
+            '-I'+mingw64+'\\include\\SDL2',
             '-I.',
             '-I./src/components',
             '-I./src/'
             )
-        add_ldflags(
-            '-LD:/app/msys2/mingw64/lib',
-            '-lSDL2main',
-            '-lSDL2',
-            '-lSDL2_ttf',
-            '-lSDL2_image',
-            '-lm',
-            '-lws2_32'
-            )
+            add_ldflags(
+                
+                '-s USE_SDL=2',
+                '-s USE_SDL_IMAGE=2',
+                '-s USE_SDL_TTF=2',
+                '-s ALLOW_MEMORY_GROWTH=1',
+                '-s ASSERTIONS=1',
+                #'-s EXPORTED_FUNCTIONS=["_main"]',
+                #'-s EXPORTED_RUNTIME_METHODS=["ccall","cwrap","FS","stringToUTF8","UTF8ToString"]',
+                '-s EXPORT_ALL=1 ',
+                '-s ASSERTIONS=2 ',
+                '-s STACK_OVERFLOW_CHECK=2',
+                '-g4',
+                '-O0',
+                '-Wbad-function-cast ',
+                '-Wcast-function-type',
+                '--source-map-base http://localhost:6931/',
+
+                '-s ERROR_ON_UNDEFINED_SYMBOLS=0',
+                '-s AGGRESSIVE_VARIABLE_ELIMINATION=1',
+                '--preload-file app/playground/',
+                '--preload-file app/assets/',
+                '--preload-file app/lib/',
+                '--preload-file app',
+                '-L'+mingw64+'\\lib',
+                '-lSDL2main',
+                '-lSDL2',
+                '-lSDL2_ttf',
+                '-lSDL2_image',
+                '-lm'
+                )
+        else:
+            tool=get_toolchain_node()
+            tool['cc']=mingw64+'\\bin\\gcc.exe'
+            tool['cxx']=mingw64+'\\bin\\g++.exe'
+            tool['ld']=mingw64+'\\bin\\gcc.exe'
+            tool['ar']=mingw64+'\\bin\\ar.exe'
+
+            add_cflags(
+                '-g',
+                '-Wno-incompatible-pointer-types -Wno-implicit-function-declaration',
+                '-F../libs/',
+                '-I'+mingw64+'\\include\\SDL2',
+                '-I.',
+                '-I./src/components',
+                '-I./src/'
+                )
+            add_ldflags(
+                '-L'+mingw64+'\\lib',
+                '-lSDL2main',
+                '-lSDL2',
+                '-lSDL2_ttf',
+                '-lSDL2_image',
+                '-lm',
+                '-lws2_32'
+                )
 
 def run(target):
     targetfile = target.targetfile()

@@ -16,6 +16,18 @@ target("main")
 )
 
 
+target("main.html") 
+(
+    add_deps("yui","cjson"),
+    add_rules("mode.debug", "mode.release"),
+    set_kind("binary"),
+    add_flags(),
+    add_files("main.c"),
+    add_run()
+)
+
+
+
 target("playground") 
 (
     add_deps("socket","yui","quickjs","jsmodule-quickjs"),
@@ -25,6 +37,17 @@ target("playground")
     add_files("playground/main.c"),
     add_run()
 )
+
+target("playground.html") 
+(
+    add_deps("socket","yui","quickjs","jsmodule-quickjs"),
+    add_rules("mode.debug", "mode.release"),
+    set_kind("binary"),
+    add_flags(),
+    add_files("playground/main.c"),
+    add_run()
+)
+
 
 
 target("playground-mario") 

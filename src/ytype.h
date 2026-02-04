@@ -305,6 +305,8 @@ typedef enum {
 #define CLEAR_STATE(layer, st) (layer->state &= ~(st))
 #define CLEAR_ALL_STATES(layer) (layer->state = LAYER_STATE_NORMAL)
 
+typedef  int (*register_event_fun_t)(Layer* layer, const char* event_name, const char* event_func_name, EventHandler event_handler);
+
 typedef struct Layer {
     char id[50];
     int index;
@@ -385,7 +387,7 @@ typedef struct Layer {
     void (*handle_touch_event)(Layer* layer, TouchEvent* event);
 
     //事件注册
-    int (*register_event)(Layer* layer, const char* event_name, const char* event_func_name, EventHandler event_handler);
+    register_event_fun_t register_event;
     int (*unregister_event)(Layer* layer, const char* event_name);
 
     // 毛玻璃效果相关属性
