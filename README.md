@@ -1,4 +1,4 @@
-# YUI - Yet another User Interface
+# YUI - Ya Ya User Interface
 
 [![License](https://img.shields.io/badge/license-LGPL--2.1-blue.svg)](LICENSE)
 [![Language](https://img.shields.io/badge/language-C-blue.svg)](https://en.wikipedia.org/wiki/C_(programming_language))
