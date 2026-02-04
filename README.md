@@ -1,6 +1,6 @@
 # YUI - Yet another User Interface
 
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-LGPL--2.1-blue.svg)](LICENSE)
 [![Language](https://img.shields.io/badge/language-C-blue.svg)](https://en.wikipedia.org/wiki/C_(programming_language))
 [![Platform](https://img.shields.io/badge/platform-cross--platform-brightgreen.svg)](#)
 
@@ -157,7 +157,15 @@ Contributions are welcome! Please read our [Contribution Guidelines](CONTRIBUTIN
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the GNU Lesser General Public License v2.1 (LGPL-2.1) - see the [LICENSE](LICENSE) file for details.
+
+**Key Points of LGPL-2.1:**
+- You can freely use, modify, and distribute this library
+- If you modify the library itself, you must release your changes under LGPL-2.1
+- You can link this library with proprietary software
+- When distributing binaries, you must provide access to the library's source code
+
+For commercial use inquiries, please contact the maintainers.
 
 ## 🙏 Acknowledgments
 
