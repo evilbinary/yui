@@ -24,8 +24,8 @@
 
     // "source":"app/calc.json",
 
-    "source":"app/os-desktop.json",
-    // "source":"app/clock-simple.json",
+    // "source":"app/os-desktop.json",
+    "source":"app/clock-simple.json",
     // "source":"app/clock-new.json",
     // "source":"app/clock.json",
     // "source":"app/watch-desktop.json",

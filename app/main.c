@@ -21,6 +21,10 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 }
 #endif
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+
 void hello_world(Layer* layer) {
     printf("你好，世界！ %s\n",layer->text);
 }
