@@ -74,6 +74,33 @@ static var_t* mario_get_text(vm_t* vm, var_t* env, void* data)
     return var_new_null(vm);
 }
 
+// 获取图层的属性值（通用）
+static var_t* mario_get_property(vm_t* vm, var_t* env, void* data)
+{
+    var_t* args = get_func_args(env);
+    uint32_t argc = get_func_args_num(env);
+
+    if (argc < 2) return var_new_null(vm);
+
+    const char* layer_id = get_func_arg_str(env, 0);
+    const char* property_name = get_func_arg_str(env, 1);
+
+    if (layer_id && property_name && g_layer_root) {
+        // 调用 js_common.c 中的函数
+        extern const char* js_module_get_property_value(const char* layer_id, const char* property_name);
+        const char* value = js_module_get_property_value(layer_id, property_name);
+        
+        if (value) {
+            var_t* result = var_new_str(vm, value);
+            // 释放返回的字符串
+            free((void*)value);
+            return result;
+        }
+    }
+
+    return var_new_null(vm);
+}
+
 // 设置背景颜色
 static var_t* mario_set_bg_color(vm_t* vm, var_t* env, void* data)
 {
@@ -623,6 +650,7 @@ void js_module_register_api(void)
     var_t* yui_cls = vm_new_class(g_vm, "YUI");
     vm_reg_native(g_vm, yui_cls, "setText(layerId, text)", mario_set_text, NULL);
     vm_reg_native(g_vm, yui_cls, "getText(layerId)", mario_get_text, NULL);
+    vm_reg_native(g_vm, yui_cls, "getProperty(layerId, property)", mario_get_property, NULL);
     vm_reg_native(g_vm, yui_cls, "setBgColor(layerId, color)", mario_set_bg_color, NULL);
     vm_reg_native(g_vm, yui_cls, "hide(layerId)", mario_hide, NULL);
     vm_reg_native(g_vm, yui_cls, "show(layerId)", mario_show, NULL);
@@ -643,6 +671,7 @@ void js_module_register_api(void)
     // 也注册为全局函数（为了兼容性）
     vm_reg_static(g_vm, NULL, "setText(layerId, text)", mario_set_text, NULL);
     vm_reg_static(g_vm, NULL, "getText(layerId)", mario_get_text, NULL);
+    vm_reg_static(g_vm, NULL, "getProperty(layerId, property)", mario_get_property, NULL);
     vm_reg_static(g_vm, NULL, "setBgColor(layerId, color)", mario_set_bg_color, NULL);
     vm_reg_static(g_vm, NULL, "hide(layerId)", mario_hide, NULL);
     vm_reg_static(g_vm, NULL, "show(layerId)", mario_show, NULL);

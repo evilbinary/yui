@@ -65,6 +65,35 @@ static JSValue js_get_text(JSContext *ctx, JSValueConst this_val, int argc, JSVa
     return JS_UNDEFINED;
 }
 
+// 获取图层的属性值（通用）
+static JSValue js_get_property(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    if (argc < 2) return JS_UNDEFINED;
+
+    size_t len1, len2;
+    const char* layer_id = JS_ToCStringLen(ctx, &len1, argv[0]);
+    const char* property_name = JS_ToCStringLen(ctx, &len2, argv[1]);
+
+    if (layer_id && property_name && g_layer_root) {
+        // 调用 js_common.c 中的函数
+        extern const char* js_module_get_property_value(const char* layer_id, const char* property_name);
+        const char* value = js_module_get_property_value(layer_id, property_name);
+        
+        if (value) {
+            JS_FreeCString(ctx, layer_id);
+            JS_FreeCString(ctx, property_name);
+            JSValue result = JS_NewString(ctx, value);
+            // 释放返回的字符串
+            free((void*)value);
+            return result;
+        }
+    }
+
+    JS_FreeCString(ctx, layer_id);
+    JS_FreeCString(ctx, property_name);
+    return JS_UNDEFINED;
+}
+
 // 设置背景颜色
 static JSValue js_set_bg_color(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
@@ -568,6 +597,7 @@ void js_module_register_api(void)
     // 设置 YUI 的方法
     JS_SetPropertyStr(g_js_ctx, yui_obj, "setText", JS_NewCFunction(g_js_ctx, js_set_text, "setText", 2));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "getText", JS_NewCFunction(g_js_ctx, js_get_text, "getText", 1));
+    JS_SetPropertyStr(g_js_ctx, yui_obj, "getProperty", JS_NewCFunction(g_js_ctx, js_get_property, "getProperty", 2));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "setBgColor", JS_NewCFunction(g_js_ctx, js_set_bg_color, "setBgColor", 2));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "hide", JS_NewCFunction(g_js_ctx, js_hide, "hide", 1));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "show", JS_NewCFunction(g_js_ctx, js_show, "show", 1));
@@ -597,6 +627,7 @@ void js_module_register_api(void)
     // 也注册为全局函数（为了兼容性）
     JS_SetPropertyStr(g_js_ctx, global_obj, "setText", JS_NewCFunction(g_js_ctx, js_set_text, "setText", 2));
     JS_SetPropertyStr(g_js_ctx, global_obj, "getText", JS_NewCFunction(g_js_ctx, js_get_text, "getText", 1));
+    JS_SetPropertyStr(g_js_ctx, global_obj, "getProperty", JS_NewCFunction(g_js_ctx, js_get_property, "getProperty", 2));
     JS_SetPropertyStr(g_js_ctx, global_obj, "setBgColor", JS_NewCFunction(g_js_ctx, js_set_bg_color, "setBgColor", 2));
     JS_SetPropertyStr(g_js_ctx, global_obj, "hide", JS_NewCFunction(g_js_ctx, js_hide, "hide", 1));
     JS_SetPropertyStr(g_js_ctx, global_obj, "show", JS_NewCFunction(g_js_ctx, js_show, "show", 1));

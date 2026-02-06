@@ -306,6 +306,7 @@ typedef enum {
 #define CLEAR_ALL_STATES(layer) (layer->state = LAYER_STATE_NORMAL)
 
 typedef  int (*register_event_fun_t)(Layer* layer, const char* event_name, const char* event_func_name, EventHandler event_handler);
+typedef  cJSON* (*get_property_fun_t)(Layer* layer, const char* property_name);
 
 typedef struct Layer {
     char id[50];
@@ -389,6 +390,9 @@ typedef struct Layer {
     //事件注册
     register_event_fun_t register_event;
     int (*unregister_event)(Layer* layer, const char* event_name);
+    
+    //组件属性获取函数
+    get_property_fun_t get_property;
 
     // 毛玻璃效果相关属性
     int backdrop_filter;     // 是否启用毛玻璃效果

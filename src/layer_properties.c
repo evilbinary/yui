@@ -447,6 +447,15 @@ cJSON* layer_get_property_as_json(Layer* layer, const char* key) {
         return NULL;
     }
     
+    // 首先尝试使用组件的通用属性获取函数
+    if (layer->component && layer->get_property) {
+        cJSON* value = layer->get_property(layer, key);
+        if (value) {
+            return value;
+        }
+    }
+    
+    // 如果组件没有返回值，使用默认的层属性处理
     // 根据属性名返回对应的 JSON 值
     if (strcmp(key, "id") == 0) {
         return cJSON_CreateString(layer->id);
@@ -513,6 +522,15 @@ cJSON* layer_get_property_as_json(Layer* layer, const char* key) {
     }
     else if (strcmp(key, "rect") == 0) {
         return create_rect_json(layer->rect);
+    }
+    else if (strcmp(key, "value") == 0) {
+        // 对于大多数组件，value 可以从 text 属性获取
+        if (layer->text && strlen(layer->text) > 0) {
+            return cJSON_CreateString(layer->text);
+        }
+        
+        // 如果没有 text 属性，返回 null
+        return cJSON_CreateNull();
     }
     
     // 未知属性，返回 NULL

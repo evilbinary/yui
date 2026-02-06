@@ -137,4 +137,7 @@ void select_component_trigger_on_change(SelectComponent* component);
 void select_component_set_on_change(SelectComponent* component, EventHandler callback, void* user_data);
 void select_component_register_event(Layer* layer, const char* event_name, const char* event_func_name, EventHandler event_handler);
 
+// 通用属性获取函数
+cJSON* select_component_get_property(Layer* layer, const char* property_name);
+
 #endif  // YUI_SELECT_COMPONENT_H

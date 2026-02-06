@@ -68,6 +68,7 @@ SelectComponent* select_component_create(Layer* layer) {
     layer->handle_key_event = select_component_handle_key_event;
     layer->handle_scroll_event = select_component_handle_scroll_event;
     layer->register_event = select_component_register_event;
+    layer->get_property = select_component_get_property;
     
     // 设置滚动事件回调
     if (!layer->event) {
@@ -1576,4 +1577,41 @@ void select_component_register_event(Layer* layer, const char* event_name, const
         component->on_change = event_handler;
         component->change_name = strdup(event_func_name);
     }
+}
+
+// 通用属性获取函数
+cJSON* select_component_get_property(Layer* layer, const char* property_name) {
+    if (!layer || !property_name || !layer->component) {
+        return NULL;
+    }
+    
+    SelectComponent* component = (SelectComponent*)layer->component;
+    
+    if (strcmp(property_name, "value") == 0) {
+        // 获取选中项的值
+        const char* value = select_component_get_selected_value(component);
+        if (value) {
+            return cJSON_CreateString(value);
+        }
+        return cJSON_CreateNull();
+    }
+    else if (strcmp(property_name, "text") == 0) {
+        // 获取选中项的文本
+        const char* text = select_component_get_selected_text(component);
+        if (text) {
+            return cJSON_CreateString(text);
+        }
+        return cJSON_CreateNull();
+    }
+    else if (strcmp(property_name, "selectedIndex") == 0) {
+        // 获取选中项的索引
+        return cJSON_CreateNumber(select_component_get_selected(component));
+    }
+    else if (strcmp(property_name, "itemCount") == 0) {
+        // 获取选项数量
+        return cJSON_CreateNumber(select_component_get_item_count(component));
+    }
+    
+    // 未知的属性，返回 NULL
+    return NULL;
 }

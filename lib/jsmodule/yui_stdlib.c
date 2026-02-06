@@ -191,6 +191,31 @@ static JSValue js_get_text(JSContext *ctx, JSValue *this_val, int argc, JSValue 
     return JS_UNDEFINED;
 }
 
+// 获取图层的属性值（通用）
+static JSValue js_get_property(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+{
+    if (argc < 2) return JS_UNDEFINED;
+
+    JSCStringBuf buf1, buf2;
+    const char* layer_id = JS_ToCString(ctx, argv[0], &buf1);
+    const char* property_name = JS_ToCString(ctx, argv[1], &buf2);
+
+    if (layer_id && property_name) {
+        // 调用 js_common.c 中的函数
+        extern const char* js_module_get_property_value(const char* layer_id, const char* property_name);
+        const char* value = js_module_get_property_value(layer_id, property_name);
+        
+        if (value) {
+            JSValue result = JS_NewString(ctx, value);
+            // 释放返回的字符串
+            free((void*)value);
+            return result;
+        }
+    }
+
+    return JS_UNDEFINED;
+}
+
 // 设置背景颜色
 static JSValue js_set_bg_color(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
 {
@@ -390,6 +415,7 @@ static const JSPropDef js_yui[] = {
     JS_CFUNC_DEF("log", 1, js_yui_log ),
     JS_CFUNC_DEF("setText", 1, js_set_text ),
     JS_CFUNC_DEF("getText", 1, js_get_text ),
+    JS_CFUNC_DEF("getProperty", 2, js_get_property ),
     JS_CFUNC_DEF("setBgColor", 1, js_set_bg_color ),
     JS_CFUNC_DEF("hide", 1, js_hide ),
     JS_CFUNC_DEF("show", 1, js_show ),
