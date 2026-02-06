@@ -304,8 +304,9 @@ void layout_layer(Layer* layer){
             
             // 计算所有子元素的总高度（不包括间距）
             int total_children_height_no_spacing = fixed_height_sum;
-            if (total_flex > 0) {
-                total_children_height_no_spacing += available_height; // flex 元素会填满可用空间
+            if (total_flex > 0 || no_height_count > 0) {
+                // flex 或自动高度元素会填满可用空间
+                total_children_height_no_spacing += available_height;
             }
             
             if (layer->layout_manager->justify == LAYOUT_ALIGN_CENTER) {
