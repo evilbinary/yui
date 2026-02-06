@@ -167,7 +167,7 @@ static void js_module_change_event(void* data)
 {
     Layer* layer = (Layer*)data;
     if (layer) {
-        printf("JS: Scroll event on layer '%s'\n", layer->id);
+        printf("JS: Change event on layer '%s'\n", layer->id);
         js_module_call_layer_event(layer->id, "onChange");
     }
 }
@@ -716,4 +716,71 @@ int js_module_set_event(const char* layer_id, const char* event_name, const char
     }
 
     return result;
+}
+
+// 获取图层的属性值（通用）
+const char* js_module_get_property_value(const char* layer_id, const char* property_name) {
+    if (!layer_id || !property_name || !g_layer_root) {
+        return NULL;
+    }
+    
+    // 查找图层
+    Layer* layer = find_layer_by_id(g_layer_root, layer_id);
+    if (!layer) {
+        printf("JS: Layer '%s' not found\n", layer_id);
+        return NULL;
+    }
+    
+    // 调用 layer_get_property_as_json 获取属性值
+    extern cJSON* layer_get_property_as_json(Layer* layer, const char* key);
+    cJSON* json_value = layer_get_property_as_json(layer, property_name);
+    
+    if (!json_value) {
+        printf("JS: Property '%s' not found for layer '%s'\n", property_name, layer_id);
+        return NULL;
+    }
+    
+    // 将 JSON 值转换为字符串
+    char* result = NULL;
+    if (cJSON_IsString(json_value)) {
+        // 如果是字符串，直接返回
+        result = strdup(json_value->valuestring);
+    }
+    else if (cJSON_IsNumber(json_value)) {
+        // 如果是数字，转换为字符串
+        char num_str[64];
+        snprintf(num_str, sizeof(num_str), "%.16g", json_value->valuedouble);
+        result = strdup(num_str);
+    }
+    else if (cJSON_IsBool(json_value)) {
+        // 如果是布尔值，转换为字符串
+        result = strdup(cJSON_IsTrue(json_value) ? "true" : "false");
+    }
+    else if (cJSON_IsNull(json_value)) {
+        // 如果是 null，返回空字符串
+        result = strdup("");
+    }
+    else if (cJSON_IsArray(json_value)) {
+        // 如果是数组，转换为 JSON 字符串
+        result = cJSON_PrintUnformatted(json_value);
+    }
+    else if (cJSON_IsObject(json_value)) {
+        // 如果是对象，转换为 JSON 字符串
+        result = cJSON_PrintUnformatted(json_value);
+    }
+    
+    cJSON_Delete(json_value);
+    
+    if (!result) {
+        printf("JS: Failed to convert property '%s' to string for layer '%s'\n", property_name, layer_id);
+        return NULL;
+    }
+    
+    printf("JS: Got property '%s' value '%s' for layer '%s'\n", property_name, result, layer_id);
+    return result;
+}
+
+// 获取 Select 组件的值（向后兼容）
+const char* js_module_get_select_value(const char* layer_id) {
+    return js_module_get_property_value(layer_id, "value");
 }

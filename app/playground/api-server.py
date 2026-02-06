@@ -28,10 +28,46 @@ sys.stderr = open(sys.stderr.fileno(), 'w', buffering=1)
 
 model= 'Pro/zai-org/GLM-4.7' #'Qwen/Qwen3-VL-235B-A22B-Instruct' #'deepseek-ai/DeepSeek-V3.2' #'Qwen/Qwen2.5-7B-Instruct' #glm-4.7-free #Qwen/Qwen2.5-7B-Instruct #gpt-5-nano
 
-client = OpenAI(
-    base_url="https://api.siliconflow.cn/v1", #"https://opencode.ai/zen/v1",
-    api_key=os.getenv("OPENAI_API_KEY", ""), # export OPENAI_API_KEY=
-)
+# 尝试使用 httpx 客户端初始化 OpenAI
+import httpx
+
+# 检查是否有代理环境变量
+http_proxy = os.environ.get('HTTP_PROXY') or os.environ.get('http_proxy')
+https_proxy = os.environ.get('HTTPS_PROXY') or os.environ.get('https_proxy')
+
+# 创建 httpx 客户端，考虑代理设置
+if http_proxy or https_proxy:
+    # 如果有代理设置
+    proxies = {}
+    if http_proxy:
+        proxies['http://'] = http_proxy
+    if https_proxy:
+        proxies['https://'] = https_proxy
+    
+    http_client = httpx.Client(proxies=proxies)
+    print("Using proxy configuration")
+else:
+    # 如果没有代理设置
+    http_client = httpx.Client()
+    print("No proxy configuration detected")
+
+try:
+    # 使用自定义 httpx 客户端初始化 OpenAI
+    client = OpenAI(
+        base_url="https://api.siliconflow.cn/v1", #"https://opencode.ai/zen/v1",
+        api_key=os.getenv("OPENAI_API_KEY", ""), # export OPENAI_API_KEY=
+        http_client=http_client
+    )
+except Exception as e:
+    print(f"Failed to initialize OpenAI client with custom httpx client: {e}")
+    print("Trying with default client...")
+    
+    # 最后尝试最基本的初始化
+    client = OpenAI(
+        api_key=os.getenv("OPENAI_API_KEY", ""),
+    )
+    # 手动设置 base_url
+    client.base_url = "https://api.siliconflow.cn/v1"
 
 app = Flask(__name__)
 CORS(app)  # 启用CORS支持
@@ -313,6 +349,113 @@ YUI框架支持丰富的动画效果，通过`animation`属性定义：
 message_history = []
 ui_state = {}  # 当前UI状态
 
+# 增量更新系统提示词（严格遵循 json-update-spec.md 规范）
+incremental_system_prompt = """你是一个专业的YUI框架增量更新助手，专门生成符合JSON增量更新规范的更新指令。
+
+请根据用户的自然语言指令，生成严格符合以下规范的增量更新JSON：
+
+## 核心规范
+
+1. **统一格式**：{ "target": "id", "change": {...} }
+2. **路径支持**：children.0、children.id、layerId.a.b.c
+3. **null语义**：null表示删除，不存在则添加，存在则更新
+
+## 基本格式
+
+### 单个更新
+```json
+{
+  "target": "layerId",
+  "change":{
+    "text": "新文本",
+    "bgColor": "#ff0000",
+    "visible": true
+  }
+}
+```
+
+### 批量更新
+```json
+[
+  {
+    "target": "button1",
+    "change":{
+        "text": "点击我",
+        "bgColor": "#4caf50"
+    }
+  },
+  {
+    "target": "label1",
+    "change":{
+        "text": "状态：成功",
+        "color": "#00ff00"
+    }
+  }
+]
+```
+
+## 支持的操作
+
+### 属性更新
+- text: 文本内容
+- label: 标签文本
+- color: 文字颜色 (HEX格式)
+- bgColor: 背景颜色 (HEX格式)
+- fontSize: 字体大小
+- borderRadius: 圆角半径
+- size: [宽度, 高度]
+- position: [X坐标, Y坐标]
+- visible: 是否可见 (boolean)
+- enabled: 是否启用 (boolean)
+
+### 删除操作
+1. 删除属性：{ "target": "element", "change": {"visible": null} }
+2. 删除元素：{ "target": "elementToRemove", "change": {"elementToRemove": null} }
+3. 删除子元素：{ "target": "parent", "change": {"children.0": null} }
+4. 清空容器：{ "target": "container", "change": {"children": null} }
+
+## 路径操作示例
+
+- 直接ID："target": "button1"
+- 数组索引："target": "container.children.0"
+- 嵌套属性："target": "panel.header.title"
+- 子元素ID："target": "list.children.item1"
+
+## 重要规则
+
+1. **严格遵守格式**：必须使用 target + change 结构
+2. **路径语法**：使用点号(.)分隔层级
+3. **null语义**：明确区分添加/更新 vs 删除
+4. **批量操作**：多个更新用数组包装
+5. **只返回JSON**：不要包含解释文字
+6. 根路径是 root 下需要更新到 添加children中
+7.通过简单的 JSON 格式增量更新 UI 组件，无需重新渲染整个 UI 树。
+    1、统一格式：{ "target": "id", "change": {...} }
+    2、路径支持：children.0、children.id、layerId.a.b.c
+    3、null 表示删除，不存在则添加，存在则更新
+
+## 示例对话
+
+用户："把提交按钮的文本改成保存"
+助手：{"target": "submitBtn", "change": {"text": "保存"}}
+
+用户："隐藏错误提示标签"
+助手：{"target": "errorLabel", "change": {"visible": false}}
+
+用户："批量更新：标题改为新界面，按钮改为蓝色"
+助手：[{"target": "titleLabel", "change": {"text": "新界面"}}, {"target": "actionBtn", "change": {"bgColor": "#2196f3"}}]
+
+用户："删除第三个列表项"
+助手：{"target": "listContainer", "change": {"children.2": null}}
+
+用户："清空整个列表"
+助手：{"target": "listContainer", "change": {"children": null}}
+
+用户："添加新元素"
+助手：{"target": "listContainer", "change": {"children": [{"id": "newPage", "type": "View"}]}}
+
+请严格按照上述规范生成JSON更新指令，确保格式正确且语义清晰。"""
+
 # 初始UI状态示例
 INITIAL_UI_STATE = {
     "statusLabel": {
@@ -525,22 +668,29 @@ def reset_state():
 
 def generate_incremental_updates(message, json_config):
     """
-    根据消息内容生成增量更新
-    这是一个示例实现，实际应用中可以根据业务逻辑定制
+    根据消息内容生成增量更新（严格遵循 json-update-spec.md 规范）
+    
+    返回格式：
+    - 单个更新：{"target": "id", "change": {"属性": "值"}}
+    - 批量更新：[{"target": "id1", "change": {...}}, {"target": "id2", "change": {...}}]
+    - 删除操作：{"target": "id", "change": {"属性": null}}
+    - 路径操作：{"target": "parent.children.0", "change": {...}}
     """
     updates = []
     lower_msg = message.lower()
     
-    
-
     try:
         print(f"[DEBUG] Calling AI API with model: {model}")
         print(f"[DEBUG] Message: {message}")
         
         completion = client.chat.completions.create(
-            model =model,
+            model=model,
             messages=[
-                {"role": "user", "content": f"生成{message},基本的布局，简洁的json输出" }
+                {
+                    "role": "system", 
+                    "content": incremental_system_prompt
+                },
+                {"role": "user", "content": message}
             ]
         )
 
@@ -555,40 +705,75 @@ def generate_incremental_updates(message, json_config):
         content = completion.choices[0].message.content
         print(f"===== 模型回复 =====\n{content}")
 
-        # 尝试解析为JSON数组
+        # 处理可能包含的Markdown代码块标记
+        if isinstance(content, str):
+            # 移除可能的Markdown代码块标记
+            if content.startswith('```json'):
+                content = content[7:]  # 移除开头的```json
+            if content.startswith('```'):
+                content = content[3:]   # 移除开头的```
+            if content.endswith('```'):
+                content = content[:-3]  # 移除结尾的```
+            content = content.strip()  # 移除前后空白
+
+        # 尝试解析为JSON（可能是对象或数组）
         try:
-            updates = json.loads(content) if isinstance(content, str) else content
-            if not isinstance(updates, list):
-                print(f"[ERROR] Parsed content is not a list, using empty updates")
+            parsed_result = json.loads(content) if isinstance(content, str) else content
+            # 标准化为数组格式返回
+            if isinstance(parsed_result, dict):
+                # 单个更新对象转为数组
+                updates = [parsed_result]
+            elif isinstance(parsed_result, list):
+                # 已经是数组格式
+                updates = parsed_result
+            else:
+                print(f"[ERROR] Parsed content is neither dict nor list, using fallback")
                 updates = []
         except json.JSONDecodeError as json_err:
             print(f"[ERROR] Failed to parse model response as JSON: {json_err}")
             print(f"[ERROR] Response content: {content}")
             updates = []
+            
     except Exception as ai_err:
         print(f"[ERROR] AI API call failed: {type(ai_err).__name__}: {str(ai_err)}")
         print(traceback.format_exc())
         updates = []
-    # 关键词到更新的映射
+    
+    # 如果AI没有返回有效结果，使用关键词匹配的回退方案
+    if not updates:
+        updates = _fallback_incremental_updates(message, lower_msg)
+    
+    return updates
+
+def _fallback_incremental_updates(message, lower_msg):
+    """关键词匹配的回退更新生成方案"""
     if "批量" in message or "batch" in lower_msg:
-        updates = [
+        return [
             {"target": "statusLabel", "change": {"text": "状态：批量更新完成", "color": "#2196f3"}},
             {"target": "item1", "change": {"text": "批量更新 - 项目 1", "bgColor": "#2196f3"}},
             {"target": "item2", "change": {"text": "批量更新 - 项目 2", "bgColor": "#ff9800"}},
             {"target": "item3", "change": {"text": "批量更新 - 项目 3", "bgColor": "#9c27b0"}}
         ]
     elif "项目1" in message or "item1" in lower_msg:
-        updates = [
+        return [
             {"target": "statusLabel", "change": {"text": "状态：项目1已更新", "color": "#4caf50"}},
             {"target": "item1", "change": {"text": f"已更新: {message}", "bgColor": "#4caf50"}}
         ]
     elif "项目2" in message or "item2" in lower_msg:
-        updates = [
+        return [
             {"target": "statusLabel", "change": {"text": "状态：项目2已更新", "color": "#ff9800"}},
             {"target": "item2", "change": {"text": f"已更新: {message}", "bgColor": "#ff9800"}}
         ]
+    elif "删除" in message or "remove" in lower_msg or "delete" in lower_msg:
+        # 删除操作示例
+        if "第一个" in message or "first" in lower_msg:
+            return [{"target": "listContainer", "change": {"children.0": null}}]
+        elif "清空" in message or "clear" in lower_msg:
+            return [{"target": "listContainer", "change": {"children": null}}]
+        else:
+            return [{"target": "tempElement", "change": {"tempElement": null}}]
     elif "重置" in message or "reset" in lower_msg:
-        updates = [
+        return [
             {"target": "statusLabel", "change": {"text": "状态：已重置", "color": "#333333"}},
             {"target": "item1", "change": {"text": "项目 1", "bgColor": "#f0f0f0"}},
             {"target": "item2", "change": {"text": "项目 2", "bgColor": "#f0f0f0"}},
@@ -596,11 +781,9 @@ def generate_incremental_updates(message, json_config):
         ]
     else:
         # 默认更新状态标签
-        updates = [
+        return [
             {"target": "statusLabel", "change": {"text": f"状态：收到消息 - {message[:20]}...", "color": "#673ab7"}}
         ]
-    
-    return updates
 
 def generate_full_ui_state(message, json_config):
     """

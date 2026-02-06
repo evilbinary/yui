@@ -53,6 +53,7 @@ TextComponent* text_component_create(Layer* layer) {
     layer->handle_key_event = text_component_handle_key_event;
     layer->handle_mouse_event = text_component_handle_mouse_event;
     layer->register_event = text_component_register_event;
+    layer->get_property = text_component_get_property;
 
     return component;
 }
@@ -318,6 +319,45 @@ void text_component_register_event(Layer* layer, const char* event_name, const c
         component->on_change = event_handler;
         component->change_name = strdup(event_func_name);
     }
+}
+
+// 通用属性获取函数
+cJSON* text_component_get_property(Layer* layer, const char* property_name) {
+    if (!layer || !property_name || !layer->component) {
+        return NULL;
+    }
+    
+    TextComponent* component = (TextComponent*)layer->component;
+    
+    if (strcmp(property_name, "value") == 0 || strcmp(property_name, "text") == 0) {
+        // 获取文本内容
+        if (layer->text && strlen(layer->text) > 0) {
+            return cJSON_CreateString(layer->text);
+        }
+        return cJSON_CreateNull();
+    }
+    else if (strcmp(property_name, "placeholder") == 0) {
+        // 获取占位符
+        if (component->placeholder && strlen(component->placeholder) > 0) {
+            return cJSON_CreateString(component->placeholder);
+        }
+        return cJSON_CreateNull();
+    }
+    else if (strcmp(property_name, "multiline") == 0) {
+        // 是否多行
+        return cJSON_CreateBool(component->multiline);
+    }
+    else if (strcmp(property_name, "editable") == 0) {
+        // 是否可编辑
+        return cJSON_CreateBool(component->editable);
+    }
+    else if (strcmp(property_name, "maxLength") == 0) {
+        // 最大长度
+        return cJSON_CreateNumber(component->max_length);
+    }
+    
+    // 未知的属性，返回 NULL
+    return NULL;
 }
 
 

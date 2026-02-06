@@ -69,6 +69,12 @@ int js_module_trigger_layer_event(Layer* layer, const char* event_name);
 // event_func_name: JS 函数名
 int js_module_set_event(const char* layer_id, const char* event_name, const char* event_func_name);
 
+// 获取图层的属性值（通用）
+const char* js_module_get_property_value(const char* layer_id, const char* property_name);
+
+// 获取 Select 组件的值（向后兼容）
+const char* js_module_get_select_value(const char* layer_id);
+
 #ifdef __cplusplus
 }
 #endif

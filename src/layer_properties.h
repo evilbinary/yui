@@ -29,6 +29,33 @@ int layer_set_property_from_json(Layer* layer, const char* key, cJSON* value, in
  */
 int layer_set_properties_from_json(Layer* layer, cJSON* json_obj, int is_creating);
 
+/**
+ * 从图层属性中根据 key 获取 JSON 值
+ * 
+ * @param layer 源图层
+ * @param key 属性名
+ * @return cJSON 对象（调用者需要释放），如果属性不存在返回 NULL
+ */
+cJSON* layer_get_property_as_json(Layer* layer, const char* key);
+
+/**
+ * 批量获取图层属性为 JSON 对象
+ * 
+ * @param layer 源图层
+ * @param keys 属性名数组
+ * @param count 属性名数量
+ * @return cJSON 对象（调用者需要释放），包含所有请求的属性
+ */
+cJSON* layer_get_properties_as_json(Layer* layer, const char** keys, int count);
+
+/**
+ * 获取图层所有属性为 JSON 对象
+ * 
+ * @param layer 源图层
+ * @return cJSON 对象（调用者需要释放），包含所有支持的属性
+ */
+cJSON* layer_get_all_properties_as_json(Layer* layer);
+
 #ifdef __cplusplus
 }
 #endif

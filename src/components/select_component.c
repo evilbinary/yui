@@ -57,12 +57,18 @@ SelectComponent* select_component_create(Layer* layer) {
     component->on_selection_changed = NULL;
     component->on_dropdown_expanded = NULL;
     
+    // 标准事件支持初始化
+    component->on_change = NULL;
+    component->change_name = NULL;
+    
     // 设置组件和渲染函数
     layer->component = component;
     layer->render = select_component_render;
     layer->handle_mouse_event = select_component_handle_mouse_event;
     layer->handle_key_event = select_component_handle_key_event;
     layer->handle_scroll_event = select_component_handle_scroll_event;
+    layer->register_event = select_component_register_event;
+    layer->get_property = select_component_get_property;
     
     // 设置滚动事件回调
     if (!layer->event) {
@@ -245,6 +251,22 @@ SelectComponent* select_component_create_from_json(Layer* layer, cJSON* json_obj
         component->font = backend_load_font(font_path, component->font_size);
     }
     
+    // 解析事件绑定
+    cJSON* events = cJSON_GetObjectItem(json_obj, "events");
+    if (events) {
+        // 解析onChange事件
+        if (cJSON_HasObjectItem(events, "onChange")) {
+            cJSON* on_change_obj = cJSON_GetObjectItem(events, "onChange");
+            if (cJSON_IsString(on_change_obj)) {
+                const char* event_name = on_change_obj->valuestring;
+                // 将事件名称存储在 change_name 中，稍后由事件系统处理
+                component->change_name = strdup(event_name);
+                EventHandler handler = find_event_by_name(event_name);
+                component->on_change = handler;
+            }
+        }
+    }
+
     return component;
 }
 
@@ -436,6 +458,11 @@ void select_component_set_selected(SelectComponent* component, int index) {
     // 调用回调函数
     if (old_index != index && component->on_selection_changed) {
         component->on_selection_changed(index, component->user_data);
+    }
+    
+    // 触发标准 onChange 事件
+    if (old_index != index) {
+        select_component_trigger_on_change(component);
     }
 }
 
@@ -1507,4 +1534,84 @@ void select_component_popup_close_callback(PopupLayer* popup) {
         
         // 注意：不在这里触发 on_dropdown_expanded 回调，因为它应该已经在 collapse 中被调用了
     }
+}
+
+// 设置 onChange 回调函数
+void select_component_set_on_change(SelectComponent* component, EventHandler callback, void* user_data) {
+    if (!component) {
+        return;
+    }
+    
+    component->on_change = callback;
+    component->change_name = (char*)user_data;
+}
+
+// 调用 onChange 回调函数
+void select_component_trigger_on_change(SelectComponent* component) {
+    if (!component) {
+        return;
+    }
+    
+    // 如果没有事件处理器但有事件名称，尝试查找事件处理器
+    if(component->on_change == NULL && component->change_name != NULL){
+        EventHandler handler = find_event_by_name(component->change_name);
+        component->on_change = handler;
+    }
+    
+    // 检查是否有可用的事件处理器
+    if (component->on_change) {
+        // 调用事件处理器
+        component->on_change(component->layer);
+    } else if (component->change_name) {
+        // 只有在指定了事件名称但找不到处理器时才打印警告
+        printf("select_component_trigger_on_change not found onchange event %s\n", component->change_name);
+        print_registered_events();
+    }
+    // 如果既没有处理器也没有事件名称，则静默处理
+}
+
+// 注册事件处理函数
+void select_component_register_event(Layer* layer, const char* event_name, const char* event_func_name, EventHandler event_handler){
+    if(strcmp(event_name,"change")==0 || strcmp(event_name,"onChange")==0){
+        SelectComponent* component = (SelectComponent*)layer->component;
+        component->on_change = event_handler;
+        component->change_name = strdup(event_func_name);
+    }
+}
+
+// 通用属性获取函数
+cJSON* select_component_get_property(Layer* layer, const char* property_name) {
+    if (!layer || !property_name || !layer->component) {
+        return NULL;
+    }
+    
+    SelectComponent* component = (SelectComponent*)layer->component;
+    
+    if (strcmp(property_name, "value") == 0) {
+        // 获取选中项的值
+        const char* value = select_component_get_selected_value(component);
+        if (value) {
+            return cJSON_CreateString(value);
+        }
+        return cJSON_CreateNull();
+    }
+    else if (strcmp(property_name, "text") == 0) {
+        // 获取选中项的文本
+        const char* text = select_component_get_selected_text(component);
+        if (text) {
+            return cJSON_CreateString(text);
+        }
+        return cJSON_CreateNull();
+    }
+    else if (strcmp(property_name, "selectedIndex") == 0) {
+        // 获取选中项的索引
+        return cJSON_CreateNumber(select_component_get_selected(component));
+    }
+    else if (strcmp(property_name, "itemCount") == 0) {
+        // 获取选项数量
+        return cJSON_CreateNumber(select_component_get_item_count(component));
+    }
+    
+    // 未知的属性，返回 NULL
+    return NULL;
 }

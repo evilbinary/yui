@@ -379,3 +379,245 @@ int layer_set_properties_from_json(Layer* layer, cJSON* json_obj, int is_creatin
     
     return count;
 }
+
+// 辅助函数：创建颜色 JSON 对象
+static cJSON* create_color_json(Color color) {
+    char color_str[20];
+    snprintf(color_str, sizeof(color_str), "#%02x%02x%02x%02x", 
+             color.r, color.g, color.b, color.a);
+    return cJSON_CreateString(color_str);
+}
+
+// 辅助函数：创建矩形 JSON 对象
+static cJSON* create_rect_json(Rect rect) {
+    cJSON* array = cJSON_CreateArray();
+    cJSON_AddItemToArray(array, cJSON_CreateNumber(rect.x));
+    cJSON_AddItemToArray(array, cJSON_CreateNumber(rect.y));
+    cJSON_AddItemToArray(array, cJSON_CreateNumber(rect.w));
+    cJSON_AddItemToArray(array, cJSON_CreateNumber(rect.h));
+    return array;
+}
+
+// 辅助函数：创建位置 JSON 对象
+static cJSON* create_position_json(Rect rect) {
+    cJSON* array = cJSON_CreateArray();
+    cJSON_AddItemToArray(array, cJSON_CreateNumber(rect.x));
+    cJSON_AddItemToArray(array, cJSON_CreateNumber(rect.y));
+    return array;
+}
+
+// 辅助函数：创建尺寸 JSON 对象
+static cJSON* create_size_json(Rect rect) {
+    cJSON* array = cJSON_CreateArray();
+    cJSON_AddItemToArray(array, cJSON_CreateNumber(rect.w));
+    cJSON_AddItemToArray(array, cJSON_CreateNumber(rect.h));
+    return array;
+}
+
+// 辅助函数：创建内边距 JSON 对象
+static cJSON* create_padding_json(Layer* layer) {
+    if (!layer->layout_manager) {
+        return cJSON_CreateNull();
+    }
+    
+    cJSON* array = cJSON_CreateArray();
+    cJSON_AddItemToArray(array, cJSON_CreateNumber(layer->layout_manager->padding[0]));  // top
+    cJSON_AddItemToArray(array, cJSON_CreateNumber(layer->layout_manager->padding[1]));  // right
+    cJSON_AddItemToArray(array, cJSON_CreateNumber(layer->layout_manager->padding[2]));  // bottom
+    cJSON_AddItemToArray(array, cJSON_CreateNumber(layer->layout_manager->padding[3]));  // left
+    return array;
+}
+
+// 辅助函数：创建字体 JSON 对象
+static cJSON* create_font_json(Layer* layer) {
+    if (!layer->font) {
+        return cJSON_CreateNull();
+    }
+    
+    cJSON* font_obj = cJSON_CreateObject();
+    cJSON_AddStringToObject(font_obj, "path", layer->font->path);
+    cJSON_AddNumberToObject(font_obj, "size", layer->font->size);
+    cJSON_AddStringToObject(font_obj, "weight", layer->font->weight);
+    
+    return font_obj;
+}
+
+cJSON* layer_get_property_as_json(Layer* layer, const char* key) {
+    if (!layer || !key) {
+        return NULL;
+    }
+    
+    // 首先尝试使用组件的通用属性获取函数
+    if (layer->component && layer->get_property) {
+        cJSON* value = layer->get_property(layer, key);
+        if (value) {
+            return value;
+        }
+    }
+    
+    // 如果组件没有返回值，使用默认的层属性处理
+    // 根据属性名返回对应的 JSON 值
+    if (strcmp(key, "id") == 0) {
+        return cJSON_CreateString(layer->id);
+    }
+    else if (strcmp(key, "text") == 0) {
+        return cJSON_CreateString(layer->text);
+    }
+    else if (strcmp(key, "label") == 0) {
+        return cJSON_CreateString(layer->label);
+    }
+    else if (strcmp(key, "color") == 0) {
+        return create_color_json(layer->color);
+    }
+    else if (strcmp(key, "bgColor") == 0) {
+        return create_color_json(layer->bg_color);
+    }
+    else if (strcmp(key, "opacity") == 0) {
+        return cJSON_CreateNumber(layer->bg_color.a);
+    }
+    else if (strcmp(key, "font") == 0) {
+        return create_font_json(layer);
+    }
+    else if (strcmp(key, "fontSize") == 0) {
+        return layer->font ? cJSON_CreateNumber(layer->font->size) : cJSON_CreateNull();
+    }
+    else if (strcmp(key, "fontWeight") == 0) {
+        return layer->font ? cJSON_CreateString(layer->font->weight) : cJSON_CreateNull();
+    }
+    else if (strcmp(key, "borderRadius") == 0) {
+        return cJSON_CreateNumber(layer->radius);
+    }
+    else if (strcmp(key, "source") == 0) {
+        return cJSON_CreateString(layer->source);
+    }
+    else if (strcmp(key, "size") == 0) {
+        return create_size_json(layer->rect);
+    }
+    else if (strcmp(key, "position") == 0) {
+        return create_position_json(layer->rect);
+    }
+    else if (strcmp(key, "width") == 0) {
+        return cJSON_CreateNumber(layer->rect.w);
+    }
+    else if (strcmp(key, "height") == 0) {
+        return cJSON_CreateNumber(layer->rect.h);
+    }
+    else if (strcmp(key, "padding") == 0) {
+        return create_padding_json(layer);
+    }
+    else if (strcmp(key, "flex") == 0) {
+        return cJSON_CreateNumber(layer->flex_ratio);
+    }
+    else if (strcmp(key, "rotation") == 0) {
+        return cJSON_CreateNumber(layer->rotation);
+    }
+    else if (strcmp(key, "visible") == 0) {
+        return cJSON_CreateBool(layer->visible);
+    }
+    else if (strcmp(key, "focusable") == 0) {
+        return cJSON_CreateBool(layer->focusable);
+    }
+    else if (strcmp(key, "scrollable") == 0) {
+        return cJSON_CreateNumber(layer->scrollable);
+    }
+    else if (strcmp(key, "rect") == 0) {
+        return create_rect_json(layer->rect);
+    }
+    else if (strcmp(key, "value") == 0) {
+        // 对于大多数组件，value 可以从 text 属性获取
+        if (layer->text && strlen(layer->text) > 0) {
+            return cJSON_CreateString(layer->text);
+        }
+        
+        // 如果没有 text 属性，返回 null
+        return cJSON_CreateNull();
+    }
+    
+    // 未知属性，返回 NULL
+    return NULL;
+}
+
+cJSON* layer_get_properties_as_json(Layer* layer, const char** keys, int count) {
+    if (!layer || !keys || count <= 0) {
+        return NULL;
+    }
+    
+    cJSON* result = cJSON_CreateObject();
+    if (!result) {
+        return NULL;
+    }
+    
+    for (int i = 0; i < count; i++) {
+        const char* key = keys[i];
+        if (!key) continue;
+        
+        cJSON* value = layer_get_property_as_json(layer, key);
+        if (value) {
+            cJSON_AddItemToObject(result, key, value);
+        }
+    }
+    
+    return result;
+}
+
+cJSON* layer_get_all_properties_as_json(Layer* layer) {
+    if (!layer) {
+        return NULL;
+    }
+    
+    cJSON* result = cJSON_CreateObject();
+    if (!result) {
+        return NULL;
+    }
+    
+    // 添加所有支持的属性
+    cJSON* value;
+    
+    // 基础属性
+    cJSON_AddStringToObject(result, "id", layer->id);
+    
+    // 文本属性
+    if (layer->text && strlen(layer->text) > 0) {
+        cJSON_AddStringToObject(result, "text", layer->text);
+    }
+    if (layer->label && strlen(layer->label) > 0) {
+        cJSON_AddStringToObject(result, "label", layer->label);
+    }
+    
+    // 颜色属性
+    cJSON_AddItemToObject(result, "color", create_color_json(layer->color));
+    cJSON_AddItemToObject(result, "bgColor", create_color_json(layer->bg_color));
+    cJSON_AddNumberToObject(result, "opacity", layer->bg_color.a);
+    
+    // 字体属性
+    if (layer->font) {
+        cJSON_AddItemToObject(result, "font", create_font_json(layer));
+    }
+    
+    // 样式属性
+    cJSON_AddNumberToObject(result, "borderRadius", layer->radius);
+    if (layer->source && strlen(layer->source) > 0) {
+        cJSON_AddStringToObject(result, "source", layer->source);
+    }
+    
+    // 尺寸和位置属性
+    cJSON_AddItemToObject(result, "size", create_size_json(layer->rect));
+    cJSON_AddItemToObject(result, "position", create_position_json(layer->rect));
+    cJSON_AddNumberToObject(result, "width", layer->rect.w);
+    cJSON_AddNumberToObject(result, "height", layer->rect.h);
+    
+    if (layer->layout_manager) {
+        cJSON_AddItemToObject(result, "padding", create_padding_json(layer));
+    }
+    
+    // 布局属性
+    cJSON_AddNumberToObject(result, "flex", layer->flex_ratio);
+    cJSON_AddNumberToObject(result, "rotation", layer->rotation);
+    
+    // 状态属性
+    cJSON_AddBoolToObject(result, "visible", layer->visible);
+    cJSON_AddBoolToObject(result, "focusable", layer->focusable);
+    cJSON_AddNumberToObject(result, "scrollable", layer->scrollable);
+    
+    return result;
+}
