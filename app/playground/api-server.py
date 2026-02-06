@@ -16,6 +16,20 @@ from datetime import datetime
 
 from openai import OpenAI
 
+import sys
+print(sys.getdefaultencoding())  # 应该是 'utf-8'
+print(sys.stdout.encoding)       # 应该是 'utf-8'
+
+import sys
+import locale
+
+# 强制使用 UTF-8
+sys.stdin.reconfigure(encoding='utf-8')
+sys.stdout.reconfigure(encoding='utf-8')
+sys.stderr.reconfigure(encoding='utf-8')
+locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
+
+
 # 设置 UTF-8 编码（解决 Windows 控制台 Unicode 问题）
 if sys.platform == "win32":
     import codecs
@@ -71,7 +85,15 @@ except Exception as e:
 
 app = Flask(__name__)
 CORS(app)  # 启用CORS支持
-
+app.config['JSON_AS_ASCII'] = False  # 关键设置！
+# 关键配置：支持中文
+app.config.update(
+    JSON_AS_ASCII=False,          # JSON 输出不转义中文
+    JSONIFY_PRETTYPRINT_REGULAR=True,
+    JSON_SORT_KEYS=False,
+    ENV='development',
+    DEBUG=True
+)
 
 full_system_prompt = """你是一个ui 生成助手，生成json格式，生成完整得ui，
 请根据以下需求，生成符合YUI框架规范的JSON格式UI定义文件。
@@ -454,7 +476,7 @@ incremental_system_prompt = """你是一个专业的YUI框架增量更新助手�
 用户："添加新元素"
 助手：{"target": "listContainer", "change": {"children": [{"id": "newPage", "type": "View"}]}}
 
-请严格按照上述规范生成JSON更新指令，确保格式正确且语义清晰。"""
+请严格按照上述规范生成JSON更新指令，确保格式正确且语义清晰,注意第一个更新指令的target是root。"""
 
 # 初始UI状态示例
 INITIAL_UI_STATE = {
@@ -495,26 +517,6 @@ def get_status():
 
 @app.route('/api/message/incremental', methods=['POST'])
 def send_message_incremental():
-    """
-    增量更新接口
-    只返回发生变化的UI元素更新
-    
-    请求格式:
-    {
-        "message": "用户发送的消息",
-        "json": { /* 当前的JSON配置 */ }
-    }
-    
-    返回格式:
-    {
-        "status": "success",
-        "updates": [
-            {"target": "elementId", "change": {"property": "value"}},
-            ...
-        ],
-        "timestamp": "..."
-    }
-    """
     try:
         # 改进JSON解析错误处理
         try:
@@ -588,7 +590,7 @@ def send_message_full():
     try:
         # 改进JSON解析错误处理
         try:
-            data = request.get_json()
+            data = request.get_json(force=True)
         except Exception as json_error:
             print(f"[ERROR] JSON解析失败: {str(json_error)}")
             print(f"[ERROR] 请求数据: {request.data.decode('utf-8', errors='replace')}")
@@ -688,7 +690,7 @@ def generate_incremental_updates(message, json_config):
             messages=[
                 {
                     "role": "system", 
-                    "content": incremental_system_prompt
+                    "content": json_config+' '+incremental_system_prompt
                 },
                 {"role": "user", "content": message}
             ]

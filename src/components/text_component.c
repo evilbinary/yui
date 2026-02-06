@@ -375,16 +375,21 @@ void text_component_set_on_change(TextComponent* component, EventHandler callbac
 
 // 调用 onChange 回调函数
 void text_component_trigger_on_change(TextComponent* component) {
-    if(component->on_change==NULL && component->change_name!=NULL){
+    // 如果没有事件处理器但有事件名称，尝试查找事件处理器
+    if(component->on_change == NULL && component->change_name != NULL){
         EventHandler handler = find_event_by_name(component->change_name);
         component->on_change = handler;
     }
-    if (!component || !component->on_change) {
-        printf("text_component_trigger_on_change not found onchange event %s\n",component->change_name);
+    
+    // 检查是否有可用的事件处理器
+    if (component->on_change) {
+        // 调用事件处理器
+        component->on_change(component->layer);
+    } else if (component->change_name) {
+        // 只有在指定了事件名称但找不到处理器时才打印警告
+        printf("select_component_trigger_on_change not found onchange event %s\n", component->change_name);
         print_registered_events();
-        return;
     }
-    component->on_change(component->layer);
 }
 
 // 删除选中文本

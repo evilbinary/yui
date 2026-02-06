@@ -5,7 +5,7 @@
 var editorState = {
     jsonContent: null,
     isValid: false,
-    updateMode: 'full',  // 默认更新模式：incremental 或 full
+    updateMode: 'incremental',  // 默认更新模式：incremental 或 full
     messageHistory: [],
     inspectEnabled: false  // Inspect 模式状态
 };
@@ -16,6 +16,7 @@ function initJsonEditor() {
 
     // 设置默认的示例JSON
     var defaultJson = {
+        "id": "root",
         "type": "Label",
         "text": "Hello World"
     };
@@ -269,8 +270,12 @@ function handleApiResponse(response, messageText, updateMode) {
         if (updateMode === 'incremental') {
             // 处理增量更新响应（直接是 updates 数组）
             if (Array.isArray(response) && response.length > 0) {
-                // 将更新转换为 YUI.update() 格式
+                // 确保每个更新项都有正确的格式（target和change字段）
+                
+                
                 var updateString = JSON.stringify(response);
+                YUI.log("handleApiResponse: Formatted updates: " + updateString);
+                YUI.log("handleApiResponse: Original updates: " + JSON.stringify(response));
                 YUI.update(updateString);
                 
                 // 显示详细信息
