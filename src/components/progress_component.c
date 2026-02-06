@@ -23,9 +23,10 @@ static void render_circle_arc(int center_x, int center_y, int radius, int start_
     }
     
     // 绘制圆弧（使用线段近似）
-    int num_segments = radius * 2; // 根据半径确定线段数量，保证平滑
-    if (num_segments < 30) num_segments = 30; // 最小线段数
-    if (num_segments > 100) num_segments = 100; // 最大线段数
+    // 根据圆周长度设置线段数量，进一步降低锯齿
+    int num_segments = (int)(2.0f * M_PI * radius);
+    if (num_segments < 120) num_segments = 120; // 最小线段数
+    if (num_segments > 720) num_segments = 720; // 最大线段数
     
     float angle_step = (end_rad - start_rad) / num_segments;
     
@@ -119,6 +120,11 @@ ProgressComponent* progress_component_create_from_json(Layer* layer, cJSON* json
         return NULL;
     }
     
+    cJSON* style = json_obj ? cJSON_GetObjectItem(json_obj, "style") : NULL;
+    int shape_specified = 0;
+    int value_specified = 0;
+    int direction_specified = 0;
+    
     // 从 JSON 配置中读取属性
     if (json_obj) {
         // 读取进度值
@@ -129,26 +135,38 @@ ProgressComponent* progress_component_create_from_json(Layer* layer, cJSON* json
                 // 将0-100的值转换为0.0-1.0
                 float progress = value / 100.0f;
                 progress_component_set_progress(component, progress);
+                value_specified = 1;
+            }
+        } else if (cJSON_HasObjectItem(json_obj, "data")) {
+            cJSON* data_item = cJSON_GetObjectItem(json_obj, "data");
+            if (cJSON_IsNumber(data_item)) {
+                int value = data_item->valueint;
+                float progress = value / 100.0f;
+                progress_component_set_progress(component, progress);
+                value_specified = 1;
             }
         }
         
         // 读取形状配置
-        if (cJSON_HasObjectItem(json_obj, "shape")) {
-            cJSON* shape_item = cJSON_GetObjectItem(json_obj, "shape");
-            if (cJSON_IsString(shape_item)) {
-                const char* shape_str = shape_item->valuestring;
-                if (strcmp(shape_str, "circle") == 0) {
-                    component->shape = PROGRESS_SHAPE_CIRCLE;
-                } else {
-                    component->shape = PROGRESS_SHAPE_RECTANGLE;
-                }
+        cJSON* shape_item = cJSON_GetObjectItem(json_obj, "shape");
+        if (!shape_item && style) {
+            shape_item = cJSON_GetObjectItem(style, "shape");
+        }
+        if (shape_item && cJSON_IsString(shape_item)) {
+            const char* shape_str = shape_item->valuestring;
+            if (strcmp(shape_str, "circle") == 0) {
+                component->shape = PROGRESS_SHAPE_CIRCLE;
+            } else {
+                component->shape = PROGRESS_SHAPE_RECTANGLE;
             }
+            shape_specified = 1;
         }
         
         // 读取方向配置（仅对长条形有效）
         if (cJSON_HasObjectItem(json_obj, "direction")) {
             cJSON* direction_item = cJSON_GetObjectItem(json_obj, "direction");
             if (cJSON_IsString(direction_item)) {
+                direction_specified = 1;
                 const char* direction_str = direction_item->valuestring;
                 if (strcmp(direction_str, "vertical") == 0) {
                     component->direction = PROGRESS_DIRECTION_VERTICAL;
@@ -167,16 +185,17 @@ ProgressComponent* progress_component_create_from_json(Layer* layer, cJSON* json
         }
         
         // 读取填充颜色
-        if (cJSON_HasObjectItem(json_obj, "fillColor")) {
-            cJSON* color_item = cJSON_GetObjectItem(json_obj, "fillColor");
-            if (cJSON_IsString(color_item)) {
-                // 解析颜色字符串（如 "#ff0000"）
-                const char* color_str = color_item->valuestring;
-                if (color_str[0] == '#') {
-                    unsigned int r, g, b;
-                    sscanf(color_str + 1, "%02x%02x%02x", &r, &g, &b);
-                    component->fill_color = (Color){r, g, b, 255};
-                }
+        cJSON* color_item = cJSON_GetObjectItem(json_obj, "fillColor");
+        if (!color_item && style) {
+            color_item = cJSON_GetObjectItem(style, "fillColor");
+        }
+        if (color_item && cJSON_IsString(color_item)) {
+            // 解析颜色字符串（如 "#ff0000"）
+            const char* color_str = color_item->valuestring;
+            if (color_str[0] == '#') {
+                unsigned int r, g, b;
+                sscanf(color_str + 1, "%02x%02x%02x", &r, &g, &b);
+                component->fill_color = (Color){r, g, b, 255};
             }
         }
         
@@ -189,15 +208,31 @@ ProgressComponent* progress_component_create_from_json(Layer* layer, cJSON* json
         }
         
         // 读取圆形进度条宽度
-        if (cJSON_HasObjectItem(json_obj, "circleWidth")) {
-            cJSON* width_item = cJSON_GetObjectItem(json_obj, "circleWidth");
-            if (cJSON_IsNumber(width_item)) {
-                component->circle_width = width_item->valueint;
-                if (component->circle_width < 1) {
-                    component->circle_width = 1;
-                }
+        cJSON* width_item = cJSON_GetObjectItem(json_obj, "circleWidth");
+        if (!width_item && style) {
+            width_item = cJSON_GetObjectItem(style, "circleWidth");
+        }
+        if (width_item && cJSON_IsNumber(width_item)) {
+            component->circle_width = width_item->valueint;
+            if (component->circle_width < 1) {
+                component->circle_width = 1;
             }
         }
+    }
+    
+    // 如果没有设置方向，默认使用较长边作为进度方向
+    if (!direction_specified) {
+        if (layer && layer->rect.w >= layer->rect.h) {
+            component->direction = PROGRESS_DIRECTION_HORIZONTAL;
+        } else {
+            component->direction = PROGRESS_DIRECTION_VERTICAL;
+        }
+    }
+    
+    // 如果没有设置形状，且是正方形，默认使用圆形
+    if (!shape_specified && layer && layer->rect.w > 0 && layer->rect.h > 0 &&
+        layer->rect.w == layer->rect.h) {
+        component->shape = PROGRESS_SHAPE_CIRCLE;
     }
     
     return component;
@@ -397,13 +432,32 @@ void progress_component_render(Layer* layer) {
     }
     
     // 显示百分比文本（两种形状都支持）
-    if (component->show_percentage && layer->font && layer->font->default_font) {
+    // 对于圆形进度条，如果自身没有字体，尝试从父层继承
+    DFont* text_font = NULL;
+    if (layer->font && layer->font->default_font) {
+        text_font = layer->font->default_font;
+    } else if (layer->parent && layer->parent->font && layer->parent->font->default_font) {
+        text_font = layer->parent->font->default_font;
+    }
+    
+    if (component->show_percentage && text_font) {
         char percentage_text[10];
         int percentage = (int)(component->progress * 100.0f);
         snprintf(percentage_text, sizeof(percentage_text), "%d%%", percentage);
         
-        Color text_color = (Color){0, 0, 0, 255};
-        Texture* text_texture = render_text(layer, percentage_text, text_color);
+        // 圆形进度条用layer->color或白色，长条形用黑色
+        Color text_color;
+        if (component->shape == PROGRESS_SHAPE_CIRCLE) {
+            if (layer->color.a > 0) {
+                text_color = layer->color;
+            } else {
+                text_color = (Color){255, 255, 255, 255}; // 默认白色
+            }
+        } else {
+            text_color = (Color){0, 0, 0, 255};
+        }
+        
+        Texture* text_texture = backend_render_texture(text_font, percentage_text, text_color);
         
         if (text_texture) {
             int text_width, text_height;

@@ -332,7 +332,7 @@ YUI框架提供强大的布局管理器，通过 `layout` 属性控制子组件�
 {
   "id": "progress",
   "type": "Progress",
-  "data": 30,// 进度值%，范围0-100
+  "value": 30, // 进度值%，范围0-100（也支持 data）
   "style": {
               "color": "#2C3E50",
               "bgColor":"#CCCCCC",
@@ -340,6 +340,33 @@ YUI框架提供强大的布局管理器，通过 `layout` 属性控制子组件�
           }
 }
 
+```
+
+Progress 组件支持的属性（除通用属性外）：
+
+- `value`/`data`: 进度值，0-100
+- `shape`: `"rectangle"` 或 `"circle"`
+- `direction`: `"horizontal"` 或 `"vertical"`（仅长条形有效）
+- `fillColor`: 进度填充颜色（支持 `#RRGGBB`）
+- `showPercentage`: 是否显示百分比文本（true/false）
+- `circleWidth`: 圆形进度条线宽
+
+圆形进度条示例：
+
+```json
+{
+  "id": "circleProgress",
+  "type": "Progress",
+  "size": [150, 150],
+  "value": 75,
+  "shape": "circle",
+  "circleWidth": 8,
+  "fillColor": "#4caf50",
+  "style": {
+    "bgColor": "#e0e0e0",
+    "borderRadius": 75
+  }
+}
 ```
 
 ### 7. CheckBox组件特有属性
