@@ -28,10 +28,46 @@ sys.stderr = open(sys.stderr.fileno(), 'w', buffering=1)
 
 model= 'Pro/zai-org/GLM-4.7' #'Qwen/Qwen3-VL-235B-A22B-Instruct' #'deepseek-ai/DeepSeek-V3.2' #'Qwen/Qwen2.5-7B-Instruct' #glm-4.7-free #Qwen/Qwen2.5-7B-Instruct #gpt-5-nano
 
-client = OpenAI(
-    base_url="https://api.siliconflow.cn/v1", #"https://opencode.ai/zen/v1",
-    api_key=os.getenv("OPENAI_API_KEY", ""), # export OPENAI_API_KEY=
-)
+# 尝试使用 httpx 客户端初始化 OpenAI
+import httpx
+
+# 检查是否有代理环境变量
+http_proxy = os.environ.get('HTTP_PROXY') or os.environ.get('http_proxy')
+https_proxy = os.environ.get('HTTPS_PROXY') or os.environ.get('https_proxy')
+
+# 创建 httpx 客户端，考虑代理设置
+if http_proxy or https_proxy:
+    # 如果有代理设置
+    proxies = {}
+    if http_proxy:
+        proxies['http://'] = http_proxy
+    if https_proxy:
+        proxies['https://'] = https_proxy
+    
+    http_client = httpx.Client(proxies=proxies)
+    print("Using proxy configuration")
+else:
+    # 如果没有代理设置
+    http_client = httpx.Client()
+    print("No proxy configuration detected")
+
+try:
+    # 使用自定义 httpx 客户端初始化 OpenAI
+    client = OpenAI(
+        base_url="https://api.siliconflow.cn/v1", #"https://opencode.ai/zen/v1",
+        api_key=os.getenv("OPENAI_API_KEY", ""), # export OPENAI_API_KEY=
+        http_client=http_client
+    )
+except Exception as e:
+    print(f"Failed to initialize OpenAI client with custom httpx client: {e}")
+    print("Trying with default client...")
+    
+    # 最后尝试最基本的初始化
+    client = OpenAI(
+        api_key=os.getenv("OPENAI_API_KEY", ""),
+    )
+    # 手动设置 base_url
+    client.base_url = "https://api.siliconflow.cn/v1"
 
 app = Flask(__name__)
 CORS(app)  # 启用CORS支持
