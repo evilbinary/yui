@@ -51,7 +51,8 @@ function onJsonChange() {
 
 // 更新模式变更时触发 - onChange 事件
 function onUpdateModeChange() {
-    var selectedValue = YUI.getText("updateModeSelect");
+    var selectedValue = YUI.getProperty("updateModeSelect", "value");
+    
     editorState.updateMode = selectedValue;
     YUI.log("onUpdateModeChange: Update mode changed to " + selectedValue);
 }
@@ -249,6 +250,8 @@ function sendMessage() {
         APIClient.sendMessageFull(messageText, json, function(response) {
             handleApiResponse(response, messageText, updateMode);
         });
+    }else{
+        YUI.log("sendMessage: Unknown update mode: " + updateMode);
     }
     
     // 清空输入框
