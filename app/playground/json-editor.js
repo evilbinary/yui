@@ -155,21 +155,80 @@ function refreshPreviewInternal(json) {
         return;
     }
 
-    // 将 JSON 转换为字符串
-    var jsonString = JSON.stringify(json, null, 4);
-
-    YUI.log("refreshPreviewInternal: JSON Text: " + jsonString);
-
-    // 使用新的 renderFromJson 函数动态渲染 UI
-    var result = YUI.renderFromJson("previewLabel", jsonString);
-
-    if (result === 0) {
-        YUI.log("refreshPreviewInternal: Successfully rendered JSON to UI");
+    // 根据更新模式处理不同
+    if (editorState.updateMode === 'incremental') {
+        // 增量模式：如果是数组，需要分别处理
+        if (Array.isArray(json)) {
+            YUI.log("refreshPreviewInternal: Processing incremental array with " + json.length + " items");
+            
+            if (json.length > 0) {
+                // 检查第一个元素是否包含id
+                var firstItem = json[0];
+                
+                if (firstItem && firstItem.id) {
+                    // 第一个元素有id，使用renderFromJson渲染
+                    var firstJsonString = JSON.stringify(firstItem, null, 4);
+                    YUI.log("refreshPreviewInternal: Rendering first item with renderFromJson");
+                    YUI.log("refreshPreviewInternal: First item JSON: " + firstJsonString);
+                    var result = YUI.renderFromJson("previewLabel", firstJsonString);
+                    
+                    if (result === 0) {
+                        YUI.log("refreshPreviewInternal: Successfully rendered first item");
+                    } else {
+                        YUI.log("refreshPreviewInternal: Failed to render first item, result = " + result);
+                    }
+                    
+                    // 对其余元素使用YUI.update
+                    for (var i = 1; i < json.length; i++) {
+                        var updateItem = json[i];
+                        var updateString = JSON.stringify(updateItem);
+                        YUI.log("refreshPreviewInternal: Updating item " + i + " with YUI.update");
+                        YUI.log("refreshPreviewInternal: Update item " + i + ": " + updateString);
+                        YUI.update(updateString);
+                    }
+                } else {
+                    // 第一个元素没有id，对所有元素使用YUI.update
+                    YUI.log("refreshPreviewInternal: No id found in first item, using YUI.update for all items");
+                    for (var i = 0; i < json.length; i++) {
+                        var updateItem = json[i];
+                        var updateString = JSON.stringify(updateItem);
+                        YUI.log("refreshPreviewInternal: Updating item " + i + " with YUI.update");
+                        YUI.log("refreshPreviewInternal: Update item " + i + ": " + updateString);
+                        YUI.update(updateString);
+                    }
+                }
+            }
+        } else {
+            // 不是数组，直接渲染
+            var jsonString = JSON.stringify(json, null, 4);
+            YUI.log("refreshPreviewInternal: Processing non-array in incremental mode");
+            var result = YUI.renderFromJson("previewLabel", jsonString);
+            
+            if (result === 0) {
+                YUI.log("refreshPreviewInternal: Successfully rendered non-array item");
+            } else {
+                YUI.log("refreshPreviewInternal: Failed to render non-array item, result = " + result);
+                // 如果渲染失败，回退到文本显示
+                var previewText = jsonToPreviewText(json);
+                YUI.setText("previewLabel", previewText);
+            }
+        }
     } else {
-        YUI.log("refreshPreviewInternal: Failed to render JSON, result = " + result);
-        // 如果渲染失败，回退到文本显示
-        var previewText = jsonToPreviewText(json);
-        YUI.setText("previewLabel", previewText);
+        // 全量模式：直接使用renderFromJson
+        var jsonString = JSON.stringify(json, null, 4);
+        YUI.log("refreshPreviewInternal: Processing full update");
+        YUI.log("refreshPreviewInternal: JSON Text: " + jsonString);
+        
+        var result = YUI.renderFromJson("previewLabel", jsonString);
+        
+        if (result === 0) {
+            YUI.log("refreshPreviewInternal: Successfully rendered full update");
+        } else {
+            YUI.log("refreshPreviewInternal: Failed to render full update, result = " + result);
+            // 如果渲染失败，回退到文本显示
+            var previewText = jsonToPreviewText(json);
+            YUI.setText("previewLabel", previewText);
+        }
     }
 }
 
