@@ -471,10 +471,17 @@ void menu_component_render(Layer* layer) {
 
 // 弹出菜单关闭回调
 static void menu_popup_close_callback(PopupLayer* popup) {
-    if (popup && popup->layer && popup->layer->component) {
-        MenuComponent* component = (MenuComponent*)popup->layer->component;
+    if (!popup) return;
+    
+    // 先保存layer指针，因为在popup_manager_remove中，popup会被释放
+    Layer* layer = popup->layer;
+    if (!layer) return;
+    
+    MenuComponent* component = (MenuComponent*)layer->component;
+    if (component) {
         component->is_popup = 0;
-        component->popup_layer = NULL;
+        // 注意：popup_layer 会在 popup_manager 中被释放，不要在这里再次设置为NULL
+        // component->popup_layer = NULL;
         
         // 调用用户自定义的关闭回调
         if (component->on_popup_closed) {
@@ -530,7 +537,8 @@ bool menu_component_show_popup(MenuComponent* component, int x, int y) {
     if (!popup_manager_add(popup)) {
         free(component->popup_layer);
         component->popup_layer = NULL;
-        popup_layer_destroy(popup);
+        // Since popup_manager_add failed, popup is not in the list, so we can safely free it
+        free(popup);
         return false;
     }
     
@@ -546,11 +554,14 @@ void menu_component_hide_popup(MenuComponent* component) {
         return;
     }
     
+    // 保存指针以便调用 popup_manager_remove
+    Layer* popup_layer = component->popup_layer;
+    component->popup_layer = NULL;  // 先设置为NULL，防止回调中再次使用
+    
     // 从弹出管理器中移除
-    popup_manager_remove(component->popup_layer);
+    popup_manager_remove(popup_layer);
     
     component->is_popup = 0;
-    component->popup_layer = NULL;
 }
 
 // 检查弹出菜单是否打开

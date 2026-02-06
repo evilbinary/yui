@@ -7,10 +7,14 @@
 PopupManager* g_popup_manager = NULL;
 
 void popup_manager_init(void) {
-    if (g_popup_manager) return;
+    if (g_popup_manager) {
+        return;
+    }
     
     g_popup_manager = (PopupManager*)malloc(sizeof(PopupManager));
-    if (!g_popup_manager) return;
+    if (!g_popup_manager) {
+        return;
+    }
     
     memset(g_popup_manager, 0, sizeof(PopupManager));
     g_popup_manager->max_popups = 10;
@@ -40,7 +44,7 @@ bool popup_manager_add(PopupLayer* popup) {
     // 检查是否已存在相同的layer
     PopupLayer* current = g_popup_manager->active_popups;
     while (current) {
-        if (current->layer == popup->layer) {
+        if (current && current->layer == popup->layer) {
             return false; // 已存在
         }
         current = current->next;
@@ -65,7 +69,6 @@ bool popup_manager_add(PopupLayer* popup) {
     // 更新顶部弹出层
     g_popup_manager->top_popup = g_popup_manager->active_popups;
     
-    printf("DEBUG: Added popup type %d with priority %d\n", popup->type, popup->priority);
     return true;
 }
 
@@ -78,7 +81,8 @@ bool popup_manager_remove(Layer* layer) {
     PopupLayer* current = g_popup_manager->active_popups;
     
     while (current) {
-        if (current->layer == layer) {
+        if (current && current->layer == layer) {
+            // 先从链表中移除
             if (prev) {
                 prev->next = current->next;
             } else {
@@ -88,13 +92,19 @@ bool popup_manager_remove(Layer* layer) {
             // 更新顶部弹出层
             g_popup_manager->top_popup = g_popup_manager->active_popups;
             
+            // 保存next指针，因为在回调函数中可能会修改链表
+            PopupLayer* next_to_free = current;
+            
+            // 将current的next设为NULL，防止回调函数中误用
+            current->next = NULL;
+            
             // 调用关闭回调（在释放之前）
-            if (current->close_callback) {
-                current->close_callback(current);
+            if (next_to_free->close_callback) {
+                next_to_free->close_callback(next_to_free);
             }
             
-            free(current);
-            printf("DEBUG: Removed popup\n");
+            // 释放内存
+            free(next_to_free);
             return true;
         }
         prev = current;
@@ -116,6 +126,9 @@ void popup_manager_close_all(void) {
     while (current) {
         PopupLayer* next = current->next;
         
+        // 先将current的next设为NULL，防止回调函数中误用
+        current->next = NULL;
+        
         if (current->close_callback) {
             current->close_callback(current);
         }
@@ -135,7 +148,7 @@ void popup_manager_close_by_type(PopupType type) {
     PopupLayer* current = g_popup_manager->active_popups;
     
     while (current) {
-        if (current->type == type) {
+        if (current && current->type == type) {
             PopupLayer* to_remove = current;
             current = current->next;
             
@@ -144,6 +157,9 @@ void popup_manager_close_by_type(PopupType type) {
             } else {
                 g_popup_manager->active_popups = current;
             }
+            
+            // 先将to_remove的next设为NULL，防止回调函数中误用
+            to_remove->next = NULL;
             
             if (to_remove->close_callback) {
                 to_remove->close_callback(to_remove);
@@ -164,7 +180,7 @@ void popup_manager_render(void) {
     
     PopupLayer* current = g_popup_manager->active_popups;
     while (current) {
-        if (current->layer && current->layer->render) {
+        if (current && current->layer && current->layer->render) {
             current->layer->render(current->layer);
         }
         current = current->next;
@@ -172,14 +188,30 @@ void popup_manager_render(void) {
 }
 
 bool popup_manager_handle_mouse_event(MouseEvent* event) {
-    if (!g_popup_manager || !event) return false;
+    if (!g_popup_manager || !event) {
+        return false;
+    }
+    
+    if (!g_popup_manager->active_popups) {
+        return false;
+    }
     
     PopupLayer* current = g_popup_manager->active_popups;
     bool handled = false;
     
     // 处理popup内部的事件
     while (current) {
-        if (current->layer && current->layer->handle_mouse_event) {
+        // 检查指针是否有效
+        if ((uintptr_t)current == 0xabababababababab || 
+            (uintptr_t)current == 0xfeeefeeefeeefeee) {
+            // 检测到 freed 内存指针，清空列表并返回
+            printf("ERROR: popup_manager_handle_mouse_event - detected freed memory pointer, clearing list\n");
+            g_popup_manager->active_popups = NULL;
+            g_popup_manager->top_popup = NULL;
+            return false;
+        }
+        
+        if (current && current->layer && current->layer->handle_mouse_event) {
             current->layer->handle_mouse_event(current->layer, event);
             handled = true;
         }
@@ -196,7 +228,7 @@ bool popup_manager_handle_key_event(KeyEvent* event) {
     bool handled = false;
     
     while (current) {
-        if (current->layer && current->layer->handle_key_event) {
+        if (current && current->layer && current->layer->handle_key_event) {
             current->layer->handle_key_event(current->layer, event);
             handled = true;
         }
@@ -213,7 +245,7 @@ bool popup_manager_handle_scroll_event(int scroll_delta) {
     bool handled = false;
     
     while (current) {
-        if (current->layer && current->layer->handle_scroll_event) {
+        if (current && current->layer && current->layer->handle_scroll_event) {
             current->layer->handle_scroll_event(current->layer, scroll_delta);
             handled = true;
         }
@@ -228,7 +260,7 @@ bool popup_manager_is_point_in_popups(int x, int y) {
     
     PopupLayer* current = g_popup_manager->active_popups;
     while (current) {
-        if (current->layer) {
+        if (current && current->layer) {
             Layer* layer = current->layer;
             if (x >= layer->rect.x && x < layer->rect.x + layer->rect.w &&
                 y >= layer->rect.y && y < layer->rect.y + layer->rect.h) {
@@ -258,7 +290,21 @@ PopupLayer* popup_layer_create(Layer* layer, PopupType type, int priority) {
 }
 
 void popup_layer_destroy(PopupLayer* popup) {
+    // Note: This function should only be called on PopupLayers that are NOT in the manager's list
+    // Use popup_manager_remove to properly remove and free a PopupLayer from the manager
     if (popup) {
+        // Make sure the popup is not in the active list before freeing
+        if (g_popup_manager) {
+            PopupLayer* current = g_popup_manager->active_popups;
+            while (current) {
+                if (current == popup) {
+                    printf("WARNING: Attempting to destroy a PopupLayer that is still in the manager's list\n");
+                    printf("Use popup_manager_remove() instead of popup_layer_destroy()\n");
+                    return;
+                }
+                current = current->next;
+            }
+        }
         free(popup);
     }
 }

@@ -702,7 +702,11 @@ void select_component_collapse(SelectComponent* component) {
     
     // 从弹出层管理器移除
     if (component->dropdown_layer) {
-        popup_manager_remove(component->dropdown_layer);
+        // 保存指针以便调用 popup_manager_remove
+        Layer* dropdown_layer = component->dropdown_layer;
+        component->dropdown_layer = NULL;  // 先设置为NULL，防止回调中再次使用
+        
+        popup_manager_remove(dropdown_layer);
         // 注意：dropdown_layer 会在 popup_manager_remove 中被释放，close_callback 会设置为 NULL
         printf("DEBUG: Removed select dropdown from popup manager\n");
     }
@@ -1519,9 +1523,13 @@ void select_component_handle_dropdown_scroll_event(Layer* layer, int scroll_delt
 
 // 弹出层关闭回调
 void select_component_popup_close_callback(PopupLayer* popup) {
-    if (!popup || !popup->layer) return;
+    if (!popup) return;
     
-    SelectComponent* component = (SelectComponent*)popup->layer->component;
+    // 先保存layer指针，因为在popup_manager_remove中，popup会被释放
+    Layer* layer = popup->layer;
+    if (!layer) return;
+    
+    SelectComponent* component = (SelectComponent*)layer->component;
     if (component) {
         // 确保状态一致，但避免重复触发回调
         component->expanded = 0;
@@ -1529,8 +1537,9 @@ void select_component_popup_close_callback(PopupLayer* popup) {
         component->is_dragging = 0;
         component->just_expanded = 0;
         
-        // 注意：dropdown_layer 会在这里被 popup_manager 释放，我们只需要设置为 NULL
-        component->dropdown_layer = NULL;
+        // 注意：dropdown_layer 会在 popup_manager 中被释放，我们只需要设置为 NULL
+        // 注意：不要在这里再次设置为NULL，因为在collapse函数中已经设置过了
+        // component->dropdown_layer = NULL;
         
         // 注意：不在这里触发 on_dropdown_expanded 回调，因为它应该已经在 collapse 中被调用了
     }
