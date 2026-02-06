@@ -1260,6 +1260,89 @@ void backend_render_line(int x1, int y1, int x2, int y2, Color color) {
     }
 }
 
+// 绘制抗锯齿圆弧（逐像素渲染，无锯齿）
+// center_x, center_y: 圆心坐标
+// radius: 圆弧半径（到弧线中心的距离）
+// start_angle, end_angle: 起止角度（度数，0度在顶部，顺时针）
+// color: 颜色
+// line_width: 弧线宽度
+void backend_render_arc(int center_x, int center_y, int radius, float start_angle, float end_angle, Color color, int line_width) {
+    if (radius <= 0 || line_width <= 0) return;
+    
+    float half_w = line_width / 2.0f;
+    float r_inner = radius - half_w;
+    float r_outer = radius + half_w;
+    if (r_inner < 0) r_inner = 0;
+    
+    // 将角度转换为弧度（0度在顶部，顺时针）
+    float start_rad = (start_angle - 90.0f) * M_PI / 180.0f;
+    float end_rad = (end_angle - 90.0f) * M_PI / 180.0f;
+    
+    // 确保 end > start
+    while (end_rad < start_rad) {
+        end_rad += 2.0f * M_PI;
+    }
+    
+    // 遍历圆弧的边界框
+    int extent = (int)(r_outer + 2);
+    int min_x = center_x - extent;
+    int min_y = center_y - extent;
+    int max_x = center_x + extent;
+    int max_y = center_y + extent;
+    
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+    
+    for (int py = min_y; py <= max_y; py++) {
+        for (int px = min_x; px <= max_x; px++) {
+            float dx = px - center_x + 0.5f;
+            float dy = py - center_y + 0.5f;
+            float dist = sqrtf(dx * dx + dy * dy);
+            
+            // 快速跳过：距离太远或太近
+            if (dist < r_inner - 1.0f || dist > r_outer + 1.0f) continue;
+            
+            // 检查角度是否在弧线范围内
+            float angle = atan2f(dy, dx);
+            
+            // 归一化角度到 [start_rad, start_rad + 2π) 范围
+            while (angle < start_rad) angle += 2.0f * M_PI;
+            while (angle > start_rad + 2.0f * M_PI) angle -= 2.0f * M_PI;
+            
+            // 角度边缘的抗锯齿（约1像素的平滑过渡）
+            float angle_aa = 1.0f;
+            float pixel_angle = 1.0f / (dist > 0 ? dist : 1.0f); // 1像素对应的角度
+            
+            if (angle < start_rad + pixel_angle) {
+                angle_aa = (angle - start_rad) / pixel_angle;
+            } else if (angle > end_rad - pixel_angle) {
+                angle_aa = (end_rad - angle) / pixel_angle;
+            } else if (angle > end_rad) {
+                continue; // 完全超出角度范围
+            }
+            if (angle_aa <= 0.0f) continue;
+            if (angle_aa > 1.0f) angle_aa = 1.0f;
+            
+            // 径向抗锯齿：根据像素到弧线内外边缘的距离计算alpha
+            float radial_aa = 1.0f;
+            if (dist < r_inner) {
+                radial_aa = 1.0f - (r_inner - dist); // 内边缘平滑
+            } else if (dist > r_outer) {
+                radial_aa = 1.0f - (dist - r_outer); // 外边缘平滑
+            }
+            if (radial_aa <= 0.0f) continue;
+            if (radial_aa > 1.0f) radial_aa = 1.0f;
+            
+            // 组合alpha
+            float final_alpha = angle_aa * radial_aa;
+            Uint8 a = (Uint8)(final_alpha * color.a);
+            if (a == 0) continue;
+            
+            SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, a);
+            SDL_RenderDrawPoint(renderer, px, py);
+        }
+    }
+}
+
 // 毛玻璃效果缓存管理函数
 void init_blur_cache() {
     if (blur_cache_initialized) return;
