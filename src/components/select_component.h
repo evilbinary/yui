@@ -63,6 +63,10 @@ typedef struct {
     void* user_data;                  // 用户数据
     void (*on_selection_changed)(int index, void* user_data);     // 选择变化回调
     void (*on_dropdown_expanded)(int expanded, void* user_data);  // 展开状态变化回调
+        
+    // 标准事件支持
+    EventHandler on_change;           // onChange 事件处理器
+    char* change_name;                // onChange 事件名称
 } SelectComponent;
 
 // 函数声明
@@ -127,5 +131,10 @@ void select_component_handle_dropdown_mouse_event(Layer* layer, MouseEvent* even
 void select_component_handle_dropdown_key_event(Layer* layer, KeyEvent* event);
 void select_component_handle_dropdown_scroll_event(Layer* layer, int scroll_delta);
 void select_component_popup_close_callback(PopupLayer* popup);
+
+// 标准事件支持函数
+void select_component_trigger_on_change(SelectComponent* component);
+void select_component_set_on_change(SelectComponent* component, EventHandler callback, void* user_data);
+void select_component_register_event(Layer* layer, const char* event_name, const char* event_func_name, EventHandler event_handler);
 
 #endif  // YUI_SELECT_COMPONENT_H

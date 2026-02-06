@@ -57,6 +57,10 @@ SelectComponent* select_component_create(Layer* layer) {
     component->on_selection_changed = NULL;
     component->on_dropdown_expanded = NULL;
     
+    // 标准事件支持初始化
+    component->on_change = NULL;
+    component->change_name = NULL;
+    
     // 设置组件和渲染函数
     layer->component = component;
     layer->render = select_component_render;
@@ -245,6 +249,22 @@ SelectComponent* select_component_create_from_json(Layer* layer, cJSON* json_obj
         component->font = backend_load_font(font_path, component->font_size);
     }
     
+    // 解析事件绑定
+    cJSON* events = cJSON_GetObjectItem(json_obj, "events");
+    if (events) {
+        // 解析onChange事件
+        if (cJSON_HasObjectItem(events, "onChange")) {
+            cJSON* on_change_obj = cJSON_GetObjectItem(events, "onChange");
+            if (cJSON_IsString(on_change_obj)) {
+                const char* event_name = on_change_obj->valuestring;
+                // 将事件名称存储在 change_name 中，稍后由事件系统处理
+                component->change_name = strdup(event_name);
+                EventHandler handler = find_event_by_name(event_name);
+                component->on_change = handler;
+            }
+        }
+    }
+
     return component;
 }
 
@@ -436,6 +456,11 @@ void select_component_set_selected(SelectComponent* component, int index) {
     // 调用回调函数
     if (old_index != index && component->on_selection_changed) {
         component->on_selection_changed(index, component->user_data);
+    }
+    
+    // 触发标准 onChange 事件
+    if (old_index != index) {
+        select_component_trigger_on_change(component);
     }
 }
 
@@ -1506,5 +1531,42 @@ void select_component_popup_close_callback(PopupLayer* popup) {
         component->dropdown_layer = NULL;
         
         // 注意：不在这里触发 on_dropdown_expanded 回调，因为它应该已经在 collapse 中被调用了
+    }
+}
+
+// 设置 onChange 回调函数
+void select_component_set_on_change(SelectComponent* component, EventHandler callback, void* user_data) {
+    if (!component) {
+        return;
+    }
+    
+    component->on_change = callback;
+    component->change_name = (char*)user_data;
+}
+
+// 调用 onChange 回调函数
+void select_component_trigger_on_change(SelectComponent* component) {
+    if (!component) {
+        return;
+    }
+    
+    if(component->on_change==NULL && component->change_name!=NULL){
+        EventHandler handler = find_event_by_name(component->change_name);
+        component->on_change = handler;
+    }
+    if (!component || !component->on_change) {
+        printf("text_component_trigger_on_change not found onchange event %s\n",component->change_name);
+        print_registered_events();
+        return;
+    }
+    component->on_change(component->layer);
+}
+
+// 注册事件处理函数
+void select_component_register_event(Layer* layer, const char* event_name, const char* event_func_name, EventHandler event_handler){
+    if(strcmp(event_name,"change")==0 || strcmp(event_name,"onChange")==0){
+        SelectComponent* component = (SelectComponent*)layer->component;
+        component->on_change = event_handler;
+        component->change_name = strdup(event_func_name);
     }
 }
