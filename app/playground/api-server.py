@@ -428,6 +428,11 @@ incremental_system_prompt = """你是一个专业的YUI框架增量更新助手�
 3. **null语义**：明确区分添加/更新 vs 删除
 4. **批量操作**：多个更新用数组包装
 5. **只返回JSON**：不要包含解释文字
+6. 根路径是 root 下需要更新到 添加children中
+7.通过简单的 JSON 格式增量更新 UI 组件，无需重新渲染整个 UI 树。
+    1、统一格式：{ "target": "id", "change": {...} }
+    2、路径支持：children.0、children.id、layerId.a.b.c
+    3、null 表示删除，不存在则添加，存在则更新
 
 ## 示例对话
 
@@ -445,6 +450,9 @@ incremental_system_prompt = """你是一个专业的YUI框架增量更新助手�
 
 用户："清空整个列表"
 助手：{"target": "listContainer", "change": {"children": null}}
+
+用户："添加新元素"
+助手：{"target": "listContainer", "change": {"children": [{"id": "newPage", "type": "View"}]}}
 
 请严格按照上述规范生成JSON更新指令，确保格式正确且语义清晰。"""
 
@@ -696,6 +704,17 @@ def generate_incremental_updates(message, json_config):
         # 获取模型回复内容
         content = completion.choices[0].message.content
         print(f"===== 模型回复 =====\n{content}")
+
+        # 处理可能包含的Markdown代码块标记
+        if isinstance(content, str):
+            # 移除可能的Markdown代码块标记
+            if content.startswith('```json'):
+                content = content[7:]  # 移除开头的```json
+            if content.startswith('```'):
+                content = content[3:]   # 移除开头的```
+            if content.endswith('```'):
+                content = content[:-3]  # 移除结尾的```
+            content = content.strip()  # 移除前后空白
 
         # 尝试解析为JSON（可能是对象或数组）
         try:
