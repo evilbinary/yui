@@ -10,6 +10,9 @@ var editorState = {
     inspectEnabled: false  // Inspect 模式状态
 };
 
+// 存储增量更新历史
+var jresponse = [];
+
 // 初始化JSON编辑器 - onLoad 事件触发
 function initJsonEditor() {
     YUI.log("initJsonEditor: Initializing JSON editor...");
@@ -272,21 +275,52 @@ function handleApiResponse(response, messageText, updateMode) {
             if (Array.isArray(response) && response.length > 0) {
                 // 确保每个更新项都有正确的格式（target和change字段）
                 
+                // 将当前响应追加到 jresponse 数组
+                response.forEach(function(update) {
+                    jresponse.push(update);
+                });
                 
                 var updateString = JSON.stringify(response);
                 YUI.log("handleApiResponse: Formatted updates: " + updateString);
                 YUI.log("handleApiResponse: Original updates: " + JSON.stringify(response));
                 YUI.update(updateString);
                 
+                
+                
+                // 获取原始文本并追加jresponse数组
+                var originalText = YUI.getText("jsonEditor");
+                var jresponseText = JSON.stringify(jresponse, null, 2);
+                
+                // 如果原始文本不为空，且不是数组格式，则追加
+                if (originalText && !originalText.trim().startsWith('[')) {
+                    // 原始文本不是数组格式，创建一个包含原始内容和jresponse的数组
+                    try {
+                        var originalJson = JSON.parse(originalText);
+                        var combinedArray = [originalJson];
+                        // 将jresponse中的每个元素添加到数组
+                        for (var i = 0; i < jresponse.length; i++) {
+                            combinedArray.push(jresponse[i]);
+                        }
+                        YUI.setText("jsonEditor", JSON.stringify(combinedArray, null, 2));
+                    } catch (e) {
+                        // 原始文本不是有效的JSON，直接追加jresponse
+                        YUI.setText("jsonEditor", jresponseText);
+                    }
+                } else {
+                    // 原始文本是数组格式或为空，直接使用jresponse
+                    YUI.setText("jsonEditor", jresponseText);
+                }
+
                 // 显示详细信息
                 var details = "✅ 增量更新成功！\n\n";
                 details += "更新详情:\n";
-                response.forEach(function(update, index) {
+                jresponse.forEach(function(update, index) {
                     details += (index + 1) + ". " + update.target + ": " + JSON.stringify(update.change) + "\n";
                 });
                 
-                YUI.setText("previewLabel", details);
                 YUI.log("handleApiResponse: Incremental updates applied: " + updateString);
+                YUI.log("handleApiResponse: Total jresponse array length: " + jresponse.length);
+                YUI.log("handleApiResponse: jresponse content: " + JSON.stringify(jresponse));
             } else if (Array.isArray(response) && response.length === 0) {
                 YUI.setText("previewLabel", "✅ 消息已发送，但没有收到UI更新\n\n消息: " + messageText);
             } else {
@@ -295,6 +329,9 @@ function handleApiResponse(response, messageText, updateMode) {
         } else if (updateMode === 'full') {
             // 处理全量更新响应（直接是 UI JSON 对象）
             if (response && typeof response === 'object' && response.type) {
+                // 清空增量更新数组，因为这是全量更新
+                jresponse = [];
+                
                 // 直接渲染完整的 UI JSON（符合 json-format-spec.md 规范）
                 YUI.log("handleApiResponse: Full UI JSON received");
                 YUI.log("handleApiResponse: UI Type: " + response.type);
@@ -309,7 +346,29 @@ function handleApiResponse(response, messageText, updateMode) {
                 // /YUI.setText("previewResult", details);
                 YUI.log("handleApiResponse: Full UI update applied", details);
                 
-                YUI.setText("jsonEditor", JSON.stringify(response, null, 2));
+                // 获取原始文本并追加jresponse数组
+                var originalText = YUI.getText("jsonEditor");
+                var jresponseText = JSON.stringify(jresponse, null, 2);
+                
+                // 如果原始文本不为空，且不是数组格式，则追加
+                if (originalText && !originalText.trim().startsWith('[')) {
+                    // 原始文本不是数组格式，创建一个包含原始内容和jresponse的数组
+                    try {
+                        var originalJson = JSON.parse(originalText);
+                        var combinedArray = [originalJson];
+                        // 将jresponse中的每个元素添加到数组
+                        for (var i = 0; i < jresponse.length; i++) {
+                            combinedArray.push(jresponse[i]);
+                        }
+                        YUI.setText("jsonEditor", JSON.stringify(combinedArray, null, 2));
+                    } catch (e) {
+                        // 原始文本不是有效的JSON，直接追加jresponse
+                        YUI.setText("jsonEditor", jresponseText);
+                    }
+                } else {
+                    // 原始文本是数组格式或为空，直接使用jresponse
+                    YUI.setText("jsonEditor", jresponseText);
+                }
                 refreshPreviewInternal(response);
                 // 这里应该调用 YUI.render 或其他函数来渲染完整的 UI
                 // 例如：YUI.renderFromJson(response);
