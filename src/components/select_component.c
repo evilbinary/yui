@@ -67,6 +67,7 @@ SelectComponent* select_component_create(Layer* layer) {
     layer->handle_mouse_event = select_component_handle_mouse_event;
     layer->handle_key_event = select_component_handle_key_event;
     layer->handle_scroll_event = select_component_handle_scroll_event;
+    layer->register_event = select_component_register_event;
     
     // 设置滚动事件回调
     if (!layer->event) {
@@ -1550,16 +1551,22 @@ void select_component_trigger_on_change(SelectComponent* component) {
         return;
     }
     
-    if(component->on_change==NULL && component->change_name!=NULL){
+    // 如果没有事件处理器但有事件名称，尝试查找事件处理器
+    if(component->on_change == NULL && component->change_name != NULL){
         EventHandler handler = find_event_by_name(component->change_name);
         component->on_change = handler;
     }
-    if (!component || !component->on_change) {
-        printf("text_component_trigger_on_change not found onchange event %s\n",component->change_name);
+    
+    // 检查是否有可用的事件处理器
+    if (component->on_change) {
+        // 调用事件处理器
+        component->on_change(component->layer);
+    } else if (component->change_name) {
+        // 只有在指定了事件名称但找不到处理器时才打印警告
+        printf("select_component_trigger_on_change not found onchange event %s\n", component->change_name);
         print_registered_events();
-        return;
     }
-    component->on_change(component->layer);
+    // 如果既没有处理器也没有事件名称，则静默处理
 }
 
 // 注册事件处理函数

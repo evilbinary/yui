@@ -167,7 +167,7 @@ static void js_module_change_event(void* data)
 {
     Layer* layer = (Layer*)data;
     if (layer) {
-        printf("JS: Scroll event on layer '%s'\n", layer->id);
+        printf("JS: Change event on layer '%s'\n", layer->id);
         js_module_call_layer_event(layer->id, "onChange");
     }
 }
