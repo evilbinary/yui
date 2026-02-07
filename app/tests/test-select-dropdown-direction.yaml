@@ -1,0 +1,76 @@
+id: testView
+type: View
+size:
+  - 400
+  - 600
+layout:
+  type: vertical
+  spacing: 20
+  padding:
+    - 20
+    - 20
+    - 20
+    - 20
+  alignItems: center
+children:
+  - id: topSelect
+    type: Select
+    text: 顶部选择框（应向下展开）
+    size:
+      - 300
+      - 40
+    selectConfig:
+      items:
+        - 选项 1
+        - 选项 2
+        - 选项 3
+        - 选项 4
+        - 选项 5
+        - 选项 6
+        - 选项 7
+        - 选项 8
+      maxVisibleItems: 5
+  - id: spacer
+    type: View
+    size:
+      - 300
+      - 200
+  - id: middleSelect
+    type: Select
+    text: 中部选择框
+    size:
+      - 300
+      - 40
+    selectConfig:
+      items:
+        - A选项
+        - B选项
+        - C选项
+        - D选项
+        - E选项
+        - F选项
+        - G选项
+        - H选项
+      maxVisibleItems: 5
+  - id: spacer2
+    type: View
+    size:
+      - 300
+      - 200
+  - id: bottomSelect
+    type: Select
+    text: 底部选择框（应向上展开）
+    size:
+      - 300
+      - 40
+    selectConfig:
+      items:
+        - 项目 1
+        - 项目 2
+        - 项目 3
+        - 项目 4
+        - 项目 5
+        - 项目 6
+        - 项目 7
+        - 项目 8
+      maxVisibleItems: 5
