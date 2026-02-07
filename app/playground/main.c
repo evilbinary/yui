@@ -1,8 +1,7 @@
 #include <stdio.h>
-
-
 #include <stdbool.h>
 #include <limits.h>
+#include <string.h>
 
 #include "cJSON.h"
 #include "event.h"
@@ -12,6 +11,7 @@
 #include "backend.h"
 #include "popup_manager.h"
 #include "../lib/jsmodule/js_module.h"
+#include "yaml_cjson.h"
 
 #if defined(_WIN32)
 #include <windows.h>
@@ -25,6 +25,47 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #endif
+
+
+// 检查文件扩展名是否为 YAML
+static bool is_yaml_file(const char* filename) {
+    if (!filename) return false;
+    
+    const char* ext = strrchr(filename, '.');
+    if (!ext) return false;
+    
+    return (strcmp(ext, ".yaml") == 0 || strcmp(ext, ".yml") == 0);
+}
+
+
+// 解析文件（支持 JSON 和 YAML）
+cJSON* parse_yaml_json_file(const char* file_path) {
+    if (!file_path) return NULL;
+    
+    // 检查是否为 YAML 文件
+    if (is_yaml_file(file_path)) {
+        printf("DEBUG: Detected YAML file: %s\n", file_path);
+        
+        char* error = NULL;
+        cJSON* json = yaml_file2cjson(file_path, &error);
+        
+        if (!json) {
+            fprintf(stderr, "Failed to parse YAML file: %s\n", file_path);
+            if (error) {
+                fprintf(stderr, "Error: %s\n", error);
+                free(error);
+            }
+            return NULL;
+        }
+        
+        printf("DEBUG: Successfully converted YAML to JSON\n");
+        return json;
+    } else {
+        // 默认按 JSON 解析
+        printf("DEBUG: Parsing as JSON file: %s\n", file_path);
+        return parse_json((char*)file_path);
+    }
+}
 
 // ====================== 主入口 ======================
 int main(int argc, char* argv[]) {
@@ -45,10 +86,14 @@ int main(int argc, char* argv[]) {
         json_path=argv[1];
     }
 
-    printf("DEBUG: Loading JSON from path: %s\n", json_path);
+    printf("DEBUG: Loading file from path: %s\n", json_path);
 
 
-    cJSON* root_json=parse_json(json_path);    
+    cJSON* root_json = parse_yaml_json_file(json_path);
+    if (!root_json) {
+        fprintf(stderr, "Failed to parse file: %s\n", json_path);
+        return -1;
+    }    
     Layer* ui_root = layer_create_from_json(root_json,NULL);
     if(ui_root==NULL){
         fprintf(stderr, "Failed to create UI from JSON: %s\n", json_path);
@@ -73,8 +118,8 @@ int main(int argc, char* argv[]) {
              const char* source_path = source->valuestring;
              printf("DEBUG: No JS found in main JSON, checking source file: %s\n", source_path);
  
-             // 加载 source 指向的 JSON 文件
-             cJSON* source_json = parse_json((char*)source_path);
+             // 加载 source 指向的文件（支持 JSON 和 YAML）
+             cJSON* source_json = parse_yaml_json_file((char*)source_path);
              if (source_json) {
                  // 从 source JSON 中加载 JS（传递 source 文件路径）
                  int source_count = js_module_load_from_json(source_json, source_path);

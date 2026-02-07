@@ -30,7 +30,7 @@ target("main.html")
 
 target("playground") 
 (
-    add_deps("socket","yui","quickjs","jsmodule-quickjs"),
+    add_deps("socket","yui","quickjs","jsmodule-quickjs","yaml2json"),
     add_rules("mode.debug", "mode.release"),
     set_kind("binary"),
     add_flags(),
@@ -40,7 +40,7 @@ target("playground")
 
 target("playground.html") 
 (
-    add_deps("socket","yui","quickjs","jsmodule-quickjs"),
+    add_deps("socket","yui","quickjs","jsmodule-quickjs","yaml2json"),
     add_rules("mode.debug", "mode.release"),
     set_kind("binary"),
     add_flags(),
@@ -52,7 +52,7 @@ target("playground.html")
 
 target("playground-mario") 
 (
-    add_deps( "jsmodule-mario","yui", "mario",),
+    add_deps("jsmodule-mario","yui", "mario","yaml2json"),
     add_rules("mode.debug", "mode.release"),
     set_kind("binary"),
     add_flags(),
@@ -62,7 +62,7 @@ target("playground-mario")
 
 target("playground-mqjs") 
 (
-    add_deps( "jsmodule","yui", "mquickjs",),
+    add_deps("jsmodule","yui", "mquickjs","yaml2json"),
     add_rules("mode.debug", "mode.release"),
     set_kind("binary"),
     add_flags(),
