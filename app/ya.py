@@ -7,7 +7,7 @@
 
 target("main") 
 (
-    add_deps("yui","cjson"),
+    add_deps("yui","cjson","yaml2json"),
     add_rules("mode.debug", "mode.release"),
     set_kind("binary"),
     add_flags(),
@@ -18,7 +18,7 @@ target("main")
 
 target("main.html") 
 (
-    add_deps("yui","cjson"),
+    add_deps("yui","cjson","yaml2json"),
     add_rules("mode.debug", "mode.release"),
     set_kind("binary"),
     add_flags(),

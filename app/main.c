@@ -11,6 +11,7 @@
 #include "layout.h"
 #include "backend.h"
 #include "popup_manager.h"
+#include "yaml_cjson.h"
 
 #if defined(_WIN32)
 #include <windows.h>
@@ -24,6 +25,46 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #endif
+
+// 检查文件扩展名是否为 YAML
+static bool is_yaml_file(const char* filename) {
+    if (!filename) return false;
+    
+    const char* ext = strrchr(filename, '.');
+    if (!ext) return false;
+    
+    return (strcmp(ext, ".yaml") == 0 || strcmp(ext, ".yml") == 0);
+}
+
+
+// 解析文件（支持 JSON 和 YAML）
+cJSON* parse_yaml_json_file(const char* file_path) {
+    if (!file_path) return NULL;
+    
+    // 检查是否为 YAML 文件
+    if (is_yaml_file(file_path)) {
+        printf("DEBUG: Detected YAML file: %s\n", file_path);
+        
+        char* error = NULL;
+        cJSON* json = yaml_file2cjson(file_path, &error);
+        
+        if (!json) {
+            fprintf(stderr, "Failed to parse YAML file: %s\n", file_path);
+            if (error) {
+                fprintf(stderr, "Error: %s\n", error);
+                free(error);
+            }
+            return NULL;
+        }
+        
+        printf("DEBUG: Successfully converted YAML to JSON\n");
+        return json;
+    } else {
+        // 默认按 JSON 解析
+        printf("DEBUG: Parsing as JSON file: %s\n", file_path);
+        return parse_json((char*)file_path);
+    }
+}
 
 void hello_world(Layer* layer) {
     printf("你好，世界！ %s\n",layer->text);
@@ -52,7 +93,7 @@ int main(int argc, char* argv[]) {
     register_event_handler("@hello", hello_world);
     register_event_handler("@helloTouch", hello_touch);
 
-    cJSON* root_json=parse_json(json_path);
+    cJSON* root_json=parse_yaml_json_file(json_path);
     Layer* ui_root = layer_create_from_json(root_json,NULL);
 
     
