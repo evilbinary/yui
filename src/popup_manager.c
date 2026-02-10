@@ -180,10 +180,15 @@ void popup_manager_render(void) {
     
     PopupLayer* current = g_popup_manager->active_popups;
     while (current) {
+        // 在调用回调函数前保存 next 指针，因为回调可能修改链表
+        PopupLayer* next = current->next;
+        
         if (current && current->layer && current->layer->render) {
             current->layer->render(current->layer);
         }
-        current = current->next;
+        
+        // 使用保存的 next 指针
+        current = next;
     }
 }
 
@@ -211,11 +216,16 @@ bool popup_manager_handle_mouse_event(MouseEvent* event) {
             return false;
         }
         
+        // 在调用回调函数前保存 next 指针，因为回调可能修改链表
+        PopupLayer* next = current->next;
+        
         if (current && current->layer && current->layer->handle_mouse_event) {
             current->layer->handle_mouse_event(current->layer, event);
             handled = true;
         }
-        current = current->next;
+        
+        // 使用保存的 next 指针
+        current = next;
     }
     
     return handled;
@@ -228,11 +238,16 @@ bool popup_manager_handle_key_event(KeyEvent* event) {
     bool handled = false;
     
     while (current) {
+        // 在调用回调函数前保存 next 指针，因为回调可能修改链表
+        PopupLayer* next = current->next;
+        
         if (current && current->layer && current->layer->handle_key_event) {
             current->layer->handle_key_event(current->layer, event);
             handled = true;
         }
-        current = current->next;
+        
+        // 使用保存的 next 指针
+        current = next;
     }
     
     return handled;
@@ -245,11 +260,16 @@ bool popup_manager_handle_scroll_event(int scroll_delta) {
     bool handled = false;
     
     while (current) {
+        // 在调用回调函数前保存 next 指针，因为回调可能修改链表
+        PopupLayer* next = current->next;
+        
         if (current && current->layer && current->layer->handle_scroll_event) {
             current->layer->handle_scroll_event(current->layer, scroll_delta);
             handled = true;
         }
-        current = current->next;
+        
+        // 使用保存的 next 指针
+        current = next;
     }
     
     return handled;
