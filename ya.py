@@ -1,4 +1,5 @@
 import platform
+import os
 
 project("yui",
     version='0.0.1',
@@ -13,6 +14,16 @@ project("yui",
 )
 
 
+prefix_env=''
+
+if platform.system()=='Windows':
+    prefix_env=''
+elif platform.system()=='Darwin': 
+    os.environ['DYLD_FRAMEWORK_PATH'] = '../libs'
+    os.environ['DYLD_LIBRARY_PATH'] = '../libs'
+elif platform.system()=='Linux':
+    # 设置环境变量，不通过shell方式
+    os.environ['LD_LIBRARY_PATH'] = '../libs'
 
 
 def add_flags():
@@ -150,11 +161,22 @@ def run(target):
     plat=target.plat()
     if platform.system()=='Windows':
         yui=targetfile.replace('/','\\')
+        os.system(yui)
     else:
-        yui=prefix_env+" && ./"+targetfile
-
-    print('run '+yui,yui)
-    os.shell(yui)
+        # 直接使用 Python 的 subprocess 来运行，确保环境变量正确传递
+        import subprocess
+        cmd = ["./" + targetfile]
+        
+        # 复制当前环境变量并确保关键变量存在
+        env = os.environ.copy()
+        if platform.system()=='Darwin':
+            env['DYLD_FRAMEWORK_PATH'] = '../libs'
+            env['DYLD_LIBRARY_PATH'] = '../libs'
+        elif platform.system()=='Linux':
+            env['LD_LIBRARY_PATH'] = '../libs'
+        
+        print('run', ' '.join(cmd))
+        subprocess.run(cmd, env=env)
 
 def add_run():
     on_run(run)
@@ -166,14 +188,6 @@ add_buildin('add_flags',add_flags)
 add_buildin('add_run',add_run)
 add_buildin('get_prefix',get_prefix)
 
-prefix_env=''
-
-if platform.system()=='Windows':
-    prefix_env=''
-elif platform.system()=='Darwin':
-    prefix_env='export DYLD_FRAMEWORK_PATH=../libs && export DYLD_LIBRARY_PATH="../libs" && '
-elif platform.system()=='Linux':
-    prefix_env='export LD_LIBRARY_PATH="../libs" && '
 
 includes("./src/ya.py")
 includes("./lib/ya.py")

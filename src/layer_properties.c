@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "util.h"
 
 // ====================== 属性处理器 ======================
 
