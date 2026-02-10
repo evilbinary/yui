@@ -752,6 +752,7 @@ static JSValue js_yui_inspect_setShowInfo(JSContext *ctx, JSValue *this_val, int
     return JS_NewBool( 1);
 }
 
+extern int js_module_set_event(const char* layer_id, const char* event_name, const char* event_func_name);
 // YUI.setEvent() - 设置图层事件回调
 static JSValue js_yui_set_event(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
 {
