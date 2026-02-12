@@ -12,7 +12,7 @@ set_kind('static')
 add_files("*.c")
 add_files("components/*.c")
 
-if is_plat("stm32"):
+if get_plat() =="stm32":
     add_files("backend/backend_stm32.c")
     # 添加STM32特定的编译标志
     add_cflags("-DSTM32_PLATFORM")
