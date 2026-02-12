@@ -13,6 +13,10 @@ project("yui",
     ]
 )
 
+# 判断是否为指定平台
+def is_plat(plat_name):
+    plat = get_plat()
+    return plat == plat_name
 
 prefix_env=''
 
@@ -24,15 +28,16 @@ elif platform.system()=='Darwin':
 elif platform.system()=='Linux':
     # 设置环境变量，不通过shell方式
     os.environ['LD_LIBRARY_PATH'] = '../libs'
-
+elif is_plat("stm32"):
+    # STM32平台不需要设置环境变量
+    prefix_env=''
 
 def add_flags():
-
     checkmem=True
     if platform.system()=='Windows':
         checkmem=False
         
-    if checkmem:
+    if checkmem and not is_plat("stm32"):
         tool=get_toolchain_node()
         tool['ld']='gcc'
         add_cflags(
@@ -60,6 +65,45 @@ def add_flags():
             '-framework SDL2_ttf',
             '-framework SDL2_image ',
             '-F../libs/'
+            ),
+    elif is_plat("stm32"):
+        # STM32平台特定的编译选项
+        add_cflags(
+            '-g',
+            '-mcpu=cortex-m7',
+            '-mthumb',
+            '-mfpu=fpv5-d16',
+            '-mfloat-abi=hard',
+            '-DSTM32F7xx',
+            '-DUSE_HAL_DRIVER',
+            '-Isrc',
+            '-Ilib',
+            '-IInc',  # STM32 HAL头文件
+            '-I../Drivers/STM32F7xx_HAL_Driver/Inc',
+            '-I../Drivers/STM32F7xx_HAL_Driver/Inc/Legacy',
+            '-I../Drivers/CMSIS/Device/ST/STM32F7xx/Include',
+            '-I../Drivers/CMSIS/Include',
+            '-I../Middlewares/Third_Party/FreeRTOS/Source/include',
+            '-I../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS',
+            '-I../Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1'
+            ),
+        add_ldflags(
+            '-mcpu=cortex-m7',
+            '-mthumb',
+            '-mfpu=fpv5-d16',
+            '-mfloat-abi=hard',
+            '-specs=nano.specs',
+            '-TSTM32F746NGHx_FLASH.ld',
+            '-Wl,--gc-sections',
+            '-static',
+            '--specs=nosys.specs',
+            '-specs=nano.specs',
+            '-Wl,--start-group',
+            '-lc',
+            '-lm',
+            '-lstdc++',
+            '-lsupc++',
+            '-Wl,--end-group'
             ),
     elif platform.system()=='Linux':
         add_cflags(
@@ -162,6 +206,11 @@ def run(target):
     if platform.system()=='Windows':
         yui=targetfile.replace('/','\\')
         os.system(yui)
+    elif is_plat("stm32"):
+        # STM32平台通过调试器运行
+        print("STM32 target, run through debugger (e.g., ST-Link)")
+        print("Binary file:", targetfile)
+        # 这里可以添加通过ST-Link或其他调试器运行的代码
     else:
         # 直接使用 Python 的 subprocess 来运行，确保环境变量正确传递
         import subprocess
