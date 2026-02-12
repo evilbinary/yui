@@ -1006,7 +1006,7 @@ static SDL_Texture* get_corner_texture(SDL_Renderer* renderer, int radius, SDL_C
         pixel_format = renderer_info.texture_formats[0];
     }
     
-    printf("DEBUG: Creating corner texture with format %s\n", SDL_GetPixelFormatName(pixel_format));
+    // printf("DEBUG: Creating corner texture with format %s\n", SDL_GetPixelFormatName(pixel_format));
     
     // 创建新的圆角纹理 - 使用渲染器支持的格式
     int size = radius + 2;

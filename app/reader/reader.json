@@ -1,0 +1,289 @@
+{
+    "id": "readerApp",
+    "type": "View",
+    "size": [800, 600],
+    "style": {
+        "bgColor": "#FFFFFF"
+    },
+    "js": ["reader.js"],
+    "initialize": "initialize",
+    "layout": {
+        "type": "vertical",
+        "spacing": 0
+    },
+    "children": [
+        {
+            "id": "toolbar",
+            "type": "View",
+            "size": [800, 60],
+            "layout": {
+                "type": "horizontal",
+                "spacing": 10,
+                "padding": [15, 10, 15, 10],
+                "justifyContent": "space-between"
+            },
+            "style": {
+                "bgColor": "#F5F5F5",
+                "borderBottomWidth": 1,
+                "borderBottomColor": "#E0E0E0"
+            },
+            "children": [
+                {
+                    "id": "bookSelector",
+                    "type": "Select",
+                    "size": [200, 30],
+                    "items": [
+                        { "value": "book1.txt", "text": "第一章：开始" },
+                        { "value": "book2.txt", "text": "第二章：发展" },
+                        { "value": "book3.txt", "text": "第三章：高潮" }
+                    ],
+                    "value": "book1.txt",
+                    "style": {
+                        "fontSize": 14,
+                        "borderRadius": 4,
+                        "borderWidth": 1,
+                        "borderColor": "#CCCCCC"
+                    },
+                    "onChange": "loadBook"
+                },
+                {
+                    "id": "titleText",
+                    "type": "Label",
+                    "text": "阅读器",
+                    "size": [100, 20],
+                    "style": {
+                        "fontSize": 18,
+                        "fontWeight": "bold",
+                        "textAlign": "center"
+                    }
+                },
+                {
+                    "id": "themeToggle",
+                    "type": "Button",
+                    "text": "🌙",
+                    "size": [40, 30],
+                    "style": {
+                        "fontSize": 18,
+                        "bgColor": "transparent"
+                    },
+                    "onClick": "toggleTheme"
+                }
+            ]
+        },
+        {
+            "id": "contentArea",
+            "type": "View",
+            "size": [800, 460],
+            "layout": {
+                "type": "vertical",
+                "padding": [40, 40, 40, 40]
+            },
+            "style": {
+                "bgColor": "#FFFFFF"
+            },
+            "children": [
+                {
+                    "id": "chapterTitle",
+                    "type": "Label",
+                    "text": "第一章：开始",
+                    "size": [720, 30],
+                    "style": {
+                        "fontSize": 24,
+                        "fontWeight": "bold",
+                        "textAlign": "center",
+                        "marginBottom": 20
+                    }
+                },
+                {
+                    "id": "contentScroll",
+                    "type": "Scroll",
+                    "size": [720, 380],
+                    "layout": {
+                        "type": "vertical",
+                        "padding": [0, 0, 0, 0]
+                    },
+                    "children": [
+                        {
+                            "id": "contentText",
+                            "type": "Label",
+                            "text": "正在加载书籍内容...",
+                            "size": [720, 360],
+                            "style": {
+                                "fontSize": 16,
+                                "lineHeight": 1.6,
+                                "textAlign": "justify"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "id": "pageIndicator",
+                    "type": "Label",
+                    "text": "第 1 页，共 1 页",
+                    "size": [720, 20],
+                    "style": {
+                        "fontSize": 14,
+                        "color": "#666666",
+                        "textAlign": "center",
+                        "marginTop": 20
+                    }
+                }
+            ]
+        },
+        {
+            "id": "bottomBar",
+            "type": "View",
+            "size": [800, 80],
+            "layout": {
+                "type": "horizontal",
+                "spacing": 20,
+                "padding": [15, 10, 15, 10],
+                "justifyContent": "space-between"
+            },
+            "style": {
+                "bgColor": "#F5F5F5",
+                "borderTopWidth": 1,
+                "borderTopColor": "#E0E0E0"
+            },
+            "children": [
+                {
+                    "id": "navigationControls",
+                    "type": "View",
+                    "size": [200, 40],
+                    "layout": {
+                        "type": "horizontal",
+                        "spacing": 10,
+                        "justifyContent": "center",
+                        "align": "center"
+                    },
+                    "children": [
+                        {
+                            "id": "prevButton",
+                            "type": "Button",
+                            "text": "上一页",
+                            "size": [60, 30],
+                            "style": {
+                                "fontSize": 14,
+                                "borderRadius": 4,
+                                "bgColor": "#E0E0E0"
+                            },
+                            "onClick": "goToPrevPage"
+                        },
+                        {
+                            "id": "pageNumber",
+                            "type": "Label",
+                            "text": "1 / 1",
+                            "size": [40, 20],
+                            "style": {
+                                "fontSize": 14,
+                                "color": "#666666",
+                                "textAlign": "center"
+                            }
+                        },
+                        {
+                            "id": "nextButton",
+                            "type": "Button",
+                            "text": "下一页",
+                            "size": [60, 30],
+                            "style": {
+                                "fontSize": 14,
+                                "borderRadius": 4,
+                                "bgColor": "#E0E0E0"
+                            },
+                            "onClick": "goToNextPage"
+                        }
+                    ]
+                },
+                {
+                    "id": "fontControls",
+                    "type": "View",
+                    "size": [150, 40],
+                    "layout": {
+                        "type": "horizontal",
+                        "spacing": 10,
+                        "justifyContent": "center",
+                        "align": "center"
+                    },
+                    "children": [
+                        {
+                            "id": "decreaseFontButton",
+                            "type": "Button",
+                            "text": "A-",
+                            "size": [30, 30],
+                            "style": {
+                                "fontSize": 16,
+                                "fontWeight": "bold",
+                                "borderRadius": 15,
+                                "bgColor": "#E0E0E0",
+                                "textAlign": "center"
+                            },
+                            "onClick": "decreaseFont"
+                        },
+                        {
+                            "id": "fontSizeLabel",
+                            "type": "Label",
+                            "text": "16px",
+                            "size": [40, 20],
+                            "style": {
+                                "fontSize": 14,
+                                "color": "#666666",
+                                "textAlign": "center"
+                            }
+                        },
+                        {
+                            "id": "increaseFontButton",
+                            "type": "Button",
+                            "text": "A+",
+                            "size": [30, 30],
+                            "style": {
+                                "fontSize": 16,
+                                "fontWeight": "bold",
+                                "borderRadius": 15,
+                                "bgColor": "#E0E0E0",
+                                "textAlign": "center"
+                            },
+                            "onClick": "increaseFont"
+                        }
+                    ]
+                },
+                {
+                    "id": "progressBar",
+                    "type": "Progress",
+                    "size": [150, 20],
+                    "value": 0,
+                    "style": {
+                        "bgColor": "#E0E0E0",
+                        "fillColor": "#1DB954",
+                        "borderRadius": 3
+                    }
+                }
+            ]
+        }
+    ],
+    "themes": {
+        "light": {
+            "bgColor": "#FFFFFF",
+            "contentBgColor": "#FFFFFF",
+            "toolbarBgColor": "#F5F5F5",
+            "bottomBarBgColor": "#F5F5F5",
+            "textColor": "#333333",
+            "secondaryTextColor": "#666666",
+            "borderColor": "#E0E0E0",
+            "buttonBgColor": "#E0E0E0",
+            "buttonTextColor": "#333333",
+            "progressColor": "#1DB954"
+        },
+        "dark": {
+            "bgColor": "#121212",
+            "contentBgColor": "#121212",
+            "toolbarBgColor": "#1E1E1E",
+            "bottomBarBgColor": "#1E1E1E",
+            "textColor": "#E0E0E0",
+            "secondaryTextColor": "#AAAAAA",
+            "borderColor": "#333333",
+            "buttonBgColor": "#333333",
+            "buttonTextColor": "#E0E0E0",
+            "progressColor": "#4CAF50"
+        }
+    }
+}

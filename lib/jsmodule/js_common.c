@@ -784,3 +784,33 @@ const char* js_module_get_property_value(const char* layer_id, const char* prope
 const char* js_module_get_select_value(const char* layer_id) {
     return js_module_get_property_value(layer_id, "value");
 }
+
+// ====================== 文件读取功能 ======================
+
+// 文件读取函数，用于JavaScript环境
+char* js_module_read_file(const char* file_path) {
+    if (!file_path) return NULL;
+    
+    FILE *f = fopen(file_path, "r");
+    if (!f) {
+        printf("JS: Cannot open file %s\n", file_path);
+        return NULL;
+    }
+
+    fseek(f, 0, SEEK_END);
+    long file_size = ftell(f);
+    fseek(f, 0, SEEK_SET);
+
+    char *buffer = malloc(file_size + 1);
+    if (!buffer) {
+        fclose(f);
+        return NULL;
+    }
+
+    size_t bytes_read = fread(buffer, 1, file_size, f);
+    buffer[bytes_read] = '\0';
+    fclose(f);
+
+    printf("JS: Successfully read %ld bytes from file %s\n", bytes_read, file_path);
+    return buffer;
+}

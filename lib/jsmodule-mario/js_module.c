@@ -197,8 +197,36 @@ static var_t* mario_log(vm_t* vm, var_t* env, void* data)
 
     mstr_free(temp);
     mstr_free(output);
-
+    
     return var_new_null(vm);
+}
+
+// 读取文件内容
+static var_t* mario_read_file(vm_t* vm, var_t* env, void* data)
+{
+    var_t* args = get_func_args(env);
+    uint32_t argc = get_func_args_num(env);
+
+    if (argc < 1) return var_new_null(vm);
+
+    const char* file_path = get_func_arg_str(env, 0);
+    if (!file_path) return var_new_null(vm);
+
+    printf("JS(Mario): Reading file: %s\n", file_path);
+
+    int len = 0;
+    uint8_t* buf = load_file(file_path, &len);
+    
+    if (!buf) {
+        printf("JS(Mario): Failed to read file: %s\n", file_path);
+        return var_new_null(vm);
+    }
+
+    var_t* result = var_new_str(vm, (char*)buf);
+    free(buf);
+    
+    printf("JS(Mario): Successfully read %d bytes from file %s\n", len, file_path);
+    return result;
 }
 
 // 从 JSON 字符串动态渲染到指定图层
@@ -667,6 +695,7 @@ void js_module_register_api(void)
     vm_reg_native(g_vm, yui_cls, "inspect.setShowBounds(show)", mario_inspect_set_show_bounds, NULL);
     vm_reg_native(g_vm, yui_cls, "inspect.setShowInfo(show)", mario_inspect_set_show_info, NULL);
     vm_reg_native(g_vm, yui_cls, "setEvent(layerId, eventName, callback)", mario_set_event, NULL);
+    vm_reg_native(g_vm, yui_cls, "readFile(filePath)", mario_read_file, NULL);
 
     // 也注册为全局函数（为了兼容性）
     vm_reg_static(g_vm, NULL, "setText(layerId, text)", mario_set_text, NULL);
@@ -676,6 +705,7 @@ void js_module_register_api(void)
     vm_reg_static(g_vm, NULL, "hide(layerId)", mario_hide, NULL);
     vm_reg_static(g_vm, NULL, "show(layerId)", mario_show, NULL);
     vm_reg_static(g_vm, NULL, "setEvent(layerId, eventName, callback)", mario_set_event, NULL);
+    vm_reg_static(g_vm, NULL, "readFile(filePath)", mario_read_file, NULL);
 
     printf("JS(Mario): Registered native API functions\n");
 }

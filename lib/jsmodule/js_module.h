@@ -75,6 +75,9 @@ const char* js_module_get_property_value(const char* layer_id, const char* prope
 // 获取 Select 组件的值（向后兼容）
 const char* js_module_get_select_value(const char* layer_id);
 
+// 文件读取函数，用于JavaScript环境
+char* js_module_read_file(const char* file_path);
+
 int js_module_set_event(const char* layer_id, const char* event_name, const char* event_func_name);
 
 #ifdef __cplusplus

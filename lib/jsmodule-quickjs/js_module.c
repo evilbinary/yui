@@ -21,6 +21,8 @@ extern struct Layer* g_layer_root;
 
 /* ====================== QuickJS 原生函数 ====================== */
 
+JSValue js_read_file(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv);
+
 // 设置文本
 static JSValue js_set_text(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
@@ -608,6 +610,9 @@ void js_module_register_api(void)
     JS_SetPropertyStr(g_js_ctx, yui_obj, "themeSetCurrent", JS_NewCFunction(g_js_ctx, js_theme_set_current, "themeSetCurrent", 1));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "themeUnload", JS_NewCFunction(g_js_ctx, js_theme_unload, "themeUnload", 1));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "themeApplyToTree", JS_NewCFunction(g_js_ctx, js_theme_apply_to_tree, "themeApplyToTree", 0));
+    JS_SetPropertyStr(g_js_ctx, yui_obj, "themeUnload", JS_NewCFunction(g_js_ctx, js_theme_unload, "themeUnload", 1));
+
+    JS_SetPropertyStr(g_js_ctx, yui_obj, "readFile", JS_NewCFunction(g_js_ctx, js_read_file, "readFile", 1));
 
     // 创建并注册 Inspect 对象
     JSValue inspect_obj = JS_NewObject(g_js_ctx);
@@ -635,6 +640,10 @@ void js_module_register_api(void)
 
     // 注册 Socket API
     js_module_register_socket_api(g_js_ctx);
+
+    // 注册 readFile 到全局对象
+    JS_SetPropertyStr(g_js_ctx, global_obj, "readFile", JS_NewCFunction(g_js_ctx, js_read_file, "readFile", 1));
+
 
     JS_FreeValue(g_js_ctx, global_obj);
 
@@ -802,4 +811,29 @@ int js_module_call_event(const char* event_name, Layer* layer)
 
     JS_FreeValue(g_js_ctx, result);
     return 0;
+}
+
+
+// 文件读取函数绑定
+JSValue js_read_file(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+    if (argc < 1) {
+        return JS_ThrowTypeError(ctx, "Expected 1 argument: file_path");
+    }
+
+    const char* file_path = JS_ToCString(ctx, argv[0]);
+    if (!file_path) {
+        return JS_ThrowTypeError(ctx, "Invalid file path");
+    }
+
+    extern char* js_module_read_file(const char* file_path);
+    char* content = js_module_read_file(file_path);
+    JS_FreeCString(ctx, file_path);
+
+    if (!content) {
+        return JS_ThrowInternalError(ctx, "Failed to read file");
+    }
+
+    JSValue result = JS_NewString(ctx, content);
+    free(content);
+    return result;
 }
