@@ -305,7 +305,8 @@ void select_component_add_item(SelectComponent* component, const char* text, voi
     // 添加新选项
     SelectItem* item = &component->items[component->item_count];
     item->text = strdup(text);
-    item->user_data = user_data;
+    // 复制 user_data（假设是字符串）
+    item->user_data = user_data ? strdup((const char*)user_data) : NULL;
     item->selected = 0;
     item->disabled = 0;
     
@@ -347,10 +348,14 @@ void select_component_add_placeholder(SelectComponent* component, const char* te
 void select_component_remove_item(SelectComponent* component, int index) {
     if (!component || index < 0 || index >= component->item_count) return;
     
-    // 释放选项文本
+    // 释放选项文本和 user_data
     if (component->items[index].text) {
         free(component->items[index].text);
         component->items[index].text = NULL;
+    }
+    if (component->items[index].user_data) {
+        free(component->items[index].user_data);
+        component->items[index].user_data = NULL;
     }
     
     // 移动后面的选项
@@ -377,12 +382,16 @@ void select_component_remove_item(SelectComponent* component, int index) {
 void select_component_clear_items(SelectComponent* component) {
     if (!component) return;
     
-    // 释放所有选项文本
+    // 释放所有选项文本和 user_data
     if (component->items) {
         for (int i = 0; i < component->item_count; i++) {
             if (component->items[i].text) {
                 free(component->items[i].text);
                 component->items[i].text = NULL;
+            }
+            if (component->items[i].user_data) {
+                free(component->items[i].user_data);
+                component->items[i].user_data = NULL;
             }
         }
         
@@ -415,7 +424,7 @@ void select_component_insert_item(SelectComponent* component, int index, const c
     // 插入新选项
     SelectItem* item = &component->items[index];
     item->text = strdup(text);
-    item->user_data = user_data;
+    item->user_data = user_data ? strdup((const char*)user_data) : NULL;
     item->selected = 0;
     item->disabled = 0;
     

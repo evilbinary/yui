@@ -9,6 +9,7 @@
 #define WINDOW_WIDTH 1000
 #define MAX_TOUCHES 10
 #define MAX_UPDATE_CALLBACKS 16
+#define MAX_TEXTURE_CACHE_ENTRIES 200
 
 // ====================== 全局渲染器 ======================
 SDL_Renderer* renderer = NULL;
@@ -32,6 +33,113 @@ typedef struct {
 #define MAX_FONT_CACHE_ENTRIES 50
 FontCacheEntry font_cache[MAX_FONT_CACHE_ENTRIES] = {0};
 int font_cache_initialized = 0;
+
+// 纹理缓存结构
+typedef struct {
+    DFont* font;
+    char text[256];
+    Color color;
+    SDL_Texture* texture;
+    int width;
+    int height;
+    Uint32 last_used;
+} TextureCacheEntry;
+
+TextureCacheEntry texture_cache[MAX_TEXTURE_CACHE_ENTRIES] = {0};
+int texture_cache_initialized = 0;
+
+// ====================== 纹理缓存管理 ======================
+void init_texture_cache() {
+    if (texture_cache_initialized) return;
+    
+    for (int i = 0; i < MAX_TEXTURE_CACHE_ENTRIES; i++) {
+        texture_cache[i].font = NULL;
+        texture_cache[i].text[0] = '\0';
+        texture_cache[i].texture = NULL;
+        texture_cache[i].width = 0;
+        texture_cache[i].height = 0;
+        texture_cache[i].last_used = 0;
+    }
+    
+    texture_cache_initialized = 1;
+}
+
+void cleanup_texture_cache() {
+    for (int i = 0; i < MAX_TEXTURE_CACHE_ENTRIES; i++) {
+        if (texture_cache[i].texture) {
+            SDL_DestroyTexture(texture_cache[i].texture);
+            texture_cache[i].texture = NULL;
+        }
+        texture_cache[i].font = NULL;
+        texture_cache[i].text[0] = '\0';
+        texture_cache[i].width = 0;
+        texture_cache[i].height = 0;
+    }
+}
+
+SDL_Texture* find_texture_in_cache(DFont* font, const char* text, Color color, int* width, int* height) {
+    if (!font || !text) return NULL;
+    
+    Uint32 current_time = SDL_GetTicks();
+    
+    for (int i = 0; i < MAX_TEXTURE_CACHE_ENTRIES; i++) {
+        if (texture_cache[i].texture &&
+            texture_cache[i].font == font &&
+            texture_cache[i].color.r == color.r &&
+            texture_cache[i].color.g == color.g &&
+            texture_cache[i].color.b == color.b &&
+            texture_cache[i].color.a == color.a &&
+            strcmp(texture_cache[i].text, text) == 0) {
+            texture_cache[i].last_used = current_time;
+            if (width) *width = texture_cache[i].width;
+            if (height) *height = texture_cache[i].height;
+            return texture_cache[i].texture;
+        }
+    }
+    return NULL;
+}
+
+void add_texture_to_cache(DFont* font, const char* text, Color color, SDL_Texture* texture, int width, int height) {
+    if (!font || !text || !texture) return;
+    
+    Uint32 current_time = SDL_GetTicks();
+    int cache_index = -1;
+    Uint32 oldest_time = current_time;
+    
+    // 首先查找空闲位置
+    for (int i = 0; i < MAX_TEXTURE_CACHE_ENTRIES; i++) {
+        if (!texture_cache[i].texture) {
+            cache_index = i;
+            break;
+        }
+    }
+    
+    // 如果没有空闲位置，查找最久未使用的位置
+    if (cache_index == -1) {
+        for (int i = 0; i < MAX_TEXTURE_CACHE_ENTRIES; i++) {
+            if (texture_cache[i].last_used < oldest_time) {
+                oldest_time = texture_cache[i].last_used;
+                cache_index = i;
+            }
+        }
+    }
+    
+    // 替换缓存项
+    if (cache_index != -1) {
+        if (texture_cache[cache_index].texture) {
+            SDL_DestroyTexture(texture_cache[cache_index].texture);
+        }
+        
+        texture_cache[cache_index].font = font;
+        strncpy(texture_cache[cache_index].text, text, sizeof(texture_cache[cache_index].text) - 1);
+        texture_cache[cache_index].text[sizeof(texture_cache[cache_index].text) - 1] = '\0';
+        texture_cache[cache_index].color = color;
+        texture_cache[cache_index].texture = texture;
+        texture_cache[cache_index].width = width;
+        texture_cache[cache_index].height = height;
+        texture_cache[cache_index].last_used = current_time;
+    }
+}
 
 // ====================== 字体缓存管理 ======================
 void init_font_cache() {
@@ -560,6 +668,17 @@ void backend_render_text_copy(Texture * texture,
 }
 
 void backend_render_text_destroy(Texture * texture){
+    // 检查纹理是否在缓存中，如果在缓存中则不销毁
+    if (!texture) return;
+    
+    for (int i = 0; i < MAX_TEXTURE_CACHE_ENTRIES; i++) {
+        if (texture_cache[i].texture == texture) {
+            // 纹理在缓存中，不销毁
+            return;
+        }
+    }
+    
+    // 不在缓存中，正常销毁
     SDL_DestroyTexture(texture);
 }
 
@@ -578,6 +697,9 @@ void backend_quit(){
       
       // 清理字体缓存
       cleanup_font_cache();
+      
+      // 清理纹理缓存
+      cleanup_texture_cache();
       
       // 清理资源
     IMG_Quit();
@@ -823,17 +945,36 @@ Texture* backend_render_texture(DFont* font,const char* text,Color color){
         return NULL;
     }
     
-     SDL_Surface* surface = TTF_RenderUTF8_Blended(font, text, color);
+    // 初始化纹理缓存
+    if (!texture_cache_initialized) {
+        init_texture_cache();
+    }
+    
+    // 尝试从缓存中查找
+    int cached_width, cached_height;
+    SDL_Texture* cached_texture = find_texture_in_cache(font, text, color, &cached_width, &cached_height);
+    if (cached_texture) {
+        return cached_texture;
+    }
+    
+    // 缓存未命中，创建新纹理
+    SDL_Surface* surface = TTF_RenderUTF8_Blended(font, text, color);
     if (!surface) {
         printf("error: TTF_RenderUTF8_Blended failed for text '%s': %s\n", text, TTF_GetError());
         return NULL;
     }
     
-    
     SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
     SDL_SetTextureScaleMode(texture, SDL_ScaleModeBest);
 
     SDL_FreeSurface(surface);
+
+    // 将纹理添加到缓存
+    if (texture) {
+        int width, height;
+        SDL_QueryTexture(texture, NULL, NULL, &width, &height);
+        add_texture_to_cache(font, text, color, texture, width, height);
+    }
 
     return texture;
 }

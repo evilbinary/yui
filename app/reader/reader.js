@@ -52,6 +52,14 @@ function toggleDebug() {
     }
 }
 
+
+function loadBookClick(){
+    var selectedValue = YUI.getProperty("bookSelector", "value");
+    YUI.log('loadBookClick',selectedValue);
+    currentBook=selectedValue;
+    loadBook(currentBook, currentPage);
+}
+
 // 加载书籍内容
 function loadBook(bookId, page) {
     YUI.log("Loading book: " + bookId + ", page: " + page);

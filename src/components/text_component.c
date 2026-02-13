@@ -38,6 +38,8 @@ TextComponent* text_component_create(Layer* layer) {
     component->line_number_bg_color = (Color){30, 30, 30, 255};  // 默认行号背景颜色
     component->selection_color = (Color){70, 130, 180, 100};  // 默认选中颜色（半透明蓝色）
     component->is_selecting = 0;  // 默认不在选择状态
+    component->cached_line_height = 0;  // 行高缓存初始化为0（无效）
+    component->line_height_valid = 0;  // 标记缓存无效
     
     // 初始化图层的文本字段
     if (!layer->text) {
@@ -188,6 +190,9 @@ void text_component_set_text(TextComponent* component, const char* text) {
     component->cursor_pos = text_len;
     component->selection_start = -1;
     component->selection_end = -1;
+    
+    // 使行高缓存失效（因为文本或字体可能改变）
+    component->line_height_valid = 0;
     
     // 更新内容高度（只调用一次）
     text_component_update_content_height(component);
@@ -618,16 +623,24 @@ int text_component_calculate_content_height(TextComponent* component) {
     int current_pos = 0;
     int line_count = 0;
     
-    // 获取实际行高
+    // 性能优化：使用缓存的行高，避免每帧创建纹理
     int line_height = component->line_height;
-    if (component->layer->font && component->layer->font->default_font) {
-        Texture* temp_tex = backend_render_texture(component->layer->font->default_font, "X", component->layer->color);
-        if (temp_tex) {
-            int temp_width, temp_height;
-            backend_query_texture(temp_tex, NULL, NULL, &temp_width, &temp_height);
-            line_height = temp_height / scale;
-            backend_render_text_destroy(temp_tex);
+    if (!component->line_height_valid) {
+        // 只在缓存无效时计算行高
+        if (component->layer->font && component->layer->font->default_font) {
+            Texture* temp_tex = backend_render_texture(component->layer->font->default_font, "X", component->layer->color);
+            if (temp_tex) {
+                int temp_width, temp_height;
+                backend_query_texture(temp_tex, NULL, NULL, &temp_width, &temp_height);
+                line_height = temp_height / scale;
+                backend_render_text_destroy(temp_tex);
+            }
         }
+        // 缓存行高
+        component->cached_line_height = line_height;
+        component->line_height_valid = 1;
+    } else {
+        line_height = component->cached_line_height;
     }
     
     // 计算文本内容区域的宽度（减去内边距和行号区域）

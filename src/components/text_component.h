@@ -29,6 +29,8 @@ typedef struct {
     int is_selecting;       // 是否正在选择文本
     EventHandler on_change; // onChange 回调函数
     char* change_name;        // 用户数据
+    int cached_line_height; // 缓存的行高（用于性能优化）
+    int line_height_valid;   // 行高缓存是否有效
 } TextComponent;
 
 // 函数声明
