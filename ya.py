@@ -49,11 +49,11 @@ def add_flags():
 
     if get_plat() in['emscripten','em']:
         set_toolchain('emscripten')
-        # tool=get_toolchain_node()
-        # tool['cc']='emcc'
-        # tool['cxx']='emcc'
-        # tool['ld']='emcc'
-        # tool['ar']='emar'
+        tool=get_toolchain_node()
+        tool['cc']='emcc'
+        tool['cxx']='emcc'
+        tool['ld']='emcc'
+        tool['ar']='emar'
         if platform.system()=='Windows':
             mingw64='E:\\soft\\msys2\\mingw64'
             add_cflags(
