@@ -20,6 +20,8 @@ SDL_Renderer* renderer = NULL;
 float scale=1.0;
 SDL_Window* window=NULL;
 DFont* default_font=NULL;
+Layer* g_ui_root = NULL;
+int g_running=0;
 
 // 主循环更新回调管理
 static UpdateCallback update_callbacks[MAX_UPDATE_CALLBACKS] = {NULL};
@@ -51,6 +53,44 @@ typedef struct {
 
 TextureCacheEntry texture_cache[MAX_TEXTURE_CACHE_ENTRIES] = {0};
 int texture_cache_initialized = 0;
+
+void handle_event(Layer* root, SDL_Event* event);
+
+#ifdef __EMSCRIPTEN__
+// Emscripten 主循环回调函数
+void backend_main_loop(void) {
+    if (!g_ui_root || !g_running) {
+        return;
+    }
+
+    SDL_Event event;
+    while (SDL_PollEvent(&event)) {
+        if (event.type == SDL_QUIT) {
+            g_running = 0;
+            emscripten_cancel_main_loop();
+            return;
+        }
+        handle_event(g_ui_root, &event);
+    }
+
+    // 调用所有注册的更新回调
+    for (int i = 0; i < update_callback_count; i++) {
+        if (update_callbacks[i]) {
+            update_callbacks[i]();
+        }
+    }
+
+    SDL_SetRenderDrawColor(renderer, 30, 30, 30, 255);
+    SDL_RenderClear(renderer);
+
+    render_layer(g_ui_root);  // 执行渲染管线
+
+    // 渲染弹出层
+    popup_manager_render();
+
+    SDL_RenderPresent(renderer);
+}
+#endif
 
 // ====================== 纹理缓存管理 ======================
 void init_texture_cache() {
@@ -257,6 +297,9 @@ typedef struct {
 #define MAX_TOUCHES 10
 TouchState touchState = {0};
 
+
+void backend_main_loop();
+
 // 检查是否Retina显示屏并获取缩放因子
 float getDisplayScale(SDL_Window* window) {
     int renderW, renderH;
@@ -277,22 +320,26 @@ void cleanup_corner_texture_cache();
 int backend_init(){
     // 初始化SDL
     SDL_Init(SDL_INIT_VIDEO);
-    
 
-    
+
     // 设置渲染质量为最佳（抗锯齿）
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "best");
 
     // Windows：默认"点击激活窗口"会吞掉首次点击，导致控件第一次点不中（拿不到焦点）
     // 开启 click-through 让首次点击也能送达应用侧
     SDL_SetHint(SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1");
-    
+
     // Windows: 强制使用 OpenGL 渲染器以避免 Direct3D 的颜色问题
     #ifdef _WIN32
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "opengl");
     printf("Windows detected: Forcing OpenGL renderer to avoid Direct3D color issues\n");
     #endif
-    
+
+#ifdef __EMSCRIPTEN__
+    // Emscripten: 禁用帧率控制，由主循环管理
+    SDL_SetHint(SDL_HINT_EMSCRIPTEN_ASYNCIFY, "0");
+#endif
+
     // Emscripten 环境下，不需要 SDL_WINDOW_OPENGL 标志
     Uint32 window_flags = SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_SHOWN;
 #ifndef __EMSCRIPTEN__
@@ -304,26 +351,27 @@ int backend_init(){
                                         SDL_WINDOWPOS_CENTERED,
                                         800, 600, window_flags);
 
-    // 尝试创建渲染器，优先使用硬件加速和垂直同步
-    Uint32 renderer_flags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC;
-    renderer = SDL_CreateRenderer(window, -1, renderer_flags);
+#ifdef __EMSCRIPTEN__
+    // Emscripten 环境下不使用 PRESENTVSYNC，因为主循环控制帧率
+    printf("Emscripten: Creating renderer without PRESENTVSYNC\n");
+    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+#else
+    // 桌面环境下尝试使用垂直同步
+    printf("Desktop: Creating renderer with PRESENTVSYNC\n");
+    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+#endif
 
     if (!renderer) {
-        // 如果同时支持加速和垂直同步失败，尝试只使用硬件加速
-        printf("Warning: Failed to create renderer with ACCELERATED | PRESENTVSYNC: %s\n", SDL_GetError());
-        printf("Retrying with ACCELERATED only...\n");
+        // 如果创建失败，重试不带任何标志
+        printf("Warning: Failed to create renderer: %s\n", SDL_GetError());
+        printf("Retrying with software renderer...\n");
 
-        renderer_flags = SDL_RENDERER_ACCELERATED;
-        renderer = SDL_CreateRenderer(window, -1, renderer_flags);
+        renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_SOFTWARE);
+    }
 
-        if (!renderer) {
-            // 如果硬件加速也失败，使用软件渲染器
-            printf("Warning: Failed to create hardware accelerated renderer: %s\n", SDL_GetError());
-            printf("Falling back to software renderer...\n");
-
-            renderer_flags = SDL_RENDERER_SOFTWARE;
-            renderer = SDL_CreateRenderer(window, -1, renderer_flags);
-        }
+    // 如果成功创建渲染器，禁用交换间隔（仅对某些平台有效）
+    if (renderer) {
+        SDL_GL_SetSwapInterval(0);
     }
 
     if (!renderer) {
@@ -742,6 +790,19 @@ void backend_run(Layer* ui_root){
     print_layer_info(ui_root, 0);
     printf("========================\n");
 
+#ifdef __EMSCRIPTEN__
+    // Emscripten 环境下使用 emscripten 主循环
+    g_ui_root = ui_root;
+    g_running = 1;
+    printf("Emscripten: Starting main loop...\n");
+
+    // 设置主循环时序，避免渲染器创建时的冲突
+    emscripten_set_main_loop_timing(0, 60);
+
+    // 启动主循环
+    emscripten_set_main_loop(backend_main_loop, 0, 1);
+#else
+    // 桌面环境使用普通循环
     // 主循环
     SDL_Event event;
     int running = 1;
@@ -770,6 +831,7 @@ void backend_run(Layer* ui_root){
         SDL_RenderPresent(renderer);
         SDL_Delay(16);
     }
+#endif
 
 }
 
