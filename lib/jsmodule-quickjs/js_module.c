@@ -9,6 +9,7 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include "../../lib/cjson/cJSON.h"
 
 // Layer 结构的最小定义
 #define MAX_TEXT 256
@@ -116,9 +117,18 @@ static JSValue js_set_property(JSContext *ctx, JSValueConst this_val, int argc, 
     if (g_layer_root) {
         Layer* layer = find_layer_by_id(g_layer_root, layer_id);
         if (layer) {
-            extern void layer_set_property(Layer* layer, const char* property_name, const char* value);
-            layer_set_property(layer, property_name, value);
-            printf("JS(QuickJS): Set property '%s' to '%s' on layer '%s'\n", property_name, value, layer_id);
+            // 创建 JSON 对象来存储字符串值
+            extern cJSON* cJSON_CreateString(const char* string);
+            extern void cJSON_Delete(cJSON* item);
+            extern int layer_set_property_from_json(Layer* layer, const char* key, cJSON* value, int is_creating);
+            
+            cJSON* json_value = cJSON_CreateString(value);
+            if (json_value) {
+                int result = layer_set_property_from_json(layer, property_name, json_value, 0);
+                printf("JS(QuickJS): Set property '%s' to '%s' on layer '%s', result=%d\n", 
+                       property_name, value, layer_id, result);
+                cJSON_Delete(json_value);
+            }
         } else {
             printf("JS(QuickJS): Layer '%s' not found\n", layer_id);
         }
