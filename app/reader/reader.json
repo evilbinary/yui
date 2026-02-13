@@ -1,5 +1,6 @@
 {
     "id": "readerApp",
+    "title": "Reader",
     "type": "View",
     "size": [800, 600],
     "style": {
@@ -67,7 +68,9 @@
                         "bgColor": "#E0E0E0",
                         "borderRadius": 4
                     },
-                    "onClick": "toggleDebug"
+                    "events": {
+                        "onClick": "toggleDebug"
+                    }
                 },
                 {
                     "id": "themeToggle",
@@ -79,17 +82,19 @@
                         "bgColor": "#E0E0E0",
                         "borderRadius": 4
                     },
-                    "onClick": "toggleTheme"
+                    "events": {
+                        "onClick": "toggleTheme"
+                    }
                 }
             ]
         },
         {
             "id": "contentArea",
             "type": "View",
-            "size": [800, 460],
+            "size": [800, 490],
             "layout": {
                 "type": "vertical",
-                "padding": [40, 40, 40, 40]
+                "padding": [20, 0, 40, 80]
             },
             "style": {
                 "bgColor": "#FFFFFF"
@@ -122,6 +127,7 @@
                             "text": "正在加载书籍内容...",
                             "size": [720, 360],
                             "multiline": true,
+                            "scrollable": 1,
                             "editable": false,
                             "style": {
                                 "fontSize": 16,
@@ -182,7 +188,9 @@
                                 "borderRadius": 4,
                                 "bgColor": "#E0E0E0"
                             },
-                            "onClick": "goToPrevPage"
+                            "events": {
+                                "onClick": "goToPrevPage"
+                            }
                         },
                         {
                             "id": "pageNumber",
@@ -205,7 +213,9 @@
                                 "borderRadius": 4,
                                 "bgColor": "#E0E0E0"
                             },
-                            "onClick": "goToNextPage"
+                            "events": {
+                                "onClick": "goToNextPage"
+                            }
                         }
                     ]
                 },
@@ -224,7 +234,7 @@
                             "id": "decreaseFontButton",
                             "type": "Button",
                             "text": "A-",
-                            "size": [25, 25],
+                            "size": [40, 25],
                             "style": {
                                 "fontSize": 14,
                                 "fontWeight": "bold",
@@ -232,7 +242,9 @@
                                 "bgColor": "#E0E0E0",
                                 "textAlign": "center"
                             },
-                            "onClick": "decreaseFont"
+                            "events": {
+                                "onClick": "decreaseFont"
+                            }
                         },
                         {
                             "id": "fontSizeLabel",
@@ -249,7 +261,7 @@
                             "id": "increaseFontButton",
                             "type": "Button",
                             "text": "A+",
-                            "size": [25, 25],
+                            "size": [40, 25],
                             "style": {
                                 "fontSize": 16,
                                 "fontWeight": "bold",
@@ -257,14 +269,16 @@
                                 "bgColor": "#E0E0E0",
                                 "textAlign": "center"
                             },
-                            "onClick": "increaseFont"
+                            "events": {
+                                "onClick": "increaseFont"
+                            }
                         }
                     ]
                 },
                 {
                     "id": "progressBar",
                     "type": "Progress",
-                    "size": [150, 16],
+                    "size": [200, 40],
                     "value": 0,
                     "style": {
                         "bgColor": "#E0E0E0",
