@@ -5,7 +5,7 @@
     "style": {
         "bgColor": "#FFFFFF"
     },
-    "js": ["reader.js"],
+    "js": ["./reader.js"],
     "initialize": "initialize",
     "layout": {
         "type": "vertical",

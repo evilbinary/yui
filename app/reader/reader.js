@@ -124,16 +124,25 @@ const readerApp = {
     
     // 显示指定页的内容
     displayPage: function(pageNumber) {
-        if (pageNumber < 1 || pageNumber > this.totalPages) return;
+        YUI.log("displayPage called with pageNumber: " + pageNumber + ", totalPages: " + this.totalPages);
+        
+        if (pageNumber < 1 || pageNumber > this.totalPages) {
+            YUI.log("Invalid page number: " + pageNumber);
+            return;
+        }
         
         // 更新当前页
         this.currentPage = pageNumber;
         
         // 获取章节标题（从第一页提取）
         const chapterTitle = this.extractChapterTitle(this.pages[0]);
+        const pageContent = this.pages[pageNumber - 1];
+        
+        YUI.log("Chapter title: " + chapterTitle);
+        YUI.log("Page content length: " + (pageContent ? pageContent.length : 0));
         
         // 更新UI
-        this.updateContent(chapterTitle, this.pages[pageNumber - 1]);
+        this.updateContent(chapterTitle, pageContent);
         this.updatePageInfo(pageNumber, this.totalPages);
         this.updateProgress(pageNumber, this.totalPages);
     },
@@ -155,12 +164,31 @@ const readerApp = {
     
     // 更新内容显示
     updateContent: function(title, content) {
-        // 使用YUI的API更新UI
-        YUI.setText("chapterTitle", title);
-        YUI.setText("contentText", content);
-        YUI.setText("bookSelector", this.currentBook);
+        YUI.log("updateContent called with title: " + title + ", content length: " + (content ? content.length : 0));
         
-        YUI.log("Content updated: " + title.substring(0, 20) + "...");
+        // 使用YUI的API更新UI
+        try {
+            YUI.setText("chapterTitle", title);
+            YUI.log("chapterTitle updated successfully");
+        } catch (e) {
+            YUI.log("Error updating chapterTitle: " + e.message);
+        }
+        
+        try {
+            YUI.setText("contentText", content || "");
+            YUI.log("contentText updated successfully");
+        } catch (e) {
+            YUI.log("Error updating contentText: " + e.message);
+        }
+        
+        try {
+            YUI.setText("bookSelector", this.currentBook);
+            YUI.log("bookSelector updated successfully");
+        } catch (e) {
+            YUI.log("Error updating bookSelector: " + e.message);
+        }
+        
+        YUI.log("Content updated: " + (title ? title.substring(0, 20) : "null") + "...");
     },
     
     // 更新页面信息
