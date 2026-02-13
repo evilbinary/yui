@@ -22,6 +22,37 @@ const readerApp = {
         YUI.log("Reader app initialized");
     },
     
+    // 切换调试模式
+    toggleDebug: function() {
+        YUI.log("Toggling debug mode...");
+        
+        if (typeof YUI.inspect === 'undefined') {
+            YUI.log("YUI.inspect is not available");
+            return;
+        }
+        
+        try {
+            // 切换 inspect 模式
+            if (this.debugMode) {
+                YUI.inspect.disable();
+                YUI.inspect.setShowBounds(false);
+                YUI.inspect.setShowInfo(false);
+                YUI.setText("debugButton", "Debug");
+                YUI.log("Debug mode disabled");
+            } else {
+                YUI.inspect.enable();
+                YUI.inspect.setShowBounds(true);
+                YUI.inspect.setShowInfo(true);
+                YUI.setText("debugButton", "Debug*");
+                YUI.log("Debug mode enabled");
+            }
+            
+            this.debugMode = !this.debugMode;
+        } catch (e) {
+            YUI.log("Error toggling debug mode: " + e.message);
+        }
+    },
+    
     // 加载书籍内容
     loadBook: function(bookId, page) {
         YUI.log("Loading book: " + bookId + ", page: " + page);
@@ -315,9 +346,9 @@ const readerApp = {
         this.applyTheme(newTheme);
         this.theme = newTheme;
         
-        // 更新主题切换按钮图标
-        const themeIcon = newTheme === "light" ? "🌙" : "☀️";
-        YUI.setText("themeToggle", themeIcon);
+        // 更新主题切换按钮文本
+        const themeText = newTheme === "light" ? "主题" : "主题*";
+        YUI.setText("themeToggle", themeText);
     },
     
     // 应用主题
@@ -381,7 +412,10 @@ const readerApp = {
     // 显示错误信息
     displayError: function(message) {
         YUI.setText("contentText", `错误: ${message}`);
-    }
+    },
+    
+    // 调试模式状态
+    debugMode: false
 };
 
 // 初始化应用
@@ -400,6 +434,7 @@ if (typeof global !== 'undefined') {
     global.toggleTheme = readerApp.toggleTheme.bind(readerApp);
     global.decreaseFont = readerApp.decreaseFont.bind(readerApp);
     global.increaseFont = readerApp.increaseFont.bind(readerApp);
+    global.toggleDebug = readerApp.toggleDebug.bind(readerApp);
 }
 
 // 如果是浏览器环境，也添加到window对象
@@ -411,6 +446,7 @@ if (typeof window !== 'undefined') {
     window.toggleTheme = readerApp.toggleTheme.bind(readerApp);
     window.decreaseFont = readerApp.decreaseFont.bind(readerApp);
     window.increaseFont = readerApp.increaseFont.bind(readerApp);
+    window.toggleDebug = readerApp.toggleDebug.bind(readerApp);
 }
 
 initialize()
