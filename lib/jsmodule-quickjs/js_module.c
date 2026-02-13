@@ -96,6 +96,40 @@ static JSValue js_get_property(JSContext *ctx, JSValueConst this_val, int argc, 
     return JS_UNDEFINED;
 }
 
+// 设置属性
+static JSValue js_set_property(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
+    if (argc < 3) {
+        return JS_ThrowTypeError(ctx, "Expected 3 arguments: layer_id, property_name, value");
+    }
+
+    const char* layer_id = JS_ToCString(ctx, argv[0]);
+    const char* property_name = JS_ToCString(ctx, argv[1]);
+    const char* value = JS_ToCString(ctx, argv[2]);
+
+    if (!layer_id || !property_name || !value) {
+        if (layer_id) JS_FreeCString(ctx, layer_id);
+        if (property_name) JS_FreeCString(ctx, property_name);
+        if (value) JS_FreeCString(ctx, value);
+        return JS_ThrowTypeError(ctx, "Invalid arguments");
+    }
+
+    if (g_layer_root) {
+        Layer* layer = find_layer_by_id(g_layer_root, layer_id);
+        if (layer) {
+            extern void layer_set_property(Layer* layer, const char* property_name, const char* value);
+            layer_set_property(layer, property_name, value);
+            printf("JS(QuickJS): Set property '%s' to '%s' on layer '%s'\n", property_name, value, layer_id);
+        } else {
+            printf("JS(QuickJS): Layer '%s' not found\n", layer_id);
+        }
+    }
+
+    JS_FreeCString(ctx, layer_id);
+    JS_FreeCString(ctx, property_name);
+    JS_FreeCString(ctx, value);
+    return JS_UNDEFINED;
+}
+
 // 设置背景颜色
 static JSValue js_set_bg_color(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
@@ -600,6 +634,8 @@ void js_module_register_api(void)
     JS_SetPropertyStr(g_js_ctx, yui_obj, "setText", JS_NewCFunction(g_js_ctx, js_set_text, "setText", 2));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "getText", JS_NewCFunction(g_js_ctx, js_get_text, "getText", 1));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "getProperty", JS_NewCFunction(g_js_ctx, js_get_property, "getProperty", 2));
+    JS_SetPropertyStr(g_js_ctx, yui_obj, "setProperty", JS_NewCFunction(g_js_ctx, js_set_property, "setProperty", 3));
+
     JS_SetPropertyStr(g_js_ctx, yui_obj, "setBgColor", JS_NewCFunction(g_js_ctx, js_set_bg_color, "setBgColor", 2));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "hide", JS_NewCFunction(g_js_ctx, js_hide, "hide", 1));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "show", JS_NewCFunction(g_js_ctx, js_show, "show", 1));

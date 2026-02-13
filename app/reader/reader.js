@@ -49,10 +49,16 @@ const readerApp = {
         }
 
         // 使用YUI的文件读取API读取文件内容
-        try {
+        // try {
             const content = YUI.readFile(bookPath);
             
             if (content) {
+                YUI.log("Content loaded successfully: " + content.substring(0, 50) + "...");
+
+                // 将内容按页分割
+                this.pages = this.splitContentIntoPages(content);
+                this.totalPages = this.pages.length;
+
                 YUI.log("Book split into " + this.totalPages + " pages");
                 
                 // 显示指定页的内容
@@ -61,15 +67,15 @@ const readerApp = {
                 YUI.log("Failed to load content from file: " + bookPath);
                 this.displayError("无法加载书籍: " + bookId);
             }
-        } catch (e) {
-            YUI.log("Error loading book content: " + e.message);
-            this.displayError("加载书籍时出错: " + e.message);
-        }
+        // } catch (e) {
+        //     YUI.log("Error loading book content: " + e.message);
+        //     this.displayError("加载书籍时出错: " + e.message);
+        // }
     },
     
     // 将内容分割成页面
     splitContentIntoPages: function(content) {
-        const maxCharsPerPage = 1000;
+        const maxCharsPerPage = 200;
         const pages = [];
         let startIndex = 0;
         
