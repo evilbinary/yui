@@ -103,6 +103,7 @@ def add_flags():
             add_cflags(
             # '--use-port=sdl2 ',
             '-g',
+            '-gsource-map',
             '-Wno-incompatible-pointer-types -Wno-implicit-function-declaration',
             '-F../libs/',
             '-I'+mingw64+'\\include\\SDL2',
@@ -115,7 +116,7 @@ def add_flags():
             )
         
             add_ldflags(
-                
+                '-gsource-map',
                 '-s USE_SDL=2',
                 '-s USE_SDL_IMAGE=2',
                 '-s USE_SDL_TTF=2',

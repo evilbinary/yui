@@ -67,7 +67,7 @@ void js_module_set_button_style(Layer* layer, const char* bg_color)
     }
 }
 
-int js_module_set_layer_event(Layer* layer, const char* event_name, const char* event_func_name, void* event_handler)
+int js_module_set_layer_event(Layer* layer, const char* event_name, const char* event_func_name, EventHandler event_handler)
 {
     if (!layer || !event_name) {
         return -1;
@@ -693,7 +693,7 @@ int js_module_set_event(const char* layer_id, const char* event_name, const char
     }
 
     // 设置图层事件
-    int result = js_module_set_layer_event(layer, event_name, event_func_name, handler);
+    int result = js_module_set_layer_event(layer, event_name, event_func_name, (void*)handler);
     if (result == 0) {
         printf("JS: Set event '%s' for layer '%s' -> '%s'\n", event_name, layer_id, event_func_name);
         

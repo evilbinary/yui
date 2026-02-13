@@ -1589,12 +1589,14 @@ void select_component_trigger_on_change(SelectComponent* component) {
 }
 
 // 注册事件处理函数
-void select_component_register_event(Layer* layer, const char* event_name, const char* event_func_name, EventHandler event_handler){
+int select_component_register_event(Layer* layer, const char* event_name, const char* event_func_name, EventHandler event_handler){
     if(strcmp(event_name,"change")==0 || strcmp(event_name,"onChange")==0){
         SelectComponent* component = (SelectComponent*)layer->component;
         component->on_change = event_handler;
         component->change_name = strdup(event_func_name);
+        return 0;
     }
+    return -1;
 }
 
 // 通用属性获取函数
