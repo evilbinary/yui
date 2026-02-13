@@ -139,11 +139,11 @@ def add_flags():
                 '--preload-file app/assets/',
                 '--preload-file app/lib/',
                 '--preload-file app',
-                '-s USE_WEBGL2=1',          # 启用 WebGL2 支持（现代浏览器兼容性更好）
-                '-s FULL_ES3=1',           # 启用完整的 OpenGL ES 3 特性
-                '-s MIN_WEBGL_VERSION=2',  # 要求 WebGL 最低版本为 2
+                # '-s USE_WEBGL2=1',          # 启用 WebGL2 支持（现代浏览器兼容性更好）
+                # '-s FULL_ES2=1',           # 启用完整的 OpenGL ES 3 特性
+                # '-s MIN_WEBGL_VERSION=2',  # 要求 WebGL 最低版本为 2
                 '-s ASSERTIONS=2',          # 启用运行时断言，便于调试
-                '-s GL_ASSERTIONS=1',       # 启用 GL 断言，捕捉 WebGL 错误
+                # '-s GL_ASSERTIONS=1',       # 启用 GL 断言，捕捉 WebGL 错误
 
                 '-L'+mingw64+'\\lib',
                

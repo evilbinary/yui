@@ -293,10 +293,16 @@ int backend_init(){
     printf("Windows detected: Forcing OpenGL renderer to avoid Direct3D color issues\n");
     #endif
     
+    // Emscripten 环境下，不需要 SDL_WINDOW_OPENGL 标志
+    Uint32 window_flags = SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_SHOWN;
+#ifndef __EMSCRIPTEN__
+    window_flags |= SDL_WINDOW_OPENGL;
+#endif
+    
     window = SDL_CreateWindow("YUI",
                                         SDL_WINDOWPOS_CENTERED,
                                         SDL_WINDOWPOS_CENTERED,
-                                        800, 600, SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
+                                        800, 600, window_flags);
 
     // 尝试创建渲染器，优先使用硬件加速和垂直同步
     Uint32 renderer_flags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC;
@@ -735,7 +741,7 @@ void backend_run(Layer* ui_root){
     printf("=== Layer Information ===\n");
     print_layer_info(ui_root, 0);
     printf("========================\n");
-    
+
     // 主循环
     SDL_Event event;
     int running = 1;
@@ -764,6 +770,7 @@ void backend_run(Layer* ui_root){
         SDL_RenderPresent(renderer);
         SDL_Delay(16);
     }
+
 }
 
 DFont* backend_load_font(char* font_path,int size){
