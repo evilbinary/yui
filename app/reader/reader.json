@@ -105,9 +105,11 @@
                     "children": [
                         {
                             "id": "contentText",
-                            "type": "Label",
+                            "type": "Text",
                             "text": "正在加载书籍内容...",
                             "size": [720, 360],
+                            "multiline": true,
+                            "editable": false,
                             "style": {
                                 "fontSize": 16,
                                 "lineHeight": 1.6,

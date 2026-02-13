@@ -73,53 +73,135 @@ const readerApp = {
         // }
     },
     
-    // 将内容分割成页面
+    // 将内容分割成页面（支持换行）
     splitContentIntoPages: function(content) {
-        const maxCharsPerPage = 200;
+        const maxCharsPerLine = 42;  // 每行最大字符数（根据字体大小和宽度计算）
+        const maxLinesPerPage = 18;  // 每页最大行数（留出边距）
         const pages = [];
-        let startIndex = 0;
         
-        while (startIndex < content.length) {
-            // 计算当前页的结束位置
-            let endIndex = startIndex + maxCharsPerPage;
+        // 按原始换行符分割段落
+        const paragraphs = content.split('\n');
+        let currentPageLines = [];
+        let lineCount = 0;
+        
+        for (let p = 0; p < paragraphs.length; p++) {
+            const paragraph = paragraphs[p];
             
-            if (endIndex >= content.length) {
-                // 如果是最后一页，直接添加剩余内容
-                pages.push(content.substring(startIndex));
+            // 处理空段落（保留空行）
+            if (!paragraph.trim()) {
+                if (lineCount >= maxLinesPerPage) {
+                    pages.push(currentPageLines.join('\n'));
+                    currentPageLines = [];
+                    lineCount = 0;
+                }
+                currentPageLines.push('');
+                lineCount++;
+                continue;
+            }
+            
+            // 处理长段落，按句子分割
+            let remainingText = paragraph;
+            
+            while (remainingText.length > 0) {
+                // 如果已经接近页面末尾，尝试在句子边界分割
+                if (lineCount >= maxLinesPerPage - 2) {
+                    // 查找句子边界
+                    let sentenceEnd = -1;
+                    for (let i = 0; i < remainingText.length && i < 100; i++) {
+                        const char = remainingText[i];
+                        if (char === '。' || char === '！' || char === '？' || 
+                            char === '.' || char === '!' || char === '?') {
+                            sentenceEnd = i + 1;
+                            break;
+                        }
+                    }
+                    
+                    if (sentenceEnd > 0) {
+                        const sentence = remainingText.substring(0, sentenceEnd).trim();
+                        remainingText = remainingText.substring(sentenceEnd).trim();
+                        
+                        // 分割长句子到多行
+                        this.splitTextIntoLines(sentence, currentPageLines, maxCharsPerLine);
+                        lineCount = currentPageLines.length % maxLinesPerPage;
+                    } else {
+                        // 找不到句子边界，强制分割
+                        const chunk = remainingText.substring(0, Math.min(remainingText.length, maxCharsPerLine));
+                        remainingText = remainingText.substring(chunk.length);
+                        currentPageLines.push(chunk.trim());
+                        lineCount++;
+                    }
+                } else {
+                    // 页面有足够空间，正常处理
+                    const chunk = remainingText.substring(0, Math.min(remainingText.length, maxCharsPerLine * 2));
+                    remainingText = remainingText.substring(chunk.length);
+                    
+                    this.splitTextIntoLines(chunk, currentPageLines, maxCharsPerLine);
+                    lineCount = currentPageLines.length % maxLinesPerPage;
+                }
+                
+                // 检查是否需要新页面
+                if (lineCount >= maxLinesPerPage) {
+                    pages.push(currentPageLines.join('\n'));
+                    currentPageLines = [];
+                    lineCount = 0;
+                }
+            }
+        }
+        
+        // 添加最后一页
+        if (currentPageLines.length > 0) {
+            pages.push(currentPageLines.join('\n'));
+        }
+        
+        return pages;
+    },
+    
+    // 将文本分割成多行
+    splitTextIntoLines: function(text, linesArray, maxCharsPerLine) {
+        let remaining = text.trim();
+        
+        while (remaining.length > 0) {
+            if (remaining.length <= maxCharsPerLine) {
+                // 剩余文本可以放入一行
+                linesArray.push(remaining);
                 break;
             }
             
-            // 尝试在句号、感叹号或问号处分割
-            let splitIndex = -1;
-            for (let i = endIndex; i > startIndex + 200; i--) {
-                const char = content[i];
-                if (char === '。' || char === '！' || char === '？' || char === '.' || char === '!' || char === '?') {
-                    splitIndex = i + 1;
+            // 查找最佳分割点（优先在标点符号后，其次在空格）
+            let splitPos = maxCharsPerLine;
+            let bestSplitPos = -1;
+            
+            // 从右向左查找合适的分割点
+            for (let i = maxCharsPerLine; i > maxCharsPerLine * 0.6; i--) {
+                const char = remaining[i];
+                if (char === ' ' || char === '　' || char === '，' || char === ',') {
+                    bestSplitPos = i;
                     break;
                 }
             }
             
-            // 如果找不到合适的分割点，就在空格处分割
-            if (splitIndex === -1) {
-                for (let i = endIndex; i > startIndex + 200; i--) {
-                    if (content[i] === ' ' || content[i] === '\n') {
-                        splitIndex = i;
+            if (bestSplitPos === -1) {
+                // 在标点符号后分割
+                for (let i = maxCharsPerLine; i > maxCharsPerLine * 0.6; i--) {
+                    const char = remaining[i];
+                    if (char === '。' || char === '！' || char === '？' || 
+                        char === '.' || char === '!' || char === '?') {
+                        bestSplitPos = i + 1;
                         break;
                     }
                 }
             }
             
-            // 如果还是找不到合适的分割点，就强制分割
-            if (splitIndex === -1) {
-                splitIndex = endIndex;
+            if (bestSplitPos === -1) {
+                // 找不到合适的分割点，强制分割
+                bestSplitPos = maxCharsPerLine;
             }
             
-            // 添加页面
-            pages.push(content.substring(startIndex, splitIndex).trim());
-            startIndex = splitIndex;
+            const line = remaining.substring(0, bestSplitPos).trim();
+            remaining = remaining.substring(bestSplitPos).trim();
+            
+            linesArray.push(line);
         }
-        
-        return pages;
     },
     
     // 显示指定页的内容
