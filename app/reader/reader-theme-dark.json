@@ -1,0 +1,112 @@
+{
+    "id": "darkTheme",
+    "type": "Theme",
+    "name": "dark",
+    "rules": [
+        {
+            "selector": "#readerApp",
+            "properties": {
+                "bgColor": "#121212"
+            }
+        },
+        {
+            "selector": "#toolbar",
+            "properties": {
+                "bgColor": "#1E1E1E",
+                "borderBottomColor": "#333333"
+            }
+        },
+        {
+            "selector": "#contentArea",
+            "properties": {
+                "bgColor": "#121212"
+            }
+        },
+        {
+            "selector": "#chapterTitle",
+            "properties": {
+                "color": "#E0E0E0"
+            }
+        },
+        {
+            "selector": "#contentText",
+            "properties": {
+                "color": "#E0E0E0"
+            }
+        },
+        {
+            "selector": "#pageIndicator",
+            "properties": {
+                "color": "#AAAAAA"
+            }
+        },
+        {
+            "selector": "#bottomBar",
+            "properties": {
+                "bgColor": "#1E1E1E",
+                "borderTopColor": "#333333"
+            }
+        },
+        {
+            "selector": "#pageNumber",
+            "properties": {
+                "color": "#AAAAAA"
+            }
+        },
+        {
+            "selector": "#fontSizeLabel",
+            "properties": {
+                "color": "#AAAAAA"
+            }
+        },
+        {
+            "selector": "#debugButton",
+            "properties": {
+                "bgColor": "#333333",
+                "color": "#E0E0E0"
+            }
+        },
+        {
+            "selector": "#themeToggle",
+            "properties": {
+                "bgColor": "#333333",
+                "color": "#E0E0E0"
+            }
+        },
+        {
+            "selector": "#prevButton",
+            "properties": {
+                "bgColor": "#333333",
+                "color": "#E0E0E0"
+            }
+        },
+        {
+            "selector": "#nextButton",
+            "properties": {
+                "bgColor": "#333333",
+                "color": "#E0E0E0"
+            }
+        },
+        {
+            "selector": "#decreaseFontButton",
+            "properties": {
+                "bgColor": "#333333",
+                "color": "#E0E0E0"
+            }
+        },
+        {
+            "selector": "#increaseFontButton",
+            "properties": {
+                "bgColor": "#333333",
+                "color": "#E0E0E0"
+            }
+        },
+        {
+            "selector": "#progressBar",
+            "properties": {
+                "bgColor": "#333333",
+                "fillColor": "#4CAF50"
+            }
+        }
+    ]
+}
