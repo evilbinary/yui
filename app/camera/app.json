@@ -1,0 +1,235 @@
+{
+    "id": "cameraApp",
+    "type": "View",
+    "size": [480, 640],
+    "style": {
+        "bgColor": "#1a1a1a"
+    },
+    "js": ["camera.js"],
+    "layout": {
+        "type": "vertical",
+        "spacing": 0
+    },
+    "children": [
+        {
+            "id": "topBar",
+            "type": "View",
+            "size": [480, 40],
+            "style": {
+                "bgColor": "#2d2d2d"
+            },
+            "layout": {
+                "type": "horizontal",
+                "spacing": 10,
+                "padding": [8, 10, 8, 10],
+                "justifyContent": "center",
+                "alignItems": "center"
+            },
+            "children": [
+                {
+                    "id": "lutPrevBtn",
+                    "type": "Button",
+                    "text": "<",
+                    "size": [30, 28],
+                    "style": {
+                        "bgColor": "#444444",
+                        "color": "#ffffff",
+                        "fontSize": 14,
+                        "borderRadius": 4
+                    }
+                },
+                {
+                    "id": "lutLabel",
+                    "type": "Label",
+                    "text": "LUT: PORTRAIT",
+                    "size": [160, 28],
+                    "style": {
+                        "color": "#ffffff",
+                        "fontSize": 14,
+                        "textAlign": "center"
+                    }
+                },
+                {
+                    "id": "lutNextBtn",
+                    "type": "Button",
+                    "text": ">",
+                    "size": [30, 28],
+                    "style": {
+                        "bgColor": "#444444",
+                        "color": "#ffffff",
+                        "fontSize": 14,
+                        "borderRadius": 4
+                    }
+                }
+            ]
+        },
+        {
+            "id": "viewfinder",
+            "type": "Image",
+            "size": [480, 500],
+            "style": {
+                "bgColor": "#000000"
+            },
+            "source": ""
+        },
+        {
+            "id": "evBar",
+            "type": "View",
+            "size": [480, 30],
+            "style": {
+                "bgColor": "#2d2d2d"
+            },
+            "layout": {
+                "type": "horizontal",
+                "spacing": 10,
+                "padding": [5, 15, 5, 15],
+                "justifyContent": "center",
+                "alignItems": "center"
+            },
+            "children": [
+                {
+                    "id": "evLabel",
+                    "type": "Label",
+                    "text": "EV: +0.0",
+                    "size": [80, 20],
+                    "style": {
+                        "color": "#00ff00",
+                        "fontSize": 14,
+                        "fontFamily": "monospace"
+                    }
+                },
+                {
+                    "id": "isoLabel",
+                    "type": "Label",
+                    "text": "ISO: 100",
+                    "size": [80, 20],
+                    "style": {
+                        "color": "#ffff00",
+                        "fontSize": 14,
+                        "fontFamily": "monospace"
+                    }
+                },
+                {
+                    "id": "wbLabel",
+                    "type": "Label",
+                    "text": "WB: 5500K",
+                    "size": [100, 20],
+                    "style": {
+                        "color": "#87CEEB",
+                        "fontSize": 14,
+                        "fontFamily": "monospace"
+                    }
+                }
+            ]
+        },
+        {
+            "id": "bottomBar",
+            "type": "View",
+            "size": [480, 70],
+            "style": {
+                "bgColor": "#1a1a1a"
+            },
+            "layout": {
+                "type": "horizontal",
+                "spacing": 20,
+                "padding": [10, 20, 10, 20],
+                "justifyContent": "center",
+                "alignItems": "center"
+            },
+            "children": [
+                {
+                    "id": "batteryContainer",
+                    "type": "View",
+                    "size": [50, 30],
+                    "layout": {
+                        "type": "horizontal",
+                        "alignItems": "center"
+                    },
+                    "children": [
+                        {
+                            "id": "batteryIcon",
+                            "type": "View",
+                            "size": [40, 20],
+                            "style": {
+                                "bgColor": "#333333",
+                                "borderWidth": 2,
+                                "borderColor": "#00ff00"
+                            }
+                        },
+                        {
+                            "id": "batteryTip",
+                            "type": "View",
+                            "size": [4, 10],
+                            "style": {
+                                "bgColor": "#00ff00"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "id": "shutterBtn",
+                    "type": "Button",
+                    "text": "●",
+                    "size": [60, 60],
+                    "style": {
+                        "bgColor": "#ffffff",
+                        "color": "#000000",
+                        "fontSize": 24,
+                        "borderRadius": 30
+                    }
+                },
+                {
+                    "id": "modeContainer",
+                    "type": "View",
+                    "size": [80, 50],
+                    "layout": {
+                        "type": "vertical",
+                        "spacing": 4,
+                        "alignItems": "center"
+                    },
+                    "children": [
+                        {
+                            "id": "modeLabel",
+                            "type": "Label",
+                            "text": "PHOTO",
+                            "size": [80, 20],
+                            "style": {
+                                "color": "#ffffff",
+                                "fontSize": 12,
+                                "textAlign": "center"
+                            }
+                        },
+                        {
+                            "id": "countLabel",
+                            "type": "Label",
+                            "text": "4321",
+                            "size": [80, 20],
+                            "style": {
+                                "color": "#888888",
+                                "fontSize": 14,
+                                "fontFamily": "monospace",
+                                "textAlign": "center"
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "recIndicator",
+            "type": "View",
+            "size": [480, 0],
+            "style": {
+                "bgColor": "#ff0000"
+            },
+            "visible": false
+        }
+    ],
+    "events": {
+        "onLoad": "@initCamera",
+        "shutterBtn.onClick": "@onShutterClick",
+        "lutPrevBtn.onClick": "@onLutPrev",
+        "lutNextBtn.onClick": "@onLutNext",
+        "viewfinder.onClick": "@onViewfinderClick"
+    }
+}
