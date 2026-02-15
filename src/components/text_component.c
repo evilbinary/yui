@@ -1164,6 +1164,8 @@ void text_component_handle_key_event(Layer* layer, KeyEvent* event) {
                             strncpy(selected_text, component->layer->text + start, len);
                             selected_text[len] = '\0';
                             printf("Copied: '%s'\n", selected_text);
+                            // 复制到剪贴板
+                            backend_set_clipboard_text(selected_text);
                             free(selected_text);
                         }
                     }
@@ -1203,8 +1205,10 @@ void text_component_handle_key_event(Layer* layer, KeyEvent* event) {
                             strncpy(selected_text, component->layer->text + start, len);
                             selected_text[len] = '\0';
                             printf("Cut: '%s'\n", selected_text);
+                            // 复制到剪贴板
+                            backend_set_clipboard_text(selected_text);
                             free(selected_text);
-                            
+
                             // 删除选中文本
                             text_component_delete_selection(component);
                         }

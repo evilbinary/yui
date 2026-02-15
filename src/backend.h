@@ -59,5 +59,6 @@ void backend_render_arc(int center_x, int center_y, int radius, float start_angl
 void backend_render_backdrop_filter(Rect* rect, int blur_radius, float saturation, float brightness);
 // 剪贴板操作
 char* backend_get_clipboard_text();
+void backend_set_clipboard_text(const char* text);
 
 #endif

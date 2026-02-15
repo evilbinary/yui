@@ -514,3 +514,8 @@ char* backend_get_clipboard_text() {
     // STM32 平台通常没有剪贴板概念
     return strdup("");
 }
+
+void backend_set_clipboard_text(const char* text) {
+    // STM32 平台通常没有剪贴板概念，忽略此操作
+    (void)text;
+}
