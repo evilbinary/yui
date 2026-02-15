@@ -2078,56 +2078,51 @@ Texture* backend_load_texture_from_base64(const char* base64_data, size_t data_l
 
 char* backend_get_clipboard_text() {
 #ifdef __EMSCRIPTEN__
-    // Emscripten 环境下，使用 JavaScript API 获取剪贴板
-    char* clipboard_text = (char*)EM_ASM_INT({
-        try {
-            // 尝试从现代剪贴板 API 获取
-            if (navigator.clipboard && navigator.clipboard.readText) {
-                // 这是一个异步操作，我们无法在同步函数中等待
-                // 返回空字符串表示需要异步处理
-                return 0;
-            }
+    // Emscripten 环境下，使用 JavaScript 读取剪贴板
+    static int clipboard_read_pending = 0;
 
-            // 回退到传统的 document.execCommand 方法
-            // 创建一个临时 textarea
-            var textarea = document.createElement('textarea');
-            textarea.style.position = 'fixed';
-            textarea.style.opacity = '0';
-            document.body.appendChild(textarea);
-
-            // 执行粘贴命令
-            textarea.select();
-            var successful = document.execCommand('paste');
-
-            // 获取文本并清理
-            var text = textarea.value;
-            document.body.removeChild(textarea);
-
-            if (successful && text) {
-                // 将文本分配到 Emscripten 堆内存
-                var lengthBytes = lengthBytesUTF8(text) + 1;
-                var stringOnWasmHeap = _malloc(lengthBytes);
-                stringToUTF8(text, stringOnWasmHeap, lengthBytes);
-                return stringOnWasmHeap;
-            }
-
-            return 0;
-        } catch (e) {
-            console.error('Failed to get clipboard:', e);
-            return 0;
+    // 如果上次有待读取的剪贴板内容，直接返回（使用 malloc 分配）
+    char* result = (char*)EM_ASM_INT({
+        if (window._clipboard_result) {
+            var len = lengthBytesUTF8(window._clipboard_result) + 1;
+            var ptr = _malloc(len);
+            stringToUTF8(window._clipboard_result, ptr, len);
+            return ptr;
         }
+        return 0;
     });
 
-    if (clipboard_text) {
-        return clipboard_text;
+    if (result) {
+        return result;
     }
 
-    // 如果剪贴板 API 不可用或失败，返回空字符串
-    char* result = (char*)malloc(1);
-    if (result) {
-        result[0] = '\0';
+    // 触发异步读取（下次调用时获取结果）
+    if (!clipboard_read_pending) {
+        clipboard_read_pending = 1;
+        EM_ASM({
+            // 检查是否支持 navigator.clipboard API
+            if (navigator && navigator.clipboard && navigator.clipboard.readText) {
+                navigator.clipboard.readText().then(function(text) {
+                    window._clipboard_result = text;
+                    console.log('Clipboard pre-read:', text);
+                }).catch(function(err) {
+                    console.error('Failed to pre-read clipboard:', err);
+                    window._clipboard_result = '';
+                });
+            } else {
+                // 不支持 clipboard API，使用回退方法
+                console.log('Clipboard API not available');
+                window._clipboard_result = '';
+            }
+        });
     }
-    return result;
+
+    // 返回 malloc 分配的空字符串
+    char* empty = (char*)malloc(1);
+    if (empty) {
+        empty[0] = '\0';
+    }
+    return empty;
 #else
     // 桌面环境使用 SDL_GetClipboardText
     char* clipboard_text = SDL_GetClipboardText();
@@ -2153,40 +2148,44 @@ char* backend_get_clipboard_text() {
 }
 
 void backend_set_clipboard_text(const char* text) {
-#ifdef __EMSCRIPTEN__
-    // Emscripten 环境下，使用 JavaScript API 设置剪贴板
     if (!text) return;
 
+#ifdef __EMSCRIPTEN__
+    // Emscripten 环境下，使用 JavaScript 设置剪贴板
+    printf("Setting clipboard: '%s'\n", text);
+
     EM_ASM_({
-        try {
-            // 尝试使用现代剪贴板 API
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(UTF8ToString($0));
-            } else {
-                // 回退到传统的 document.execCommand 方法
-                // 创建一个临时 textarea
-                var textarea = document.createElement('textarea');
-                textarea.value = UTF8ToString($0);
-                textarea.style.position = 'fixed';
-                textarea.style.opacity = '0';
-                textarea.style.top = '0';
-                textarea.style.left = '0';
-                document.body.appendChild(textarea);
+        var text = UTF8ToString($0);
 
-                // 选中文本并执行复制命令
-                textarea.select();
-                var successful = document.execCommand('copy');
-
-                // 清理
-                document.body.removeChild(textarea);
-
-                if (!successful) {
-                    console.error('Failed to copy text to clipboard');
-                }
+        // 检查是否支持 navigator.clipboard API
+        if (navigator && navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(function() {
+                console.log('Clipboard set successfully');
+            }).catch(function(err) {
+                console.error('Failed to set clipboard:', err);
+            });
+        } else {
+            // 回退方法：使用 document.execCommand
+            var textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            textarea.style.top = '0';
+            textarea.style.left = '0';
+            document.body.appendChild(textarea);
+            textarea.focus();
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                console.log('Clipboard set via execCommand');
+            } catch (e) {
+                console.error('Failed to set clipboard via execCommand:', e);
             }
-        } catch (e) {
-            console.error('Failed to set clipboard:', e);
+            document.body.removeChild(textarea);
         }
+
+        // 同时保存到全局变量
+        window._clipboard_result = text;
     }, text);
 #else
     // 桌面环境使用 SDL_SetClipboardText
