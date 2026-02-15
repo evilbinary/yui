@@ -318,12 +318,14 @@ void text_component_set_selection_color(TextComponent* component, Color color) {
 }
 
 // 注册事件处理函数
-void text_component_register_event(Layer* layer, const char* event_name, const char* event_func_name, EventHandler event_handler){
+int text_component_register_event(Layer* layer, const char* event_name, const char* event_func_name, EventHandler event_handler){
     if(strcmp(event_name,"change")==0 || strcmp(event_name,"onChange")==0){
         TextComponent* component = (TextComponent*)layer->component;
         component->on_change = event_handler;
         component->change_name = strdup(event_func_name);
+        return 0;
     }
+    return -1;
 }
 
 // 通用属性获取函数
