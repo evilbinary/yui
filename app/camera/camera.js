@@ -29,20 +29,25 @@ var lutList = [
 
 // 辅助函数：更新图层属性
 function updateLayerProperty(layerId, property, value) {
+    var change = {};
+    change[property] = value;
     var update = {
-        "target": layerId
+        "target": layerId,
+        "change": change
     };
-    update[property] = value;
     YUI.update(JSON.stringify([update]));
 }
 
 // 辅助函数：更新图层样式
 function updateLayerStyle(layerId, styleProperty, value) {
+    var style = {};
+    style[styleProperty] = value;
     var update = {
         "target": layerId,
-        "style": {}
+        "change": {
+            "style": style
+        }
     };
-    update.style[styleProperty] = value;
     YUI.update(JSON.stringify([update]));
 }
 
