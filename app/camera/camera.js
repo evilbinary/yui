@@ -149,16 +149,10 @@ function onShutterClick() {
 function takePhoto() {
     YUI.log("takePhoto: Taking photo...");
     
-    // 模拟拍照效果
-    updateLayerStyle("viewfinder", "bgColor", "#ffffff");
-    
-    // 短暂延迟后恢复
-    setTimeout(function() {
-        updateLayerStyle("viewfinder", "bgColor", "#000000");
-        cameraState.photoCount--;
-        updateCameraParams();
-        YUI.log("takePhoto: Photo saved! Remaining: " + cameraState.photoCount);
-    }, 100);
+    // 模拟拍照效果 - 直接更新计数
+    cameraState.photoCount--;
+    updateCameraParams();
+    YUI.log("takePhoto: Photo saved! Remaining: " + cameraState.photoCount);
 }
 
 // 切换录制状态
