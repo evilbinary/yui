@@ -108,8 +108,9 @@ int js_module_set_layer_event(Layer* layer, const char* event_name, const char* 
     }
     // 检查 change 事件
     if (strcmp(event_name, "change") == 0 || strcmp(event_name, "onChange") == 0) {
-        if(layer->register_event!=NULL){
-            ((register_event_fun_t )layer->register_event)(layer, event_name, event_func_name, (EventHandler)event_handler);
+        register_event_fun_t fn=layer->register_event;
+        if(fn!=NULL){
+            fn(layer, event_name, event_func_name, (EventHandler)event_handler);
         }
         return 0;
     
@@ -693,7 +694,7 @@ int js_module_set_event(const char* layer_id, const char* event_name, const char
     }
 
     // 设置图层事件
-    int result = js_module_set_layer_event(layer, event_name, event_func_name, (void*)handler);
+    int result = js_module_set_layer_event(layer, event_name, event_func_name, handler);
     if (result == 0) {
         printf("JS: Set event '%s' for layer '%s' -> '%s'\n", event_name, layer_id, event_func_name);
         
