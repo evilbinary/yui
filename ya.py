@@ -259,7 +259,7 @@ def add_flags():
                 '-O0',
                 '-Wbad-function-cast ',
                 '-Wcast-function-type',
-                '--source-map-base http://localhost:6931/',
+                # '--source-map-base http://localhost:6931/',
 
                 '-s ERROR_ON_UNDEFINED_SYMBOLS=0',
                 '-s AGGRESSIVE_VARIABLE_ELIMINATION=1',

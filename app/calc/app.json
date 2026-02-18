@@ -1,0 +1,12 @@
+{
+    "type":"main",
+    "assets":"app/assets",
+    "font":"Roboto-Regular.ttf",
+    "fontSize":"16",
+    "text":"calc",
+    "size":[800,600],
+    "source":"app/calc/calc.json",
+    "style": {
+        "color": "#2C3E50"
+    }
+}

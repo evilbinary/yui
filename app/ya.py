@@ -143,3 +143,55 @@ target("camera")
     add_files("camera/main.c"),
     add_run()
 )
+
+target("camera.html") 
+(
+    add_deps("socket","yui","quickjs","jsmodule-quickjs","yaml2json"),
+    add_rules("mode.debug", "mode.release"),
+    set_kind("binary"),
+    add_flags(),
+    add_files("camera/main.c"),
+    add_run()
+)
+
+
+target("reader") 
+(
+    add_deps("socket","yui","quickjs","jsmodule-quickjs","yaml2json"),
+    add_rules("mode.debug", "mode.release"),
+    set_kind("binary"),
+    add_flags(),
+    add_files("reader/main.c"),
+    add_run()
+)
+
+target("reader.html") 
+(
+    add_deps("socket","yui","quickjs","jsmodule-quickjs","yaml2json"),
+    add_rules("mode.debug", "mode.release"),
+    set_kind("binary"),
+    add_flags(),
+    add_files("reader/main.c"),
+    add_run()
+)
+
+target("calc") 
+(
+    add_deps("socket","yui","quickjs","jsmodule-quickjs","yaml2json"),
+    add_rules("mode.debug", "mode.release"),
+    set_kind("binary"),
+    add_flags(),
+    add_files("calc/main.c"),
+    add_run()
+)
+
+
+target("calc.html") 
+(
+    add_deps("socket","yui","quickjs","jsmodule-quickjs","yaml2json"),
+    add_rules("mode.debug", "mode.release"),
+    set_kind("binary"),
+    add_flags(),
+    add_files("calc/main.c"),
+    add_run()
+)
