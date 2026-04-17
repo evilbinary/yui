@@ -185,4 +185,32 @@ void parse_color(char* valuestring, Color* color) {
       sscanf(valuestring, "#%02hhx%02hhx%02hhx", &color->r, &color->g, &color->b);
       color->a = 255;  // 默认不透明
     }
-  }
+}
+
+// 获取 UTF-8 字符的字节长度
+int utf8_char_len(unsigned char c) {
+    if ((c & 0x80) == 0) return 1;        // 0xxxxxxx - ASCII
+    if ((c & 0xE0) == 0xC0) return 2;     // 110xxxxx - 2字节
+    if ((c & 0xF0) == 0xE0) return 3;     // 1110xxxx - 3字节（中文）
+    if ((c & 0xF8) == 0xF0) return 4;     // 11110xxx - 4字节
+    return 1; // 默认返回1字节
+}
+
+// 获取光标前一个 UTF-8 字符的字节长度
+int get_prev_utf8_char_len(const char* text, int cursor_pos) {
+    if (cursor_pos <= 0) return 0;
+    
+    // 从光标位置向前查找 UTF-8 字符的起始位置
+    int i = cursor_pos - 1;
+    while (i >= 0 && ((unsigned char)text[i] & 0xC0) == 0x80) {
+        i--; // 跳过 UTF-8 continuation bytes (10xxxxxx)
+    }
+    
+    return cursor_pos - i;
+}
+
+// 获取光标处 UTF-8 字符的字节长度
+int get_current_utf8_char_len(const char* text, int cursor_pos) {
+    unsigned char c = (unsigned char)text[cursor_pos];
+    return utf8_char_len(c);
+}

@@ -19,6 +19,10 @@ int is_point_in_rect(int x, int y, Rect rect);
 
 void parse_color(char* valuestring, Color* color);
 
+// UTF-8 字符处理辅助函数
+int utf8_char_len(unsigned char c);
+int get_prev_utf8_char_len(const char* text, int cursor_pos);
+int get_current_utf8_char_len(const char* text, int cursor_pos);
 
 #endif
 

@@ -827,8 +827,12 @@ static void text_component_delete_prev_char(TextComponent* component) {
     }
     
     if (component->cursor_pos > 0) {
+        // 获取光标前一个 UTF-8 字符的字节长度
+        int char_len = get_prev_utf8_char_len(component->layer->text, component->cursor_pos);
+        if (char_len <= 0) char_len = 1;
+        
         // 计算新文本长度
-        size_t new_len = len - 1;
+        size_t new_len = len - char_len;
         
         // 创建临时缓冲区存储新文本
         char* new_text = malloc(new_len + 1);
@@ -837,15 +841,15 @@ static void text_component_delete_prev_char(TextComponent* component) {
         }
         
         // 复制光标位置之前的部分（不包括要删除的字符）
-        memcpy(new_text, component->layer->text, component->cursor_pos - 1);
+        memcpy(new_text, component->layer->text, component->cursor_pos - char_len);
         // 复制光标位置之后的部分
-        memcpy(new_text + component->cursor_pos - 1, component->layer->text + component->cursor_pos, len - component->cursor_pos + 1);
+        memcpy(new_text + component->cursor_pos - char_len, component->layer->text + component->cursor_pos, len - component->cursor_pos + 1);
         
         // 设置新文本
         layer_set_text(component->layer, new_text);
         free(new_text);
         
-        component->cursor_pos--;
+        component->cursor_pos -= char_len;
         
         // 触发 onChange 事件
         text_component_trigger_on_change(component);
