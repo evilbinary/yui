@@ -61,4 +61,9 @@ void backend_render_backdrop_filter(Rect* rect, int blur_radius, float saturatio
 char* backend_get_clipboard_text();
 void backend_set_clipboard_text(const char* text);
 
+// IME 文本输入支持
+void backend_start_text_input();
+void backend_stop_text_input();
+void backend_set_text_input_rect(Rect* rect);
+
 #endif

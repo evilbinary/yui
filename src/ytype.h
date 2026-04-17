@@ -232,7 +232,8 @@ typedef struct KeyEvent{
     enum {
         KEY_EVENT_DOWN,
         KEY_EVENT_UP,
-        KEY_EVENT_TEXT_INPUT
+        KEY_EVENT_TEXT_INPUT,
+        KEY_EVENT_TEXT_EDITING  // IME 文本编辑事件（候选词）
     } type;
     
     union {
@@ -244,6 +245,8 @@ typedef struct KeyEvent{
         
         struct {
             char text[32];  // 输入的文本
+            int start;      // 编辑起始位置（用于IME）
+            int length;     // 编辑长度（用于IME）
         } text;
     } data;
 } KeyEvent;

@@ -321,6 +321,8 @@ int backend_init(){
     // 初始化SDL
     SDL_Init(SDL_INIT_VIDEO);
 
+    // 启用 IME UI 显示（候选词窗口）
+    SDL_SetHint(SDL_HINT_IME_SHOW_UI, "1");
 
     // 设置渲染质量为最佳（抗锯齿）
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "best");
@@ -495,6 +497,16 @@ void handle_event(Layer* root, SDL_Event* event) {
         key_event.data.key.key_code = event->key.keysym.sym;
         key_event.data.key.mod = event->key.keysym.mod;
         key_event.data.key.repeat = event->key.repeat;
+        
+        handle_key_event(root, &key_event);
+    } else if (event->type == SDL_TEXTEDITING) {
+        // 处理 IME 文本编辑事件（显示候选词）
+        KeyEvent key_event;
+        key_event.type = KEY_EVENT_TEXT_EDITING;
+        strncpy(key_event.data.text.text, event->edit.text, 31);
+        key_event.data.text.text[31] = '\0';
+        key_event.data.text.start = event->edit.start;
+        key_event.data.text.length = event->edit.length;
         
         handle_key_event(root, &key_event);
     } else if (event->type == SDL_TEXTINPUT) {
@@ -2193,4 +2205,24 @@ void backend_set_clipboard_text(const char* text) {
         printf("Failed to set clipboard text: %s\n", SDL_GetError());
     }
 #endif
+}
+
+// IME 文本输入支持
+void backend_start_text_input() {
+    SDL_StartTextInput();
+}
+
+void backend_stop_text_input() {
+    SDL_StopTextInput();
+}
+
+void backend_set_text_input_rect(Rect* rect) {
+    if (rect) {
+        SDL_Rect sdl_rect;
+        sdl_rect.x = rect->x;
+        sdl_rect.y = rect->y;
+        sdl_rect.w = rect->w;
+        sdl_rect.h = rect->h;
+        SDL_SetTextInputRect(&sdl_rect);
+    }
 }

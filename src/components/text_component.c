@@ -1270,6 +1270,14 @@ void text_component_handle_key_event(Layer* layer, KeyEvent* event) {
                 text_component_insert_char(component, event->data.text.text[i]);
             }
         }
+    } else if (event->type == KEY_EVENT_TEXT_EDITING) {
+        // 处理 IME 文本编辑事件（候选词预览）
+        // 这里可以显示候选词或组合字符串
+        // 暂时只打印调试信息
+        printf("IME Editing: '%s', start=%d, length=%d\n", 
+               event->data.text.text, 
+               event->data.text.start, 
+               event->data.text.length);
     }
 }
 
@@ -1294,6 +1302,18 @@ void text_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
         if (layer->focusable) {
             // 设置焦点状态
             SET_STATE(layer, LAYER_STATE_FOCUSED);
+
+            // 启用 IME 文本输入
+            if (component->editable) {
+                backend_start_text_input();
+                // 设置输入区域，让输入法候选框出现在文本框下方
+                Rect rect;
+                rect.x = layer->rect.x;
+                rect.y = layer->rect.y + layer->rect.h;
+                rect.w = layer->rect.w;
+                rect.h = 0;
+                backend_set_text_input_rect(&rect);
+            }
         }
         if (point_in_rect(pt, layer->rect)) {
             // 计算点击位置对应的文本位置
@@ -1314,6 +1334,8 @@ void text_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
             component->is_selecting = 0;
             // 移除焦点状态
             CLEAR_STATE(layer, LAYER_STATE_FOCUSED);
+            // 停止 IME 文本输入
+            backend_stop_text_input();
         }
     }
     // 鼠标拖动 - 更新选择范围
