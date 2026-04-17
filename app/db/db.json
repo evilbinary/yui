@@ -1,0 +1,356 @@
+{
+  "id": "dbEditor",
+  "title": "DB Editor",
+  "type": "View",
+  "size": [900, 600],
+  "js": ["./db.js"],
+  "initialize": "init",
+  "layout": {
+    "type": "vertical",
+    "spacing": 0
+  },
+  "style": {
+    "color": "#CDD6F4",
+    "bgColor": "#1E1E2E"
+  },
+  "children": [
+    {
+      "id": "toolbar",
+      "type": "View",
+      "size": [900, 48],
+      "layout": {
+        "type": "horizontal",
+        "spacing": 20,
+        "padding": [12, 16, 12, 16],
+        "align": "center",
+        "justifyContent": "space-between"
+      },
+      "style": {
+        "bgColor": "#181825",
+        "borderBottomWidth": 1,
+        "borderBottomColor": "#313244"
+      },
+      "children": [
+        {
+          "id": "toolbarTitle",
+          "type": "Label",
+          "text": "DB Editor",
+          "style": {
+            "color": "#89B4FA",
+            "fontSize": 14,
+            "fontWeight": "bold"
+          }
+        },
+        {
+          "id": "btnGroup",
+          "type": "View",
+          "size": [280, 32],
+          "layout": {
+            "type": "horizontal",
+            "spacing": 12,
+            "align": "center"
+          },
+          "children": [
+            {
+              "id": "btnConnect",
+              "type": "Button",
+              "size": [80, 32],
+              "text": "连接",
+              "style": {
+                "color": "#CDD6F4",
+                "bgColor": "#45475A",
+                "borderRadius": 6,
+                "fontSize": 12
+              },
+              "events": {
+                "onClick": "@connectDb"
+              }
+            },
+            {
+              "id": "btnExecute",
+              "type": "Button",
+              "size": [80, 32],
+              "text": "执行",
+              "style": {
+                "color": "#1E1E2E",
+                "bgColor": "#A6E3A1",
+                "borderRadius": 6,
+                "fontSize": 12,
+                "fontWeight": "bold"
+              },
+              "events": {
+                "onClick": "@executeQuery"
+              }
+            },
+            {
+              "id": "btnClear",
+              "type": "Button",
+              "size": [80, 32],
+              "text": "清空",
+              "style": {
+                "color": "#CDD6F4",
+                "bgColor": "#45475A",
+                "borderRadius": 6,
+                "fontSize": 12
+              },
+              "events": {
+                "onClick": "@clearEditor"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mainContent",
+      "type": "View",
+      "layout": {
+        "type": "horizontal",
+        "spacing": 0
+      },
+      "size": [900, 522],
+      "style": {
+        "bgColor": "#1E1E2E"
+      },
+      "children": [
+        {
+          "id": "dbListPanel",
+          "type": "View",
+          "size": [240, 522],
+          "layout": {
+            "type": "vertical",
+            "spacing": 0
+          },
+          "style": {
+            "bgColor": "#181825",
+            "borderRightWidth": 1,
+            "borderRightColor": "#313244"
+          },
+          "children": [
+            {
+              "id": "dbListHeader",
+              "type": "View",
+              "size": [240, 32],
+              "layout": {
+                "type": "horizontal",
+                "align": "center",
+                "padding": [8, 12, 8, 12]
+              },
+              "style": {
+                "bgColor": "#181825",
+                "borderBottomWidth": 1,
+                "borderBottomColor": "#313244"
+              },
+              "children": [
+                {
+                  "id": "dbListTitle",
+                  "type": "Label",
+                  "text": "数据库",
+                  "style": {
+                    "color": "#A6ADC8",
+                    "fontSize": 11,
+                    "fontWeight": "bold"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "dbTree",
+              "type": "TreeView",
+              "size": [240, 490],
+              "style": {
+                "color": "#CDD6F4",
+                "bgColor": "#181825",
+                "fontSize": 13
+              },
+              "events": {
+                "onSelect": "@onDbSelect"
+              }
+            }
+          ]
+        },
+        {
+          "id": "editorPanel",
+          "type": "View",
+          "size": [660, 522],
+          "layout": {
+            "type": "vertical",
+            "spacing": 0
+          },
+          "style": {
+            "bgColor": "#1E1E2E"
+          },
+          "children": [
+            {
+              "id": "sqlEditorContainer",
+              "type": "View",
+              "size": [660, 200],
+              "layout": {
+                "type": "vertical",
+                "spacing": 0
+              },
+              "style": {
+                "bgColor": "#11111B"
+              },
+              "children": [
+                {
+                  "id": "sqlTabBar",
+                  "type": "View",
+                  "size": [660, 32],
+                  "layout": {
+                    "type": "horizontal",
+                    "spacing": 12,
+                    "padding": [8, 12, 8, 12],
+                    "align": "center",
+                    "justifyContent": "space-between"
+                  },
+                  "style": {
+                    "bgColor": "#181825",
+                    "borderBottomWidth": 1,
+                    "borderBottomColor": "#313244"
+                  },
+                  "children": [
+                    {
+                      "id": "sqlTab",
+                      "type": "Label",
+                      "text": "Query 1",
+                      "style": {
+                        "color": "#CDD6F4",
+                        "fontSize": 12
+                      }
+                    },
+                    {
+                      "id": "newTabBtn",
+                      "type": "Label",
+                      "text": "+",
+                      "style": {
+                        "color": "#6C7086",
+                        "fontSize": 14
+                      }
+                    }
+                  ]
+                },
+                {
+                  "id": "sqlEditor",
+                  "type": "Text",
+                  "text": "",
+                  "size": [660, 168],
+                  "multiline": true,
+                  "editable": true,
+                  "scrollable": 1,
+                  "events": {
+                    "onChange": "@onSqlChange"
+                  },
+                  "style": {
+                    "color": "#CDD6F4",
+                    "bgColor": "#11111B",
+                    "fontSize": 13,
+                    "padding": [12, 12, 12, 12],
+                    "cursorColor": "#89B4FA"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "resultContainer",
+              "type": "View",
+              "size": [660, 322],
+              "layout": {
+                "type": "vertical",
+                "spacing": 0
+              },
+              "style": {
+                "bgColor": "#11111B"
+              },
+              "children": [
+                {
+                  "id": "resultTabBar",
+                  "type": "View",
+                  "size": [660, 32],
+                  "layout": {
+                    "type": "horizontal",
+                    "spacing": 12,
+                    "padding": [8, 12, 8, 12],
+                    "align": "center"
+                  },
+                  "style": {
+                    "bgColor": "#181825",
+                    "borderBottomWidth": 1,
+                    "borderBottomColor": "#313244"
+                  },
+                  "children": [
+                    {
+                      "id": "resultTab",
+                      "type": "Label",
+                      "text": "查询结果",
+                      "style": {
+                        "color": "#CDD6F4",
+                        "fontSize": 12
+                      }
+                    },
+                    {
+                      "id": "resultInfo",
+                      "type": "Label",
+                      "text": "(0 行)",
+                      "style": {
+                        "color": "#6C7086",
+                        "fontSize": 11
+                      }
+                    }
+                  ]
+                },
+                {
+                  "id": "resultGrid",
+                  "type": "TreeView",
+                  "size": [660, 290],
+                  "style": {
+                    "color": "#CDD6F4",
+                    "bgColor": "#11111B",
+                    "fontSize": 13
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "statusBar",
+      "type": "View",
+      "size": [900, 30],
+      "layout": {
+        "type": "horizontal",
+        "spacing": 12,
+        "padding": [8, 12, 8, 12],
+        "align": "center"
+      },
+      "style": {
+        "bgColor": "#181825",
+        "borderTopWidth": 1,
+        "borderTopColor": "#313244"
+      },
+      "children": [
+        {
+          "id": "statusIcon",
+          "type": "Label",
+          "text": "●",
+          "style": {
+            "color": "#F38BA8",
+            "fontSize": 10
+          }
+        },
+        {
+          "id": "statusText",
+          "type": "Label",
+          "text": "未连接",
+          "style": {
+            "color": "#CDD6F4",
+            "fontSize": 11,
+            "fontWeight": "bold"
+          }
+        }
+      ]
+    }
+  ]
+}

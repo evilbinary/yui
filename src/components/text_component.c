@@ -129,7 +129,36 @@ TextComponent* text_component_create_from_json(Layer* layer,cJSON* json_obj){
             text_component_set_selection_color(layer->component, selection_color);
         }
     }
-    
+
+    // 解析cursorColor属性 (从style对象中读取)
+    cJSON* style_obj = cJSON_GetObjectItem(json_obj, "style");
+    if (style_obj && cJSON_HasObjectItem(style_obj, "cursorColor")) {
+        cJSON* color_obj = cJSON_GetObjectItem(style_obj, "cursorColor");
+        if (cJSON_IsString(color_obj)) {
+            // 使用util.c中的parse_color函数解析十六进制颜色字符串
+            Color cursor_color = {255, 255, 255, 255}; // 默认白色
+            parse_color(color_obj->valuestring, &cursor_color);
+            text_component_set_cursor_color(layer->component, cursor_color);
+        }
+        else if (cJSON_IsObject(color_obj)) {
+            // 兼容旧的RGB对象格式
+            Color cursor_color = {255, 255, 255, 255}; // 默认白色
+            if (cJSON_HasObjectItem(color_obj, "r")) {
+                cursor_color.r = cJSON_GetObjectItem(color_obj, "r")->valueint;
+            }
+            if (cJSON_HasObjectItem(color_obj, "g")) {
+                cursor_color.g = cJSON_GetObjectItem(color_obj, "g")->valueint;
+            }
+            if (cJSON_HasObjectItem(color_obj, "b")) {
+                cursor_color.b = cJSON_GetObjectItem(color_obj, "b")->valueint;
+            }
+            if (cJSON_HasObjectItem(color_obj, "a")) {
+                cursor_color.a = cJSON_GetObjectItem(color_obj, "a")->valueint;
+            }
+            text_component_set_cursor_color(layer->component, cursor_color);
+        }
+    }
+
       // 解析事件绑定
     cJSON* events = cJSON_GetObjectItem(json_obj, "events");
     if (events) {

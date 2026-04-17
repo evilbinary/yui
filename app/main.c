@@ -106,6 +106,11 @@ int main(int argc, char* argv[]) {
         if (ui_root->rect.h <= 0) {
             ui_root->rect.h = window_height;
         }
+    }else{
+        backend_set_windowsize(ui_root->rect.w,ui_root->rect.h);
+    }
+    if(ui_root->text!=NULL){
+        backend_set_window_size(ui_root->text);
     }
 
     // 如果根图层没有设置宽度和高度，则根据窗口大小设置

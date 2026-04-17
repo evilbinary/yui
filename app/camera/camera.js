@@ -152,7 +152,31 @@ function takePhoto() {
     // 模拟拍照效果 - 直接更新计数
     cameraState.photoCount--;
     updateCameraParams();
-    YUI.log("takePhoto: Photo saved! Remaining: " + cameraState.photoCount);
+    
+    // 应用当前选择的 LUT
+    var currentLut = lutList[cameraState.currentLut];
+    YUI.log("takePhoto: Applying LUT: " + currentLut.name);
+    applyLut(currentLut.name);
+    
+    // 添加拍照视觉反馈
+    flashEffect();
+    
+    YUI.log("takePhoto: Photo saved! Remaining: " + cameraState.photoCount + " with LUT: " + currentLut.name);
+}
+
+// 拍照闪光效果
+function flashEffect() {
+    // 模拟闪光效果 - 短暂改变取景器背景色
+    var viewfinder = YUI.getView("viewfinder");
+    if (viewfinder) {
+        // 闪光
+        updateLayerStyle("viewfinder", "bgColor", "#ffffff");
+        
+        // 延迟恢复
+        setTimeout(function() {
+            updateLayerStyle("viewfinder", "bgColor", "#000000");
+        }, 100);
+    }
 }
 
 // 切换录制状态
@@ -181,6 +205,9 @@ function onLutPrev() {
         cameraState.currentLut = lutList.length - 1;
     }
     updateLutDisplay();
+    
+    // 添加 LUT 切换视觉反馈
+    lutChangeEffect();
 }
 
 // 切换到下一个 LUT
@@ -191,6 +218,19 @@ function onLutNext() {
         cameraState.currentLut = 0;
     }
     updateLutDisplay();
+    
+    // 添加 LUT 切换视觉反馈
+    lutChangeEffect();
+}
+
+// LUT 切换视觉效果
+function lutChangeEffect() {
+    // 短暂改变 LUT 标签颜色，提供视觉反馈
+    updateLayerStyle("lutLabel", "color", "#ffcc00");
+    
+    setTimeout(function() {
+        updateLayerStyle("lutLabel", "color", "#ffffff");
+    }, 300);
 }
 
 // 点击取景器
@@ -202,8 +242,45 @@ function onViewfinderClick() {
 // 应用 LUT 滤镜效果
 function applyLut(lutName) {
     YUI.log("applyLut: Applying LUT: " + lutName);
-    // 这里可以实现具体的 LUT 应用逻辑
+    
+    // 模拟 LUT 应用逻辑
     // 在实际应用中，这会通过 WebGL shader 或图像处理实现
+    switch(lutName) {
+        case 'PORTRAIT':
+            // 人像模式：增强肤色，柔和色调
+            YUI.log("applyLut: Portrait mode - Enhancing skin tones and softening colors");
+            break;
+        case 'LANDSCAPE':
+            // 风景模式：增强蓝天和绿地
+            YUI.log("applyLut: Landscape mode - Enhancing blues and greens");
+            break;
+        case 'CINEMATIC':
+            // 电影模式：增加对比度和饱和度
+            YUI.log("applyLut: Cinematic mode - Increasing contrast and saturation");
+            break;
+        case 'VINTAGE':
+            // 复古模式：降低饱和度，增加暖色调
+            YUI.log("applyLut: Vintage mode - Desaturating and adding warm tones");
+            break;
+        case 'B&W':
+            // 黑白模式：转换为灰度
+            YUI.log("applyLut: Black & White mode - Converting to grayscale");
+            break;
+        case 'VIVID':
+            // 鲜艳模式：增加饱和度和对比度
+            YUI.log("applyLut: Vivid mode - Increasing saturation and contrast");
+            break;
+        case 'SOFT':
+            // 柔和模式：降低对比度，增加曝光
+            YUI.log("applyLut: Soft mode - Decreasing contrast and increasing exposure");
+            break;
+        case 'COOL':
+            // 冷色模式：增加蓝色调
+            YUI.log("applyLut: Cool mode - Adding blue tones");
+            break;
+        default:
+            YUI.log("applyLut: Unknown LUT: " + lutName);
+    }
 }
 
 // 设置曝光补偿
