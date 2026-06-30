@@ -18,11 +18,11 @@ TreeViewComponent* treeview_component_create(Layer* layer) {
     component->item_height = 24;
     component->indent_width = 20;
     component->font_size = 14; // 默认字体大小
-    component->text_color = (Color){0, 0, 0, 255};
-    component->selected_text_color = (Color){255, 255, 255, 255};
-    component->selected_bg_color = (Color){0, 120, 215, 255};
-    component->hover_bg_color = (Color){229, 243, 255, 255};
-    component->expand_icon_color = (Color){102, 102, 102, 255};
+    component->text_color = (Color){205, 214, 244, 255};  // Catppuccin 文本色
+    component->selected_text_color = (Color){205, 214, 244, 255};
+    component->selected_bg_color = (Color){69, 71, 90, 255};    // Catppuccin surface1
+    component->hover_bg_color = (Color){49, 50, 68, 255};       // Catppuccin surface0
+    component->expand_icon_color = (Color){108, 112, 134, 255}; // Catppuccin overlay0
     component->user_data = NULL;
     component->on_node_selected = NULL;
     component->on_node_expanded = NULL;
@@ -332,11 +332,11 @@ TreeViewComponent* treeview_component_create_from_json(Layer* layer, cJSON* json
     // 解析颜色
     cJSON* style = cJSON_GetObjectItem(json_obj, "style");
     if (style) {
-        Color text_color = {0, 0, 0, 255}; // 默认黑色
-        Color selected_text_color = {255, 255, 255, 255}; // 默认白色
-        Color selected_bg_color = {51, 153, 255, 255}; // 默认蓝色
-        Color hover_bg_color = {220, 220, 220, 255}; // 默认灰色
-        Color expand_icon_color = {0, 0, 0, 255}; // 默认黑色
+        Color text_color = {205, 214, 244, 255}; // 默认 Catppuccin 文本色
+        Color selected_text_color = {205, 214, 244, 255};
+        Color selected_bg_color = {69, 71, 90, 255};    // Catppuccin surface1
+        Color hover_bg_color = {49, 50, 68, 255};       // Catppuccin surface0
+        Color expand_icon_color = {108, 112, 134, 255}; // Catppuccin overlay0
         
         cJSON* color = cJSON_GetObjectItem(style, "textColor");
         if (color && color->valuestring) {
@@ -857,10 +857,12 @@ void treeview_component_render(Layer* layer) {
     
     // 绘制背景
     Rect bg_rect = {layer->rect.x, layer->rect.y, layer->rect.w, layer->rect.h};
-    backend_render_rounded_rect(&bg_rect, (Color){255, 255, 255, 255}, 5);
-    
-    // 绘制边框
-    backend_render_rounded_rect_with_border(&bg_rect, (Color){255, 255, 255, 255}, 5, 1, (Color){204, 204, 204, 255});
+    if (layer->bg_color.a > 0) {
+        if (layer->radius > 0)
+            backend_render_rounded_rect(&bg_rect, layer->bg_color, layer->radius);
+        else
+            backend_render_fill_rect(&bg_rect, layer->bg_color);
+    }
     
     // 应用滚动偏移
     int item_y = layer->rect.y - layer->scroll_offset;
@@ -910,8 +912,9 @@ void treeview_component_render(Layer* layer) {
                 }
             }
             
-            // 绘制文本
-            Color text_color = node->selected ? component->selected_text_color : component->text_color;
+            // 绘制文本（优先使用 layer->color，降级到组件默认色）
+            Color default_color = layer->color.a > 0 ? layer->color : component->text_color;
+            Color text_color = node->selected ? component->selected_text_color : default_color;
             if (node->text && layer->font && layer->font->default_font) {
                 Texture* text_texture = backend_render_texture(layer->font->default_font, node->text, text_color);
                 if (text_texture) {
