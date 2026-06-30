@@ -288,6 +288,11 @@ static int handle_source(Layer* layer, cJSON* value, int is_creating) {
     return 1;
 }
 
+// data 属性处理器（通过回调分派给组件）
+static int handle_data(Layer* layer, cJSON* value, int is_creating) {
+    return layer_set_data(layer, value);
+}
+
 // 属性处理器查找表
 static const PropertyHandlerEntry property_handlers[] = {
     // 基础属性
@@ -296,6 +301,9 @@ static const PropertyHandlerEntry property_handlers[] = {
     // 文本属性
     {"text", handle_text},
     {"label", handle_label},
+    
+    // 数据属性（组件依赖，如 TreeView）
+    {"data", handle_data},
     
     // 颜色属性
     {"color", handle_color},
@@ -333,6 +341,15 @@ static const PropertyHandlerEntry property_handlers[] = {
 };
 
 // ====================== 公共 API ======================
+
+int layer_set_data(Layer* layer, cJSON* data) {
+    if (!layer || !data) return 0;
+    if (layer->on_data_update) {
+        layer->on_data_update(layer, data);
+        return 1;
+    }
+    return 0;
+}
 
 int layer_set_property_from_json(Layer* layer, const char* key, cJSON* value, int is_creating) {
     if (!layer || !key || !value) {

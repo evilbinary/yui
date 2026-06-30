@@ -291,6 +291,20 @@ void treeview_set_font_size(TreeViewComponent* component, int size) {
 }
 
 
+static void treeview_data_update(Layer* layer, cJSON* data) {
+    if (!layer || !layer->component) return;
+    TreeViewComponent* component = (TreeViewComponent*)layer->component;
+    treeview_clear_all_root_nodes(component);
+    if (cJSON_IsArray(data)) {
+        int count = cJSON_GetArraySize(data);
+        for (int i = 0; i < count; i++) {
+            TreeNode* node = parse_tree_node(cJSON_GetArrayItem(data, i), 0, NULL);
+            if (node) treeview_add_root_node(component, node);
+        }
+    }
+}
+
+
 TreeViewComponent* treeview_component_create_from_json(Layer* layer, cJSON* json_obj) {
     // 创建基础组件
     TreeViewComponent* component = treeview_component_create(layer);
@@ -299,6 +313,9 @@ TreeViewComponent* treeview_component_create_from_json(Layer* layer, cJSON* json
     layer->render = treeview_component_render;
     layer->handle_mouse_event = treeview_component_handle_mouse_event;
     layer->handle_key_event = treeview_component_handle_key_event;
+    
+    // 注册数据更新回调
+    layer->on_data_update = treeview_data_update;
     
     // 解析项目高度
     cJSON* itemHeight = cJSON_GetObjectItem(json_obj, "itemHeight");

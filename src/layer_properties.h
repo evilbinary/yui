@@ -9,6 +9,11 @@ extern "C" {
 #endif
 
 /**
+ * 设置图层数据（通过组件的 on_data_update 回调分派）
+ */
+int layer_set_data(Layer* layer, cJSON* data);
+
+/**
  * 从 JSON 对象解析并设置图层的单个属性
  * 
  * @param layer 目标图层

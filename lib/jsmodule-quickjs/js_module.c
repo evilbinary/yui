@@ -1,6 +1,7 @@
 #include "lib/jsmodule/js_module.h"
 #include "../../lib/quickjs/quickjs.h"
 #include "../../src/layer.h"
+#include "../../src/layer_properties.h"
 #include "../../src/layout.h"
 #include "../../src/render.h"
 #include "js_socket.h"
@@ -10,7 +11,6 @@
 #include <time.h>
 #include <unistd.h>
 #include "../../lib/cjson/cJSON.h"
-#include "../../src/components/treeview_component.h"
 
 // Layer 结构的最小定义
 #define MAX_TEXT 256
@@ -800,50 +800,29 @@ static JSValue js_layer_wrapper_get_data(JSContext* ctx, JSValueConst this_val)
     return result;
 }
 
-// Layer 包装对象的 data 属性 setter
+// Layer 包装对象的 data 属性 setter（通过统一属性系统）
 static JSValue js_layer_wrapper_set_data(JSContext* ctx, JSValueConst this_val, JSValueConst val)
 {
     Layer* layer = js_get_layer_from_wrapper(ctx, this_val);
     if (!layer) return JS_UNDEFINED;
-    
-    printf("JS(QuickJS): set_data layer='%s' type=%d\n", layer->id, layer->type);
 
-    if (layer->type != TREEVIEW || !layer->component) {
-        return JS_UNDEFINED;
-    }
-    
-    // 使用 JSON.stringify 将 JS 值转为 JSON 字符串
+    // JSON.stringify → cJSON 后走统一 property 系统
     JSValue global = JS_GetGlobalObject(ctx);
     JSValue json_obj = JS_GetPropertyStr(ctx, global, "JSON");
     JSValue stringify = JS_GetPropertyStr(ctx, json_obj, "stringify");
     
     JSValue json_str_val = JS_Call(ctx, stringify, json_obj, 1, &val);
     if (JS_IsException(json_str_val)) {
-        JS_FreeValue(ctx, json_str_val);
-        JS_FreeValue(ctx, stringify);
-        JS_FreeValue(ctx, json_obj);
-        JS_FreeValue(ctx, global);
+        JS_FreeValue(ctx, json_str_val); JS_FreeValue(ctx, stringify);
+        JS_FreeValue(ctx, json_obj); JS_FreeValue(ctx, global);
         return JS_UNDEFINED;
     }
     
     const char* json_str = JS_ToCString(ctx, json_str_val);
-    
-    TreeViewComponent* component = (TreeViewComponent*)layer->component;
-    
     if (json_str) {
         cJSON* data_json = cJSON_Parse(json_str);
-        if (data_json && cJSON_IsArray(data_json)) {
-            treeview_clear_all_root_nodes(component);
-            
-            int count = cJSON_GetArraySize(data_json);
-            for (int i = 0; i < count; i++) {
-                cJSON* node_json = cJSON_GetArrayItem(data_json, i);
-                TreeNode* node = parse_tree_node(node_json, 0, NULL);
-                if (node) {
-                    treeview_add_root_node(component, node);
-                }
-            }
-            
+        if (data_json) {
+            layer_set_property_from_json(layer, "data", data_json, 0);
             cJSON_Delete(data_json);
         }
         JS_FreeCString(ctx, json_str);
