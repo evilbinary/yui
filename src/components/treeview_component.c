@@ -688,7 +688,7 @@ int treeview_is_expand_icon_clicked(TreeViewComponent* component, TreeNode* node
     // 与渲染一致的左边距
     Layer* layer = component->layer;
     int left_margin = (layer->layout_manager && layer->layout_manager->padding[3] > 0)
-        ? layer->layout_manager->padding[3] : 24;
+        ? layer->layout_manager->padding[3] : 0;
     
     // 查找节点在可见节点中的位置
     for (int i = 0; i < component->root_count; i++) {
@@ -871,7 +871,7 @@ void treeview_component_render(Layer* layer) {
     
     // 计算左边距（使用 layer 的 padding，无配置时默认 20）
     int left_margin = (layer->layout_manager && layer->layout_manager->padding[3] > 0)
-        ? layer->layout_manager->padding[3] : 20;
+        ? layer->layout_manager->padding[3] : 0;
     
     // 应用滚动偏移
     int item_y = layer->rect.y - layer->scroll_offset;
@@ -931,7 +931,7 @@ void treeview_component_render(Layer* layer) {
                     backend_query_texture(text_texture, NULL, NULL, &actual_text_width, &actual_text_height);
                     
                     // 计算文本位置
-                    int text_x = layer->rect.x + node->level * component->indent_width + left_margin + 20;
+                    int text_x = layer->rect.x + node->level * component->indent_width + left_margin + 18;
                     int text_y = item_y + (component->item_height - actual_text_height / scale) / 2;
                     
                     Rect text_rect = {
