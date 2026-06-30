@@ -629,6 +629,180 @@ void js_module_cleanup(void)
     }
 }
 
+// ====================== Layer 包装对象支持 ======================
+
+// 前向声明 (使用正确的 getter/setter 签名)
+static JSValue js_layer_wrapper_get_text(JSContext* ctx, JSValueConst this_val);
+static JSValue js_layer_wrapper_set_text(JSContext* ctx, JSValueConst this_val, JSValueConst val);
+static JSValue js_layer_wrapper_get_style(JSContext* ctx, JSValueConst this_val);
+static JSValue js_layer_wrapper_set_style(JSContext* ctx, JSValueConst this_val, JSValueConst val);
+
+// 从包装对象获取 Layer 指针
+static Layer* js_get_layer_from_wrapper(JSContext* ctx, JSValueConst val)
+{
+    printf("JS(QuickJS): js_get_layer_from_wrapper called with this_val = %p\n", (void*)JS_VALUE_GET_PTR(val));
+    
+    if (!JS_IsObject(val)) {
+        printf("JS(QuickJS): not an object\n");
+        return NULL;
+    }
+    
+    JSValue ptr_val = JS_GetPropertyStr(ctx, val, "__layer_ptr");
+    if (JS_IsUndefined(ptr_val) || JS_IsNull(ptr_val)) {
+        printf("JS(QuickJS): __layer_ptr is undefined or null\n");
+        JS_FreeValue(ctx, ptr_val);
+        return NULL;
+    }
+    
+    int64_t ptr_int = 0;
+    if (JS_ToInt64(ctx, &ptr_int, ptr_val) != 0 || ptr_int == 0) {
+        printf("JS(QuickJS): invalid layer pointer value\n");
+        JS_FreeValue(ctx, ptr_val);
+        return NULL;
+    }
+    
+    JS_FreeValue(ctx, ptr_val);
+    
+    Layer* layer = (Layer*)(uintptr_t)ptr_int;
+    printf("JS(QuickJS): Got layer ptr = %p\n", (void*)layer);
+    
+    return layer;
+}
+
+// Layer 包装对象的 text 属性 getter
+static JSValue js_layer_wrapper_get_text(JSContext* ctx, JSValueConst this_val)
+{
+    Layer* layer = js_get_layer_from_wrapper(ctx, this_val);
+    if (!layer) return JS_UNDEFINED;
+    
+    const char* text = layer_get_text(layer);
+    return JS_NewString(ctx, text ? text : "");
+}
+
+// Layer 包装对象的 text 属性 setter
+static JSValue js_layer_wrapper_set_text(JSContext* ctx, JSValueConst this_val, JSValueConst val)
+{
+    Layer* layer = js_get_layer_from_wrapper(ctx, this_val);
+    if (!layer) return JS_UNDEFINED;
+    
+    const char* text = JS_ToCString(ctx, val);
+    if (text) {
+        layer_set_text(layer, text);
+        JS_FreeCString(ctx, text);
+    }
+    return JS_UNDEFINED;
+}
+
+// Layer 包装对象的 style 属性 getter
+static JSValue js_layer_wrapper_get_style(JSContext* ctx, JSValueConst this_val)
+{
+    Layer* layer = js_get_layer_from_wrapper(ctx, this_val);
+    if (!layer) return JS_UNDEFINED;
+    
+    // 创建一个包含当前样式的对象
+    JSValue style_obj = JS_NewObject(ctx);
+    
+    // 添加 color 属性
+    char color_str[32];
+    snprintf(color_str, sizeof(color_str), "#%02X%02X%02X", layer->color.r, layer->color.g, layer->color.b);
+    JS_SetPropertyStr(ctx, style_obj, "color", JS_NewString(ctx, color_str));
+    
+    // 添加 bgColor 属性
+    char bg_color_str[32];
+    snprintf(bg_color_str, sizeof(bg_color_str), "#%02X%02X%02X", layer->bg_color.r, layer->bg_color.g, layer->bg_color.b);
+    JS_SetPropertyStr(ctx, style_obj, "bgColor", JS_NewString(ctx, bg_color_str));
+    
+    return style_obj;
+}
+
+// Layer 包装对象的 style 属性 setter
+static JSValue js_layer_wrapper_set_style(JSContext* ctx, JSValueConst this_val, JSValueConst val)
+{
+    Layer* layer = js_get_layer_from_wrapper(ctx, this_val);
+    if (!layer) return JS_UNDEFINED;
+    
+    // 获取 color 属性
+    JSValue color_val = JS_GetPropertyStr(ctx, val, "color");
+    if (!JS_IsUndefined(color_val)) {
+        const char* color_str = JS_ToCString(ctx, color_val);
+        if (color_str) {
+            // 解析颜色并设置
+            extern void parse_color(char* valuestring, Color* color);
+            Color color;
+            parse_color((char*)color_str, &color);
+            layer->color = color;
+            JS_FreeCString(ctx, color_str);
+        }
+    }
+    JS_FreeValue(ctx, color_val);
+    
+    // 获取 bgColor 属性
+    JSValue bg_color_val = JS_GetPropertyStr(ctx, val, "bgColor");
+    if (!JS_IsUndefined(bg_color_val)) {
+        const char* bg_color_str = JS_ToCString(ctx, bg_color_val);
+        if (bg_color_str) {
+            Color bg_color;
+            extern void parse_color(char* valuestring, Color* color);
+            parse_color((char*)bg_color_str, &bg_color);
+            layer->bg_color = bg_color;
+            JS_FreeCString(ctx, bg_color_str);
+        }
+    }
+    JS_FreeValue(ctx, bg_color_val);
+    
+    return JS_UNDEFINED;
+}
+
+// 创建 Layer 包装对象
+static JSValue js_create_layer_wrapper(JSContext* ctx, Layer* layer)
+{
+    // 创建普通对象
+    JSValue wrapper = JS_NewObject(ctx);
+
+    // 使用整数存储 layer 指针（避免字符串 GC 问题）
+    JSValue layer_ptr_val = JS_NewInt64(ctx, (int64_t)(uintptr_t)layer);
+    JS_SetPropertyStr(ctx, wrapper, "__layer_ptr", layer_ptr_val);
+    JS_FreeValue(ctx, layer_ptr_val);
+
+    // 定义 text 属性的 getter/setter (使用 JS_NewCFunction2 指定正确的类型)
+    JSValue text_getter = JS_NewCFunction2(ctx, (JSCFunction*)js_layer_wrapper_get_text, "get text", 0, JS_CFUNC_getter, 0);
+    JSValue text_setter = JS_NewCFunction2(ctx, (JSCFunction*)js_layer_wrapper_set_text, "set text", 1, JS_CFUNC_setter, 0);
+    JSAtom text_atom = JS_NewAtom(ctx, "text");
+    JS_DefinePropertyGetSet(ctx, wrapper, text_atom, text_getter, text_setter, JS_PROP_CONFIGURABLE | JS_PROP_ENUMERABLE);
+    JS_FreeAtom(ctx, text_atom);
+    
+    // 定义 style 属性的 getter/setter
+    JSValue style_getter = JS_NewCFunction2(ctx, (JSCFunction*)js_layer_wrapper_get_style, "get style", 0, JS_CFUNC_getter, 0);
+    JSValue style_setter = JS_NewCFunction2(ctx, (JSCFunction*)js_layer_wrapper_set_style, "set style", 1, JS_CFUNC_setter, 0);
+    JSAtom style_atom = JS_NewAtom(ctx, "style");
+    JS_DefinePropertyGetSet(ctx, wrapper, style_atom, style_getter, style_setter, JS_PROP_CONFIGURABLE | JS_PROP_ENUMERABLE);
+    JS_FreeAtom(ctx, style_atom);
+    
+    return wrapper;
+}
+
+// YUI.find() - 查找图层并返回包装对象
+static JSValue js_yui_find(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv)
+{
+    if (argc < 1) return JS_NULL;
+    
+    const char* layer_id = JS_ToCString(ctx, argv[0]);
+    if (!layer_id || !g_layer_root) return JS_NULL;
+    
+    Layer* layer = find_layer_by_id(g_layer_root, layer_id);
+    if (!layer) {
+        JS_FreeCString(ctx, layer_id);
+        return JS_NULL;
+    }
+    
+    // 创建 Layer 包装对象
+    JSValue wrapper = js_create_layer_wrapper(ctx, layer);
+    
+    JS_FreeCString(ctx, layer_id);
+    
+    return wrapper;
+}
+
 // 注册 C API 到 JS
 void js_module_register_api(void)
 {
@@ -637,8 +811,15 @@ void js_module_register_api(void)
     // 获取全局对象
     JSValue global_obj = JS_GetGlobalObject(g_js_ctx);
 
+    // 注意：Layer 包装对象现在使用普通 JS 对象，通过 __layer_ptr 属性存储指针
+    // getter/setter 在创建对象时动态设置
+
     // 注册 YUI 对象
     JSValue yui_obj = JS_NewObject(g_js_ctx);
+    
+    // 添加 find 方法到 YUI 对象
+    JS_SetPropertyStr(g_js_ctx, yui_obj, "find", JS_NewCFunction(g_js_ctx, js_yui_find, "find", 1));
+    printf("JS(QuickJS): Added find() method to YUI object\n");
 
     // 设置 YUI 的方法
     JS_SetPropertyStr(g_js_ctx, yui_obj, "setText", JS_NewCFunction(g_js_ctx, js_set_text, "setText", 2));
@@ -675,6 +856,10 @@ void js_module_register_api(void)
     // 将 YUI 对象添加到全局
     JS_SetPropertyStr(g_js_ctx, global_obj, "YUI", yui_obj);
     
+    // 创建 yui 小写别名（指向同一个 YUI 对象）
+    JS_SetPropertyStr(g_js_ctx, global_obj, "yui", yui_obj);
+    printf("JS(QuickJS): Created 'yui' alias for 'YUI'\n");
+    
     // 也注册为全局函数（为了兼容性）
     JS_SetPropertyStr(g_js_ctx, global_obj, "setText", JS_NewCFunction(g_js_ctx, js_set_text, "setText", 2));
     JS_SetPropertyStr(g_js_ctx, global_obj, "getText", JS_NewCFunction(g_js_ctx, js_get_text, "getText", 1));
@@ -690,6 +875,8 @@ void js_module_register_api(void)
     // 注册 readFile 到全局对象
     JS_SetPropertyStr(g_js_ctx, global_obj, "readFile", JS_NewCFunction(g_js_ctx, js_read_file, "readFile", 1));
 
+    // 注册 print 到全局对象（与 log 功能相同）
+    JS_SetPropertyStr(g_js_ctx, global_obj, "print", JS_NewCFunction(g_js_ctx, js_log, "print", 1));
 
     JS_FreeValue(g_js_ctx, global_obj);
 

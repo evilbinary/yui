@@ -161,5 +161,3 @@ function init() {
   print("DB Editor initialized");
   updateStatus("未连接", "#F38BA8");
 }
-
-init();

@@ -1,6 +1,6 @@
 {
   "id": "dbEditor",
-  "title": "DB Editor",
+  "text": "数据库",
   "type": "View",
   "size": [900, 600],
   "js": ["./db.js"],
