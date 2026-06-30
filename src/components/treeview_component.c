@@ -685,13 +685,18 @@ int treeview_is_expand_icon_clicked(TreeViewComponent* component, TreeNode* node
     // 计算节点位置，考虑滚动偏移
     int item_y = component->layer->rect.y - component->layer->scroll_offset;
     
+    // 与渲染一致的左边距
+    Layer* layer = component->layer;
+    int left_margin = (layer->layout_manager && layer->layout_manager->padding[3] > 0)
+        ? layer->layout_manager->padding[3] : 24;
+    
     // 查找节点在可见节点中的位置
     for (int i = 0; i < component->root_count; i++) {
         TreeNode* current = component->root_nodes[i];
         
         if (current == node) {
             // 找到节点，检查是否点击在展开图标上
-            int icon_x = component->layer->rect.x + current->level * component->indent_width;
+            int icon_x = component->layer->rect.x + current->level * component->indent_width + left_margin;
             int icon_y = item_y + (component->item_height - 10) / 2;
             
             return (x >= icon_x && x < icon_x + 10 && y >= icon_y && y < icon_y + 10);
@@ -715,7 +720,7 @@ int treeview_is_expand_icon_clicked(TreeViewComponent* component, TreeNode* node
                 
                 if (stack_node == node) {
                     // 找到节点，检查是否点击在展开图标上
-                    int icon_x = component->layer->rect.x + stack_node->level * component->indent_width;
+                    int icon_x = component->layer->rect.x + stack_node->level * component->indent_width + left_margin;
                     int icon_y = item_y + (component->item_height - 10) / 2;
                     
                     free(stack);
@@ -864,6 +869,10 @@ void treeview_component_render(Layer* layer) {
             backend_render_fill_rect(&bg_rect, layer->bg_color);
     }
     
+    // 计算左边距（使用 layer 的 padding，无配置时默认 20）
+    int left_margin = (layer->layout_manager && layer->layout_manager->padding[3] > 0)
+        ? layer->layout_manager->padding[3] : 20;
+    
     // 应用滚动偏移
     int item_y = layer->rect.y - layer->scroll_offset;
     
@@ -891,7 +900,7 @@ void treeview_component_render(Layer* layer) {
             
             // 绘制展开/折叠图标
             if (node->child_count > 0) {
-                int icon_x = layer->rect.x + node->level * component->indent_width;
+                int icon_x = layer->rect.x + node->level * component->indent_width + left_margin;
                 int icon_y = item_y + (component->item_height - 10) / 2;
                 
                 // 绘制图标背景
@@ -922,7 +931,7 @@ void treeview_component_render(Layer* layer) {
                     backend_query_texture(text_texture, NULL, NULL, &actual_text_width, &actual_text_height);
                     
                     // 计算文本位置
-                    int text_x = layer->rect.x + node->level * component->indent_width + 20;
+                    int text_x = layer->rect.x + node->level * component->indent_width + left_margin + 20;
                     int text_y = item_y + (component->item_height - actual_text_height / scale) / 2;
                     
                     Rect text_rect = {
@@ -978,7 +987,7 @@ void treeview_component_render(Layer* layer) {
                     
                     // 绘制展开/折叠图标
                     if (current->child_count > 0) {
-                        int icon_x = layer->rect.x + current->level * component->indent_width;
+                        int icon_x = layer->rect.x + current->level * component->indent_width + left_margin;
                         int icon_y = item_y + (component->item_height - 10) / 2;
                         
                         // 绘制图标背景
@@ -1008,7 +1017,7 @@ void treeview_component_render(Layer* layer) {
                             backend_query_texture(text_texture, NULL, NULL, &actual_text_width, &actual_text_height);
                             
                             // 计算文本位置
-                            int current_text_x = layer->rect.x + current->level * component->indent_width + 20;
+                        int current_text_x = layer->rect.x + current->level * component->indent_width + left_margin + 20;
                             int current_text_y = item_y + (component->item_height - actual_text_height / scale) / 2;
                             
                             Rect text_rect = {
