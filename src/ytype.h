@@ -121,7 +121,7 @@ typedef enum {
 typedef enum {
     VISIBLE,
     IN_VISIBLE,
-} VisableType;
+} VisibleType;
 
 
 
