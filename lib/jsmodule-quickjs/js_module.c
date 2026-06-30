@@ -10,6 +10,7 @@
 #include <time.h>
 #include <unistd.h>
 #include "../../lib/cjson/cJSON.h"
+#include "../../src/components/treeview_component.h"
 
 // Layer 结构的最小定义
 #define MAX_TEXT 256
@@ -753,6 +754,109 @@ static JSValue js_layer_wrapper_set_style(JSContext* ctx, JSValueConst this_val,
     return JS_UNDEFINED;
 }
 
+// 递归将 TreeNode 转换为 JS 对象
+static JSValue tree_node_to_js_object(JSContext* ctx, TreeNode* node)
+{
+    JSValue obj = JS_NewObject(ctx);
+    
+    if (node->text) {
+        JS_SetPropertyStr(ctx, obj, "text", JS_NewString(ctx, node->text));
+    }
+    
+    if (node->expanded) {
+        JS_SetPropertyStr(ctx, obj, "expanded", JS_NewBool(ctx, 1));
+    }
+    
+    if (node->child_count > 0) {
+        JSValue children = JS_NewArray(ctx);
+        for (int i = 0; i < node->child_count; i++) {
+            JSValue child_obj = tree_node_to_js_object(ctx, node->children[i]);
+            JS_SetPropertyUint32(ctx, children, i, child_obj);
+        }
+        JS_SetPropertyStr(ctx, obj, "children", children);
+    }
+    
+    return obj;
+}
+
+// Layer 包装对象的 data 属性 getter
+static JSValue js_layer_wrapper_get_data(JSContext* ctx, JSValueConst this_val)
+{
+    Layer* layer = js_get_layer_from_wrapper(ctx, this_val);
+    if (!layer) return JS_UNDEFINED;
+    
+    if (layer->type != TREEVIEW || !layer->component) {
+        return JS_UNDEFINED;
+    }
+    
+    TreeViewComponent* component = (TreeViewComponent*)layer->component;
+    JSValue result = JS_NewArray(ctx);
+    
+    for (int i = 0; i < component->root_count; i++) {
+        JSValue node_obj = tree_node_to_js_object(ctx, component->root_nodes[i]);
+        JS_SetPropertyUint32(ctx, result, i, node_obj);
+    }
+    
+    return result;
+}
+
+// Layer 包装对象的 data 属性 setter
+static JSValue js_layer_wrapper_set_data(JSContext* ctx, JSValueConst this_val, JSValueConst val)
+{
+    Layer* layer = js_get_layer_from_wrapper(ctx, this_val);
+    if (!layer) return JS_UNDEFINED;
+    
+    printf("JS(QuickJS): set_data layer='%s' type=%d\n", layer->id, layer->type);
+
+    if (layer->type != TREEVIEW || !layer->component) {
+        return JS_UNDEFINED;
+    }
+    
+    // 使用 JSON.stringify 将 JS 值转为 JSON 字符串
+    JSValue global = JS_GetGlobalObject(ctx);
+    JSValue json_obj = JS_GetPropertyStr(ctx, global, "JSON");
+    JSValue stringify = JS_GetPropertyStr(ctx, json_obj, "stringify");
+    
+    JSValue json_str_val = JS_Call(ctx, stringify, json_obj, 1, &val);
+    if (JS_IsException(json_str_val)) {
+        JS_FreeValue(ctx, json_str_val);
+        JS_FreeValue(ctx, stringify);
+        JS_FreeValue(ctx, json_obj);
+        JS_FreeValue(ctx, global);
+        return JS_UNDEFINED;
+    }
+    
+    const char* json_str = JS_ToCString(ctx, json_str_val);
+    
+    TreeViewComponent* component = (TreeViewComponent*)layer->component;
+    
+    if (json_str) {
+        cJSON* data_json = cJSON_Parse(json_str);
+        if (data_json && cJSON_IsArray(data_json)) {
+            treeview_clear_all_root_nodes(component);
+            
+            int count = cJSON_GetArraySize(data_json);
+            for (int i = 0; i < count; i++) {
+                cJSON* node_json = cJSON_GetArrayItem(data_json, i);
+                TreeNode* node = parse_tree_node(node_json, 0, NULL);
+                if (node) {
+                    treeview_add_root_node(component, node);
+                }
+            }
+            
+            cJSON_Delete(data_json);
+        }
+        JS_FreeCString(ctx, json_str);
+    }
+    
+    JS_FreeValue(ctx, json_str_val);
+    JS_FreeValue(ctx, stringify);
+    JS_FreeValue(ctx, json_obj);
+    JS_FreeValue(ctx, global);
+    
+    return JS_UNDEFINED;
+}
+
 // 创建 Layer 包装对象
 static JSValue js_create_layer_wrapper(JSContext* ctx, Layer* layer)
 {
@@ -777,6 +881,13 @@ static JSValue js_create_layer_wrapper(JSContext* ctx, Layer* layer)
     JSAtom style_atom = JS_NewAtom(ctx, "style");
     JS_DefinePropertyGetSet(ctx, wrapper, style_atom, style_getter, style_setter, JS_PROP_CONFIGURABLE | JS_PROP_ENUMERABLE);
     JS_FreeAtom(ctx, style_atom);
+    
+    // 定义 data 属性的 getter/setter
+    JSValue data_getter = JS_NewCFunction2(ctx, (JSCFunction*)js_layer_wrapper_get_data, "get data", 0, JS_CFUNC_getter, 0);
+    JSValue data_setter = JS_NewCFunction2(ctx, (JSCFunction*)js_layer_wrapper_set_data, "set data", 1, JS_CFUNC_setter, 0);
+    JSAtom data_atom = JS_NewAtom(ctx, "data");
+    JS_DefinePropertyGetSet(ctx, wrapper, data_atom, data_getter, data_setter, JS_PROP_CONFIGURABLE | JS_PROP_ENUMERABLE);
+    JS_FreeAtom(ctx, data_atom);
     
     return wrapper;
 }

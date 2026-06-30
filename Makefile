@@ -17,6 +17,8 @@ build-playground:
 gdb: build-playground
 	gdb -x  gdb.gdb ./build/None/None/None/playground.exe  app/db/db.json
 
+db: build-playground
+	./build/None/None/None/playground.exe  app/db/db.json
 
 run: main
 	ya -r main

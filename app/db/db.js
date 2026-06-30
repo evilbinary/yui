@@ -11,7 +11,7 @@ function connectDb() {
   
   if (statusText) {
     statusText.text = "已连接";
-    statusText.style = { color: "#1E1E2E" };
+    statusText.style = { color: "#A6E3A1" };
   }
   if (statusIcon) {
     statusIcon.text = "●";
@@ -72,27 +72,22 @@ function executeQuery() {
   
   updateStatus("执行中...", "#F9E2AF");
   
-  var startTime = Date.now();
+  var mockData = [
+    { id: 1, name: "Alice", email: "alice@example.com", created_at: "2024-01-15" },
+    { id: 2, name: "Bob", email: "bob@example.com", created_at: "2024-01-16" },
+    { id: 3, name: "Charlie", email: "charlie@example.com", created_at: "2024-01-17" },
+    { id: 4, name: "David", email: "david@example.com", created_at: "2024-01-18" },
+    { id: 5, name: "Eve", email: "eve@example.com", created_at: "2024-01-19" }
+  ];
   
-  setTimeout(function() {
-    var mockData = [
-      { id: 1, name: "Alice", email: "alice@example.com", created_at: "2024-01-15" },
-      { id: 2, name: "Bob", email: "bob@example.com", created_at: "2024-01-16" },
-      { id: 3, name: "Charlie", email: "charlie@example.com", created_at: "2024-01-17" },
-      { id: 4, name: "David", email: "david@example.com", created_at: "2024-01-18" },
-      { id: 5, name: "Eve", email: "eve@example.com", created_at: "2024-01-19" }
-    ];
-    
-    showResults(mockData);
-    
-    var elapsed = Date.now() - startTime;
-    var resultInfo = yui.find("resultInfo");
-    if (resultInfo) {
-      resultInfo.text = "(" + mockData.length + " 行, " + elapsed + "ms)";
-    }
-    
-    updateStatus("查询完成", "#A6E3A1");
-  }, 300);
+  showResults(mockData);
+  
+  var resultInfo = yui.find("resultInfo");
+  if (resultInfo) {
+    resultInfo.text = "(" + mockData.length + " 行)";
+  }
+  
+  updateStatus("查询完成", "#A6E3A1");
 }
 
 function showResults(rows) {
@@ -121,7 +116,7 @@ function updateStatus(text, color) {
   var statusText = yui.find("statusText");
   if (statusText) {
     statusText.text = text;
-    statusText.style = { color: "#1E1E2E" };
+    statusText.style = { color: color ? color : "#CDD6F4" };
   }
   if (color) {
     var statusIcon = yui.find("statusIcon");
@@ -157,7 +152,6 @@ function onDbSelect(node) {
   }
 }
 
-function init() {
-  print("DB Editor initialized");
-  updateStatus("未连接", "#F38BA8");
-}
+// 初始化 - 在脚本加载时自动执行
+updateStatus("未连接", "#F38BA8");
+loadDbList();

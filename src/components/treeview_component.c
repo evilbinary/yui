@@ -414,6 +414,19 @@ void treeview_set_user_data(TreeViewComponent* component, void* data) {
     component->user_data = data;
 }
 
+// 清空所有根节点
+void treeview_clear_all_root_nodes(TreeViewComponent* component) {
+    if (!component) return;
+    if (component->root_nodes) {
+        for (int i = 0; i < component->root_count; i++) {
+            treeview_destroy_node(component->root_nodes[i]);
+        }
+        free(component->root_nodes);
+        component->root_nodes = NULL;
+        component->root_count = 0;
+    }
+}
+
 // 设置节点选中回调
 void treeview_set_node_selected_callback(TreeViewComponent* component, void (*callback)(TreeNode*, void*)) {
     if (!component) return;

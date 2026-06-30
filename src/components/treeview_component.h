@@ -51,6 +51,9 @@ TreeNode* treeview_create_node(const char* text);
 // 销毁节点及其子节点
 void treeview_destroy_node(TreeNode* node);
 
+// 清空所有根节点
+void treeview_clear_all_root_nodes(TreeViewComponent* component);
+
 // 添加根节点
 int treeview_add_root_node(TreeViewComponent* component, TreeNode* node);
 

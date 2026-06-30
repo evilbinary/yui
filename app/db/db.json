@@ -4,7 +4,6 @@
   "type": "View",
   "size": [900, 600],
   "js": ["./db.js"],
-  "initialize": "init",
   "layout": {
     "type": "vertical",
     "spacing": 0
@@ -156,7 +155,7 @@
             },
             {
               "id": "dbTree",
-              "type": "TreeView",
+              "type": "Treeview",
               "size": [240, 490],
               "style": {
                 "color": "#CDD6F4",
@@ -301,7 +300,7 @@
                 },
                 {
                   "id": "resultGrid",
-                  "type": "TreeView",
+                  "type": "Treeview",
                   "size": [660, 290],
                   "style": {
                     "color": "#CDD6F4",
