@@ -2,6 +2,7 @@
     "id": "popupMenuTestApp",
     "type": "View",
     "theme": "default",
+    "assets": "app/assets",
     "style": {
         "color": "#2C3E50",
         "bgColor": "#F5F5F5"

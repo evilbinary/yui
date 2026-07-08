@@ -570,12 +570,6 @@ void menu_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     }
 
     Rect* rect = &layer->rect;
-    printf("MOUSE: layer='%s' state=%d btn=%d x=%d y=%d rect=(%d,%d,%d,%d) expanded=%d\n",
-           layer->id ? layer->id : "null",
-           event->state, event->button, event->x, event->y,
-           rect->x, rect->y, rect->w, rect->h,
-           component->expanded);
-    fflush(stdout);
 
     if (event->state == SDL_MOUSEMOTION) {
         if (component->expanded) {
@@ -636,7 +630,6 @@ void menu_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
         } else {
             // 折叠状态：点击标题区域展开
             if (relative_y < y_offset) {
-                printf("EXPAND CLICK: setting expanded=1\n"); fflush(stdout);
                 component->expanded = 1;
                 component->hovered_item = -1;
 
@@ -660,21 +653,28 @@ void menu_component_render(Layer* layer) {
     MenuComponent* component = (MenuComponent*)layer->component;
     Rect* rect = &layer->rect;
 
+    // 折叠时只绘制标题栏区域，展开时绘制完整菜单
+    int title_h = (layer->text && strlen(layer->text) > 0) ? component->item_height : 0;
+    Rect bg_rect = component->expanded ? *rect :
+                   (Rect){rect->x, rect->y, rect->w, title_h > 0 ? title_h + 1 : 0};
+
     // 绘制背景
-    if (component->bg_color.a > 0) {
-        if (layer->radius > 0) {
-            backend_render_rounded_rect(rect, component->bg_color, layer->radius);
+    if (component->bg_color.a > 0 && bg_rect.h > 0) {
+        if (layer->radius > 0 && component->expanded) {
+            backend_render_rounded_rect(&bg_rect, component->bg_color, layer->radius);
         } else {
-            backend_render_fill_rect(rect, component->bg_color);
+            backend_render_fill_rect(&bg_rect, component->bg_color);
         }
     }
-    
+
     // 绘制边框
-    Color border_color = (Color){200, 200, 200, 255};
-    if (layer->radius > 0) {
-        backend_render_rounded_rect_with_border(rect, component->bg_color, layer->radius, 1, border_color);
-    } else {
-        backend_render_rect_color(rect, border_color.r, border_color.g, border_color.b, border_color.a);
+    if (bg_rect.h > 0) {
+        Color border_color = (Color){200, 200, 200, 255};
+        if (layer->radius > 0 && component->expanded) {
+            backend_render_rounded_rect_with_border(&bg_rect, component->bg_color, layer->radius, 1, border_color);
+        } else if (title_h > 0) {
+            backend_render_rect(&bg_rect, border_color);
+        }
     }
     
     int y_offset = 0;
@@ -723,17 +723,17 @@ void menu_component_render(Layer* layer) {
             backend_render_text_destroy(arrow_texture);
         }
         
-        // 标题分隔线
-        int line_y = rect->y + component->item_height;
-        backend_render_line(rect->x + 5, line_y, rect->x + rect->w - 5, line_y, component->separator_color);
-        
+        // 标题分隔线（仅展开时显示）
+        if (component->expanded) {
+            int line_y = rect->y + component->item_height;
+            backend_render_line(rect->x + 5, line_y, rect->x + rect->w - 5, line_y, component->separator_color);
+        }
+
         y_offset = component->item_height;
     }
     
     // 仅展开时绘制菜单项
     if (component->expanded) {
-        printf("MENU EXPANDED: count=%d expanded=%d\n", component->item_count, component->expanded);
-        // 绘制菜单项
         // 绘制菜单项
         for (int i = 0; i < component->item_count; i++) {
             MenuItem* item = &component->items[i];

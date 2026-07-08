@@ -373,9 +373,6 @@ void layout_layer(Layer* layer){
                     }
                 }
                 
-                fprintf(stderr, "LAYOUT: child[%d] '%s': current_y=%d padding_top=%d child_h=%d spacing=%d\n",
-                       i, child->id ? child->id : "(null)", current_y, padding_top, child->rect.h, spacing);
-                fflush(stderr);
                 child->rect.x = layer->rect.x + padding_left;
                 child->rect.y = current_y;
                 

@@ -2,6 +2,7 @@
     "id": "menuTestApp",
     "type": "View",
     "theme": "default",
+    "assets": "app/assets",
     "style": {
         "color": "#2C3E50",
         "bgColor": "#F5F5F5"
@@ -21,6 +22,7 @@
             "id": "title",
             "type": "Label",
             "text": "菜单组件测试",
+     
             "style": {
                 "type": "center",
                 "color": "#1976D2",
@@ -31,8 +33,9 @@
         {
             "id": "mainMenu",
             "type": "Menu",
+            "text": "主菜单",
             "position": [50, 80],
-            "size": [200, 240],
+            "size": [200, 390],
             "style": {
                 "bgColor": "#FFFFFF",
                 "textColor": "#2C3E50",
@@ -60,7 +63,7 @@
                 {
                     "text": "保存文件",
                     "shortcut": "Ctrl+S",
-                    "enabled": true,
+                    "enabled": true, 
                     "checked": false,
                     "separator": false
                 },
