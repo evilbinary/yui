@@ -3,6 +3,7 @@
 #include "../backend.h"
 #include "../util.h"
 #include "../popup_manager.h"
+#include "../event.h"
 #include <stdlib.h>
 #include <string.h>
 #include "cJSON.h"
@@ -26,6 +27,7 @@ MenuComponent* menu_component_create(Layer* layer) {
     component->opened_item = -1;
     component->is_popup = 0;
     component->is_submenu = 0;
+    component->expanded = 0;
     component->parent_menu = NULL;
     component->item_height = 30;
     component->min_width = 150;
@@ -42,10 +44,39 @@ MenuComponent* menu_component_create(Layer* layer) {
     // 设置组件指针和自定义渲染函数
     layer->component = component;
     layer->render = menu_component_render;
-    
+
+
     // 绑定事件处理函数
     layer->handle_mouse_event = menu_component_handle_mouse_event;
     layer->handle_key_event = menu_component_handle_key_event;
+
+    // 确保图层有可用的字体
+    if (!layer->font) {
+        // 从父层继承字体配置
+        Layer* p = layer->parent;
+        while (p) {
+            if (p->font) {
+                layer->font = malloc(sizeof(Font));
+                if (layer->font) {
+                    memcpy(layer->font, p->font, sizeof(Font));
+                    layer->font->default_font = NULL; // 需要单独加载
+                }
+                break;
+            }
+            p = p->parent;
+        }
+        // 父层也没有字体，使用默认配置（load_all_fonts 会加载实际字体文件）
+        if (!layer->font) {
+            layer->font = malloc(sizeof(Font));
+            if (layer->font) {
+                memset(layer->font, 0, sizeof(Font));
+                snprintf(layer->font->path, MAX_PATH, "%s", "Roboto-Regular.ttf");
+                layer->font->size = 16;
+                snprintf(layer->font->weight, sizeof(layer->font->weight), "%s", "normal");
+                layer->font->default_font = NULL;
+            }
+        }
+    }
     
     return component;
 }
@@ -55,16 +86,70 @@ void menu_component_destroy(MenuComponent* component) {
     if (!component) {
         return;
     }
-    
+
     // 如果弹出菜单正在显示，先关闭它
     if (component->is_popup && component->popup_layer) {
         menu_component_hide_popup(component);
     }
-    
+
+    // 递归销毁所有子菜单
     if (component->items) {
+        for (int i = 0; i < component->item_count; i++) {
+            if (component->items[i].submenu) {
+                menu_component_destroy(component->items[i].submenu);
+                component->items[i].submenu = NULL;
+            }
+        }
         free(component->items);
     }
+
+    // 子菜单的内部图层由我们分配，需要释放
+    if (component->is_submenu && component->layer) {
+        if (component->layer->font) {
+            free(component->layer->font);
+        }
+        free(component->layer);
+    }
     free(component);
+}
+
+// 递归解析JSON菜单项（支持嵌套子菜单）
+static void parse_menu_items_from_json(MenuComponent* component, cJSON* items_json) {
+    if (!component || !items_json || !cJSON_IsArray(items_json)) return;
+
+    int count = cJSON_GetArraySize(items_json);
+    for (int i = 0; i < count; i++) {
+        cJSON* item = cJSON_GetArrayItem(items_json, i);
+        if (!item) continue;
+
+        const char* text = "";
+        const char* shortcut = "";
+        int enabled = 1;
+        int checked = 0;
+        int separator = 0;
+
+        if (cJSON_HasObjectItem(item, "text"))     text = cJSON_GetObjectItem(item, "text")->valuestring;
+        if (cJSON_HasObjectItem(item, "shortcut")) shortcut = cJSON_GetObjectItem(item, "shortcut")->valuestring;
+        if (cJSON_HasObjectItem(item, "enabled"))  enabled = cJSON_IsTrue(cJSON_GetObjectItem(item, "enabled"));
+        if (cJSON_HasObjectItem(item, "checked"))  checked = cJSON_IsTrue(cJSON_GetObjectItem(item, "checked"));
+        if (cJSON_HasObjectItem(item, "separator")) separator = cJSON_IsTrue(cJSON_GetObjectItem(item, "separator"));
+
+        menu_component_add_item(component, text, shortcut, enabled, checked, separator, NULL, NULL);
+
+        // 解析嵌套子菜单
+        cJSON* submenu_json = cJSON_GetObjectItem(item, "items");
+        if (submenu_json && cJSON_IsArray(submenu_json)) {
+            MenuComponent* submenu = menu_component_add_submenu(component, i);
+            if (submenu) {
+                submenu->item_click_name[0] = '\0';
+                // 继承父菜单的item_click_name，让子菜单项也能触发同一事件
+                if (strlen(component->item_click_name) > 0) {
+                    strncpy(submenu->item_click_name, component->item_click_name, sizeof(submenu->item_click_name) - 1);
+                }
+                parse_menu_items_from_json(submenu, submenu_json);
+            }
+        }
+    }
 }
 
 // 从JSON创建菜单组件
@@ -72,45 +157,15 @@ MenuComponent* menu_component_create_from_json(Layer* layer, cJSON* json) {
     if (!layer || !json) {
         return NULL;
     }
-    
+
     MenuComponent* component = menu_component_create(layer);
     if (!component) {
         return NULL;
     }
-    
-    // 解析菜单项
+
+    // 解析菜单项（递归支持子菜单）
     cJSON* items = cJSON_GetObjectItem(json, "items");
-    if (items && cJSON_IsArray(items)) {
-        int item_count = cJSON_GetArraySize(items);
-        for (int i = 0; i < item_count; i++) {
-            cJSON* item = cJSON_GetArrayItem(items, i);
-            if (item) {
-                const char* text = "";
-                const char* shortcut = "";
-                int enabled = 1;
-                int checked = 0;
-                int separator = 0;
-                
-                if (cJSON_HasObjectItem(item, "text")) {
-                    text = cJSON_GetObjectItem(item, "text")->valuestring;
-                }
-                if (cJSON_HasObjectItem(item, "shortcut")) {
-                    shortcut = cJSON_GetObjectItem(item, "shortcut")->valuestring;
-                }
-                if (cJSON_HasObjectItem(item, "enabled")) {
-                    enabled = cJSON_IsTrue(cJSON_GetObjectItem(item, "enabled"));
-                }
-                if (cJSON_HasObjectItem(item, "checked")) {
-                    checked = cJSON_IsTrue(cJSON_GetObjectItem(item, "checked"));
-                }
-                if (cJSON_HasObjectItem(item, "separator")) {
-                    separator = cJSON_IsTrue(cJSON_GetObjectItem(item, "separator"));
-                }
-                
-                menu_component_add_item(component, text, shortcut, enabled, checked, separator, NULL, NULL);
-            }
-        }
-    }
+    parse_menu_items_from_json(component, items);
     
     // 解析样式
     cJSON* style = cJSON_GetObjectItem(json, "style");
@@ -142,6 +197,18 @@ MenuComponent* menu_component_create_from_json(Layer* layer, cJSON* json) {
         }
         if (cJSON_HasObjectItem(style, "itemHeight")) {
             component->item_height = cJSON_GetObjectItem(style, "itemHeight")->valueint;
+        }
+    }
+    
+    // 解析onItemClick事件
+    cJSON* events = cJSON_GetObjectItem(json, "events");
+    if (events) {
+        if (cJSON_HasObjectItem(events, "onItemClick")) {
+            const char* handler_name = cJSON_GetObjectItem(events, "onItemClick")->valuestring;
+            // 去掉@前缀
+            if (handler_name[0] == '@') handler_name++;
+            strncpy(component->item_click_name, handler_name, sizeof(component->item_click_name) - 1);
+            component->item_click_name[sizeof(component->item_click_name) - 1] = '\0';
         }
     }
     
@@ -238,6 +305,53 @@ void menu_component_set_user_data(MenuComponent* component, void* data) {
     component->user_data = data;
 }
 
+// 为指定索引的菜单项创建子菜单
+MenuComponent* menu_component_add_submenu(MenuComponent* component, int item_index) {
+    if (!component || item_index < 0 || item_index >= component->item_count) {
+        return NULL;
+    }
+
+    MenuItem* item = &component->items[item_index];
+    if (item->separator) return NULL;
+    if (item->submenu) return item->submenu;  // 已存在则返回
+
+    // 创建子菜单的内部图层
+    Layer* sub_layer = (Layer*)malloc(sizeof(Layer));
+    if (!sub_layer) return NULL;
+    memset(sub_layer, 0, sizeof(Layer));
+
+    // 继承父菜单的字体
+    if (component->layer && component->layer->font) {
+        sub_layer->font = (Font*)malloc(sizeof(Font));
+        if (sub_layer->font) {
+            memcpy(sub_layer->font, component->layer->font, sizeof(Font));
+            sub_layer->font->default_font = NULL;
+        }
+    }
+
+    MenuComponent* submenu = menu_component_create(sub_layer);
+    if (!submenu) {
+        if (sub_layer->font) free(sub_layer->font);
+        free(sub_layer);
+        return NULL;
+    }
+
+    submenu->is_submenu = 1;
+    submenu->parent_menu = component;
+
+    // 继承父菜单的样式
+    submenu->bg_color = component->bg_color;
+    submenu->text_color = component->text_color;
+    submenu->hover_color = component->hover_color;
+    submenu->disabled_color = component->disabled_color;
+    submenu->separator_color = component->separator_color;
+    submenu->item_height = component->item_height;
+    submenu->min_width = component->min_width;
+
+    item->submenu = submenu;
+    return submenu;
+}
+
 // 获取指定位置对应的菜单项索引
 int menu_component_get_item_at_position(MenuComponent* component, int x, int y) {
     if (!component) {
@@ -253,8 +367,12 @@ int menu_component_get_item_at_position(MenuComponent* component, int x, int y) 
         return -1;
     }
     
+    // 计算标题偏移
+    int y_offset = (component->layer->text && strlen(component->layer->text) > 0) ? component->item_height : 0;
+    
     // 计算菜单项索引
-    int relative_y = y - rect->y;
+    int relative_y = y - rect->y - y_offset;
+    if (relative_y < 0) return -1; // 标题区域，不在菜单项上
     int index = relative_y / component->item_height;
     
     if (index >= 0 && index < component->item_count) {
@@ -264,24 +382,89 @@ int menu_component_get_item_at_position(MenuComponent* component, int x, int y) 
     return -1;
 }
 
+// 沿着parent_menu链关闭所有菜单
+static void close_menu_chain(MenuComponent* component) {
+    MenuComponent* cur = component;
+    while (cur) {
+        if (cur->is_popup) {
+            menu_component_hide_popup(cur);
+        } else {
+            cur->hovered_item = -1;
+            cur->expanded = 0;
+            // 关闭子菜单
+            if (cur->opened_item >= 0 && cur->items && cur->opened_item < cur->item_count) {
+                MenuItem* sub_item = &cur->items[cur->opened_item];
+                if (sub_item->submenu && sub_item->submenu->is_popup) {
+                    menu_component_hide_popup(sub_item->submenu);
+                }
+                cur->opened_item = -1;
+            }
+            if (cur->layer) {
+                popup_manager_remove(cur->layer);
+            }
+        }
+        cur = cur->parent_menu;
+    }
+}
+
+// 执行菜单项点击
+static void menu_item_click(MenuComponent* component, MenuItem* item) {
+    if (!item || item->separator || !item->enabled) return;
+
+    if (item->submenu) {
+        // 有子菜单的项：展开/收起子菜单
+        if (component->opened_item >= 0) {
+            MenuItem* prev = &component->items[component->opened_item];
+            if (prev->submenu && prev->submenu->is_popup) {
+                menu_component_hide_popup(prev->submenu);
+            }
+            if (component->opened_item == component->hovered_item) {
+                component->opened_item = -1;
+                return;
+            }
+        }
+        // 展开子菜单
+        Rect* rect = component->popup_layer ? &component->popup_layer->rect : &component->layer->rect;
+        int y_offset = (component->layer->text && strlen(component->layer->text) > 0) ? component->item_height : 0;
+        int sub_x = rect->x + rect->w;
+        int sub_y = rect->y + y_offset + component->hovered_item * component->item_height;
+        menu_component_show_popup(item->submenu, sub_x, sub_y);
+        component->opened_item = component->hovered_item;
+        return;
+    }
+
+    // 执行回调
+    if (item->callback) {
+        item->callback(item->user_data);
+    } else if (strlen(component->item_click_name) > 0) {
+        EventHandler handler = find_event_by_name(component->item_click_name);
+        if (handler) handler(item->text);
+    }
+
+    // 关闭整个菜单链
+    close_menu_chain(component);
+}
+
 // 处理键盘事件
 void menu_component_handle_key_event(Layer* layer, KeyEvent* event) {
     MenuComponent* component = (MenuComponent*)layer->component;
     if (!component || component->item_count == 0) {
         return;
     }
-    
+
     if (event->type == KEY_EVENT_DOWN) {
         switch (event->data.key.key_code) {
             case 38: // 上箭头
+                if (!component->expanded) break;
                 if (component->hovered_item <= 0) {
                     component->hovered_item = component->item_count - 1;
                 } else {
                     component->hovered_item--;
                 }
-                // 跳过分隔符
-                while (component->hovered_item >= 0 && 
-                       component->items[component->hovered_item].separator) {
+                // 跳过分隔符（最多遍历整个数组防止死循环）
+                for (int _i = 0; _i < component->item_count; _i++) {
+                    if (component->hovered_item < 0 ||
+                        !component->items[component->hovered_item].separator) break;
                     if (component->hovered_item <= 0) {
                         component->hovered_item = component->item_count - 1;
                     } else {
@@ -289,16 +472,18 @@ void menu_component_handle_key_event(Layer* layer, KeyEvent* event) {
                     }
                 }
                 break;
-                
+
             case 40: // 下箭头
+                if (!component->expanded) break;
                 if (component->hovered_item < 0 || component->hovered_item >= component->item_count - 1) {
                     component->hovered_item = 0;
                 } else {
                     component->hovered_item++;
                 }
-                // 跳过分隔符
-                while (component->hovered_item < component->item_count && 
-                       component->items[component->hovered_item].separator) {
+                // 跳过分隔符（最多遍历整个数组防止死循环）
+                for (int _i = 0; _i < component->item_count; _i++) {
+                    if (component->hovered_item >= component->item_count ||
+                        !component->items[component->hovered_item].separator) break;
                     if (component->hovered_item >= component->item_count - 1) {
                         component->hovered_item = 0;
                     } else {
@@ -306,30 +491,74 @@ void menu_component_handle_key_event(Layer* layer, KeyEvent* event) {
                     }
                 }
                 break;
-                
-            case 13: // 回车键
-            case 32: // 空格键
-                if (component->hovered_item >= 0 && component->hovered_item < component->item_count) {
-                    MenuItem* item = &component->items[component->hovered_item];
-                    if (!item->separator && item->enabled && item->callback) {
-                        item->callback(item->user_data);
-                    }
-                    
-                    // 如果是弹出菜单，选择后自动关闭
-                    if (component->is_popup) {
-                        menu_component_hide_popup(component);
-                    }
+
+            case 39: // 右箭头 — 展开子菜单
+                if (!component->expanded || component->hovered_item < 0) break;
+                if (component->items[component->hovered_item].submenu) {
+                    menu_item_click(component, &component->items[component->hovered_item]);
                 }
                 break;
-                
-            case 27: // ESC键
-                component->hovered_item = -1;
-                // 如果是弹出菜单，ESC键关闭菜单
-                if (component->is_popup) {
+
+            case 37: // 左箭头 — 关闭子菜单返回父菜单
+                if (component->parent_menu && component->is_popup) {
                     menu_component_hide_popup(component);
+                    if (component->parent_menu->expanded) {
+                        component->parent_menu->opened_item = -1;
+                    }
+                } else if (component->opened_item >= 0) {
+                    MenuItem* sub_item = &component->items[component->opened_item];
+                    if (sub_item->submenu && sub_item->submenu->is_popup) {
+                        menu_component_hide_popup(sub_item->submenu);
+                    }
+                    component->opened_item = -1;
+                }
+                break;
+
+            case 13: // 回车键
+            case 32: // 空格键
+                if (!component->expanded) break;
+                if (component->hovered_item >= 0 && component->hovered_item < component->item_count) {
+                    menu_item_click(component, &component->items[component->hovered_item]);
+                }
+                break;
+
+            case 27: // ESC键
+                if (component->is_popup && component->parent_menu) {
+                    // 子菜单ESC返回父菜单
+                    menu_component_hide_popup(component);
+                    if (component->parent_menu->expanded) {
+                        component->parent_menu->opened_item = -1;
+                    }
+                } else if (component->expanded) {
+                    component->hovered_item = -1;
+                    component->expanded = 0;
                 }
                 break;
         }
+    }
+}
+
+// 内联展开菜单关闭回调
+static void menu_inline_close_callback(PopupLayer* popup) {
+    if (!popup || !popup->layer) return;
+    MenuComponent* component = (MenuComponent*)popup->layer->component;
+    if (component) {
+        component->expanded = 0;
+        component->hovered_item = -1;
+    }
+}
+
+// 收起展开的内联菜单
+void menu_component_collapse(MenuComponent* component) {
+    if (!component || !component->expanded) return;
+
+    // 先设状态再清理，防止重入问题
+    component->expanded = 0;
+    component->hovered_item = -1;
+
+    // 从弹出层管理器移除（如果已注册）
+    if (component->layer) {
+        popup_manager_remove(component->layer);
     }
 }
 
@@ -339,28 +568,84 @@ void menu_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     if (!component) {
         return;
     }
-    
-    if (event->state == 0) { // 鼠标移动
-        int old_hovered = component->hovered_item;
-        component->hovered_item = menu_component_get_item_at_position(component, event->x, event->y);
-        
-        // 如果悬停项发生变化，需要重新渲染
-        if (old_hovered != component->hovered_item) {
-            // 可以在这里添加重绘逻辑
-        }
-        
-    } else if (event->state == 1 && event->button == 1) { // 左键点击
-        int clicked_item = menu_component_get_item_at_position(component, event->x, event->y);
-        
-        if (clicked_item >= 0 && clicked_item < component->item_count) {
-            MenuItem* item = &component->items[clicked_item];
-            if (!item->separator && item->enabled && item->callback) {
-                item->callback(item->user_data);
+
+    Rect* rect = &layer->rect;
+    printf("MOUSE: layer='%s' state=%d btn=%d x=%d y=%d rect=(%d,%d,%d,%d) expanded=%d\n",
+           layer->id ? layer->id : "null",
+           event->state, event->button, event->x, event->y,
+           rect->x, rect->y, rect->w, rect->h,
+           component->expanded);
+    fflush(stdout);
+
+    if (event->state == SDL_MOUSEMOTION) {
+        if (component->expanded) {
+            int prev_hovered = component->hovered_item;
+            component->hovered_item = menu_component_get_item_at_position(component, event->x, event->y);
+
+            // 子菜单 hover 展开/切换
+            if (component->hovered_item >= 0 && component->hovered_item != prev_hovered) {
+                MenuItem* item = &component->items[component->hovered_item];
+                if (item->submenu) {
+                    // 关闭之前打开的不同子菜单
+                    if (component->opened_item >= 0 && component->opened_item != component->hovered_item) {
+                        MenuItem* prev = &component->items[component->opened_item];
+                        if (prev->submenu && prev->submenu->is_popup) {
+                            menu_component_hide_popup(prev->submenu);
+                        }
+                    }
+                    // 展开新子菜单
+                    Rect* mrect = component->popup_layer ? &component->popup_layer->rect : &component->layer->rect;
+                    int y_off = (component->layer->text && strlen(component->layer->text) > 0) ? component->item_height : 0;
+                    int sub_x = mrect->x + mrect->w;
+                    int sub_y = mrect->y + y_off + component->hovered_item * component->item_height;
+                    menu_component_show_popup(item->submenu, sub_x, sub_y);
+                    component->opened_item = component->hovered_item;
+                } else if (component->opened_item >= 0) {
+                    // hover移到没有子菜单的项，关闭已打开的子菜单
+                    MenuItem* prev = &component->items[component->opened_item];
+                    if (prev->submenu && prev->submenu->is_popup) {
+                        menu_component_hide_popup(prev->submenu);
+                    }
+                    component->opened_item = -1;
+                }
             }
-            
-            // 如果是弹出菜单，点击后自动关闭
-            if (component->is_popup) {
-                menu_component_hide_popup(component);
+        } else {
+            component->hovered_item = -1;
+        }
+
+    } else if (event->state == SDL_PRESSED && event->button == SDL_BUTTON_LEFT) {
+        int y_offset = (layer->text && strlen(layer->text) > 0) ? component->item_height : 0;
+        int relative_y = event->y - rect->y;
+
+        if (component->expanded) {
+            int clicked_item = menu_component_get_item_at_position(component, event->x, event->y);
+            if (clicked_item >= 0 && clicked_item < component->item_count) {
+                menu_item_click(component, &component->items[clicked_item]);
+            } else {
+                // 点击空白区域或标题收起
+                menu_component_collapse(component);
+                // 同时关闭打开的子菜单
+                if (component->opened_item >= 0) {
+                    MenuItem* prev = &component->items[component->opened_item];
+                    if (prev->submenu && prev->submenu->is_popup) {
+                        menu_component_hide_popup(prev->submenu);
+                    }
+                    component->opened_item = -1;
+                }
+            }
+        } else {
+            // 折叠状态：点击标题区域展开
+            if (relative_y < y_offset) {
+                printf("EXPAND CLICK: setting expanded=1\n"); fflush(stdout);
+                component->expanded = 1;
+                component->hovered_item = -1;
+
+                PopupLayer* popup = popup_layer_create(layer, POPUP_TYPE_MENU, 100);
+                if (popup) {
+                    popup->auto_close = true;
+                    popup->close_callback = menu_inline_close_callback;
+                    popup_manager_add(popup);
+                }
             }
         }
     }
@@ -371,10 +656,10 @@ void menu_component_render(Layer* layer) {
     if (!layer || !layer->component) {
         return;
     }
-    
+
     MenuComponent* component = (MenuComponent*)layer->component;
     Rect* rect = &layer->rect;
-    
+
     // 绘制背景
     if (component->bg_color.a > 0) {
         if (layer->radius > 0) {
@@ -392,77 +677,152 @@ void menu_component_render(Layer* layer) {
         backend_render_rect_color(rect, border_color.r, border_color.g, border_color.b, border_color.a);
     }
     
-    // 绘制菜单项
-    for (int i = 0; i < component->item_count; i++) {
-        MenuItem* item = &component->items[i];
-        int item_y = rect->y + i * component->item_height;
-        Rect item_rect = {rect->x, item_y, rect->w, component->item_height};
+    int y_offset = 0;
+    
+    // 绘制标题文本
+    if (layer->text && strlen(layer->text) > 0) {
+        Color title_color = component->text_color;
         
-        if (item->separator) {
-            // 绘制分隔符
-            int separator_y = item_y + component->item_height / 2;
-            backend_render_line(rect->x + 5, separator_y, rect->x + rect->w - 5, separator_y, 
-                               component->separator_color);
-        } else {
-            // 绘制菜单项背景（如果是悬停状态）
-            if (i == component->hovered_item) {
-                Color hover_bg = component->hover_color;
-                if (layer->radius > 0) {
-                    backend_render_rounded_rect(&item_rect, hover_bg, 0);
-                } else {
-                    backend_render_fill_rect(&item_rect, hover_bg);
+        // 绘制标题背景（悬停或展开时高亮）
+        Rect title_bar = {rect->x, rect->y, rect->w, component->item_height};
+        if (component->expanded) {
+            Color highlight = component->hover_color;
+            backend_render_fill_rect(&title_bar, highlight);
+        }
+        
+        // 绘制标题文字
+        Texture* title_texture = render_text(layer, layer->text, title_color);
+        if (title_texture) {
+            int title_width, title_height;
+            backend_query_texture(title_texture, NULL, NULL, &title_width, &title_height);
+            
+            Rect title_rect = {
+                rect->x + 12,
+                rect->y + (component->item_height - title_height / scale) / 2,
+                title_width / scale,
+                title_height / scale
+            };
+            
+            backend_render_text_copy(title_texture, NULL, &title_rect);
+            backend_render_text_destroy(title_texture);
+        }
+        
+        // 绘制下拉箭头 ▼
+        const char* arrow = component->expanded ? "▲" : "▼";
+        Texture* arrow_texture = render_text(layer, arrow, title_color);
+        if (arrow_texture) {
+            int arrow_width, arrow_height;
+            backend_query_texture(arrow_texture, NULL, NULL, &arrow_width, &arrow_height);
+            Rect arrow_rect = {
+                rect->x + rect->w - arrow_width / scale - 12,
+                rect->y + (component->item_height - arrow_height / scale) / 2,
+                arrow_width / scale,
+                arrow_height / scale
+            };
+            backend_render_text_copy(arrow_texture, NULL, &arrow_rect);
+            backend_render_text_destroy(arrow_texture);
+        }
+        
+        // 标题分隔线
+        int line_y = rect->y + component->item_height;
+        backend_render_line(rect->x + 5, line_y, rect->x + rect->w - 5, line_y, component->separator_color);
+        
+        y_offset = component->item_height;
+    }
+    
+    // 仅展开时绘制菜单项
+    if (component->expanded) {
+        printf("MENU EXPANDED: count=%d expanded=%d\n", component->item_count, component->expanded);
+        // 绘制菜单项
+        // 绘制菜单项
+        for (int i = 0; i < component->item_count; i++) {
+            MenuItem* item = &component->items[i];
+            int item_y = rect->y + y_offset + i * component->item_height;
+            Rect item_rect = {rect->x, item_y, rect->w, component->item_height};
+            
+            if (item->separator) {
+                // 绘制分隔符
+                int separator_y = item_y + component->item_height / 2;
+                backend_render_line(rect->x + 5, separator_y, rect->x + rect->w - 5, separator_y, 
+                                   component->separator_color);
+            } else {
+                // 绘制菜单项背景（悬停且启用时高亮）
+                if (i == component->hovered_item && item->enabled) {
+                    Color hover_bg = component->hover_color;
+                    if (layer->radius > 0) {
+                        backend_render_rounded_rect(&item_rect, hover_bg, 0);
+                    } else {
+                        backend_render_fill_rect(&item_rect, hover_bg);
+                    }
                 }
-            }
-            
-            // 确定文本颜色
-            Color text_color = item->enabled ? component->text_color : component->disabled_color;
-            
-            // 绘制复选框（如果有的话）
-            if (item->checked) {
-                Rect check_rect = {rect->x + 8, item_y + component->item_height / 2 - 6, 12, 12};
-                backend_render_rect(&check_rect, text_color);
-                // 绘制勾选标记
-                backend_render_line(check_rect.x + 2, check_rect.y + 6, 
-                                  check_rect.x + 5, check_rect.y + 9, text_color);
-                backend_render_line(check_rect.x + 5, check_rect.y + 9, 
-                                  check_rect.x + 10, check_rect.y + 4, text_color);
-            }
-            
-            // 绘制菜单项文本
-            int text_x = rect->x + (item->checked ? 28 : 12);
-            Texture* text_texture = render_text(layer, item->text, text_color);
-            if (text_texture) {
-                int text_width, text_height;
-                backend_query_texture(text_texture, NULL, NULL, &text_width, &text_height);
                 
-                Rect text_rect = {
-                    text_x,
-                    item_y + (component->item_height - text_height / scale) / 2,
-                    text_width / scale,
-                    text_height / scale
-                };
+                // 确定文本颜色
+                Color text_color = item->enabled ? component->text_color : component->disabled_color;
                 
-                backend_render_text_copy(text_texture, NULL, &text_rect);
-                backend_render_text_destroy(text_texture);
-            }
-            
-            // 绘制快捷键文本
-            if (strlen(item->shortcut) > 0) {
-                Texture* shortcut_texture = render_text(layer, item->shortcut, text_color);
-                if (shortcut_texture) {
-                    int shortcut_width, shortcut_height;
-                    backend_query_texture(shortcut_texture, NULL, NULL, &shortcut_width, &shortcut_height);
+                // 绘制复选框（如果有的话）
+                if (item->checked) {
+                    Rect check_rect = {rect->x + 8, item_y + component->item_height / 2 - 6, 12, 12};
+                    backend_render_rect(&check_rect, text_color);
+                    backend_render_line(check_rect.x + 2, check_rect.y + 6, 
+                                      check_rect.x + 5, check_rect.y + 9, text_color);
+                    backend_render_line(check_rect.x + 5, check_rect.y + 9, 
+                                      check_rect.x + 10, check_rect.y + 4, text_color);
+                }
+                
+                // 绘制菜单项文本
+                int text_x = rect->x + (item->checked ? 28 : 12);
+                int right_padding = item->submenu ? 24 : 12;
+                Texture* text_texture = render_text(layer, item->text, text_color);
+                if (text_texture) {
+                    int text_width, text_height;
+                    backend_query_texture(text_texture, NULL, NULL, &text_width, &text_height);
                     
-                    int shortcut_x = rect->x + rect->w - shortcut_width / scale - 12;
-                    Rect shortcut_rect = {
-                        shortcut_x,
-                        item_y + (component->item_height - shortcut_height / scale) / 2,
-                        shortcut_width / scale,
-                        shortcut_height / scale
+                    Rect text_rect = {
+                        text_x,
+                        item_y + (component->item_height - text_height / scale) / 2,
+                        text_width / scale,
+                        text_height / scale
                     };
                     
-                    backend_render_text_copy(shortcut_texture, NULL, &shortcut_rect);
-                    backend_render_text_destroy(shortcut_texture);
+                    backend_render_text_copy(text_texture, NULL, &text_rect);
+                    backend_render_text_destroy(text_texture);
+                }
+                
+                // 绘制子菜单箭头 ▶
+                if (item->submenu) {
+                    Texture* sub_arrow = render_text(layer, "▶", text_color);
+                    if (sub_arrow) {
+                        int aw, ah;
+                        backend_query_texture(sub_arrow, NULL, NULL, &aw, &ah);
+                        Rect sa_rect = {
+                            rect->x + rect->w - aw / scale - 8,
+                            item_y + (component->item_height - ah / scale) / 2,
+                            aw / scale,
+                            ah / scale
+                        };
+                        backend_render_text_copy(sub_arrow, NULL, &sa_rect);
+                        backend_render_text_destroy(sub_arrow);
+                    }
+                }
+                
+                // 绘制快捷键文本
+                if (strlen(item->shortcut) > 0) {
+                    Texture* shortcut_texture = render_text(layer, item->shortcut, text_color);
+                    if (shortcut_texture) {
+                        int shortcut_width, shortcut_height;
+                        backend_query_texture(shortcut_texture, NULL, NULL, &shortcut_width, &shortcut_height);
+                        
+                        int shortcut_x = rect->x + rect->w - shortcut_width / scale - right_padding;
+                        Rect shortcut_rect = {
+                            shortcut_x,
+                            item_y + (component->item_height - shortcut_height / scale) / 2,
+                            shortcut_width / scale,
+                            shortcut_height / scale
+                        };
+                        
+                        backend_render_text_copy(shortcut_texture, NULL, &shortcut_rect);
+                        backend_render_text_destroy(shortcut_texture);
+                    }
                 }
             }
         }

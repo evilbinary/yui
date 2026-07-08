@@ -289,8 +289,9 @@ void layout_layer(Layer* layer){
             }
             
             // 分配空间
-            int available_height = content_height - fixed_height_sum - 
+            int available_height = content_height - fixed_height_sum -
                                   (valid_child_count - 1) * spacing;
+            if (available_height < 0) available_height = 0; // 防止负高度
             int current_y = layer->rect.y + padding_top;
             
             // 初始化内容尺寸
@@ -372,6 +373,9 @@ void layout_layer(Layer* layer){
                     }
                 }
                 
+                fprintf(stderr, "LAYOUT: child[%d] '%s': current_y=%d padding_top=%d child_h=%d spacing=%d\n",
+                       i, child->id ? child->id : "(null)", current_y, padding_top, child->rect.h, spacing);
+                fflush(stderr);
                 child->rect.x = layer->rect.x + padding_left;
                 child->rect.y = current_y;
                 

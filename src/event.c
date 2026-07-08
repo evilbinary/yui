@@ -193,9 +193,11 @@ void handle_mouse_event(Layer* layer, MouseEvent* event) {
         return;
     }
 
-    // 优先处理popup层的事件
-    if (popup_manager_handle_mouse_event(event)) {
-        return;
+    // 优先处理popup层的事件（只在根层级检查，避免子节点重复转发事件）
+    if (layer->parent == NULL) {
+        if (popup_manager_handle_mouse_event(event)) {
+            return;
+        }
     }
 
     Point mouse_pos = {event->x, event->y};
