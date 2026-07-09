@@ -2619,8 +2619,8 @@ void text_component_render(Layer* layer) {
     // 恢复裁剪区域
     backend_render_set_clip_rect(&prev_clip);
     
-    // 如果是多行模式且需要滚动，绘制滚动条
-    if (component->multiline) {
+    // 多行滚动条：仅当未启用 layer 通用垂直滚动条时自绘，避免与 render_vertical_scrollbar 重复
+    if (component->multiline && layer->scrollable != 1 && layer->scrollable != 3) {
         // 使用已经计算好的内容高度，而不是重新计算
         int total_text_height = layer->content_height;
         int visible_height = layer->rect.h - 10; // 减去内边距
