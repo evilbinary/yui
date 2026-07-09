@@ -3,9 +3,14 @@
 #include "../backend.h"
 #include <stdlib.h>
 #include <string.h>
+#include "cJSON.h"
 
-// 创建按钮组件
+// 创建按钮组件（内部通用初始化）
 ButtonComponent* button_component_create(Layer* layer) {
+    return button_component_create_from_json(layer, NULL);
+}
+
+ButtonComponent* button_component_create_from_json(Layer* layer, cJSON* json_obj) {
     if (!layer) {
         return NULL;
     }
@@ -18,12 +23,36 @@ ButtonComponent* button_component_create(Layer* layer) {
     memset(component, 0, sizeof(ButtonComponent));
     component->layer = layer;
     component->user_data = NULL;
+    component->icon_path = NULL;
+    component->icon_text = NULL;
+    component->icon_tex = NULL;
+    component->icon_size = 0;
     
     // 设置默认颜色
     component->colors[LAYER_STATE_NORMAL] = (Color){100, 149, 237, 255};    // 蓝色
     component->colors[LAYER_STATE_HOVER] = (Color){135, 206, 250, 255};     // 亮蓝色
     component->colors[LAYER_STATE_PRESSED] = (Color){70, 130, 180, 255};    // 深蓝色
     component->colors[LAYER_STATE_DISABLED] = (Color){200, 200, 200, 150};  // 灰色半透明
+
+    // 从 JSON 加载图标配置
+    if (json_obj) {
+        cJSON* icon_json = cJSON_GetObjectItem(json_obj, "icon");
+        if (icon_json && icon_json->valuestring) {
+            const char* icon_val = icon_json->valuestring;
+            // 如果包含 . / 或 \\ 则是文件路径
+            if (strchr(icon_val, '.') || strchr(icon_val, '/') || strchr(icon_val, '\\')) {
+                component->icon_path = strdup(icon_val);
+            } else {
+                component->icon_text = strdup(icon_val);
+            }
+        }
+
+        cJSON* iconSize = cJSON_GetObjectItem(json_obj, "iconSize");
+        if (iconSize) {
+            component->icon_size = iconSize->valueint;
+        }
+    }
+
     // 设置组件指针和自定义渲染函数
     layer->component = component;
     layer->render = button_component_render;
@@ -43,6 +72,9 @@ ButtonComponent* button_component_create(Layer* layer) {
 // 销毁按钮组件
 void button_component_destroy(ButtonComponent* component) {
     if (component) {
+        if (component->icon_text) free(component->icon_text);
+        if (component->icon_path) free(component->icon_path);
+        if (component->icon_tex) backend_render_text_destroy(component->icon_tex);
         free(component);
     }
 }
@@ -54,6 +86,24 @@ void button_component_set_text(ButtonComponent* component, const char* text) {
     }
     
     layer_set_text(component->layer, text);
+}
+
+// 设置图标路径
+void button_component_set_icon_path(ButtonComponent* component, const char* path) {
+    if (!component || !path) return;
+    if (component->icon_path) free(component->icon_path);
+    if (component->icon_text) { free(component->icon_text); component->icon_text = NULL; }
+    if (component->icon_tex) { backend_render_text_destroy(component->icon_tex); component->icon_tex = NULL; }
+    component->icon_path = strdup(path);
+}
+
+// 设置图标文本
+void button_component_set_icon_text(ButtonComponent* component, const char* text) {
+    if (!component || !text) return;
+    if (component->icon_text) free(component->icon_text);
+    if (component->icon_path) { free(component->icon_path); component->icon_path = NULL; }
+    if (component->icon_tex) { backend_render_text_destroy(component->icon_tex); component->icon_tex = NULL; }
+    component->icon_text = strdup(text);
 }
 
 // 设置按钮颜色
