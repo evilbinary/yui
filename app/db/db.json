@@ -112,7 +112,8 @@
                   "fontSize": 13
                 },
                 "events": {
-                  "onSelect": "@onDbSelect"
+                  "onSelect": "@onDbSelect",
+                  "onExpand": "@onDbExpand"
                 }
               }
             ]

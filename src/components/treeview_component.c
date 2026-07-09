@@ -400,7 +400,7 @@ TreeViewComponent* treeview_component_create_from_json(Layer* layer, cJSON* json
         treeview_set_colors(component, text_color, selected_text_color, selected_bg_color, hover_bg_color, expand_icon_color);
     }
 
-    // 解析事件，存储名字并缓存 handler
+    // 解析事件名（handler 在触发时查找，因为此时事件尚未注册）
     cJSON* events = cJSON_GetObjectItem(json_obj, "events");
     if (events) {
         cJSON* onSelect = cJSON_GetObjectItem(events, "onSelect");
@@ -408,14 +408,12 @@ TreeViewComponent* treeview_component_create_from_json(Layer* layer, cJSON* json
             const char* val = onSelect->valuestring;
             if (val[0] == '@') val++;
             component->on_select_name = strdup(val);
-            component->on_select_handler = find_event_by_name(val);
         }
         cJSON* onExpand = cJSON_GetObjectItem(events, "onExpand");
         if (onExpand && onExpand->valuestring) {
             const char* val = onExpand->valuestring;
             if (val[0] == '@') val++;
             component->on_expand_name = strdup(val);
-            component->on_expand_handler = find_event_by_name(val);
         }
     }
 
@@ -862,18 +860,21 @@ void treeview_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
                 }
 
                 // 触发 JS onExpand 事件
-                if (component->on_expand_handler && old_expanded != node->expanded) {
-                    char* node_json = treeview_node_to_json(node);
-                    if (node_json) {
-                        if (!layer->event) {
-                            layer->event = calloc(1, sizeof(Event));
+                if (component->on_expand_name && old_expanded != node->expanded) {
+                    EventHandler handler = find_event_by_name(component->on_expand_name);
+                    if (handler) {
+                        char* node_json = treeview_node_to_json(node);
+                        if (node_json) {
+                            if (!layer->event) {
+                                layer->event = calloc(1, sizeof(Event));
+                            }
+                            strncpy(layer->event->click_name, component->on_expand_name, MAX_PATH - 1);
+                            layer->event->click_name[MAX_PATH - 1] = '\0';
+                            free(layer->text);
+                            layer->text = strdup(node_json);
+                            free(node_json);
+                            handler(layer);
                         }
-                        strncpy(layer->event->click_name, component->on_expand_name, MAX_PATH - 1);
-                        layer->event->click_name[MAX_PATH - 1] = '\0';
-                        free(layer->text);
-                        layer->text = strdup(node_json);
-                        free(node_json);
-                        component->on_expand_handler(layer);
                     }
                 }
             } else {
@@ -883,20 +884,22 @@ void treeview_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
                 // 滚动到选中的节点
                 treeview_scroll_to_node(component, node);
 
-                // 触发 onSelect 事件（类似菜单组件的 onItemClick）
-                if (component->on_select_handler) {
-                    // 序列化节点数据供JS访问
-                    char* node_json = treeview_node_to_json(node);
-                    if (node_json) {
-                        if (!layer->event) {
-                            layer->event = calloc(1, sizeof(Event));
+                // 触发 onSelect 事件
+                if (component->on_select_name) {
+                    EventHandler handler = find_event_by_name(component->on_select_name);
+                    if (handler) {
+                        char* node_json = treeview_node_to_json(node);
+                        if (node_json) {
+                            if (!layer->event) {
+                                layer->event = calloc(1, sizeof(Event));
+                            }
+                            strncpy(layer->event->click_name, component->on_select_name, MAX_PATH - 1);
+                            layer->event->click_name[MAX_PATH - 1] = '\0';
+                            free(layer->text);
+                            layer->text = strdup(node_json);
+                            free(node_json);
+                            handler(layer);
                         }
-                        strncpy(layer->event->click_name, component->on_select_name, MAX_PATH - 1);
-                        layer->event->click_name[MAX_PATH - 1] = '\0';
-                        free(layer->text);
-                        layer->text = strdup(node_json);
-                        free(node_json);
-                        component->on_select_handler(layer);
                     }
                 }
             }

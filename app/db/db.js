@@ -293,6 +293,7 @@ function loadDatabases() {
                     icon: "app/assets/icons/db-db.svg",
                     icon_text: "",
                     expanded: false,
+                    expandable: true,
                     children: []
                 });
             }
@@ -425,6 +426,8 @@ function updateStatus(text, color) {
 // ====================== Events ======================
 
 function onDbSelect(layerId) {
+    YUI.log('onDbSelect');
+
     if (!layerId) return;
     var layer = yui.find(layerId);
     if (!layer) return;
@@ -433,13 +436,13 @@ function onDbSelect(layerId) {
     var node = JSON.parse(nodeText);
     currentDb = node;
 
-    if (node.icon === "database") {
+    if (node.icon && node.icon.indexOf("db-db") >= 0) {
         if (!node.children || node.children.length === 0) {
             loadCategories(node.text);
         }
         var statusText = yui.find("statusText");
         if (statusText) statusText.text = "数据库: " + node.text;
-    } else if (node.icon === "category") {
+    } else if (node.expandable && node._db) {
         var handlers = { "表": "mysql_db_tables", "视图": "mysql_db_views", "存储过程": "mysql_db_procedures", "函数": "mysql_db_functions" };
         var handler = handlers[node.text];
         if (handler && node._db) {
@@ -459,6 +462,34 @@ function onDbSelect(layerId) {
     }
 }
 
+
+// ====================== Treeview Events ======================
+
+function onDbExpand(layerId) {
+    YUI.log('onDbExpand');
+    
+    if (!layerId) return;
+    var layer = yui.find(layerId);
+    if (!layer) return;
+    var nodeText = layer.text;
+    if (!nodeText) return;
+    var node = JSON.parse(nodeText);
+
+    // 展开数据库节点时加载分类
+    if (node.icon && node.icon.indexOf("db-db") >= 0 && node.expanded) {
+        if (!node.children || node.children.length === 0) {
+            loadCategories(node.text);
+        }
+    }
+    // 展开分类节点时加载其子项
+    if (node.expandable && node._db && node.expanded) {
+        var handlers = { "表": "mysql_db_tables", "视图": "mysql_db_views", "存储过程": "mysql_db_procedures", "函数": "mysql_db_functions" };
+        var handler = handlers[node.text];
+        if (handler) {
+            loadCategoryItems(node._db, node.text, handler);
+        }
+    }
+}
 
 // ====================== Init ======================
 
