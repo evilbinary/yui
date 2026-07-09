@@ -82,17 +82,17 @@ ProgressComponent* progress_component_create_from_json(Layer* layer, cJSON* json
         }
         
         // 读取形状配置
-        cJSON* shape_item = cJSON_GetObjectItem(json_obj, "shape");
+            cJSON* shape_item = cJSON_GetObjectItem(json_obj, "shape");
         if (!shape_item && style) {
             shape_item = cJSON_GetObjectItem(style, "shape");
         }
         if (shape_item && cJSON_IsString(shape_item)) {
-            const char* shape_str = shape_item->valuestring;
-            if (strcmp(shape_str, "circle") == 0) {
-                component->shape = PROGRESS_SHAPE_CIRCLE;
-            } else {
-                component->shape = PROGRESS_SHAPE_RECTANGLE;
-            }
+                const char* shape_str = shape_item->valuestring;
+                if (strcmp(shape_str, "circle") == 0) {
+                    component->shape = PROGRESS_SHAPE_CIRCLE;
+                } else {
+                    component->shape = PROGRESS_SHAPE_RECTANGLE;
+                }
             shape_specified = 1;
         }
         
@@ -119,17 +119,17 @@ ProgressComponent* progress_component_create_from_json(Layer* layer, cJSON* json
         }
         
         // 读取填充颜色
-        cJSON* color_item = cJSON_GetObjectItem(json_obj, "fillColor");
+            cJSON* color_item = cJSON_GetObjectItem(json_obj, "fillColor");
         if (!color_item && style) {
             color_item = cJSON_GetObjectItem(style, "fillColor");
         }
         if (color_item && cJSON_IsString(color_item)) {
-            // 解析颜色字符串（如 "#ff0000"）
-            const char* color_str = color_item->valuestring;
-            if (color_str[0] == '#') {
-                unsigned int r, g, b;
-                sscanf(color_str + 1, "%02x%02x%02x", &r, &g, &b);
-                component->fill_color = (Color){r, g, b, 255};
+                // 解析颜色字符串（如 "#ff0000"）
+                const char* color_str = color_item->valuestring;
+                if (color_str[0] == '#') {
+                    unsigned int r, g, b;
+                    sscanf(color_str + 1, "%02x%02x%02x", &r, &g, &b);
+                    component->fill_color = (Color){r, g, b, 255};
             }
         }
         
@@ -142,17 +142,17 @@ ProgressComponent* progress_component_create_from_json(Layer* layer, cJSON* json
         }
         
         // 读取圆形进度条宽度
-        cJSON* width_item = cJSON_GetObjectItem(json_obj, "circleWidth");
+            cJSON* width_item = cJSON_GetObjectItem(json_obj, "circleWidth");
         if (!width_item && style) {
             width_item = cJSON_GetObjectItem(style, "circleWidth");
         }
         if (width_item && cJSON_IsNumber(width_item)) {
-            component->circle_width = width_item->valueint;
-            if (component->circle_width < 1) {
-                component->circle_width = 1;
+                component->circle_width = width_item->valueint;
+                if (component->circle_width < 1) {
+                    component->circle_width = 1;
+                }
             }
         }
-    }
     
     // 如果没有设置方向，默认使用较长边作为进度方向
     if (!direction_specified) {

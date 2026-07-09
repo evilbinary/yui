@@ -39,11 +39,20 @@ ButtonComponent* button_component_create_from_json(Layer* layer, cJSON* json_obj
         cJSON* icon_json = cJSON_GetObjectItem(json_obj, "icon");
         if (icon_json && icon_json->valuestring) {
             const char* icon_val = icon_json->valuestring;
-            // 如果包含 . / 或 \\ 则是文件路径
+            // 含路径分隔符或扩展名的视为图片/SVG 文件，否则为文本图标（emoji 等）
             if (strchr(icon_val, '.') || strchr(icon_val, '/') || strchr(icon_val, '\\')) {
                 component->icon_path = strdup(icon_val);
             } else {
                 component->icon_text = strdup(icon_val);
+            }
+        }
+
+        // 检测 bgColor 是否显式设为 transparent
+        cJSON* style = cJSON_GetObjectItem(json_obj, "style");
+        if (style) {
+            cJSON* bg = cJSON_GetObjectItem(style, "bgColor");
+            if (bg && bg->valuestring && strcmp(bg->valuestring, "transparent") == 0) {
+                component->bg_transparent = 1;
             }
         }
 
@@ -204,12 +213,27 @@ void button_component_render(Layer* layer) {
     
     ButtonComponent* component = (ButtonComponent*)layer->component;
     
-    // 根据按钮状态选择颜色，如果layer有背景色则优先使用layer的背景色
+    // 背景色选择
     Color bg_color;
-    if (layer->bg_color.a > 0) {
+    int has_bg = 1;
+    if (component->bg_transparent) {
+        // 透明背景：正常态不画，交互态用中性半透明叠加色
+        if (HAS_STATE(layer, LAYER_STATE_HOVER) || HAS_STATE(layer, LAYER_STATE_PRESSED) || HAS_STATE(layer, LAYER_STATE_FOCUSED)) {
+            if (HAS_STATE(layer, LAYER_STATE_PRESSED)) {
+                bg_color = (Color){128, 128, 128, 50};
+            } else if (HAS_STATE(layer, LAYER_STATE_HOVER)) {
+                bg_color = (Color){128, 128, 128, 30};
+            } else {
+                bg_color = (Color){128, 128, 128, 20};
+            }
+        } else {
+            bg_color = (Color){0, 0, 0, 0};  // 正常态透明
+            has_bg = 0;
+        }
+    } else if (layer->bg_color.a > 0) {
         bg_color = layer->bg_color;
     } else {
-        // 根据当前状态组合选择合适的颜色
+        // 根据状态使用组件默认色
         if (HAS_STATE(layer, LAYER_STATE_PRESSED)) {
             bg_color = component->colors[LAYER_STATE_PRESSED];
         } else if (HAS_STATE(layer, LAYER_STATE_HOVER)) {
@@ -222,7 +246,7 @@ void button_component_render(Layer* layer) {
             bg_color = component->colors[LAYER_STATE_NORMAL];
         }
     }
-    
+
     // 绘制背景
     if (bg_color.a > 0) {
         // 先渲染背景色
@@ -238,57 +262,100 @@ void button_component_render(Layer* layer) {
         }
     }
     
-    // 绘制边框
-    Color border_color = (Color){200, 200, 200, 255};
-    if (HAS_STATE(layer, LAYER_STATE_PRESSED)) {
-        border_color = (Color){100, 100, 100, 255};
-    } else if (HAS_STATE(layer, LAYER_STATE_HOVER)) {
-        border_color = (Color){150, 150, 150, 255};
-    } else if (HAS_STATE(layer, LAYER_STATE_FOCUSED)) {
-        border_color = (Color){50, 150, 255, 255}; // 聚焦状态使用高亮边框
-    }
-    
-    if (layer->radius > 0) {
-        backend_render_rounded_rect_with_border(&layer->rect, bg_color, layer->radius, 1, border_color);
-    } else {
-        backend_render_rect_color(&layer->rect, border_color.r, border_color.g, border_color.b, border_color.a);
-    }
-    
-    // 渲染按钮文本
-    const char* layer_text = layer_get_text(layer);
-    if (layer_text[0] != '\0') {
-        Color text_color = layer->color;
-        if (HAS_STATE(layer, LAYER_STATE_DISABLED)) {
-            text_color = (Color){255, 255, 255, 150};
+    // 绘制边框（仅当有背景色时）
+    if (has_bg) {
+        Color border_color = (Color){200, 200, 200, 255};
+        if (HAS_STATE(layer, LAYER_STATE_PRESSED)) {
+            border_color = (Color){100, 100, 100, 255};
+        } else if (HAS_STATE(layer, LAYER_STATE_HOVER)) {
+            border_color = (Color){150, 150, 150, 255};
+        } else if (HAS_STATE(layer, LAYER_STATE_FOCUSED)) {
+            border_color = (Color){50, 150, 255, 255}; // 聚焦状态使用高亮边框
         }
+        
+        if (layer->radius > 0) {
+            backend_render_rounded_rect_with_border(&layer->rect, bg_color, layer->radius, 1, border_color);
+        } else {
+            backend_render_rect_color(&layer->rect, border_color.r, border_color.g, border_color.b, border_color.a);
+        }
+    }
+    
+    // 渲染图标与文本
+    const char* layer_text = layer_get_text(layer);
+    int has_text = layer_text && layer_text[0] != '\0';
+    int has_icon = component->icon_path || component->icon_text;
+    if (!has_text && !has_icon) {
+        return;
+    }
 
+    Color text_color = layer->color;
+    if (HAS_STATE(layer, LAYER_STATE_DISABLED)) {
+        text_color = (Color){255, 255, 255, 150};
+    }
+
+    int text_x_offset = 0;
+    int text_y_center = layer->rect.y + layer->rect.h / 2;
+
+    // --- 渲染图标（优先 SVG/图片，回退到文本图标） ---
+    Texture* icon_tex = NULL;
+    int icon_tex_owned = 0;
+    if (component->icon_path && !component->icon_tex) {
+        component->icon_tex = backend_load_texture(component->icon_path);
+    }
+    if (component->icon_tex) {
+        icon_tex = component->icon_tex;
+    } else if (component->icon_text) {
+        icon_tex = render_text(layer, component->icon_text, text_color);
+        icon_tex_owned = 1;
+    }
+
+    if (icon_tex) {
+        int iw, ih;
+        backend_query_texture(icon_tex, NULL, NULL, &iw, &ih);
+        int icon_max = component->icon_size > 0 ? component->icon_size : layer->rect.h - 8;
+        int icon_w = iw / scale;
+        int icon_h = ih / scale;
+        if (icon_w > icon_max || icon_h > icon_max) {
+            float ratio = (float)icon_w / icon_h;
+            if (ratio > 1.0f) {
+                icon_w = icon_max;
+                icon_h = (int)(icon_max / ratio);
+            } else {
+                icon_h = icon_max;
+                icon_w = (int)(icon_max * ratio);
+            }
+        }
+        int icon_x = has_text ? layer->rect.x + 6 : layer->rect.x + (layer->rect.w - icon_w) / 2;
+        int icon_y = text_y_center - icon_h / 2;
+        Rect icon_rect = {icon_x, icon_y, icon_w, icon_h};
+        backend_render_text_copy(icon_tex, NULL, &icon_rect);
+        if (icon_tex_owned) backend_render_text_destroy(icon_tex);
+        if (has_text) {
+            text_x_offset = icon_w + 6;
+        }
+    }
+
+    // --- 渲染文本 ---
+    if (has_text) {
         Texture* text_texture = render_text(layer, layer_text, text_color);
 
         if (text_texture) {
             int text_width, text_height;
             backend_query_texture(text_texture, NULL, NULL, &text_width, &text_height);
 
-            // 不需要除以scale，因为SDL_RenderSetScale已经处理了坐标缩放
-            // text_width和text_height是纹理的物理像素大小
-            // SDL会自动根据scale调整渲染
-            Rect text_rect = {
-                layer->rect.x + (layer->rect.w - text_width / scale) / 2,  // 居中
-                layer->rect.y + (layer->rect.h - text_height / scale) / 2,
-                text_width / scale,
-                text_height / scale
-            };
-
-            // 确保文本不会超出按钮边界
-            if (text_rect.w > layer->rect.w - 20) {
-                text_rect.w = layer->rect.w - 20;
-                text_rect.x = layer->rect.x + 10;
+            int text_x, text_y;
+            if (text_x_offset > 0) {
+                int total_w = layer->rect.w - text_x_offset - 10;
+                text_x = layer->rect.x + text_x_offset + (total_w - text_width / scale) / 2;
+                if (text_x < layer->rect.x + text_x_offset) {
+                    text_x = layer->rect.x + text_x_offset;
+                }
+            } else {
+                text_x = layer->rect.x + (layer->rect.w - text_width / scale) / 2;
             }
+            text_y = layer->rect.y + (layer->rect.h - text_height / scale) / 2;
 
-            if (text_rect.h > layer->rect.h) {
-                text_rect.h = layer->rect.h;
-                text_rect.y = layer->rect.y;
-            }
-
+            Rect text_rect = {text_x, text_y, text_width / scale, text_height / scale};
             backend_render_text_copy(text_texture, NULL, &text_rect);
             backend_render_text_destroy(text_texture);
         }

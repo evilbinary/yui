@@ -12,6 +12,7 @@ typedef struct {
     char* icon_text;       // 图标文本 (emoji等)
     struct Texture* icon_tex;  // 缓存的图标纹理
     int icon_size;         // 图标最大尺寸 (0 = 自动)
+    int bg_transparent;    // bgColor 显式设为 transparent
 } ButtonComponent;
 
 // 函数声明

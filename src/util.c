@@ -160,7 +160,12 @@ int is_point_in_rect(int x, int y, Rect rect) {
 
 void parse_color(char* valuestring, Color* color) {
     // 支持多种颜色格式
-    if (strncmp(valuestring, "rgba(", 5) == 0) {
+    if (strcmp(valuestring, "transparent") == 0) {
+        color->r = 0;
+        color->g = 0;
+        color->b = 0;
+        color->a = 0;
+    } else if (strncmp(valuestring, "rgba(", 5) == 0) {
       // 解析 rgba(r, g, b, a) 格式，支持空格
       int r, g, b, a;
       sscanf(valuestring, "rgba(%d,%d,%d,%d)", &r, &g, &b, &a);

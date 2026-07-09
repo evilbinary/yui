@@ -176,6 +176,7 @@
                         "id": "btnRun",
                         "type": "Button",
                         "size": [48, 24],
+                        "icon": "app/assets/icons/run.svg",
                         "text": "▶ 运行",
                         "style": {
                           "color": "#A6E3A1",
@@ -189,6 +190,7 @@
                         "id": "btnExplain",
                         "type": "Button",
                         "size": [28, 22],
+                        "icon": "app/assets/icons/btnExplain.svg",
                         "text": "⚡",
                         "style": {
                           "color": "#F9E2AF",
@@ -202,6 +204,7 @@
                         "id": "btnFormat",
                         "type": "Button",
                         "size": [28, 22],
+                        "icon": "app/assets/icons/btnFormat.svg",
                         "text": "✧",
                         "style": {
                           "color": "#89B4FA",
@@ -215,6 +218,7 @@
                         "id": "btnSave",
                         "type": "Button",
                         "size": [28, 22],
+                        "icon": "app/assets/icons/btnSave.svg",
                         "text": "◷",
                         "style": {
                           "color": "#A6ADC8",
@@ -228,6 +232,7 @@
                         "id": "btnOpen",
                         "type": "Button",
                         "size": [28, 22],
+                        "icon": "app/assets/icons/btnOpen.svg",
                         "text": "☰",
                         "style": {
                           "color": "#A6ADC8",
