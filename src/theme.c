@@ -116,8 +116,11 @@ Theme* theme_load_from_json(cJSON* json) {
         return NULL;
     }
     
-    // 解析样式规则
+    // 解析样式规则（兼容 styles 与 rules 两种字段名）
     cJSON* styles = cJSON_GetObjectItem(json, "styles");
+    if (!styles || !cJSON_IsArray(styles)) {
+        styles = cJSON_GetObjectItem(json, "rules");
+    }
     if (styles && cJSON_IsArray(styles)) {
         int rule_count = cJSON_GetArraySize(styles);
         
@@ -172,8 +175,11 @@ ThemeRule* theme_rule_create_from_json(cJSON* json) {
     // 解析选择器类型
     rule->selector_type = theme_parse_selector_type(selector);
     
-    // 解析样式属性
+    // 解析样式属性（兼容 style 与 properties 两种字段名）
     cJSON* style_obj = cJSON_GetObjectItem(json, "style");
+    if (!style_obj || !cJSON_IsObject(style_obj)) {
+        style_obj = cJSON_GetObjectItem(json, "properties");
+    }
     if (!style_obj || !cJSON_IsObject(style_obj)) {
         free(rule);
         return NULL;
@@ -331,6 +337,7 @@ void theme_merge_style(ThemeRule* rule, Layer* layer) {
         printf("[Theme] Applying color to layer id='%s' (rule color RGBA=%d,%d,%d,%d)\n", 
                layer->id, rule->color.r, rule->color.g, rule->color.b, rule->color.a);
         layer->color = rule->color;
+        mark_layer_dirty(layer, DIRTY_COLOR);
     }
     
     // 背景颜色（主题总是覆盖图层背景色）
