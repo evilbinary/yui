@@ -198,7 +198,7 @@ function onThemeSettings() {
 }
 
 function onAbout() {
-    updateStatus("YUI DB Editor v0.1", "#89B4FA");
+    YUI.show("aboutDialog");
 }
 
 
@@ -549,7 +549,7 @@ function onDbExpand(layerId) {
 
 function onLoad() {
   YUI.log('onLoad');
-  connectDb();
+  //connectDb();
   loadDatabases();
 }
 

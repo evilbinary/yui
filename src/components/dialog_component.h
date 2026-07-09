@@ -39,6 +39,8 @@ struct DialogComponent {
     int message_scroll_offset; // 消息区滚动偏移
     int message_content_height;// 消息内容总高度
     int message_area_height;   // 消息可见区高度
+    int scrollbar_dragging;    // 是否正在拖动滚动条
+    int scrollbar_drag_offset; // 拖动时鼠标与滑块顶部的偏移
     void* user_data;           // 用户数据
     
     // 颜色配置

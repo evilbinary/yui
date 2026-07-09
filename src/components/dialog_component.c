@@ -32,6 +32,12 @@ static int dialog_get_line_height(Layer* text_layer, Color color);
 static int dialog_render_wrapped_message(Layer* text_layer, DialogComponent* component,
     Rect* dialog_rect, int message_top, int message_area_height, int scroll_offset);
 static void dialog_component_handle_scroll_event(Layer* layer, int scroll_delta);
+static void dialog_get_message_area(DialogComponent* component, Layer* layer,
+    int* message_top, int* message_area_height);
+static int dialog_get_scrollbar_thumb(DialogComponent* component, Layer* layer,
+    Rect* out_thumb, Rect* out_track);
+static void dialog_render_message_scrollbar(DialogComponent* component, Layer* layer,
+    int message_top, int message_area_height);
 
 // 创建对话框组件
 DialogComponent* dialog_component_create(Layer* layer) {
@@ -58,6 +64,8 @@ DialogComponent* dialog_component_create(Layer* layer) {
     component->message_scroll_offset = 0;
     component->message_content_height = 0;
     component->message_area_height = 0;
+    component->scrollbar_dragging = 0;
+    component->scrollbar_drag_offset = 0;
     component->user_data = NULL;
     component->on_close = NULL;
     component->on_show = NULL;
@@ -330,6 +338,8 @@ bool dialog_component_show(DialogComponent* component, int x, int y) {
     component->message_scroll_offset = 0;
     component->message_content_height = 0;
     component->message_area_height = 0;
+    component->scrollbar_dragging = 0;
+    component->scrollbar_drag_offset = 0;
     
     // 创建弹出层并添加到弹出管理器
     PopupLayer* popup = popup_layer_create(component->popup_layer, POPUP_TYPE_DIALOG, 
@@ -374,6 +384,7 @@ void dialog_component_hide(DialogComponent* component) {
     Layer* popup_layer = component->popup_layer;
     component->popup_layer = NULL;
     component->is_opened = 0;
+    component->scrollbar_dragging = 0;
 
     popup_manager_remove(popup_layer);
     free(popup_layer);
@@ -434,6 +445,96 @@ static int dialog_get_line_height(Layer* text_layer, Color color) {
     return h / (int)scale + 4;
 }
 
+static void dialog_get_message_area(DialogComponent* component, Layer* layer,
+    int* message_top, int* message_area_height) {
+    Rect* rect = &layer->rect;
+    int current_y = rect->y + 20;
+
+    if (component && strlen(component->title) > 0) {
+        current_y += 40;
+    }
+
+    int top = current_y;
+    int button_area_y = rect->y + rect->h - 50;
+    int area_height = button_area_y - top - 10;
+    if (area_height < 0) {
+        area_height = 0;
+    }
+
+    if (message_top) {
+        *message_top = top;
+    }
+    if (message_area_height) {
+        *message_area_height = area_height;
+    }
+}
+
+static int dialog_get_scrollbar_thumb(DialogComponent* component, Layer* layer,
+    Rect* out_thumb, Rect* out_track) {
+    if (!component || !layer) {
+        return 0;
+    }
+
+    int message_top = 0;
+    int message_area_height = 0;
+    dialog_get_message_area(component, layer, &message_top, &message_area_height);
+
+    int content_h = component->message_content_height;
+    int visible_h = message_area_height;
+    if (content_h <= visible_h || visible_h <= 0) {
+        return 0;
+    }
+
+    const int scrollbar_width = 8;
+    int scrollbar_x = layer->rect.x + layer->rect.w - scrollbar_width - 8;
+    int max_scroll = content_h - visible_h;
+    int scroll_offset = component->message_scroll_offset;
+    if (scroll_offset < 0) {
+        scroll_offset = 0;
+    } else if (scroll_offset > max_scroll) {
+        scroll_offset = max_scroll;
+    }
+
+    int thumb_h = (int)((float)visible_h / content_h * visible_h);
+    if (thumb_h < 20) {
+        thumb_h = 20;
+    }
+    if (thumb_h > visible_h) {
+        thumb_h = visible_h;
+    }
+
+    int thumb_y = message_top;
+    if (max_scroll > 0) {
+        thumb_y = message_top + (int)((float)scroll_offset / max_scroll * (visible_h - thumb_h));
+    }
+
+    if (out_track) {
+        *out_track = (Rect){scrollbar_x, message_top, scrollbar_width, visible_h};
+    }
+    if (out_thumb) {
+        *out_thumb = (Rect){scrollbar_x, thumb_y, scrollbar_width, thumb_h};
+    }
+    return 1;
+}
+
+static void dialog_render_message_scrollbar(DialogComponent* component, Layer* layer,
+    int message_top, int message_area_height) {
+    Rect track = {0};
+    Rect thumb = {0};
+    if (!dialog_get_scrollbar_thumb(component, layer, &thumb, &track)) {
+        return;
+    }
+
+    Color track_color = {100, 100, 100, 60};
+    backend_render_fill_rect(&track, track_color);
+
+    Color thumb_color = component->border_color;
+    if (thumb_color.a == 0) {
+        thumb_color = (Color){130, 130, 130, 200};
+    }
+    backend_render_fill_rect(&thumb, thumb_color);
+}
+
 static int dialog_render_wrapped_message(Layer* text_layer, DialogComponent* component,
     Rect* dialog_rect, int message_top, int message_area_height, int scroll_offset) {
     const char* text = component->message;
@@ -441,7 +542,7 @@ static int dialog_render_wrapped_message(Layer* text_layer, DialogComponent* com
         return 0;
     }
 
-    int max_width = dialog_rect->w - 40;
+    int max_width = dialog_rect->w - 52;
     int x = dialog_rect->x + 20;
     int line_height = dialog_get_line_height(text_layer, component->text_color);
     int rel_y = 0;
@@ -623,10 +724,71 @@ void dialog_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     if (!component || !component->is_opened || !event) {
         return;
     }
-    
+
+    Rect thumb = {0};
+    Rect track = {0};
+    int has_scrollbar = dialog_get_scrollbar_thumb(component, layer, &thumb, &track);
+    int message_area_height = component->message_area_height;
+    if (message_area_height <= 0) {
+        int message_top = 0;
+        dialog_get_message_area(component, layer, &message_top, &message_area_height);
+    }
+
     if (event->state == SDL_MOUSEMOTION) {
+        if (component->scrollbar_dragging && has_scrollbar) {
+            int max_scroll = component->message_content_height - message_area_height;
+            if (max_scroll > 0) {
+                int thumb_h = thumb.h;
+                int track_range = track.h - thumb_h;
+                int new_thumb_y = event->y - component->scrollbar_drag_offset;
+                if (new_thumb_y < track.y) {
+                    new_thumb_y = track.y;
+                }
+                if (new_thumb_y > track.y + track_range) {
+                    new_thumb_y = track.y + track_range;
+                }
+                if (track_range > 0) {
+                    component->message_scroll_offset =
+                        (int)((float)(new_thumb_y - track.y) / track_range * max_scroll);
+                }
+            }
+            return;
+        }
         component->selected_button = dialog_get_button_at_position(component, layer, event->x, event->y);
+    } else if (event->state == SDL_PRESSED && event->button == SDL_BUTTON_LEFT) {
+        if (has_scrollbar &&
+            event->x >= thumb.x && event->x < thumb.x + thumb.w &&
+            event->y >= thumb.y && event->y < thumb.y + thumb.h) {
+            component->scrollbar_dragging = 1;
+            component->scrollbar_drag_offset = event->y - thumb.y;
+            return;
+        }
+        if (has_scrollbar &&
+            event->x >= track.x && event->x < track.x + track.w &&
+            event->y >= track.y && event->y < track.y + track.h) {
+            int max_scroll = component->message_content_height - message_area_height;
+            if (max_scroll > 0) {
+                int thumb_h = thumb.h;
+                int page = message_area_height;
+                if (event->y < thumb.y) {
+                    component->message_scroll_offset -= page;
+                } else if (event->y >= thumb.y + thumb_h) {
+                    component->message_scroll_offset += page;
+                }
+                if (component->message_scroll_offset < 0) {
+                    component->message_scroll_offset = 0;
+                } else if (component->message_scroll_offset > max_scroll) {
+                    component->message_scroll_offset = max_scroll;
+                }
+            }
+            return;
+        }
     } else if (event->state == SDL_RELEASED && event->button == SDL_BUTTON_LEFT) {
+        if (component->scrollbar_dragging) {
+            component->scrollbar_dragging = 0;
+            return;
+        }
+
         int clicked_button = dialog_get_button_at_position(component, layer, event->x, event->y);
         
         if (clicked_button >= 0 && clicked_button < component->button_count) {
@@ -700,13 +862,9 @@ void dialog_component_render(Layer* layer) {
         current_y += 40;
     }
     
-    int message_top = current_y;
-    int button_area_y = rect->y + rect->h - 50;
-    int message_area_height = button_area_y - message_top - 10;
-    if (message_area_height < 0) {
-        message_area_height = 0;
-    }
-
+    int message_top = 0;
+    int message_area_height = 0;
+    dialog_get_message_area(component, layer, &message_top, &message_area_height);
     component->message_area_height = message_area_height;
 
     // 绘制消息（支持 \n 换行、自动折行与滚动）
@@ -721,6 +879,10 @@ void dialog_component_render(Layer* layer) {
         }
         if (component->message_scroll_offset > max_scroll) {
             component->message_scroll_offset = max_scroll;
+        }
+
+        if (max_scroll > 0) {
+            dialog_render_message_scrollbar(component, layer, message_top, message_area_height);
         }
     } else {
         component->message_content_height = 0;
