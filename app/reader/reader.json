@@ -46,7 +46,7 @@
                         "borderColor": "#CCCCCC"
                     },
                     "events":{
-                        "onChange": "loadBookClick"
+                        "onChange": "@loadBookClick"
 
                     }
                 },
@@ -72,7 +72,7 @@
                         "borderRadius": 4
                     },
                     "events": {
-                        "onClick": "toggleDebug"
+                        "onClick": "@toggleDebug"
                     }
                 },
                 {
@@ -86,7 +86,7 @@
                         "borderRadius": 4
                     },
                     "events": {
-                        "onClick": "toggleTheme"
+                        "onClick": "@toggleTheme"
                     }
                 }
             ]
@@ -192,7 +192,7 @@
                                 "bgColor": "#E0E0E0"
                             },
                             "events": {
-                                "onClick": "goToPrevPage"
+                                "onClick": "@goToPrevPage"
                             }
                         },
                         {
@@ -217,7 +217,7 @@
                                 "bgColor": "#E0E0E0"
                             },
                             "events": {
-                                "onClick": "goToNextPage"
+                                "onClick": "@goToNextPage"
                             }
                         }
                     ]
@@ -273,7 +273,7 @@
                                 "textAlign": "center"
                             },
                             "events": {
-                                "onClick": "increaseFont"
+                                "onClick": "@increaseFont"
                             }
                         }
                     ]
