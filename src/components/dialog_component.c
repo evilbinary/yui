@@ -38,6 +38,14 @@ static int dialog_get_scrollbar_thumb(DialogComponent* component, Layer* layer,
     Rect* out_thumb, Rect* out_track);
 static void dialog_render_message_scrollbar(DialogComponent* component, Layer* layer,
     int message_top, int message_area_height);
+static void dialog_parse_button_style(DialogButton* button, cJSON* style);
+static int dialog_get_button_width(DialogComponent* component, int index);
+static int dialog_get_button_height(DialogComponent* component, int index);
+static int dialog_get_button_area_y(DialogComponent* component, Layer* layer);
+static int dialog_layout_button_rect(DialogComponent* component, Layer* layer,
+    int index, Rect* out_rect);
+static void dialog_get_button_colors(DialogComponent* component, DialogButton* button,
+    int selected, Color* bg, Color* text);
 
 // 创建对话框组件
 DialogComponent* dialog_component_create(Layer* layer) {
@@ -78,6 +86,10 @@ DialogComponent* dialog_component_create(Layer* layer) {
     component->button_color = DEFAULT_BUTTON_COLOR;
     component->button_hover_color = DEFAULT_BUTTON_HOVER_COLOR;
     component->button_text_color = DEFAULT_BUTTON_TEXT_COLOR;
+    component->button_width = 80;
+    component->button_height = 35;
+    component->button_spacing = 20;
+    component->button_area_bottom = 50;
     
     // 模板图层不参与普通渲染，仅通过 popup 显示
     layer->component = component;
@@ -400,22 +412,15 @@ static int dialog_get_button_at_position(DialogComponent* component, Layer* popu
     if (!component || !popup_layer || component->button_count == 0) {
         return -1;
     }
-    
-    Rect* rect = &popup_layer->rect;
-    
-    // 按钮区域在对话框底部
-    int button_area_y = rect->y + rect->h - 50;
-    int button_height = 35;
-    int button_width = 80;
-    int button_spacing = 20;
-    int total_width = component->button_count * button_width + (component->button_count - 1) * button_spacing;
-    int start_x = rect->x + (rect->w - total_width) / 2;
-    
+
     for (int i = 0; i < component->button_count; i++) {
-        int button_x = start_x + i * (button_width + button_spacing);
-        
-        if (x >= button_x && x < button_x + button_width &&
-            y >= button_area_y && y < button_area_y + button_height) {
+        Rect button_rect = {0};
+        if (!dialog_layout_button_rect(component, popup_layer, i, &button_rect)) {
+            continue;
+        }
+
+        if (x >= button_rect.x && x < button_rect.x + button_rect.w &&
+            y >= button_rect.y && y < button_rect.y + button_rect.h) {
             return i;
         }
     }
@@ -445,6 +450,101 @@ static int dialog_get_line_height(Layer* text_layer, Color color) {
     return h / (int)scale + 4;
 }
 
+static void dialog_parse_button_style(DialogButton* button, cJSON* style) {
+    if (!button || !style) {
+        return;
+    }
+
+    if (cJSON_HasObjectItem(style, "width")) {
+        button->width = cJSON_GetObjectItem(style, "width")->valueint;
+    }
+    if (cJSON_HasObjectItem(style, "height")) {
+        button->height = cJSON_GetObjectItem(style, "height")->valueint;
+    }
+    if (cJSON_HasObjectItem(style, "bgColor")) {
+        parse_color(cJSON_GetObjectItem(style, "bgColor")->valuestring, &button->bg_color);
+        button->has_bg_color = 1;
+    }
+    if (cJSON_HasObjectItem(style, "color")) {
+        parse_color(cJSON_GetObjectItem(style, "color")->valuestring, &button->bg_color);
+        button->has_bg_color = 1;
+    }
+    if (cJSON_HasObjectItem(style, "hoverColor")) {
+        parse_color(cJSON_GetObjectItem(style, "hoverColor")->valuestring, &button->hover_color);
+        button->has_hover_color = 1;
+    }
+    if (cJSON_HasObjectItem(style, "textColor")) {
+        parse_color(cJSON_GetObjectItem(style, "textColor")->valuestring, &button->text_color);
+        button->has_text_color = 1;
+    }
+}
+
+static int dialog_get_button_width(DialogComponent* component, int index) {
+    if (!component || index < 0 || index >= component->button_count) {
+        return component ? component->button_width : 80;
+    }
+    DialogButton* button = &component->buttons[index];
+    return button->width > 0 ? button->width : component->button_width;
+}
+
+static int dialog_get_button_height(DialogComponent* component, int index) {
+    if (!component || index < 0 || index >= component->button_count) {
+        return component ? component->button_height : 35;
+    }
+    DialogButton* button = &component->buttons[index];
+    return button->height > 0 ? button->height : component->button_height;
+}
+
+static int dialog_get_button_area_y(DialogComponent* component, Layer* layer) {
+    if (!component || !layer) {
+        return 0;
+    }
+    return layer->rect.y + layer->rect.h - component->button_area_bottom;
+}
+
+static int dialog_layout_button_rect(DialogComponent* component, Layer* layer,
+    int index, Rect* out_rect) {
+    if (!component || !layer || !out_rect || index < 0 || index >= component->button_count) {
+        return 0;
+    }
+
+    int spacing = component->button_spacing;
+    int total_width = 0;
+    for (int i = 0; i < component->button_count; i++) {
+        total_width += dialog_get_button_width(component, i);
+        if (i > 0) {
+            total_width += spacing;
+        }
+    }
+
+    int start_x = layer->rect.x + (layer->rect.w - total_width) / 2;
+    int button_x = start_x;
+    for (int i = 0; i < index; i++) {
+        button_x += dialog_get_button_width(component, i) + spacing;
+    }
+
+    int button_y = dialog_get_button_area_y(component, layer);
+    out_rect->x = button_x;
+    out_rect->y = button_y;
+    out_rect->w = dialog_get_button_width(component, index);
+    out_rect->h = dialog_get_button_height(component, index);
+    return 1;
+}
+
+static void dialog_get_button_colors(DialogComponent* component, DialogButton* button,
+    int selected, Color* bg, Color* text) {
+    if (!component || !button || !bg || !text) {
+        return;
+    }
+
+    if (selected) {
+        *bg = button->has_hover_color ? button->hover_color : component->button_hover_color;
+    } else {
+        *bg = button->has_bg_color ? button->bg_color : component->button_color;
+    }
+    *text = button->has_text_color ? button->text_color : component->button_text_color;
+}
+
 static void dialog_get_message_area(DialogComponent* component, Layer* layer,
     int* message_top, int* message_area_height) {
     Rect* rect = &layer->rect;
@@ -455,7 +555,7 @@ static void dialog_get_message_area(DialogComponent* component, Layer* layer,
     }
 
     int top = current_y;
-    int button_area_y = rect->y + rect->h - 50;
+    int button_area_y = dialog_get_button_area_y(component, layer);
     int area_height = button_area_y - top - 10;
     if (area_height < 0) {
         area_height = 0;
@@ -890,40 +990,32 @@ void dialog_component_render(Layer* layer) {
     
     // 绘制按钮
     if (component->button_count > 0) {
-        int button_area_y = rect->y + rect->h - 50;
-        int button_height = 35;
-        int button_width = 80;
-        int button_spacing = 20;
-        int total_width = component->button_count * button_width + (component->button_count - 1) * button_spacing;
-        int start_x = rect->x + (rect->w - total_width) / 2;
-        
         for (int i = 0; i < component->button_count; i++) {
             DialogButton* button = &component->buttons[i];
-            int button_x = start_x + i * (button_width + button_spacing);
-            Rect button_rect = {button_x, button_area_y, button_width, button_height};
-            
-            // 选择按钮颜色
-            Color button_color = component->button_color;
-            if (i == component->selected_button) {
-                button_color = component->button_hover_color;
+            Rect button_rect = {0};
+            if (!dialog_layout_button_rect(component, layer, i, &button_rect)) {
+                continue;
             }
-            
-            // 绘制按钮背景
+
+            Color button_color = {0};
+            Color button_text_color = {0};
+            dialog_get_button_colors(component, button, i == component->selected_button,
+                                     &button_color, &button_text_color);
+
             backend_render_fill_rect(&button_rect, button_color);
-            
-            // 绘制按钮文本
-            Texture* button_texture = render_text(text_layer, button->text, component->button_text_color);
+
+            Texture* button_texture = render_text(text_layer, button->text, button_text_color);
             if (button_texture) {
                 int text_width, text_height;
                 backend_query_texture(button_texture, NULL, NULL, &text_width, &text_height);
-                
+
                 Rect text_rect = {
-                    button_x + (button_width - text_width / scale) / 2,
-                    button_area_y + (button_height - text_height / scale) / 2,
+                    button_rect.x + (button_rect.w - text_width / scale) / 2,
+                    button_rect.y + (button_rect.h - text_height / scale) / 2,
                     text_width / scale,
                     text_height / scale
                 };
-                
+
                 backend_render_text_copy(button_texture, NULL, &text_rect);
                 backend_render_text_destroy(button_texture);
             }
@@ -1036,6 +1128,13 @@ DialogComponent* dialog_component_create_from_json(Layer* layer, cJSON* json) {
                 }
                 
                 dialog_component_add_button(component, text, NULL, NULL, is_default, is_cancel);
+                if (component->button_count > 0) {
+                    DialogButton* btn = &component->buttons[component->button_count - 1];
+                    cJSON* btn_style = cJSON_GetObjectItem(button, "style");
+                    if (btn_style) {
+                        dialog_parse_button_style(btn, btn_style);
+                    }
+                }
             }
         }
     }
@@ -1077,6 +1176,18 @@ DialogComponent* dialog_component_create_from_json(Layer* layer, cJSON* json) {
             Color button_text_color;
             parse_color(cJSON_GetObjectItem(style, "buttonTextColor")->valuestring, &button_text_color);
             component->button_text_color = button_text_color;
+        }
+        if (cJSON_HasObjectItem(style, "buttonWidth")) {
+            component->button_width = cJSON_GetObjectItem(style, "buttonWidth")->valueint;
+        }
+        if (cJSON_HasObjectItem(style, "buttonHeight")) {
+            component->button_height = cJSON_GetObjectItem(style, "buttonHeight")->valueint;
+        }
+        if (cJSON_HasObjectItem(style, "buttonSpacing")) {
+            component->button_spacing = cJSON_GetObjectItem(style, "buttonSpacing")->valueint;
+        }
+        if (cJSON_HasObjectItem(style, "buttonAreaBottom")) {
+            component->button_area_bottom = cJSON_GetObjectItem(style, "buttonAreaBottom")->valueint;
         }
     }
     

@@ -13,6 +13,14 @@ typedef struct {
     void* user_data;                  // 用户数据
     int is_default;                  // 是否为默认按钮（回车键触发）
     int is_cancel;                   // 是否为取消按钮（ESC键触发）
+    int width;                       // 按钮宽度，0 表示使用对话框默认值
+    int height;                      // 按钮高度，0 表示使用对话框默认值
+    Color bg_color;                  // 按钮背景色
+    Color hover_color;               // 按钮悬停色
+    Color text_color;                // 按钮文字色
+    int has_bg_color;                // 是否自定义背景色
+    int has_hover_color;             // 是否自定义悬停色
+    int has_text_color;              // 是否自定义文字色
 } DialogButton;
 
 // 对话框类型
@@ -51,6 +59,10 @@ struct DialogComponent {
     Color button_color;        // 按钮颜色
     Color button_hover_color;  // 按钮悬停颜色
     Color button_text_color;   // 按钮文本颜色
+    int button_width;          // 默认按钮宽度
+    int button_height;         // 默认按钮高度
+    int button_spacing;        // 按钮间距
+    int button_area_bottom;    // 按钮区距底部距离
     
     // 回调函数
     void (*on_close)(DialogComponent* dialog, int button_index);

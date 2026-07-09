@@ -566,9 +566,17 @@
       "message": "YUI - Ya Ya User Interface\n\n一款面向 AI 应用的轻量级 GUI 框架，由 evilbinary 开发，使用 C 语言构建，通过 JSON 描述界面。\n\n主要特性：\n• 轻量高性能，支持脏矩形渲染\n• 声明式 JSON 配置 UI\n• 跨平台（Windows / macOS / Linux）\n• 丰富组件、动画系统、主题切换\n• 支持 QuickJS / mquickjs / Mario 引擎\n\n许可证：LGPL-2.1\n项目地址：github.com/evilbinary/YUI\n\nYUI DB Editor v0.1",
       "dialogType": "info",
       "modal": true,
+      "fontSize": 12,
       "size": [360, 240],
       "buttons": [
-        { "text": "确定", "default": true }
+        { "text": "确定", "default": true, 
+          "style": {
+            "bgColor": "#313244",
+            "hoverColor": "#45475A",
+            "textColor": "#F38BA8",
+            "width": 72,
+            "height": 28
+          }}
       ],
       "style": {
         "titleColor": "#89B4FA",
