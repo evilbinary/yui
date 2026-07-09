@@ -195,3 +195,14 @@ target("calc.html")
     add_files("calc/main.c"),
     add_run()
 )
+
+
+target("db") 
+(
+    add_deps("socket","yui","quickjs","jsmodule-quickjs","yaml2json"),
+    add_rules("mode.debug", "mode.release"),
+    set_kind("binary"),
+    add_flags(),
+    add_files("db/main.c"),
+    add_run()
+)
