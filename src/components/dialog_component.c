@@ -26,6 +26,12 @@ static const Color ERROR_COLOR = {220, 20, 60, 255};
 static const Color QUESTION_COLOR = {60, 179, 113, 255};
 
 static int dialog_layer_set_visible(Layer* layer, int visible);
+static int dialog_get_button_at_position(DialogComponent* component, Layer* popup_layer, int x, int y);
+static int dialog_measure_text_width(Layer* text_layer, const char* text, Color color);
+static int dialog_get_line_height(Layer* text_layer, Color color);
+static int dialog_render_wrapped_message(Layer* text_layer, DialogComponent* component,
+    Rect* dialog_rect, int message_top, int message_area_height, int scroll_offset);
+static void dialog_component_handle_scroll_event(Layer* layer, int scroll_delta);
 
 // 创建对话框组件
 DialogComponent* dialog_component_create(Layer* layer) {
@@ -49,6 +55,9 @@ DialogComponent* dialog_component_create(Layer* layer) {
     component->selected_button = -1;
     component->is_modal = 1;
     component->is_opened = 0;
+    component->message_scroll_offset = 0;
+    component->message_content_height = 0;
+    component->message_area_height = 0;
     component->user_data = NULL;
     component->on_close = NULL;
     component->on_show = NULL;
@@ -316,6 +325,11 @@ bool dialog_component_show(DialogComponent* component, int x, int y) {
     component->popup_layer->render = dialog_component_render;
     component->popup_layer->handle_mouse_event = dialog_component_handle_mouse_event;
     component->popup_layer->handle_key_event = dialog_component_handle_key_event;
+    component->popup_layer->handle_scroll_event = dialog_component_handle_scroll_event;
+
+    component->message_scroll_offset = 0;
+    component->message_content_height = 0;
+    component->message_area_height = 0;
     
     // 创建弹出层并添加到弹出管理器
     PopupLayer* popup = popup_layer_create(component->popup_layer, POPUP_TYPE_DIALOG, 
@@ -358,12 +372,11 @@ void dialog_component_hide(DialogComponent* component) {
     
     // 保存指针以便调用 popup_manager_remove
     Layer* popup_layer = component->popup_layer;
-    component->popup_layer = NULL;  // 先设置为NULL，防止回调中再次使用
-    
-    // 从弹出管理器中移除
-    popup_manager_remove(popup_layer);
-    
+    component->popup_layer = NULL;
     component->is_opened = 0;
+
+    popup_manager_remove(popup_layer);
+    free(popup_layer);
 }
 
 // 检查对话框是否打开
@@ -372,12 +385,12 @@ bool dialog_component_is_opened(DialogComponent* component) {
 }
 
 // 获取按钮在指定位置的索引
-static int dialog_get_button_at_position(DialogComponent* component, int x, int y) {
-    if (!component || !component->popup_layer || component->button_count == 0) {
+static int dialog_get_button_at_position(DialogComponent* component, Layer* popup_layer, int x, int y) {
+    if (!component || !popup_layer || component->button_count == 0) {
         return -1;
     }
     
-    Rect* rect = &component->popup_layer->rect;
+    Rect* rect = &popup_layer->rect;
     
     // 按钮区域在对话框底部
     int button_area_y = rect->y + rect->h - 50;
@@ -397,6 +410,142 @@ static int dialog_get_button_at_position(DialogComponent* component, int x, int 
     }
     
     return -1;
+}
+
+static int dialog_measure_text_width(Layer* text_layer, const char* text, Color color) {
+    Texture* tex = render_text(text_layer, text, color);
+    if (!tex) {
+        return 0;
+    }
+    int w = 0, h = 0;
+    backend_query_texture(tex, NULL, NULL, &w, &h);
+    backend_render_text_destroy(tex);
+    return w / (int)scale;
+}
+
+static int dialog_get_line_height(Layer* text_layer, Color color) {
+    Texture* tex = render_text(text_layer, "A", color);
+    if (!tex) {
+        return 18;
+    }
+    int w = 0, h = 0;
+    backend_query_texture(tex, NULL, NULL, &w, &h);
+    backend_render_text_destroy(tex);
+    return h / (int)scale + 4;
+}
+
+static int dialog_render_wrapped_message(Layer* text_layer, DialogComponent* component,
+    Rect* dialog_rect, int message_top, int message_area_height, int scroll_offset) {
+    const char* text = component->message;
+    if (!text || !text[0] || message_area_height <= 0) {
+        return 0;
+    }
+
+    int max_width = dialog_rect->w - 40;
+    int x = dialog_rect->x + 20;
+    int line_height = dialog_get_line_height(text_layer, component->text_color);
+    int rel_y = 0;
+    const char* paragraph = text;
+
+    Rect clip = {dialog_rect->x, message_top, dialog_rect->w, message_area_height};
+    Rect prev_clip;
+    backend_render_get_clip_rect(&prev_clip);
+    backend_render_set_clip_rect(&clip);
+
+    while (*paragraph) {
+        const char* next_nl = strchr(paragraph, '\n');
+        int para_len = next_nl ? (int)(next_nl - paragraph) : (int)strlen(paragraph);
+        const char* line_start = paragraph;
+        const char* para_end = paragraph + para_len;
+
+        while (line_start < para_end) {
+            char buf[512];
+            int remain = (int)(para_end - line_start);
+            if (remain >= (int)sizeof(buf)) {
+                remain = (int)sizeof(buf) - 1;
+            }
+            memcpy(buf, line_start, remain);
+            buf[remain] = '\0';
+
+            int fit_len = remain;
+            if (dialog_measure_text_width(text_layer, buf, component->text_color) > max_width) {
+                fit_len = 0;
+                int pos = 0;
+                while (line_start + pos < para_end) {
+                    int clen = utf8_char_len((unsigned char)line_start[pos]);
+                    if (clen <= 0) {
+                        clen = 1;
+                    }
+                    if (pos + clen >= (int)sizeof(buf)) {
+                        break;
+                    }
+                    memcpy(buf, line_start, pos + clen);
+                    buf[pos + clen] = '\0';
+                    if (dialog_measure_text_width(text_layer, buf, component->text_color) > max_width) {
+                        break;
+                    }
+                    pos += clen;
+                    fit_len = pos;
+                }
+                if (fit_len == 0) {
+                    fit_len = utf8_char_len((unsigned char)line_start[0]);
+                    if (fit_len <= 0) {
+                        fit_len = 1;
+                    }
+                }
+                memcpy(buf, line_start, fit_len);
+                buf[fit_len] = '\0';
+            }
+
+            int draw_y = message_top + rel_y - scroll_offset;
+            if (draw_y + line_height > message_top && draw_y < message_top + message_area_height) {
+                Texture* line_tex = render_text(text_layer, buf, component->text_color);
+                if (line_tex) {
+                    int tw = 0, th = 0;
+                    backend_query_texture(line_tex, NULL, NULL, &tw, &th);
+                    Rect line_rect = {x, draw_y, tw / (int)scale, th / (int)scale};
+                    backend_render_text_copy(line_tex, NULL, &line_rect);
+                    backend_render_text_destroy(line_tex);
+                }
+            }
+
+            line_start += fit_len;
+            rel_y += line_height;
+        }
+
+        if (next_nl) {
+            paragraph = next_nl + 1;
+        } else {
+            break;
+        }
+    }
+
+    if (prev_clip.w > 0 && prev_clip.h > 0) {
+        backend_render_set_clip_rect(&prev_clip);
+    } else {
+        backend_render_set_clip_rect(NULL);
+    }
+
+    return rel_y;
+}
+
+static void dialog_component_handle_scroll_event(Layer* layer, int scroll_delta) {
+    DialogComponent* component = (DialogComponent*)layer->component;
+    if (!component || !component->is_opened) {
+        return;
+    }
+
+    int max_scroll = component->message_content_height - component->message_area_height;
+    if (max_scroll <= 0) {
+        return;
+    }
+
+    component->message_scroll_offset += scroll_delta * 20;
+    if (component->message_scroll_offset < 0) {
+        component->message_scroll_offset = 0;
+    } else if (component->message_scroll_offset > max_scroll) {
+        component->message_scroll_offset = max_scroll;
+    }
 }
 
 // 处理键盘事件
@@ -471,16 +620,14 @@ void dialog_component_handle_key_event(Layer* layer, KeyEvent* event) {
 // 处理鼠标事件
 void dialog_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     DialogComponent* component = (DialogComponent*)layer->component;
-    if (!component || !component->is_opened) {
+    if (!component || !component->is_opened || !event) {
         return;
     }
     
-    if (event->state == 0) { // 鼠标移动
-        int old_selected = component->selected_button;
-        component->selected_button = dialog_get_button_at_position(component, event->x, event->y);
-        
-    } else if (event->state == 1 && event->button == 1) { // 左键点击
-        int clicked_button = dialog_get_button_at_position(component, event->x, event->y);
+    if (event->state == SDL_MOUSEMOTION) {
+        component->selected_button = dialog_get_button_at_position(component, layer, event->x, event->y);
+    } else if (event->state == SDL_RELEASED && event->button == SDL_BUTTON_LEFT) {
+        int clicked_button = dialog_get_button_at_position(component, layer, event->x, event->y);
         
         if (clicked_button >= 0 && clicked_button < component->button_count) {
             DialogButton* button = &component->buttons[clicked_button];
@@ -553,37 +700,30 @@ void dialog_component_render(Layer* layer) {
         current_y += 40;
     }
     
-    // 绘制消息
-    if (strlen(component->message) > 0) {
-        Texture* message_texture = render_text(text_layer, component->message, component->text_color);
-        if (message_texture) {
-            int message_width, message_height;
-            backend_query_texture(message_texture, NULL, NULL, &message_width, &message_height);
-            
-            // 自动换行处理
-            int max_width = rect->w - 40;
-            if (message_width / scale > max_width) {
-                // 简单的截断处理，实际应用中可以实现更复杂的文本换行
-                Rect message_rect = {
-                    rect->x + 20,
-                    current_y,
-                    max_width,
-                    message_height / scale
-                };
-                backend_render_text_copy(message_texture, NULL, &message_rect);
-            } else {
-                Rect message_rect = {
-                    rect->x + (rect->w - message_width / scale) / 2,
-                    current_y,
-                    message_width / scale,
-                    message_height / scale
-                };
-                backend_render_text_copy(message_texture, NULL, &message_rect);
-            }
-            
-            backend_render_text_destroy(message_texture);
+    int message_top = current_y;
+    int button_area_y = rect->y + rect->h - 50;
+    int message_area_height = button_area_y - message_top - 10;
+    if (message_area_height < 0) {
+        message_area_height = 0;
+    }
+
+    component->message_area_height = message_area_height;
+
+    // 绘制消息（支持 \n 换行、自动折行与滚动）
+    if (strlen(component->message) > 0 && message_area_height > 0) {
+        component->message_content_height = dialog_render_wrapped_message(
+            text_layer, component, rect, message_top, message_area_height,
+            component->message_scroll_offset);
+
+        int max_scroll = component->message_content_height - message_area_height;
+        if (max_scroll < 0) {
+            max_scroll = 0;
         }
-        current_y += 100;
+        if (component->message_scroll_offset > max_scroll) {
+            component->message_scroll_offset = max_scroll;
+        }
+    } else {
+        component->message_content_height = 0;
     }
     
     // 绘制按钮

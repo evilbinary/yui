@@ -614,8 +614,7 @@ void menu_component_handle_key_event(Layer* layer, KeyEvent* event) {
                         component->parent_menu->opened_item = -1;
                     }
                 } else if (component->expanded) {
-                    component->hovered_item = -1;
-                    component->expanded = 0;
+                    menu_component_collapse(component);
                 }
                 break;
         }

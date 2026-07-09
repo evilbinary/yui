@@ -36,6 +36,9 @@ struct DialogComponent {
     int selected_button;       // 当前选中的按钮索引
     int is_modal;              // 是否为模态对话框
     int is_opened;             // 对话框是否已打开
+    int message_scroll_offset; // 消息区滚动偏移
+    int message_content_height;// 消息内容总高度
+    int message_area_height;   // 消息可见区高度
     void* user_data;           // 用户数据
     
     // 颜色配置
