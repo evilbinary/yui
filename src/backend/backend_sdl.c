@@ -1444,6 +1444,14 @@ void backend_delay(int delay){
     SDL_Delay(delay);
 }
 
+Uint32 backend_get_ticks(void){
+    return SDL_GetTicks();
+}
+
+void backend_get_mouse_state(int* x, int* y){
+    SDL_GetMouseState(x, y);
+}
+
 void backend_render_fill_rect(Rect* rect,Color color){
     SDL_SetRenderDrawColor(renderer, 
                                 color.r, 

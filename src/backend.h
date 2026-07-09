@@ -20,6 +20,8 @@ void backend_set_window_size(char* title);
 void backend_quit();
 void backend_render_present();
 void backend_delay(int delay);
+Uint32 backend_get_ticks(void);
+void backend_get_mouse_state(int* x, int* y);
 void backend_render_clear_color(unsigned char r,unsigned char g,unsigned char b,unsigned char a);
 
 DFont* backend_load_font(char* font_path,int size);

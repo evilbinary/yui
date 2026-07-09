@@ -89,7 +89,7 @@
               {
                 "id": "dbListSearch",
                 "type": "Input",
-                "size": [224, 32],
+                "size": [224, 24],
                 "text": "",
                 "placeholder": "搜索表...",
                 "style": {
@@ -547,6 +547,7 @@
           "id": "statusText",
           "type": "Label",
           "text": "未连接",
+          "size": [300, 20],
           "style": {
             "color": "#CDD6F4",
             "fontSize": 11,
