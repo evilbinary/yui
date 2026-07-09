@@ -199,7 +199,7 @@ void button_component_render(Layer* layer) {
     }
     
     if (layer->radius > 0) {
-        backend_render_rounded_rect_with_border(&layer->rect, bg_color, layer->radius, 2, border_color);
+        backend_render_rounded_rect_with_border(&layer->rect, bg_color, layer->radius, 1, border_color);
     } else {
         backend_render_rect_color(&layer->rect, border_color.r, border_color.g, border_color.b, border_color.a);
     }
