@@ -224,6 +224,7 @@ static JSValue js_log(JSContext *ctx, JSValueConst this_val, int argc, JSValueCo
         }
     }
     printf("\n");
+    fflush(stdout);
     return JS_UNDEFINED;
 }
 

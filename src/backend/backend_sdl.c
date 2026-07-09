@@ -328,7 +328,6 @@ int backend_init(){
     // Windows: 抑制系统 DLL 调试输出（DWM 等），并禁止崩溃弹窗
     #ifdef _WIN32
     SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
-    _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_DEBUG);
     #endif
 
     // 初始化SDL
