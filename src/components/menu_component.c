@@ -32,6 +32,7 @@ MenuComponent* menu_component_create(Layer* layer) {
     component->item_height = 30;
     component->min_width = 80;
     component->content_width = 0;
+    component->show_arrow = 0;
     component->user_data = NULL;
     component->on_popup_closed = NULL;
     
@@ -257,8 +258,11 @@ MenuComponent* menu_component_create_from_json(Layer* layer, cJSON* json) {
         if (cJSON_HasObjectItem(style, "itemHeight")) {
             component->item_height = cJSON_GetObjectItem(style, "itemHeight")->valueint;
         }
+        if (cJSON_HasObjectItem(style, "showArrow")) {
+            component->show_arrow = cJSON_IsTrue(cJSON_GetObjectItem(style, "showArrow"));
+        }
     }
-    
+
     // 解析onItemClick事件
     cJSON* events = cJSON_GetObjectItem(json, "events");
     if (events) {
@@ -752,18 +756,8 @@ void menu_component_render(Layer* layer) {
         }
     }
 
-    // 绘制边框（如果需要）
-    if (bg_rect.h > 0 && layer->border_width > 0) {
-        Color border_color = layer->border_color.a > 0 ? layer->border_color : (Color){200, 200, 200, 255};
-        if (layer->radius > 0 && component->expanded) {
-            backend_render_rounded_rect_with_border(&bg_rect, component->bg_color, layer->radius, layer->border_width, border_color);
-        } else if (title_h > 0) {
-            backend_render_rect(&bg_rect, border_color);
-        }
-    }
-    
     int y_offset = 0;
-    
+
     // 绘制标题文本
     if (layer->text && strlen(layer->text) > 0) {
         Color title_color = component->text_color;
@@ -793,19 +787,21 @@ void menu_component_render(Layer* layer) {
         }
         
         // 绘制下拉箭头 ▼
-        const char* arrow = component->expanded ? "▲" : "▼";
-        Texture* arrow_texture = render_text(layer, arrow, title_color);
-        if (arrow_texture) {
-            int arrow_width, arrow_height;
-            backend_query_texture(arrow_texture, NULL, NULL, &arrow_width, &arrow_height);
-            Rect arrow_rect = {
-                rect->x + rect->w - arrow_width / scale - 12,
-                rect->y + (component->item_height - arrow_height / scale) / 2,
-                arrow_width / scale,
-                arrow_height / scale
-            };
-            backend_render_text_copy(arrow_texture, NULL, &arrow_rect);
-            backend_render_text_destroy(arrow_texture);
+        if (component->show_arrow) {
+            const char* arrow = component->expanded ? "▲" : "▼";
+            Texture* arrow_texture = render_text(layer, arrow, title_color);
+            if (arrow_texture) {
+                int arrow_width, arrow_height;
+                backend_query_texture(arrow_texture, NULL, NULL, &arrow_width, &arrow_height);
+                Rect arrow_rect = {
+                    rect->x + rect->w - arrow_width / scale - 12,
+                    rect->y + (component->item_height - arrow_height / scale) / 2,
+                    arrow_width / scale,
+                    arrow_height / scale
+                };
+                backend_render_text_copy(arrow_texture, NULL, &arrow_rect);
+                backend_render_text_destroy(arrow_texture);
+            }
         }
         
         // 标题分隔线（仅展开时显示）

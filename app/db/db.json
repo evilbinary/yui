@@ -451,10 +451,7 @@
         "textColor": "#CDD6F4",
         "hoverColor": "#45475A",
         "disabledColor": "#6C7086",
-        "separatorColor": "#585B70",
-        "borderWidth": 1,
-        "borderColor": "#45475A",
-        "borderRadius": 6
+        "separatorColor": "#585B70"
       },
       "items": [
         { "text": "新建查询", "onClick": "onNewTab" },
@@ -480,10 +477,7 @@
         "textColor": "#CDD6F4",
         "hoverColor": "#45475A",
         "disabledColor": "#6C7086",
-        "separatorColor": "#585B70",
-        "borderWidth": 1,
-        "borderColor": "#45475A",
-        "borderRadius": 6
+        "separatorColor": "#585B70"
       },
       "items": [
         { "text": "新建连接", "onClick": "onNewConnection" },
@@ -509,10 +503,7 @@
         "textColor": "#CDD6F4",
         "hoverColor": "#45475A",
         "disabledColor": "#6C7086",
-        "separatorColor": "#585B70",
-        "borderWidth": 1,
-        "borderColor": "#45475A",
-        "borderRadius": 6
+        "separatorColor": "#585B70"
       },
       "items": [
         { "text": "偏好设置", "onClick": "onOpenSettings" },
