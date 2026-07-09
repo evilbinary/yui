@@ -142,7 +142,7 @@ static var_t* mario_hide(vm_t* vm, var_t* env, void* data)
     if (layer_id && g_layer_root) {
         struct Layer* layer = find_layer_by_id(g_layer_root, layer_id);
         if (layer) {
-            layer->visible = 0; // IN_VISIBLE
+            layer_hide(layer);
             printf("JS(Mario): Hide layer '%s'\n", layer_id);
         }
     }
@@ -163,7 +163,7 @@ static var_t* mario_show(vm_t* vm, var_t* env, void* data)
     if (layer_id && g_layer_root) {
         struct Layer* layer = find_layer_by_id(g_layer_root, layer_id);
         if (layer) {
-            layer->visible = 1; // VISIBLE
+            layer_show(layer);
             printf("JS(Mario): Show layer '%s'\n", layer_id);
         }
     }

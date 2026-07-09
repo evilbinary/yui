@@ -25,6 +25,8 @@ static const Color WARNING_COLOR = {255, 165, 0, 255};
 static const Color ERROR_COLOR = {220, 20, 60, 255};
 static const Color QUESTION_COLOR = {60, 179, 113, 255};
 
+static int dialog_layer_set_visible(Layer* layer, int visible);
+
 // 创建对话框组件
 DialogComponent* dialog_component_create(Layer* layer) {
     if (!layer) {
@@ -62,10 +64,38 @@ DialogComponent* dialog_component_create(Layer* layer) {
     
     // 模板图层不参与普通渲染，仅通过 popup 显示
     layer->component = component;
+    layer->set_visible = dialog_layer_set_visible;
     layer->handle_mouse_event = dialog_component_handle_mouse_event;
     layer->handle_key_event = dialog_component_handle_key_event;
     
     return component;
+}
+
+static int dialog_layer_set_visible(Layer* layer, int visible) {
+    if (!layer || !layer->component) {
+        return 0;
+    }
+
+    DialogComponent* component = (DialogComponent*)layer->component;
+    if (visible == VISIBLE) {
+        if (dialog_component_is_opened(component)) {
+            return 1;
+        }
+
+        int sw = 0, sh = 0;
+        int dw = layer->rect.w > 0 ? layer->rect.w : 400;
+        int dh = layer->rect.h > 0 ? layer->rect.h : 200;
+        backend_get_windowsize(&sw, &sh);
+        int x = sw > dw ? (sw - dw) / 2 : 0;
+        int y = sh > dh ? (sh - dh) / 2 : 0;
+        return dialog_component_show(component, x, y) ? 1 : 0;
+    }
+
+    if (dialog_component_is_opened(component)) {
+        dialog_component_hide(component);
+    }
+    layer->visible = IN_VISIBLE;
+    return 1;
 }
 
 // 销毁对话框组件
@@ -279,7 +309,9 @@ bool dialog_component_show(DialogComponent* component, int x, int y) {
     component->popup_layer->rect.h = dialog_height;
     
     // 复制基本属性
-    component->popup_layer->radius = 8;  // 圆角
+    component->popup_layer->radius = component->layer->radius > 0 ? component->layer->radius : 8;
+    component->popup_layer->font = component->layer->font;
+    component->popup_layer->assets = component->layer->assets;
     component->popup_layer->component = component;
     component->popup_layer->render = dialog_component_render;
     component->popup_layer->handle_mouse_event = dialog_component_handle_mouse_event;
@@ -476,7 +508,8 @@ void dialog_component_render(Layer* layer) {
     if (!component->is_opened) {
         return;
     }
-    
+
+    Layer* text_layer = component->layer ? component->layer : layer;
     Rect* rect = &layer->rect;
     
     // 绘制背景
@@ -502,7 +535,7 @@ void dialog_component_render(Layer* layer) {
     
     // 绘制标题
     if (strlen(component->title) > 0) {
-        Texture* title_texture = render_text(layer, component->title, component->title_color);
+        Texture* title_texture = render_text(text_layer, component->title, component->title_color);
         if (title_texture) {
             int title_width, title_height;
             backend_query_texture(title_texture, NULL, NULL, &title_width, &title_height);
@@ -522,7 +555,7 @@ void dialog_component_render(Layer* layer) {
     
     // 绘制消息
     if (strlen(component->message) > 0) {
-        Texture* message_texture = render_text(layer, component->message, component->text_color);
+        Texture* message_texture = render_text(text_layer, component->message, component->text_color);
         if (message_texture) {
             int message_width, message_height;
             backend_query_texture(message_texture, NULL, NULL, &message_width, &message_height);
@@ -577,7 +610,7 @@ void dialog_component_render(Layer* layer) {
             backend_render_fill_rect(&button_rect, button_color);
             
             // 绘制按钮文本
-            Texture* button_texture = render_text(layer, button->text, component->button_text_color);
+            Texture* button_texture = render_text(text_layer, button->text, component->button_text_color);
             if (button_texture) {
                 int text_width, text_height;
                 backend_query_texture(button_texture, NULL, NULL, &text_width, &text_height);

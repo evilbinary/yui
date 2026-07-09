@@ -1086,6 +1086,32 @@ Layer* find_layer_by_id(Layer* root, const char* id) {
     return NULL;
 }
 
+int layer_show(Layer* layer) {
+    if (!layer) {
+        return 0;
+    }
+
+    if (layer->set_visible) {
+        return layer->set_visible(layer, VISIBLE);
+    }
+
+    layer->visible = VISIBLE;
+    return 1;
+}
+
+int layer_hide(Layer* layer) {
+    if (!layer) {
+        return 0;
+    }
+
+    if (layer->set_visible) {
+        return layer->set_visible(layer, IN_VISIBLE);
+    }
+
+    layer->visible = IN_VISIBLE;
+    return 1;
+}
+
 // 从 JSON 字符串解析并创建图层
 Layer* parse_layer_from_string(const char* json_str, Layer* parent) {
     if (!json_str) {

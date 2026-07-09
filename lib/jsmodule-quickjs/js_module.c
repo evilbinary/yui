@@ -183,7 +183,7 @@ static JSValue js_hide(JSContext *ctx, JSValueConst this_val, int argc, JSValueC
     if (layer_id && g_layer_root) {
         struct Layer* layer = find_layer_by_id(g_layer_root, layer_id);
         if (layer) {
-            layer->visible = 0; // IN_VISIBLE
+            layer_hide(layer);
             printf("JS(QuickJS): Hide layer '%s'\n", layer_id);
         }
     }
@@ -203,7 +203,7 @@ static JSValue js_show(JSContext *ctx, JSValueConst this_val, int argc, JSValueC
     if (layer_id && g_layer_root) {
         struct Layer* layer = find_layer_by_id(g_layer_root, layer_id);
         if (layer) {
-            layer->visible = 1; // VISIBLE
+            layer_show(layer);
             printf("JS(QuickJS): Show layer '%s'\n", layer_id);
         }
     }

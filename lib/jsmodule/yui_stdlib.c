@@ -253,7 +253,7 @@ static JSValue js_hide(JSContext *ctx, JSValue *this_val, int argc, JSValue *arg
     if (layer_id && g_layer_root ) {
         Layer* layer = find_layer_by_id(g_layer_root, layer_id);
         if (layer) {
-            layer->visible = IN_VISIBLE;
+            layer_hide(layer);
             printf("YUI: Hide layer '%s'\n", layer_id);
         }
     }
@@ -272,7 +272,7 @@ static JSValue js_show(JSContext *ctx, JSValue *this_val, int argc, JSValue *arg
     if (layer_id && g_layer_root ) {
         Layer* layer = find_layer_by_id(g_layer_root, layer_id);
         if (layer) {
-            layer->visible = VISIBLE;
+            layer_show(layer);
             printf("YUI: Show layer '%s'\n", layer_id);
         }
     }

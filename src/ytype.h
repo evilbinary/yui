@@ -384,6 +384,9 @@ typedef struct Layer {
     // 自定义渲染函数指针
     void (*render)(Layer* layer);
 
+    // 显示/隐藏（组件可自定义，如 Dialog 弹出层）
+    int (*set_visible)(Layer* layer, int visible);
+
     // 布局更新函数指针
     void (*layout)(Layer* layer);
 
