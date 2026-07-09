@@ -290,7 +290,7 @@ function loadDatabases() {
                 fullDbData.push({
                     id: "db_" + dbs[i],
                     text: dbs[i],
-                    icon: "app/assets/icons/db-table.svg",
+                    icon: "app/assets/icons/db-db.svg",
                     icon_text: "",
                     expanded: false,
                     children: []
