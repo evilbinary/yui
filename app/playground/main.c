@@ -168,6 +168,12 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    // 设置窗口图标
+    cJSON* icon_path = cJSON_GetObjectItem(root_json, "icon");
+    if (icon_path && cJSON_IsString(icon_path)) {
+        backend_set_window_icon(icon_path->valuestring);
+    }
+
     // 如果根图层没有设置宽度和高度，则根据窗口大小设置
     printf("ui_root %d,%d\n",ui_root->rect.w,ui_root->rect.h);
 

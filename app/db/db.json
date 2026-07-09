@@ -4,6 +4,7 @@
   "type": "View",
   "size": [900, 600],
   "js": ["./db.js"],
+  "icon": "app/db/icon.png",
   "layout": { "type": "absolute" },
   "style": {
     "titleBarBgColor": "#1E1E2E",

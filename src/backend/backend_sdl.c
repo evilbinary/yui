@@ -473,17 +473,33 @@ void backend_set_titlebar_color(Color bg, Color text) {
         #ifdef _WIN32
         HWND hwnd = wmInfo.info.win.window;
         COLORREF bgColor = RGB(bg.r, bg.g, bg.b);
-        // 标题栏背景色（35 = DWMWA_CAPTION_COLOR）
+
+        // 基础暗色模式（Win10 20H1+ 和 Win11 都支持）
+        BOOL dark = TRUE;
+        DwmSetWindowAttribute(hwnd, 20, &dark, sizeof(dark));
+
+        // 自定义颜色（仅 Win11 支持，Win10 上静默忽略）
         DwmSetWindowAttribute(hwnd, 35, &bgColor, sizeof(bgColor));
-        // 窗口边框同色（34 = DWMWA_BORDER_COLOR）
         DwmSetWindowAttribute(hwnd, 34, &bgColor, sizeof(bgColor));
-        // 标题文字色（36 = DWMWA_TEXT_COLOR）
         COLORREF textColor = RGB(text.r, text.g, text.b);
         DwmSetWindowAttribute(hwnd, 36, &textColor, sizeof(textColor));
+
         // 强制刷新
         SetWindowPos(hwnd, NULL, 0, 0, 0, 0, SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE);
 
         #endif // _WIN32
+    }
+}
+
+// 设置窗口图标
+void backend_set_window_icon(const char* path) {
+    if (!window || !path) return;
+    SDL_Surface* icon = IMG_Load(path);
+    if (icon) {
+        SDL_SetWindowIcon(window, icon);
+        SDL_FreeSurface(icon);
+    } else {
+        printf("Failed to load icon: %s\n", path);
     }
 }
 
