@@ -9,6 +9,7 @@
 #include "render.h"
 #include "layout.h"
 #include "backend.h"
+#include "util.h"
 #include "popup_manager.h"
 #include "../lib/jsmodule/js_module.h"
 #include "yaml_cjson.h"
@@ -148,6 +149,17 @@ int main(int argc, char* argv[]) {
     }
     if(ui_root->text!=NULL){
         backend_set_window_size(ui_root->text);
+    }
+
+    // 设置窗口标题栏背景色（从 style 中读取）
+    cJSON* root_style = cJSON_GetObjectItem(root_json, "style");
+    if (root_style) {
+        cJSON* title_bg = cJSON_GetObjectItem(root_style, "titleBarBgColor");
+        if (title_bg && cJSON_IsString(title_bg)) {
+            Color color;
+            parse_color(title_bg->valuestring, &color);
+            backend_set_titlebar_background_color(color);
+        }
     }
 
     // 如果根图层没有设置宽度和高度，则根据窗口大小设置

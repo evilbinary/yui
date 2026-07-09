@@ -6,6 +6,7 @@
   "js": ["./db.js"],
   "layout": { "type": "absolute" },
   "style": {
+    "titleBarBgColor": "#1E1E2E",
     "color": "#CDD6F4",
     "bgColor": "#1E1E2E"
   },

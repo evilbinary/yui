@@ -10,3 +10,4 @@ lib/mquickjs/mqjs_stdlib
 gdb_crash.log
 .shadowkitten/
 *.log
+app/db/db.json
