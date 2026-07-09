@@ -75,14 +75,14 @@ static void* handle_mysql_connect(void* data) {
     }
 
     MYSQL* ret = mysql_real_connect(g_mysql_conn, host, user, pass, db, port, NULL, 0);
-    cJSON_Delete(json);
-
     if (ret) {
+        cJSON_Delete(json);
         g_mysql_connected = 1;
         mysql_set_character_set(g_mysql_conn, "utf8mb4");
         printf("MySQL: Connected to %s:%d db=%s\n", host, port, db);
         return strdup("{\"success\":true}");
     } else {
+        cJSON_Delete(json);
         printf("MySQL: Connection failed: %s\n", mysql_error(g_mysql_conn));
         char err_buf[512];
         snprintf(err_buf, sizeof(err_buf), "{\"success\":false,\"error\":\"%s\"}", mysql_error(g_mysql_conn));
@@ -112,19 +112,22 @@ static void* handle_mysql_query(void* data) {
 
     const char* sql = json_get_string(json, "sql");
     if (!sql) { cJSON_Delete(json); return strdup("{\"error\":\"Missing sql\"}"); }
+    char* sql_copy = strdup(sql);
     cJSON_Delete(json);
+    sql = NULL;
 
-    if (mysql_query(g_mysql_conn, sql) != 0) {
+    if (mysql_query(g_mysql_conn, sql_copy) != 0) {
         char err_buf[1024];
         snprintf(err_buf, sizeof(err_buf), "{\"error\":\"%s\"}", mysql_error(g_mysql_conn));
+        free(sql_copy);
         return strdup(err_buf);
     }
+    free(sql_copy);
 
     MYSQL_RES* result = mysql_store_result(g_mysql_conn);
     if (!result) return strdup("[]");
 
     char* json_out = result_to_json(result);
-    // result_to_json allocates with strdup or cJSON_Print, return directly
     return json_out;
 }
 
@@ -138,13 +141,16 @@ static void* handle_mysql_exec(void* data) {
 
     const char* sql = json_get_string(json, "sql");
     if (!sql) { cJSON_Delete(json); return strdup("{\"error\":\"Missing sql\"}"); }
+    char* sql_copy = strdup(sql);
     cJSON_Delete(json);
 
-    if (mysql_query(g_mysql_conn, sql) != 0) {
+    if (mysql_query(g_mysql_conn, sql_copy) != 0) {
         char err_buf[1024];
         snprintf(err_buf, sizeof(err_buf), "{\"error\":\"%s\"}", mysql_error(g_mysql_conn));
+        free(sql_copy);
         return strdup(err_buf);
     }
+    free(sql_copy);
 
     my_ulonglong affected = mysql_affected_rows(g_mysql_conn);
     MYSQL_RES* result = mysql_store_result(g_mysql_conn);
@@ -204,10 +210,12 @@ static void* handle_mysql_db_tables(void* data) {
 
     const char* dbname = json_get_string(json, "database");
     if (!dbname) { cJSON_Delete(json); return strdup("[]"); }
+    char* db_copy = strdup(dbname);
     cJSON_Delete(json);
 
     char sql[512];
-    snprintf(sql, sizeof(sql), "SHOW TABLES FROM `%s`", dbname);
+    snprintf(sql, sizeof(sql), "SHOW TABLES FROM `%s`", db_copy);
+    free(db_copy);
 
     if (mysql_query(g_mysql_conn, sql) != 0) return strdup("[]");
 
@@ -245,10 +253,12 @@ static void* handle_mysql_columns(void* data) {
 
     const char* table = json_get_string(json, "table");
     if (!table) { cJSON_Delete(json); return strdup("[]"); }
+    char* table_copy = strdup(table);
     cJSON_Delete(json);
 
     char sql[512];
-    snprintf(sql, sizeof(sql), "SHOW COLUMNS FROM `%s`", table);
+    snprintf(sql, sizeof(sql), "SHOW COLUMNS FROM `%s`", table_copy);
+    free(table_copy);
 
     if (mysql_query(g_mysql_conn, sql) != 0) return strdup("[]");
 
@@ -285,13 +295,15 @@ static void* handle_mysql_db_views(void* data) {
     cJSON* json = cJSON_Parse(json_str);
     if (!json) return strdup("[]");
     const char* dbname = json_get_string(json, "database");
+    if (!dbname) { cJSON_Delete(json); return strdup("[]"); }
+    char* db_copy = strdup(dbname);
     cJSON_Delete(json);
-    if (!dbname) return strdup("[]");
 
     char sql[512];
     snprintf(sql, sizeof(sql),
         "SELECT TABLE_NAME FROM information_schema.TABLES "
-        "WHERE TABLE_SCHEMA = '%s' AND TABLE_TYPE = 'VIEW' ORDER BY TABLE_NAME", dbname);
+        "WHERE TABLE_SCHEMA = '%s' AND TABLE_TYPE = 'VIEW' ORDER BY TABLE_NAME", db_copy);
+    free(db_copy);
     return query_name_list(sql);
 }
 
@@ -301,13 +313,15 @@ static void* handle_mysql_db_procedures(void* data) {
     cJSON* json = cJSON_Parse(json_str);
     if (!json) return strdup("[]");
     const char* dbname = json_get_string(json, "database");
+    if (!dbname) { cJSON_Delete(json); return strdup("[]"); }
+    char* db_copy = strdup(dbname);
     cJSON_Delete(json);
-    if (!dbname) return strdup("[]");
 
     char sql[512];
     snprintf(sql, sizeof(sql),
         "SELECT ROUTINE_NAME FROM information_schema.ROUTINES "
-        "WHERE ROUTINE_SCHEMA = '%s' AND ROUTINE_TYPE = 'PROCEDURE' ORDER BY ROUTINE_NAME", dbname);
+        "WHERE ROUTINE_SCHEMA = '%s' AND ROUTINE_TYPE = 'PROCEDURE' ORDER BY ROUTINE_NAME", db_copy);
+    free(db_copy);
     return query_name_list(sql);
 }
 
@@ -317,13 +331,15 @@ static void* handle_mysql_db_functions(void* data) {
     cJSON* json = cJSON_Parse(json_str);
     if (!json) return strdup("[]");
     const char* dbname = json_get_string(json, "database");
+    if (!dbname) { cJSON_Delete(json); return strdup("[]"); }
+    char* db_copy = strdup(dbname);
     cJSON_Delete(json);
-    if (!dbname) return strdup("[]");
 
     char sql[512];
     snprintf(sql, sizeof(sql),
         "SELECT ROUTINE_NAME FROM information_schema.ROUTINES "
-        "WHERE ROUTINE_SCHEMA = '%s' AND ROUTINE_TYPE = 'FUNCTION' ORDER BY ROUTINE_NAME", dbname);
+        "WHERE ROUTINE_SCHEMA = '%s' AND ROUTINE_TYPE = 'FUNCTION' ORDER BY ROUTINE_NAME", db_copy);
+    free(db_copy);
     return query_name_list(sql);
 }
 

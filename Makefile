@@ -13,9 +13,11 @@ playground:
 
 build-playground:
 	ya -b playground
+build-db:
+	ya -b db
 	
-gdb: build-playground
-	gdb -x  gdb.gdb ./build/None/None/None/playground.exe  app/db/db.json
+gdb: build-db
+	gdb -x  gdb.gdb ./build/None/None/None/db.exe  app/db/db.json
 
 db:  
 	ya -b db

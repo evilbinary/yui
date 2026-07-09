@@ -443,21 +443,46 @@ function onDbSelect(layerId) {
         }
         var statusText = yui.find("statusText");
         if (statusText) statusText.text = "数据库: " + node.text;
-    } else if (node.expandable && node._db) {
+    } else if (node.expandable) {
+        // Category node (表/视图/存储过程/函数) - find db name from fullDbData
+        var dbName = null;
+        for (var i = 0; i < fullDbData.length && !dbName; i++) {
+            var cats = fullDbData[i].children || [];
+            for (var j = 0; j < cats.length; j++) {
+                if (cats[j].text === node.text) {
+                    dbName = cats[j]._db || fullDbData[i].text;
+                    break;
+                }
+            }
+        }
         var handlers = { "表": "mysql_db_tables", "视图": "mysql_db_views", "存储过程": "mysql_db_procedures", "函数": "mysql_db_functions" };
         var handler = handlers[node.text];
-        if (handler && node._db) {
-            loadCategoryItems(node._db, node.text, handler);
+        if (handler && dbName) {
+            loadCategoryItems(dbName, node.text, handler);
         }
         var statusText = yui.find("statusText");
-        if (statusText) statusText.text = "加载: " + node._db + "." + node.text;
-    } else if (node.icon === "item") {
+        if (statusText) statusText.text = "加载: " + (dbName || "?") + "." + node.text;
+    } else if (node.text) {
+        // Leaf item (table/view/proc/func) - find db name from fullDbData
+        var dbName = null;
+        for (var i = 0; i < fullDbData.length && !dbName; i++) {
+            var cats = fullDbData[i].children || [];
+            for (var j = 0; j < cats.length; j++) {
+                var items = cats[j].children || [];
+                for (var k = 0; k < items.length; k++) {
+                    if (items[k].text === node.text) {
+                        dbName = fullDbData[i].text;
+                        break;
+                    }
+                }
+            }
+        }
         var statusText = yui.find("statusText");
-        if (statusText) statusText.text = "选中: " + node._db + "." + node.text;
+        if (statusText) statusText.text = "选中: " + (dbName || "?") + "." + node.text;
 
         var editor = yui.find("sqlEditor");
-        if (editor) {
-            editor.text = "SELECT * FROM `" + node._db + "`.`" + node.text + "` LIMIT 100;";
+        if (editor && dbName) {
+            editor.text = "SELECT * FROM `" + dbName + "`.`" + node.text + "` LIMIT 100;";
         }
         if (activeTab >= 0 && activeTab < tabs.length) tabs[activeTab].sql = editor.text;
     }
