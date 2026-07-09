@@ -488,18 +488,12 @@ static int g_titlebar_colors_set = 0;  // 是否已设置颜色
 static void apply_titlebar_dark_mode(HWND hwnd) {
     BOOL dark = TRUE;
 
-    // 检查窗口样式
-    LONG style = GetWindowLongW(hwnd, GWL_STYLE);
-    LONG ex_style = GetWindowLongW(hwnd, GWL_EXSTYLE);
-    printf("DEBUG style=0x%lx ex=0x%lx\n", (unsigned long)style, (unsigned long)ex_style);
-
     // AllowDarkModeForWindow（uxtheme.dll ordinal 133）
     static BOOL (WINAPI *_AllowDarkModeForWindow)(HWND, BOOL) = NULL;
     if (!_AllowDarkModeForWindow) {
         HMODULE hUx = LoadLibraryA("uxtheme.dll");
         if (hUx) {
             *(FARPROC*)&_AllowDarkModeForWindow = GetProcAddress(hUx, (LPCSTR)(ULONG_PTR)(WORD)133);
-            printf("DEBUG AllowDarkModeForWindow=%p\n", (void*)_AllowDarkModeForWindow);
         }
     }
     if (_AllowDarkModeForWindow) {
@@ -516,14 +510,13 @@ static void apply_titlebar_dark_mode(HWND hwnd) {
     }
     if (_SetWindowCompositionAttribute) {
         WINDOWCOMPOSITIONATTRIBDATA data = { WCA_USEDARKMODECOLORS, &dark, sizeof(dark) };
-        BOOL ok = _SetWindowCompositionAttribute(hwnd, &data);
-        printf("DEBUG SWCA ok=%d\n", ok);
+        _SetWindowCompositionAttribute(hwnd, &data);
     }
 
     // DwmSetWindowAttribute（Win10 20H1+ / Win11）
     DwmSetWindowAttribute(hwnd, 20, &dark, sizeof(dark));
 
-    // 自定义标题栏颜色（Win11 完整支持，部分 Win10 20H2+ 也支持按钮区域变色）
+    // 自定义颜色（Win11 完整支持，Win10 静默忽略）
     if (g_titlebar_colors_set) {
         COLORREF bgColor = RGB(g_titlebar_bg.r, g_titlebar_bg.g, g_titlebar_bg.b);
         DwmSetWindowAttribute(hwnd, 35, &bgColor, sizeof(bgColor));
@@ -538,7 +531,7 @@ static void apply_titlebar_dark_mode(HWND hwnd) {
     // 刷新 DWM 框架
     SetWindowPos(hwnd, NULL, 0, 0, 0, 0, SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE);
 
-    // 扩展暗色框架到窗口（让按钮区域也变暗）
+    // 扩展 DWM 框架覆盖整个窗口（让按钮区域也使用暗色绘制）
     static BOOL (WINAPI *_DwmExtendFrameIntoClientArea)(HWND, const MARGINS*) = NULL;
     if (!_DwmExtendFrameIntoClientArea) {
         HMODULE hDwm = LoadLibraryA("dwmapi.dll");
@@ -547,14 +540,9 @@ static void apply_titlebar_dark_mode(HWND hwnd) {
         }
     }
     if (_DwmExtendFrameIntoClientArea) {
-        // MARGINS {-1} 扩展框架到整个窗口
         MARGINS margins = { -1, -1, -1, -1 };
         _DwmExtendFrameIntoClientArea(hwnd, &margins);
-        printf("DEBUG DwmExtendFrameIntoClientArea\n");
     }
-
-    printf("DEBUG dark applied\n");
-
 }
 
 // 窗口子类化过程 — 拦截 DWM 重置标题栏颜色的消息
