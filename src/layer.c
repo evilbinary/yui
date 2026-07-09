@@ -426,6 +426,12 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
     layer_set_text(layer, cJSON_GetObjectItem(json_obj, "text")->valuestring);
   }
 
+  // 解析可见性
+  cJSON* visible_item = cJSON_GetObjectItem(json_obj, "visible");
+  if (visible_item) {
+    layer->visible = cJSON_IsTrue(visible_item) ? VISIBLE : IN_VISIBLE;
+  }
+
   // 解析数据绑定
   cJSON* binding = cJSON_GetObjectItem(json_obj, "binding");
   if (binding) {
