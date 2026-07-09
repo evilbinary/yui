@@ -1088,51 +1088,97 @@ int js_module_call_event(const char* event_name, Layer* layer)
 {
     if (!g_js_ctx || !event_name) return -1;
 
-    // 移除 @ 前缀（如果有）
-    const char* func_name = event_name;
-    if (func_name[0] == '@') {
-        func_name++;
-    }
+    // @ 前缀表示函数名引用，否则是内联 JS 代码
+    if (event_name[0] == '@') {
+        // 函数名引用：移除 @ 前缀后查找全局函数并调用
+        const char* func_name = event_name + 1;
+        // 获取全局对象
+        JSValue global_obj = JS_GetGlobalObject(g_js_ctx);
+        JSValue func = JS_GetPropertyStr(g_js_ctx, global_obj, func_name);
 
-    // 获取全局对象
-    JSValue global_obj = JS_GetGlobalObject(g_js_ctx);
-    JSValue func = JS_GetPropertyStr(g_js_ctx, global_obj, func_name);
+        if (JS_IsUndefined(func) || JS_IsNull(func)) {
+            JS_FreeValue(g_js_ctx, global_obj);
+            JS_FreeValue(g_js_ctx, func);
+            return -1;
+        }
 
-    if (JS_IsUndefined(func) || JS_IsNull(func)) {
+        if (!JS_IsFunction(g_js_ctx, func)) {
+            JS_FreeValue(g_js_ctx, global_obj);
+            JS_FreeValue(g_js_ctx, func);
+            return -1;
+        }
+
+        // 准备参数
+        JSValue args[1];
+        args[0] = layer ? JS_NewString(g_js_ctx, layer->id) : JS_NULL;
+
+        // 调用函数
+        JSValue result = JS_Call(g_js_ctx, func, JS_UNDEFINED, 1, args);
+
+        // 清理
+        JS_FreeValue(g_js_ctx, args[0]);
         JS_FreeValue(g_js_ctx, global_obj);
         JS_FreeValue(g_js_ctx, func);
-        return -1;
-    }
 
-    if (!JS_IsFunction(g_js_ctx, func)) {
-        JS_FreeValue(g_js_ctx, global_obj);
-        JS_FreeValue(g_js_ctx, func);
-        return -1;
-    }
+        if (JS_IsException(result)) {
+            JSValue exc = JS_GetException(g_js_ctx);
+            char err_prefix[256];
+            snprintf(err_prefix, sizeof(err_prefix), "event '%s'", event_name);
+            print_quickjs_exception(g_js_ctx, exc, err_prefix);
+            JS_FreeValue(g_js_ctx, exc);
+            JS_FreeValue(g_js_ctx, result);
+            return -1;
+        }
 
-    // 准备参数
-    JSValue args[1];
-    args[0] = layer ? JS_NewString(g_js_ctx, layer->id) : JS_NULL;
-
-    // 调用函数
-    JSValue result = JS_Call(g_js_ctx, func, JS_UNDEFINED, 1, args);
-
-    // 清理
-    JS_FreeValue(g_js_ctx, args[0]);
-    JS_FreeValue(g_js_ctx, global_obj);
-    JS_FreeValue(g_js_ctx, func);
-
-    if (JS_IsException(result)) {
-        JSValue exc = JS_GetException(g_js_ctx);
-        char err_prefix[256];
-        snprintf(err_prefix, sizeof(err_prefix), "event '%s'", event_name);
-        print_quickjs_exception(g_js_ctx, exc, err_prefix);
-        JS_FreeValue(g_js_ctx, exc);
         JS_FreeValue(g_js_ctx, result);
+        return 0;
+    }
+
+    // 内联 JS 代码：直接 eval 执行
+    const char* eval_src = event_name;
+    char* wrapped = NULL;
+    size_t eval_len = strlen(event_name);
+
+    if (strncmp(event_name, "function", 8) == 0) {
+        wrapped = malloc(eval_len + 3);
+        if (!wrapped) return -1;
+        wrapped[0] = '(';
+        memcpy(wrapped + 1, event_name, eval_len);
+        wrapped[1 + eval_len] = ')';
+        wrapped[2 + eval_len] = '\0';
+        eval_src = wrapped;
+        eval_len += 2;
+    }
+
+    JSValue val = JS_Eval(g_js_ctx, eval_src, eval_len, "<event>", JS_EVAL_TYPE_GLOBAL);
+    if (wrapped) free(wrapped);
+
+    if (JS_IsException(val)) {
+        JSValue exc = JS_GetException(g_js_ctx);
+        print_quickjs_exception(g_js_ctx, exc, "<event>");
+        JS_FreeValue(g_js_ctx, exc);
+        JS_FreeValue(g_js_ctx, val);
         return -1;
     }
 
-    JS_FreeValue(g_js_ctx, result);
+    // 如果求值结果是函数则调用它
+    if (JS_IsFunction(g_js_ctx, val)) {
+        JSValue args[1];
+        args[0] = layer ? JS_NewString(g_js_ctx, layer->id) : JS_NULL;
+        JSValue result = JS_Call(g_js_ctx, val, JS_UNDEFINED, 1, args);
+        JS_FreeValue(g_js_ctx, args[0]);
+
+        if (JS_IsException(result)) {
+            JSValue exc = JS_GetException(g_js_ctx);
+            print_quickjs_exception(g_js_ctx, exc, "<event>");
+            JS_FreeValue(g_js_ctx, exc);
+            JS_FreeValue(g_js_ctx, result);
+            JS_FreeValue(g_js_ctx, val);
+            return -1;
+        }
+        JS_FreeValue(g_js_ctx, result);
+    }
+    JS_FreeValue(g_js_ctx, val);
     return 0;
 }
 

@@ -127,8 +127,14 @@ static void js_module_common_event(void* data)
     if (layer && layer->event) {
         // 查找 click_name 对应的 JS 函数并调用
         if (layer->event->click_name[0] != '\0') {
-            printf("JS: YUI click handler calling '%s'\n", layer->event->click_name);
-            js_module_trigger_event(layer->event->click_name, layer);
+            const char* name = layer->event->click_name;
+            printf("JS: YUI click handler calling '%s'\n", name);
+            // 直接查找，如果失败则尝试加上图层ID前缀（支持文档级事件）
+            if (js_module_trigger_event(name, layer) != 0) {
+                char full_name[256];
+                snprintf(full_name, sizeof(full_name), "%s.%s", layer->id, name);
+                js_module_trigger_event(full_name, layer);
+            }
         }
     }
 }
@@ -326,15 +332,20 @@ static void register_js_event_mapping(const char* event_name, const char* func_n
 
     strncpy(g_js_event_map[g_js_event_count].event_name, event_name, 127);
     g_js_event_map[g_js_event_count].event_name[127] = '\0';
-    strncpy(g_js_event_map[g_js_event_count].func_name, clean_func_name, 127);
+    strncpy(g_js_event_map[g_js_event_count].func_name, func_name, 127);
     g_js_event_map[g_js_event_count].func_name[127] = '\0';
 
-    printf("JS: Registered JS event: '%s' -> '%s'\n", event_name, clean_func_name);
+    printf("JS: Registered JS event: '%s' -> '%s'\n", event_name, func_name);
 
 
 
-    // 支持event_name=id+event 这种格式 card1.onClick 这种格式的
+    // Extract event_type for dot-separated names (e.g., "menuTestApp.handleMenuClick" -> "handleMenuClick")
     char* dot_pos = strstr(event_name, ".");
+    char* event_type = NULL;
+    if (dot_pos != NULL) {
+        event_type = dot_pos + 1;
+    }
+
     if (dot_pos != NULL && g_layer_root ) {
         // 复制 id（在 . 之前的部分）
         char layer_id[128];
@@ -342,9 +353,6 @@ static void register_js_event_mapping(const char* event_name, const char* func_n
         if (id_len > 127) id_len = 127;
         strncpy(layer_id, event_name, id_len);
         layer_id[id_len] = '\0';
-
-        // event_type 在 . 之后的部分
-        char* event_type = dot_pos + 1;
 
         // 根据 event_type 获取对应的事件处理函数
         EventHandler handler = get_event_handler_by_type(event_type);
@@ -355,15 +363,34 @@ static void register_js_event_mapping(const char* event_name, const char* func_n
             }
         } else {
             // 非标准事件类型（如 onItemClick），注册为全局处理器
-            register_event_handler(clean_func_name, js_module_common_event);
+            // 以 @ 开头的是函数名引用，否则是内联 JS 代码
+            if (func_name[0] == '@') {
+                register_event_handler(clean_func_name, js_module_common_event);
+            } else {
+                register_event_handler(event_type, js_module_common_event);
+            }
         }
     }else{
         EventHandler handler = get_event_handler_by_type(event_name);
-
-        // 注册layer 回调用事件（使用通用事件处理器）
-        register_event_handler(clean_func_name, js_module_common_event);
+        // 以 @ 开头的是函数名引用，否则是内联 JS 代码
+        if (func_name[0] == '@') {
+            register_event_handler(clean_func_name, js_module_common_event);
+        } else {
+            register_event_handler(event_name, js_module_common_event);
+        }
     }
     g_js_event_count++;
+
+    // Also register unprefixed event type (e.g., "handleMenuClick" without "menuTestApp." prefix)
+    // so it can be found regardless of which layer triggers it
+    if (dot_pos != NULL && event_type != NULL && g_js_event_count < MAX_JS_EVENTS) {
+        strncpy(g_js_event_map[g_js_event_count].event_name, event_type, 127);
+        g_js_event_map[g_js_event_count].event_name[127] = '\0';
+        strncpy(g_js_event_map[g_js_event_count].func_name, func_name, 127);
+        g_js_event_map[g_js_event_count].func_name[127] = '\0';
+        printf("JS: Registered JS event (unprefixed): '%s' -> '%s'\n", event_type, func_name);
+        g_js_event_count++;
+    }
 }
 
 
@@ -550,11 +577,9 @@ int js_module_load_from_json(cJSON* root_json, const char* json_file_path)
     int total_loaded = load_js_recursive(root_json, json_dir);
     printf("JS: Total %d JS file(s) loaded from JSON\n", total_loaded);
 
-    // 自动触发 onLoad 事件（如果有）
-    if (total_loaded > 0) {
-        printf("JS: Triggering 'onLoad' event...\n");
-        js_module_trigger_event("onLoad", NULL);
-    }
+    // 自动触发 onLoad 事件
+    printf("JS: Triggering 'onLoad' event...\n");
+    js_module_trigger_event("onLoad", NULL);
 
     return total_loaded;
 }
