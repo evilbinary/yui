@@ -35,7 +35,7 @@
         "type": "View",
         "position": [0, 36],
             "layout": {
-              "type": "vertical",
+              "type": "horizontal",
               "spacing": 0,
               "padding": [0, 0, 0, 0]
             },
