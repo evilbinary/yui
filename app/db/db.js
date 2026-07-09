@@ -332,12 +332,13 @@ function loadCategoryItems(dbName, category, handler) {
                 var cats = fullDbData[i].children;
                 for (var j = 0; j < cats.length; j++) {
                     if (cats[j].text === category) {
+                        var categoryIcons = { "表": "app/assets/icons/db-table.svg", "视图": "app/assets/icons/db-view.svg", "存储过程": "app/assets/icons/db-procedure.svg", "函数": "app/assets/icons/db-function.svg" };
                         var children = [];
                         for (var k = 0; k < items.length; k++) {
                             children.push({
                                 id: "item_" + dbName + "_" + category + "_" + items[k],
                                 text: items[k],
-                                icon: "item",
+                                icon: categoryIcons[category] || "item",
                                 icon_text: cats[j].icon_text,
                                 _db: dbName
                             });
@@ -479,6 +480,14 @@ function onDbExpand(layerId) {
             fullDbData[i].expanded = node.expanded;
             break;
         }
+        // 也检查分类节点
+        var cats = fullDbData[i].children || [];
+        for (var j = 0; j < cats.length; j++) {
+            if (cats[j].text === node.text) {
+                cats[j].expanded = node.expanded;
+                break;
+            }
+        }
     }
 
     // 展开数据库节点时加载分类
@@ -488,11 +497,25 @@ function onDbExpand(layerId) {
         }
     }
     // 展开分类节点时加载其子项
-    if (node.expandable && node._db && node.expanded) {
-        var handlers = { "表": "mysql_db_tables", "视图": "mysql_db_views", "存储过程": "mysql_db_procedures", "函数": "mysql_db_functions" };
-        var handler = handlers[node.text];
-        if (handler) {
-            loadCategoryItems(node._db, node.text, handler);
+    if (node.expandable && node.expanded) {
+        // 从 fullDbData 查找分类所属的数据库名
+        var dbName = null;
+        for (var i = 0; i < fullDbData.length; i++) {
+            var cats = fullDbData[i].children || [];
+            for (var j = 0; j < cats.length; j++) {
+                if (cats[j].text === node.text) {
+                    dbName = cats[j]._db || fullDbData[i].text;
+                    break;
+                }
+            }
+            if (dbName) break;
+        }
+        if (dbName) {
+            var handlers = { "表": "mysql_db_tables", "视图": "mysql_db_views", "存储过程": "mysql_db_procedures", "函数": "mysql_db_functions" };
+            var handler = handlers[node.text];
+            if (handler) {
+                loadCategoryItems(dbName, node.text, handler);
+            }
         }
     }
 }

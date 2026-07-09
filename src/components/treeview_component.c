@@ -1095,7 +1095,10 @@ void treeview_component_render(Layer* layer) {
                 Texture* node_icon_tex = NULL;
                 int node_icon_owned = 0;
                 if (node->icon && !node->icon_tex) {
-                    node->icon_tex = backend_load_texture(node->icon);
+                    // 只有看起来像文件路径时才尝试加载图片
+                    if (strchr(node->icon, '.') || strchr(node->icon, '/') || strchr(node->icon, '\\')) {
+                        node->icon_tex = backend_load_texture(node->icon);
+                    }
                 }
                 if (node->icon_tex) {
                     node_icon_tex = node->icon_tex;
@@ -1251,7 +1254,9 @@ void treeview_component_render(Layer* layer) {
                         Texture* child_icon_tex = NULL;
                         int child_icon_owned = 0;
                         if (current->icon && !current->icon_tex) {
-                            current->icon_tex = backend_load_texture(current->icon);
+                            if (strchr(current->icon, '.') || strchr(current->icon, '/') || strchr(current->icon, '\\')) {
+                                current->icon_tex = backend_load_texture(current->icon);
+                            }
                         }
                         if (current->icon_tex) {
                             child_icon_tex = current->icon_tex;
