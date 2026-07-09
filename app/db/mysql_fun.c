@@ -195,6 +195,37 @@ static void* handle_mysql_databases(void* data) {
     return json_out;
 }
 
+static void* handle_mysql_db_tables(void* data) {
+    const char* json_str = (const char*)data;
+    if (!json_str || !g_mysql_conn || !g_mysql_connected) return strdup("[]");
+
+    cJSON* json = cJSON_Parse(json_str);
+    if (!json) return strdup("[]");
+
+    const char* dbname = json_get_string(json, "database");
+    if (!dbname) { cJSON_Delete(json); return strdup("[]"); }
+    cJSON_Delete(json);
+
+    char sql[512];
+    snprintf(sql, sizeof(sql), "SHOW TABLES FROM `%s`", dbname);
+
+    if (mysql_query(g_mysql_conn, sql) != 0) return strdup("[]");
+
+    MYSQL_RES* result = mysql_store_result(g_mysql_conn);
+    if (!result) return strdup("[]");
+
+    cJSON* arr = cJSON_CreateArray();
+    MYSQL_ROW row;
+    while ((row = mysql_fetch_row(result))) {
+        cJSON_AddItemToArray(arr, cJSON_CreateString(row[0]));
+    }
+    mysql_free_result(result);
+
+    char* json_out = cJSON_PrintUnformatted(arr);
+    cJSON_Delete(arr);
+    return json_out;
+}
+
 static void* handle_mysql_error(void* data) {
     if (g_mysql_conn) {
         char buf[512];
@@ -239,5 +270,6 @@ void register_mysql_handlers(void) {
     register_event_handler("mysql_databases",  handle_mysql_databases);
     register_event_handler("mysql_error",      handle_mysql_error);
     register_event_handler("mysql_columns",    handle_mysql_columns);
-    printf("MySQL: Registered %d event handlers\n", 8);
+    register_event_handler("mysql_db_tables",  handle_mysql_db_tables);
+    printf("MySQL: Registered %d event handlers\n", 9);
 }

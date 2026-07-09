@@ -26,6 +26,10 @@ TreeViewComponent* treeview_component_create(Layer* layer) {
     component->user_data = NULL;
     component->on_node_selected = NULL;
     component->on_node_expanded = NULL;
+    component->expand_icon = strdup("▶");
+    component->collapse_icon = strdup("▼");
+    component->expand_icon_path = NULL;
+    component->collapse_icon_path = NULL;
     
     // 设置组件
     layer->component = component;
@@ -47,7 +51,12 @@ void treeview_component_destroy(TreeViewComponent* component) {
         }
         free(component->root_nodes);
     }
-    
+
+    if (component->expand_icon) free(component->expand_icon);
+    if (component->collapse_icon) free(component->collapse_icon);
+    if (component->expand_icon_path) free(component->expand_icon_path);
+    if (component->collapse_icon_path) free(component->collapse_icon_path);
+
     free(component);
 }
 
@@ -62,8 +71,15 @@ TreeNode* treeview_create_node(const char* text) {
     node->expanded = 0;
     node->selected = 0;
     node->level = 0;
+    node->expandable = 0;
     node->user_data = NULL;
     node->parent = NULL;
+    node->expand_icon = NULL;
+    node->collapse_icon = NULL;
+    node->expand_icon_path = NULL;
+    node->collapse_icon_path = NULL;
+    node->expand_icon_tex = NULL;
+    node->collapse_icon_tex = NULL;
     
     return node;
 }
@@ -84,6 +100,12 @@ void treeview_destroy_node(TreeNode* node) {
     if (node->text) {
         free(node->text);
     }
+    if (node->expand_icon) free(node->expand_icon);
+    if (node->collapse_icon) free(node->collapse_icon);
+    if (node->expand_icon_path) free(node->expand_icon_path);
+    if (node->collapse_icon_path) free(node->collapse_icon_path);
+    if (node->expand_icon_tex) backend_render_text_destroy(node->expand_icon_tex);
+    if (node->collapse_icon_tex) backend_render_text_destroy(node->collapse_icon_tex);
     
     free(node);
 }
@@ -205,7 +227,7 @@ const char* treeview_get_node_text(TreeNode* node) {
 
 // 展开节点
 void treeview_expand_node(TreeNode* node) {
-    if (!node || node->child_count == 0) return;
+    if (!node || (node->child_count == 0 && !node->expandable)) return;
     node->expanded = 1;
 }
 
@@ -217,7 +239,7 @@ void treeview_collapse_node(TreeNode* node) {
 
 // 切换节点展开状态
 void treeview_toggle_node(TreeNode* node) {
-    if (!node || node->child_count == 0) return;
+    if (!node || (node->child_count == 0 && !node->expandable)) return;
     node->expanded = !node->expanded;
 }
 
@@ -397,10 +419,21 @@ TreeNode* parse_tree_node(cJSON* node_json, int level, TreeNode* parent) {
     if (expanded && expanded->type == cJSON_True) {
         node->expanded = 1;
     }
+
+    // 解析自定义展开/折叠图标
+    cJSON* expandIcon = cJSON_GetObjectItem(node_json, "expandIcon");
+    if (expandIcon && expandIcon->valuestring) {
+        node->expand_icon = strdup(expandIcon->valuestring);
+    }
+    cJSON* collapseIcon = cJSON_GetObjectItem(node_json, "collapseIcon");
+    if (collapseIcon && collapseIcon->valuestring) {
+        node->collapse_icon = strdup(collapseIcon->valuestring);
+    }
     
     // 解析children属性
     cJSON* children = cJSON_GetObjectItem(node_json, "children");
     if (children && cJSON_IsArray(children)) {
+        node->expandable = 1;
         int child_count = cJSON_GetArraySize(children);
         
         for (int i = 0; i < child_count; i++) {
@@ -680,7 +713,7 @@ TreeNode* treeview_get_node_from_position(TreeViewComponent* component, int x, i
 
 // 检查是否点击在展开/折叠图标上
 int treeview_is_expand_icon_clicked(TreeViewComponent* component, TreeNode* node, int x, int y) {
-    if (!component || !node || node->child_count == 0) return 0;
+    if (!component || !node || (node->child_count == 0 && !node->expandable)) return 0;
     
     // 计算节点位置，考虑滚动偏移
     int item_y = component->layer->rect.y - component->layer->scroll_offset;
@@ -899,28 +932,60 @@ void treeview_component_render(Layer* layer) {
             }
             
             // 绘制展开/折叠图标
-            if (node->child_count > 0) {
+            if (node->child_count > 0 || node->expandable) {
                 int icon_x = layer->rect.x + node->level * component->indent_width + left_margin;
                 int icon_y = item_y + (component->item_height - 10) / 2;
-                
-                // 绘制图标背景
-                Rect icon_rect = {icon_x, icon_y, 10, 10};
-                backend_render_rounded_rect(&icon_rect, component->expand_icon_color, 2);
-                
-                // 绘制图标符号
+
+                // 尝试加载 SVG/图片图标 → 文字图标 → 默认矩形 +/-
+                Texture* icon_tex = NULL;
+                int tex_owned = 0;
+
                 if (node->expanded) {
-                    // 绘制减号
-                    Rect minus_rect = {icon_x + 2, icon_y + 4, 6, 2};
-                    backend_render_rect(&minus_rect, (Color){255, 255, 255, 255});
+                    const char* path = node->collapse_icon_path ? node->collapse_icon_path : component->collapse_icon_path;
+                    if (path && !node->collapse_icon_tex) {
+                        node->collapse_icon_tex = backend_load_texture((char*)path);
+                    }
+                    if (node->collapse_icon_tex) { icon_tex = node->collapse_icon_tex; }
+                    else {
+                        const char* text = node->collapse_icon ? node->collapse_icon : component->collapse_icon;
+                        if (text) { icon_tex = backend_render_texture(layer->font->default_font, text, component->expand_icon_color); tex_owned = 1; }
+                    }
                 } else {
-                    // 绘制加号
-                    Rect minus_rect = {icon_x + 2, icon_y + 4, 6, 2};
-                    backend_render_rect(&minus_rect, (Color){255, 255, 255, 255});
-                    Rect plus_rect = {icon_x + 4, icon_y + 2, 2, 6};
-                    backend_render_rect(&plus_rect, (Color){255, 255, 255, 255});
+                    const char* path = node->expand_icon_path ? node->expand_icon_path : component->expand_icon_path;
+                    if (path && !node->expand_icon_tex) {
+                        node->expand_icon_tex = backend_load_texture((char*)path);
+                    }
+                    if (node->expand_icon_tex) { icon_tex = node->expand_icon_tex; }
+                    else {
+                        const char* text = node->expand_icon ? node->expand_icon : component->expand_icon;
+                        if (text) { icon_tex = backend_render_texture(layer->font->default_font, text, component->expand_icon_color); tex_owned = 1; }
+                    }
+                }
+
+                if (icon_tex) {
+                    int tw, th;
+                    backend_query_texture(icon_tex, NULL, NULL, &tw, &th);
+                    Rect dst = {icon_x, icon_y + (10 - th/scale) / 2, tw/scale, th/scale};
+                    backend_render_text_copy(icon_tex, NULL, &dst);
+                    if (tex_owned) backend_render_text_destroy(icon_tex);
+                } else {
+                    // 绘制图标背景
+                    Rect icon_rect = {icon_x, icon_y, 10, 10};
+                    backend_render_rounded_rect(&icon_rect, component->expand_icon_color, 2);
+
+                    // 绘制图标符号
+                    if (node->expanded) {
+                        Rect minus_rect = {icon_x + 2, icon_y + 4, 6, 2};
+                        backend_render_rect(&minus_rect, (Color){255, 255, 255, 255});
+                    } else {
+                        Rect minus_rect = {icon_x + 2, icon_y + 4, 6, 2};
+                        backend_render_rect(&minus_rect, (Color){255, 255, 255, 255});
+                        Rect plus_rect = {icon_x + 4, icon_y + 2, 2, 6};
+                        backend_render_rect(&plus_rect, (Color){255, 255, 255, 255});
+                    }
                 }
             }
-            
+
             // 绘制文本（优先使用 layer->color，降级到组件默认色）
             Color default_color = layer->color.a > 0 ? layer->color : component->text_color;
             Color text_color = node->selected ? component->selected_text_color : default_color;
@@ -986,25 +1051,56 @@ void treeview_component_render(Layer* layer) {
                     }
                     
                     // 绘制展开/折叠图标
-                    if (current->child_count > 0) {
+                    if (current->child_count > 0 || current->expandable) {
                         int icon_x = layer->rect.x + current->level * component->indent_width + left_margin;
                         int icon_y = item_y + (component->item_height - 10) / 2;
-                        
-                        // 绘制图标背景
-                        Rect icon_rect = {icon_x, icon_y, 10, 10};
-                        backend_render_rounded_rect(&icon_rect, component->expand_icon_color, 2);
-                        
-                        // 绘制图标符号
+
+                        Texture* icon_tex = NULL;
+                        int tex_owned = 0;
+
                         if (current->expanded) {
-                            // 绘制减号
-                            Rect minus_rect = {icon_x + 2, icon_y + 4, 6, 2};
-                            backend_render_rect(&minus_rect, (Color){255, 255, 255, 255});
+                            const char* path = current->collapse_icon_path ? current->collapse_icon_path : component->collapse_icon_path;
+                            if (path && !current->collapse_icon_tex) {
+                                current->collapse_icon_tex = backend_load_texture((char*)path);
+                            }
+                            if (current->collapse_icon_tex) { icon_tex = current->collapse_icon_tex; }
+                            else {
+                                const char* text = current->collapse_icon ? current->collapse_icon : component->collapse_icon;
+                                if (text) { icon_tex = backend_render_texture(layer->font->default_font, text, component->expand_icon_color); tex_owned = 1; }
+                            }
                         } else {
-                            // 绘制加号
-                            Rect minus_rect = {icon_x + 2, icon_y + 4, 6, 2};
-                            backend_render_rect(&minus_rect, (Color){255, 255, 255, 255});
-                            Rect plus_rect = {icon_x + 4, icon_y + 2, 2, 6};
-                            backend_render_rect(&plus_rect, (Color){255, 255, 255, 255});
+                            const char* path = current->expand_icon_path ? current->expand_icon_path : component->expand_icon_path;
+                            if (path && !current->expand_icon_tex) {
+                                current->expand_icon_tex = backend_load_texture((char*)path);
+                            }
+                            if (current->expand_icon_tex) { icon_tex = current->expand_icon_tex; }
+                            else {
+                                const char* text = current->expand_icon ? current->expand_icon : component->expand_icon;
+                                if (text) { icon_tex = backend_render_texture(layer->font->default_font, text, component->expand_icon_color); tex_owned = 1; }
+                            }
+                        }
+
+                        if (icon_tex) {
+                            int tw, th;
+                            backend_query_texture(icon_tex, NULL, NULL, &tw, &th);
+                            Rect dst = {icon_x, icon_y + (10 - th/scale) / 2, tw/scale, th/scale};
+                            backend_render_text_copy(icon_tex, NULL, &dst);
+                            if (tex_owned) backend_render_text_destroy(icon_tex);
+                        } else {
+                            // 绘制图标背景
+                            Rect icon_rect = {icon_x, icon_y, 10, 10};
+                            backend_render_rounded_rect(&icon_rect, component->expand_icon_color, 2);
+
+                            // 绘制图标符号
+                            if (current->expanded) {
+                                Rect minus_rect = {icon_x + 2, icon_y + 4, 6, 2};
+                                backend_render_rect(&minus_rect, (Color){255, 255, 255, 255});
+                            } else {
+                                Rect minus_rect = {icon_x + 2, icon_y + 4, 6, 2};
+                                backend_render_rect(&minus_rect, (Color){255, 255, 255, 255});
+                                Rect plus_rect = {icon_x + 4, icon_y + 2, 2, 6};
+                                backend_render_rect(&plus_rect, (Color){255, 255, 255, 255});
+                            }
                         }
                     }
                     

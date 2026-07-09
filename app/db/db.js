@@ -12,8 +12,8 @@ var tabCounter = 1;
 var dbConfig = {
     host: "localhost",
     user: "root",
-    password: "",
-    database: "mysql",
+    password: "root",
+    database: "",
     port: 3306
 };
 
@@ -32,11 +32,11 @@ function connectDb() {
         var statusText = yui.find("statusText");
         var statusIcon = yui.find("statusIcon");
         if (statusText) {
-            statusText.text = "已连接 " + dbConfig.host + "/" + dbConfig.database;
+            statusText.text = "已连接 " + dbConfig.host + ":" + dbConfig.port;
             statusText.style = { color: "#A6E3A1" };
         }
         if (statusIcon) statusIcon.style = { color: "#A6E3A1" };
-        loadDbList();
+        loadDatabases();
     } else {
         updateStatus("连接失败: " + (info.error || "未知错误"), "#F38BA8");
     }
@@ -56,6 +56,7 @@ function disconnectDb() {
 
     var tree = yui.find("dbTree");
     if (tree) tree.data = [];
+    fullDbData = [];
 }
 
 
@@ -275,36 +276,57 @@ function onOpen() {
     updateStatus("打开: 未实现", "#F9E2AF");
 }
 
-// ====================== Database List ======================
+// ====================== Database Tree (Multi-DB) ======================
 
 var fullDbData = [];
 
-function loadDbList() {
-    var result = YUI.call("mysql_tables");
+function loadDatabases() {
+    var result = YUI.call("mysql_databases");
     fullDbData = [];
     if (result) {
         try {
-            var tables = JSON.parse(result);
-            var children = [];
-            for (var i = 0; i < tables.length; i++) {
-                children.push({
-                    id: "tbl_" + tables[i],
-                    text: tables[i],
-                    icon: "table"
+            var dbs = JSON.parse(result);
+            for (var i = 0; i < dbs.length; i++) {
+                fullDbData.push({
+                    id: "db_" + dbs[i],
+                    text: dbs[i],
+                    icon: "database",
+                    expanded: false,
+                    children: []
                 });
             }
-            fullDbData = [{
-                id: "current_db",
-                text: dbConfig.database,
-                icon: "database",
-                expanded: true,
-                children: children
-            }];
         } catch (e) {
-            print("loadDbList parse error: " + e);
+            print("loadDatabases parse error: " + e);
         }
     }
     applyDbFilter("");
+}
+
+function loadDbTables(dbName) {
+    var result = YUI.call("mysql_db_tables", JSON.stringify({ database: dbName }));
+    if (!result) return;
+    try {
+        var tables = JSON.parse(result);
+        for (var i = 0; i < fullDbData.length; i++) {
+            if (fullDbData[i].text === dbName) {
+                var children = [];
+                for (var j = 0; j < tables.length; j++) {
+                    children.push({
+                        id: "tbl_" + dbName + "_" + tables[j],
+                        text: tables[j],
+                        icon: "table",
+                        dbName: dbName
+                    });
+                }
+                fullDbData[i].children = children;
+                fullDbData[i].expanded = true;
+                break;
+            }
+        }
+        applyDbFilter("");
+    } catch (e) {
+        print("loadDbTables parse error: " + e);
+    }
 }
 
 function onSearchDb(text) {
@@ -379,11 +401,21 @@ function updateStatus(text, color) {
 function onDbSelect(node) {
     if (!node) return;
     currentDb = node;
-    var statusText = yui.find("statusText");
-    if (statusText) statusText.text = "选中: " + node.text;
-    if (node.icon === "table") {
+
+    if (node.icon === "database") {
+        if (!node.children || node.children.length === 0) {
+            loadDbTables(node.text);
+        }
+        var statusText = yui.find("statusText");
+        if (statusText) statusText.text = "数据库: " + node.text;
+    } else if (node.icon === "table") {
+        var statusText = yui.find("statusText");
+        if (statusText) statusText.text = "选中: " + node.dbName + "." + node.text;
+
         var editor = yui.find("sqlEditor");
-        if (editor) editor.text = "SELECT * FROM " + node.text + " LIMIT 100;";
+        if (editor) {
+            editor.text = "SELECT * FROM `" + node.dbName + "`.`" + node.text + "` LIMIT 100;";
+        }
         if (activeTab >= 0 && activeTab < tabs.length) tabs[activeTab].sql = editor.text;
     }
 }
@@ -393,4 +425,3 @@ function onDbSelect(node) {
 
 initTabs();
 updateStatus("未连接", "#F38BA8");
-loadDbList();

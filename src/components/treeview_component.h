@@ -16,8 +16,15 @@ typedef struct TreeNode {
     int expanded;
     int selected;
     int level;
+    int expandable;  // 1 = may have children (show expand icon even if child_count == 0)
     void* user_data;
     struct TreeNode* parent;
+    char* expand_icon;   // custom icon text when collapsed (e.g. "▶")
+    char* collapse_icon; // custom icon text when expanded (e.g. "▼")
+    char* expand_icon_path;   // path to SVG/image for collapsed icon
+    char* collapse_icon_path; // path to SVG/image for expanded icon
+    struct Texture* expand_icon_tex;   // cached texture for expand
+    struct Texture* collapse_icon_tex; // cached texture for collapse
 } TreeNode;
 
 // 树视图组件
@@ -37,6 +44,10 @@ typedef struct TreeViewComponent {
     void* user_data;
     void (*on_node_selected)(TreeNode* node, void* user_data);
     void (*on_node_expanded)(TreeNode* node, int expanded, void* user_data);
+    char* expand_icon;         // default expand icon text when collapsed
+    char* collapse_icon;       // default collapse icon text when expanded
+    char* expand_icon_path;    // default SVG/image path for collapsed
+    char* collapse_icon_path;  // default SVG/image path for expanded
 } TreeViewComponent;
 
 // 创建树视图组件
