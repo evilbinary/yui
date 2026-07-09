@@ -8,8 +8,6 @@
 
 #define TOOLTIP_DELAY_MS 400
 
-static Layer* g_tooltip_layer = NULL;
-
 // 渲染 tooltip 弹层
 static void tooltip_layer_render(Layer* layer) {
     if (!layer) return;
@@ -37,7 +35,7 @@ static void tooltip_layer_render(Layer* layer) {
 
 static void show_tooltip(LabelComponent* comp, int mouse_x, int mouse_y) {
     if (!comp || !comp->has_overflow) return;
-    if (g_tooltip_layer) return;
+    if (comp->tooltip_popup) return;
 
     Layer* layer = comp->layer;
     if (!layer->font || !layer->font->default_font) return;
@@ -52,44 +50,49 @@ static void show_tooltip(LabelComponent* comp, int mouse_x, int mouse_y) {
     backend_query_texture(tex, NULL, NULL, &tw, &th);
     backend_render_text_destroy(tex);
 
-    if (tw / scale <= layer->rect.w) return;
+    int tooltip_avail_w = layer->rect.w - (layer->rect.w > 10 ? 10 : 0);
+    if (tw / scale <= tooltip_avail_w) return;
 
     // 创建 tooltip layer
-    g_tooltip_layer = malloc(sizeof(Layer));
-    memset(g_tooltip_layer, 0, sizeof(Layer));
-    g_tooltip_layer->type = LABEL;
-    g_tooltip_layer->visible = 1;
-    g_tooltip_layer->font = layer->font;
+    Layer* tl = malloc(sizeof(Layer));
+    memset(tl, 0, sizeof(Layer));
+    tl->type = LABEL;
+    tl->visible = 1;
+    tl->font = layer->font;
 
     int pad = 6;
     int sw = 800, sh = 600;
     backend_get_windowsize(&sw, &sh);
 
-    g_tooltip_layer->rect.x = mouse_x + 12;
-    g_tooltip_layer->rect.y = mouse_y + 12;
-    g_tooltip_layer->rect.w = tw / scale + pad * 2;
-    g_tooltip_layer->rect.h = th / scale + pad * 2;
+    tl->rect.x = mouse_x + 12;
+    tl->rect.y = mouse_y + 12;
+    tl->rect.w = tw / scale + pad * 2;
+    tl->rect.h = th / scale + pad * 2;
 
-    if (g_tooltip_layer->rect.x + g_tooltip_layer->rect.w > sw)
-        g_tooltip_layer->rect.x = mouse_x - g_tooltip_layer->rect.w - 4;
-    if (g_tooltip_layer->rect.y + g_tooltip_layer->rect.h > sh)
-        g_tooltip_layer->rect.y = mouse_y - g_tooltip_layer->rect.h - 4;
+    if (tl->rect.x + tl->rect.w > sw)
+        tl->rect.x = mouse_x - tl->rect.w - 4;
+    if (tl->rect.y + tl->rect.h > sh)
+        tl->rect.y = mouse_y - tl->rect.h - 4;
 
-    g_tooltip_layer->text = strdup(full_text);
-    g_tooltip_layer->render = tooltip_layer_render;
+    tl->text = strdup(full_text);
+    tl->render = tooltip_layer_render;
 
-    PopupLayer* popup = popup_layer_create(g_tooltip_layer, POPUP_TYPE_TOOLTIP, 100);
-    if (popup) {
-        popup_manager_add(popup);
+    PopupLayer* popup = popup_layer_create(tl, POPUP_TYPE_TOOLTIP, 100);
+    if (popup && popup_manager_add(popup)) {
+        comp->tooltip_popup = popup;
+    } else {
+        if (tl->text) free(tl->text);
+        free(tl);
     }
 }
 
-static void hide_tooltip(void) {
-    if (g_tooltip_layer) {
-        popup_manager_remove(g_tooltip_layer);
-        if (g_tooltip_layer->text) free(g_tooltip_layer->text);
-        free(g_tooltip_layer);
-        g_tooltip_layer = NULL;
+static void hide_tooltip(LabelComponent* comp) {
+    if (comp->tooltip_popup) {
+        Layer* tl = ((PopupLayer*)comp->tooltip_popup)->layer;
+        popup_manager_remove(tl);
+        if (tl->text) free(tl->text);
+        free(tl);
+        comp->tooltip_popup = NULL;
     }
 }
 
@@ -115,7 +118,7 @@ LabelComponent* label_component_create(Layer* layer) {
 // 销毁标签组件
 void label_component_destroy(LabelComponent* component) {
     if (component) {
-        hide_tooltip();
+        hide_tooltip(component);
         free(component);
     }
 }
@@ -307,12 +310,12 @@ void label_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
         } else if (!inside && comp->hovering) {
             // 鼠标离开
             comp->hovering = 0;
-            hide_tooltip();
+            hide_tooltip(comp);
         }
     } else if (event->state == SDL_PRESSED || event->state == SDL_RELEASED) {
         if (!inside && comp->hovering) {
             comp->hovering = 0;
-            hide_tooltip();
+            hide_tooltip(comp);
         }
     }
 }

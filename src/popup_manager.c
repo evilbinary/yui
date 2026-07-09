@@ -1,5 +1,6 @@
 #include "popup_manager.h"
 #include "event.h"
+#include "backend.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -177,7 +178,10 @@ void popup_manager_close_by_type(PopupType type) {
 
 void popup_manager_render(void) {
     if (!g_popup_manager) return;
-    
+
+    // 重置裁剪区域，防止 tooltip 等弹出层被前一层裁剪
+    backend_render_set_clip_rect(NULL);
+
     PopupLayer* current = g_popup_manager->active_popups;
     while (current) {
         // 在调用回调函数前保存 next 指针，因为回调可能修改链表

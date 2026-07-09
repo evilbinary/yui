@@ -11,6 +11,7 @@ typedef struct {
     int has_overflow;      // 文本是否超出宽度
     Uint32 hover_start;    // 鼠标进入的时间戳
     int hovering;          // 鼠标是否在组件上
+    void* tooltip_popup;   // tooltip popup 引用 (PopupLayer*)
 } LabelComponent;
 
 // 函数声明
