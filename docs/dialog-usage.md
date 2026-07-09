@@ -1,399 +1,324 @@
-# Dialog组件在JSON中的使用方法
+# Dialog 组件使用说明
 
 ## 概述
 
-Dialog组件现在已经完全集成到YUI框架的layer系统中，可以通过JSON配置文件直接定义和使用对话框。
+Dialog 已集成到 YUI 的 Layer 体系中，可在 JSON 中声明对话框，通过 `YUI.show()` / `YUI.hide()` 或 C API 显示与关闭。
 
-## JSON配置结构
+未配置 `visible: true` 时，对话框默认隐藏，适合作为「关于」「确认」等按需弹出的窗口。
 
-### 基本语法
-
-```json
-{
-  "type": "dialog",
-  "name": "dialog_id",
-  "title": "对话框标题",
-  "message": "对话框消息内容",
-  "type": "info",           // 对话框类型
-  "modal": true,            // 是否模态
-  "buttons": [              // 按钮配置
-    {
-      "text": "确定",
-      "default": true        // 是否为默认按钮（回车触发）
-    },
-    {
-      "text": "取消",
-      "cancel": true         // 是否为取消按钮（ESC触发）
-    }
-  ],
-  "style": {                // 样式配置
-    "titleColor": "#4682B4",
-    "textColor": "#333333",
-    "bgColor": "#FFFFFF",
-    "borderColor": "#CCCCCC",
-    "buttonColor": "#4682B4",
-    "buttonHoverColor": "#5F9FD8",
-    "buttonTextColor": "#FFFFFF"
-  }
-}
-```
-
-## 完整示例
-
-### 1. 在app.json中配置对话框
+## JSON 基本结构
 
 ```json
 {
-  "window": {
-    "title": "Dialog测试应用",
-    "width": 800,
-    "height": 600,
-    "backgroundColor": "#f0f0f0"
-  },
-  "layers": [
-    // 触发按钮
-    {
-      "type": "button",
-      "name": "showDialogBtn",
-      "rect": {"x": 50, "y": 50, "width": 150, "height": 40},
-      "text": "显示对话框",
-      "onClick": "showDialog"
-    },
-    
-    // 信息对话框
-    {
-      "type": "dialog",
-      "name": "infoDialog",
-      "title": "信息",
-      "message": "这是一个信息对话框示例。",
-      "type": "info",
-      "modal": true,
-      "buttons": [
-        {
-          "text": "确定",
-          "default": true
-        }
-      ]
-    },
-    
-    // 确认对话框
-    {
-      "type": "dialog",
-      "name": "confirmDialog",
-      "title": "确认操作",
-      "message": "您确定要执行此操作吗？",
-      "type": "question",
-      "modal": true,
-      "buttons": [
-        {
-          "text": "是",
-          "default": true
-        },
-        {
-          "text": "否",
-          "cancel": true
-        }
-      ]
-    }
-  ]
-}
-```
-
-### 2. 在代码中显示对话框
-
-```c
-// 显示对话框的示例代码
-void show_dialog_handler(void* user_data) {
-    // 获取dialog组件
-    Layer* dialog_layer = find_layer_by_id("infoDialog");
-    if (dialog_layer && dialog_layer->component) {
-        DialogComponent* dialog = (DialogComponent*)dialog_layer->component;
-        
-        // 居中显示对话框
-        int screen_w = 800, screen_h = 600;
-        int dialog_w = 400, dialog_h = 200;
-        int x = (screen_w - dialog_w) / 2;
-        int y = (screen_h - dialog_h) / 2;
-        
-        dialog_component_show(dialog, x, y);
-    }
-}
-
-void show_confirm_dialog_handler(void* user_data) {
-    Layer* dialog_layer = find_layer_by_id("confirmDialog");
-    if (dialog_layer && dialog_layer->component) {
-        DialogComponent* dialog = (DialogComponent*)dialog_layer->component;
-        
-        // 设置关闭回调
-        dialog->on_close = confirm_dialog_close_handler;
-        
-        // 居中显示
-        int screen_w = 800, screen_h = 600;
-        int dialog_w = 400, dialog_h = 200;
-        int x = (screen_w - dialog_w) / 2;
-        int y = (screen_h - dialog_h) / 2;
-        
-        dialog_component_show(dialog, x, y);
-    }
-}
-
-// 对话框关闭回调
-void confirm_dialog_close_handler(DialogComponent* dialog, int button_index) {
-    if (button_index == 0) {
-        printf("用户选择了"是"\n");
-        // 执行确认操作
-    } else {
-        printf("用户选择了"否"\n");
-        // 取消操作
-    }
-}
-```
-
-## 对话框类型详解
-
-### 1. 信息对话框 (info)
-```json
-{
-  "type": "dialog",
-  "type": "info",
-  "title": "信息",
-  "message": "操作已完成！",
-  "buttons": [{"text": "确定", "default": true}]
-}
-```
-- **用途**: 显示一般信息
-- **默认颜色**: 蓝色主题
-- **典型场景**: 操作成功提示、通知信息
-
-### 2. 警告对话框 (warning)
-```json
-{
-  "type": "dialog",
-  "type": "warning",
-  "title": "警告",
-  "message": "此操作可能导致数据丢失！",
+  "id": "aboutDialog",
+  "type": "Dialog",
+  "title": "关于 YUI",
+  "message": "对话框正文，支持 \\n 换行。",
+  "dialogType": "info",
+  "modal": true,
+  "movable": true,
+  "fontSize": 12,
+  "size": [360, 240],
   "buttons": [
-    {"text": "继续", "default": true},
-    {"text": "取消", "cancel": true}
-  ]
-}
-```
-- **用途**: 警告潜在问题
-- **默认颜色**: 橙色主题
-- **典型场景**: 删除确认、修改重要设置
-
-### 3. 错误对话框 (error)
-```json
-{
-  "type": "dialog",
-  "type": "error",
-  "title": "错误",
-  "message": "无法连接到服务器！",
-  "buttons": [{"text": "确定", "default": true}]
-}
-```
-- **用途**: 显示错误信息
-- **默认颜色**: 红色主题
-- **典型场景**: 操作失败、系统错误
-
-### 4. 问题对话框 (question)
-```json
-{
-  "type": "dialog",
-  "type": "question",
-  "title": "确认",
-  "message": "是否保存更改？",
-  "buttons": [
-    {"text": "是", "default": true},
-    {"text": "否", "cancel": true}
-  ]
-}
-```
-- **用途**: 询问用户选择
-- **默认颜色**: 绿色主题
-- **典型场景**: 保存确认、删除确认
-
-### 5. 自定义对话框 (custom)
-```json
-{
-  "type": "dialog",
-  "type": "custom",
-  "title": "自定义",
-  "message": "这是一个自定义样式的对话框",
-  "modal": false,
-  "buttons": [
-    {"text": "选项1", "default": true},
-    {"text": "选项2"},
-    {"text": "关闭", "cancel": true}
+    { "text": "确定", "default": true }
   ],
   "style": {
-    "titleColor": "#9370DB",
-    "textColor": "#2C3E50",
-    "bgColor": "#F8F9FA",
-    "borderColor": "#9370DB",
-    "buttonColor": "#9370DB",
-    "buttonHoverColor": "#A688DB",
-    "buttonTextColor": "#FFFFFF"
+    "titleColor": "#89B4FA",
+    "textColor": "#CDD6F4",
+    "bgColor": "#1E1E2E",
+    "borderColor": "#45475A",
+    "buttonColor": "#45475A",
+    "buttonHoverColor": "#585B70",
+    "buttonTextColor": "#CDD6F4",
+    "buttonWidth": 80,
+    "buttonHeight": 32,
+    "buttonSpacing": 20,
+    "buttonAreaBottom": 50
   }
 }
 ```
-- **用途**: 完全自定义的对话框
-- **颜色**: 可通过style完全自定义
-- **典型场景**: 特殊用途、品牌定制
 
-## 样式配置
+### 顶层属性
 
-### 颜色属性
+| 属性 | 类型 | 说明 | 默认值 |
+|------|------|------|--------|
+| `id` | string | 图层 ID，供 `YUI.show("id")` 查找 | — |
+| `type` | string | 固定为 `"Dialog"` | — |
+| `title` | string | 标题 | 空 |
+| `message` | string | 正文，支持 `\n` 换行与自动折行 | 空 |
+| `dialogType` | string | 对话框语义类型，见下文 | `info` |
+| `modal` | boolean | 是否模态（打开时阻断主界面点击） | `true` |
+| `movable` | boolean | 是否允许拖动标题栏移动 | `true` |
+| `visible` | boolean | 是否初始可见；未配置时默认隐藏 | 隐藏 |
+| `fontSize` | number | 标题、正文、按钮文字字号 | 继承父层或 `16` |
+| `size` | [w, h] | 对话框宽高 | 自动估算 |
+| `position` | [x, y] | 模板图层位置（弹出时仍默认居中） | `[0, 0]` |
+| `buttons` | array | 底部按钮列表 | 空 |
+
+> **注意**：语义类型请用 `dialogType`（`info` / `warning` / `error` / `question` / `custom`），不要与图层 `type: "Dialog"` 混淆。
+
+## 完整示例（DB Editor）
+
+`app/db/db.json`：
+
+```json
+{
+  "id": "aboutDialog",
+  "type": "Dialog",
+  "title": "关于 YUI",
+  "message": "YUI - Ya Ya User Interface\n\n一款面向 AI 应用的轻量级 GUI 框架……",
+  "dialogType": "info",
+  "modal": true,
+  "fontSize": 12,
+  "size": [360, 240],
+  "buttons": [
+    {
+      "text": "确定",
+      "default": true,
+      "style": {
+        "bgColor": "#313244",
+        "hoverColor": "#45475A",
+        "textColor": "#F38BA8",
+        "width": 72,
+        "height": 28
+      }
+    }
+  ],
+  "style": {
+    "titleColor": "#89B4FA",
+    "textColor": "#CDD6F4",
+    "bgColor": "#1E1E2E",
+    "borderColor": "#45475A",
+    "buttonColor": "#45475A",
+    "buttonHoverColor": "#585B70",
+    "buttonTextColor": "#CDD6F4"
+  }
+}
+```
+
+`app/db/db.js`：
+
+```javascript
+function onAbout() {
+    YUI.show("aboutDialog");
+}
+```
+
+## 显示与隐藏
+
+### JavaScript（推荐）
+
+```javascript
+YUI.show("aboutDialog");   // 居中弹出
+YUI.hide("aboutDialog");   // 关闭
+```
+
+也可通过图层属性：
+
+```javascript
+var dlg = yui.find("aboutDialog");
+if (dlg) dlg.visible = true;   // 等价于 show
+```
+
+### C API
+
+```c
+Layer* layer = find_layer_by_id(root, "aboutDialog");
+if (layer) {
+    layer_show(layer);   // 内部调用 dialog 的 set_visible，居中弹出
+    layer_hide(layer);
+}
+
+// 或直接操作组件
+DialogComponent* dialog = (DialogComponent*)layer->component;
+dialog_component_show(dialog, x, y);
+dialog_component_hide(dialog);
+```
+
+## dialogType 类型
+
+| dialogType | 用途 | 标题默认色调 |
+|------------|------|--------------|
+| `info` | 一般信息提示 | 蓝色 |
+| `warning` | 警告 | 橙色 |
+| `error` | 错误 | 红色 |
+| `question` | 确认 / 询问 | 绿色 |
+| `custom` | 完全依赖 `style` 配色 | 自定义 |
+
+示例：
+
+```json
+{
+  "id": "confirmDialog",
+  "type": "Dialog",
+  "title": "确认删除",
+  "message": "此操作不可撤销，是否继续？",
+  "dialogType": "question",
+  "modal": true,
+  "buttons": [
+    { "text": "删除", "default": true },
+    { "text": "取消", "cancel": true }
+  ]
+}
+```
+
+## 样式配置（style）
+
+### 对话框颜色
 
 | 属性 | 说明 | 默认值 |
 |------|------|--------|
-| titleColor | 标题颜色 | 依赖类型 |
-| textColor | 文本颜色 | #333333 |
-| bgColor | 背景颜色 | #FFFFFF |
-| borderColor | 边框颜色 | #CCCCCC |
-| buttonColor | 按钮颜色 | #4682B4 |
-| buttonHoverColor | 按钮悬停颜色 | #5F9FD8 |
-| buttonTextColor | 按钮文本颜色 | #FFFFFF |
+| `titleColor` | 标题颜色 | 随 dialogType |
+| `textColor` | 正文颜色 | `#505050` 系 |
+| `bgColor` | 背景色 | `#FFFFFF` |
+| `borderColor` | 边框色 | `#CCCCCC` |
+| `buttonColor` | 按钮默认背景 | `#4682B4` |
+| `buttonHoverColor` | 按钮悬停 / 选中背景 | `#5F9FD8` |
+| `buttonTextColor` | 按钮文字颜色 | `#FFFFFF` |
 
-### 示例样式配置
+### 按钮区域布局（对话框级默认）
 
-```json
-"style": {
-  "titleColor": "#2C3E50",        // 深灰色标题
-  "textColor": "#34495E",         // 中灰色文本
-  "bgColor": "#ECF0F1",           // 浅灰色背景
-  "borderColor": "#BDC3C7",       // 边框颜色
-  "buttonColor": "#3498DB",       // 蓝色按钮
-  "buttonHoverColor": "#2980B9",  // 深蓝色悬停
-  "buttonTextColor": "#FFFFFF"     // 白色按钮文字
-}
-```
+| 属性 | 说明 | 默认值 |
+|------|------|--------|
+| `buttonWidth` | 按钮默认宽度（px） | `80` |
+| `buttonHeight` | 按钮默认高度（px） | `35` |
+| `buttonSpacing` | 按钮间距（px） | `20` |
+| `buttonAreaBottom` | 按钮区距对话框底边（px） | `50` |
 
-## 按钮配置
+未单独配置的按钮继承以上默认值。
 
-### 按钮属性
+## 按钮配置（buttons）
+
+### 通用属性
 
 | 属性 | 类型 | 说明 |
 |------|------|------|
-| text | string | 按钮显示文本 |
-| default | boolean | 是否为默认按钮（回车触发） |
-| cancel | boolean | 是否为取消按钮（ESC触发） |
+| `text` | string | 按钮文字 |
+| `default` | boolean | 默认按钮，**Enter** 触发 |
+| `cancel` | boolean | 取消按钮，**Esc** 优先触发 |
+| `style` | object | 单个按钮样式覆盖（可选） |
 
-### 按钮示例
+### 单按钮样式（buttons[].style）
+
+| 属性 | 说明 |
+|------|------|
+| `width` / `height` | 按钮尺寸，未设置则用对话框默认 |
+| `bgColor` 或 `color` | 背景色 |
+| `hoverColor` | 悬停 / 选中背景色 |
+| `textColor` | 文字颜色 |
+
+不同宽度的按钮会按总宽度自动居中排列。
 
 ```json
 "buttons": [
   {
     "text": "确定",
-    "default": true
+    "default": true,
+    "style": {
+      "bgColor": "#45475A",
+      "hoverColor": "#585B70",
+      "textColor": "#CDD6F4",
+      "width": 80,
+      "height": 32
+    }
   },
   {
-    "text": "取消", 
-    "cancel": true
-  },
-  {
-    "text": "稍后提醒"
+    "text": "取消",
+    "cancel": true,
+    "style": {
+      "bgColor": "#313244",
+      "hoverColor": "#45475A",
+      "textColor": "#F38BA8",
+      "width": 72,
+      "height": 28
+    }
   }
 ]
 ```
 
-## 事件处理
+## 长文本与滚动
 
-### 显示对话框
+正文超出标题与按钮之间的区域时：
 
-```c
-// 通过layer ID查找对话框
-Layer* dialog_layer = find_layer_by_id("dialog_id");
-if (dialog_layer && dialog_layer->component) {
-    DialogComponent* dialog = (DialogComponent*)dialog_layer->component;
-    
-    // 设置位置并显示
-    dialog_component_show(dialog, x, y);
-}
-```
+- 自动换行（含 UTF-8 字内折行）
+- 支持 `\n` 手动换行
+- 右侧显示**垂直滚动条**
+- **鼠标滚轮**滚动（约 20px/格）
+- 可**拖动滚动条**滑块，或点击轨道翻页
 
-### 处理按钮点击
+消息区会为滚动条预留右侧空间，避免文字与滑块重叠。
 
-```c
-// 设置对话框关闭回调
-dialog->on_close = dialog_closed_handler;
+## 拖动移动
 
-void dialog_closed_handler(DialogComponent* dialog, int button_index) {
-    switch (button_index) {
-        case 0:
-            printf("第一个按钮被点击\n");
-            break;
-        case 1:
-            printf("第二个按钮被点击\n");
-            break;
-        case -1:
-            printf("对话框被关闭（无按钮点击）\n");
-            break;
-    }
-}
-```
+- 默认 `movable: true`
+- 在**标题栏区域**按住左键拖动即可移动
+- 位置限制在窗口内，不会拖出屏幕
+- 关闭后再次 `show` 会重新居中，不记忆上次位置
 
-## 动态控制
+禁用拖动：
 
-### 运行时修改内容
-
-```c
-// 修改对话框标题和消息
-dialog_component_set_title(dialog, "新标题");
-dialog_component_set_message(dialog, "新消息内容");
-
-// 修改对话框类型
-dialog_component_set_type(dialog, DIALOG_TYPE_WARNING);
-
-// 动态添加按钮
-dialog_component_clear_buttons(dialog);
-dialog_component_add_button(dialog, "确定", ok_handler, NULL, 1, 0);
-dialog_component_add_button(dialog, "取消", cancel_handler, NULL, 0, 1);
-```
-
-### 检查对话框状态
-
-```c
-if (dialog_component_is_opened(dialog)) {
-    printf("对话框当前处于打开状态\n");
-}
+```json
+{ "movable": false }
 ```
 
 ## 键盘快捷键
 
-- **Enter**: 触发默认按钮（标记为"default"的按钮）
-- **ESC**: 触发取消按钮（标记为"cancel"的按钮）或直接关闭对话框
-- **Tab**: 在按钮间循环切换选择
+| 按键 | 行为 |
+|------|------|
+| **Enter** | 触发 `default: true` 的按钮；若无则触发第一个按钮 |
+| **Esc** | 触发 `cancel: true` 的按钮；若无则直接关闭 |
+| **Tab** | 在按钮间循环切换悬停选中 |
+
+按钮点击在**鼠标释放**时生效（与拖动、滚动条区分）。
+
+## 运行时修改（C API）
+
+```c
+dialog_component_set_title(dialog, "新标题");
+dialog_component_set_message(dialog, "新消息");
+dialog_component_set_type(dialog, DIALOG_TYPE_WARNING);
+dialog_component_set_modal(dialog, 1);
+
+dialog_component_clear_buttons(dialog);
+dialog_component_add_button(dialog, "确定", NULL, NULL, 1, 0);
+dialog_component_add_button(dialog, "取消", NULL, NULL, 0, 1);
+
+if (dialog_component_is_opened(dialog)) {
+    /* 已打开 */
+}
+```
+
+关闭回调：
+
+```c
+dialog->on_close = on_dialog_close;
+
+void on_dialog_close(DialogComponent* dialog, int button_index) {
+    /* button_index: 0,1,... 为按钮下标；-1 表示无按钮关闭 */
+}
+```
 
 ## 最佳实践
 
-1. **合理使用模态对话框**: 对于重要操作使用模态对话框，对于提示信息可使用非模态对话框
-
-2. **清晰的按钮文本**: 使用动词开头的明确按钮文本，如"确定删除"而不是简单的"确定"
-
-3. **合理的默认选择**: 为危险的默认操作设置取消按钮为默认按钮
-
-4. **一致的颜色主题**: 在同一应用中保持对话框颜色的一致性
-
-5. **适当的错误处理**: 始终检查对话框组件是否成功创建和显示
+1. 按需弹出类对话框不要设 `visible: true`，用 `YUI.show(id)` 控制。
+2. 危险操作用 `dialogType: "question"` 或 `"warning"`，并把 `cancel` 放在更符合习惯的按钮上。
+3. 长说明用 `\n` 分段；内容过长时依赖内置滚动，可适当增大 `size` 高度。
+4. 按钮文字保持简短；需要强调某个按钮时用 `buttons[].style` 单独配色。
+5. 模态对话框用于必须用户确认的场景；纯提示可考虑 `modal: false`（仍可通过拖动查看背后内容）。
 
 ## 故障排除
 
-### 常见问题
+| 现象 | 排查 |
+|------|------|
+| 对话框不出现 | 检查 `id` 是否与 `YUI.show` 一致；是否误设 `visible: false` 且未调用 show |
+| 启动就显示 | 去掉 `visible: true`，或确认未在 `onLoad` 里自动 show |
+| 按钮点不动 | 模态层是否被其他 popup 挡住；是否需在释放鼠标时点击 |
+| 文字显示不全 | 增大 `size` 高度，或使用滚轮 / 滚动条查看全文 |
+| 拖不动 | 确认 `movable` 未设为 `false`；在标题栏区域按下拖动 |
+| 样式无效 | 颜色使用 `#RRGGBB`；按钮级样式写在 `buttons[].style` 内 |
 
-1. **对话框不显示**
-   - 检查JSON中的"type"字段是否为"dialog"
-   - 确认layer ID唯一且正确
-   - 验证坐标是否在屏幕范围内
+## 相关文件
 
-2. **按钮无响应**
-   - 检查按钮配置是否正确
-   - 确认事件处理函数已正确设置
-   - 验证对话框是否获得焦点
-
-3. **样式不生效**
-   - 检查颜色格式是否正确（十六进制格式）
-   - 确认style对象语法正确
-   - 验证属性名称拼写
-
-通过以上配置和方法，你可以在YUI应用中灵活地使用dialog组件来实现各种用户交互场景。
+- 组件实现：`src/components/dialog_component.c`
+- 示例配置：`app/db/db.json`（`aboutDialog`）
+- 示例脚本：`app/db/db.js`（`onAbout`）
