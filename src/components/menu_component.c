@@ -209,20 +209,6 @@ MenuComponent* menu_component_create_from_json(Layer* layer, cJSON* json) {
             if (handler_name[0] == '@') handler_name++;
             strncpy(component->item_click_name, handler_name, sizeof(component->item_click_name) - 1);
             component->item_click_name[sizeof(component->item_click_name) - 1] = '\0';
-
-            // 设置图层的点击事件名称，供 js_module_common_event 路由到正确的JS函数
-            if (component->item_click_name[0]) {
-                if (!layer->event) {
-                    layer->event = malloc(sizeof(Event));
-                    if (layer->event) {
-                        memset(layer->event, 0, sizeof(Event));
-                    }
-                }
-                if (layer->event) {
-                    strncpy(layer->event->click_name, component->item_click_name, MAX_PATH - 1);
-                    layer->event->click_name[MAX_PATH - 1] = '\0';
-                }
-            }
         }
     }
 
@@ -456,6 +442,18 @@ static void menu_item_click(MenuComponent* component, MenuItem* item) {
         const char* orig = layer_get_text(component->layer);
         strncpy(saved_text, orig, sizeof(saved_text) - 1);
         layer_set_text(component->layer, item->text);
+
+        // 设置事件路由信息，供 js_module_common_event 调用对应的JS函数
+        if (!component->layer->event) {
+            component->layer->event = malloc(sizeof(Event));
+            if (component->layer->event) {
+                memset(component->layer->event, 0, sizeof(Event));
+            }
+        }
+        if (component->layer->event) {
+            strncpy(component->layer->event->click_name, component->item_click_name, MAX_PATH - 1);
+            component->layer->event->click_name[MAX_PATH - 1] = '\0';
+        }
 
         EventHandler handler = find_event_by_name(component->item_click_name);
         if (handler) handler(component->layer);

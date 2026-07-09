@@ -4,6 +4,7 @@
 #include "popup_manager.h"
 #include <stdio.h>
 #include <string.h>
+#include <stdbool.h>
 
 // 全局事件处理数组
 int global_event_handers_size=MAX_EVENT;
@@ -187,6 +188,69 @@ void handle_key_event(Layer* layer, KeyEvent* event) {
     }
 }
 
+// 递归检查指定位置是否有子图层可以处理点击事件
+static bool has_child_handler_at_point(Layer* layer, Point point) {
+    if (!layer) return false;
+    for (int i = 0; i < layer->child_count; i++) {
+        Layer* child = layer->children[i];
+        if (!child) continue;
+        if (point_in_rect(point, child->rect)) {
+            if (child->handle_mouse_event) return true;
+            if (child->event && child->event->click) return true;
+            if (has_child_handler_at_point(child, point)) return true;
+        }
+    }
+    if (layer->sub && point_in_rect(point, layer->sub->rect)) {
+        if (layer->sub->handle_mouse_event) return true;
+        if (layer->sub->event && layer->sub->event->click) return true;
+        if (has_child_handler_at_point(layer->sub, point)) return true;
+    }
+    return false;
+}
+
+// 默认鼠标事件处理函数（用于没有自定义 handle_mouse_event 的图层）
+void default_layer_handle_mouse_event(Layer* layer, MouseEvent* event) {
+    if (!layer || !event) return;
+
+    Point mouse_pos = {event->x, event->y};
+
+    // 默认状态管理
+    if (point_in_rect(mouse_pos, layer->rect)) {
+        if (layer->state != LAYER_STATE_FOCUSED && layer->state != LAYER_STATE_DISABLED) {
+            if (event->state == SDL_PRESSED) {
+                layer->state = LAYER_STATE_PRESSED;
+            } else {
+                layer->state = LAYER_STATE_HOVER;
+            }
+        }
+    } else {
+        if (layer->state != LAYER_STATE_DISABLED && layer->state != LAYER_STATE_FOCUSED) {
+            layer->state = LAYER_STATE_NORMAL;
+        }
+    }
+
+    // 通用点击事件分发（所有layer组件都会检查）
+    if (layer->event && layer->event->click) {
+        if (event->state == SDL_RELEASED && event->button == SDL_BUTTON_LEFT) {
+            if (point_in_rect(mouse_pos, layer->rect)) {
+                bool has_handler = has_child_handler_at_point(layer, mouse_pos);
+                if (!has_handler && layer->parent) {
+                    for (int i = 0; i < layer->parent->child_count && !has_handler; i++) {
+                        Layer* sibling = layer->parent->children[i];
+                        if (sibling && sibling != layer && sibling->handle_mouse_event &&
+                            point_in_rect(mouse_pos, sibling->rect)) {
+                            has_handler = true;
+                        }
+                    }
+                }
+                if (!has_handler) {
+                    layer->event->click(layer);
+                }
+            }
+        }
+    }
+}
+
 // 处理鼠标事件
 void handle_mouse_event(Layer* layer, MouseEvent* event) {
     if (!layer || !event) {
@@ -234,23 +298,9 @@ void handle_mouse_event(Layer* layer, MouseEvent* event) {
             // 注意：这里不返回，继续处理自定义事件处理函数
         }
 
-        // 如果没有自定义的事件处理函数，使用默认的状态管理
-        // 注意：如果已经设置了FOCUSED状态，不要覆盖它
-        if (!layer->handle_mouse_event && layer->state != LAYER_STATE_FOCUSED && layer->state != LAYER_STATE_DISABLED) {
-            if (event->state == SDL_PRESSED) {
-                // 鼠标按下时设置为PRESSED状态
-                layer->state = LAYER_STATE_PRESSED;
-            } else {
-                // 鼠标悬停时设置为HOVER状态
-                layer->state = LAYER_STATE_HOVER;
-            }
-        }
-    } else {
-        // 鼠标离开图层时，恢复为NORMAL状态（除非是DISABLED或FOCUSED状态）
-        if (!layer->handle_mouse_event && layer->state != LAYER_STATE_DISABLED && layer->state != LAYER_STATE_FOCUSED) {
-            layer->state = LAYER_STATE_NORMAL;
-        }
     }
+
+    
 
     // 让各组件自己处理鼠标事件（包括点击）
     if (layer->handle_mouse_event) {
