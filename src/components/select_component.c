@@ -259,7 +259,9 @@ SelectComponent* select_component_create_from_json(Layer* layer, cJSON* json_obj
             cJSON* on_change_obj = cJSON_GetObjectItem(events, "onChange");
             if (cJSON_IsString(on_change_obj)) {
                 const char* event_name = on_change_obj->valuestring;
-                // 将事件名称存储在 change_name 中，稍后由事件系统处理
+                if (event_name[0] == '@') {
+                    event_name++;
+                }
                 component->change_name = strdup(event_name);
                 EventHandler handler = find_event_by_name(event_name);
                 component->on_change = handler;
@@ -1561,20 +1563,21 @@ void select_component_trigger_on_change(SelectComponent* component) {
     
     // 如果没有事件处理器但有事件名称，尝试查找事件处理器
     if(component->on_change == NULL && component->change_name != NULL){
-        EventHandler handler = find_event_by_name(component->change_name);
+        const char* event_name = component->change_name;
+        if (event_name[0] == '@') {
+            event_name++;
+        }
+        EventHandler handler = find_event_by_name(event_name);
         component->on_change = handler;
     }
     
     // 检查是否有可用的事件处理器
     if (component->on_change) {
-        // 调用事件处理器
         component->on_change(component->layer);
     } else if (component->change_name) {
-        // 只有在指定了事件名称但找不到处理器时才打印警告
         printf("select_component_trigger_on_change not found onchange event %s\n", component->change_name);
         print_registered_events();
     }
-    // 如果既没有处理器也没有事件名称，则静默处理
 }
 
 // 注册事件处理函数
@@ -1582,6 +1585,9 @@ int select_component_register_event(Layer* layer, const char* event_name, const 
     if(strcmp(event_name,"change")==0 || strcmp(event_name,"onChange")==0){
         SelectComponent* component = (SelectComponent*)layer->component;
         component->on_change = event_handler;
+        if (event_func_name && event_func_name[0] == '@') {
+            event_func_name++;
+        }
         component->change_name = strdup(event_func_name);
         return 0;
     }

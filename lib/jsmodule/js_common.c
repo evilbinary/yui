@@ -365,6 +365,8 @@ static void register_js_event_mapping(const char* event_name, const char* func_n
             Layer * layer = find_layer_by_id(g_layer_root, layer_id);
             if (layer != NULL) {
                 js_module_set_layer_event(layer, event_type, clean_func_name, handler);
+            } else {
+                printf("JS: Warning: layer '%s' not found for event '%s'\n", layer_id, event_name);
             }
         } else {
             // 非标准事件类型（如 onItemClick），注册为全局处理器
