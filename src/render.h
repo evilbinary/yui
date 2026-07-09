@@ -8,6 +8,7 @@
 
 
 void render_layer(Layer* layer);
+void render_inspect_overlay(Layer* layer);
 void load_textures(Layer* root);
 void load_font(Layer* root);
 void load_all_fonts(Layer* layer);

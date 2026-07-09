@@ -272,115 +272,6 @@ void render_layer(Layer* layer) {
     
     render_clip_end(layer,&prev_clip);
 
-// Inspect 调试模式绘制
-if ((yui_inspect_mode_enabled || layer->inspect_enabled) && 
-    (layer->inspect_show_bounds || layer->inspect_show_info || yui_inspect_show_bounds || yui_inspect_show_info)) {
-    
-    // 显示边界框
-    if (yui_inspect_show_bounds && layer->inspect_show_bounds && layer->rect.w > 0 && layer->rect.h > 0) {
-        // 绘制边界矩形（半透明红色）
-        Color bounds_color = {255, 0, 0, 100}; // 半透明红色
-        backend_render_rect(&layer->rect, bounds_color);
-        
-        // 绘制四个角的标记点
-        int corner_size = 4;
-        Color corner_color = {255, 0, 0, 200}; // 不透明红色
-        
-        // 左上角
-        Rect corner1 = {layer->rect.x - corner_size/2, layer->rect.y - corner_size/2, corner_size, corner_size};
-        backend_render_fill_rect(&corner1, corner_color);
-        
-        // 右上角
-        Rect corner2 = {layer->rect.x + layer->rect.w - corner_size/2, layer->rect.y - corner_size/2, corner_size, corner_size};
-        backend_render_fill_rect(&corner2, corner_color);
-        
-        // 左下角
-        Rect corner3 = {layer->rect.x - corner_size/2, layer->rect.y + layer->rect.h - corner_size/2, corner_size, corner_size};
-        backend_render_fill_rect(&corner3, corner_color);
-        
-        // 右下角
-        Rect corner4 = {layer->rect.x + layer->rect.w - corner_size/2, layer->rect.y + layer->rect.h - corner_size/2, corner_size, corner_size};
-        backend_render_fill_rect(&corner4, corner_color);
-    }
-    
-    // 显示详细信息
-    if (yui_inspect_show_info && layer->inspect_show_info && strlen(layer->id) > 0) {
-        // 准备信息文本（多行）
-        char line1[128], line2[128], line3[128], line4[128];
-        snprintf(line1, sizeof(line1), "ID: %s", layer->id);
-        snprintf(line2, sizeof(line2), "Type: %s", 
-                 layer->type >= 0 && layer->type < layer_type_size ? layer_type_name[layer->type] : "Unknown");
-        snprintf(line3, sizeof(line3), "Pos: (%d,%d)", layer->rect.x, layer->rect.y);
-        snprintf(line4, sizeof(line4), "Size: (%d,%d)", layer->rect.w, layer->rect.h);
-        
-        // 渲染每一行以计算总尺寸
-        Color text_color = {255, 255, 255, 255};
-        Texture* tex1 = render_text(layer, line1, text_color);
-        Texture* tex2 = render_text(layer, line2, text_color);
-        Texture* tex3 = render_text(layer, line3, text_color);
-        Texture* tex4 = render_text(layer, line4, text_color);
-        
-        if (tex1 && tex2 && tex3 && tex4) {
-            int w1, h1, w2, h2, w3, h3, w4, h4;
-            backend_query_texture(tex1, NULL, NULL, &w1, &h1);
-            backend_query_texture(tex2, NULL, NULL, &w2, &h2);
-            backend_query_texture(tex3, NULL, NULL, &w3, &h3);
-            backend_query_texture(tex4, NULL, NULL, &w4, &h4);
-            
-            // 计算最大宽度和总高度
-            int max_width = w1 > w2 ? (w1 > w3 ? (w1 > w4 ? w1 : w4) : (w3 > w4 ? w3 : w4)) : (w2 > w3 ? (w2 > w4 ? w2 : w4) : (w3 > w4 ? w3 : w4));
-            int total_height = h1 + h2 + h3 + h4;
-            int line_spacing = 2; // 行间距
-            total_height += line_spacing * 3;
-            
-            // 添加边距
-            int padding = 10;
-            int info_width = max_width + padding * 2;
-            int info_height = total_height + padding * 2;
-            int info_x = layer->rect.x;
-            int info_y = layer->rect.y;
-            
-            // 确保信息显示在屏幕内（相对于整个窗口）
-            // 这里可以添加屏幕边界检查逻辑，如果需要的话
-            
-            // 绘制信息背景（半透明黑色）
-            Rect info_bg = {info_x, info_y, info_width, info_height};
-            Color bg_color = {0, 0, 0, 180}; // 半透明黑色
-            backend_render_fill_rect(&info_bg, bg_color);
-            
-            // 渲染每一行文本（缩放80%）
-            float scale = 0.8f; // 缩放比例
-            int current_y = info_y + padding;
-            Rect rect1 = {info_x + padding, current_y, (int)(w1 * scale), (int)(h1 * scale)};
-            backend_render_text_copy(tex1, NULL, &rect1);
-            current_y += (int)(h1 * scale) + line_spacing;
-            
-            Rect rect2 = {info_x + padding, current_y, (int)(w2 * scale), (int)(h2 * scale)};
-            backend_render_text_copy(tex2, NULL, &rect2);
-            current_y += (int)(h2 * scale) + line_spacing;
-            
-            Rect rect3 = {info_x + padding, current_y, (int)(w3 * scale), (int)(h3 * scale)};
-            backend_render_text_copy(tex3, NULL, &rect3);
-            current_y += (int)(h3 * scale) + line_spacing;
-            
-            Rect rect4 = {info_x + padding, current_y, (int)(w4 * scale), (int)(h4 * scale)};
-            backend_render_text_copy(tex4, NULL, &rect4);
-            
-            // 清理
-            backend_render_text_destroy(tex1);
-            backend_render_text_destroy(tex2);
-            backend_render_text_destroy(tex3);
-            backend_render_text_destroy(tex4);
-        } else {
-            // 清理已创建的纹理
-            if (tex1) backend_render_text_destroy(tex1);
-            if (tex2) backend_render_text_destroy(tex2);
-            if (tex3) backend_render_text_destroy(tex3);
-            if (tex4) backend_render_text_destroy(tex4);
-        }
-    }
-}
-
 #if DEBUG_VIEW
     Texture* text_texture = render_text(layer,layer->id, (Color){strlen(layer->id)*40%255, 0, 0, 255});
     Rect r={layer->rect.x+2,layer->rect.y,strlen(layer->id)*6,12};
@@ -389,6 +280,131 @@ if ((yui_inspect_mode_enabled || layer->inspect_enabled) &&
     backend_render_rect(&layer->rect,(Color){strlen(layer->id)*40%255, 0, 0, 255});
 #endif
 }
+
+static void render_layer_inspect(Layer* layer) {
+    if (!layer) {
+        return;
+    }
+
+    if (!(yui_inspect_mode_enabled || layer->inspect_enabled)) {
+        return;
+    }
+
+    if (!(layer->inspect_show_bounds || layer->inspect_show_info ||
+          yui_inspect_show_bounds || yui_inspect_show_info)) {
+        return;
+    }
+
+    if (yui_inspect_show_bounds && layer->inspect_show_bounds &&
+        layer->rect.w > 0 && layer->rect.h > 0) {
+        Color bounds_color = {255, 0, 0, 255};
+        backend_render_rect(&layer->rect, bounds_color);
+
+        int corner_size = 4;
+        Color corner_color = {255, 0, 0, 255};
+
+        Rect corner1 = {layer->rect.x - corner_size / 2, layer->rect.y - corner_size / 2, corner_size, corner_size};
+        backend_render_fill_rect(&corner1, corner_color);
+
+        Rect corner2 = {layer->rect.x + layer->rect.w - corner_size / 2, layer->rect.y - corner_size / 2, corner_size, corner_size};
+        backend_render_fill_rect(&corner2, corner_color);
+
+        Rect corner3 = {layer->rect.x - corner_size / 2, layer->rect.y + layer->rect.h - corner_size / 2, corner_size, corner_size};
+        backend_render_fill_rect(&corner3, corner_color);
+
+        Rect corner4 = {layer->rect.x + layer->rect.w - corner_size / 2, layer->rect.y + layer->rect.h - corner_size / 2, corner_size, corner_size};
+        backend_render_fill_rect(&corner4, corner_color);
+    }
+
+    if (yui_inspect_show_info && layer->inspect_show_info && strlen(layer->id) > 0) {
+        char line1[128], line2[128], line3[128], line4[128];
+        snprintf(line1, sizeof(line1), "ID: %s", layer->id);
+        snprintf(line2, sizeof(line2), "Type: %s",
+                 layer->type >= 0 && layer->type < layer_type_size ? layer_type_name[layer->type] : "Unknown");
+        snprintf(line3, sizeof(line3), "Pos: (%d,%d)", layer->rect.x, layer->rect.y);
+        snprintf(line4, sizeof(line4), "Size: (%d,%d)", layer->rect.w, layer->rect.h);
+
+        Color text_color = {255, 255, 255, 255};
+        Texture* tex1 = render_text(layer, line1, text_color);
+        Texture* tex2 = render_text(layer, line2, text_color);
+        Texture* tex3 = render_text(layer, line3, text_color);
+        Texture* tex4 = render_text(layer, line4, text_color);
+
+        if (tex1 && tex2 && tex3 && tex4) {
+            int w1, h1, w2, h2, w3, h3, w4, h4;
+            backend_query_texture(tex1, NULL, NULL, &w1, &h1);
+            backend_query_texture(tex2, NULL, NULL, &w2, &h2);
+            backend_query_texture(tex3, NULL, NULL, &w3, &h3);
+            backend_query_texture(tex4, NULL, NULL, &w4, &h4);
+
+            int max_width = w1 > w2 ? (w1 > w3 ? (w1 > w4 ? w1 : w4) : (w3 > w4 ? w3 : w4))
+                                    : (w2 > w3 ? (w2 > w4 ? w2 : w4) : (w3 > w4 ? w3 : w4));
+            int total_height = h1 + h2 + h3 + h4;
+            int line_spacing = 2;
+            total_height += line_spacing * 3;
+
+            int padding = 10;
+            int info_width = max_width + padding * 2;
+            int info_height = total_height + padding * 2;
+            int info_x = layer->rect.x;
+            int info_y = layer->rect.y;
+
+            Rect info_bg = {info_x, info_y, info_width, info_height};
+            Color bg_color = {0, 0, 0, 180};
+            backend_render_fill_rect(&info_bg, bg_color);
+
+            float info_scale = 0.8f;
+            int current_y = info_y + padding;
+            Rect rect1 = {info_x + padding, current_y, (int)(w1 * info_scale), (int)(h1 * info_scale)};
+            backend_render_text_copy(tex1, NULL, &rect1);
+            current_y += (int)(h1 * info_scale) + line_spacing;
+
+            Rect rect2 = {info_x + padding, current_y, (int)(w2 * info_scale), (int)(h2 * info_scale)};
+            backend_render_text_copy(tex2, NULL, &rect2);
+            current_y += (int)(h2 * info_scale) + line_spacing;
+
+            Rect rect3 = {info_x + padding, current_y, (int)(w3 * info_scale), (int)(h3 * info_scale)};
+            backend_render_text_copy(tex3, NULL, &rect3);
+            current_y += (int)(h3 * info_scale) + line_spacing;
+
+            Rect rect4 = {info_x + padding, current_y, (int)(w4 * info_scale), (int)(h4 * info_scale)};
+            backend_render_text_copy(tex4, NULL, &rect4);
+
+            backend_render_text_destroy(tex1);
+            backend_render_text_destroy(tex2);
+            backend_render_text_destroy(tex3);
+            backend_render_text_destroy(tex4);
+        } else {
+            if (tex1) backend_render_text_destroy(tex1);
+            if (tex2) backend_render_text_destroy(tex2);
+            if (tex3) backend_render_text_destroy(tex3);
+            if (tex4) backend_render_text_destroy(tex4);
+        }
+    }
+}
+
+void render_inspect_overlay(Layer* layer) {
+    if (!layer || layer->visible == IN_VISIBLE) {
+        return;
+    }
+
+    if (!layer->parent) {
+        backend_render_set_clip_rect(NULL);
+    }
+
+    render_layer_inspect(layer);
+
+    for (int i = 0; i < layer->child_count; i++) {
+        if (layer->children[i]) {
+            render_inspect_overlay(layer->children[i]);
+        }
+    }
+
+    if (layer->sub) {
+        render_inspect_overlay(layer->sub);
+    }
+}
+
 void render_clip_start(Layer* layer,Rect* prev_clip){
     backend_render_get_clip_rect(prev_clip);
     // 设置当前图层的裁剪区域

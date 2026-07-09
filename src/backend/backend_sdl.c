@@ -91,6 +91,7 @@ void backend_main_loop(void) {
     SDL_RenderClear(renderer);
 
     render_layer(g_ui_root);  // 执行渲染管线
+    render_inspect_overlay(g_ui_root);
 
     // 渲染弹出层
     popup_manager_render();
@@ -1013,6 +1014,7 @@ void backend_run(Layer* ui_root){
         SDL_RenderClear(renderer);
 
         render_layer(ui_root);  // 执行渲染管线
+        render_inspect_overlay(ui_root);
 
         // 渲染弹出层
         popup_manager_render();
@@ -1458,6 +1460,7 @@ void backend_get_mouse_state(int* x, int* y){
 }
 
 void backend_render_fill_rect(Rect* rect,Color color){
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
     SDL_SetRenderDrawColor(renderer, 
                                 color.r, 
                                 color.g, 
@@ -1491,7 +1494,7 @@ void backend_render_rounded_rect_with_border(Rect* rect, Color bg_color, int rad
 }
 
 void backend_render_rect(Rect* rect,Color color){
-     // 绘制按钮边框
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
     SDL_SetRenderDrawColor(renderer, 
                                 color.r, 
                                 color.g, 
