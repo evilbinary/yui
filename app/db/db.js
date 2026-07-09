@@ -276,7 +276,7 @@ function onOpen() {
     updateStatus("打开: 未实现", "#F9E2AF");
 }
 
-// ====================== Database Tree (Multi-DB) ======================
+// ====================== Database Tree (Multi-DB with Categories) ======================
 
 var fullDbData = [];
 
@@ -290,7 +290,7 @@ function loadDatabases() {
                 fullDbData.push({
                     id: "db_" + dbs[i],
                     text: dbs[i],
-                    icon: "database",
+                    icon: "🗄",
                     expanded: false,
                     children: []
                 });
@@ -302,30 +302,54 @@ function loadDatabases() {
     applyDbFilter("");
 }
 
-function loadDbTables(dbName) {
-    var result = YUI.call("mysql_db_tables", JSON.stringify({ database: dbName }));
+function loadCategories(dbName) {
+    for (var i = 0; i < fullDbData.length; i++) {
+        if (fullDbData[i].text === dbName) {
+            if (!fullDbData[i].children || fullDbData[i].children.length === 0) {
+                fullDbData[i].children = [
+                    { text: "表", icon: "📊", children: [], _db: dbName, expandable: true },
+                    { text: "视图", icon: "👁", children: [], _db: dbName, expandable: true },
+                    { text: "存储过程", icon: "⚡", children: [], _db: dbName, expandable: true },
+                    { text: "函数", icon: "🔧", children: [], _db: dbName, expandable: true }
+                ];
+                fullDbData[i].expanded = true;
+            }
+            break;
+        }
+    }
+    applyDbFilter("");
+}
+
+function loadCategoryItems(dbName, category, handler) {
+    var result = YUI.call(handler, JSON.stringify({ database: dbName }));
     if (!result) return;
     try {
-        var tables = JSON.parse(result);
+        var items = JSON.parse(result);
         for (var i = 0; i < fullDbData.length; i++) {
             if (fullDbData[i].text === dbName) {
-                var children = [];
-                for (var j = 0; j < tables.length; j++) {
-                    children.push({
-                        id: "tbl_" + dbName + "_" + tables[j],
-                        text: tables[j],
-                        icon: "table",
-                        dbName: dbName
-                    });
+                var cats = fullDbData[i].children;
+                for (var j = 0; j < cats.length; j++) {
+                    if (cats[j].text === category) {
+                        var children = [];
+                        for (var k = 0; k < items.length; k++) {
+                            children.push({
+                                id: "item_" + dbName + "_" + category + "_" + items[k],
+                                text: items[k],
+                                icon: cats[j].icon,
+                                _db: dbName
+                            });
+                        }
+                        cats[j].children = children;
+                        cats[j].expanded = true;
+                        break;
+                    }
                 }
-                fullDbData[i].children = children;
-                fullDbData[i].expanded = true;
                 break;
             }
         }
         applyDbFilter("");
     } catch (e) {
-        print("loadDbTables parse error: " + e);
+        print("loadCategoryItems parse error: " + e);
     }
 }
 
@@ -423,5 +447,12 @@ function onDbSelect(node) {
 
 // ====================== Init ======================
 
+function onLoad() {
+  YUI.log('onLoad');
+  connectDb();
+  loadDatabases();
+}
+
+// ====================== Init ======================
 initTabs();
 updateStatus("未连接", "#F38BA8");

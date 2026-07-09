@@ -80,6 +80,7 @@ TreeNode* treeview_create_node(const char* text) {
     node->collapse_icon_path = NULL;
     node->expand_icon_tex = NULL;
     node->collapse_icon_tex = NULL;
+    node->icon_text = NULL;
     
     return node;
 }
@@ -106,6 +107,7 @@ void treeview_destroy_node(TreeNode* node) {
     if (node->collapse_icon_path) free(node->collapse_icon_path);
     if (node->expand_icon_tex) backend_render_text_destroy(node->expand_icon_tex);
     if (node->collapse_icon_tex) backend_render_text_destroy(node->collapse_icon_tex);
+    if (node->icon_text) free(node->icon_text);
     
     free(node);
 }
@@ -428,6 +430,10 @@ TreeNode* parse_tree_node(cJSON* node_json, int level, TreeNode* parent) {
     cJSON* collapseIcon = cJSON_GetObjectItem(node_json, "collapseIcon");
     if (collapseIcon && collapseIcon->valuestring) {
         node->collapse_icon = strdup(collapseIcon->valuestring);
+    }
+    cJSON* icon = cJSON_GetObjectItem(node_json, "icon");
+    if (icon && icon->valuestring) {
+        node->icon_text = strdup(icon->valuestring);
     }
     
     // 解析children属性
@@ -990,13 +996,31 @@ void treeview_component_render(Layer* layer) {
             Color default_color = layer->color.a > 0 ? layer->color : component->text_color;
             Color text_color = node->selected ? component->selected_text_color : default_color;
             if (node->text && layer->font && layer->font->default_font) {
+                // 计算文本起始X：展开图标(10px) + 间距(8px)
+                int base_text_x = layer->rect.x + node->level * component->indent_width + left_margin + 18;
+                int text_y_base = item_y + (component->item_height - text_height) / 2;
+                int text_x_offset = 0;
+
+                // 绘制节点icon图标(在文本前面)
+                if (node->icon_text) {
+                    Texture* icon_tex = backend_render_texture(layer->font->default_font, node->icon_text, text_color);
+                    if (icon_tex) {
+                        int iw, ih;
+                        backend_query_texture(icon_tex, NULL, NULL, &iw, &ih);
+                        Rect ir = {base_text_x, text_y_base, iw/scale, ih/scale};
+                        backend_render_text_copy(icon_tex, NULL, &ir);
+                        backend_render_text_destroy(icon_tex);
+                        text_x_offset = iw/scale + 4;
+                    }
+                }
+
                 Texture* text_texture = backend_render_texture(layer->font->default_font, node->text, text_color);
                 if (text_texture) {
                     int actual_text_width, actual_text_height;
                     backend_query_texture(text_texture, NULL, NULL, &actual_text_width, &actual_text_height);
                     
-                    // 计算文本位置
-                    int text_x = layer->rect.x + node->level * component->indent_width + left_margin + 18;
+                    // 计算文本位置(加上icon偏移)
+                    int text_x = base_text_x + text_x_offset;
                     int text_y = item_y + (component->item_height - actual_text_height / scale) / 2;
                     
                     Rect text_rect = {
@@ -1107,13 +1131,31 @@ void treeview_component_render(Layer* layer) {
                     // 绘制文本 - 修复后的代码
                     Color current_text_color = current->selected ? component->selected_text_color : component->text_color;
                     if (current->text && layer->font && layer->font->default_font) {
+                        // base text x: 展开图标(10px) + 间距(10px)
+                        int base_text_x = layer->rect.x + current->level * component->indent_width + left_margin + 20;
+                        int text_y_base = item_y + (component->item_height - text_height) / 2;
+                        int text_x_offset = 0;
+
+                        // 绘制节点icon图标(在文本前面)
+                        if (current->icon_text) {
+                            Texture* icon_tex = backend_render_texture(layer->font->default_font, current->icon_text, current_text_color);
+                            if (icon_tex) {
+                                int iw, ih;
+                                backend_query_texture(icon_tex, NULL, NULL, &iw, &ih);
+                                Rect ir = {base_text_x, text_y_base, iw/scale, ih/scale};
+                                backend_render_text_copy(icon_tex, NULL, &ir);
+                                backend_render_text_destroy(icon_tex);
+                                text_x_offset = iw/scale + 4;
+                            }
+                        }
+
                         Texture* text_texture = backend_render_texture(layer->font->default_font, current->text, current_text_color);
                         if (text_texture) {
                             int actual_text_width, actual_text_height;
                             backend_query_texture(text_texture, NULL, NULL, &actual_text_width, &actual_text_height);
                             
                             // 计算文本位置
-                        int current_text_x = layer->rect.x + current->level * component->indent_width + left_margin + 20;
+                        int current_text_x = base_text_x + text_x_offset;
                             int current_text_y = item_y + (component->item_height - actual_text_height / scale) / 2;
                             
                             Rect text_rect = {

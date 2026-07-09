@@ -259,6 +259,74 @@ static void* handle_mysql_columns(void* data) {
     return json_out;
 }
 
+// 通用查询: 从information_schema返回名称列表
+static char* query_name_list(const char* sql) {
+    if (!g_mysql_conn || !g_mysql_connected) return strdup("[]");
+    if (mysql_query(g_mysql_conn, sql) != 0) return strdup("[]");
+
+    MYSQL_RES* result = mysql_store_result(g_mysql_conn);
+    if (!result) return strdup("[]");
+
+    cJSON* arr = cJSON_CreateArray();
+    MYSQL_ROW row;
+    while ((row = mysql_fetch_row(result))) {
+        cJSON_AddItemToArray(arr, cJSON_CreateString(row[0]));
+    }
+    mysql_free_result(result);
+
+    char* json_out = cJSON_PrintUnformatted(arr);
+    cJSON_Delete(arr);
+    return json_out;
+}
+
+static void* handle_mysql_db_views(void* data) {
+    const char* json_str = (const char*)data;
+    if (!json_str) return strdup("[]");
+    cJSON* json = cJSON_Parse(json_str);
+    if (!json) return strdup("[]");
+    const char* dbname = json_get_string(json, "database");
+    cJSON_Delete(json);
+    if (!dbname) return strdup("[]");
+
+    char sql[512];
+    snprintf(sql, sizeof(sql),
+        "SELECT TABLE_NAME FROM information_schema.TABLES "
+        "WHERE TABLE_SCHEMA = '%s' AND TABLE_TYPE = 'VIEW' ORDER BY TABLE_NAME", dbname);
+    return query_name_list(sql);
+}
+
+static void* handle_mysql_db_procedures(void* data) {
+    const char* json_str = (const char*)data;
+    if (!json_str) return strdup("[]");
+    cJSON* json = cJSON_Parse(json_str);
+    if (!json) return strdup("[]");
+    const char* dbname = json_get_string(json, "database");
+    cJSON_Delete(json);
+    if (!dbname) return strdup("[]");
+
+    char sql[512];
+    snprintf(sql, sizeof(sql),
+        "SELECT ROUTINE_NAME FROM information_schema.ROUTINES "
+        "WHERE ROUTINE_SCHEMA = '%s' AND ROUTINE_TYPE = 'PROCEDURE' ORDER BY ROUTINE_NAME", dbname);
+    return query_name_list(sql);
+}
+
+static void* handle_mysql_db_functions(void* data) {
+    const char* json_str = (const char*)data;
+    if (!json_str) return strdup("[]");
+    cJSON* json = cJSON_Parse(json_str);
+    if (!json) return strdup("[]");
+    const char* dbname = json_get_string(json, "database");
+    cJSON_Delete(json);
+    if (!dbname) return strdup("[]");
+
+    char sql[512];
+    snprintf(sql, sizeof(sql),
+        "SELECT ROUTINE_NAME FROM information_schema.ROUTINES "
+        "WHERE ROUTINE_SCHEMA = '%s' AND ROUTINE_TYPE = 'FUNCTION' ORDER BY ROUTINE_NAME", dbname);
+    return query_name_list(sql);
+}
+
 // ====================== 注册 ======================
 
 void register_mysql_handlers(void) {
@@ -270,6 +338,9 @@ void register_mysql_handlers(void) {
     register_event_handler("mysql_databases",  handle_mysql_databases);
     register_event_handler("mysql_error",      handle_mysql_error);
     register_event_handler("mysql_columns",    handle_mysql_columns);
-    register_event_handler("mysql_db_tables",  handle_mysql_db_tables);
-    printf("MySQL: Registered %d event handlers\n", 9);
+    register_event_handler("mysql_db_tables",    handle_mysql_db_tables);
+    register_event_handler("mysql_db_views",     handle_mysql_db_views);
+    register_event_handler("mysql_db_procedures", handle_mysql_db_procedures);
+    register_event_handler("mysql_db_functions",  handle_mysql_db_functions);
+    printf("MySQL: Registered %d event handlers\n", 12);
 }

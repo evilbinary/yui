@@ -556,5 +556,8 @@
         }
       ]
     }
-  ]
+  ],
+  "events": {
+    "onLoad": "@onLoad"
+  }
 }

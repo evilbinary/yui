@@ -25,6 +25,7 @@ typedef struct TreeNode {
     char* collapse_icon_path; // path to SVG/image for expanded icon
     struct Texture* expand_icon_tex;   // cached texture for expand
     struct Texture* collapse_icon_tex; // cached texture for collapse
+    char* icon_text;  // icon text rendered before node label (e.g. "📊", "⚡")
 } TreeNode;
 
 // 树视图组件
