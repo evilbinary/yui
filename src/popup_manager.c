@@ -196,6 +196,16 @@ void popup_manager_render(void) {
     }
 }
 
+static int popup_point_inside(Layer* layer, MouseEvent* event) {
+    if (!layer || !event) {
+        return 0;
+    }
+    return event->x >= layer->rect.x &&
+           event->x < layer->rect.x + layer->rect.w &&
+           event->y >= layer->rect.y &&
+           event->y < layer->rect.y + layer->rect.h;
+}
+
 bool popup_manager_handle_mouse_event(MouseEvent* event) {
     if (!g_popup_manager || !event) {
         return false;
@@ -206,33 +216,40 @@ bool popup_manager_handle_mouse_event(MouseEvent* event) {
     }
     
     PopupLayer* current = g_popup_manager->active_popups;
-    bool handled = false;
+    bool block_main = false;
     
-    // 处理popup内部的事件
     while (current) {
-        // 检查指针是否有效
         if ((uintptr_t)current == 0xabababababababab || 
             (uintptr_t)current == 0xfeeefeeefeeefeee) {
-            // 检测到 freed 内存指针，清空列表并返回
             printf("ERROR: popup_manager_handle_mouse_event - detected freed memory pointer, clearing list\n");
             g_popup_manager->active_popups = NULL;
             g_popup_manager->top_popup = NULL;
             return false;
         }
         
-        // 在调用回调函数前保存 next 指针，因为回调可能修改链表
         PopupLayer* next = current->next;
-        
-        if (current && current->layer && current->layer->handle_mouse_event) {
-            current->layer->handle_mouse_event(current->layer, event);
-            handled = true;
+        Layer* popup_layer = current->layer;
+
+        if (popup_layer) {
+            int inside = popup_point_inside(popup_layer, event);
+
+            if (popup_layer->handle_mouse_event) {
+                if (inside || current->type == POPUP_TYPE_DIALOG) {
+                    popup_layer->handle_mouse_event(popup_layer, event);
+                }
+            }
+
+            if (current->type == POPUP_TYPE_DIALOG) {
+                block_main = true;
+            } else if (inside) {
+                block_main = true;
+            }
         }
         
-        // 使用保存的 next 指针
         current = next;
     }
     
-    return handled;
+    return block_main;
 }
 
 bool popup_manager_handle_key_event(KeyEvent* event) {
