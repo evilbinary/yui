@@ -26,6 +26,7 @@ TreeViewComponent* treeview_component_create(Layer* layer) {
     component->user_data = NULL;
     component->on_node_selected = NULL;
     component->on_node_expanded = NULL;
+    component->icon_size = 0;
     component->expand_icon = strdup("▶");
     component->collapse_icon = strdup("▼");
     component->expand_icon_path = NULL;
@@ -362,7 +363,13 @@ TreeViewComponent* treeview_component_create_from_json(Layer* layer, cJSON* json
     if (indentWidth) {
         treeview_set_indent_width(component, indentWidth->valueint);
     }
-    
+
+    // 解析图标大小
+    cJSON* iconSize = cJSON_GetObjectItem(json_obj, "iconSize");
+    if (iconSize) {
+        component->icon_size = iconSize->valueint;
+    }
+
     // 解析颜色
     cJSON* style = cJSON_GetObjectItem(json_obj, "style");
     if (style) {
@@ -1099,7 +1106,7 @@ void treeview_component_render(Layer* layer) {
                 if (node_icon_tex) {
                     int iw, ih;
                     backend_query_texture(node_icon_tex, NULL, NULL, &iw, &ih);
-                    int icon_max_size = component->item_height - 6;
+                    int icon_max_size = component->icon_size > 0 ? component->icon_size : component->item_height - 10;
                     int icon_w = iw / scale;
                     int icon_h = ih / scale;
                     if (icon_w > icon_max_size || icon_h > icon_max_size) {
@@ -1255,7 +1262,7 @@ void treeview_component_render(Layer* layer) {
                         if (child_icon_tex) {
                             int iw, ih;
                             backend_query_texture(child_icon_tex, NULL, NULL, &iw, &ih);
-                            int icon_max_size = component->item_height - 6;
+                            int icon_max_size = component->icon_size > 0 ? component->icon_size : component->item_height - 10;
                             int icon_w = iw / scale;
                             int icon_h = ih / scale;
                             if (icon_w > icon_max_size || icon_h > icon_max_size) {

@@ -466,14 +466,20 @@ function onDbSelect(layerId) {
 // ====================== Treeview Events ======================
 
 function onDbExpand(layerId) {
-    YUI.log('onDbExpand');
-    
     if (!layerId) return;
     var layer = yui.find(layerId);
     if (!layer) return;
     var nodeText = layer.text;
     if (!nodeText) return;
     var node = JSON.parse(nodeText);
+
+    // 同步展开状态到 fullDbData，避免重建时丢失折叠状态
+    for (var i = 0; i < fullDbData.length; i++) {
+        if (fullDbData[i].text === node.text) {
+            fullDbData[i].expanded = node.expanded;
+            break;
+        }
+    }
 
     // 展开数据库节点时加载分类
     if (node.icon && node.icon.indexOf("db-db") >= 0 && node.expanded) {

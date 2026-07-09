@@ -106,6 +106,7 @@
                 "id": "dbTree",
                 "type": "Treeview",
                 "size": [224, 470],
+                "scrollable": 1,
                 "style": {
                   "color": "#CDD6F4",
                   "bgColor": "#181825",

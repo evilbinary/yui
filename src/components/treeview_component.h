@@ -47,6 +47,7 @@ typedef struct TreeViewComponent {
     void* user_data;
     void (*on_node_selected)(TreeNode* node, void* user_data);
     void (*on_node_expanded)(TreeNode* node, int expanded, void* user_data);
+    int icon_size;               // max icon size (0 = auto from item_height)
     char* expand_icon;         // default expand icon text when collapsed
     char* collapse_icon;       // default collapse icon text when expanded
     char* expand_icon_path;    // default SVG/image path for collapsed
