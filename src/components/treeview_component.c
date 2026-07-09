@@ -30,6 +30,8 @@ TreeViewComponent* treeview_component_create(Layer* layer) {
     component->collapse_icon = strdup("▼");
     component->expand_icon_path = NULL;
     component->collapse_icon_path = NULL;
+    component->on_select_name = NULL;
+    component->on_select_handler = NULL;
     
     // 设置组件
     layer->component = component;
@@ -56,6 +58,7 @@ void treeview_component_destroy(TreeViewComponent* component) {
     if (component->collapse_icon) free(component->collapse_icon);
     if (component->expand_icon_path) free(component->expand_icon_path);
     if (component->collapse_icon_path) free(component->collapse_icon_path);
+    if (component->on_select_name) free(component->on_select_name);
 
     free(component);
 }
@@ -80,7 +83,9 @@ TreeNode* treeview_create_node(const char* text) {
     node->collapse_icon_path = NULL;
     node->expand_icon_tex = NULL;
     node->collapse_icon_tex = NULL;
+    node->icon = NULL;
     node->icon_text = NULL;
+    node->icon_tex = NULL;
     
     return node;
 }
@@ -107,6 +112,8 @@ void treeview_destroy_node(TreeNode* node) {
     if (node->collapse_icon_path) free(node->collapse_icon_path);
     if (node->expand_icon_tex) backend_render_text_destroy(node->expand_icon_tex);
     if (node->collapse_icon_tex) backend_render_text_destroy(node->collapse_icon_tex);
+    if (node->icon_tex) backend_render_text_destroy(node->icon_tex);
+    if (node->icon) free(node->icon);
     if (node->icon_text) free(node->icon_text);
     
     free(node);
@@ -389,7 +396,19 @@ TreeViewComponent* treeview_component_create_from_json(Layer* layer, cJSON* json
         
         treeview_set_colors(component, text_color, selected_text_color, selected_bg_color, hover_bg_color, expand_icon_color);
     }
-    
+
+    // 解析 onSelect 事件名，存储名字并缓存 handler
+    cJSON* events = cJSON_GetObjectItem(json_obj, "events");
+    if (events) {
+        cJSON* onSelect = cJSON_GetObjectItem(events, "onSelect");
+        if (onSelect && onSelect->valuestring) {
+            const char* val = onSelect->valuestring;
+            if (val[0] == '@') val++;
+            component->on_select_name = strdup(val);
+            component->on_select_handler = find_event_by_name(val);
+        }
+    }
+
     // 解析节点
     cJSON* nodes = cJSON_GetObjectItem(json_obj, "nodes");
     if (nodes && cJSON_IsArray(nodes)) {
@@ -433,7 +452,11 @@ TreeNode* parse_tree_node(cJSON* node_json, int level, TreeNode* parent) {
     }
     cJSON* icon = cJSON_GetObjectItem(node_json, "icon");
     if (icon && icon->valuestring) {
-        node->icon_text = strdup(icon->valuestring);
+        node->icon = strdup(icon->valuestring);
+    }
+    cJSON* iconText = cJSON_GetObjectItem(node_json, "icon_text");
+    if (iconText && iconText->valuestring) {
+        node->icon_text = strdup(iconText->valuestring);
     }
     
     // 解析children属性
@@ -786,6 +809,20 @@ int treeview_is_expand_icon_clicked(TreeViewComponent* component, TreeNode* node
     return 0;
 }
 
+// 序列化TreeNode为JSON
+static char* treeview_node_to_json(TreeNode* node) {
+    if (!node) return strdup("{}");
+    cJSON* obj = cJSON_CreateObject();
+    if (node->text) cJSON_AddStringToObject(obj, "text", node->text);
+    if (node->icon) cJSON_AddStringToObject(obj, "icon", node->icon);
+    if (node->icon_text) cJSON_AddStringToObject(obj, "icon_text", node->icon_text);
+    cJSON_AddBoolToObject(obj, "expanded", node->expanded);
+    cJSON_AddBoolToObject(obj, "expandable", node->expandable);
+    char* json_str = cJSON_PrintUnformatted(obj);
+    cJSON_Delete(obj);
+    return json_str;
+}
+
 // 处理鼠标事件
 void treeview_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     if (!layer || !event || !layer->component) return;
@@ -816,9 +853,21 @@ void treeview_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
             } else {
                 // 选中节点
                 treeview_set_selected_node(component, node);
-                
+
                 // 滚动到选中的节点
                 treeview_scroll_to_node(component, node);
+
+                // 触发 onSelect 事件（类似菜单组件的 onItemClick）
+                if (component->on_select_handler) {
+                    // 序列化节点数据供JS访问
+                    char* node_json = treeview_node_to_json(node);
+                    if (node_json) {
+                        free(layer->text);
+                        layer->text = strdup(node_json);
+                        free(node_json);
+                        component->on_select_handler(layer);
+                    }
+                }
             }
         }
     }
@@ -1001,17 +1050,38 @@ void treeview_component_render(Layer* layer) {
                 int text_y_base = item_y + (component->item_height - text_height) / 2;
                 int text_x_offset = 0;
 
-                // 绘制节点icon图标(在文本前面)
-                if (node->icon_text) {
-                    Texture* icon_tex = backend_render_texture(layer->font->default_font, node->icon_text, text_color);
-                    if (icon_tex) {
-                        int iw, ih;
-                        backend_query_texture(icon_tex, NULL, NULL, &iw, &ih);
-                        Rect ir = {base_text_x, text_y_base, iw/scale, ih/scale};
-                        backend_render_text_copy(icon_tex, NULL, &ir);
-                        backend_render_text_destroy(icon_tex);
-                        text_x_offset = iw/scale + 4;
+                // 绘制节点icon: 优先加载SVG/图片，回退到icon_text文本
+                Texture* node_icon_tex = NULL;
+                int node_icon_owned = 0;
+                if (node->icon && !node->icon_tex) {
+                    node->icon_tex = backend_load_texture(node->icon);
+                }
+                if (node->icon_tex) {
+                    node_icon_tex = node->icon_tex;
+                } else if (node->icon_text) {
+                    node_icon_tex = backend_render_texture(layer->font->default_font, node->icon_text, text_color);
+                    node_icon_owned = 1;
+                }
+                if (node_icon_tex) {
+                    int iw, ih;
+                    backend_query_texture(node_icon_tex, NULL, NULL, &iw, &ih);
+                    int icon_max_size = component->item_height - 6;
+                    int icon_w = iw / scale;
+                    int icon_h = ih / scale;
+                    if (icon_w > icon_max_size || icon_h > icon_max_size) {
+                        float ratio = (float)icon_w / icon_h;
+                        if (ratio > 1.0f) {
+                            icon_w = icon_max_size;
+                            icon_h = (int)(icon_max_size / ratio);
+                        } else {
+                            icon_h = icon_max_size;
+                            icon_w = (int)(icon_max_size * ratio);
+                        }
                     }
+                    Rect ir = {base_text_x, text_y_base + (icon_max_size - icon_h) / 2, icon_w, icon_h};
+                    backend_render_text_copy(node_icon_tex, NULL, &ir);
+                    if (node_icon_owned) backend_render_text_destroy(node_icon_tex);
+                    text_x_offset = icon_w + 4;
                 }
 
                 Texture* text_texture = backend_render_texture(layer->font->default_font, node->text, text_color);
@@ -1136,17 +1206,38 @@ void treeview_component_render(Layer* layer) {
                         int text_y_base = item_y + (component->item_height - text_height) / 2;
                         int text_x_offset = 0;
 
-                        // 绘制节点icon图标(在文本前面)
-                        if (current->icon_text) {
-                            Texture* icon_tex = backend_render_texture(layer->font->default_font, current->icon_text, current_text_color);
-                            if (icon_tex) {
-                                int iw, ih;
-                                backend_query_texture(icon_tex, NULL, NULL, &iw, &ih);
-                                Rect ir = {base_text_x, text_y_base, iw/scale, ih/scale};
-                                backend_render_text_copy(icon_tex, NULL, &ir);
-                                backend_render_text_destroy(icon_tex);
-                                text_x_offset = iw/scale + 4;
+                        // 绘制节点icon: 优先加载SVG/图片，回退到icon_text文本
+                        Texture* child_icon_tex = NULL;
+                        int child_icon_owned = 0;
+                        if (current->icon && !current->icon_tex) {
+                            current->icon_tex = backend_load_texture(current->icon);
+                        }
+                        if (current->icon_tex) {
+                            child_icon_tex = current->icon_tex;
+                        } else if (current->icon_text) {
+                            child_icon_tex = backend_render_texture(layer->font->default_font, current->icon_text, current_text_color);
+                            child_icon_owned = 1;
+                        }
+                        if (child_icon_tex) {
+                            int iw, ih;
+                            backend_query_texture(child_icon_tex, NULL, NULL, &iw, &ih);
+                            int icon_max_size = component->item_height - 6;
+                            int icon_w = iw / scale;
+                            int icon_h = ih / scale;
+                            if (icon_w > icon_max_size || icon_h > icon_max_size) {
+                                float ratio = (float)icon_w / icon_h;
+                                if (ratio > 1.0f) {
+                                    icon_w = icon_max_size;
+                                    icon_h = (int)(icon_max_size / ratio);
+                                } else {
+                                    icon_h = icon_max_size;
+                                    icon_w = (int)(icon_max_size * ratio);
+                                }
                             }
+                            Rect ir = {base_text_x, text_y_base + (icon_max_size - icon_h) / 2, icon_w, icon_h};
+                            backend_render_text_copy(child_icon_tex, NULL, &ir);
+                            if (child_icon_owned) backend_render_text_destroy(child_icon_tex);
+                            text_x_offset = icon_w + 4;
                         }
 
                         Texture* text_texture = backend_render_texture(layer->font->default_font, current->text, current_text_color);

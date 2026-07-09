@@ -290,7 +290,8 @@ function loadDatabases() {
                 fullDbData.push({
                     id: "db_" + dbs[i],
                     text: dbs[i],
-                    icon: "🗄",
+                    icon: "app/assets/icons/db-table.svg",
+                    icon_text: "",
                     expanded: false,
                     children: []
                 });
@@ -307,10 +308,10 @@ function loadCategories(dbName) {
         if (fullDbData[i].text === dbName) {
             if (!fullDbData[i].children || fullDbData[i].children.length === 0) {
                 fullDbData[i].children = [
-                    { text: "表", icon: "📊", children: [], _db: dbName, expandable: true },
-                    { text: "视图", icon: "👁", children: [], _db: dbName, expandable: true },
-                    { text: "存储过程", icon: "⚡", children: [], _db: dbName, expandable: true },
-                    { text: "函数", icon: "🔧", children: [], _db: dbName, expandable: true }
+                    { text: "表", icon: "app/assets/icons/db-table.svg", icon_text: "", children: [], _db: dbName, expandable: true },
+                    { text: "视图", icon: "app/assets/icons/db-view.svg", icon_text: "", children: [], _db: dbName, expandable: true },
+                    { text: "存储过程", icon: "app/assets/icons/db-procedure.svg", icon_text: "", children: [], _db: dbName, expandable: true },
+                    { text: "函数", icon: "app/assets/icons/db-function.svg", icon_text: "", children: [], _db: dbName, expandable: true }
                 ];
                 fullDbData[i].expanded = true;
             }
@@ -335,7 +336,8 @@ function loadCategoryItems(dbName, category, handler) {
                             children.push({
                                 id: "item_" + dbName + "_" + category + "_" + items[k],
                                 text: items[k],
-                                icon: cats[j].icon,
+                                icon: "item",
+                                icon_text: cats[j].icon_text,
                                 _db: dbName
                             });
                         }
@@ -373,7 +375,7 @@ function applyDbFilter(filter) {
             var filteredChildren = n.children ? filterNodes(n.children) : [];
             if (match || filteredChildren.length > 0) {
                 result.push({
-                    id: n.id, text: n.text, icon: n.icon,
+                    id: n.id, text: n.text, icon: n.icon, icon_text: n.icon_text,
                     expanded: true,
                     children: filteredChildren.length > 0 ? filteredChildren : (n.children ? [] : undefined)
                 });
@@ -422,23 +424,36 @@ function updateStatus(text, color) {
 
 // ====================== Events ======================
 
-function onDbSelect(node) {
-    if (!node) return;
+function onDbSelect(layerId) {
+    if (!layerId) return;
+    var layer = yui.find(layerId);
+    if (!layer) return;
+    var nodeText = layer.text;
+    if (!nodeText) return;
+    var node = JSON.parse(nodeText);
     currentDb = node;
 
     if (node.icon === "database") {
         if (!node.children || node.children.length === 0) {
-            loadDbTables(node.text);
+            loadCategories(node.text);
         }
         var statusText = yui.find("statusText");
         if (statusText) statusText.text = "数据库: " + node.text;
-    } else if (node.icon === "table") {
+    } else if (node.icon === "category") {
+        var handlers = { "表": "mysql_db_tables", "视图": "mysql_db_views", "存储过程": "mysql_db_procedures", "函数": "mysql_db_functions" };
+        var handler = handlers[node.text];
+        if (handler && node._db) {
+            loadCategoryItems(node._db, node.text, handler);
+        }
         var statusText = yui.find("statusText");
-        if (statusText) statusText.text = "选中: " + node.dbName + "." + node.text;
+        if (statusText) statusText.text = "加载: " + node._db + "." + node.text;
+    } else if (node.icon === "item") {
+        var statusText = yui.find("statusText");
+        if (statusText) statusText.text = "选中: " + node._db + "." + node.text;
 
         var editor = yui.find("sqlEditor");
         if (editor) {
-            editor.text = "SELECT * FROM `" + node.dbName + "`.`" + node.text + "` LIMIT 100;";
+            editor.text = "SELECT * FROM `" + node._db + "`.`" + node.text + "` LIMIT 100;";
         }
         if (activeTab >= 0 && activeTab < tabs.length) tabs[activeTab].sql = editor.text;
     }

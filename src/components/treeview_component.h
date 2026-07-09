@@ -25,7 +25,9 @@ typedef struct TreeNode {
     char* collapse_icon_path; // path to SVG/image for expanded icon
     struct Texture* expand_icon_tex;   // cached texture for expand
     struct Texture* collapse_icon_tex; // cached texture for collapse
+    char* icon;       // file path to SVG/image, or programmatic ID (e.g. "database", "table")
     char* icon_text;  // icon text rendered before node label (e.g. "📊", "⚡")
+    struct Texture* icon_tex;  // cached texture for icon
 } TreeNode;
 
 // 树视图组件
@@ -49,6 +51,8 @@ typedef struct TreeViewComponent {
     char* collapse_icon;       // default collapse icon text when expanded
     char* expand_icon_path;    // default SVG/image path for collapsed
     char* collapse_icon_path;  // default SVG/image path for expanded
+    char* on_select_name;           // event handler name for node selection
+    EventHandler on_select_handler;  // cached event handler for node selection
 } TreeViewComponent;
 
 // 创建树视图组件
