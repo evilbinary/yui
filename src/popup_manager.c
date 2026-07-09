@@ -296,6 +296,22 @@ bool popup_manager_handle_scroll_event(int scroll_delta) {
     return handled;
 }
 
+bool popup_manager_contains_layer(Layer* layer) {
+    if (!g_popup_manager || !layer) {
+        return false;
+    }
+
+    PopupLayer* current = g_popup_manager->active_popups;
+    while (current) {
+        if (current->layer == layer) {
+            return true;
+        }
+        current = current->next;
+    }
+
+    return false;
+}
+
 bool popup_manager_is_point_in_popups(int x, int y) {
     if (!g_popup_manager) return false;
     

@@ -614,80 +614,73 @@ void select_component_set_dropdown_expanded_callback(SelectComponent* component,
     component->on_dropdown_expanded = callback;
 }
 
+// 同步下拉弹出层的矩形（用于命中测试）
+static void select_sync_dropdown_layer_rect(SelectComponent* component) {
+    if (!component || !component->dropdown_layer || !component->layer) {
+        return;
+    }
+
+    int dropdown_height = component->item_height * component->item_count;
+    if (dropdown_height > component->max_visible_items * component->item_height) {
+        dropdown_height = component->max_visible_items * component->item_height;
+    }
+
+    component->dropdown_layer->rect.x = component->layer->rect.x;
+    component->dropdown_layer->rect.w = component->layer->rect.w;
+    component->dropdown_layer->rect.h = dropdown_height;
+
+    int window_width, window_height;
+    backend_get_windowsize(&window_width, &window_height);
+
+    int space_below = window_height - (component->layer->rect.y + component->layer->rect.h);
+    int space_above = component->layer->rect.y;
+
+    if (space_below >= dropdown_height || space_below >= space_above) {
+        component->dropdown_open_upward = 0;
+        component->dropdown_layer->rect.y = component->layer->rect.y + component->layer->rect.h;
+    } else {
+        component->dropdown_open_upward = 1;
+        component->dropdown_layer->rect.y = component->layer->rect.y - dropdown_height;
+    }
+}
+
 // 展开下拉菜单
 void select_component_expand(SelectComponent* component) {
     if (!component || component->expanded || component->item_count == 0) {
-        printf("DEBUG: expand early return - component=%p, expanded=%d, item_count=%d\n", 
-               component, component ? component->expanded : -1, component ? component->item_count : -1);
         return;
     }
-    
-    // printf("DEBUG: Starting expansion - component=%p, item_count=%d\n", component, component->item_count);
+
+    if (!component->dropdown_layer) {
+        component->dropdown_layer = calloc(1, sizeof(Layer));
+        if (!component->dropdown_layer) {
+            return;
+        }
+
+        component->dropdown_layer->component = component;
+        component->dropdown_layer->render = select_component_render_dropdown_only;
+        component->dropdown_layer->handle_mouse_event = select_component_handle_dropdown_mouse_event;
+        component->dropdown_layer->handle_key_event = select_component_handle_dropdown_key_event;
+        component->dropdown_layer->handle_scroll_event = select_component_handle_dropdown_scroll_event;
+    }
+
+    select_sync_dropdown_layer_rect(component);
+
     component->expanded = 1;
     component->hover_index = -1;
     component->scroll_position = 0;
-    
-    // 创建下拉菜单弹出层
-    if (!component->dropdown_layer) {
-        component->dropdown_layer = malloc(sizeof(Layer));
-        if (component->dropdown_layer) {
-            memset(component->dropdown_layer, 0, sizeof(Layer));
-            
-            // 设置弹出层位置和大小
-            component->dropdown_layer->rect.x = component->layer->rect.x;
-            
-            // 计算下拉菜单高度
-            int dropdown_height = component->item_height * component->item_count;
-            if (dropdown_height > component->max_visible_items * component->item_height) {
-                dropdown_height = component->max_visible_items * component->item_height;
-            }
-            component->dropdown_layer->rect.w = component->layer->rect.w;
-            component->dropdown_layer->rect.h = dropdown_height;
-            
-            // 智能判断展开方向：检查下方是否有足够空间
-            int window_width, window_height;
-            backend_get_windowsize(&window_width, &window_height);
-            
-            int space_below = window_height - (component->layer->rect.y + component->layer->rect.h);
-            int space_above = component->layer->rect.y;
-            
-            // 判断是否有足够空间向下展开
-            if (space_below >= dropdown_height || space_below >= space_above) {
-                // 向下展开
-                component->dropdown_open_upward = 0;
-                component->dropdown_layer->rect.y = component->layer->rect.y + component->layer->rect.h;
-                printf("DEBUG: Dropdown opening DOWNWARD - space_below=%d, dropdown_height=%d\n", space_below, dropdown_height);
-            } else {
-                // 向上展开
-                component->dropdown_open_upward = 1;
-                component->dropdown_layer->rect.y = component->layer->rect.y - dropdown_height;
-                printf("DEBUG: Dropdown opening UPWARD - space_below=%d, space_above=%d, dropdown_height=%d\n", 
-                       space_below, space_above, dropdown_height);
-            }
-            
-            // 设置渲染函数为独立的下拉渲染函数
-            component->dropdown_layer->component = component;
-            component->dropdown_layer->render = select_component_render_dropdown_only;
-            component->dropdown_layer->handle_mouse_event = select_component_handle_dropdown_mouse_event;
-            component->dropdown_layer->handle_key_event = select_component_handle_dropdown_key_event;
-            component->dropdown_layer->handle_scroll_event = select_component_handle_dropdown_scroll_event;
-        }
-    }
-    
-    // 设置刚展开标志，防止立即关闭
     component->just_expanded = 1;
-    
-    // 添加到弹出层管理器
-    if (component->dropdown_layer) {
+
+    if (!popup_manager_contains_layer(component->dropdown_layer)) {
         PopupLayer* popup = popup_layer_create(component->dropdown_layer, POPUP_TYPE_DROPDOWN, 100);
         if (popup) {
-            popup->auto_close = false;  // 临时禁用自动关闭
+            popup->auto_close = false;
             popup->close_callback = select_component_popup_close_callback;
-            popup_manager_add(popup);
-            printf("DEBUG: Added select dropdown to popup manager\n");
+            if (!popup_manager_add(popup)) {
+                free(popup);
+            }
         }
     }
-    
+
     if (component->on_dropdown_expanded) {
         component->on_dropdown_expanded(1, component->user_data);
     }
@@ -709,15 +702,12 @@ void select_component_collapse(SelectComponent* component) {
         component->on_dropdown_expanded(0, component->user_data);
     }
     
-    // 从弹出层管理器移除
     if (component->dropdown_layer) {
-        // 保存指针以便调用 popup_manager_remove
         Layer* dropdown_layer = component->dropdown_layer;
-        component->dropdown_layer = NULL;  // 先设置为NULL，防止回调中再次使用
-        
+        component->dropdown_layer = NULL;
+
         popup_manager_remove(dropdown_layer);
-        // 注意：dropdown_layer 会在 popup_manager_remove 中被释放，close_callback 会设置为 NULL
-        printf("DEBUG: Removed select dropdown from popup manager\n");
+        free(dropdown_layer);
     }
 }
 
@@ -813,14 +803,13 @@ void select_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     }
     
     if (event->state == SDL_PRESSED && event->button == SDL_BUTTON_LEFT) {
+        if (component->expanded && !in_select_area && !in_dropdown_area && !component->just_expanded) {
+            select_component_collapse(component);
+            return;
+        }
+
         // 检查是否点击在 Select 按钮上
-        if (event->x >= layer->rect.x && event->x < layer->rect.x + layer->rect.w &&
-            event->y >= layer->rect.y && event->y < layer->rect.y + layer->rect.h) {
-            // 如果刚刚展开，不要立即关闭
-            if (component->just_expanded) {
-                component->just_expanded = 0;
-                return;  // 不处理toggle，只是清除标志
-            }
+        if (in_select_area) {
             select_component_toggle(component);
         }
         // 检查是否点击在下拉菜单选项上
@@ -915,10 +904,10 @@ void select_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
             }
         }
     } else if (event->state == SDL_RELEASED && event->button == SDL_BUTTON_LEFT) {
-        // 停止拖拽
         if (component->is_dragging) {
             component->is_dragging = 0;
         }
+        component->just_expanded = 0;
     } else if (event->state == SDL_MOUSEMOTION) {
         // printf("DEBUG: Mouse motion - x=%d, y=%d, is_dragging=%d\n", 
             //    event->x, event->y, component->is_dragging);
