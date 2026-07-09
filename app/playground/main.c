@@ -151,14 +151,20 @@ int main(int argc, char* argv[]) {
         backend_set_window_size(ui_root->text);
     }
 
-    // 设置窗口标题栏背景色（从 style 中读取）
+    // 设置窗口标题栏颜色（从 style 中读取）
     cJSON* root_style = cJSON_GetObjectItem(root_json, "style");
     if (root_style) {
         cJSON* title_bg = cJSON_GetObjectItem(root_style, "titleBarBgColor");
+        cJSON* title_text = cJSON_GetObjectItem(root_style, "titleBarTextColor");
         if (title_bg && cJSON_IsString(title_bg)) {
-            Color color;
-            parse_color(title_bg->valuestring, &color);
-            backend_set_titlebar_background_color(color);
+            Color bg, text;
+            parse_color(title_bg->valuestring, &bg);
+            if (title_text && cJSON_IsString(title_text)) {
+                parse_color(title_text->valuestring, &text);
+            } else {
+                text = (Color){255, 255, 255, 255};
+            }
+            backend_set_titlebar_color(bg, text);
         }
     }
 

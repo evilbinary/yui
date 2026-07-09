@@ -67,6 +67,6 @@ void backend_stop_text_input();
 void backend_set_text_input_rect(Rect* rect);
 
 // Windows 标题栏背景色
-void backend_set_titlebar_background_color(Color color);
+void backend_set_titlebar_color(Color bg, Color text);
 
 #endif

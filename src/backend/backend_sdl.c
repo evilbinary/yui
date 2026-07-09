@@ -5,12 +5,12 @@
 #include "popup_manager.h"
 #include <stdbool.h>  // 添加支持bool类型
 #include <math.h>     // 添加数学函数支持
-#include <stdlib.h>
 
 #ifdef _WIN32
 #include <windows.h>
 #include <SDL_syswm.h>
 #include <dwmapi.h>
+#pragma comment(lib, "dwmapi.lib")
 #endif
 
 #ifdef __EMSCRIPTEN__
@@ -458,44 +458,36 @@ int backend_init(){
 
 }
 
-#ifdef _WIN32
 
-// 注册表路径
-#define PERSONALIZE_KEY_PATH "Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize"
 
-// 检测 Windows 系统是否启用了暗色模式 (AppMode)
-static int backend_is_system_dark_mode(void) {
-    HKEY hKey;
-    DWORD appsUseLightTheme = 1;  // 默认亮色模式
-    DWORD dataSize = sizeof(DWORD);
-    
-    if (RegOpenKeyExA(HKEY_CURRENT_USER, PERSONALIZE_KEY_PATH, 0, KEY_READ, &hKey) == ERROR_SUCCESS) {
-        RegQueryValueExA(hKey, "AppsUseLightTheme", NULL, NULL, (LPBYTE)&appsUseLightTheme, &dataSize);
-        RegCloseKey(hKey);
-    }
-    
-    return appsUseLightTheme == 0;  // 0 表示暗色模式, 1 表示亮色模式
-}
 
-// 设置窗口标题栏背景色
-void backend_set_titlebar_background_color(Color color) {
+// 设置窗口标题栏背景色和文字色
+void backend_set_titlebar_color(Color bg, Color text) {
     if (!window) return;
-
-#ifndef DWMWA_CAPTION_COLOR
-#define DWMWA_CAPTION_COLOR 35
-#endif
 
     SDL_SysWMinfo wmInfo;
     SDL_VERSION(&wmInfo.version);
 
     if (SDL_GetWindowWMInfo(window, &wmInfo)) {
+
+        #ifdef _WIN32
         HWND hwnd = wmInfo.info.win.window;
-        COLORREF wincolor = RGB(color.r, color.g, color.b);
-        DwmSetWindowAttribute(hwnd, DWMWA_CAPTION_COLOR, &wincolor, sizeof(wincolor));
+        COLORREF bgColor = RGB(bg.r, bg.g, bg.b);
+        // 标题栏背景色（35 = DWMWA_CAPTION_COLOR）
+        DwmSetWindowAttribute(hwnd, 35, &bgColor, sizeof(bgColor));
+        // 窗口边框同色（34 = DWMWA_BORDER_COLOR）
+        DwmSetWindowAttribute(hwnd, 34, &bgColor, sizeof(bgColor));
+        // 标题文字色（36 = DWMWA_TEXT_COLOR）
+        COLORREF textColor = RGB(text.r, text.g, text.b);
+        DwmSetWindowAttribute(hwnd, 36, &textColor, sizeof(textColor));
+        // 强制刷新
+        SetWindowPos(hwnd, NULL, 0, 0, 0, 0, SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE);
+
+        #endif // _WIN32
     }
 }
 
-#endif // _WIN32
+
 
 // 重置触摸状态
 void resetTouchState() {
