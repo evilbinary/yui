@@ -459,11 +459,129 @@ int backend_init(){
 }
 
 
+#ifdef _WIN32
+
+// WCA_USEDARKMODECOLORS 可能未在旧 SDK 中定义
+#ifndef WCA_USEDARKMODECOLORS
+#define WCA_USEDARKMODECOLORS 26
+#endif
+
+// WINDOWCOMPOSITIONATTRIBDATA 结构体定义（如果 SDK 已有则跳过）
+#ifndef _WINDOWCOMPOSITIONATTRIBDATA_DEFINED_
+#define _WINDOWCOMPOSITIONATTRIBDATA_DEFINED_
+typedef struct _WINDOWCOMPOSITIONATTRIBDATA {
+    DWORD dwAttrib;
+    PVOID pvData;
+    DWORD cbData;
+} WINDOWCOMPOSITIONATTRIBDATA, *PWINDOWCOMPOSITIONATTRIBDATA;
+#endif
 
 
-// 设置窗口标题栏背景色和文字色
+#endif
+
+// 保存标题栏颜色用于重新应用
+static Color g_titlebar_bg = {0};
+static Color g_titlebar_text = {0};
+static int g_titlebar_colors_set = 0;  // 是否已设置颜色
+
+// 应用暗色模式的核心逻辑
+static void apply_titlebar_dark_mode(HWND hwnd) {
+    BOOL dark = TRUE;
+
+    // 检查窗口样式
+    LONG style = GetWindowLongW(hwnd, GWL_STYLE);
+    LONG ex_style = GetWindowLongW(hwnd, GWL_EXSTYLE);
+    printf("DEBUG style=0x%lx ex=0x%lx\n", (unsigned long)style, (unsigned long)ex_style);
+
+    // AllowDarkModeForWindow（uxtheme.dll ordinal 133）
+    static BOOL (WINAPI *_AllowDarkModeForWindow)(HWND, BOOL) = NULL;
+    if (!_AllowDarkModeForWindow) {
+        HMODULE hUx = LoadLibraryA("uxtheme.dll");
+        if (hUx) {
+            *(FARPROC*)&_AllowDarkModeForWindow = GetProcAddress(hUx, (LPCSTR)(ULONG_PTR)(WORD)133);
+            printf("DEBUG AllowDarkModeForWindow=%p\n", (void*)_AllowDarkModeForWindow);
+        }
+    }
+    if (_AllowDarkModeForWindow) {
+        _AllowDarkModeForWindow(hwnd, TRUE);
+    }
+
+    // SetWindowCompositionAttribute（Win10 18362+）
+    static BOOL (WINAPI *_SetWindowCompositionAttribute)(HWND, WINDOWCOMPOSITIONATTRIBDATA*) = NULL;
+    if (!_SetWindowCompositionAttribute) {
+        HMODULE hmod = LoadLibraryA("user32.dll");
+        if (hmod) {
+            *(FARPROC*)&_SetWindowCompositionAttribute = GetProcAddress(hmod, "SetWindowCompositionAttribute");
+        }
+    }
+    if (_SetWindowCompositionAttribute) {
+        WINDOWCOMPOSITIONATTRIBDATA data = { WCA_USEDARKMODECOLORS, &dark, sizeof(dark) };
+        BOOL ok = _SetWindowCompositionAttribute(hwnd, &data);
+        printf("DEBUG SWCA ok=%d\n", ok);
+    }
+
+    // DwmSetWindowAttribute（Win10 20H1+ / Win11）
+    DwmSetWindowAttribute(hwnd, 20, &dark, sizeof(dark));
+
+    // 自定义标题栏颜色（Win11 完整支持，部分 Win10 20H2+ 也支持按钮区域变色）
+    if (g_titlebar_colors_set) {
+        COLORREF bgColor = RGB(g_titlebar_bg.r, g_titlebar_bg.g, g_titlebar_bg.b);
+        DwmSetWindowAttribute(hwnd, 35, &bgColor, sizeof(bgColor));
+        DwmSetWindowAttribute(hwnd, 34, &bgColor, sizeof(bgColor));
+        COLORREF textColor = RGB(g_titlebar_text.r, g_titlebar_text.g, g_titlebar_text.b);
+        DwmSetWindowAttribute(hwnd, 36, &textColor, sizeof(textColor));
+    }
+
+    // SetProp（Win10 < 18362 回退）
+    SetPropW(hwnd, L"UseImmersiveDarkModeColors", (HANDLE)(INT_PTR)dark);
+
+    // 刷新 DWM 框架
+    SetWindowPos(hwnd, NULL, 0, 0, 0, 0, SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE);
+
+    // 扩展暗色框架到窗口（让按钮区域也变暗）
+    static BOOL (WINAPI *_DwmExtendFrameIntoClientArea)(HWND, const MARGINS*) = NULL;
+    if (!_DwmExtendFrameIntoClientArea) {
+        HMODULE hDwm = LoadLibraryA("dwmapi.dll");
+        if (hDwm) {
+            *(FARPROC*)&_DwmExtendFrameIntoClientArea = GetProcAddress(hDwm, "DwmExtendFrameIntoClientArea");
+        }
+    }
+    if (_DwmExtendFrameIntoClientArea) {
+        // MARGINS {-1} 扩展框架到整个窗口
+        MARGINS margins = { -1, -1, -1, -1 };
+        _DwmExtendFrameIntoClientArea(hwnd, &margins);
+        printf("DEBUG DwmExtendFrameIntoClientArea\n");
+    }
+
+    printf("DEBUG dark applied\n");
+
+}
+
+// 窗口子类化过程 — 拦截 DWM 重置标题栏颜色的消息
+static WNDPROC g_original_wndproc = NULL;
+
+static LRESULT CALLBACK TitleBarSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+    switch (msg) {
+    case WM_NCACTIVATE:
+    case WM_SETTEXT:
+        {
+            LRESULT result = CallWindowProc(g_original_wndproc, hwnd, msg, wParam, lParam);
+            apply_titlebar_dark_mode(hwnd);
+            return result;
+        }
+    }
+    return CallWindowProc(g_original_wndproc, hwnd, msg, wParam, lParam);
+}
+
+// 设置窗口标题栏暗色模式 + 自定义颜色（兼容 Win10 和 Win11）
+// 使用完整的兼容链: SetWindowCompositionAttribute → SetProp → DwmSetWindowAttribute
 void backend_set_titlebar_color(Color bg, Color text) {
     if (!window) return;
+
+    // 保存颜色值（用于子类化过程重新应用）
+    g_titlebar_bg = bg;
+    g_titlebar_text = text;
+    g_titlebar_colors_set = 1;
 
     SDL_SysWMinfo wmInfo;
     SDL_VERSION(&wmInfo.version);
@@ -472,20 +590,13 @@ void backend_set_titlebar_color(Color bg, Color text) {
 
         #ifdef _WIN32
         HWND hwnd = wmInfo.info.win.window;
-        COLORREF bgColor = RGB(bg.r, bg.g, bg.b);
 
-        // 基础暗色模式（Win10 20H1+ 和 Win11 都支持）
-        BOOL dark = TRUE;
-        DwmSetWindowAttribute(hwnd, 20, &dark, sizeof(dark));
+        // 首次调用时安装窗口子类化
+        if (!g_original_wndproc) {
+            g_original_wndproc = (WNDPROC)SetWindowLongPtr(hwnd, GWLP_WNDPROC, (LONG_PTR)TitleBarSubclassProc);
+        }
 
-        // 自定义颜色（仅 Win11 支持，Win10 上静默忽略）
-        DwmSetWindowAttribute(hwnd, 35, &bgColor, sizeof(bgColor));
-        DwmSetWindowAttribute(hwnd, 34, &bgColor, sizeof(bgColor));
-        COLORREF textColor = RGB(text.r, text.g, text.b);
-        DwmSetWindowAttribute(hwnd, 36, &textColor, sizeof(textColor));
-
-        // 强制刷新
-        SetWindowPos(hwnd, NULL, 0, 0, 0, 0, SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE);
+        apply_titlebar_dark_mode(hwnd);
 
         #endif // _WIN32
     }
@@ -877,6 +988,25 @@ void backend_run(Layer* ui_root){
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) running = 0;
             handle_event(ui_root, &event);
+
+#ifdef _WIN32
+            // 窗口移动/大小改变后重新应用标题栏暗色
+            if (event.type == SDL_WINDOWEVENT) {
+                switch (event.window.event) {
+                case SDL_WINDOWEVENT_MOVED:
+                case SDL_WINDOWEVENT_RESIZED:
+                case SDL_WINDOWEVENT_EXPOSED:
+                    {
+                        SDL_SysWMinfo wmInfo;
+                        SDL_VERSION(&wmInfo.version);
+                        if (SDL_GetWindowWMInfo(window, &wmInfo)) {
+                            apply_titlebar_dark_mode(wmInfo.info.win.window);
+                        }
+                    }
+                    break;
+                }
+            }
+#endif
         }
 
         // 调用所有注册的更新回调
@@ -895,6 +1025,20 @@ void backend_run(Layer* ui_root){
         popup_manager_render();
 
         SDL_RenderPresent(renderer);
+
+#ifdef _WIN32
+        // 第一帧渲染后重新应用暗色（此时窗口已完全显示）
+        static int first_frame = 1;
+        if (first_frame) {
+            first_frame = 0;
+            SDL_SysWMinfo wmInfo;
+            SDL_VERSION(&wmInfo.version);
+            if (SDL_GetWindowWMInfo(window, &wmInfo)) {
+                apply_titlebar_dark_mode(wmInfo.info.win.window);
+            }
+        }
+#endif
+
         SDL_Delay(16);
     }
 #endif
