@@ -44,6 +44,7 @@ struct MenuComponent {
     void* user_data;           // 用户数据
     void (*on_popup_closed)(MenuComponent* menu);  // 弹出菜单关闭回调
     char item_click_name[128]; // onItemClick事件处理函数名称
+    int content_width;         // 根据内容自动计算的宽度(0=使用默认宽度)
 };
 
 // 函数声明

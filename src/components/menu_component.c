@@ -30,7 +30,8 @@ MenuComponent* menu_component_create(Layer* layer) {
     component->expanded = 0;
     component->parent_menu = NULL;
     component->item_height = 30;
-    component->min_width = 150;
+    component->min_width = 80;
+    component->content_width = 0;
     component->user_data = NULL;
     component->on_popup_closed = NULL;
     
@@ -152,6 +153,61 @@ static void parse_menu_items_from_json(MenuComponent* component, cJSON* items_js
     }
 }
 
+// 计算UTF-8字符串的字符数（非字节数）
+static int utf8_char_count(const char* s) {
+    int count = 0;
+    while (*s) {
+        if ((*s & 0xC0) != 0x80) count++;
+        s++;
+    }
+    return count;
+}
+
+// 根据内容自动计算菜单宽度
+static void menu_calculate_auto_width(MenuComponent* component) {
+    if (!component || !component->layer) return;
+
+    Layer* layer = component->layer;
+    int font_size = (layer->font) ? layer->font->size : 16;
+    int max_width = 80;
+
+    // 估算标题文本宽度（按字符数，非字节数）
+    if (layer->text && strlen(layer->text) > 0) {
+        int title_w = utf8_char_count(layer->text) * font_size + 48;
+        if (title_w > max_width) max_width = title_w;
+    }
+
+    // 估算每个菜单项的文本宽度
+    for (int i = 0; i < component->item_count; i++) {
+        MenuItem* item = &component->items[i];
+        if (item->separator) continue;
+
+        int item_w = utf8_char_count(item->text) * font_size;
+
+        // 快捷键宽度
+        int sc_len = strlen(item->shortcut);
+        if (sc_len > 0) {
+            item_w += 24 + (int)(sc_len * font_size * 0.6f);
+        }
+
+        // 内边距: 12左 + 12右
+        int padding = 24;
+        if (item->checked) padding += 16;
+        if (item->submenu) padding += 16;
+
+        item_w += padding;
+        if (item_w > max_width) max_width = item_w;
+    }
+
+    if (max_width < component->min_width) {
+        max_width = component->min_width;
+    }
+
+    component->content_width = max_width;
+    layer->rect.w = max_width;
+    layer->fixed_width = max_width;
+}
+
 // 从JSON创建菜单组件
 MenuComponent* menu_component_create_from_json(Layer* layer, cJSON* json) {
     if (!layer || !json) {
@@ -166,6 +222,9 @@ MenuComponent* menu_component_create_from_json(Layer* layer, cJSON* json) {
     // 解析菜单项（递归支持子菜单）
     cJSON* items = cJSON_GetObjectItem(json, "items");
     parse_menu_items_from_json(component, items);
+
+    // 根据内容自动计算菜单宽度
+    menu_calculate_auto_width(component);
     
     // 解析样式
     cJSON* style = cJSON_GetObjectItem(json, "style");
@@ -650,8 +709,10 @@ void menu_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
                 }
             }
         } else {
-            // 折叠状态：点击标题区域展开
-            if (relative_y < y_offset) {
+            // 折叠状态：点击标题区域展开（必须先确认点击在菜单矩形内）
+            if (relative_y < y_offset &&
+                event->x >= rect->x && event->x < rect->x + rect->w &&
+                event->y >= rect->y) {
                 component->expanded = 1;
                 component->hovered_item = -1;
 
@@ -691,11 +752,11 @@ void menu_component_render(Layer* layer) {
         }
     }
 
-    // 绘制边框
-    if (bg_rect.h > 0) {
-        Color border_color = (Color){200, 200, 200, 255};
+    // 绘制边框（如果需要）
+    if (bg_rect.h > 0 && layer->border_width > 0) {
+        Color border_color = layer->border_color.a > 0 ? layer->border_color : (Color){200, 200, 200, 255};
         if (layer->radius > 0 && component->expanded) {
-            backend_render_rounded_rect_with_border(&bg_rect, component->bg_color, layer->radius, 1, border_color);
+            backend_render_rounded_rect_with_border(&bg_rect, component->bg_color, layer->radius, layer->border_width, border_color);
         } else if (title_h > 0) {
             backend_render_rect(&bg_rect, border_color);
         }
@@ -888,8 +949,8 @@ bool menu_component_show_popup(MenuComponent* component, int x, int y) {
     
     memset(component->popup_layer, 0, sizeof(Layer));
     
-    // 计算菜单大小
-    int menu_width = component->min_width;
+    // 计算菜单大小（优先使用自动计算宽度）
+    int menu_width = component->content_width > 0 ? component->content_width : component->min_width;
     int menu_height = component->item_count * component->item_height;
     
     // 设置弹出菜单的位置和大小

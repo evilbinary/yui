@@ -151,7 +151,7 @@
             },
             "items": [
                 {
-                    "text": "撤销",
+                    "text": "aaa",
                     "shortcut": "Ctrl+Z",
                     "enabled": true,
                     "checked": false,
@@ -206,9 +206,9 @@
         }
     ],
     "events": {
-        "onLoad": "@initMenus",
-        "handleMenuClick": "function(itemText) { document.getElementById('resultLabel').text = '主菜单点击: ' + itemText; }",
-        "handleContextMenuClick": "function(itemText) { document.getElementById('resultLabel').text = '右键菜单点击: ' + itemText; }",
-        "initMenus": "function() { console.log('菜单测试应用已加载'); }"
+        "onLoad": " YUI.log('menu test loaded1==================》');",
+        "handleMenuClick": " YUI.log('handleMenuClick=================='); ",
+        "handleContextMenuClick": "function(itemText) { YUI.log('handleContextMenuClick==================' + itemText); }"
+       
     }
 }
