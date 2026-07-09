@@ -197,12 +197,14 @@ target("calc.html")
 )
 
 
-target("db") 
+target("db")
 (
     add_deps("socket","yui","quickjs","jsmodule-quickjs","yaml2json"),
     add_rules("mode.debug", "mode.release"),
     set_kind("binary"),
     add_flags(),
-    add_files("db/main.c"),
+    add_files("db/main.c", "db/mysql_fun.c"),
+    add_cflags(' -I/mingw64/include/mariadb -I/mingw64/include/'),
+    add_ldflags(' -L/mingw64/lib/ -lmariadb '),
     add_run()
 )

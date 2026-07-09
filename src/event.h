@@ -6,7 +6,7 @@
 #include "layout.h"
 
 // Fix: Make sure EventHandler is properly declared
-typedef void (*EventHandler)(void* data);
+typedef void* (*EventHandler)(void* data);
 
 int register_event_handler(const char* name, EventHandler handler);
 void print_registered_events();

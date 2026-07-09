@@ -5,6 +5,7 @@
 #include "../../src/layout.h"
 #include "../../src/render.h"
 #include "js_socket.h"
+#include "../../src/event.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -894,6 +895,44 @@ static JSValue js_yui_find(JSContext* ctx, JSValueConst this_val, int argc, JSVa
 }
 
 // 注册 C API 到 JS
+/* ====================== YUI.call Bridge ====================== */
+
+void* js_module_get_context(void) {
+    return g_js_ctx;
+}
+
+static JSValue js_native_call(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+    if (argc < 1) {
+        return JS_NewString(ctx, "{\"error\":\"Missing event name\"}");
+    }
+
+    const char* event_name = JS_ToCString(ctx, argv[0]);
+    if (!event_name) {
+        return JS_NewString(ctx, "{\"error\":\"Invalid event name\"}");
+    }
+
+    const char* json_args = NULL;
+    if (argc > 1 && JS_IsString(argv[1])) {
+        json_args = JS_ToCString(ctx, argv[1]);
+    }
+
+    EventHandler handler = find_event_by_name(event_name);
+    JSValue result;
+    if (handler) {
+        char* ret = (char*)handler((void*)json_args);
+        result = ret ? JS_NewString(ctx, ret) : JS_NewString(ctx, "{\"success\":true}");
+        free(ret);
+    } else {
+        char buf[512];
+        snprintf(buf, sizeof(buf), "{\"error\":\"No handler for event: %s\"}", event_name);
+        result = JS_NewString(ctx, buf);
+    }
+
+    if (json_args) JS_FreeCString(ctx, json_args);
+    JS_FreeCString(ctx, event_name);
+    return result;
+}
+
 void js_module_register_api(void)
 {
     if (!g_js_ctx) return;
@@ -967,6 +1006,10 @@ void js_module_register_api(void)
 
     // 注册 print 到全局对象（与 log 功能相同）
     JS_SetPropertyStr(g_js_ctx, global_obj, "print", JS_NewCFunction(g_js_ctx, js_log, "print", 1));
+
+    // 注册 YUI.call 桥接（C 事件处理器调用入口）
+    JS_SetPropertyStr(g_js_ctx, yui_obj, "call", JS_NewCFunction(g_js_ctx, js_native_call, "call", 2));
+    printf("JS(QuickJS): Registered YUI.call bridge\n");
 
     JS_FreeValue(g_js_ctx, global_obj);
 

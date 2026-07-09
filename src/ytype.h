@@ -132,7 +132,7 @@ typedef enum {
     INPUT_FIELD,
     LABEL,
     IMAGE,
-    LIST,
+    LAYER_LIST,
     GRID,  // 添加GRID类型
     PROGRESS,
     CHECKBOX,
@@ -263,7 +263,7 @@ typedef struct MouseEvent {
 #define MAX_EVENT 512
 
 // 定义事件处理函数类型
-typedef void (*EventHandler)(void* data);
+typedef void* (*EventHandler)(void* data);
 
 
 typedef struct {

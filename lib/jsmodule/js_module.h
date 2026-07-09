@@ -80,6 +80,9 @@ char* js_module_read_file(const char* file_path);
 
 int js_module_set_event(const char* layer_id, const char* event_name, const char* event_func_name);
 
+// YUI.call 桥接函数
+void* js_module_get_context(void);
+
 #ifdef __cplusplus
 }
 #endif

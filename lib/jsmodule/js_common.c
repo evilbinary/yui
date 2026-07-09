@@ -121,7 +121,7 @@ int js_module_set_layer_event(Layer* layer, const char* event_name, const char* 
 }
 
 // 通用的 JS 事件包装函数（用于 YUI 的 register_event_handler）
-static void js_module_common_event(void* data)
+static void* js_module_common_event(void* data)
 {
     Layer* layer = (Layer*)data;
     if (layer && layer->event) {
@@ -137,46 +137,51 @@ static void js_module_common_event(void* data)
             }
         }
     }
+    return NULL;
 }
 
 // Click 事件包装函数
-static void js_module_click_event(void* data)
+static void* js_module_click_event(void* data)
 {
     Layer* layer = (Layer*)data;
     if (layer) {
         printf("JS: Click event on layer '%s'\n", layer->id);
         js_module_call_layer_event(layer->id, "onClick");
     }
+    return NULL;
 }
 
 // Press 事件包装函数
-static void js_module_press_event(void* data)
+static void* js_module_press_event(void* data)
 {
     Layer* layer = (Layer*)data;
     if (layer) {
         printf("JS: Press event on layer '%s'\n", layer->id);
         js_module_call_layer_event(layer->id, "onPress");
     }
+    return NULL;
 }
 
 // Scroll 事件包装函数
-static void js_module_scroll_event(void* data)
+static void* js_module_scroll_event(void* data)
 {
     Layer* layer = (Layer*)data;
     if (layer) {
         printf("JS: Scroll event on layer '%s'\n", layer->id);
         js_module_call_layer_event(layer->id, "onScroll");
     }
+    return NULL;
 }
 
 // Change 事件包装函数
-static void js_module_change_event(void* data)
+static void* js_module_change_event(void* data)
 {
     Layer* layer = (Layer*)data;
     if (layer) {
         printf("JS: Change event on layer '%s'\n", layer->id);
         js_module_call_layer_event(layer->id, "onChange");
     }
+    return NULL;
 }
 
 // 根据事件类型返回对应的处理函数

@@ -66,12 +66,14 @@ cJSON* parse_yaml_json_file(const char* file_path) {
     }
 }
 
-void hello_world(Layer* layer) {
+void* hello_world(Layer* layer) {
     printf("你好，世界！ %s\n",layer->text);
+    return NULL;
 }
 
-void hello_touch(Layer* layer) {
+void* hello_touch(Layer* layer) {
     printf("touch %s\n",layer->text);
+    return NULL;
 }
 
 // ====================== 主入口 ======================

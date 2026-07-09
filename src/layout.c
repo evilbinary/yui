@@ -422,8 +422,8 @@ void layout_layer(Layer* layer){
     }
 
     //LIST 布局
-    if(layer->type==LIST){
-        printf("layout_layer: processing LIST layout\n");
+    if(layer->type==LAYER_LIST){
+        printf("layout_layer: processing LAYER_LIST layout\n");
         fflush(stdout);
         int padding_top = layer->layout_manager ? layer->layout_manager->padding[0] : 0;
         int padding_left = layer->layout_manager ? layer->layout_manager->padding[3] : 0;
