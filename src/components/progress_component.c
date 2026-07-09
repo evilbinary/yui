@@ -397,23 +397,31 @@ void progress_component_render(Layer* layer) {
             int text_width, text_height;
             backend_query_texture(text_texture, NULL, NULL, &text_width, &text_height);
             
+            int natural_w = text_width / scale;
+            int natural_h = text_height / scale;
+            int max_w = layer->rect.w - 10;
+            int max_h = layer->rect.h - 10;
+            if (max_w < 1) max_w = 1;
+            if (max_h < 1) max_h = 1;
+            
+            int draw_w = natural_w;
+            int draw_h = natural_h;
+            if (draw_w > max_w || draw_h > max_h) {
+                float scale_w = (float)max_w / (float)draw_w;
+                float scale_h = (float)max_h / (float)draw_h;
+                float fit_scale = scale_w < scale_h ? scale_w : scale_h;
+                draw_w = (int)(draw_w * fit_scale);
+                draw_h = (int)(draw_h * fit_scale);
+                if (draw_w < 1) draw_w = 1;
+                if (draw_h < 1) draw_h = 1;
+            }
+            
             Rect text_rect = {
-                layer->rect.x + (layer->rect.w - text_width / scale) / 2,  // 居中
-                layer->rect.y + (layer->rect.h - text_height / scale) / 2,
-                text_width / scale,
-                text_height / scale
+                layer->rect.x + (layer->rect.w - draw_w) / 2,
+                layer->rect.y + (layer->rect.h - draw_h) / 2,
+                draw_w,
+                draw_h
             };
-            
-            // 确保文本不会超出进度条边界
-            if (text_rect.w > layer->rect.w - 10) {
-                text_rect.w = layer->rect.w - 10;
-                text_rect.x = layer->rect.x + 5;
-            }
-            
-            if (text_rect.h > layer->rect.h - 10) {
-                text_rect.h = layer->rect.h - 10;
-                text_rect.y = layer->rect.y + 5;
-            }
             
             backend_render_text_copy(text_texture, NULL, &text_rect);
             backend_render_text_destroy(text_texture);
