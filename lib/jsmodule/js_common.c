@@ -354,7 +354,8 @@ static void register_js_event_mapping(const char* event_name, const char* func_n
                 js_module_set_layer_event(layer, event_type, clean_func_name, handler);
             }
         } else {
-            printf("JS: Warning: Unknown event type '%s' for layer '%s'\n", event_type, layer_id);
+            // 非标准事件类型（如 onItemClick），注册为全局处理器
+            register_event_handler(clean_func_name, js_module_common_event);
         }
     }else{
         EventHandler handler = get_event_handler_by_type(event_name);

@@ -209,9 +209,23 @@ MenuComponent* menu_component_create_from_json(Layer* layer, cJSON* json) {
             if (handler_name[0] == '@') handler_name++;
             strncpy(component->item_click_name, handler_name, sizeof(component->item_click_name) - 1);
             component->item_click_name[sizeof(component->item_click_name) - 1] = '\0';
+
+            // 设置图层的点击事件名称，供 js_module_common_event 路由到正确的JS函数
+            if (component->item_click_name[0]) {
+                if (!layer->event) {
+                    layer->event = malloc(sizeof(Event));
+                    if (layer->event) {
+                        memset(layer->event, 0, sizeof(Event));
+                    }
+                }
+                if (layer->event) {
+                    strncpy(layer->event->click_name, component->item_click_name, MAX_PATH - 1);
+                    layer->event->click_name[MAX_PATH - 1] = '\0';
+                }
+            }
         }
     }
-    
+
     return component;
 }
 
@@ -437,8 +451,17 @@ static void menu_item_click(MenuComponent* component, MenuItem* item) {
     if (item->callback) {
         item->callback(item->user_data);
     } else if (strlen(component->item_click_name) > 0) {
+        // 保存原始文本，设置点击项文本供JS读取
+        char saved_text[256] = {0};
+        const char* orig = layer_get_text(component->layer);
+        strncpy(saved_text, orig, sizeof(saved_text) - 1);
+        layer_set_text(component->layer, item->text);
+
         EventHandler handler = find_event_by_name(component->item_click_name);
-        if (handler) handler(item->text);
+        if (handler) handler(component->layer);
+
+        // 恢复原始文本
+        layer_set_text(component->layer, saved_text);
     }
 
     // 关闭整个菜单链
@@ -570,9 +593,10 @@ void menu_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     }
 
     Rect* rect = &layer->rect;
+    int is_popup_style = (layer->text == NULL || layer->text[0] == '\0');
 
     if (event->state == SDL_MOUSEMOTION) {
-        if (component->expanded) {
+        if (component->expanded || is_popup_style) {
             int prev_hovered = component->hovered_item;
             component->hovered_item = menu_component_get_item_at_position(component, event->x, event->y);
 
@@ -611,7 +635,7 @@ void menu_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
         int y_offset = (layer->text && strlen(layer->text) > 0) ? component->item_height : 0;
         int relative_y = event->y - rect->y;
 
-        if (component->expanded) {
+        if (component->expanded || is_popup_style) {
             int clicked_item = menu_component_get_item_at_position(component, event->x, event->y);
             if (clicked_item >= 0 && clicked_item < component->item_count) {
                 menu_item_click(component, &component->items[clicked_item]);
@@ -654,8 +678,10 @@ void menu_component_render(Layer* layer) {
     Rect* rect = &layer->rect;
 
     // 折叠时只绘制标题栏区域，展开时绘制完整菜单
+    // 弹出式菜单（无标题文字）直接绘制完整菜单
     int title_h = (layer->text && strlen(layer->text) > 0) ? component->item_height : 0;
-    Rect bg_rect = component->expanded ? *rect :
+    int is_popup_style = (title_h == 0);
+    Rect bg_rect = (component->expanded || is_popup_style) ? *rect :
                    (Rect){rect->x, rect->y, rect->w, title_h > 0 ? title_h + 1 : 0};
 
     // 绘制背景
@@ -731,9 +757,9 @@ void menu_component_render(Layer* layer) {
 
         y_offset = component->item_height;
     }
-    
-    // 仅展开时绘制菜单项
-    if (component->expanded) {
+
+    // 展开或弹出式菜单时绘制菜单项
+    if (component->expanded || is_popup_style) {
         // 绘制菜单项
         for (int i = 0; i < component->item_count; i++) {
             MenuItem* item = &component->items[i];
