@@ -32,6 +32,8 @@ TreeViewComponent* treeview_component_create(Layer* layer) {
     component->collapse_icon_path = NULL;
     component->on_select_name = NULL;
     component->on_select_handler = NULL;
+    component->on_expand_name = NULL;
+    component->on_expand_handler = NULL;
     
     // 设置组件
     layer->component = component;
@@ -59,6 +61,7 @@ void treeview_component_destroy(TreeViewComponent* component) {
     if (component->expand_icon_path) free(component->expand_icon_path);
     if (component->collapse_icon_path) free(component->collapse_icon_path);
     if (component->on_select_name) free(component->on_select_name);
+    if (component->on_expand_name) free(component->on_expand_name);
 
     free(component);
 }
@@ -397,7 +400,7 @@ TreeViewComponent* treeview_component_create_from_json(Layer* layer, cJSON* json
         treeview_set_colors(component, text_color, selected_text_color, selected_bg_color, hover_bg_color, expand_icon_color);
     }
 
-    // 解析 onSelect 事件名，存储名字并缓存 handler
+    // 解析事件，存储名字并缓存 handler
     cJSON* events = cJSON_GetObjectItem(json_obj, "events");
     if (events) {
         cJSON* onSelect = cJSON_GetObjectItem(events, "onSelect");
@@ -406,6 +409,13 @@ TreeViewComponent* treeview_component_create_from_json(Layer* layer, cJSON* json
             if (val[0] == '@') val++;
             component->on_select_name = strdup(val);
             component->on_select_handler = find_event_by_name(val);
+        }
+        cJSON* onExpand = cJSON_GetObjectItem(events, "onExpand");
+        if (onExpand && onExpand->valuestring) {
+            const char* val = onExpand->valuestring;
+            if (val[0] == '@') val++;
+            component->on_expand_name = strdup(val);
+            component->on_expand_handler = find_event_by_name(val);
         }
     }
 
@@ -850,6 +860,22 @@ void treeview_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
                 if (component->on_node_expanded && old_expanded != node->expanded) {
                     component->on_node_expanded(node, node->expanded, component->user_data);
                 }
+
+                // 触发 JS onExpand 事件
+                if (component->on_expand_handler && old_expanded != node->expanded) {
+                    char* node_json = treeview_node_to_json(node);
+                    if (node_json) {
+                        if (!layer->event) {
+                            layer->event = calloc(1, sizeof(Event));
+                        }
+                        strncpy(layer->event->click_name, component->on_expand_name, MAX_PATH - 1);
+                        layer->event->click_name[MAX_PATH - 1] = '\0';
+                        free(layer->text);
+                        layer->text = strdup(node_json);
+                        free(node_json);
+                        component->on_expand_handler(layer);
+                    }
+                }
             } else {
                 // 选中节点
                 treeview_set_selected_node(component, node);
@@ -862,6 +888,11 @@ void treeview_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
                     // 序列化节点数据供JS访问
                     char* node_json = treeview_node_to_json(node);
                     if (node_json) {
+                        if (!layer->event) {
+                            layer->event = calloc(1, sizeof(Event));
+                        }
+                        strncpy(layer->event->click_name, component->on_select_name, MAX_PATH - 1);
+                        layer->event->click_name[MAX_PATH - 1] = '\0';
                         free(layer->text);
                         layer->text = strdup(node_json);
                         free(node_json);

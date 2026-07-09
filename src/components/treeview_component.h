@@ -53,6 +53,8 @@ typedef struct TreeViewComponent {
     char* collapse_icon_path;  // default SVG/image path for expanded
     char* on_select_name;           // event handler name for node selection
     EventHandler on_select_handler;  // cached event handler for node selection
+    char* on_expand_name;            // event handler name for node expand/collapse
+    EventHandler on_expand_handler;  // cached event handler for node expand/collapse
 } TreeViewComponent;
 
 // 创建树视图组件
