@@ -66,4 +66,8 @@ void backend_start_text_input();
 void backend_stop_text_input();
 void backend_set_text_input_rect(Rect* rect);
 
+// Windows 标题栏暗色模式（仅 Windows 平台生效）
+void backend_apply_system_titlebar_theme(void);
+void backend_set_titlebar_dark_mode(int dark_mode);
+
 #endif

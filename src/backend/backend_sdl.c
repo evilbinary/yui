@@ -6,6 +6,12 @@
 #include <stdbool.h>  // 添加支持bool类型
 #include <math.h>     // 添加数学函数支持
 
+#ifdef _WIN32
+#include <windows.h>
+#include <SDL_syswm.h>
+#include <dwmapi.h>
+#endif
+
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #endif
@@ -446,10 +452,80 @@ int backend_init(){
     init_font_cache();
     // 初始化触摸状态
     memset(&touchState, 0, sizeof(TouchState));
-    
+
+    // Windows: 设置标题栏跟随系统暗色模式
+    #ifdef _WIN32
+    backend_apply_system_titlebar_theme();
+    #endif
+
     return 0;
 
 }
+
+#ifdef _WIN32
+
+// 注册表路径
+#define PERSONALIZE_KEY_PATH "Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize"
+
+// 检测 Windows 系统是否启用了暗色模式 (AppMode)
+static int backend_is_system_dark_mode(void) {
+    HKEY hKey;
+    DWORD appsUseLightTheme = 1;  // 默认亮色模式
+    DWORD dataSize = sizeof(DWORD);
+    
+    if (RegOpenKeyExA(HKEY_CURRENT_USER, PERSONALIZE_KEY_PATH, 0, KEY_READ, &hKey) == ERROR_SUCCESS) {
+        RegQueryValueExA(hKey, "AppsUseLightTheme", NULL, NULL, (LPBYTE)&appsUseLightTheme, &dataSize);
+        RegCloseKey(hKey);
+    }
+    
+    return appsUseLightTheme == 0;  // 0 表示暗色模式, 1 表示亮色模式
+}
+
+// 应用系统标题栏主题
+void backend_apply_system_titlebar_theme(void) {
+    if (!window) return;
+    
+    SDL_SysWMinfo wmInfo;
+    SDL_VERSION(&wmInfo.version);
+    
+    if (SDL_GetWindowWMInfo(window, &wmInfo)) {
+        HWND hwnd = wmInfo.info.win.window;
+        
+        BOOL useDarkMode = backend_is_system_dark_mode() ? TRUE : FALSE;
+        HRESULT hr = DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &useDarkMode, sizeof(useDarkMode));
+        
+        if (SUCCEEDED(hr)) {
+            printf("Windows: Title bar dark mode %s\n", useDarkMode ? "enabled" : "disabled");
+        } else {
+            // DWMWA_USE_IMMERSIVE_DARK_MODE 需要 Windows 10 20H1 (Build 19041) 或更高
+            // 低版本上尝试使用 DWMWA_USE_IMMERSIVE_DARK_MODE 前身 (19H1)
+            printf("Windows: DwmSetWindowAttribute failed (hr=0x%lx), may need newer Windows version\n", hr);
+        }
+    }
+}
+
+// 手动设置标题栏暗色模式
+void backend_set_titlebar_dark_mode(int dark_mode) {
+    if (!window) return;
+    
+    SDL_SysWMinfo wmInfo;
+    SDL_VERSION(&wmInfo.version);
+    
+    if (SDL_GetWindowWMInfo(window, &wmInfo)) {
+        HWND hwnd = wmInfo.info.win.window;
+        
+        BOOL useDarkMode = dark_mode ? TRUE : FALSE;
+        HRESULT hr = DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &useDarkMode, sizeof(useDarkMode));
+        
+        if (SUCCEEDED(hr)) {
+            printf("Windows: Title bar dark mode set to %s\n", useDarkMode ? "dark" : "light");
+        } else {
+            printf("Windows: Failed to set title bar dark mode (hr=0x%lx)\n", hr);
+        }
+    }
+}
+
+#endif // _WIN32
 
 // 重置触摸状态
 void resetTouchState() {

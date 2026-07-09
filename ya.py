@@ -291,14 +291,15 @@ def add_flags():
                 '-I./src/'
                 )
             add_ldflags(
-                '-L'+mingw64+'\\lib',
-                '-lSDL2main',
-                '-lSDL2',
-                '-lSDL2_ttf',
-                '-lSDL2_image',
-                '-lm',
-                '-lws2_32'
-                )
+            '-L'+mingw64+'\\lib',
+            '-lSDL2main',
+            '-lSDL2',
+            '-lSDL2_ttf',
+            '-lSDL2_image',
+            '-lm',
+            '-lws2_32',
+            '-ldwmapi'
+            )
 
 def run(target):
     targetfile = target.targetfile()
