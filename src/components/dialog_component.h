@@ -49,6 +49,10 @@ struct DialogComponent {
     int message_area_height;   // 消息可见区高度
     int scrollbar_dragging;    // 是否正在拖动滚动条
     int scrollbar_drag_offset; // 拖动时鼠标与滑块顶部的偏移
+    int dragging;              // 是否正在拖动对话框
+    int drag_offset_x;         // 拖动时鼠标相对对话框左上角的 X 偏移
+    int drag_offset_y;         // 拖动时鼠标相对对话框左上角的 Y 偏移
+    int movable;               // 是否允许拖动
     void* user_data;           // 用户数据
     
     // 颜色配置

@@ -46,6 +46,8 @@ static int dialog_layout_button_rect(DialogComponent* component, Layer* layer,
     int index, Rect* out_rect);
 static void dialog_get_button_colors(DialogComponent* component, DialogButton* button,
     int selected, Color* bg, Color* text);
+static int dialog_point_in_drag_area(DialogComponent* component, Layer* layer, int x, int y);
+static void dialog_clamp_to_window(Layer* layer);
 
 // 创建对话框组件
 DialogComponent* dialog_component_create(Layer* layer) {
@@ -74,6 +76,10 @@ DialogComponent* dialog_component_create(Layer* layer) {
     component->message_area_height = 0;
     component->scrollbar_dragging = 0;
     component->scrollbar_drag_offset = 0;
+    component->dragging = 0;
+    component->drag_offset_x = 0;
+    component->drag_offset_y = 0;
+    component->movable = 1;
     component->user_data = NULL;
     component->on_close = NULL;
     component->on_show = NULL;
@@ -352,6 +358,10 @@ bool dialog_component_show(DialogComponent* component, int x, int y) {
     component->message_area_height = 0;
     component->scrollbar_dragging = 0;
     component->scrollbar_drag_offset = 0;
+    component->dragging = 0;
+    component->drag_offset_x = 0;
+    component->drag_offset_y = 0;
+    component->movable = 1;
     
     // 创建弹出层并添加到弹出管理器
     PopupLayer* popup = popup_layer_create(component->popup_layer, POPUP_TYPE_DIALOG, 
@@ -397,6 +407,7 @@ void dialog_component_hide(DialogComponent* component) {
     component->popup_layer = NULL;
     component->is_opened = 0;
     component->scrollbar_dragging = 0;
+    component->dragging = 0;
 
     popup_manager_remove(popup_layer);
     free(popup_layer);
@@ -543,6 +554,59 @@ static void dialog_get_button_colors(DialogComponent* component, DialogButton* b
         *bg = button->has_bg_color ? button->bg_color : component->button_color;
     }
     *text = button->has_text_color ? button->text_color : component->button_text_color;
+}
+
+static int dialog_point_in_drag_area(DialogComponent* component, Layer* layer, int x, int y) {
+    if (!component || !layer || !component->movable) {
+        return 0;
+    }
+
+    Rect* rect = &layer->rect;
+    if (x < rect->x || x >= rect->x + rect->w) {
+        return 0;
+    }
+
+    int drag_bottom = rect->y + (strlen(component->title) > 0 ? 56 : 24);
+    int message_top = 0;
+    int message_area_height = 0;
+    dialog_get_message_area(component, layer, &message_top, &message_area_height);
+    if (message_top > drag_bottom) {
+        drag_bottom = message_top;
+    }
+
+    return y >= rect->y && y < drag_bottom;
+}
+
+static void dialog_clamp_to_window(Layer* layer) {
+    if (!layer) {
+        return;
+    }
+
+    int sw = 0;
+    int sh = 0;
+    backend_get_windowsize(&sw, &sh);
+    if (sw <= 0 || sh <= 0) {
+        return;
+    }
+
+    if (layer->rect.x < 0) {
+        layer->rect.x = 0;
+    }
+    if (layer->rect.y < 0) {
+        layer->rect.y = 0;
+    }
+    if (layer->rect.x + layer->rect.w > sw) {
+        layer->rect.x = sw - layer->rect.w;
+    }
+    if (layer->rect.y + layer->rect.h > sh) {
+        layer->rect.y = sh - layer->rect.h;
+    }
+    if (layer->rect.x < 0) {
+        layer->rect.x = 0;
+    }
+    if (layer->rect.y < 0) {
+        layer->rect.y = 0;
+    }
 }
 
 static void dialog_get_message_area(DialogComponent* component, Layer* layer,
@@ -835,6 +899,12 @@ void dialog_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     }
 
     if (event->state == SDL_MOUSEMOTION) {
+        if (component->dragging) {
+            layer->rect.x = event->x - component->drag_offset_x;
+            layer->rect.y = event->y - component->drag_offset_y;
+            dialog_clamp_to_window(layer);
+            return;
+        }
         if (component->scrollbar_dragging && has_scrollbar) {
             int max_scroll = component->message_content_height - message_area_height;
             if (max_scroll > 0) {
@@ -856,6 +926,12 @@ void dialog_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
         }
         component->selected_button = dialog_get_button_at_position(component, layer, event->x, event->y);
     } else if (event->state == SDL_PRESSED && event->button == SDL_BUTTON_LEFT) {
+        if (dialog_point_in_drag_area(component, layer, event->x, event->y)) {
+            component->dragging = 1;
+            component->drag_offset_x = event->x - layer->rect.x;
+            component->drag_offset_y = event->y - layer->rect.y;
+            return;
+        }
         if (has_scrollbar &&
             event->x >= thumb.x && event->x < thumb.x + thumb.w &&
             event->y >= thumb.y && event->y < thumb.y + thumb.h) {
@@ -884,6 +960,10 @@ void dialog_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
             return;
         }
     } else if (event->state == SDL_RELEASED && event->button == SDL_BUTTON_LEFT) {
+        if (component->dragging) {
+            component->dragging = 0;
+            return;
+        }
         if (component->scrollbar_dragging) {
             component->scrollbar_dragging = 0;
             return;
@@ -1104,6 +1184,10 @@ DialogComponent* dialog_component_create_from_json(Layer* layer, cJSON* json) {
     // 解析模态属性
     if (cJSON_HasObjectItem(json, "modal")) {
         dialog_component_set_modal(component, cJSON_IsTrue(cJSON_GetObjectItem(json, "modal")));
+    }
+
+    if (cJSON_HasObjectItem(json, "movable")) {
+        component->movable = cJSON_IsTrue(cJSON_GetObjectItem(json, "movable"));
     }
     
     // 解析按钮
