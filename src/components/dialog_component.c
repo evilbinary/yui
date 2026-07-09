@@ -60,9 +60,8 @@ DialogComponent* dialog_component_create(Layer* layer) {
     component->button_hover_color = DEFAULT_BUTTON_HOVER_COLOR;
     component->button_text_color = DEFAULT_BUTTON_TEXT_COLOR;
     
-    // 设置组件指针和渲染函数
+    // 模板图层不参与普通渲染，仅通过 popup 显示
     layer->component = component;
-    layer->render = dialog_component_render;
     layer->handle_mouse_event = dialog_component_handle_mouse_event;
     layer->handle_key_event = dialog_component_handle_key_event;
     
@@ -474,6 +473,10 @@ void dialog_component_render(Layer* layer) {
     }
     
     DialogComponent* component = (DialogComponent*)layer->component;
+    if (!component->is_opened) {
+        return;
+    }
+    
     Rect* rect = &layer->rect;
     
     // 绘制背景
@@ -630,6 +633,11 @@ DialogComponent* dialog_component_create_from_json(Layer* layer, cJSON* json) {
     if (!component) {
         return NULL;
     }
+
+    // 未配置 visible 时默认隐藏，通过 show 弹出显示
+    if (!cJSON_HasObjectItem(json, "visible")) {
+        layer->visible = IN_VISIBLE;
+    }
     
     // 解析标题
     if (cJSON_HasObjectItem(json, "title")) {
@@ -641,9 +649,18 @@ DialogComponent* dialog_component_create_from_json(Layer* layer, cJSON* json) {
         dialog_component_set_message(component, cJSON_GetObjectItem(json, "message")->valuestring);
     }
     
-    // 解析类型
-    if (cJSON_HasObjectItem(json, "type")) {
-        const char* type_str = cJSON_GetObjectItem(json, "type")->valuestring;
+    // 解析类型（dialogType 优先，避免与图层 type 字段冲突）
+    cJSON* type_item = cJSON_GetObjectItem(json, "dialogType");
+    if (!type_item) {
+        type_item = cJSON_GetObjectItem(json, "type");
+        if (type_item && type_item->valuestring &&
+            (strcmp(type_item->valuestring, "Dialog") == 0 ||
+             strcmp(type_item->valuestring, "dialog") == 0)) {
+            type_item = NULL;
+        }
+    }
+    if (type_item && type_item->valuestring) {
+        const char* type_str = type_item->valuestring;
         if (strcmp(type_str, "info") == 0) {
             dialog_component_set_type(component, DIALOG_TYPE_INFO);
         } else if (strcmp(type_str, "warning") == 0) {
