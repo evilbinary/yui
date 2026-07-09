@@ -139,7 +139,10 @@ int js_module_call_event(const char* event_name, Layer* layer)
     JSValue func = JS_GetPropertyStr(g_js_ctx, global_obj, func_name);
 
     if (JS_IsUndefined(func) || !JS_IsFunction(g_js_ctx, func)) {
-        return -1;
+        JS_FreeValue(g_js_ctx, global_obj);
+        JS_FreeValue(g_js_ctx, func);
+        // 全局函数不存在时，回退到事件映射表查找
+        return js_module_trigger_event(func_name, layer);
     }
 
     // 调用函数

@@ -193,5 +193,12 @@
         "buttonTextColor": "#FFFFFF"
       }
     }
-  ]
+  ],
+  "events": {
+    "showInfoDialog": "function() { YUI.show('infoDialog'); }",
+    "showWarningDialog": "function() { YUI.show('warningDialog') }",
+    "showErrorDialog": "function() { YUI.show('errorDialog') }",
+    "showQuestionDialog": "function() { YUI.show('questionDialog') }",
+    "showCustomDialog": "function() { YUI.show('customDialog') }"
+  }
 }

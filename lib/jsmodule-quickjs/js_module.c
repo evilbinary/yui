@@ -1143,13 +1143,14 @@ int js_module_call_event(const char* event_name, Layer* layer)
         if (JS_IsUndefined(func) || JS_IsNull(func)) {
             JS_FreeValue(g_js_ctx, global_obj);
             JS_FreeValue(g_js_ctx, func);
-            return -1;
+            // 全局函数不存在时，回退到事件映射表查找
+            return js_module_trigger_event(func_name, layer);
         }
 
         if (!JS_IsFunction(g_js_ctx, func)) {
             JS_FreeValue(g_js_ctx, global_obj);
             JS_FreeValue(g_js_ctx, func);
-            return -1;
+            return js_module_trigger_event(func_name, layer);
         }
 
         // 准备参数

@@ -337,10 +337,10 @@ static void register_js_event_mapping(const char* event_name, const char* func_n
 
     strncpy(g_js_event_map[g_js_event_count].event_name, event_name, 127);
     g_js_event_map[g_js_event_count].event_name[127] = '\0';
-    strncpy(g_js_event_map[g_js_event_count].func_name, func_name, 127);
+    strncpy(g_js_event_map[g_js_event_count].func_name, clean_func_name, 127);
     g_js_event_map[g_js_event_count].func_name[127] = '\0';
 
-    printf("JS: Registered JS event: '%s' -> '%s'\n", event_name, func_name);
+    printf("JS: Registered JS event: '%s' -> '%s'\n", event_name, clean_func_name);
 
 
 
@@ -393,9 +393,9 @@ static void register_js_event_mapping(const char* event_name, const char* func_n
     if (dot_pos != NULL && event_type != NULL && g_js_event_count < MAX_JS_EVENTS) {
         strncpy(g_js_event_map[g_js_event_count].event_name, event_type, 127);
         g_js_event_map[g_js_event_count].event_name[127] = '\0';
-        strncpy(g_js_event_map[g_js_event_count].func_name, func_name, 127);
+        strncpy(g_js_event_map[g_js_event_count].func_name, clean_func_name, 127);
         g_js_event_map[g_js_event_count].func_name[127] = '\0';
-        printf("JS: Registered JS event (unprefixed): '%s' -> '%s'\n", event_type, func_name);
+        printf("JS: Registered JS event (unprefixed): '%s' -> '%s'\n", event_type, clean_func_name);
         g_js_event_count++;
     }
 }
@@ -605,9 +605,21 @@ int js_module_trigger_event(const char* event_name, Layer* layer)
         printf("JS:   [%d] '%s' -> '%s' (comparing with '%s')\n", 
                i, g_js_event_map[i].event_name, g_js_event_map[i].func_name, event_name);
         if (strcmp(g_js_event_map[i].event_name, event_name) == 0) {
+            const char* func_name = g_js_event_map[i].func_name;
             printf("JS: Triggering JS event '%s' -> calling function '%s'\n",
-                   event_name, g_js_event_map[i].func_name);
-            return js_module_call_event(g_js_event_map[i].func_name, layer);
+                   event_name, func_name);
+            // @ 前缀表示函数名引用：先在事件映射表中解析，再尝试直接调用
+            if (func_name[0] == '@') {
+                return js_module_trigger_event(func_name + 1, layer);
+            }
+            // 简单标识符（非内联代码）优先在事件映射表中查找
+            if (func_name[0] != '\0' && strncmp(func_name, "function", 8) != 0) {
+                int resolved = js_module_trigger_event(func_name, layer);
+                if (resolved == 0) {
+                    return 0;
+                }
+            }
+            return js_module_call_event(func_name, layer);
         }
     }
 

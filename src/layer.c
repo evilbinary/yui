@@ -714,12 +714,16 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
   if (events) {
     if (cJSON_HasObjectItem(events, "onClick")) {
       layer->event = malloc(sizeof(Event));
+      memset(layer->event, 0, sizeof(Event));
       const char* handler_id =
           cJSON_GetObjectItem(events, "onClick")->valuestring;
-      // 实际项目应建立handler_id到函数的映射表
-      strcpy(layer->event->click_name, handler_id);
+      const char* lookup_name = handler_id;
+      if (handler_id[0] == '@') {
+        lookup_name = handler_id + 1;
+      }
+      strcpy(layer->event->click_name, lookup_name);
 
-      EventHandler handler = find_event_by_name(handler_id);
+      EventHandler handler = find_event_by_name(lookup_name);
       layer->event->click = handler;
     }
     // 解析滚动事件
@@ -730,9 +734,13 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
       }
       const char* handler_id =
           cJSON_GetObjectItem(events, "onScroll")->valuestring;
-      strcpy(layer->event->scroll_name, handler_id);
+      const char* lookup_name = handler_id;
+      if (handler_id[0] == '@') {
+        lookup_name = handler_id + 1;
+      }
+      strcpy(layer->event->scroll_name, lookup_name);
 
-      EventHandler handler = find_event_by_name(handler_id);
+      EventHandler handler = find_event_by_name(lookup_name);
       layer->event->scroll = handler;
     }
     // 解析统一触屏事件
@@ -743,10 +751,14 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
       }
       const char* handler_id =
           cJSON_GetObjectItem(events, "onTouch")->valuestring;
-      strcpy(layer->event->touch_name, handler_id);
+      const char* lookup_name = handler_id;
+      if (handler_id[0] == '@') {
+        lookup_name = handler_id + 1;
+      }
+      strcpy(layer->event->touch_name, lookup_name);
 
       // 查找事件处理函数
-      EventHandler handler = find_event_by_name(handler_id);
+      EventHandler handler = find_event_by_name(lookup_name);
       if (handler) {
         // 由于EventHandler和touch函数签名不同，这里需要进行类型转换
         layer->event->touch = (void (*)(TouchEvent*))handler;
