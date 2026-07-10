@@ -1,0 +1,18 @@
+{
+    "id": "dynamic_detail",
+    "type": "view",
+    "visible": true,
+    "events": {
+        "onLoad": "@onDetailPageLoad",
+        "onShow": "@onDetailPageShow",
+        "onHide": "@onDetailPageHide",
+        "onUnload": "@onDetailPageUnload"
+    },
+    "children": [
+        {
+            "id": "detail_title",
+            "type": "label",
+            "text": "Dynamic Detail"
+        }
+    ]
+}

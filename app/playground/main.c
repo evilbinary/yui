@@ -110,7 +110,7 @@ int main(int argc, char* argv[]) {
 
      // 加载并执行 JS 文件
      printf("加载并执行 JS 文件...\n");
-     int count = js_module_load_from_json(root_json, json_path);
+     int count = js_module_load_from_json(root_json, json_path, 0);
  
      // 如果主 JSON 中没有找到 js 文件，检查是否有 source 属性
      if (count <= 0) {
@@ -123,7 +123,7 @@ int main(int argc, char* argv[]) {
              cJSON* source_json = parse_yaml_json_file((char*)source_path);
              if (source_json) {
                  // 从 source JSON 中加载 JS（传递 source 文件路径）
-                 int source_count = js_module_load_from_json(source_json, source_path);
+                 int source_count = js_module_load_from_json(source_json, source_path, 0);
                  printf("DEBUG: Loaded %d JS file(s) from source JSON\n", source_count);
                  cJSON_Delete(source_json);
                  count += source_count;

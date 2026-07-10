@@ -4,6 +4,7 @@
 #include "../../src/layer_properties.h"
 #include "../../src/layout.h"
 #include "../../src/layer_update.h"
+#include "../../src/layer_lifecycle.h"
 #include "../../src/render.h"
 #include "js_socket.h"
 #include "../../src/event.h"
@@ -234,11 +235,21 @@ static JSValue js_log(JSContext *ctx, JSValueConst this_val, int argc, JSValueCo
     return JS_UNDEFINED;
 }
 
-// 从 JSON 字符串动态渲染到指定图层
+static int append_layer_child_qjs(Layer* parent, Layer* child) {
+    if (!parent || !child) return -1;
+    Layer** new_children = realloc(parent->children, sizeof(Layer*) * (parent->child_count + 1));
+    if (!new_children) return -2;
+    parent->children = new_children;
+    parent->children[parent->child_count] = child;
+    parent->child_count++;
+    return 0;
+}
+
+// 从 JSON 字符串动态渲染到指定图层（可选第三参数 append：true 时追加子图层，不清空已有子节点）
 static JSValue js_render_from_json(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     if (argc < 2) {
-        return JS_ThrowTypeError(ctx, "Expected 2 arguments: layer_id and json_string");
+        return JS_ThrowTypeError(ctx, "Expected at least 2 arguments: layer_id, json_string, append?");
     }
 
     size_t len1, len2;
@@ -251,76 +262,80 @@ static JSValue js_render_from_json(JSContext *ctx, JSValueConst this_val, int ar
         return JS_ThrowTypeError(ctx, "Invalid arguments");
     }
 
-    printf("JS(QuickJS): renderFromJson called with layer_id='%s'\n", layer_id);
-
-    if (g_layer_root) {
-        // 查找目标图层
-        Layer* parent_layer = find_layer_by_id(g_layer_root, layer_id);
-        if (!parent_layer) {
-            printf("JS(QuickJS): ERROR - Layer '%s' not found\n", layer_id);
-            JS_FreeCString(ctx, layer_id);
-            JS_FreeCString(ctx, json_str);
-            return JS_NewInt32(ctx, -1);
-        }
-
-        printf("JS(QuickJS): Found parent layer '%s'\n", layer_id);
-
-        // 清除父图层的所有子图层
-        if (parent_layer->children) {
-            for (int i = 0; i < parent_layer->child_count; i++) {
-                if (parent_layer->children[i]) {
-                    destroy_layer(parent_layer->children[i]);
-                }
-            }
-            free(parent_layer->children);
-            parent_layer->children = NULL;
-        }
-        parent_layer->child_count = 0;
-
-        // 从 JSON 字符串创建新图层
-        Layer* new_layer = parse_layer_from_string(json_str, parent_layer);
-
-        if (new_layer) {
-            // 为子图层数组分配空间（初始分配1个，可以根据需要扩展）
-            parent_layer->children = malloc(sizeof(Layer*));
-            if (!parent_layer->children) {
-                printf("JS(QuickJS): ERROR - Failed to allocate memory for children array\n");
-                destroy_layer(new_layer);
-                JS_FreeCString(ctx, layer_id);
-                JS_FreeCString(ctx, json_str);
-                return JS_NewInt32(ctx, -2);
-            }
-
-            parent_layer->children[0] = new_layer;
-            parent_layer->child_count = 1;
-
-            // 重新布局父图层和新的子图层
-            printf("JS(QuickJS): Reloading layout for parent layer '%s'\n", layer_id);
-            layout_layer(parent_layer);
-            printf("JS(QuickJS): Layout updated successfully\n");
-
-            // 为新创建的图层加载字体
-            printf("JS(QuickJS): Loading fonts for new layer\n");
-            load_all_fonts(new_layer);
-            printf("JS(QuickJS): Fonts loaded successfully\n");
-
-            printf("JS(QuickJS): Successfully rendered JSON to layer '%s', new layer id: '%s'\n",
-                   layer_id, new_layer->id);
-            JS_FreeCString(ctx, layer_id);
-            JS_FreeCString(ctx, json_str);
-            return JS_NewInt32(ctx, 0);
-        } else {
-            printf("JS(QuickJS): ERROR - Failed to parse JSON string\n");
-            JS_FreeCString(ctx, layer_id);
-            JS_FreeCString(ctx, json_str);
-            return JS_NewInt32(ctx, -3);
-        }
+    int append = 0;
+    if (argc >= 3) {
+        append = JS_ToBool(ctx, argv[2]);
     }
 
-    printf("JS(QuickJS): ERROR - g_layer_root is NULL\n");
+    printf("JS(QuickJS): renderFromJson called with layer_id='%s', append=%d\n", layer_id, append);
+
+    if (!g_layer_root) {
+        JS_FreeCString(ctx, layer_id);
+        JS_FreeCString(ctx, json_str);
+        return JS_NewInt32(ctx, -4);
+    }
+
+    Layer* parent_layer = find_layer_by_id(g_layer_root, layer_id);
+    if (!parent_layer) {
+        printf("JS(QuickJS): ERROR - Layer '%s' not found\n", layer_id);
+        JS_FreeCString(ctx, layer_id);
+        JS_FreeCString(ctx, json_str);
+        return JS_NewInt32(ctx, -1);
+    }
+
+    if (!append && parent_layer->children) {
+        for (int i = 0; i < parent_layer->child_count; i++) {
+            if (parent_layer->children[i]) {
+                layer_lifecycle_before_destroy(parent_layer->children[i]);
+                destroy_layer(parent_layer->children[i]);
+            }
+        }
+        free(parent_layer->children);
+        parent_layer->children = NULL;
+        parent_layer->child_count = 0;
+    }
+
+    Layer* new_layer = parse_layer_from_string(json_str, parent_layer);
+    if (!new_layer) {
+        JS_FreeCString(ctx, layer_id);
+        JS_FreeCString(ctx, json_str);
+        return JS_NewInt32(ctx, -3);
+    }
+
+    if (append) {
+        if (append_layer_child_qjs(parent_layer, new_layer) != 0) {
+            destroy_layer(new_layer);
+            JS_FreeCString(ctx, layer_id);
+            JS_FreeCString(ctx, json_str);
+            return JS_NewInt32(ctx, -2);
+        }
+    } else {
+        parent_layer->children = malloc(sizeof(Layer*));
+        if (!parent_layer->children) {
+            destroy_layer(new_layer);
+            JS_FreeCString(ctx, layer_id);
+            JS_FreeCString(ctx, json_str);
+            return JS_NewInt32(ctx, -2);
+        }
+        parent_layer->children[0] = new_layer;
+        parent_layer->child_count = 1;
+    }
+
+    layout_layer(parent_layer);
+    load_all_fonts(new_layer);
+
+    cJSON* page_json = cJSON_Parse(json_str);
+    if (page_json) {
+        js_module_load_from_json(page_json, NULL, 1);
+        cJSON_Delete(page_json);
+    }
+    layer_lifecycle_on_show(new_layer);
+
+    printf("JS(QuickJS): Successfully rendered JSON to layer '%s', new layer id: '%s'\n",
+           layer_id, new_layer->id);
     JS_FreeCString(ctx, layer_id);
     JS_FreeCString(ctx, json_str);
-    return JS_NewInt32(ctx, -4);
+    return JS_NewInt32(ctx, 0);
 }
 
 // JSON 增量更新
@@ -620,6 +635,7 @@ int js_module_init(void)
 
     // 注册 API 函数
     js_module_register_api();
+    js_module_init_layer_lifecycle();
 
     printf("JS(QuickJS): QuickJS engine initialized\n");
     return 0;
@@ -628,6 +644,7 @@ int js_module_init(void)
 // 清理 JS 引擎
 void js_module_cleanup(void)
 {
+    js_module_shutdown();
     if (g_js_ctx) {
         JS_FreeContext(g_js_ctx);
         g_js_ctx = NULL;
@@ -1050,7 +1067,7 @@ void js_module_register_api(void)
     JS_SetPropertyStr(g_js_ctx, yui_obj, "setBgColor", JS_NewCFunction(g_js_ctx, js_set_bg_color, "setBgColor", 2));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "hide", JS_NewCFunction(g_js_ctx, js_hide, "hide", 1));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "show", JS_NewCFunction(g_js_ctx, js_show, "show", 1));
-    JS_SetPropertyStr(g_js_ctx, yui_obj, "renderFromJson", JS_NewCFunction(g_js_ctx, js_render_from_json, "renderFromJson", 2));
+    JS_SetPropertyStr(g_js_ctx, yui_obj, "renderFromJson", JS_NewCFunction(g_js_ctx, js_render_from_json, "renderFromJson", 3));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "update", JS_NewCFunction(g_js_ctx, js_update, "update", 1));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "log", JS_NewCFunction(g_js_ctx, js_log, "log", 1));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "themeLoad", JS_NewCFunction(g_js_ctx, js_theme_load, "themeLoad", 1));

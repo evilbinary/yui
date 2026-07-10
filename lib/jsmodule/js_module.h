@@ -27,7 +27,15 @@ int js_module_load_file(const char* filename);
 void js_module_register_api(void);
 
 // 从 JSON 中加载 JS 文件（json_file_path 用于相对路径解析）
-int js_module_load_from_json(cJSON* root_json, const char* json_file_path);
+// append=0: 清空事件表、初始化生命周期树（应用启动）
+// append=1: 仅追加 JS 与事件，不清空、不触发 onLoad（动态页面）
+int js_module_load_from_json(cJSON* root_json, const char* json_file_path, int append);
+
+// 应用退出：根 Layer onHide/onUnload
+void js_module_shutdown(void);
+
+// 初始化页面生命周期派发
+void js_module_init_layer_lifecycle(void);
 
 // 调用 JS 函数（通过事件名）
 int js_module_call_event(const char* event_name, Layer* layer);

@@ -1,0 +1,86 @@
+{
+    "size": [640, 420],
+    "text": "Page Lifecycle Test",
+    "js": "test-page-lifecycle.js",
+    "events": {
+        "onLoad": "@onAppLoad"
+    },
+    "children": [
+        {
+            "id": "nav",
+            "type": "view",
+            "layout": "horizontal",
+            "fixedHeight": 44,
+            "spacing": 8,
+            "children": [
+                {
+                    "id": "btn_home",
+                    "type": "button",
+                    "text": "Home",
+                    "events": { "onClick": "@goHome" }
+                },
+                {
+                    "id": "btn_list",
+                    "type": "button",
+                    "text": "List",
+                    "events": { "onClick": "@goList" }
+                },
+                {
+                    "id": "btn_destroy",
+                    "type": "button",
+                    "text": "Destroy List",
+                    "events": { "onClick": "@destroyListPage" }
+                }
+            ]
+        },
+        {
+            "id": "page_outlet",
+            "type": "view",
+            "flex": 1,
+            "children": [
+                {
+                    "id": "page_home",
+                    "type": "view",
+                    "visible": true,
+                    "events": {
+                        "onLoad": "@onHomeLoad",
+                        "onShow": "@onHomeShow",
+                        "onHide": "@onHomeHide",
+                        "onUnload": "@onHomeUnload"
+                    },
+                    "children": [
+                        {
+                            "id": "home_label",
+                            "type": "label",
+                            "text": "Home Page"
+                        }
+                    ]
+                },
+                {
+                    "id": "page_list",
+                    "type": "view",
+                    "visible": false,
+                    "events": {
+                        "onLoad": "@onListLoad",
+                        "onShow": "@onListShow",
+                        "onHide": "@onListHide",
+                        "onUnload": "@onListUnload"
+                    },
+                    "children": [
+                        {
+                            "id": "list_label",
+                            "type": "label",
+                            "text": "List Page"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "log",
+            "type": "label",
+            "text": "log:",
+            "fixedHeight": 120
+        }
+    ]
+}

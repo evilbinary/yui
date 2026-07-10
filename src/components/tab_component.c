@@ -254,7 +254,11 @@ void tab_component_set_active_tab(TabComponent* component, int index) {
   // 更新内容层的可见性
   for (int i = 0; i < component->tab_count; i++) {
     if (component->tabs[i].content_layer) {
-      component->tabs[i].content_layer->visible = (i == index)?VISIBLE:IN_VISIBLE;
+      if (i == index) {
+        layer_show(component->tabs[i].content_layer);
+      } else {
+        layer_hide(component->tabs[i].content_layer);
+      }
       printf("DEBUG: Tab %d content_layer visible=%d\n", i, component->tabs[i].content_layer->visible);
     }
   }

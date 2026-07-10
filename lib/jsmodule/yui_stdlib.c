@@ -22,6 +22,8 @@
 
 #include "theme_manager.h"
 #include "layer.h"
+#include "layer_lifecycle.h"
+#include "cJSON.h"
 
 
 #define MAX_TEXT 256
@@ -37,6 +39,8 @@ extern Layer* g_layer_root;
 extern Layer* find_layer_by_id(Layer* root, const char* id);
 extern Layer* parse_layer_from_string(const char* json_str, Layer* parent);
 extern void destroy_layer(Layer* layer);
+extern int js_module_load_from_json(cJSON* root_json, const char* json_file_path, int append);
+extern char* js_module_read_file(const char* file_path);
 
 // 颜色结构体定义
 
@@ -295,11 +299,25 @@ static JSValue js_yui_log(JSContext *ctx, JSValue *this_val, int argc, JSValue *
     return JS_UNDEFINED;
 }
 
-// 从 JSON 字符串动态渲染到指定图层
+static int append_layer_child(Layer* parent, Layer* child) {
+    if (!parent || !child) return -1;
+
+    Layer** new_children = realloc(parent->children, sizeof(Layer*) * (parent->child_count + 1));
+    if (!new_children) {
+        return -2;
+    }
+
+    parent->children = new_children;
+    parent->children[parent->child_count] = child;
+    parent->child_count++;
+    return 0;
+}
+
+// 从 JSON 字符串动态渲染到指定图层（可选第三参数 append：true 时追加子图层，不清空已有子节点）
 static JSValue js_render_from_json(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
 {
     if (argc < 2) {
-        return JS_ThrowTypeError(ctx, "Expected 2 arguments: layer_id and json_string");
+        return JS_ThrowTypeError(ctx, "Expected at least 2 arguments: layer_id, json_string, append?");
     }
 
     JSCStringBuf buf1, buf2;
@@ -310,61 +328,92 @@ static JSValue js_render_from_json(JSContext *ctx, JSValue *this_val, int argc, 
         return JS_ThrowTypeError(ctx, "Invalid arguments");
     }
 
-    printf("YUI: render_from_json called with layer_id='%s'\n", layer_id);
-
-    if (g_layer_root) {
-        // 查找目标图层
-        Layer* parent_layer = find_layer_by_id(g_layer_root, layer_id);
-        if (!parent_layer) {
-            printf("YUI: ERROR - Layer '%s' not found\n", layer_id);
-            return JS_NewInt32(ctx, -1);
-        }
-
-        printf("YUI: Found parent layer '%s'\n", layer_id);
-
-        // 清除父图层的所有子图层
-        if (parent_layer->children) {
-            for (int i = 0; i < parent_layer->child_count; i++) {
-                if (parent_layer->children[i]) {
-                    destroy_layer(parent_layer->children[i]);
-                }
-            }
-            free(parent_layer->children);
-            parent_layer->children = NULL;
-        }
-        parent_layer->child_count = 0;
-
-        // 从 JSON 字符串创建新图层
-        Layer* new_layer = parse_layer_from_string(json_str, parent_layer);
-
-        if (new_layer) {
-            // 为子图层数组分配空间（初始分配1个，可以根据需要扩展）
-            parent_layer->children = malloc(sizeof(Layer*));
-            if (!parent_layer->children) {
-                printf("YUI: ERROR - Failed to allocate memory for children array\n");
-                destroy_layer(new_layer);
-                return JS_NewInt32(ctx, -2);
-            }
-
-            parent_layer->children[0] = new_layer;
-            parent_layer->child_count = 1;
-            layout_layer(parent_layer);
-             // 为新创建的图层加载字体
-            printf("JS(mqjs): Loading fonts for new layer\n");
-            load_all_fonts(new_layer);
-            printf("JS(mqjs): Fonts loaded successfully\n");
-
-            printf("YUI: Successfully rendered JSON to layer '%s', new layer id: '%s'\n",
-                   layer_id, new_layer->id);
-            return JS_NewInt32(ctx, 0);
-        } else {
-            printf("YUI: ERROR - Failed to parse JSON string\n");
-            return JS_NewInt32(ctx, -3);
-        }
+    int append = 0;
+    if (argc >= 3) {
+        append = JS_ToBool(ctx, argv[2]);
     }
 
-    printf("YUI: ERROR - g_layer_root is NULL\n");
-    return JS_NewInt32(ctx, -4);
+    printf("YUI: render_from_json called with layer_id='%s', append=%d\n", layer_id, append);
+
+    if (!g_layer_root) {
+        return JS_NewInt32(ctx, -4);
+    }
+
+    Layer* parent_layer = find_layer_by_id(g_layer_root, layer_id);
+    if (!parent_layer) {
+        printf("YUI: ERROR - Layer '%s' not found\n", layer_id);
+        return JS_NewInt32(ctx, -1);
+    }
+
+    if (!append && parent_layer->children) {
+        for (int i = 0; i < parent_layer->child_count; i++) {
+            if (parent_layer->children[i]) {
+                layer_lifecycle_before_destroy(parent_layer->children[i]);
+                destroy_layer(parent_layer->children[i]);
+            }
+        }
+        free(parent_layer->children);
+        parent_layer->children = NULL;
+        parent_layer->child_count = 0;
+    }
+
+    Layer* new_layer = parse_layer_from_string(json_str, parent_layer);
+    if (!new_layer) {
+        printf("YUI: ERROR - Failed to parse JSON string\n");
+        return JS_NewInt32(ctx, -3);
+    }
+
+    if (append) {
+        if (append_layer_child(parent_layer, new_layer) != 0) {
+            destroy_layer(new_layer);
+            return JS_NewInt32(ctx, -2);
+        }
+    } else {
+        parent_layer->children = malloc(sizeof(Layer*));
+        if (!parent_layer->children) {
+            printf("YUI: ERROR - Failed to allocate memory for children array\n");
+            destroy_layer(new_layer);
+            return JS_NewInt32(ctx, -2);
+        }
+        parent_layer->children[0] = new_layer;
+        parent_layer->child_count = 1;
+    }
+
+    layout_layer(parent_layer);
+    load_all_fonts(new_layer);
+
+    cJSON* page_json = cJSON_Parse(json_str);
+    if (page_json) {
+        js_module_load_from_json(page_json, NULL, 1);
+        cJSON_Delete(page_json);
+    }
+    layer_lifecycle_on_show(new_layer);
+
+    printf("YUI: Successfully rendered JSON to layer '%s', new layer id: '%s'\n",
+           layer_id, new_layer->id);
+    return JS_NewInt32(ctx, 0);
+}
+
+static JSValue js_read_file(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+{
+    if (argc < 1) {
+        return JS_ThrowTypeError(ctx, "Expected 1 argument: file_path");
+    }
+
+    JSCStringBuf buf;
+    const char* file_path = JS_ToCString(ctx, argv[0], &buf);
+    if (!file_path) {
+        return JS_ThrowTypeError(ctx, "Invalid file path");
+    }
+
+    char* content = js_module_read_file(file_path);
+    if (!content) {
+        return JS_NULL;
+    }
+
+    JSValue result = JS_NewString(ctx, content);
+    free(content);
+    return result;
 }
 
 
@@ -419,7 +468,8 @@ static const JSPropDef js_yui[] = {
     JS_CFUNC_DEF("setBgColor", 1, js_set_bg_color ),
     JS_CFUNC_DEF("hide", 1, js_hide ),
     JS_CFUNC_DEF("show", 1, js_show ),
-    JS_CFUNC_DEF("renderFromJson", 2, js_render_from_json ),
+    JS_CFUNC_DEF("renderFromJson", 3, js_render_from_json ),
+    JS_CFUNC_DEF("readFile", 1, js_read_file ),
     JS_CFUNC_DEF("call", 2, js_yui_call ),
     JS_CFUNC_DEF("update", 1, js_yui_update ),
     JS_CFUNC_DEF("themeLoad", 1, js_yui_themeLoad ),

@@ -1,0 +1,83 @@
+{
+    "size": [700, 460],
+    "text": "Router Test",
+    "js": ["../lib/router.js", "test-router.js"],
+    "events": {
+        "onLoad": "@onAppLoad"
+    },
+    "children": [
+        {
+            "id": "nav",
+            "type": "view",
+            "layout": "horizontal",
+            "fixedHeight": 44,
+            "spacing": 8,
+            "children": [
+                { "id": "btn_home", "type": "button", "text": "Home", "events": { "onClick": "@goHome" } },
+                { "id": "btn_list", "type": "button", "text": "List", "events": { "onClick": "@goList" } },
+                { "id": "btn_detail", "type": "button", "text": "Detail", "events": { "onClick": "@goDetail" } },
+                { "id": "btn_dynamic", "type": "button", "text": "Dynamic", "events": { "onClick": "@goDynamic" } },
+                { "id": "btn_admin", "type": "button", "text": "Admin", "events": { "onClick": "@goAdmin" } },
+                { "id": "btn_back", "type": "button", "text": "Back", "events": { "onClick": "@goBack" } }
+            ]
+        },
+        {
+            "id": "page_outlet",
+            "type": "view",
+            "flex": 1,
+            "children": [
+                {
+                    "id": "home",
+                    "type": "view",
+                    "visible": true,
+                    "events": {
+                        "onLoad": "@onHomeLoad",
+                        "onShow": "@onHomeShow",
+                        "onHide": "@onHomeHide"
+                    },
+                    "children": [
+                        { "id": "home_label", "type": "label", "text": "Home" }
+                    ]
+                },
+                {
+                    "id": "list",
+                    "type": "view",
+                    "visible": false,
+                    "events": {
+                        "onLoad": "@onListLoad",
+                        "onShow": "@onListShow",
+                        "onHide": "@onListHide"
+                    },
+                    "children": [
+                        { "id": "list_label", "type": "label", "text": "List" }
+                    ]
+                },
+                {
+                    "id": "detail",
+                    "type": "view",
+                    "visible": false,
+                    "events": {
+                        "onLoad": "@onDetailLoad",
+                        "onShow": "@onDetailShow",
+                        "onHide": "@onDetailHide"
+                    },
+                    "children": [
+                        { "id": "detail_label", "type": "label", "text": "Static Detail" }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "route_info",
+            "type": "label",
+            "text": "route:",
+            "fixedHeight": 24
+        },
+        {
+            "id": "log",
+            "type": "label",
+            "text": "log:",
+            "fixedHeight": 120
+        }
+    ]
+}

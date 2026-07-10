@@ -54,6 +54,7 @@ int js_module_init(void)
     }
 
     js_module_register_api();
+    js_module_init_layer_lifecycle();
 
     printf("JS: JavaScript engine initialized\n");
     return 0;
@@ -62,6 +63,7 @@ int js_module_init(void)
 // 清理 JS 引擎
 void js_module_cleanup(void)
 {
+    js_module_shutdown();
     if (g_js_ctx) {
         JS_FreeContext(g_js_ctx);
         g_js_ctx = NULL;

@@ -4,6 +4,9 @@
   "type": "View",
   "size": [900, 600],
   "js": ["./db.js"],
+  "events": {
+    "onLoad": "@onLoad"
+  },
   "icon": "app/db/icon.png",
   "layout": { "type": "absolute" },
   "style": {
