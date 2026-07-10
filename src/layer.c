@@ -13,7 +13,7 @@ Layer* focused_layer = NULL;
 char* layer_type_name[] = {"View",     "Button",   "Input",   "Label",
                            "Image",    "List",     "Grid",    "Progress",
                            "Checkbox", "Radiobox", "Text",    "Treeview",
-                           "Tab",      "Slider",   "Select", "Scrollbar", "Menu", "Dialog", "Clock"};
+                           "Tab",      "Slider",   "Select", "Scrollbar", "Menu", "Dialog", "Clock", "Sash"};
 
 int layer_type_size = (sizeof(layer_type_name) / sizeof(layer_type_name[0]));  // 更新图层类型数量
 
@@ -966,6 +966,8 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
     layer->component = dialog_component_create_from_json(layer, json_obj);
   } else if (layer->type == CLOCK) {
     layer->component = clock_component_create_from_json(layer, json_obj);
+  } else if (layer->type == SASH) {
+    layer->component = sash_component_create_from_json(layer, json_obj);
   }
 
   // 递归解析子图层（如果不是SCROLLBAR类型）
