@@ -295,6 +295,15 @@ void backend_set_window_size(char* title) {
     // STM32 没有窗口标题概念，此功能不适用
 }
 
+void backend_set_resizable(int resizable) {
+    (void)resizable;
+}
+
+void backend_set_minimum_windowsize(int width, int height) {
+    (void)width;
+    (void)height;
+}
+
 void backend_render_present() {
     if (!framebuffer || !display_needs_update) return;
     

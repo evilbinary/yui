@@ -1,6 +1,7 @@
 #include "backend.h"
 #include "event.h"
 #include "render.h"
+#include "layout.h"
 #include "ytype.h"
 #include "popup_manager.h"
 #include <stdbool.h>  // 添加支持bool类型
@@ -62,6 +63,19 @@ TextureCacheEntry texture_cache[MAX_TEXTURE_CACHE_ENTRIES] = {0};
 int texture_cache_initialized = 0;
 
 void handle_event(Layer* root, SDL_Event* event);
+
+static void backend_handle_window_resize(Layer* root) {
+    if (!root || !window) return;
+    int w = 0, h = 0;
+    SDL_GetWindowSize(window, &w, &h);
+    if (w <= 0 || h <= 0) return;
+    if (root->rect.w == w && root->rect.h == h) return;
+    root->rect.x = 0;
+    root->rect.y = 0;
+    root->rect.w = w;
+    root->rect.h = h;
+    layout_layer(root);
+}
 
 #ifdef __EMSCRIPTEN__
 // Emscripten 主循环回调函数
@@ -729,6 +743,9 @@ void handle_event(Layer* root, SDL_Event* event) {
             handle_scroll_event(root,mouse_x,mouse_y, event->wheel.x,-event->wheel.y);
         }
     }
+    else if (event->type == SDL_WINDOWEVENT && event->window.event == SDL_WINDOWEVENT_RESIZED) {
+        backend_handle_window_resize(root);
+    }
     // 触摸开始事件
     else if (event->type == SDL_FINGERDOWN) {
         // 更新触摸状态
@@ -1335,6 +1352,18 @@ void backend_set_windowsize(int width,int  height){
 
 void backend_set_window_size(char* title){
     SDL_SetWindowTitle(window,title);
+}
+
+void backend_set_resizable(int resizable) {
+    if (window) {
+        SDL_SetWindowResizable(window, resizable ? SDL_TRUE : SDL_FALSE);
+    }
+}
+
+void backend_set_minimum_windowsize(int width, int height) {
+    if (window && width > 0 && height > 0) {
+        SDL_SetWindowMinimumSize(window, width, height);
+    }
 }
 
 

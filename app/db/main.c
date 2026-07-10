@@ -199,6 +199,9 @@ int main(int argc, char* argv[]) {
     load_textures(ui_root);
     layout_layer(ui_root);
 
+    backend_set_resizable(1);
+    backend_set_minimum_windowsize(640, 400);
+
     backend_run(ui_root);
 
     // 清理资源
