@@ -259,6 +259,11 @@ int default_layer_handle_mouse_event(Layer* layer, MouseEvent* event) {
             }
         }
     }
+    // 鼠标在图层范围内且为按下/释放事件时，消费事件阻止穿透到兄弟图层。
+    // MOUSEMOTION 始终放行，避免阻断拖拽操作（如 sash 拖动）。
+    if (event->state == SDL_PRESSED || event->state == SDL_RELEASED) {
+        return point_in_rect(mouse_pos, layer->rect) ? 1 : 0;
+    }
     return 0;
 }
 

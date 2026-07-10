@@ -5,7 +5,6 @@
 #include "../layer_update.h"
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
 
 extern Layer* g_ui_root;
 
@@ -51,12 +50,7 @@ void sash_component_destroy(SashComponent* comp) {
 
 static void ensure_target(SashComponent* comp) {
     if (!comp->target && comp->target_id[0] && g_ui_root) {
-        printf("[sash] ensure_target: g_ui_root=%p looking for id='%s'\n", (void*)g_ui_root, comp->target_id);
         comp->target = find_layer_by_id(g_ui_root, comp->target_id);
-        printf("[sash] ensure_target: find_layer_by_id returned %p\n", (void*)comp->target);
-    } else {
-        printf("[sash] ensure_target: skip (target=%p, id='%s', root=%p)\n",
-            (void*)comp->target, comp->target_id, (void*)g_ui_root);
     }
 }
 
@@ -104,12 +98,17 @@ int sash_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
                   event->y >= layer->rect.y && event->y < layer->rect.y + layer->rect.h);
 
     if (event->state == SDL_MOUSEMOTION) {
+        if (inside && !comp->hover) {
+            comp->hover = 1;
+            mark_layer_dirty(layer, DIRTY_COLOR);
+        } else if (!inside && comp->hover && !comp->dragging) {
+            comp->hover = 0;
+            mark_layer_dirty(layer, DIRTY_COLOR);
+        }
+
         if (comp->dragging) {
-            printf("[sash] MOTION dragging: inside=%d layer_rect=(%d,%d,%d,%d) mouse=(%d,%d)\n",
-                inside, layer->rect.x, layer->rect.y, layer->rect.w, layer->rect.h, event->x, event->y);
             ensure_target(comp);
-            printf("[sash] MOTION target=%p target_id=%s\n", (void*)comp->target, comp->target_id);
-            if (!comp->target || !comp->target->parent) { printf("[sash] MOTION no target, return\n"); return 0; }
+            if (!comp->target || !comp->target->parent) return 0;
 
             int delta_y = event->y - comp->drag_start_y;
             int new_h = comp->initial_height + delta_y;
@@ -124,8 +123,6 @@ int sash_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
                     break;
                 }
             }
-            printf("[sash] MOTION below=%p delta_y=%d new_h=%d initial_height=%d drag_start_y=%d\n",
-                (void*)below, delta_y, new_h, comp->initial_height, comp->drag_start_y);
 
             int total = 0;
             if (below) {
@@ -143,27 +140,21 @@ int sash_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
 
             mark_layer_dirty(parent, DIRTY_LAYOUT);
             layout_layer(parent);
-            printf("[sash] MOTION done: target_h=%d below_h=%d\n", comp->target->rect.h, below ? below->rect.h : 0);
         }
         return 0;
     }
 
     if (event->state == SDL_PRESSED && event->button == SDL_BUTTON_LEFT && inside) {
-        printf("[sash] PRESSED: layer_rect=(%d,%d,%d,%d) mouse=(%d,%d)\n",
-            layer->rect.x, layer->rect.y, layer->rect.w, layer->rect.h, event->x, event->y);
         ensure_target(comp);
-        printf("[sash] PRESSED target=%p target_id=%s\n", (void*)comp->target, comp->target_id);
         comp->dragging = 1;
         comp->drag_start_y = event->y;
         if (comp->target) {
             comp->initial_height = comp->target->rect.h;
         }
-        printf("[sash] PRESSED dragging=%d initial_height=%d\n", comp->dragging, comp->initial_height);
         return 0;
     }
 
     if (event->state == SDL_RELEASED && event->button == SDL_BUTTON_LEFT) {
-        printf("[sash] RELEASED\n");
         comp->dragging = 0;
         return 0;
     }

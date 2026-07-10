@@ -350,6 +350,7 @@
                     "type": "Text",
                     "text": "",
                     "size": [660, 140],
+                    "flex": 1,
                     "multiline": true,
                     "editable": true,
                     "scrollable": 1,
@@ -430,6 +431,7 @@
                     "type": "Treeview",
                     "scrollable": 3,
                     "size": [660, 296],
+                    "flex": 1,
                     "style": {
                       "color": "#CDD6F4",
                       "bgColor": "#11111B",
