@@ -7,5 +7,6 @@ typedef struct Layer Layer;
 
 
 void layout_layer(Layer* layer);
+void layout_resize(Layer* layer, int width, int height);
 
 #endif

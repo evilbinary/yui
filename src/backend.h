@@ -19,7 +19,6 @@ void backend_set_windowsize(int width,int  height);
 void backend_set_window_size(char* title);
 void backend_set_resizable(int resizable);
 void backend_set_minimum_windowsize(int width, int height);
-void backend_resize_root_layout(Layer* root, int width, int height);
 void backend_quit();
 void backend_render_present();
 void backend_delay(int delay);

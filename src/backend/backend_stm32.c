@@ -308,12 +308,6 @@ void backend_set_resize_callback(ResizeCallback callback) {
     (void)callback;
 }
 
-void backend_resize_root_layout(Layer* root, int w, int h) {
-    (void)root;
-    (void)w;
-    (void)h;
-}
-
 void backend_render_present() {
     if (!framebuffer || !display_needs_update) return;
     

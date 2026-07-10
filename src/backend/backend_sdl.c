@@ -1,7 +1,6 @@
 #include "backend.h"
 #include "event.h"
 #include "render.h"
-#include "layout.h"
 #include "ytype.h"
 #include "popup_manager.h"
 #include <stdbool.h>  // 添加支持bool类型
@@ -65,27 +64,12 @@ int texture_cache_initialized = 0;
 
 void handle_event(Layer* root, SDL_Event* event);
 
-void backend_resize_root_layout(Layer* root, int w, int h) {
-    if (!root) return;
-    if (root->rect.w == w && root->rect.h == h) return;
-    root->rect.x = 0;
-    root->rect.y = 0;
-    root->rect.w = w;
-    root->rect.h = h;
-    layout_layer(root);
-}
-
-static void backend_default_resize(Layer* root, int w, int h) {
-    backend_resize_root_layout(root, w, h);
-}
-
 static void backend_handle_window_resize(Layer* root) {
-    if (!root || !window) return;
+    if (!root || !window || !resize_callback) return;
     int w = 0, h = 0;
     SDL_GetWindowSize(window, &w, &h);
     if (w <= 0 || h <= 0) return;
-    ResizeCallback cb = resize_callback ? resize_callback : backend_default_resize;
-    cb(root, w, h);
+    resize_callback(root, w, h);
 }
 
 #ifdef __EMSCRIPTEN__
