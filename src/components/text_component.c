@@ -1398,6 +1398,67 @@ int text_component_handle_key_event(Layer* layer, KeyEvent* event) {
 
 
 
+static int text_component_get_vertical_scrollbar_track(Layer* layer, Rect* track_out) {
+    if (!layer || !track_out) return 0;
+
+    int visible_height = layer->rect.h;
+    if (layer->layout_manager) {
+        visible_height -= layer->layout_manager->padding[0] + layer->layout_manager->padding[2];
+    }
+
+    if ((layer->scrollable == 1 || layer->scrollable == 3) &&
+        layer->scrollbar_v && layer->scrollbar_v->visible &&
+        layer->content_height > visible_height) {
+        int scrollbar_width = layer->scrollbar_v->thickness > 0 ? layer->scrollbar_v->thickness : 8;
+        track_out->x = layer->rect.x + layer->rect.w - scrollbar_width;
+        track_out->y = layer->rect.y;
+        track_out->w = scrollbar_width;
+        track_out->h = visible_height;
+        return 1;
+    }
+
+    TextComponent* component = (TextComponent*)layer->component;
+    if (component && component->multiline &&
+        layer->scrollable != 1 && layer->scrollable != 3) {
+        int inner_visible = layer->rect.h - 10;
+        if (layer->content_height <= inner_visible) return 0;
+        track_out->x = layer->rect.x + layer->rect.w - 10;
+        track_out->y = layer->rect.y + 5;
+        track_out->w = 5;
+        track_out->h = layer->rect.h - 10;
+        return 1;
+    }
+    return 0;
+}
+
+static int text_component_point_in_vertical_scrollbar(Layer* layer, Point pt) {
+    Rect track;
+    if (!text_component_get_vertical_scrollbar_track(layer, &track)) return 0;
+    return point_in_rect(pt, track);
+}
+
+static void text_component_get_content_rect(TextComponent* component, Layer* layer, Rect* out) {
+    if (!component || !layer || !out) return;
+
+    int left_padding = 5;
+    if (component->show_line_numbers && component->multiline) {
+        left_padding += component->line_number_width;
+    }
+    out->x = layer->rect.x + left_padding;
+    out->y = layer->rect.y + 5;
+    out->w = layer->rect.w - (left_padding + 5);
+    out->h = layer->rect.h - 10;
+
+    Rect track;
+    if (text_component_get_vertical_scrollbar_track(layer, &track)) {
+        int content_right = out->x + out->w;
+        if (content_right > track.x) {
+            out->w = track.x - out->x;
+            if (out->w < 0) out->w = 0;
+        }
+    }
+}
+
 // 处理鼠标事件
 int text_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     if (!layer || !event || !layer->component) {
@@ -1406,11 +1467,28 @@ int text_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     
     TextComponent* component = (TextComponent*)layer->component;
     Point pt = {event->x, event->y};
+
+    if (layer->scrollbar_v && layer->scrollbar_v->is_dragging) {
+        if (event->state == SDL_RELEASED && event->button == SDL_BUTTON_LEFT) {
+            component->is_selecting = 0;
+        }
+        return 1;
+    }
+
+    if (text_component_point_in_vertical_scrollbar(layer, pt)) {
+        if (event->state == SDL_RELEASED && event->button == SDL_BUTTON_LEFT) {
+            component->is_selecting = 0;
+        }
+        return 1;
+    }
+
+    Rect content_rect;
+    text_component_get_content_rect(component, layer, &content_rect);
     
     // 鼠标左键按下 - 设置光标位置并开始选择
     if (event->state == SDL_PRESSED && event->button == SDL_BUTTON_LEFT) {
         // 检查组件是否可获得焦点
-        if (layer->focusable) {
+        if (layer->focusable && point_in_rect(pt, content_rect)) {
             // 设置焦点状态
             SET_STATE(layer, LAYER_STATE_FOCUSED);
 
@@ -1426,7 +1504,7 @@ int text_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
                 backend_set_text_input_rect(&rect);
             }
         }
-        if (point_in_rect(pt, layer->rect)) {
+        if (point_in_rect(pt, content_rect)) {
             // 计算点击位置对应的文本位置
             int click_pos = text_component_get_position_from_point(component, pt, layer);
             component->cursor_pos = click_pos;
@@ -1438,6 +1516,10 @@ int text_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
             
             // 更新滚动位置，确保光标可见
             text_component_update_scroll_for_cursor(component);
+        } else if (point_in_rect(pt, layer->rect)) {
+            component->selection_start = -1;
+            component->selection_end = -1;
+            component->is_selecting = 0;
         } else {
             // 点击文本区域外，清除选择并移除焦点
             component->selection_start = -1;
@@ -1453,7 +1535,7 @@ int text_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     else if (event->state == SDL_MOUSEMOTION && (event->button == SDL_BUTTON_LEFT) && component->is_selecting) {
         int drag_pos;
         
-        if (point_in_rect(pt, layer->rect)) {
+        if (point_in_rect(pt, content_rect)) {
             // 在文本区域内，使用正常计算
             drag_pos = text_component_get_position_from_point(component, pt, layer);
         } else {
@@ -1544,19 +1626,8 @@ int text_component_get_position_from_point(TextComponent* component, Point pt, L
         return 0;
     }
     
-    // 准备渲染区域
-    Rect render_rect = layer->rect;
-    int left_padding = 5;
-    
-    // 如果显示行号，为行号区域预留空间
-    if (component->show_line_numbers && component->multiline) {
-        left_padding += component->line_number_width;
-    }
-    
-    render_rect.x += left_padding;
-    render_rect.y += 5;
-    render_rect.w -= (left_padding + 5);
-    render_rect.h -= 10;
+    Rect render_rect;
+    text_component_get_content_rect(component, layer, &render_rect);
     
     // 边界检查
     if (pt.y < render_rect.y) return 0;
@@ -1934,19 +2005,9 @@ void text_component_render(Layer* layer) {
         }
     }
     
-    // 准备渲染区域
-    Rect render_rect = layer->rect;
-    int left_padding = 5;
-    
-    // 如果显示行号，为行号区域预留空间并添加分隔线
-    if (component->show_line_numbers && component->multiline) {
-        left_padding += component->line_number_width;
-    }
-    
-    render_rect.x += left_padding;
-    render_rect.y += 5;
-    render_rect.w -= (left_padding + 5);  // 左内边距 + 右内边距
-    render_rect.h -= 10;
+    // 准备渲染区域（排除滚动条轨道）
+    Rect render_rect;
+    text_component_get_content_rect(component, layer, &render_rect);
     
     // 保存当前裁剪区域
     Rect prev_clip;
