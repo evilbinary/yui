@@ -14,6 +14,7 @@ typedef enum {
     TEXT_SYNTAX_NONE = 0,
     TEXT_SYNTAX_JSON,
     TEXT_SYNTAX_SQL,
+    TEXT_SYNTAX_MARKDOWN,
 } TextSyntaxLanguage;
 
 typedef struct {

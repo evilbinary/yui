@@ -184,6 +184,7 @@ static TextSyntaxLanguage text_component_parse_syntax_language(const char* langu
     if (!language || language[0] == '\0') return TEXT_SYNTAX_NONE;
     if (strcmp(language, "json") == 0) return TEXT_SYNTAX_JSON;
     if (strcmp(language, "sql") == 0) return TEXT_SYNTAX_SQL;
+    if (strcmp(language, "markdown") == 0 || strcmp(language, "md") == 0) return TEXT_SYNTAX_MARKDOWN;
     return TEXT_SYNTAX_NONE;
 }
 

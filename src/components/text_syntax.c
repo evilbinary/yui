@@ -14,6 +14,8 @@ typedef enum {
     HL_TOKEN_KEYWORD,
     HL_TOKEN_PUNCTUATION,
     HL_TOKEN_COMMENT,
+    HL_TOKEN_HEADING,
+    HL_TOKEN_CODE,
 } HighlightTokenType;
 
 typedef struct {
@@ -42,6 +44,12 @@ void text_syntax_config_init(TextSyntaxConfig* config, TextSyntaxLanguage langua
         config->keyword_color = (Color){86, 156, 214, 255};
         config->punctuation_color = (Color){212, 212, 212, 255};
         config->comment_color = default_color;
+    } else if (language == TEXT_SYNTAX_MARKDOWN) {
+        config->keyword_color = (Color){250, 179, 135, 255};
+        config->string_color = (Color){166, 227, 161, 255};
+        config->key_color = (Color){243, 139, 168, 255};
+        config->comment_color = (Color){108, 112, 134, 255};
+        config->punctuation_color = (Color){137, 180, 250, 255};
     }
 }
 
@@ -53,6 +61,9 @@ void text_syntax_config_set_color(TextSyntaxConfig* config, const char* name, Co
     else if (strcmp(name, "keyword") == 0) config->keyword_color = color;
     else if (strcmp(name, "punctuation") == 0) config->punctuation_color = color;
     else if (strcmp(name, "comment") == 0) config->comment_color = color;
+    else if (strcmp(name, "code") == 0) config->key_color = color;
+    else if (strcmp(name, "heading") == 0) config->keyword_color = color;
+    else if (strcmp(name, "link") == 0) config->key_color = color;
     else if (strcmp(name, "default") == 0) config->default_color = color;
 }
 
@@ -64,6 +75,8 @@ static Color token_color(const TextSyntaxConfig* config, HighlightTokenType type
         case HL_TOKEN_KEYWORD: return config->keyword_color;
         case HL_TOKEN_PUNCTUATION: return config->punctuation_color;
         case HL_TOKEN_COMMENT: return config->comment_color;
+        case HL_TOKEN_HEADING: return config->keyword_color;
+        case HL_TOKEN_CODE: return config->key_color;
         default: return config->default_color;
     }
 }
@@ -344,6 +357,259 @@ static int sql_tokenize_line(const char* text, int start, int end, HighlightToke
     return count;
 }
 
+static int md_line_first_nonspace(const char* text, int start, int end) {
+    int p = start;
+    while (p < end && (text[p] == ' ' || text[p] == '\t')) p++;
+    return p;
+}
+
+static int md_is_hr_line(const char* text, int first, int end) {
+    if (first + 2 >= end) return 0;
+    char c = text[first];
+    if (c != '-' && c != '*' && c != '_') return 0;
+    if (text[first + 1] != c || text[first + 2] != c) return 0;
+    for (int i = first; i < end; i++) {
+        if (text[i] != c && text[i] != ' ' && text[i] != '\t') return 0;
+    }
+    return 1;
+}
+
+static int md_try_delimited_span(const char* text, int end, int* pos, char open, char close,
+                                 HighlightTokenType content_type, HighlightTokenType marker_type,
+                                 HighlightToken tokens[], int* count, int max_tokens) {
+    int mark = *pos;
+    (*pos)++;
+    int content = *pos;
+    while (*pos < end && text[*pos] != close) (*pos)++;
+    if (*pos >= end) {
+        *pos = mark + 1;
+        return 0;
+    }
+    if (*count + 3 > max_tokens) return 0;
+    tokens[(*count)++] = (HighlightToken){mark, mark + 1, marker_type};
+    tokens[(*count)++] = (HighlightToken){content, *pos, content_type};
+    tokens[(*count)++] = (HighlightToken){*pos, *pos + 1, marker_type};
+    (*pos)++;
+    return 1;
+}
+
+static int markdown_tokenize_line(const char* text, int start, int end, HighlightToken tokens[], int max_tokens) {
+    int count = 0;
+    int first = md_line_first_nonspace(text, start, end);
+
+    if (first < end && text[first] == '#') {
+        int h = first;
+        while (h < end && text[h] == '#') h++;
+        if (h < end && (text[h] == ' ' || text[h] == '\t')) {
+            tokens[count++] = (HighlightToken){first, end, HL_TOKEN_HEADING};
+            return count;
+        }
+    }
+    if (first < end && text[first] == '>') {
+        tokens[count++] = (HighlightToken){first, end, HL_TOKEN_COMMENT};
+        return count;
+    }
+    if (first + 2 < end && text[first] == '`' && text[first + 1] == '`' && text[first + 2] == '`') {
+        tokens[count++] = (HighlightToken){first, end, HL_TOKEN_CODE};
+        return count;
+    }
+    if (first > start) {
+        int spaces = 0;
+        for (int i = start; i < first; i++) {
+            if (text[i] == ' ') spaces++;
+        }
+        if (spaces >= 4) {
+            tokens[count++] = (HighlightToken){start, end, HL_TOKEN_CODE};
+            return count;
+        }
+    }
+    if (md_is_hr_line(text, first, end)) {
+        tokens[count++] = (HighlightToken){first, end, HL_TOKEN_PUNCTUATION};
+        return count;
+    }
+
+    int pos = start;
+    if (first < end && (text[first] == '-' || text[first] == '*' || text[first] == '+') &&
+        first + 1 < end && text[first + 1] == ' ') {
+        tokens[count++] = (HighlightToken){first, first + 2, HL_TOKEN_PUNCTUATION};
+        pos = first + 2;
+    } else if (first < end && isdigit((unsigned char)text[first])) {
+        int d = first;
+        while (d < end && isdigit((unsigned char)text[d])) d++;
+        if (d < end && text[d] == '.' && d + 1 < end && text[d + 1] == ' ') {
+            tokens[count++] = (HighlightToken){first, d + 2, HL_TOKEN_PUNCTUATION};
+            pos = d + 2;
+        }
+    }
+
+    while (pos < end && count < max_tokens) {
+        char c = text[pos];
+
+        if (c == ' ' || c == '\t' || c == '\r') {
+            int ws = pos;
+            while (pos < end && (text[pos] == ' ' || text[pos] == '\t' || text[pos] == '\r')) pos++;
+            tokens[count++] = (HighlightToken){ws, pos, HL_TOKEN_DEFAULT};
+            continue;
+        }
+
+        if (pos + 3 < end && text[pos] == '<' && text[pos + 1] == '!' &&
+            text[pos + 2] == '-' && text[pos + 3] == '-') {
+            int cs = pos;
+            pos += 4;
+            while (pos + 2 < end && !(text[pos] == '-' && text[pos + 1] == '-' && text[pos + 2] == '>')) pos++;
+            if (pos + 2 < end) pos += 3;
+            tokens[count++] = (HighlightToken){cs, pos, HL_TOKEN_COMMENT};
+            continue;
+        }
+
+        if (c == '`') {
+            int tick_start = pos;
+            int ticks = 0;
+            while (pos < end && text[pos] == '`') {
+                ticks++;
+                pos++;
+            }
+            int close = pos;
+            while (close < end) {
+                if (text[close] == '`') {
+                    int matched = 0;
+                    int p2 = close;
+                    while (p2 < end && text[p2] == '`' && matched < ticks) {
+                        matched++;
+                        p2++;
+                    }
+                    if (matched == ticks) {
+                        tokens[count++] = (HighlightToken){tick_start, p2, HL_TOKEN_CODE};
+                        pos = p2;
+                        goto md_next;
+                    }
+                }
+                close++;
+            }
+            tokens[count++] = (HighlightToken){tick_start, end, HL_TOKEN_CODE};
+            break;
+        }
+
+        if (pos + 1 < end && c == '*' && text[pos + 1] == '*') {
+            int mark = pos;
+            pos += 2;
+            int content = pos;
+            while (pos + 1 < end && !(text[pos] == '*' && text[pos + 1] == '*')) pos++;
+            if (pos + 1 < end) {
+                tokens[count++] = (HighlightToken){mark, mark + 2, HL_TOKEN_PUNCTUATION};
+                tokens[count++] = (HighlightToken){content, pos, HL_TOKEN_KEYWORD};
+                tokens[count++] = (HighlightToken){pos, pos + 2, HL_TOKEN_PUNCTUATION};
+                pos += 2;
+                continue;
+            }
+            pos = mark;
+        }
+
+        if (pos + 1 < end && c == '_' && text[pos + 1] == '_') {
+            int mark = pos;
+            pos += 2;
+            int content = pos;
+            while (pos + 1 < end && !(text[pos] == '_' && text[pos + 1] == '_')) pos++;
+            if (pos + 1 < end) {
+                tokens[count++] = (HighlightToken){mark, mark + 2, HL_TOKEN_PUNCTUATION};
+                tokens[count++] = (HighlightToken){content, pos, HL_TOKEN_KEYWORD};
+                tokens[count++] = (HighlightToken){pos, pos + 2, HL_TOKEN_PUNCTUATION};
+                pos += 2;
+                continue;
+            }
+            pos = mark;
+        }
+
+        if (pos + 1 < end && c == '~' && text[pos + 1] == '~') {
+            int mark = pos;
+            pos += 2;
+            int content = pos;
+            while (pos + 1 < end && !(text[pos] == '~' && text[pos + 1] == '~')) pos++;
+            if (pos + 1 < end) {
+                tokens[count++] = (HighlightToken){mark, mark + 2, HL_TOKEN_PUNCTUATION};
+                tokens[count++] = (HighlightToken){content, pos, HL_TOKEN_COMMENT};
+                tokens[count++] = (HighlightToken){pos, pos + 2, HL_TOKEN_PUNCTUATION};
+                pos += 2;
+                continue;
+            }
+            pos = mark;
+        }
+
+        if (c == '*' && (pos + 1 >= end || text[pos + 1] != '*')) {
+            if (md_try_delimited_span(text, end, &pos, '*', '*', HL_TOKEN_STRING, HL_TOKEN_PUNCTUATION,
+                                      tokens, &count, max_tokens)) {
+                continue;
+            }
+        }
+
+        if (c == '_' && (pos + 1 >= end || text[pos + 1] != '_')) {
+            if (md_try_delimited_span(text, end, &pos, '_', '_', HL_TOKEN_STRING, HL_TOKEN_PUNCTUATION,
+                                      tokens, &count, max_tokens)) {
+                continue;
+            }
+        }
+
+        if (c == '!' && pos + 1 < end && text[pos + 1] == '[') {
+            int ls = pos;
+            pos += 2;
+            int label_start = pos;
+            while (pos < end && text[pos] != ']') pos++;
+            if (pos < end) {
+                int label_end = pos++;
+                if (pos < end && text[pos] == '(') {
+                    pos++;
+                    int url_start = pos;
+                    while (pos < end && text[pos] != ')') pos++;
+                    int url_end = pos;
+                    if (pos < end) pos++;
+                    if (count + 5 <= max_tokens) {
+                        tokens[count++] = (HighlightToken){ls, ls + 2, HL_TOKEN_PUNCTUATION};
+                        tokens[count++] = (HighlightToken){label_start, label_end, HL_TOKEN_STRING};
+                        tokens[count++] = (HighlightToken){label_end, label_end + 1, HL_TOKEN_PUNCTUATION};
+                        tokens[count++] = (HighlightToken){url_start, url_end, HL_TOKEN_KEY};
+                        if (url_end < end) {
+                            tokens[count++] = (HighlightToken){url_end, url_end + 1, HL_TOKEN_PUNCTUATION};
+                        }
+                        continue;
+                    }
+                }
+            }
+            pos = ls + 1;
+        }
+
+        if (c == '[') {
+            int ls = pos++;
+            int label_start = pos;
+            while (pos < end && text[pos] != ']') pos++;
+            if (pos < end) {
+                int label_end = pos++;
+                if (pos < end && text[pos] == '(') {
+                    pos++;
+                    int url_start = pos;
+                    while (pos < end && text[pos] != ')') pos++;
+                    int url_end = pos;
+                    if (pos < end) pos++;
+                    if (count + 5 <= max_tokens) {
+                        tokens[count++] = (HighlightToken){ls, ls + 1, HL_TOKEN_PUNCTUATION};
+                        tokens[count++] = (HighlightToken){label_start, label_end, HL_TOKEN_STRING};
+                        tokens[count++] = (HighlightToken){label_end, label_end + 1, HL_TOKEN_PUNCTUATION};
+                        tokens[count++] = (HighlightToken){url_start, url_end, HL_TOKEN_KEY};
+                        tokens[count++] = (HighlightToken){url_end, url_end + 1, HL_TOKEN_PUNCTUATION};
+                        continue;
+                    }
+                }
+            }
+            pos = ls + 1;
+        }
+
+        tokens[count++] = (HighlightToken){pos, pos + 1, HL_TOKEN_DEFAULT};
+        pos++;
+        md_next:;
+    }
+
+    return count;
+}
+
 int text_syntax_measure_width(DFont* font, const char* text, int start, int end, Color color) {
     if (!font || !text || start >= end) return 0;
     int len = end - start;
@@ -392,6 +658,8 @@ void text_syntax_render_range(DFont* font, const char* text, int start, int end,
         token_count = json_tokenize_line(text, start, end, tokens, MAX_HIGHLIGHT_TOKENS);
     } else if (config->language == TEXT_SYNTAX_SQL) {
         token_count = sql_tokenize_line(text, start, end, tokens, MAX_HIGHLIGHT_TOKENS);
+    } else if (config->language == TEXT_SYNTAX_MARKDOWN) {
+        token_count = markdown_tokenize_line(text, start, end, tokens, MAX_HIGHLIGHT_TOKENS);
     }
 
     if (token_count == 0) {
