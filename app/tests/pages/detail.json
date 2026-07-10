@@ -1,7 +1,10 @@
 {
     "id": "dynamic_detail",
-    "type": "view",
+    "type": "View",
     "visible": true,
+    "style": {
+        "bgColor": "#45475A"
+    },
     "events": {
         "onLoad": "@onDetailPageLoad",
         "onShow": "@onDetailPageShow",
@@ -11,8 +14,9 @@
     "children": [
         {
             "id": "detail_title",
-            "type": "label",
-            "text": "Dynamic Detail"
+            "type": "Label",
+            "text": "Dynamic Detail :id",
+            "style": { "color": "#CDD6F4", "fontSize": 20 }
         }
     ]
 }

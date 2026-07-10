@@ -1,0 +1,22 @@
+{
+    "id": "page_list",
+    "type": "View",
+    "visible": true,
+    "style": {
+        "bgColor": "#45475A"
+    },
+    "events": {
+        "onLoad": "@onListLoad",
+        "onShow": "@onListShow",
+        "onHide": "@onListHide",
+        "onUnload": "@onListUnload"
+    },
+    "children": [
+        {
+            "id": "list_label",
+            "type": "Label",
+            "text": "List Page (from pages/list.json)",
+            "style": { "color": "#CDD6F4", "fontSize": 20 }
+        }
+    ]
+}

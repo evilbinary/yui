@@ -223,6 +223,9 @@ var Router = {
     },
 
     _findChildById: function(layerId) {
+        if (typeof YUI !== "undefined" && typeof YUI.find === "function") {
+            return YUI.find(layerId);
+        }
         if (typeof yui !== "undefined" && yui.find) {
             return yui.find(layerId);
         }

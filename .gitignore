@@ -12,3 +12,17 @@ gdb_crash.log
 *.log
 app/db/db.json
 queries
+app/b1.json
+app/b2.json
+app/b3.json
+app/photo-1454496522488-7a8e488e8606.avif
+app/photo-1454496522488-7a8e488e8606.jpg
+app/watch-os.json
+app/watch-os1.json
+app/watch-os2.json
+app/watch-os3.json
+app/watch-os4.json
+app/watch-os5.json
+app/watch-os6.json
+router-test-out.txt
+router-test-err.txt

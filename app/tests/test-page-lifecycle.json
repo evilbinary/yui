@@ -1,33 +1,56 @@
 {
+    "id": "lifecycle_app",
+    "type": "View",
     "size": [640, 420],
     "text": "Page Lifecycle Test",
     "js": "test-page-lifecycle.js",
+    "style": {
+        "bgColor": "#1E1E2E",
+        "color": "#CDD6F4"
+    },
+    "layout": {
+        "type": "vertical",
+        "spacing": 6,
+        "padding": [8, 8, 8, 8]
+    },
     "events": {
         "onLoad": "@onAppLoad"
     },
     "children": [
         {
             "id": "nav",
-            "type": "view",
-            "layout": "horizontal",
-            "fixedHeight": 44,
-            "spacing": 8,
+            "type": "View",
+            "size": [624, 40],
+            "style": {
+                "bgColor": "#313244"
+            },
+            "layout": {
+                "type": "horizontal",
+                "spacing": 6,
+                "padding": [4, 4, 4, 4]
+            },
             "children": [
                 {
                     "id": "btn_home",
-                    "type": "button",
+                    "type": "Button",
                     "text": "Home",
                     "events": { "onClick": "@goHome" }
                 },
                 {
                     "id": "btn_list",
-                    "type": "button",
+                    "type": "Button",
                     "text": "List",
                     "events": { "onClick": "@goList" }
                 },
                 {
+                    "id": "btn_detail",
+                    "type": "Button",
+                    "text": "Detail",
+                    "events": { "onClick": "@goDetail" }
+                },
+                {
                     "id": "btn_destroy",
-                    "type": "button",
+                    "type": "Button",
                     "text": "Destroy List",
                     "events": { "onClick": "@destroyListPage" }
                 }
@@ -35,13 +58,19 @@
         },
         {
             "id": "page_outlet",
-            "type": "view",
+            "type": "View",
             "flex": 1,
+            "style": {
+                "bgColor": "#181825"
+            },
             "children": [
                 {
                     "id": "page_home",
-                    "type": "view",
+                    "type": "View",
                     "visible": true,
+                    "style": {
+                        "bgColor": "#45475A"
+                    },
                     "events": {
                         "onLoad": "@onHomeLoad",
                         "onShow": "@onHomeShow",
@@ -51,26 +80,9 @@
                     "children": [
                         {
                             "id": "home_label",
-                            "type": "label",
-                            "text": "Home Page"
-                        }
-                    ]
-                },
-                {
-                    "id": "page_list",
-                    "type": "view",
-                    "visible": false,
-                    "events": {
-                        "onLoad": "@onListLoad",
-                        "onShow": "@onListShow",
-                        "onHide": "@onListHide",
-                        "onUnload": "@onListUnload"
-                    },
-                    "children": [
-                        {
-                            "id": "list_label",
-                            "type": "label",
-                            "text": "List Page"
+                            "type": "Label",
+                            "text": "Home Page",
+                            "style": { "color": "#CDD6F4", "fontSize": 20 }
                         }
                     ]
                 }
@@ -78,9 +90,10 @@
         },
         {
             "id": "log",
-            "type": "label",
+            "type": "Label",
+            "size": [624, 100],
             "text": "log:",
-            "fixedHeight": 120
+            "style": { "color": "#BAC2DE", "fontSize": 12 }
         }
     ]
 }

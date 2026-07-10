@@ -1,83 +1,132 @@
 {
+    "id": "router_app",
+    "type": "View",
     "size": [700, 460],
     "text": "Router Test",
     "js": ["../lib/router.js", "test-router.js"],
+    "style": {
+        "bgColor": "#1E1E2E",
+        "color": "#CDD6F4"
+    },
+    "layout": {
+        "type": "vertical",
+        "spacing": 6,
+        "padding": [8, 8, 8, 8]
+    },
     "events": {
-        "onLoad": "@onAppLoad"
+        "onLoad": "@onAppLoad",
+        "onShow": "@onAppShow"
     },
     "children": [
         {
             "id": "nav",
-            "type": "view",
-            "layout": "horizontal",
-            "fixedHeight": 44,
-            "spacing": 8,
+            "type": "View",
+            "size": [684, 40],
+            "style": {
+                "bgColor": "#313244"
+            },
+            "layout": {
+                "type": "horizontal",
+                "spacing": 6,
+                "padding": [4, 4, 4, 4]
+            },
             "children": [
-                { "id": "btn_home", "type": "button", "text": "Home", "events": { "onClick": "@goHome" } },
-                { "id": "btn_list", "type": "button", "text": "List", "events": { "onClick": "@goList" } },
-                { "id": "btn_detail", "type": "button", "text": "Detail", "events": { "onClick": "@goDetail" } },
-                { "id": "btn_dynamic", "type": "button", "text": "Dynamic", "events": { "onClick": "@goDynamic" } },
-                { "id": "btn_admin", "type": "button", "text": "Admin", "events": { "onClick": "@goAdmin" } },
-                { "id": "btn_back", "type": "button", "text": "Back", "events": { "onClick": "@goBack" } }
+                { "id": "btn_home", "type": "Button", "text": "Home", "events": { "onClick": "@goHome" } },
+                { "id": "btn_list", "type": "Button", "text": "List", "events": { "onClick": "@goList" } },
+                { "id": "btn_detail", "type": "Button", "text": "Detail", "events": { "onClick": "@goDetail" } },
+                { "id": "btn_dynamic", "type": "Button", "text": "Dynamic", "events": { "onClick": "@goDynamic" } },
+                { "id": "btn_admin", "type": "Button", "text": "Admin", "events": { "onClick": "@goAdmin" } },
+                { "id": "btn_login", "type": "Button", "text": "Login", "events": { "onClick": "@doLogin" } },
+                { "id": "btn_replace", "type": "Button", "text": "Replace", "events": { "onClick": "@goReplaceList" } },
+                { "id": "btn_back", "type": "Button", "text": "Back", "events": { "onClick": "@goBack" } }
             ]
         },
         {
             "id": "page_outlet",
-            "type": "view",
+            "type": "View",
             "flex": 1,
+            "style": {
+                "bgColor": "#181825"
+            },
             "children": [
                 {
                     "id": "home",
-                    "type": "view",
+                    "type": "View",
                     "visible": true,
+                    "style": {
+                        "bgColor": "#45475A"
+                    },
                     "events": {
                         "onLoad": "@onHomeLoad",
                         "onShow": "@onHomeShow",
                         "onHide": "@onHomeHide"
                     },
                     "children": [
-                        { "id": "home_label", "type": "label", "text": "Home" }
+                        {
+                            "id": "home_label",
+                            "type": "Label",
+                            "text": "Home",
+                            "style": { "color": "#CDD6F4", "fontSize": 20 }
+                        }
                     ]
                 },
                 {
                     "id": "list",
-                    "type": "view",
+                    "type": "View",
                     "visible": false,
+                    "style": {
+                        "bgColor": "#45475A"
+                    },
                     "events": {
                         "onLoad": "@onListLoad",
                         "onShow": "@onListShow",
                         "onHide": "@onListHide"
                     },
                     "children": [
-                        { "id": "list_label", "type": "label", "text": "List" }
+                        {
+                            "id": "list_label",
+                            "type": "Label",
+                            "text": "List",
+                            "style": { "color": "#CDD6F4", "fontSize": 20 }
+                        }
                     ]
                 },
                 {
                     "id": "detail",
-                    "type": "view",
+                    "type": "View",
                     "visible": false,
+                    "style": {
+                        "bgColor": "#45475A"
+                    },
                     "events": {
                         "onLoad": "@onDetailLoad",
                         "onShow": "@onDetailShow",
                         "onHide": "@onDetailHide"
                     },
                     "children": [
-                        { "id": "detail_label", "type": "label", "text": "Static Detail" }
+                        {
+                            "id": "detail_label",
+                            "type": "Label",
+                            "text": "Static Detail (id=)",
+                            "style": { "color": "#CDD6F4", "fontSize": 20 }
+                        }
                     ]
                 }
             ]
         },
         {
             "id": "route_info",
-            "type": "label",
+            "type": "Label",
+            "size": [684, 22],
             "text": "route:",
-            "fixedHeight": 24
+            "style": { "color": "#A6ADC8", "fontSize": 14 }
         },
         {
             "id": "log",
-            "type": "label",
+            "type": "Label",
+            "size": [684, 100],
             "text": "log:",
-            "fixedHeight": 120
+            "style": { "color": "#BAC2DE", "fontSize": 12 }
         }
     ]
 }

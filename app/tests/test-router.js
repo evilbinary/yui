@@ -11,6 +11,7 @@ var routes = {
 
 var logs = [];
 var isLoggedIn = false;
+// 设为 1 启动时自动跑一遍完整流程（无需点按钮）
 var ROUTER_SELF_TEST = 0;
 
 function appendLog(msg) {
@@ -26,13 +27,26 @@ function updateRouteInfo() {
         YUI.setText("route_info", "route: (none)");
         return;
     }
-    YUI.setText("route_info", "route: " + route.path + "  canBack=" + YUI.canBack());
+    var params = route.params || {};
+    var paramText = "";
+    for (var key in params) {
+        if (params.hasOwnProperty(key)) {
+            paramText += (paramText ? ", " : "") + key + "=" + params[key];
+        }
+    }
+    YUI.setText(
+        "route_info",
+        "route: " + route.path +
+        (paramText ? " (" + paramText + ")" : "") +
+        "  canBack=" + YUI.canBack()
+    );
 }
 
 function onAppLoad() {
     Router.init({
         outlet: "page_outlet",
-        routes: routes
+        routes: routes,
+        defaultRoute: "/"
     });
 
     YUI.beforeRoute(function(from, to, next) {
@@ -52,14 +66,21 @@ function onAppLoad() {
     }
 }
 
+function onAppShow() {
+    updateRouteInfo();
+}
+
 function runRouterSelfTest() {
     appendLog("selfTest:start");
     goList();
     goDetail();
     goBack();
     goAdmin();
+    doLogin();
+    goAdmin();
     goDynamic();
     goBack();
+    goReplaceList();
     goHome();
     appendLog("selfTest:end");
 }
@@ -73,11 +94,23 @@ function onListShow() { appendLog("list.onShow"); updateRouteInfo(); }
 function onListHide() { appendLog("list.onHide"); }
 
 function onDetailLoad() { appendLog("detail.onLoad"); }
-function onDetailShow() { appendLog("detail.onShow"); updateRouteInfo(); }
+function onDetailShow() {
+    appendLog("detail.onShow");
+    var route = YUI.currentRoute();
+    var id = route && route.params ? route.params.id : "?";
+    YUI.setText("detail_label", "Static Detail (id=" + id + ")");
+    updateRouteInfo();
+}
 function onDetailHide() { appendLog("detail.onHide"); }
 
 function onDetailPageLoad() { appendLog("dynamic.onLoad"); }
-function onDetailPageShow() { appendLog("dynamic.onShow"); updateRouteInfo(); }
+function onDetailPageShow() {
+    appendLog("dynamic.onShow");
+    var route = YUI.currentRoute();
+    var id = route && route.params ? route.params.id : "?";
+    YUI.setText("detail_title", "Dynamic Detail " + id);
+    updateRouteInfo();
+}
 function onDetailPageHide() { appendLog("dynamic.onHide"); }
 function onDetailPageUnload() { appendLog("dynamic.onUnload"); }
 
@@ -87,3 +120,12 @@ function goDetail() { YUI.navigate("/detail/42"); }
 function goDynamic() { YUI.navigate("/dynamic/99"); }
 function goAdmin() { YUI.navigate("/admin"); }
 function goBack() { YUI.back(); updateRouteInfo(); }
+function goReplaceList() {
+    appendLog("replace->/list");
+    YUI.replace("/list");
+    updateRouteInfo();
+}
+function doLogin() {
+    isLoggedIn = true;
+    appendLog("login:ok");
+}

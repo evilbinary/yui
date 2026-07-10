@@ -77,10 +77,6 @@ void layer_lifecycle_before_destroy(Layer* layer) {
 static void layer_lifecycle_init_layer(Layer* layer) {
     if (!layer) return;
 
-    if (layer->lifecycle_enabled && layer->visible == VISIBLE) {
-        layer_lifecycle_on_show(layer);
-    }
-
     if (layer->children) {
         for (int i = 0; i < layer->child_count; i++) {
             layer_lifecycle_init_layer(layer->children[i]);
@@ -88,6 +84,11 @@ static void layer_lifecycle_init_layer(Layer* layer) {
     }
     if (layer->sub) {
         layer_lifecycle_init_layer(layer->sub);
+    }
+
+    // 子节点先初始化，根 Layer 的 onLoad 最后触发（等同原 app.onLoad 时机）
+    if (layer->lifecycle_enabled && layer->visible == VISIBLE) {
+        layer_lifecycle_on_show(layer);
     }
 }
 
