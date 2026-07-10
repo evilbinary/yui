@@ -4,7 +4,7 @@
 #include "layer.h"
 
 typedef struct Layer Layer;
-
+typedef struct ResizeEvent ResizeEvent;
 
 void layout_layer(Layer* layer);
 void layout_capture_base(Layer* layer);
