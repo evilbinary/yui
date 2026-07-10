@@ -41,6 +41,7 @@ TreeViewComponent* treeview_component_create(Layer* layer) {
     layer->render = treeview_component_render;
     layer->handle_mouse_event = treeview_component_handle_mouse_event;
     layer->handle_key_event = treeview_component_handle_key_event;
+    layer->focusable = 1;  // 支持键盘事件
     
     return component;
 }
@@ -958,46 +959,61 @@ void treeview_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
 // 处理键盘事件
 void treeview_component_handle_key_event(Layer* layer, KeyEvent* event) {
     if (!layer || !event || !layer->component) return;
-    
+
     TreeViewComponent* component = (TreeViewComponent*)layer->component;
-    
+
     if (event->type == KEY_EVENT_DOWN) {
         switch (event->data.key.key_code) {
-            case SDLK_UP:
-                // 选择上一个节点
-                if (component->selected_node) {
-                    // TODO: 实现选择上一个节点的逻辑
-                }
+            case SDLK_UP: {
+                // 垂直向上滚动
+                layer->scroll_offset -= component->item_height;
+                if (layer->scroll_offset < 0) layer->scroll_offset = 0;
+                treeview_update_scrollbar(component);
                 break;
-                
-            case SDLK_DOWN:
-                // 选择下一个节点
-                if (component->selected_node) {
-                    // TODO: 实现选择下一个节点的逻辑
-                }
+            }
+
+            case SDLK_DOWN: {
+                // 垂直向下滚动
+                layer->scroll_offset += component->item_height;
+                int max_offset = treeview_calculate_content_height(component) - layer->rect.h;
+                if (max_offset < 0) max_offset = 0;
+                if (layer->scroll_offset > max_offset) layer->scroll_offset = max_offset;
+                treeview_update_scrollbar(component);
                 break;
-                
+            }
+
             case SDLK_LEFT:
-                // 折叠节点
-                if (component->selected_node) {
+                // 水平向左滚动（优先），否则折叠选中节点
+                if ((layer->scrollable == 2 || layer->scrollable == 3) && layer->scroll_offset_x > 0) {
+                    layer->scroll_offset_x -= 40;
+                    if (layer->scroll_offset_x < 0) layer->scroll_offset_x = 0;
+                    treeview_update_scrollbar(component);
+                } else if (component->selected_node && component->selected_node->expanded) {
                     treeview_collapse_node(component->selected_node);
-                    
-                    // 调用回调函数
                     if (component->on_node_expanded) {
                         component->on_node_expanded(component->selected_node, 0, component->user_data);
                     }
+                    treeview_update_scrollbar(component);
                 }
                 break;
-                
+
             case SDLK_RIGHT:
-                // 展开节点
-                if (component->selected_node) {
+                // 水平向右滚动（优先），否则展开选中节点
+                if ((layer->scrollable == 2 || layer->scrollable == 3) && layer->content_width > layer->rect.w) {
+                    int max_x = layer->content_width - layer->rect.w;
+                    if (layer->scroll_offset_x < max_x) {
+                        layer->scroll_offset_x += 40;
+                        if (layer->scroll_offset_x > max_x) layer->scroll_offset_x = max_x;
+                        treeview_update_scrollbar(component);
+                        break;
+                    }
+                }
+                if (component->selected_node && component->selected_node->expandable && !component->selected_node->expanded) {
                     treeview_expand_node(component->selected_node);
-                    
-                    // 调用回调函数
                     if (component->on_node_expanded) {
                         component->on_node_expanded(component->selected_node, 1, component->user_data);
                     }
+                    treeview_update_scrollbar(component);
                 }
                 break;
         }
