@@ -459,6 +459,12 @@ TreeNode* parse_tree_node(cJSON* node_json, int level, TreeNode* parent) {
         node->expanded = 1;
     }
 
+    // 解析expandable属性
+    cJSON* expandable_json = cJSON_GetObjectItem(node_json, "expandable");
+    if (expandable_json) {
+        node->expandable = cJSON_IsTrue(expandable_json) ? 1 : 0;
+    }
+
     // 解析自定义展开/折叠图标
     cJSON* expandIcon = cJSON_GetObjectItem(node_json, "expandIcon");
     if (expandIcon && expandIcon->valuestring) {
