@@ -1,6 +1,7 @@
 #ifndef YUI_TEXT_COMPONENT_H
 #define YUI_TEXT_COMPONENT_H
 
+#include "text_syntax.h"
 #include "../ytype.h"
 
 typedef struct Layer Layer;
@@ -31,6 +32,13 @@ typedef struct {
     char* change_name;        // 用户数据
     int cached_line_height; // 缓存的行高（用于性能优化）
     int line_height_valid;   // 行高缓存是否有效
+    TextSyntaxConfig syntax_config; // 语法高亮配置
+    int text_revision;       // 文本变更版本号
+    int* layout_starts;      // 视觉行起始偏移缓存
+    int layout_count;        // 视觉行数量
+    int layout_cache_revision; // 布局缓存对应的文本版本
+    int layout_cache_max_width; // 布局缓存对应的最大宽度
+    int layout_cache_text_len;  // 布局缓存对应的文本长度
 } TextComponent;
 
 // 函数声明
@@ -48,6 +56,9 @@ void text_component_set_line_number_width(TextComponent* component, int width);
 void text_component_set_line_number_color(TextComponent* component, Color color);
 void text_component_set_line_number_bg_color(TextComponent* component, Color color);
 void text_component_set_selection_color(TextComponent* component, Color color);
+void text_component_set_syntax_highlight(TextComponent* component, const char* language);
+void text_component_invalidate_layout(TextComponent* component);
+void text_component_on_layer_text_changed(Layer* layer);
 void text_component_set_on_change(TextComponent* component, EventHandler callback, void* user_data);
 int text_component_handle_key_event(Layer* layer, KeyEvent* event);
 int text_component_handle_mouse_event(Layer* layer, MouseEvent* event);

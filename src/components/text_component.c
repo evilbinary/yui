@@ -11,6 +11,207 @@
 #include <stdlib.h>
 
 
+#define TEXT_LINE_SPACING 2
+
+static int text_component_get_line_height(TextComponent* component) {
+    if (!component || !component->layer) return 20;
+    if (component->line_height_valid && component->cached_line_height > 0) {
+        return component->cached_line_height;
+    }
+    int line_height = component->line_height > 0 ? component->line_height : 20;
+    if (component->layer->font && component->layer->font->default_font) {
+        Texture* temp_tex = backend_render_texture(component->layer->font->default_font, "X", component->layer->color);
+        if (temp_tex) {
+            int temp_width = 0, temp_height = 0;
+            backend_query_texture(temp_tex, NULL, NULL, &temp_width, &temp_height);
+            line_height = temp_height / scale;
+            backend_render_text_destroy(temp_tex);
+            component->cached_line_height = line_height;
+            component->line_height_valid = 1;
+        }
+    }
+    return line_height;
+}
+
+static int text_component_measure_width(TextComponent* component, const char* text, int start, int end) {
+    if (!component || !component->layer || !component->layer->font || !component->layer->font->default_font) {
+        return 0;
+    }
+    return text_syntax_measure_width(component->layer->font->default_font, text, start, end, component->layer->color);
+}
+
+static int text_component_find_wrap_end(const char* text, int start, int line_end, int max_width, TextComponent* component) {
+    if (start >= line_end) return start;
+    if (text_component_measure_width(component, text, start, line_end) <= max_width) {
+        return line_end;
+    }
+    int lo = start + 1;
+    int hi = line_end;
+    while (lo < hi) {
+        int mid = lo + (hi - lo) / 2;
+        if (text_component_measure_width(component, text, start, mid) <= max_width) {
+            lo = mid + 1;
+        } else {
+            hi = mid;
+        }
+    }
+    return lo - 1;
+}
+
+void text_component_invalidate_layout(TextComponent* component) {
+    if (!component) return;
+    component->text_revision++;
+    component->line_height_valid = 0;
+    component->layout_cache_text_len = -1;
+}
+
+void text_component_on_layer_text_changed(Layer* layer) {
+    if (!layer || layer->type != TEXT || !layer->component) return;
+    TextComponent* component = (TextComponent*)layer->component;
+    text_component_invalidate_layout(component);
+    text_component_update_content_height(component);
+}
+
+static void text_component_free_layout(TextComponent* component) {
+    if (!component) return;
+    free(component->layout_starts);
+    component->layout_starts = NULL;
+    component->layout_count = 0;
+    component->layout_cache_revision = -1;
+    component->layout_cache_max_width = 0;
+    component->layout_cache_text_len = -1;
+}
+
+static void text_component_ensure_layout(TextComponent* component, int max_width) {
+    if (!component || !component->layer) return;
+    const char* text = component->layer->text ? component->layer->text : "";
+    int text_len = (int)strlen(text);
+    if (max_width < 1) max_width = 1;
+
+    if (component->layout_starts &&
+        component->layout_cache_revision == component->text_revision &&
+        component->layout_cache_max_width == max_width &&
+        component->layout_cache_text_len == text_len) {
+        return;
+    }
+    int capacity = 64;
+    int* starts = (int*)malloc(sizeof(int) * (size_t)capacity);
+    if (!starts) return;
+
+    int count = 0;
+    int current_pos = 0;
+    while (current_pos <= text_len) {
+        if (count >= capacity) {
+            capacity *= 2;
+            int* grown = (int*)realloc(starts, sizeof(int) * (size_t)capacity);
+            if (!grown) break;
+            starts = grown;
+        }
+        starts[count++] = current_pos;
+        if (current_pos >= text_len) break;
+
+        int line_end = current_pos;
+        while (line_end < text_len && text[line_end] != '\n') {
+            line_end++;
+        }
+
+        int split_pos = text_component_find_wrap_end(text, current_pos, line_end, max_width, component);
+        if (split_pos <= current_pos) {
+            split_pos = current_pos + 1;
+        }
+        if (split_pos < line_end) {
+            current_pos = split_pos;
+            continue;
+        }
+        if (line_end < text_len && text[line_end] == '\n') {
+            current_pos = line_end + 1;
+        } else {
+            current_pos = line_end;
+        }
+    }
+
+    free(component->layout_starts);
+    component->layout_starts = starts;
+    component->layout_count = count;
+    component->layout_cache_revision = component->text_revision;
+    component->layout_cache_max_width = max_width;
+    component->layout_cache_text_len = text_len;
+}
+
+static int text_component_count_visual_lines_in_range(TextComponent* component, int max_width,
+                                                      int start, int logical_end) {
+    if (!component || !component->layer || !component->layer->text) return 1;
+    char* text = component->layer->text;
+    if (start >= logical_end) return 1;
+
+    int width = text_component_measure_width(component, text, start, logical_end);
+    if (width <= max_width) return 1;
+
+    int lines = 0;
+    int pos = start;
+    while (pos < logical_end) {
+        int split_pos = text_component_find_wrap_end(text, pos, logical_end, max_width, component);
+        if (split_pos <= pos) split_pos = pos + 1;
+        lines++;
+        pos = split_pos;
+    }
+    return lines > 0 ? lines : 1;
+}
+
+static void text_component_render_text_segment(TextComponent* component, const char* text,
+                                               int start, int end, int x, int y) {
+    if (!component || !component->layer || !component->layer->font || !component->layer->font->default_font) {
+        return;
+    }
+    if (start >= end) return;
+
+    if (component->syntax_config.language != TEXT_SYNTAX_NONE) {
+        text_syntax_render_range(component->layer->font->default_font, text, start, end,
+                                 &component->syntax_config, x, y);
+        return;
+    }
+
+    int len = end - start;
+    char* buf = (char*)malloc((size_t)len + 1);
+    if (!buf) return;
+    memcpy(buf, text + start, (size_t)len);
+    buf[len] = '\0';
+    Texture* tex = backend_render_texture(component->layer->font->default_font, buf, component->layer->color);
+    free(buf);
+    if (!tex) return;
+    int width = 0, height = 0;
+    backend_query_texture(tex, NULL, NULL, &width, &height);
+    Rect rect = {x, y, width / scale, height / scale};
+    backend_render_text_copy(tex, NULL, &rect);
+    backend_render_text_destroy(tex);
+}
+
+static TextSyntaxLanguage text_component_parse_syntax_language(const char* language) {
+    if (!language || language[0] == '\0') return TEXT_SYNTAX_NONE;
+    if (strcmp(language, "json") == 0) return TEXT_SYNTAX_JSON;
+    return TEXT_SYNTAX_NONE;
+}
+
+void text_component_set_syntax_highlight(TextComponent* component, const char* language) {
+    if (!component) return;
+    TextSyntaxLanguage lang = text_component_parse_syntax_language(language);
+    text_syntax_config_init(&component->syntax_config, lang, component->layer ? component->layer->color : (Color){0, 0, 0, 255});
+}
+
+static void text_component_parse_syntax_colors(TextComponent* component, cJSON* colors_obj) {
+    if (!component || !colors_obj || !cJSON_IsObject(colors_obj)) return;
+    cJSON* child = colors_obj->child;
+    while (child) {
+        if (cJSON_IsString(child) && child->valuestring) {
+            Color color = component->syntax_config.default_color;
+            parse_color(child->valuestring, &color);
+            text_syntax_config_set_color(&component->syntax_config, child->string, color);
+        }
+        child = child->next;
+    }
+}
+
+
 // 创建文本组件
 TextComponent* text_component_create(Layer* layer) {
     TextComponent* component = (TextComponent*)malloc(sizeof(TextComponent));
@@ -40,6 +241,13 @@ TextComponent* text_component_create(Layer* layer) {
     component->is_selecting = 0;  // 默认不在选择状态
     component->cached_line_height = 0;  // 行高缓存初始化为0（无效）
     component->line_height_valid = 0;  // 标记缓存无效
+    component->text_revision = 0;
+    component->layout_starts = NULL;
+    component->layout_count = 0;
+    component->layout_cache_revision = -1;
+    component->layout_cache_max_width = 0;
+    component->layout_cache_text_len = -1;
+    text_syntax_config_init(&component->syntax_config, TEXT_SYNTAX_NONE, layer->color);
     
     // 初始化图层的文本字段
     if (!layer->text) {
@@ -177,13 +385,23 @@ TextComponent* text_component_create_from_json(Layer* layer,cJSON* json_obj){
         }
     }
 
-    return component;
+    if (cJSON_HasObjectItem(json_obj, "syntaxHighlight")) {
+        cJSON* syntax_obj = cJSON_GetObjectItem(json_obj, "syntaxHighlight");
+        if (cJSON_IsString(syntax_obj) && syntax_obj->valuestring) {
+            text_component_set_syntax_highlight(component, syntax_obj->valuestring);
+        }
+    }
+    if (cJSON_HasObjectItem(json_obj, "syntaxColors")) {
+        text_component_parse_syntax_colors(component, cJSON_GetObjectItem(json_obj, "syntaxColors"));
+    }
 
+    return component;
 }
 
 // 销毁文本组件
 void text_component_destroy(TextComponent* component) {
     if (component) {
+        text_component_free_layout(component);
         free(component);
     }
 }
@@ -224,6 +442,7 @@ void text_component_set_text(TextComponent* component, const char* text) {
     
     // 使行高缓存失效（因为文本或字体可能改变）
     component->line_height_valid = 0;
+    text_component_invalidate_layout(component);
     
     // 更新内容高度（只调用一次）
     text_component_update_content_height(component);
@@ -477,6 +696,7 @@ static void text_component_delete_selection(TextComponent* component) {
         free(new_text);
         
         component->cursor_pos = start;
+        text_component_invalidate_layout(component);
         
         // 更新内容高度
         text_component_update_content_height(component);
@@ -544,6 +764,7 @@ static void text_component_insert_char(TextComponent* component, char c) {
     free(new_text);
     
     component->cursor_pos++;
+    text_component_invalidate_layout(component);
     
     // 更新内容高度（只调用一次）
     text_component_update_content_height(component);
@@ -646,149 +867,28 @@ void text_component_update_scroll_for_cursor(TextComponent* component) {
 
 // 计算文本内容总高度
 int text_component_calculate_content_height(TextComponent* component) {
-    if (!component || !component->layer || !component->layer->text) {
+    if (!component || !component->layer) {
         return 0;
     }
-    
-    // 如果不是多行模式，内容高度就是可见区域高度
+
     if (!component->multiline) {
         return component->layer->rect.h;
     }
-    
-    // 多行模式需要计算实际行数
-    char* text = component->layer->text;
-    int text_len = strlen(text);
-    int current_pos = 0;
-    int line_count = 0;
-    
-    // 性能优化：使用缓存的行高，避免每帧创建纹理
-    int line_height = component->line_height;
-    if (!component->line_height_valid) {
-        // 只在缓存无效时计算行高
-        if (component->layer->font && component->layer->font->default_font) {
-            Texture* temp_tex = backend_render_texture(component->layer->font->default_font, "X", component->layer->color);
-            if (temp_tex) {
-                int temp_width, temp_height;
-                backend_query_texture(temp_tex, NULL, NULL, &temp_width, &temp_height);
-                line_height = temp_height / scale;
-                backend_render_text_destroy(temp_tex);
-            }
-        }
-        // 缓存行高
-        component->cached_line_height = line_height;
-        component->line_height_valid = 1;
-    } else {
-        line_height = component->cached_line_height;
-    }
-    
-    // 计算文本内容区域的宽度（减去内边距和行号区域）
-    // 与渲染函数中的计算保持一致
+
+    const char* text = component->layer->text ? component->layer->text : "";
+    int line_height = text_component_get_line_height(component);
     int left_padding = 5;
     if (component->show_line_numbers && component->multiline) {
         left_padding += component->line_number_width;
     }
-    int max_width = component->layer->rect.w - (left_padding + 5); // 左内边距 + 右内边距
-    
-    // 如果没有文本，返回一行的高度
-    if (text_len == 0) {
-        return line_height + 2;
+    int max_width = component->layer->rect.w - (left_padding + 5);
+    if (max_width < 1) max_width = 1;
+
+    text_component_ensure_layout(component, max_width);
+    if (component->layout_count <= 0) {
+        return line_height + TEXT_LINE_SPACING;
     }
-    
-    // 遍历文本，计算视觉行数
-    while (current_pos < text_len) {
-        // 查找当前行的结束位置
-        int line_end = current_pos;
-        while (line_end < text_len && text[line_end] != '\n') {
-            line_end++;
-        }
-        
-        // 计算这段文本的宽度
-        int current_width = 0;
-        char* temp_line = (char*)malloc(line_end - current_pos + 1);
-        if (temp_line) {
-            strncpy(temp_line, text + current_pos, line_end - current_pos);
-            temp_line[line_end - current_pos] = '\0';
-            
-            Texture* line_tex = backend_render_texture(component->layer->font->default_font, temp_line, component->layer->color);
-            if (line_tex) {
-                int line_width, line_height_ignore;
-                backend_query_texture(line_tex, NULL, NULL, &line_width, &line_height_ignore);
-                current_width = line_width / scale;
-                backend_render_text_destroy(line_tex);
-            }
-            
-            free(temp_line);
-        }
-        
-        // 如果文本超过宽度限制，需要计算需要多少视觉行
-        if (current_width <= max_width) {
-            // 不需要换行，只有一行
-            line_count++;
-        } else {
-            // 需要自动换行，计算需要多少行
-            int needed_lines = 0;
-            int segment_start = current_pos;
-            
-            while (segment_start < line_end) {
-                int segment_end = segment_start;
-                
-                // 找到最大的不超过宽度的位置
-                int test_width = 0;
-                while (segment_end < line_end) {
-                    // 计算当前段的宽度
-                    char* test_segment = (char*)malloc(segment_end - segment_start + 1);
-                    if (test_segment) {
-                        strncpy(test_segment, text + segment_start, segment_end - segment_start);
-                        test_segment[segment_end - segment_start] = '\0';
-                        
-                        Texture* test_tex = backend_render_texture(component->layer->font->default_font, test_segment, component->layer->color);
-                        if (test_tex) {
-                            int test_w, test_h;
-                            backend_query_texture(test_tex, NULL, NULL, &test_w, &test_h);
-                            test_width = test_w / scale;
-                            backend_render_text_destroy(test_tex);
-                        }
-                        
-                        free(test_segment);
-                        
-                        // 如果超过宽度，回退到上一个字符
-                        if (test_width > max_width && segment_end > segment_start) {
-                            segment_end--;
-                            break;
-                        }
-                    }
-                    
-                    segment_end++;
-                }
-                
-                // 如果找到了一个有效的段
-                if (segment_end > segment_start) {
-                    needed_lines++;
-                    segment_start = segment_end;
-                } else {
-                    // 单个字符就超过了宽度，至少需要一行
-                    needed_lines++;
-                    segment_start++;
-                }
-            }
-            
-            line_count += needed_lines; // 添加计算出的行数
-        }
-        
-        // 移动到下一行
-        if (line_end < text_len && text[line_end] == '\n') {
-            current_pos = line_end + 1;
-        } else {
-            current_pos = line_end;
-        }
-    }
-    
-    // 返回总高度（行高 + 行间距）
-    // 确保至少有一行的高度
-    if (line_count == 0) {
-        return line_height + 2;
-    }
-    return line_count * (line_height + 2);
+    return component->layout_count * (line_height + TEXT_LINE_SPACING);
 }
 
 
@@ -857,6 +957,7 @@ static void text_component_delete_prev_char(TextComponent* component) {
         free(new_text);
         
         component->cursor_pos -= char_len;
+        text_component_invalidate_layout(component);
         
         // 触发 onChange 事件
         text_component_trigger_on_change(component);
@@ -919,6 +1020,7 @@ static void text_component_delete_next_char(TextComponent* component) {
     // 设置新文本
     layer_set_text(component->layer, new_text);
     free(new_text);
+    text_component_invalidate_layout(component);
     
     // 更新内容高度
     text_component_update_content_height(component);
@@ -997,6 +1099,7 @@ static void text_component_insert_text(TextComponent* component, const char* tex
     free(new_text);
     
     component->cursor_pos += text_len;
+    text_component_invalidate_layout(component);
     
     // 更新内容高度（只调用一次）
     text_component_update_content_height(component);
@@ -1675,6 +1778,10 @@ void text_component_render(Layer* layer) {
         return;
     }
     TextComponent* component = (TextComponent*)layer->component;
+    if (layer->font && !layer->font->default_font) {
+        load_all_fonts(layer);
+    }
+    component->syntax_config.default_color = layer->color;
     text_component_update_content_height(component);
     // 绘制背景
     backend_render_fill_rect(&layer->rect, layer->bg_color);
@@ -1701,14 +1808,7 @@ void text_component_render(Layer* layer) {
         backend_render_fill_rect(&separator_line, separator_color);
         
         // 获取行高
-        int line_height = component->line_height;
-        Texture* temp_tex = backend_render_texture(layer->font->default_font, "X", component->line_number_color);
-        if (temp_tex) {
-            int temp_width, temp_height;
-            backend_query_texture(temp_tex, NULL, NULL, &temp_width, &temp_height);
-            line_height = temp_height / scale;
-            backend_render_text_destroy(temp_tex);
-        }
+        int line_height = text_component_get_line_height(component);
         
         // 遍历文本，使用与渲染相同的算法，为每个逻辑行渲染行号
         char* text = component->layer->text;
@@ -1891,14 +1991,7 @@ void text_component_render(Layer* layer) {
             Color selection_bg = component->selection_color;
             
             // 获取行高
-            int line_height = 20;
-            Texture* line_tex = backend_render_texture(layer->font->default_font, "X", layer->color);
-            if (line_tex) {
-                int temp_width, temp_height;
-                backend_query_texture(line_tex, NULL, NULL, &temp_width, &temp_height);
-                line_height = temp_height / scale;
-                backend_render_text_destroy(line_tex);
-            }
+            int line_height = text_component_get_line_height(component);
             
             // 确保start <= end
             int start = component->selection_start;
@@ -2124,298 +2217,56 @@ void text_component_render(Layer* layer) {
         
         // 绘制文本
         if (component->multiline) {
-            // 多行模式下，实现自动换行
             char* text = component->layer->text;
-            int text_len = strlen(text);
-            int current_pos = 0;
-            int line_y = render_rect.y - layer->scroll_offset; // 减去滚动偏移，实现滚动效果
-            int line_height = 0;
-            int char_width = 8; // 默认字符宽度
-            
-            // 先获取字符尺寸
-            Texture* temp_tex = backend_render_texture(layer->font->default_font, "X", layer->color);
-            if (temp_tex) {
-                int temp_width, temp_height;
-                backend_query_texture(temp_tex, NULL, NULL, &temp_width, &temp_height);
-                char_width = temp_width / scale;
-                line_height = temp_height / scale;
-                backend_render_text_destroy(temp_tex);
-            }
-            
-            // 优化：预先计算最大可见行数，避免渲染不可见行
-            int max_visible_lines = (render_rect.h + (line_height + 2) - 1) / (line_height + 2) + 1; // 向上取整
-            int first_visible_line = layer->scroll_offset / (line_height + 2);
+            int text_len = (int)strlen(text);
+            int line_height = text_component_get_line_height(component);
+            int line_stride = line_height + TEXT_LINE_SPACING;
+
+            text_component_ensure_layout(component, render_rect.w);
+
+            int first_visible_line = layer->scroll_offset / line_stride;
+            int max_visible_lines = render_rect.h / line_stride + 2;
             int last_visible_line = first_visible_line + max_visible_lines;
-            
-            // 循环处理每一行
-            int current_line = 0;
-            while (current_pos < text_len) {
-            // 优化：快速跳过不可见的行
-            if (current_line < first_visible_line) {
-                // 快速跳过行，不需要详细渲染
-                // 使用与高度计算相同的精确算法计算当前行会分成多少视觉行
-                int line_end = current_pos;
-                while (line_end < text_len && text[line_end] != '\n') {
-                    line_end++;
+
+            for (int line_index = 0; line_index < component->layout_count; line_index++) {
+                if (line_index < first_visible_line) continue;
+                if (line_index >= last_visible_line) break;
+
+                int start = component->layout_starts[line_index];
+                int end = (line_index + 1 < component->layout_count)
+                    ? component->layout_starts[line_index + 1] : text_len;
+                while (end > start && text[end - 1] == '\n') {
+                    end--;
                 }
-                
-                // 计算整行文本的宽度
-                int current_width = 0;
-                char* temp_line = (char*)malloc(line_end - current_pos + 1);
-                if (temp_line) {
-                    strncpy(temp_line, text + current_pos, line_end - current_pos);
-                    temp_line[line_end - current_pos] = '\0';
-                    
-                    Texture* line_tex = backend_render_texture(layer->font->default_font, temp_line, layer->color);
-                    if (line_tex) {
-                        int line_width, line_height_ignore;
-                        backend_query_texture(line_tex, NULL, NULL, &line_width, &line_height_ignore);
-                        current_width = line_width / scale;
-                        backend_render_text_destroy(line_tex);
-                    }
-                    
-                    free(temp_line);
+                if (end <= start) continue;
+
+                int line_y = render_rect.y + line_index * line_stride - layer->scroll_offset;
+                if (line_y + line_height < render_rect.y || line_y > render_rect.y + render_rect.h) {
+                    continue;
                 }
-                
-                // 计算当前行会分成多少视觉行（使用与高度计算相同的精确算法）
-                int visual_lines_in_this_line = 1;
-                if (current_width > render_rect.w) {
-                    // 使用与 text_component_calculate_content_height 相同的精确算法
-                    int segment_start = current_pos;
-                    int needed_lines = 0;
-                    
-                    while (segment_start < line_end) {
-                        int segment_end = segment_start;
-                        int test_width = 0;
-                        
-                        while (segment_end < line_end) {
-                            char* test_segment = (char*)malloc(segment_end - segment_start + 1);
-                            if (test_segment) {
-                                strncpy(test_segment, text + segment_start, segment_end - segment_start);
-                                test_segment[segment_end - segment_start] = '\0';
-                                
-                                Texture* test_tex = backend_render_texture(layer->font->default_font, test_segment, layer->color);
-                                if (test_tex) {
-                                    int test_w, test_h;
-                                    backend_query_texture(test_tex, NULL, NULL, &test_w, &test_h);
-                                    test_width = test_w / scale;
-                                    backend_render_text_destroy(test_tex);
-                                }
-                                
-                                free(test_segment);
-                                
-                                if (test_width > render_rect.w && segment_end > segment_start) {
-                                    segment_end--;
-                                    break;
-                                }
-                            }
-                            segment_end++;
-                        }
-                        
-                        if (segment_end > segment_start) {
-                            needed_lines++;
-                            segment_start = segment_end;
-                        } else {
-                            needed_lines++;
-                            segment_start++;
-                        }
-                    }
-                    
-                    visual_lines_in_this_line = needed_lines;
-                }
-                
-                // 跳过这些视觉行
-                current_line += visual_lines_in_this_line;
-                
-                // 移动到下一逻辑行
-                if (line_end < text_len && text[line_end] == '\n') {
-                    current_pos = line_end + 1;
-                } else {
-                    current_pos = line_end;
-                }
-                continue;
+
+                text_component_render_text_segment(component, text, start, end, render_rect.x, line_y);
             }
-                
-                // 如果已经渲染了足够的可见行，退出循环
-                if (current_line >= last_visible_line) {
-                    break;
-                }
-                // 查找当前行可以显示的最大文本长度
-                int line_end = current_pos;
-                int max_width = render_rect.w;
-                int current_width = 0;
-                
-                // 尝试找到合适的换行点
-                while (line_end < strlen(text)) {
-                    // 遇到换行符时立即换行
-                    if (text[line_end] == '\n') {
-                        break;
-                    }
-                    
-                    line_end++;
-                }
-                
-                // 计算整行文本的宽度
-                char* temp_line = (char*)malloc(line_end - current_pos + 1);
-                if (temp_line) {
-                    strncpy(temp_line, text + current_pos, line_end - current_pos);
-                    temp_line[line_end - current_pos] = '\0';
-                    
-                    Texture* line_tex = backend_render_texture(layer->font->default_font, temp_line, layer->color);
-                    if (line_tex) {
-                        int line_width, line_height_ignore;
-                        backend_query_texture(line_tex, NULL, NULL, &line_width, &line_height_ignore);
-                        current_width = line_width / scale;
-                        backend_render_text_destroy(line_tex);
-                    }
-                    
-                    free(temp_line);
-                }
-                
-                // 确定当前行的结束位置
-                int split_pos = current_pos;
-                
-                // 如果文本没有超过宽度限制
-                if (current_width <= max_width) {
-                    // 使用整行（到\n或文本末尾）
-                    split_pos = line_end;
-                }
-                // 如果文本超过宽度限制，需要硬换行
-                else {
-                    // 找到最大的不超过宽度的位置
-                    split_pos = current_pos;
-                    while (split_pos < line_end) {
-                        char* test_line = (char*)malloc(split_pos - current_pos + 1);
-                        if (test_line) {
-                            strncpy(test_line, text + current_pos, split_pos - current_pos);
-                            test_line[split_pos - current_pos] = '\0';
-                            
-                            Texture* test_tex = backend_render_texture(layer->font->default_font, test_line, layer->color);
-                            if (test_tex) {
-                                int test_width, test_height;
-                                backend_query_texture(test_tex, NULL, NULL, &test_width, &test_height);
-                                if (test_width / scale > max_width) {
-                                    backend_render_text_destroy(test_tex);
-                                    free(test_line);
-                                    break;
-                                }
-                                backend_render_text_destroy(test_tex);
-                            }
-                            
-                            free(test_line);
-                        }
-                        split_pos++;
-                    } 
-                    
-                    if (split_pos > current_pos) {
-                        split_pos--;
-                    }
-                }
-                
-                // 渲染当前行
-                // 确保split_pos >= current_pos，防止负长度
-                if (split_pos < current_pos) {
-                    split_pos = current_pos;
-                }
-                
-                char* current_line = (char*)malloc(split_pos - current_pos + 2);
-                if (current_line) {
-                    // 复制当前行文本，但不包含换行符
-                    int copy_len = split_pos - current_pos;
-                    // 检查是否在换行符处结束
-                    if (copy_len > 0 && split_pos > current_pos && text[split_pos - 1] == '\n') {
-                        copy_len--; // 不包含换行符
-                    }
-                    
-                    // 确保copy_len不为负数
-                    if (copy_len < 0) {
-                        copy_len = 0;
-                    }
-                    
-                    strncpy(current_line, text + current_pos, copy_len);
-                    current_line[copy_len] = '\0';
-                      
-                    Texture* line_tex = backend_render_texture(layer->font->default_font, current_line, layer->color);
-                    if (line_tex) {
-                        int actual_width, actual_height;
-                        backend_query_texture(line_tex, NULL, NULL, &actual_width, &actual_height);
-                          
-                        Rect text_rect = {
-                            render_rect.x,
-                            line_y,
-                            actual_width / scale,  // 使用实际文本宽度，避免文字变形
-                            actual_height / scale  // 使用实际文本高度
-                        };
-                          
-                        // 确保文本不会超出边界
-                        if (text_rect.x + text_rect.w > render_rect.x + render_rect.w) {
-                            text_rect.w = render_rect.x + render_rect.w - text_rect.x;
-                        }
-                          
-                        // 渲染文本
-                        backend_render_text_copy(line_tex, NULL, &text_rect);
-                        backend_render_text_destroy(line_tex);
-                    }
-                
-                free(current_line);
+
+            if (component->layout_count <= 0 && text_len > 0) {
+                text_component_render_text_segment(component, text, 0, text_len,
+                                                   render_rect.x, render_rect.y - layer->scroll_offset);
             }
-              
-            // 如果是在换行符处结束，直接跳到下一个字符
-            if (split_pos < strlen(text) && text[split_pos] == '\n') {
-                current_pos = split_pos + 1;
-            } else {
-                current_pos = split_pos;
-            }
-            
-            // 移动到下一行
-            line_y += line_height + 2; // 加2作为行间距
-            current_line++; // 增加行计数
-            }
-            
-            // 计算文本总高度（考虑所有行的高度和间距）
-            // 使用content_height而不是line_y计算
+
             int total_text_height = layer->content_height;
-            
-            // 限制滚动范围
             if (total_text_height <= render_rect.h) {
-                layer->scroll_offset = 0; // 文本高度小于可见区域，不需要滚动
+                layer->scroll_offset = 0;
             } else {
-                // 确保滚动不会超出上边界
-                if (layer->scroll_offset < 0) {
-                    layer->scroll_offset = 0;
-                }
-                // 确保滚动不会超出下边界
+                if (layer->scroll_offset < 0) layer->scroll_offset = 0;
                 int max_scroll_y = total_text_height - render_rect.h;
-                if (layer->scroll_offset > max_scroll_y) {
-                    layer->scroll_offset = max_scroll_y;
-                }
+                if (layer->scroll_offset > max_scroll_y) layer->scroll_offset = max_scroll_y;
             }
         } else {
-            // 单行模式，应用水平滚动
-            Texture* tex = backend_render_texture(layer->font->default_font, component->layer->text, layer->color);
-            if (tex) {
-                int text_width, text_height;
-                backend_query_texture(tex, NULL, NULL, &text_width, &text_height);
-                
-                // 计算文本位置，应用滚动偏移
-                Rect text_rect = {
-                    render_rect.x - component->scroll_x,  // 应用水平滚动
-                    render_rect.y + (render_rect.h - text_height / scale) / 2,  // 单行模式下垂直居中
-                    text_width / scale,
-                    text_height / scale
-                };
-                
-                // 确保文本不会超出边界
-                if (text_rect.x + text_rect.w > render_rect.x + render_rect.w) {
-                    text_rect.w = render_rect.x + render_rect.w - text_rect.x;
-                }
-                if (text_rect.y + text_rect.h > render_rect.y + render_rect.h) {
-                    text_rect.h = render_rect.y + render_rect.h - text_rect.y;
-                }
-                
-                backend_render_text_copy(tex, NULL, &text_rect);
-                backend_render_text_destroy(tex);
-            }
+            int line_height = text_component_get_line_height(component);
+            int text_len = (int)strlen(component->layer->text);
+            int text_y = render_rect.y + (render_rect.h - line_height) / 2;
+            text_component_render_text_segment(component, component->layer->text, 0, text_len,
+                                               render_rect.x - component->scroll_x, text_y);
         }
     }
     
@@ -2427,16 +2278,7 @@ void text_component_render(Layer* layer) {
         if (component->cursor_pos > text_len) component->cursor_pos = text_len;
         
         // 获取行高
-        int line_height = 20;
-        if (layer->font && layer->font->default_font) {
-            Texture* temp_tex = backend_render_texture(layer->font->default_font, "X", layer->color);
-            if (temp_tex) {
-                int temp_width, temp_height;
-                backend_query_texture(temp_tex, NULL, NULL, &temp_width, &temp_height);
-                line_height = temp_height / scale;
-                backend_render_text_destroy(temp_tex);
-            }
-        }
+        int line_height = text_component_get_line_height(component);
         
         if (component->multiline) {
             // 多行模式：需要考虑自动换行来计算光标位置
