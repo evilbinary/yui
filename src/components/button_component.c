@@ -134,10 +134,10 @@ void button_component_set_user_data(ButtonComponent* component, void* data) {
 }
 
 // 处理键盘事件
-void button_component_handle_key_event(Layer* layer, KeyEvent* event) {
+int button_component_handle_key_event(Layer* layer, KeyEvent* event) {
     ButtonComponent* component = (ButtonComponent*)layer->component;
     if (!component || HAS_STATE(layer, LAYER_STATE_DISABLED)) {
-        return;
+        return 0;
     }
 
     // 处理回车键或空格键按下事件
@@ -157,13 +157,14 @@ void button_component_handle_key_event(Layer* layer, KeyEvent* event) {
             }
         }
     }
+    return 0;
 }
 
 // 处理鼠标事件
-void button_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
+int button_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     ButtonComponent* component = (ButtonComponent*)layer->component;
     if (!component || HAS_STATE(layer, LAYER_STATE_DISABLED)) {
-        return;
+        return 0;
     }
 
     // 检查鼠标是否在按钮范围内
@@ -198,6 +199,7 @@ void button_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     else if (event->state == SDL_MOUSEMOTION) {
         // 移动时不清除 PRESSED 状态，保持按下状态
     }
+    return 0;
 }
 
 // 渲染按钮组件

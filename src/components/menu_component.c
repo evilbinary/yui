@@ -530,10 +530,10 @@ static void menu_item_click(MenuComponent* component, MenuItem* item) {
 }
 
 // 处理键盘事件
-void menu_component_handle_key_event(Layer* layer, KeyEvent* event) {
+int menu_component_handle_key_event(Layer* layer, KeyEvent* event) {
     MenuComponent* component = (MenuComponent*)layer->component;
     if (!component || component->item_count == 0) {
-        return;
+        return 0;
     }
 
     if (event->type == KEY_EVENT_DOWN) {
@@ -619,6 +619,7 @@ void menu_component_handle_key_event(Layer* layer, KeyEvent* event) {
                 break;
         }
     }
+    return 0;
 }
 
 // 内联展开菜单关闭回调
@@ -646,10 +647,10 @@ void menu_component_collapse(MenuComponent* component) {
 }
 
 // 处理鼠标事件
-void menu_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
+int menu_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     MenuComponent* component = (MenuComponent*)layer->component;
     if (!component) {
-        return;
+        return 0;
     }
 
     Rect* rect = &layer->rect;
@@ -728,6 +729,7 @@ void menu_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
             }
         }
     }
+    return 0;
 }
 
 // 渲染菜单组件

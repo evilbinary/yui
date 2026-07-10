@@ -163,14 +163,14 @@ int radiobox_component_is_disabled(RadioboxComponent* component) {
 }
 
 // 处理鼠标事件
-void radiobox_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
+int radiobox_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     if (!layer || !event || !layer->component) {
-        return;
+        return 0;
     }
 
     // 如果图层被禁用，则不处理鼠标事件
     if (HAS_STATE(layer, LAYER_STATE_DISABLED)) {
-        return;
+        return 0;
     }
 
     RadioboxComponent* component = (RadioboxComponent*)layer->component;
@@ -190,6 +190,7 @@ void radiobox_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
             layer->event->click(layer);
         }
     }
+    return 0;
 }
 
 // 将颜色转换为灰度并降低透明度

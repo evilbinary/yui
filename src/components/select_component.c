@@ -725,8 +725,8 @@ void select_component_toggle(SelectComponent* component) {
 }
 
 // 处理鼠标事件
-void select_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
-    if (!layer || !event || !layer->component) return;
+int select_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
+    if (!layer || !event || !layer->component) return 0;
     
     SelectComponent* component = (SelectComponent*)layer->component;
     
@@ -764,11 +764,11 @@ void select_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
         if (new_scroll < 0) new_scroll = 0;
         if (new_scroll > total_items - visible_items) new_scroll = total_items - visible_items;
         
-        printf("DEBUG: mouse_delta=%d, scroll_delta=%d, new_scroll=%d\n", 
+        printf("DEBUG: mouse_delta=%d, scroll_delta=%d, new_scroll=%d\n",
                mouse_delta, scroll_delta, new_scroll);
-        
+
         component->scroll_position = new_scroll;
-        return;
+        return 0;
     }
     
     // 检查鼠标是否在 Select 区域内（用于悬停状态）
@@ -807,7 +807,7 @@ void select_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     if (event->state == SDL_PRESSED && event->button == SDL_BUTTON_LEFT) {
         if (component->expanded && !in_select_area && !in_dropdown_area && !component->just_expanded) {
             select_component_collapse(component);
-            return;
+            return 0;
         }
 
         // 检查是否点击在 Select 按钮上
@@ -911,9 +911,9 @@ void select_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
         }
         component->just_expanded = 0;
     } else if (event->state == SDL_MOUSEMOTION) {
-        // printf("DEBUG: Mouse motion - x=%d, y=%d, is_dragging=%d\n", 
+        // printf("DEBUG: Mouse motion - x=%d, y=%d, is_dragging=%d\n",
             //    event->x, event->y, component->is_dragging);
-        
+
         if (component->expanded) {
             // 更新悬停状态
             int dropdown_x = layer->rect.x;
@@ -922,19 +922,19 @@ void select_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
             if (dropdown_height > component->max_visible_items * component->item_height) {
                 dropdown_height = component->max_visible_items * component->item_height;
             }
-            
+
             if (component->dropdown_open_upward) {
                 dropdown_y = layer->rect.y - dropdown_height;
             } else {
                 dropdown_y = layer->rect.y + layer->rect.h;
             }
-            
+
             int content_width = layer->rect.w;
             int has_scrollbar = component->item_count > component->max_visible_items;
             if (has_scrollbar) {
                 content_width -= component->scrollbar_width;
             }
-            
+
             if (event->x >= dropdown_x && event->x < dropdown_x + content_width) {
                 int hover_index = (event->y - dropdown_y) / component->item_height + component->scroll_position;
                 if (hover_index >= 0 && hover_index < component->item_count) {
@@ -947,6 +947,7 @@ void select_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
             }
         }
     }
+    return 0;
 }
 
 // 处理滚动事件
@@ -986,8 +987,8 @@ void select_component_scroll_callback(Layer* layer) {
 }
 
 // 处理键盘事件
-void select_component_handle_key_event(Layer* layer, KeyEvent* event) {
-    if (!layer || !event || !layer->component) return;
+int select_component_handle_key_event(Layer* layer, KeyEvent* event) {
+    if (!layer || !event || !layer->component) return 0;
     
     SelectComponent* component = (SelectComponent*)layer->component;
     
@@ -1035,20 +1036,21 @@ void select_component_handle_key_event(Layer* layer, KeyEvent* event) {
                 
             case SDLK_RETURN:
             case SDLK_SPACE:
-                if (component->expanded && component->hover_index >= 0 && 
-                    component->hover_index < component->item_count && 
+                if (component->expanded && component->hover_index >= 0 &&
+                    component->hover_index < component->item_count &&
                     !component->items[component->hover_index].disabled) {
                     select_component_set_selected(component, component->hover_index);
                 } else {
                     select_component_toggle(component);
                 }
                 break;
-                
+
             case SDLK_ESCAPE:
                 select_component_collapse(component);
                 break;
         }
     }
+    return 0;
 }
 
 // 渲染 Select 组件
@@ -1329,8 +1331,8 @@ void select_component_render_dropdown_only(Layer* layer) {
 }
 
 // 弹出层专用鼠标事件处理
-void select_component_handle_dropdown_mouse_event(Layer* layer, MouseEvent* event) {
-    if (!layer || !event || !layer->component) return;
+int select_component_handle_dropdown_mouse_event(Layer* layer, MouseEvent* event) {
+    if (!layer || !event || !layer->component) return 0;
     
     SelectComponent* component = (SelectComponent*)layer->component;
     
@@ -1456,11 +1458,12 @@ void select_component_handle_dropdown_mouse_event(Layer* layer, MouseEvent* even
             }
         }
     }
+    return 0;
 }
 
 // 弹出层专用键盘事件处理
-void select_component_handle_dropdown_key_event(Layer* layer, KeyEvent* event) {
-    if (!layer || !event || !layer->component) return;
+int select_component_handle_dropdown_key_event(Layer* layer, KeyEvent* event) {
+    if (!layer || !event || !layer->component) return 0;
     
     SelectComponent* component = (SelectComponent*)layer->component;
     
@@ -1543,6 +1546,7 @@ void select_component_popup_close_callback(PopupLayer* popup) {
         
         // 注意：不在这里触发 on_dropdown_expanded 回调，因为它应该已经在 collapse 中被调用了
     }
+    return 0;
 }
 
 // 设置 onChange 回调函数

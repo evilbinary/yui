@@ -62,8 +62,8 @@ void menu_component_set_colors(MenuComponent* component, Color bg, Color text,
 void menu_component_set_item_height(MenuComponent* component, int height);
 void menu_component_set_min_width(MenuComponent* component, int width);
 void menu_component_set_user_data(MenuComponent* component, void* data);
-void menu_component_handle_mouse_event(Layer* layer, MouseEvent* event);
-void menu_component_handle_key_event(Layer* layer, KeyEvent* event);
+int menu_component_handle_mouse_event(Layer* layer, MouseEvent* event);
+int menu_component_handle_key_event(Layer* layer, KeyEvent* event);
 void menu_component_render(Layer* layer);
 int menu_component_get_item_at_position(MenuComponent* component, int x, int y);
 

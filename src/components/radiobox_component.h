@@ -34,7 +34,7 @@ void radiobox_component_set_user_data(RadioboxComponent* component, void* data);
 // 添加禁用/启用函数
 void radiobox_component_set_disabled(RadioboxComponent* component, int disabled);
 int radiobox_component_is_disabled(RadioboxComponent* component);
-void radiobox_component_handle_mouse_event(Layer* layer, MouseEvent* event);
+int radiobox_component_handle_mouse_event(Layer* layer, MouseEvent* event);
 void radiobox_component_render(Layer* layer);
 
 // 单选框组相关函数

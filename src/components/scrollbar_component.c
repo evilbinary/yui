@@ -168,10 +168,10 @@ void scrollbar_component_update_position(ScrollbarComponent* component) {
 }
 
 // 处理鼠标事件
-void scrollbar_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
+int scrollbar_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     ScrollbarComponent* component = (ScrollbarComponent*)layer->component;
     if (!component || !component->target_layer) {
-        return;
+        return 0;
     }
     
     Layer* target = component->target_layer;
@@ -262,6 +262,7 @@ void scrollbar_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
             target->scroll_offset_x = (int)(ratio * max_scroll_offset);
         }
     }
+    return 0;
 }
 
 // 渲染滚动条

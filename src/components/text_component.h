@@ -49,8 +49,8 @@ void text_component_set_line_number_color(TextComponent* component, Color color)
 void text_component_set_line_number_bg_color(TextComponent* component, Color color);
 void text_component_set_selection_color(TextComponent* component, Color color);
 void text_component_set_on_change(TextComponent* component, EventHandler callback, void* user_data);
-void text_component_handle_key_event(Layer* layer, KeyEvent* event);
-void text_component_handle_mouse_event(Layer* layer, MouseEvent* event);
+int text_component_handle_key_event(Layer* layer, KeyEvent* event);
+int text_component_handle_mouse_event(Layer* layer, MouseEvent* event);
 void text_component_render(Layer* layer);
 int text_component_get_position_from_point(TextComponent* component, Point pt, Layer* layer);
 int text_component_register_event(Layer* layer, const char* event_name, const char* event_func_name, EventHandler event_handler);

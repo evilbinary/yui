@@ -922,8 +922,8 @@ static char* treeview_node_to_json(TreeNode* node) {
 }
 
 // 处理鼠标事件
-void treeview_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
-    if (!layer || !event || !layer->component) return;
+int treeview_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
+    if (!layer || !event || !layer->component) return 0;
     
     TreeViewComponent* component = (TreeViewComponent*)layer->component;
     
@@ -995,11 +995,12 @@ void treeview_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
             }
         }
     }
+    return 0;
 }
 
 // 处理键盘事件
-void treeview_component_handle_key_event(Layer* layer, KeyEvent* event) {
-    if (!layer || !event || !layer->component) return;
+int treeview_component_handle_key_event(Layer* layer, KeyEvent* event) {
+    if (!layer || !event || !layer->component) return 0;
 
     TreeViewComponent* component = (TreeViewComponent*)layer->component;
 
@@ -1059,6 +1060,7 @@ void treeview_component_handle_key_event(Layer* layer, KeyEvent* event) {
                 break;
         }
     }
+    return 0;
 }
 
 // 渲染树视图

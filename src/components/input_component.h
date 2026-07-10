@@ -26,8 +26,8 @@ void input_component_set_text(InputComponent* component, const char* text);
 void input_component_set_placeholder(InputComponent* component, const char* placeholder);
 void input_component_set_max_length(InputComponent* component, int max_length);
 void input_component_set_cursor_color(InputComponent* component, Color cursor_color);
-void input_component_handle_key_event(Layer* layer, KeyEvent* event);
-void input_component_handle_mouse_event(Layer* layer,MouseEvent* event);
+int input_component_handle_key_event(Layer* layer, KeyEvent* event);
+int input_component_handle_mouse_event(Layer* layer,MouseEvent* event);
 void input_component_render(Layer* layer);
 
 #endif  // YUI_INPUT_COMPONENT_H

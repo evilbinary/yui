@@ -89,10 +89,10 @@ void sash_component_render(Layer* layer) {
     }
 }
 
-void sash_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
-    if (!layer || !event) return;
+int sash_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
+    if (!layer || !event) return 0;
     SashComponent* comp = (SashComponent*)layer->component;
-    if (!comp) return;
+    if (!comp) return 0;
 
     int inside = (event->x >= layer->rect.x && event->x < layer->rect.x + layer->rect.w &&
                   event->y >= layer->rect.y && event->y < layer->rect.y + layer->rect.h);
@@ -108,7 +108,7 @@ void sash_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
 
         if (comp->dragging) {
             ensure_target(comp);
-            if (!comp->target || !comp->target->parent) return;
+            if (!comp->target || !comp->target->parent) return 0;
 
             int delta_y = event->y - comp->drag_start_y;
             int new_h = comp->initial_height + delta_y;
@@ -138,7 +138,7 @@ void sash_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
                 layout_layer(parent);
             }
         }
-        return;
+        return 0;
     }
 
     if (event->state == SDL_PRESSED && event->button == SDL_BUTTON_LEFT && inside) {
@@ -148,11 +148,12 @@ void sash_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
         if (comp->target) {
             comp->initial_height = comp->target->rect.h;
         }
-        return;
+        return 0;
     }
 
     if (event->state == SDL_RELEASED && event->button == SDL_BUTTON_LEFT) {
         comp->dragging = 0;
-        return;
+        return 0;
     }
+    return 0;
 }

@@ -39,8 +39,8 @@ void slider_component_set_orientation(SliderComponent* component, int orientatio
 void slider_component_set_colors(SliderComponent* component, Color track, Color thumb, Color active_thumb);
 void slider_component_set_user_data(SliderComponent* component, void* data);
 void slider_component_set_value_changed_callback(SliderComponent* component, void (*callback)(float, void*));
-void slider_component_handle_mouse_event(Layer* layer, MouseEvent* event);
-void slider_component_handle_key_event(Layer* layer, KeyEvent* event);
+int slider_component_handle_mouse_event(Layer* layer, MouseEvent* event);
+int slider_component_handle_key_event(Layer* layer, KeyEvent* event);
 void slider_component_render(Layer* layer);
 
 #endif  // YUI_SLIDER_COMPONENT_H

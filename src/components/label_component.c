@@ -295,8 +295,8 @@ void label_component_render(Layer* layer) {
 }
 
 // 鼠标事件处理
-void label_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
-    if (!layer || !layer->component) return;
+int label_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
+    if (!layer || !layer->component) return 0;
     LabelComponent* comp = (LabelComponent*)layer->component;
 
     int inside = (event->x >= layer->rect.x && event->x <= layer->rect.x + layer->rect.w &&
@@ -325,4 +325,5 @@ void label_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
             layer->event->click(layer);
         }
     }
+    return 0;
 }

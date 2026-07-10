@@ -456,8 +456,8 @@ int tab_is_close_button_clicked(TabComponent* component, int tab_index, int x,
 }
 
 // 处理鼠标事件
-void tab_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
-  if (!layer || !event || !layer->component) return;
+int tab_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
+  if (!layer || !event || !layer->component) return 0;
 
   TabComponent* component = (TabComponent*)layer->component;
 
@@ -478,11 +478,12 @@ void tab_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
       }
     }
   }
+  return 0;
 }
 
 // 处理键盘事件
-void tab_component_handle_key_event(Layer* layer, KeyEvent* event) {
-  if (!layer || !event || !layer->component) return;
+int tab_component_handle_key_event(Layer* layer, KeyEvent* event) {
+  if (!layer || !event || !layer->component) return 0;
 
   TabComponent* component = (TabComponent*)layer->component;
 
@@ -500,6 +501,7 @@ void tab_component_handle_key_event(Layer* layer, KeyEvent* event) {
         break;
     }
   }
+  return 0;
 }
 
 // 渲染选项卡

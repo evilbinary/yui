@@ -21,6 +21,6 @@ void label_component_set_text(LabelComponent* component, const char* text);
 void label_component_set_text_alignment(LabelComponent* component, int alignment);
 void label_component_set_auto_size(LabelComponent* component, int auto_size);
 void label_component_render(Layer* layer);
-void label_component_handle_mouse_event(Layer* layer, MouseEvent* event);
+int label_component_handle_mouse_event(Layer* layer, MouseEvent* event);
 
 #endif  // YUI_LABEL_COMPONENT_H

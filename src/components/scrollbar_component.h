@@ -24,7 +24,7 @@ void scrollbar_component_set_thickness(ScrollbarComponent* component, int thickn
 void scrollbar_component_set_colors(ScrollbarComponent* component, Color track_color, Color thumb_color);
 void scrollbar_component_set_visible(ScrollbarComponent* component, int visible);
 void scrollbar_component_update_position(ScrollbarComponent* component);
-void scrollbar_component_handle_mouse_event(Layer* layer, MouseEvent* event);
+int scrollbar_component_handle_mouse_event(Layer* layer, MouseEvent* event);
 void scrollbar_component_render(Layer* layer);
 ScrollbarComponent* scrollbar_component_create_from_json(Layer* layer,Layer* target_layer, cJSON* json_obj);
 

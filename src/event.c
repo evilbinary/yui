@@ -182,18 +182,16 @@ void handle_key_event(Layer* layer, KeyEvent* event) {
 
     // 如果当前图层就是焦点图层且有键盘事件处理函数，则处理事件
     if (focused_layer == layer && layer->handle_key_event) {
-        layer->handle_key_event(layer, event);
-        return;
+        if (layer->handle_key_event(layer, event)) return;
     }
-    
+
     // 递归处理子图层的键盘事件，寻找焦点图层
     for (int i = 0; i < layer->child_count; i++) {
         if (layer->children[i]) {
-            // 递归调用，不需要额外检查
             handle_key_event(layer->children[i], event);
         }
     }
-    
+
     // 处理sub图层的键盘事件
     if (layer->sub) {
         handle_key_event(layer->sub, event);
@@ -221,8 +219,8 @@ static bool has_child_handler_at_point(Layer* layer, Point point) {
 }
 
 // 默认鼠标事件处理函数（用于没有自定义 handle_mouse_event 的图层）
-void default_layer_handle_mouse_event(Layer* layer, MouseEvent* event) {
-    if (!layer || !event) return;
+int default_layer_handle_mouse_event(Layer* layer, MouseEvent* event) {
+    if (!layer || !event) return 0;
 
     Point mouse_pos = {event->x, event->y};
 
@@ -261,27 +259,35 @@ void default_layer_handle_mouse_event(Layer* layer, MouseEvent* event) {
             }
         }
     }
+    return 0;
 }
 
-// 处理鼠标事件
-void handle_mouse_event(Layer* layer, MouseEvent* event) {
+// 处理鼠标事件，返回非0表示事件已被消费，调用者应停止传播
+int handle_mouse_event(Layer* layer, MouseEvent* event) {
     if (!layer || !event) {
-        return;
+        return 0;
     }
 
     // 优先处理popup层的事件（只在根层级检查，避免子节点重复转发事件）
     if (layer->parent == NULL) {
         if (popup_manager_handle_mouse_event(event)) {
-            return;
+            return 1;
         }
     }
 
     Point mouse_pos = {event->x, event->y};
 
-    // 先递归处理子图层的事件，让子图层优先响应（跳过不可见图层）
-    for (int i = 0; i < layer->child_count; i++) {
+    // 从顶层到底层分发子图层（索引越大越靠前）。
+    // 移动事件分发给所有可见子图层（hover 跟踪）；
+    // 按下/释放事件被第一个命中鼠标的子图层消费后终止，
+    // 组件也可通过返回非0主动阻止冒泡。
+    for (int i = layer->child_count - 1; i >= 0; i--) {
         if (layer->children[i] && layer->children[i]->visible == VISIBLE) {
-            handle_mouse_event(layer->children[i], event);
+            int consumed = handle_mouse_event(layer->children[i], event);
+            if (consumed) return 1;
+            if (event->state != SDL_MOUSEMOTION && point_in_rect(mouse_pos, layer->children[i]->rect)) {
+                break;
+            }
         }
     }
 
@@ -298,30 +304,28 @@ void handle_mouse_event(Layer* layer, MouseEvent* event) {
 
     // 处理当前图层的焦点切换逻辑
     if (point_in_rect(mouse_pos, layer->rect)) {
-        // 处理焦点切换逻辑（只有当没有子图层获取焦点时）
         if (!child_has_focus && layer->focusable && layer->visible == VISIBLE && event->state == SDL_PRESSED) {
-            // 如果当前有焦点图层，将其状态设置为NORMAL
             if (focused_layer && focused_layer != layer) {
                 focused_layer->state = LAYER_STATE_NORMAL;
             }
             focused_layer = layer;
             layer->state = LAYER_STATE_FOCUSED;
-            // 注意：这里不返回，继续处理自定义事件处理函数
         }
-
     }
-
-    
 
     // 让各组件自己处理鼠标事件（包括点击）
     if (layer->handle_mouse_event) {
-        layer->handle_mouse_event(layer, event);
+        int consumed = layer->handle_mouse_event(layer, event);
+        if (consumed) return 1;
     }
 
     // 递归处理子图层的事件
     if (layer->sub) {
-        handle_mouse_event(layer->sub, event);
+        int consumed = handle_mouse_event(layer->sub, event);
+        if (consumed) return 1;
     }
+
+    return 0;
 }
 
 // 处理滚动条拖动事件

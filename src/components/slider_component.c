@@ -258,8 +258,8 @@ float slider_calculate_value_from_position(SliderComponent* component, int mouse
 }
 
 // 处理鼠标事件
-void slider_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
-    if (!layer || !event || !layer->component) return;
+int slider_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
+    if (!layer || !event || !layer->component) return 0;
     
     SliderComponent* component = (SliderComponent*)layer->component;
     // 只在按下事件时输出调试信息
@@ -274,7 +274,7 @@ void slider_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
         if (event->state == SDL_RELEASED && event->button == SDL_BUTTON_LEFT) {
             component->dragging = 0;
         }
-        return;
+        return 0;
     }
     
     if (event->state == SDL_PRESSED && event->button == SDL_BUTTON_LEFT) {
@@ -306,11 +306,12 @@ void slider_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
         float new_value = slider_calculate_value_from_position(component, event->x, event->y);
         slider_component_set_value(component, new_value);
     }
+    return 0;
 }
 
 // 处理键盘事件
-void slider_component_handle_key_event(Layer* layer, KeyEvent* event) {
-    if (!layer || !event || !layer->component) return;
+int slider_component_handle_key_event(Layer* layer, KeyEvent* event) {
+    if (!layer || !event || !layer->component) return 0;
     
     SliderComponent* component = (SliderComponent*)layer->component;
     
@@ -347,6 +348,7 @@ void slider_component_handle_key_event(Layer* layer, KeyEvent* event) {
         
         slider_component_set_value(component, new_value);
     }
+    return 0;
 }
 
 // 渲染滑块

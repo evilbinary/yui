@@ -144,10 +144,10 @@ void treeview_set_node_selected_callback(TreeViewComponent* component, void (*ca
 void treeview_set_node_expanded_callback(TreeViewComponent* component, void (*callback)(TreeNode*, int, void*));
 
 // 处理鼠标事件
-void treeview_component_handle_mouse_event(Layer* layer, MouseEvent* event);
+int treeview_component_handle_mouse_event(Layer* layer, MouseEvent* event);
 
 // 处理键盘事件
-void treeview_component_handle_key_event(Layer* layer, KeyEvent* event);
+int treeview_component_handle_key_event(Layer* layer, KeyEvent* event);
 
 // 渲染树视图
 void treeview_component_render(Layer* layer);

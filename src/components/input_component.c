@@ -118,13 +118,13 @@ void input_component_set_cursor_color(InputComponent* component, Color cursor_co
 }
 
 // 处理键盘事件
-void input_component_handle_key_event(Layer* layer,  KeyEvent* event) {
+int input_component_handle_key_event(Layer* layer,  KeyEvent* event) {
     InputComponent* component = (InputComponent*)layer->component;
     if (!component || !event || HAS_STATE(layer, LAYER_STATE_DISABLED)) {
-        return;
+        return 0;
     }
     if(!HAS_STATE(layer, LAYER_STATE_FOCUSED)){
-        return;
+        return 0;
     }
 
     char buf[MAX_TEXT];
@@ -240,6 +240,7 @@ void input_component_handle_key_event(Layer* layer,  KeyEvent* event) {
     if (text_changed) {
         layer_set_text(layer, buf);
     }
+    return 0;
 }
 
 // 定义一个静态变量来跟踪上一次点击的组件
@@ -255,10 +256,10 @@ void input_component_debug_focus_state() {
 }
 
 // 处理鼠标事件
-void input_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
+int input_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     if (!layer || !layer->component) {
         printf("Mouse event skipped: invalid layer or component\n");
-        return;
+        return 0;
     }
     InputComponent* component = (InputComponent*)layer->component;
 
@@ -324,6 +325,7 @@ void input_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
             printf("Not resetting state: current component is not the last clicked component\n");
         }
     }
+    return 0;
 }
 
 // 渲染输入组件

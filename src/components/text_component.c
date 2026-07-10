@@ -1010,15 +1010,15 @@ static void text_component_insert_text(TextComponent* component, const char* tex
 }
 
 // 处理键盘事件
-void text_component_handle_key_event(Layer* layer, KeyEvent* event) {
+int text_component_handle_key_event(Layer* layer, KeyEvent* event) {
     if (!layer || !event || !layer->component) {
-        return;
+        return 0;
     }
-    
+
     TextComponent* component = (TextComponent*)layer->component;
-    
+
     if (!component->editable) {
-        return;
+        return 0;
     }
     
     // 处理特殊键
@@ -1285,11 +1285,12 @@ void text_component_handle_key_event(Layer* layer, KeyEvent* event) {
         // 处理 IME 文本编辑事件（候选词预览）
         // 这里可以显示候选词或组合字符串
         // 暂时只打印调试信息
-        printf("IME Editing: '%s', start=%d, length=%d\n", 
-               event->data.text.text, 
-               event->data.text.start, 
+        printf("IME Editing: '%s', start=%d, length=%d\n",
+               event->data.text.text,
+               event->data.text.start,
                event->data.text.length);
     }
+    return 0;
 }
 
 
@@ -1299,9 +1300,9 @@ void text_component_handle_key_event(Layer* layer, KeyEvent* event) {
 
 
 // 处理鼠标事件
-void text_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
+int text_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     if (!layer || !event || !layer->component) {
-        return;
+        return 0;
     }
     
     TextComponent* component = (TextComponent*)layer->component;
@@ -1387,6 +1388,7 @@ void text_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     else if (event->state == SDL_RELEASED && event->button == SDL_BUTTON_LEFT) {
         component->is_selecting = 0;
     }
+    return 0;
 }
 
 

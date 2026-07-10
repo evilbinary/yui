@@ -814,12 +814,12 @@ static void dialog_component_handle_scroll_event(Layer* layer, int scroll_delta)
 }
 
 // 处理键盘事件
-void dialog_component_handle_key_event(Layer* layer, KeyEvent* event) {
+int dialog_component_handle_key_event(Layer* layer, KeyEvent* event) {
     DialogComponent* component = (DialogComponent*)layer->component;
     if (!component || !component->is_opened) {
-        return;
+        return 0;
     }
-    
+
     if (event->type == KEY_EVENT_DOWN) {
         switch (event->data.key.key_code) {
             case 13: // 回车键
@@ -833,7 +833,7 @@ void dialog_component_handle_key_event(Layer* layer, KeyEvent* event) {
                             component->on_close(component, i);
                         }
                         dialog_component_hide(component);
-                        return;
+                        return 0;
                     }
                 }
                 // 如果没有默认按钮，触发第一个按钮
@@ -859,7 +859,7 @@ void dialog_component_handle_key_event(Layer* layer, KeyEvent* event) {
                             component->on_close(component, i);
                         }
                         dialog_component_hide(component);
-                        return;
+                        return 0;
                     }
                 }
                 // 如果没有取消按钮，直接关闭对话框
@@ -880,13 +880,14 @@ void dialog_component_handle_key_event(Layer* layer, KeyEvent* event) {
                 break;
         }
     }
+    return 0;
 }
 
 // 处理鼠标事件
-void dialog_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
+int dialog_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     DialogComponent* component = (DialogComponent*)layer->component;
     if (!component || !component->is_opened || !event) {
-        return;
+        return 0;
     }
 
     Rect thumb = {0};
@@ -903,7 +904,7 @@ void dialog_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
             layer->rect.x = event->x - component->drag_offset_x;
             layer->rect.y = event->y - component->drag_offset_y;
             dialog_clamp_to_window(layer);
-            return;
+            return 0;
         }
         if (component->scrollbar_dragging && has_scrollbar) {
             int max_scroll = component->message_content_height - message_area_height;
@@ -922,7 +923,7 @@ void dialog_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
                         (int)((float)(new_thumb_y - track.y) / track_range * max_scroll);
                 }
             }
-            return;
+            return 0;
         }
         component->selected_button = dialog_get_button_at_position(component, layer, event->x, event->y);
     } else if (event->state == SDL_PRESSED && event->button == SDL_BUTTON_LEFT) {
@@ -930,14 +931,14 @@ void dialog_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
             component->dragging = 1;
             component->drag_offset_x = event->x - layer->rect.x;
             component->drag_offset_y = event->y - layer->rect.y;
-            return;
+            return 0;
         }
         if (has_scrollbar &&
             event->x >= thumb.x && event->x < thumb.x + thumb.w &&
             event->y >= thumb.y && event->y < thumb.y + thumb.h) {
             component->scrollbar_dragging = 1;
             component->scrollbar_drag_offset = event->y - thumb.y;
-            return;
+            return 0;
         }
         if (has_scrollbar &&
             event->x >= track.x && event->x < track.x + track.w &&
@@ -957,16 +958,16 @@ void dialog_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
                     component->message_scroll_offset = max_scroll;
                 }
             }
-            return;
+            return 0;
         }
     } else if (event->state == SDL_RELEASED && event->button == SDL_BUTTON_LEFT) {
         if (component->dragging) {
             component->dragging = 0;
-            return;
+            return 0;
         }
         if (component->scrollbar_dragging) {
             component->scrollbar_dragging = 0;
-            return;
+            return 0;
         }
 
         int clicked_button = dialog_get_button_at_position(component, layer, event->x, event->y);
@@ -985,6 +986,7 @@ void dialog_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
             dialog_component_hide(component);
         }
     }
+    return 0;
 }
 
 // 渲染对话框组件

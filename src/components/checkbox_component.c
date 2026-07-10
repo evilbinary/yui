@@ -144,24 +144,24 @@ int checkbox_component_is_disabled(CheckboxComponent* component) {
 }
 
 // 处理鼠标事件
-void checkbox_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
+int checkbox_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     if (!layer || !event || !layer->component) {
-        return;
+        return 0;
     }
-    
+
     // 如果组件被禁用，不响应点击事件
     if (HAS_STATE(layer, LAYER_STATE_DISABLED)) {
-        return;
+        return 0;
     }
-    
+
     CheckboxComponent* component = (CheckboxComponent*)layer->component;
-    
+
     // 检查鼠标是否在复选框范围内
-    int is_inside = (event->x >= layer->rect.x && 
+    int is_inside = (event->x >= layer->rect.x &&
                      event->x < layer->rect.x + layer->rect.w &&
-                     event->y >= layer->rect.y && 
+                     event->y >= layer->rect.y &&
                      event->y < layer->rect.y + layer->rect.h);
-    
+
     // 处理鼠标点击事件
     if (event->button == BUTTON_LEFT && event->state == BUTTON_PRESSED && is_inside) {
         // 切换选中状态
@@ -173,12 +173,13 @@ void checkbox_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
         } else {
             layer->state &= ~LAYER_STATE_ACTIVE; // 只清除激活位，保留其他位
         }
-        
+
         // 如果有点击事件回调，调用它
         if (layer->event && layer->event->click) {
             layer->event->click(layer);
         }
     }
+    return 0;
 }
 
 // 渲染复选框

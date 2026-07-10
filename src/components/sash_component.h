@@ -21,6 +21,6 @@ SashComponent* sash_component_create(Layer* layer);
 SashComponent* sash_component_create_from_json(Layer* layer, cJSON* json_obj);
 void sash_component_destroy(SashComponent* component);
 void sash_component_render(Layer* layer);
-void sash_component_handle_mouse_event(Layer* layer, MouseEvent* event);
+int sash_component_handle_mouse_event(Layer* layer, MouseEvent* event);
 
 #endif

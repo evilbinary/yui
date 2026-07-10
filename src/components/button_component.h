@@ -24,8 +24,8 @@ void button_component_set_color(ButtonComponent* component, LayerState state, Co
 void button_component_set_icon_path(ButtonComponent* component, const char* path);
 void button_component_set_icon_text(ButtonComponent* component, const char* text);
 void button_component_set_user_data(ButtonComponent* component, void* data);
-void button_component_handle_mouse_event(Layer* layer, MouseEvent* event);
+int button_component_handle_mouse_event(Layer* layer, MouseEvent* event);
 void button_component_render(Layer* layer);
-void button_component_handle_key_event(Layer* layer, KeyEvent* event);
+int button_component_handle_key_event(Layer* layer, KeyEvent* event);
 
 #endif  // YUI_BUTTON_COMPONENT_H
