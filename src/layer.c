@@ -156,18 +156,14 @@ static void layer_set_text_with_size(Layer* layer, const char* value) {
     // 如果现有内存足够，直接使用
     if (layer->text && layer->text_size >= required_size) {
       memcpy(layer->text, value, required_size);
-      return;
+    } else {
+      // 内存不足，需要重新分配
+      char* new_buf = (char*)realloc(layer->text, required_size);
+      if (!new_buf) return;
+      memcpy(new_buf, value, required_size);
+      layer->text = new_buf;
+      layer->text_size = required_size;
     }
-    
-    // 内存不足，需要重新分配
-    char* new_buf = (char*)realloc(layer->text, required_size);
-    if (!new_buf) {
-      // 分配失败，如果原来有内存则保持不变
-      return;
-    }
-    memcpy(new_buf, value, required_size);
-    layer->text = new_buf;
-    layer->text_size = required_size;
   } else {
     // 如果value为NULL，释放内存并重置
     if (layer->text) {

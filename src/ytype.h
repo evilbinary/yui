@@ -371,9 +371,6 @@ typedef struct Layer {
     // 数据更新回调（由组件各自注册）
     void (*on_data_update)(Layer* layer, cJSON* data);
 
-    // 文本更新回调（由组件各自注册，如 Input 需同步内部缓冲区）
-    void (*on_text_update)(Layer* layer, const char* text);
-    
     // 添加滚动支持字段
     int scrollable;          // 滚动类型: 0=不可滚动, 1=垂直滚动, 2=水平滚动, 3=双向滚动
     int scroll_offset;       // 垂直滚动偏移

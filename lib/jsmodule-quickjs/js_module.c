@@ -30,6 +30,7 @@ extern struct Layer* g_layer_root;
 JSValue js_read_file(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv);
 JSValue js_write_file(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv);
 JSValue js_list_dir(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv);
+JSValue js_focus(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv);
 
 // 设置文本
 static JSValue js_set_text(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
@@ -1061,6 +1062,7 @@ void js_module_register_api(void)
     JS_SetPropertyStr(g_js_ctx, yui_obj, "readFile", JS_NewCFunction(g_js_ctx, js_read_file, "readFile", 1));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "writeFile", JS_NewCFunction(g_js_ctx, js_write_file, "writeFile", 2));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "listDir", JS_NewCFunction(g_js_ctx, js_list_dir, "listDir", 1));
+    JS_SetPropertyStr(g_js_ctx, yui_obj, "focus", JS_NewCFunction(g_js_ctx, js_focus, "focus", 1));
 
     // 创建并注册 Inspect 对象
     JSValue inspect_obj = JS_NewObject(g_js_ctx);
@@ -1416,4 +1418,28 @@ JSValue js_list_dir(JSContext* ctx, JSValueConst this_val, int argc, JSValueCons
     closedir(dir);
     if (need_free) JS_FreeCString(ctx, dir_path);
     return result;
+}
+
+JSValue js_focus(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+    if (argc < 1 || !g_layer_root) return JS_UNDEFINED;
+
+    const char* layer_id = JS_ToCString(ctx, argv[0]);
+    if (!layer_id) return JS_UNDEFINED;
+
+    Layer* layer = find_layer_by_id(g_layer_root, layer_id);
+    JS_FreeCString(ctx, layer_id);
+
+    if (!layer) return JS_UNDEFINED;
+
+    // 清除旧焦点图层状态
+    extern Layer* focused_layer;
+    if (focused_layer && focused_layer != layer) {
+        CLEAR_STATE(focused_layer, LAYER_STATE_FOCUSED);
+    }
+
+    // 设置新焦点
+    focused_layer = layer;
+    SET_STATE(layer, LAYER_STATE_FOCUSED);
+
+    return JS_UNDEFINED;
 }

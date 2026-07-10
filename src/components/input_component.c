@@ -11,28 +11,28 @@ InputComponent* input_component_create(Layer* layer) {
     if (!layer) {
         return NULL;
     }
-    
+
     InputComponent* component = (InputComponent*)malloc(sizeof(InputComponent));
     if (!component) {
         return NULL;
     }
-    
+
     memset(component, 0, sizeof(InputComponent));
     component->layer = layer;
     component->max_length = MAX_TEXT - 1;
     component->cursor_pos = 0;
     component->selection_start = 0;
     component->selection_end = 0;
-    
+
     // 设置组件指针和自定义渲染函数
     layer->component = component;
     layer->render = input_component_render;
     layer->handle_mouse_event = input_component_handle_mouse_event;
     layer->handle_key_event = input_component_handle_key_event;
-    
+
     // 设置组件为可聚焦
     layer->focusable = 1;
-    
+
     component->cursor_color = (Color){255, 0, 0, 255};
     return component;
 }
@@ -63,13 +63,12 @@ void input_component_destroy(InputComponent* component) {
 
 // 设置输入文本
 void input_component_set_text(InputComponent* component, const char* text) {
-    if (!component || !text) {
+    if (!component || !text || !component->layer) {
         return;
     }
-    
-    strncpy(component->text, text, component->max_length);
-    component->text[component->max_length] = '\0';
-    component->cursor_pos = strlen(component->text);
+
+    layer_set_text(component->layer, text);
+    component->cursor_pos = strlen(component->layer->text);
     component->selection_start = component->cursor_pos;
     component->selection_end = component->cursor_pos;
 }
@@ -86,16 +85,20 @@ void input_component_set_placeholder(InputComponent* component, const char* plac
 
 // 设置最大输入长度
 void input_component_set_max_length(InputComponent* component, int max_length) {
-    if (!component) {
+    if (!component || !component->layer) {
         return;
     }
-    
+
     if (max_length > 0 && max_length < MAX_TEXT) {
         component->max_length = max_length;
-        
+
         // 如果当前文本超过新的最大长度，截断它
-        if (strlen(component->text) > max_length) {
-            component->text[max_length] = '\0';
+        const char* current_text = component->layer->text;
+        if (current_text && strlen(current_text) > max_length) {
+            char truncated[MAX_TEXT];
+            strncpy(truncated, current_text, max_length);
+            truncated[max_length] = '\0';
+            layer_set_text(component->layer, truncated);
             component->cursor_pos = max_length;
             component->selection_start = max_length;
             component->selection_end = max_length;
@@ -123,119 +126,119 @@ void input_component_handle_key_event(Layer* layer,  KeyEvent* event) {
     if(!HAS_STATE(layer, LAYER_STATE_FOCUSED)){
         return;
     }
-    // printf("input_component_handle_key_event: %d, %s\n", event->type, event->data.text.text);
 
-    int current_length = strlen(component->text);
-    
+    char buf[MAX_TEXT];
+    const char* src = layer->text ? layer->text : "";
+    strncpy(buf, src, MAX_TEXT - 1);
+    buf[MAX_TEXT - 1] = '\0';
+
+    int current_length = strlen(buf);
+    int text_changed = 0;
+
     switch (event->type) {
         case KEY_EVENT_TEXT_INPUT:
-            // 处理文本输入
             if (current_length < component->max_length) {
-                // 如果有选中文本，先删除选中的文本
                 if (component->selection_start != component->selection_end) {
-                    int start = component->selection_start < component->selection_end ? 
+                    int start = component->selection_start < component->selection_end ?
                                 component->selection_start : component->selection_end;
-                    int end = component->selection_start > component->selection_end ? 
+                    int end = component->selection_start > component->selection_end ?
                               component->selection_start : component->selection_end;
-                    
-                    // 删除选中的文本
-                    memmove(component->text + start, component->text + end, 
+
+                    memmove(buf + start, buf + end,
                            current_length - end + 1);
                     component->cursor_pos = start;
                     current_length -= (end - start);
+                    text_changed = 1;
                 }
-                
-                // 插入新文本
+
                 if (strlen(event->data.text.text) > 0) {
                     int text_len = strlen(event->data.text.text);
                     int available_space = component->max_length - current_length;
                     int copy_len = text_len < available_space ? text_len : available_space;
-                    
-                    // 移动现有文本，为新文本腾出空间
-                    memmove(component->text + component->cursor_pos + copy_len, 
-                           component->text + component->cursor_pos, 
+
+                    memmove(buf + component->cursor_pos + copy_len,
+                           buf + component->cursor_pos,
                            current_length - component->cursor_pos + 1);
-                    
-                    // 复制新文本
-                    memcpy(component->text + component->cursor_pos, event->data.text.text, copy_len);
-                    
-                    // 更新光标位置
+
+                    memcpy(buf + component->cursor_pos, event->data.text.text, copy_len);
+
                     component->cursor_pos += copy_len;
+                    text_changed = 1;
                 }
             }
             break;
-            
+
         case KEY_EVENT_DOWN:
-            // 处理特殊键
             switch (event->data.key.key_code) {
                 case 8:  // Backspace
                     if (current_length > 0 && component->cursor_pos > 0) {
                         if (component->selection_start != component->selection_end) {
-                            // 有选中文本，删除选中的文本
-                            int start = component->selection_start < component->selection_end ? 
+                            int start = component->selection_start < component->selection_end ?
                                         component->selection_start : component->selection_end;
-                            int end = component->selection_start > component->selection_end ? 
+                            int end = component->selection_start > component->selection_end ?
                                       component->selection_start : component->selection_end;
-                            
-                            memmove(component->text + start, component->text + end, 
+
+                            memmove(buf + start, buf + end,
                                    current_length - end + 1);
                             component->cursor_pos = start;
                         } else {
-                            // 没有选中文本，删除光标前的字符
-                            memmove(component->text + component->cursor_pos - 1, 
-                                   component->text + component->cursor_pos, 
+                            memmove(buf + component->cursor_pos - 1,
+                                   buf + component->cursor_pos,
                                    current_length - component->cursor_pos + 1);
                             component->cursor_pos--;
                         }
+                        text_changed = 1;
                     }
                     break;
-                    
+
                 case 127:  // Delete
                     if (current_length > 0 && component->cursor_pos < current_length) {
                         if (component->selection_start != component->selection_end) {
-                            // 有选中文本，删除选中的文本
-                            int start = component->selection_start < component->selection_end ? 
+                            int start = component->selection_start < component->selection_end ?
                                         component->selection_start : component->selection_end;
-                            int end = component->selection_start > component->selection_end ? 
+                            int end = component->selection_start > component->selection_end ?
                                       component->selection_start : component->selection_end;
-                            
-                            memmove(component->text + start, component->text + end, 
+
+                            memmove(buf + start, buf + end,
                                    current_length - end + 1);
                             component->cursor_pos = start;
                         } else {
-                            // 没有选中文本，删除光标后的字符
-                            memmove(component->text + component->cursor_pos, 
-                                   component->text + component->cursor_pos + 1, 
+                            memmove(buf + component->cursor_pos,
+                                   buf + component->cursor_pos + 1,
                                    current_length - component->cursor_pos);
                         }
+                        text_changed = 1;
                     }
                     break;
-                    
+
                 case 37:  // Left arrow
                     if (component->cursor_pos > 0) {
                         component->cursor_pos--;
                     }
                     break;
-                    
+
                 case 39:  // Right arrow
                     if (component->cursor_pos < current_length) {
                         component->cursor_pos++;
                     }
                     break;
-                    
+
                 case 36:  // Home
                     component->cursor_pos = 0;
                     break;
-                    
+
                 case 35:  // End
                     component->cursor_pos = current_length;
                     break;
             }
-            
-            // 重置选择范围
+
             component->selection_start = component->cursor_pos;
             component->selection_end = component->cursor_pos;
             break;
+    }
+
+    if (text_changed) {
+        layer_set_text(layer, buf);
     }
 }
 
@@ -298,7 +301,7 @@ void input_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
             
             // TODO: 根据点击位置计算光标位置
             // 这里简化处理，暂时设置为文本末尾
-            component->cursor_pos = strlen(component->text);
+            component->cursor_pos = layer->text ? strlen(layer->text) : 0;
             component->selection_start = component->cursor_pos;
             component->selection_end = component->cursor_pos;
             
@@ -402,10 +405,10 @@ void input_component_render(Layer* layer) {
     
     // 渲染文本
     Color text_color = layer->color;
-    const char* display_text = component->text;
+    const char* display_text = layer->text ? layer->text : "";
     
     // 如果没有输入文本且不是聚焦状态，显示占位文本
-    if (strlen(component->text) == 0 && !HAS_STATE(layer, LAYER_STATE_FOCUSED) && 
+    if ((!layer->text || layer->text[0] == '\0') && !HAS_STATE(layer, LAYER_STATE_FOCUSED) &&
         strlen(component->placeholder) > 0) {
         display_text = component->placeholder;
         text_color = (Color){150, 150, 150, 150};  // 占位文本使用灰色
@@ -491,10 +494,10 @@ void input_component_render(Layer* layer) {
         int cursor_height = layer->rect.h - 10;
         
         // 如果有文本，计算光标前面的文本宽度，更新光标x坐标
-        if (component->cursor_pos > 0 && strlen(component->text) > 0) {
+        if (component->cursor_pos > 0 && layer->text && layer->text[0] != '\0') {
             // 创建光标前的子串
             char cursor_text[component->cursor_pos + 1];
-            strncpy(cursor_text, component->text, component->cursor_pos);
+            strncpy(cursor_text, layer->text, component->cursor_pos);
             cursor_text[component->cursor_pos] = '\0';
             
             // 如果图层有标签文本，需要调整起始位置

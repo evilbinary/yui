@@ -9,7 +9,6 @@ typedef struct KeyEvent KeyEvent;
 // 输入组件结构体
 typedef struct {
     Layer* layer;          // 关联的图层
-    char text[MAX_TEXT];   // 输入文本
     char placeholder[MAX_TEXT];  // 占位文本
     int cursor_pos;        // 光标位置
     int selection_start;   // 选择起始位置
