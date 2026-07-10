@@ -77,10 +77,12 @@ function renderTabs() {
             var bg = i === activeTab ? "#1E1E2E" : "transparent";
             var color = i === activeTab ? "#CDD6F4" : "#6C7086";
             el.visible = true;
+            el.size = [70, 24];
             el.text = tabs[i].name;
             el.style = { color: color, bgColor: bg, fontSize: 11, padding: [4, 10, 4, 10], borderRadius: 4 };
         } else {
             el.visible = false;
+            el.size = [0, 0];
         }
     }
 }
@@ -108,6 +110,7 @@ function switchTab(index) {
 }
 
 function onTabClick(layerId) {
+    print("onTabClick: clicked tab " + layerId);
     if (!layerId) return;
     var idx = parseInt(layerId.replace("tab_", ""));
     for (var i = 0; i < tabs.length; i++) {

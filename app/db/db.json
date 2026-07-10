@@ -447,9 +447,9 @@
         "separatorColor": "#585B70"
       },
       "items": [
-        { "text": "新建查询", "onClick": "onNewTab" },
-        { "text": "打开文件", "onClick": "onOpen" },
-        { "text": "保存文件", "onClick": "onSave" },
+        { "text": "新建查询", "onClick": "@onNewTab" },
+        { "text": "打开文件", "onClick": "@onOpen" },
+        { "text": "保存文件", "onClick": "@onSave" },
         { "separator": true },
         { "text": "退出", "onClick": "onExit" }
       ],
