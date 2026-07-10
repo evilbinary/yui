@@ -58,7 +58,6 @@ void text_component_set_line_number_bg_color(TextComponent* component, Color col
 void text_component_set_selection_color(TextComponent* component, Color color);
 void text_component_set_syntax_highlight(TextComponent* component, const char* language);
 void text_component_invalidate_layout(TextComponent* component);
-void text_component_on_layer_text_changed(Layer* layer);
 void text_component_set_on_change(TextComponent* component, EventHandler callback, void* user_data);
 int text_component_handle_key_event(Layer* layer, KeyEvent* event);
 int text_component_handle_mouse_event(Layer* layer, MouseEvent* event);

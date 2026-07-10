@@ -1,5 +1,6 @@
 #include "layer.h"
 #include "layer_properties.h"
+#include "layer_update.h"
 #include "util.h"
 #include "animate.h"
 #include "theme_manager.h"
@@ -212,6 +213,7 @@ void layer_set_text(Layer* layer, const char* value) {
     return;
   }
   layer_set_text_with_size(layer, value);
+  mark_layer_dirty(layer, DIRTY_TEXT);
 }
 
 const char* layer_get_label(const Layer* layer) {

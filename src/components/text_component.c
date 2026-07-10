@@ -1,6 +1,7 @@
 #include "text_component.h"
 #include "../ytype.h"
 #include "../layer.h"
+#include "../layer_update.h"
 #include "../event.h"
 #include "../backend.h"
 #include "../render.h"
@@ -63,13 +64,6 @@ void text_component_invalidate_layout(TextComponent* component) {
     component->text_revision++;
     component->line_height_valid = 0;
     component->layout_cache_text_len = -1;
-}
-
-void text_component_on_layer_text_changed(Layer* layer) {
-    if (!layer || layer->type != TEXT || !layer->component) return;
-    TextComponent* component = (TextComponent*)layer->component;
-    text_component_invalidate_layout(component);
-    text_component_update_content_height(component);
 }
 
 static void text_component_free_layout(TextComponent* component) {
@@ -1780,6 +1774,10 @@ void text_component_render(Layer* layer) {
     TextComponent* component = (TextComponent*)layer->component;
     if (layer->font && !layer->font->default_font) {
         load_all_fonts(layer);
+    }
+    if (layer->dirty_flags & DIRTY_TEXT) {
+        text_component_invalidate_layout(component);
+        layer->dirty_flags &= ~DIRTY_TEXT;
     }
     component->syntax_config.default_color = layer->color;
     text_component_update_content_height(component);
