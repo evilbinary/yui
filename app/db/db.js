@@ -303,13 +303,17 @@ function loadCategories(dbName) {
 }
 
 function loadCategoryItems(dbName, category, handler) {
+    print("loadCategoryItems: dbName=" + dbName + " category=" + category + " handler=" + handler);
     var result = YUI.call(handler, JSON.stringify({ database: dbName }));
+    print("loadCategoryItems: result=" + (result ? result : "null/undefined"));
     if (!result) return;
     try {
         var items = JSON.parse(result);
+        print("loadCategoryItems: parsed " + items.length + " items");
         for (var i = 0; i < fullDbData.length; i++) {
             if (fullDbData[i].text === dbName) {
                 var cats = fullDbData[i].children;
+                print("loadCategoryItems: found db " + dbName + " with " + (cats ? cats.length : 0) + " categories");
                 for (var j = 0; j < cats.length; j++) {
                     if (cats[j].text === category) {
                         var categoryIcons = { "表": "app/assets/icons/db-table.svg", "视图": "app/assets/icons/db-view.svg", "存储过程": "app/assets/icons/db-procedure.svg", "函数": "app/assets/icons/db-function.svg" };
@@ -444,9 +448,10 @@ function onDbSelect(layerId) {
         var statusText = yui.find("statusText");
         if (statusText) statusText.text = "数据库: " + node.text;
     } else if (node.expandable) {
-        // Category node - prefer _db from node, fall back to search
+        print("onDbSelect: expandable node text=" + node.text + " _db=" + (node._db || "undefined"));
         var dbName = node._db;
         if (!dbName) {
+            print("onDbSelect: _db not found, searching fullDbData...");
             for (var i = 0; i < fullDbData.length && !dbName; i++) {
                 var cats = fullDbData[i].children || [];
                 for (var j = 0; j < cats.length; j++) {
@@ -527,9 +532,10 @@ function onDbExpand(layerId) {
     }
     // 展开分类节点时加载其子项
     if (node.expandable && node.expanded) {
-        // Prefer _db from node (preserved through C round-trip), fall back to search
+        print("onDbExpand: expandable node text=" + node.text + " _db=" + (node._db || "undefined"));
         var dbName = node._db;
         if (!dbName) {
+            print("onDbExpand: _db not found, searching fullDbData...");
             for (var i = 0; i < fullDbData.length; i++) {
                 var cats = fullDbData[i].children || [];
                 for (var j = 0; j < cats.length; j++) {

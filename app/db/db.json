@@ -160,19 +160,6 @@
                     },
                     "children": [
                       {
-                        "id": "btnConnect",
-                        "type": "Button",
-                        "size": [48, 24],
-                        "text": "连接",
-                        "style": {
-                          "color": "#CDD6F4",
-                          "bgColor": "#45475A",
-                          "borderRadius": 4,
-                          "fontSize": 11
-                        },
-                        "events": { "onClick": "@connectDb" }
-                      },
-                      {
                         "id": "btnRun",
                         "type": "Button",
                         "size": [48, 24],
