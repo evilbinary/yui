@@ -41,6 +41,13 @@ SashComponent* sash_component_create_from_json(Layer* layer, cJSON* json_obj) {
         comp->min_size = min_json->valueint;
     }
 
+    cJSON* orientation_json = cJSON_GetObjectItem(json_obj, "orientation");
+    if (orientation_json && cJSON_IsString(orientation_json)) {
+        if (strcmp(orientation_json->valuestring, "horizontal") == 0) {
+            comp->horizontal = 1;
+        }
+    }
+
     return comp;
 }
 
@@ -64,28 +71,47 @@ void sash_component_render(Layer* layer) {
 
     if (!comp) return;
 
-    // Top border
-    Rect top_line = {layer->rect.x, layer->rect.y, layer->rect.w, 1};
-    Color border_color = {69, 71, 90, 255};
-    backend_render_fill_rect(&top_line, border_color);
-
-    // Gripper dots
     int dot_r = 2;
     int dot_spacing = 10;
     int center_x = layer->rect.x + layer->rect.w / 2;
     int center_y = layer->rect.y + layer->rect.h / 2;
+    Color border_color = {69, 71, 90, 255};
     Color dot_color = comp->hover ? (Color){180, 180, 190, 255} : (Color){100, 100, 115, 255};
 
-    for (int i = -1; i <= 1; i++) {
-        Rect dot = {center_x + i * dot_spacing - dot_r, center_y - dot_r, dot_r * 2, dot_r * 2};
-        backend_render_fill_rect(&dot, dot_color);
-    }
+    if (comp->horizontal) {
+        // Left border
+        Rect left_line = {layer->rect.x, layer->rect.y, 1, layer->rect.h};
+        backend_render_fill_rect(&left_line, border_color);
 
-    // Hover accent
-    if (comp->hover) {
-        Rect accent = {layer->rect.x, layer->rect.y + 1, layer->rect.w, 1};
-        Color accent_color = {137, 180, 250, 180};
-        backend_render_fill_rect(&accent, accent_color);
+        // Vertical gripper dots
+        for (int i = -1; i <= 1; i++) {
+            Rect dot = {center_x - dot_r, center_y + i * dot_spacing - dot_r, dot_r * 2, dot_r * 2};
+            backend_render_fill_rect(&dot, dot_color);
+        }
+
+        // Hover accent on left
+        if (comp->hover) {
+            Rect accent = {layer->rect.x + 1, layer->rect.y, 1, layer->rect.h};
+            Color accent_color = {137, 180, 250, 180};
+            backend_render_fill_rect(&accent, accent_color);
+        }
+    } else {
+        // Top border
+        Rect top_line = {layer->rect.x, layer->rect.y, layer->rect.w, 1};
+        backend_render_fill_rect(&top_line, border_color);
+
+        // Horizontal gripper dots
+        for (int i = -1; i <= 1; i++) {
+            Rect dot = {center_x + i * dot_spacing - dot_r, center_y - dot_r, dot_r * 2, dot_r * 2};
+            backend_render_fill_rect(&dot, dot_color);
+        }
+
+        // Hover accent on top
+        if (comp->hover) {
+            Rect accent = {layer->rect.x, layer->rect.y + 1, layer->rect.w, 1};
+            Color accent_color = {137, 180, 250, 180};
+            backend_render_fill_rect(&accent, accent_color);
+        }
     }
 }
 
@@ -110,32 +136,51 @@ int sash_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
             ensure_target(comp);
             if (!comp->target || !comp->target->parent) return 0;
 
-            int delta_y = event->y - comp->drag_start_y;
-            int new_h = comp->initial_height + delta_y;
-            if (new_h < comp->min_size) new_h = comp->min_size;
-
             Layer* parent = comp->target->parent;
 
-            Layer* below = NULL;
+            // Find adjacent sibling (right for horizontal, below for vertical)
+            Layer* sibling = NULL;
             for (int i = 0; i < parent->child_count - 1; i++) {
                 if (parent->children[i] == layer) {
-                    below = parent->children[i + 1];
+                    sibling = parent->children[i + 1];
                     break;
                 }
             }
 
-            int total = 0;
-            if (below) {
-                total = comp->target->rect.h + below->rect.h;
-                if (new_h > total - 20) new_h = total - 20;
-            }
+            if (comp->horizontal) {
+                int delta_x = event->x - comp->drag_start_y;  // reusing field
+                int new_w = comp->initial_height + delta_x;   // reusing field
+                if (new_w < comp->min_size) new_w = comp->min_size;
 
-            comp->target->rect.h = new_h;
-            comp->target->fixed_height = new_h;
+                int total = 0;
+                if (sibling) {
+                    total = comp->target->rect.w + sibling->rect.w;
+                    if (new_w > total - 20) new_w = total - 20;
+                }
 
-            if (below) {
-                below->rect.h = total - new_h;
-                below->fixed_height = total - new_h;
+                comp->target->rect.w = new_w;
+
+                if (sibling) {
+                    sibling->rect.w = total - new_w;
+                }
+            } else {
+                int delta_y = event->y - comp->drag_start_y;
+                int new_h = comp->initial_height + delta_y;
+                if (new_h < comp->min_size) new_h = comp->min_size;
+
+                int total = 0;
+                if (sibling) {
+                    total = comp->target->rect.h + sibling->rect.h;
+                    if (new_h > total - 20) new_h = total - 20;
+                }
+
+                comp->target->rect.h = new_h;
+                comp->target->fixed_height = new_h;
+
+                if (sibling) {
+                    sibling->rect.h = total - new_h;
+                    sibling->fixed_height = total - new_h;
+                }
             }
 
             mark_layer_dirty(parent, DIRTY_LAYOUT);
@@ -147,9 +192,9 @@ int sash_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     if (event->state == SDL_PRESSED && event->button == SDL_BUTTON_LEFT && inside) {
         ensure_target(comp);
         comp->dragging = 1;
-        comp->drag_start_y = event->y;
+        comp->drag_start_y = comp->horizontal ? event->x : event->y;
         if (comp->target) {
-            comp->initial_height = comp->target->rect.h;
+            comp->initial_height = comp->horizontal ? comp->target->rect.w : comp->target->rect.h;
         }
         return 0;
     }

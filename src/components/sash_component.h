@@ -9,12 +9,13 @@ typedef struct MouseEvent MouseEvent;
 typedef struct {
     Layer* layer;
     int dragging;
-    int drag_start_y;
-    int initial_height;
-    Layer* target;       // layer above sash to resize (lazy-resolved from target_id)
+    int drag_start_y;    // drag_start_x when horizontal
+    int initial_height;  // initial_width when horizontal
+    Layer* target;
     char target_id[MAX_TEXT];
     int min_size;
     int hover;
+    int horizontal;      // 0=vertical (resize height), 1=horizontal (resize width)
 } SashComponent;
 
 SashComponent* sash_component_create(Layer* layer);
