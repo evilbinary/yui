@@ -721,36 +721,39 @@ static JSValue js_layer_wrapper_set_style(JSContext* ctx, JSValueConst this_val,
 {
     Layer* layer = js_get_layer_from_wrapper(ctx, this_val);
     if (!layer) return JS_UNDEFINED;
-    
+
+    int dirty = 0;
+
     // 获取 color 属性
     JSValue color_val = JS_GetPropertyStr(ctx, val, "color");
     if (!JS_IsUndefined(color_val)) {
         const char* color_str = JS_ToCString(ctx, color_val);
         if (color_str) {
-            // 解析颜色并设置
             extern void parse_color(char* valuestring, Color* color);
-            Color color;
-            parse_color((char*)color_str, &color);
-            layer->color = color;
+            parse_color((char*)color_str, &layer->color);
             JS_FreeCString(ctx, color_str);
+            dirty = 1;
         }
     }
     JS_FreeValue(ctx, color_val);
-    
+
     // 获取 bgColor 属性
     JSValue bg_color_val = JS_GetPropertyStr(ctx, val, "bgColor");
     if (!JS_IsUndefined(bg_color_val)) {
         const char* bg_color_str = JS_ToCString(ctx, bg_color_val);
         if (bg_color_str) {
-            Color bg_color;
             extern void parse_color(char* valuestring, Color* color);
-            parse_color((char*)bg_color_str, &bg_color);
-            layer->bg_color = bg_color;
+            parse_color((char*)bg_color_str, &layer->bg_color);
             JS_FreeCString(ctx, bg_color_str);
+            dirty = 1;
         }
     }
     JS_FreeValue(ctx, bg_color_val);
-    
+
+    if (dirty) {
+        mark_layer_dirty(layer, DIRTY_COLOR);
+    }
+
     return JS_UNDEFINED;
 }
 
