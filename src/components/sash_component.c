@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-extern struct Layer* g_layer_root;
+extern Layer* g_ui_root;
 
 SashComponent* sash_component_create(Layer* layer) {
     if (!layer) return NULL;
@@ -49,8 +49,8 @@ void sash_component_destroy(SashComponent* comp) {
 }
 
 static void ensure_target(SashComponent* comp) {
-    if (!comp->target && comp->target_id[0] && g_layer_root) {
-        comp->target = find_layer_by_id(g_layer_root, comp->target_id);
+    if (!comp->target && comp->target_id[0] && g_ui_root) {
+        comp->target = find_layer_by_id(g_ui_root, comp->target_id);
     }
 }
 
