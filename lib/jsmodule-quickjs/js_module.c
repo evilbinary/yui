@@ -985,8 +985,10 @@ void js_module_register_api(void)
 
     // 将 YUI 对象添加到全局
     JS_SetPropertyStr(g_js_ctx, global_obj, "YUI", yui_obj);
-    
+
     // 创建 yui 小写别名（指向同一个 YUI 对象）
+    // 必须 DupValue 因为 JS_SetPropertyStr 会 steal 引用
+    JS_DupValue(g_js_ctx, yui_obj);
     JS_SetPropertyStr(g_js_ctx, global_obj, "yui", yui_obj);
     printf("JS(QuickJS): Created 'yui' alias for 'YUI'\n");
     

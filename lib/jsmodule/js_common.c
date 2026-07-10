@@ -610,10 +610,19 @@ int js_module_trigger_event(const char* event_name, Layer* layer)
                    event_name, func_name);
             // @ 前缀表示函数名引用：先在事件映射表中解析，再尝试直接调用
             if (func_name[0] == '@') {
-                return js_module_trigger_event(func_name + 1, layer);
+                const char* redirect = func_name + 1;
+                // 避免自引用导致的无限递归
+                if (strcmp(redirect, event_name) == 0) {
+                    return js_module_call_event(event_name, layer);
+                }
+                return js_module_trigger_event(redirect, layer);
             }
             // 简单标识符（非内联代码）优先在事件映射表中查找
             if (func_name[0] != '\0' && strncmp(func_name, "function", 8) != 0) {
+                // 避免自引用（事件名==函数名）导致的无限递归
+                if (strcmp(func_name, event_name) == 0) {
+                    return js_module_call_event(func_name, layer);
+                }
                 int resolved = js_module_trigger_event(func_name, layer);
                 if (resolved == 0) {
                     return 0;
