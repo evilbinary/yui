@@ -643,32 +643,25 @@ static JSValue js_layer_wrapper_set_style(JSContext* ctx, JSValueConst this_val,
 // 从包装对象获取 Layer 指针
 static Layer* js_get_layer_from_wrapper(JSContext* ctx, JSValueConst val)
 {
-    printf("JS(QuickJS): js_get_layer_from_wrapper called with this_val = %p\n", (void*)JS_VALUE_GET_PTR(val));
-    
     if (!JS_IsObject(val)) {
-        printf("JS(QuickJS): not an object\n");
         return NULL;
     }
-    
+
     JSValue ptr_val = JS_GetPropertyStr(ctx, val, "__layer_ptr");
     if (JS_IsUndefined(ptr_val) || JS_IsNull(ptr_val)) {
-        printf("JS(QuickJS): __layer_ptr is undefined or null\n");
         JS_FreeValue(ctx, ptr_val);
         return NULL;
     }
-    
+
     int64_t ptr_int = 0;
     if (JS_ToInt64(ctx, &ptr_int, ptr_val) != 0 || ptr_int == 0) {
-        printf("JS(QuickJS): invalid layer pointer value\n");
         JS_FreeValue(ctx, ptr_val);
         return NULL;
     }
-    
+
     JS_FreeValue(ctx, ptr_val);
-    
+
     Layer* layer = (Layer*)(uintptr_t)ptr_int;
-    printf("JS(QuickJS): Got layer ptr = %p\n", (void*)layer);
-    
     return layer;
 }
 

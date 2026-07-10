@@ -1132,27 +1132,36 @@ void treeview_component_render(Layer* layer) {
                 if (text_texture) {
                     int actual_text_width, actual_text_height;
                     backend_query_texture(text_texture, NULL, NULL, &actual_text_width, &actual_text_height);
-                    
+
                     // 计算文本位置(加上icon偏移)
                     int text_x = base_text_x + text_x_offset;
                     int text_y = item_y + (component->item_height - actual_text_height / scale) / 2;
-                    
+
                     Rect text_rect = {
                         text_x,
                         text_y,
                         actual_text_width / scale,
                         actual_text_height / scale
                     };
-                    
-                    // 确保文本不会超出边界
+
+                    // 确保文本不会超出边界，同时裁剪源纹理防止字体压缩
+                    Rect* p_src = NULL;
+                    Rect src_clip;
                     if (text_rect.x + text_rect.w > layer->rect.x + layer->rect.w) {
-                        text_rect.w = layer->rect.x + layer->rect.w - text_rect.x;
+                        int clipped_w = layer->rect.x + layer->rect.w - text_rect.x;
+                        if (clipped_w <= 0) { backend_render_text_destroy(text_texture); continue; }
+                        src_clip.x = 0;
+                        src_clip.y = 0;
+                        src_clip.w = (int)(clipped_w * scale);
+                        src_clip.h = actual_text_height;
+                        p_src = &src_clip;
+                        text_rect.w = clipped_w;
                     }
                     if (text_rect.y + text_rect.h > item_y + component->item_height) {
                         text_rect.h = item_y + component->item_height - text_rect.y;
                     }
-                    
-                    backend_render_text_copy(text_texture, NULL, &text_rect);
+
+                    backend_render_text_copy(text_texture, p_src, &text_rect);
                     backend_render_text_destroy(text_texture);
                 }
             }
@@ -1290,27 +1299,36 @@ void treeview_component_render(Layer* layer) {
                         if (text_texture) {
                             int actual_text_width, actual_text_height;
                             backend_query_texture(text_texture, NULL, NULL, &actual_text_width, &actual_text_height);
-                            
+
                             // 计算文本位置
-                        int current_text_x = base_text_x + text_x_offset;
+                            int current_text_x = base_text_x + text_x_offset;
                             int current_text_y = item_y + (component->item_height - actual_text_height / scale) / 2;
-                            
+
                             Rect text_rect = {
                                 current_text_x,
                                 current_text_y,
                                 actual_text_width / scale,
                                 actual_text_height / scale
                             };
-                            
-                            // 确保文本不会超出边界
+
+                            // 确保文本不会超出边界，同时裁剪源纹理防止字体压缩
+                            Rect* p_src = NULL;
+                            Rect src_clip;
                             if (text_rect.x + text_rect.w > layer->rect.x + layer->rect.w) {
-                                text_rect.w = layer->rect.x + layer->rect.w - text_rect.x;
+                                int clipped_w = layer->rect.x + layer->rect.w - text_rect.x;
+                                if (clipped_w <= 0) { backend_render_text_destroy(text_texture); continue; }
+                                src_clip.x = 0;
+                                src_clip.y = 0;
+                                src_clip.w = (int)(clipped_w * scale);
+                                src_clip.h = actual_text_height;
+                                p_src = &src_clip;
+                                text_rect.w = clipped_w;
                             }
                             if (text_rect.y + text_rect.h > item_y + component->item_height) {
                                 text_rect.h = item_y + component->item_height - text_rect.y;
                             }
-                            
-                            backend_render_text_copy(text_texture, NULL, &text_rect);
+
+                            backend_render_text_copy(text_texture, p_src, &text_rect);
                             backend_render_text_destroy(text_texture);
                         }
                     }
