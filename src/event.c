@@ -278,16 +278,11 @@ int handle_mouse_event(Layer* layer, MouseEvent* event) {
     Point mouse_pos = {event->x, event->y};
 
     // 从顶层到底层分发子图层（索引越大越靠前）。
-    // 移动事件分发给所有可见子图层（hover 跟踪）；
-    // 按下/释放事件被第一个命中鼠标的子图层消费后终止，
-    // 组件也可通过返回非0主动阻止冒泡。
+    // 所有可见子图层都会收到事件，组件返回非0可主动阻止冒泡。
     for (int i = layer->child_count - 1; i >= 0; i--) {
         if (layer->children[i] && layer->children[i]->visible == VISIBLE) {
             int consumed = handle_mouse_event(layer->children[i], event);
             if (consumed) return 1;
-            if (event->state != SDL_MOUSEMOTION && point_in_rect(mouse_pos, layer->children[i]->rect)) {
-                break;
-            }
         }
     }
 

@@ -1367,7 +1367,7 @@ int select_component_handle_dropdown_mouse_event(Layer* layer, MouseEvent* event
         if (new_scroll > total_items - visible_items) new_scroll = total_items - visible_items;
         
         component->scroll_position = new_scroll;
-        return;
+        return 0;
     }
     
     int dropdown_x = component->layer->rect.x;
@@ -1503,6 +1503,7 @@ int select_component_handle_dropdown_key_event(Layer* layer, KeyEvent* event) {
                 break;
         }
     }
+    return 0;
 }
 
 // 弹出层专用滚动事件处理
@@ -1546,7 +1547,6 @@ void select_component_popup_close_callback(PopupLayer* popup) {
         
         // 注意：不在这里触发 on_dropdown_expanded 回调，因为它应该已经在 collapse 中被调用了
     }
-    return 0;
 }
 
 // 设置 onChange 回调函数
