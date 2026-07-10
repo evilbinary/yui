@@ -1,0 +1,89 @@
+{
+    "id": "page_home",
+    "type": "View",
+    "flex": 1,
+    "style": { "bgColor": "#45475A" },
+    "layout": {
+        "type": "vertical",
+        "spacing": 10,
+        "padding": [16, 16, 16, 16]
+    },
+    "events": {
+        "onLoad": "@onHomeLoad",
+        "onShow": "@onHomeShow"
+    },
+    "children": [
+        {
+            "id": "home_title",
+            "type": "Label",
+            "text": "Welcome to YUI Shop",
+            "style": { "color": "#CDD6F4", "fontSize": 22 }
+        },
+        {
+            "id": "home_subtitle",
+            "type": "Label",
+            "text": "Browse categories or check featured items",
+            "style": { "color": "#BAC2DE", "fontSize": 14 }
+        },
+        {
+            "id": "home_cat_label",
+            "type": "Label",
+            "text": "Categories",
+            "style": { "color": "#A6E3A1", "fontSize": 16 }
+        },
+        {
+            "id": "btn_cat_electronics",
+            "type": "Button",
+            "text": "Electronics",
+            "events": { "onClick": "@homeGoElectronics" }
+        },
+        {
+            "id": "btn_cat_fashion",
+            "type": "Button",
+            "text": "Fashion",
+            "events": { "onClick": "@homeGoFashion" }
+        },
+        {
+            "id": "btn_cat_books",
+            "type": "Button",
+            "text": "Books",
+            "events": { "onClick": "@homeGoBooks" }
+        },
+        {
+            "id": "home_feat_label",
+            "type": "Label",
+            "text": "Featured",
+            "style": { "color": "#F9E2AF", "fontSize": 16 }
+        },
+        {
+            "id": "home_feat_info",
+            "type": "Label",
+            "text": "Tap a product to view details",
+            "style": { "color": "#BAC2DE", "fontSize": 13 }
+        },
+        {
+            "id": "btn_feat_1",
+            "type": "Button",
+            "text": "Featured #1",
+            "events": { "onClick": "@homeFeat1" }
+        },
+        {
+            "id": "btn_feat_2",
+            "type": "Button",
+            "text": "Featured #2",
+            "events": { "onClick": "@homeFeat2" }
+        },
+        {
+            "id": "btn_feat_3",
+            "type": "Button",
+            "text": "Featured #3",
+            "events": { "onClick": "@homeFeat3" }
+        },
+        {
+            "id": "btn_feat_4",
+            "type": "Button",
+            "text": "Featured #4",
+            "events": { "onClick": "@homeFeat4" }
+        }
+    ]
+}

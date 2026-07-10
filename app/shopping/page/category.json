@@ -1,0 +1,47 @@
+{
+    "id": "page_category",
+    "type": "View",
+    "flex": 1,
+    "style": { "bgColor": "#45475A" },
+    "layout": {
+        "type": "vertical",
+        "spacing": 8,
+        "padding": [16, 16, 16, 16]
+    },
+    "events": {
+        "onLoad": "@onCategoryLoad",
+        "onShow": "@onCategoryShow"
+    },
+    "children": [
+        {
+            "id": "category_title",
+            "type": "Label",
+            "text": "Category",
+            "style": { "color": "#CDD6F4", "fontSize": 20 }
+        },
+        {
+            "id": "category_hint",
+            "type": "Label",
+            "text": "Select a product",
+            "style": { "color": "#BAC2DE", "fontSize": 13 }
+        },
+        {
+            "id": "btn_cat_item_1",
+            "type": "Button",
+            "text": "Item 1",
+            "events": { "onClick": "@categoryItem1" }
+        },
+        {
+            "id": "btn_cat_item_2",
+            "type": "Button",
+            "text": "Item 2",
+            "events": { "onClick": "@categoryItem2" }
+        },
+        {
+            "id": "btn_cat_item_3",
+            "type": "Button",
+            "text": "Item 3",
+            "events": { "onClick": "@categoryItem3" }
+        }
+    ]
+}

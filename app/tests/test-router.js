@@ -12,7 +12,7 @@ var routes = {
 var logs = [];
 var isLoggedIn = false;
 // 设为 1 启动时自动跑一遍完整流程（无需点按钮）
-var ROUTER_SELF_TEST = 1;
+var ROUTER_SELF_TEST = 0;
 
 function appendLog(msg) {
     logs.push(msg);

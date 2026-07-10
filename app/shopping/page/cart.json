@@ -1,0 +1,65 @@
+{
+    "id": "page_cart",
+    "type": "View",
+    "flex": 1,
+    "style": { "bgColor": "#45475A" },
+    "layout": {
+        "type": "vertical",
+        "spacing": 8,
+        "padding": [16, 16, 16, 16]
+    },
+    "events": {
+        "onLoad": "@onCartLoad",
+        "onShow": "@onCartShow"
+    },
+    "children": [
+        {
+            "id": "cart_title",
+            "type": "Label",
+            "text": "Shopping Cart",
+            "style": { "color": "#CDD6F4", "fontSize": 20 }
+        },
+        {
+            "id": "cart_user",
+            "type": "Label",
+            "text": "Signed in as: -",
+            "style": { "color": "#BAC2DE", "fontSize": 13 }
+        },
+        {
+            "id": "cart_line_1",
+            "type": "Label",
+            "text": "(empty)",
+            "style": { "color": "#CDD6F4", "fontSize": 14 }
+        },
+        {
+            "id": "cart_line_2",
+            "type": "Label",
+            "text": "",
+            "style": { "color": "#CDD6F4", "fontSize": 14 }
+        },
+        {
+            "id": "cart_line_3",
+            "type": "Label",
+            "text": "",
+            "style": { "color": "#CDD6F4", "fontSize": 14 }
+        },
+        {
+            "id": "cart_total",
+            "type": "Label",
+            "text": "Total: $0",
+            "style": { "color": "#A6E3A1", "fontSize": 16 }
+        },
+        {
+            "id": "btn_cart_clear",
+            "type": "Button",
+            "text": "Clear Cart",
+            "events": { "onClick": "@cartClear" }
+        },
+        {
+            "id": "btn_cart_continue",
+            "type": "Button",
+            "text": "Continue Shopping",
+            "events": { "onClick": "@cartContinue" }
+        }
+    ]
+}

@@ -1,0 +1,53 @@
+{
+    "id": "page_login",
+    "type": "View",
+    "flex": 1,
+    "style": { "bgColor": "#313244" },
+    "layout": {
+        "type": "vertical",
+        "spacing": 12,
+        "padding": [24, 24, 24, 24]
+    },
+    "events": {
+        "onLoad": "@onLoginLoad",
+        "onShow": "@onLoginShow"
+    },
+    "children": [
+        {
+            "id": "login_title",
+            "type": "Label",
+            "text": "Sign In",
+            "style": { "color": "#CDD6F4", "fontSize": 22 }
+        },
+        {
+            "id": "login_hint",
+            "type": "Label",
+            "text": "Cart requires login. Pick a demo account:",
+            "style": { "color": "#BAC2DE", "fontSize": 14 }
+        },
+        {
+            "id": "login_redirect",
+            "type": "Label",
+            "text": "",
+            "style": { "color": "#F9E2AF", "fontSize": 13 }
+        },
+        {
+            "id": "btn_login_user",
+            "type": "Button",
+            "text": "Login as Alice (user)",
+            "events": { "onClick": "@loginAsUser" }
+        },
+        {
+            "id": "btn_login_admin",
+            "type": "Button",
+            "text": "Login as Bob (admin)",
+            "events": { "onClick": "@loginAsAdmin" }
+        },
+        {
+            "id": "btn_login_cancel",
+            "type": "Button",
+            "text": "Cancel",
+            "events": { "onClick": "@loginCancel" }
+        }
+    ]
+}

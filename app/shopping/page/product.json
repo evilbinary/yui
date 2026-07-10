@@ -1,0 +1,91 @@
+{
+    "id": "page_product_:id",
+    "type": "View",
+    "flex": 1,
+    "style": { "bgColor": "#0A0D12" },
+    "layout": {
+        "type": "vertical",
+        "spacing": 12,
+        "padding": [12, 16, 16, 16]
+    },
+    "events": {
+        "onLoad": "@onProductLoad",
+        "onShow": "@onProductShow"
+    },
+    "children": [
+        {
+            "id": "product_card",
+            "type": "View",
+            "flex": 1,
+            "style": {
+                "bgColor": "#1A2030",
+                "borderRadius": 20,
+                "borderColor": "#2E3648",
+                "borderWidth": 1
+            },
+            "layout": { "type": "vertical", "spacing": 12, "padding": [24, 20, 24, 20] },
+            "children": [
+                {
+                    "id": "product_badge",
+                    "type": "Label",
+                    "text": "货号",
+                    "style": { "color": "#7C6CFF", "fontSize": 11, "fontWeight": "bold" }
+                },
+                {
+                    "id": "product_name",
+                    "type": "Label",
+                    "text": "商品名称",
+                    "style": { "color": "#FFFFFF", "fontSize": 22, "fontWeight": "bold" }
+                },
+                {
+                    "id": "product_price",
+                    "type": "Label",
+                    "text": "¥0",
+                    "style": { "color": "#E8C47C", "fontSize": 22, "fontWeight": "bold" }
+                },
+                {
+                    "id": "product_desc",
+                    "type": "Label",
+                    "text": "正品保障 · 7天无理由退换",
+                    "style": { "color": "#9AA3B2", "fontSize": 13 }
+                },
+                {
+                    "id": "product_divider",
+                    "type": "View",
+                    "size": [326, 1],
+                    "style": { "bgColor": "#2E3648" }
+                },
+                {
+                    "id": "btn_add_cart",
+                    "type": "Button",
+                    "text": "加入购物袋",
+                    "size": [326, 46],
+                    "events": { "onClick": "@productAddToCart" },
+                    "style": {
+                        "bgColor": "#1E2433",
+                        "color": "#F2F4F8",
+                        "fontSize": 15,
+                        "fontWeight": "bold",
+                        "borderRadius": 12,
+                        "borderColor": "#2E3648",
+                        "borderWidth": 1
+                    }
+                },
+                {
+                    "id": "btn_buy_now",
+                    "type": "Button",
+                    "text": "立即购买",
+                    "size": [326, 46],
+                    "events": { "onClick": "@productBuyNow" },
+                    "style": {
+                        "bgColor": "#7C6CFF",
+                        "color": "#FFFFFF",
+                        "fontSize": 15,
+                        "fontWeight": "bold",
+                        "borderRadius": 12
+                    }
+                }
+            ]
+        }
+    ]
+}
