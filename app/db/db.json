@@ -348,6 +348,7 @@
                   {
                     "id": "sqlEditor",
                     "type": "Text",
+                    "syntaxHighlight": "sql",
                     "text": "",
                     "size": [660, 140],
                     "flex": 1,
@@ -356,6 +357,13 @@
                     "scrollable": 1,
                     "events": {
                       "onChange": "@onSqlChange"
+                    },
+                    "syntaxColors": {
+                      "keyword": "#CBA6F7",
+                      "string": "#A6E3A1",
+                      "number": "#FAB387",
+                      "comment": "#6C7086",
+                      "punctuation": "#89DCEB"
                     },
                     "style": {
                       "color": "#CDD6F4",

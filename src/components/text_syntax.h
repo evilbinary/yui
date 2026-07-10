@@ -13,6 +13,7 @@ typedef SDL_Color Color;
 typedef enum {
     TEXT_SYNTAX_NONE = 0,
     TEXT_SYNTAX_JSON,
+    TEXT_SYNTAX_SQL,
 } TextSyntaxLanguage;
 
 typedef struct {
@@ -23,6 +24,7 @@ typedef struct {
     Color number_color;
     Color keyword_color;
     Color punctuation_color;
+    Color comment_color;
 } TextSyntaxConfig;
 
 void text_syntax_config_init(TextSyntaxConfig* config, TextSyntaxLanguage language, Color default_color);

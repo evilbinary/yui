@@ -13,6 +13,7 @@ typedef enum {
     HL_TOKEN_NUMBER,
     HL_TOKEN_KEYWORD,
     HL_TOKEN_PUNCTUATION,
+    HL_TOKEN_COMMENT,
 } HighlightTokenType;
 
 typedef struct {
@@ -28,11 +29,20 @@ void text_syntax_config_init(TextSyntaxConfig* config, TextSyntaxLanguage langua
     memset(config, 0, sizeof(TextSyntaxConfig));
     config->language = language;
     config->default_color = default_color;
-    config->key_color = (Color){156, 220, 254, 255};
-    config->string_color = (Color){206, 145, 120, 255};
-    config->number_color = (Color){181, 206, 168, 255};
-    config->keyword_color = (Color){86, 156, 214, 255};
-    config->punctuation_color = (Color){212, 212, 212, 255};
+    config->comment_color = (Color){108, 112, 134, 255};
+    config->punctuation_color = (Color){137, 220, 235, 255};
+    config->number_color = (Color){250, 179, 135, 255};
+    config->keyword_color = (Color){203, 166, 247, 255};
+    config->string_color = (Color){166, 227, 161, 255};
+    config->key_color = (Color){137, 180, 250, 255};
+    if (language == TEXT_SYNTAX_JSON) {
+        config->key_color = (Color){156, 220, 254, 255};
+        config->string_color = (Color){206, 145, 120, 255};
+        config->number_color = (Color){181, 206, 168, 255};
+        config->keyword_color = (Color){86, 156, 214, 255};
+        config->punctuation_color = (Color){212, 212, 212, 255};
+        config->comment_color = default_color;
+    }
 }
 
 void text_syntax_config_set_color(TextSyntaxConfig* config, const char* name, Color color) {
@@ -42,6 +52,7 @@ void text_syntax_config_set_color(TextSyntaxConfig* config, const char* name, Co
     else if (strcmp(name, "number") == 0) config->number_color = color;
     else if (strcmp(name, "keyword") == 0) config->keyword_color = color;
     else if (strcmp(name, "punctuation") == 0) config->punctuation_color = color;
+    else if (strcmp(name, "comment") == 0) config->comment_color = color;
     else if (strcmp(name, "default") == 0) config->default_color = color;
 }
 
@@ -52,8 +63,17 @@ static Color token_color(const TextSyntaxConfig* config, HighlightTokenType type
         case HL_TOKEN_NUMBER: return config->number_color;
         case HL_TOKEN_KEYWORD: return config->keyword_color;
         case HL_TOKEN_PUNCTUATION: return config->punctuation_color;
+        case HL_TOKEN_COMMENT: return config->comment_color;
         default: return config->default_color;
     }
+}
+
+static int is_word_char(char c) {
+    return isalnum((unsigned char)c) || c == '_';
+}
+
+static int is_identifier_start(char c) {
+    return isalpha((unsigned char)c) || c == '_';
 }
 
 static int is_json_keyword(const char* text, int pos, int end, const char* word, int word_len) {
@@ -148,6 +168,182 @@ static int json_tokenize_line(const char* text, int start, int end, HighlightTok
     return count;
 }
 
+static const char* SQL_KEYWORDS[] = {
+    "SELECT", "FROM", "WHERE", "INSERT", "UPDATE", "DELETE", "CREATE", "DROP", "ALTER",
+    "TABLE", "INDEX", "VIEW", "JOIN", "INNER", "LEFT", "RIGHT", "OUTER", "FULL", "CROSS",
+    "ON", "AS", "AND", "OR", "NOT", "IN", "IS", "NULL", "LIKE", "BETWEEN", "GROUP", "BY",
+    "ORDER", "HAVING", "LIMIT", "OFFSET", "DISTINCT", "UNION", "ALL", "SET", "VALUES",
+    "INTO", "PRIMARY", "KEY", "FOREIGN", "REFERENCES", "CONSTRAINT", "DEFAULT", "AUTO_INCREMENT",
+    "COUNT", "SUM", "AVG", "MIN", "MAX", "CASE", "WHEN", "THEN", "ELSE", "END",
+    "TRUE", "FALSE", "EXISTS", "ASC", "DESC", "DATABASE", "SCHEMA", "SHOW", "USE",
+    "GRANT", "REVOKE", "BEGIN", "COMMIT", "ROLLBACK", "TRANSACTION", "IF", "REPLACE",
+    "TRUNCATE", "EXEC", "EXECUTE", "VARCHAR", "INT", "INTEGER", "TEXT", "BLOB", "DATE",
+    "DATETIME", "TIMESTAMP", "BOOLEAN", "DECIMAL", "FLOAT", "DOUBLE", "UNSIGNED", "ZEROFILL",
+    "ENGINE", "CHARSET", "COLLATE", "COMMENT", "WITH", "RECURSIVE", "OVER", "PARTITION",
+    "WINDOW", "ROW", "ROWS", "RANGE", "UNBOUNDED", "PRECEDING", "FOLLOWING", "CURRENT",
+    "NATURAL", "USING", "DUAL", "EXPLAIN", "DESCRIBE", "DESC", "PROCEDURE", "FUNCTION",
+    "TRIGGER", "EVENT", "LOCK", "UNLOCK", "TABLES", "DATABASES", "COLUMN", "COLUMNS",
+    "ADD", "MODIFY", "CHANGE", "RENAME", "TO", "FIRST", "AFTER", "IGNORE", "DUPLICATE",
+    "DELAYED", "HIGH_PRIORITY", "LOW_PRIORITY", "SQL", "CALC_FOUND_ROWS", "STRAIGHT_JOIN",
+    "FOR", "SHARE", "NOWAIT", "SKIP", "LOCKED", "LATERAL", "CASCADE", "RESTRICT", "NO",
+    "ACTION", "MATCH", "FULL", "PARTIAL", "SIMPLE", "LOCALTIME", "LOCALTIMESTAMP",
+    "UTC_DATE", "UTC_TIME", "UTC_TIMESTAMP", "INTERVAL", "YEAR", "MONTH", "DAY", "HOUR",
+    "MINUTE", "SECOND", "MICROSECOND", "XOR", "REGEXP", "RLIKE", "DIV", "MOD", "BINARY",
+    NULL
+};
+
+static int strncasecmp_ascii(const char* a, const char* b, int n) {
+    for (int i = 0; i < n; i++) {
+        unsigned char ca = (unsigned char)a[i];
+        unsigned char cb = (unsigned char)b[i];
+        if (tolower(ca) != tolower(cb)) return (int)tolower(ca) - (int)tolower(cb);
+        if (ca == '\0') return 0;
+    }
+    return 0;
+}
+
+static int is_sql_keyword(const char* text, int start, int end) {
+    int len = end - start;
+    if (len <= 0) return 0;
+    for (int i = 0; SQL_KEYWORDS[i]; i++) {
+        const char* kw = SQL_KEYWORDS[i];
+        int kw_len = (int)strlen(kw);
+        if (kw_len == len && strncasecmp_ascii(text + start, kw, len) == 0) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static int sql_tokenize_line(const char* text, int start, int end, HighlightToken tokens[], int max_tokens) {
+    int count = 0;
+    int pos = start;
+
+    while (pos < end && count < max_tokens) {
+        char c = text[pos];
+
+        if (c == ' ' || c == '\t' || c == '\r') {
+            int ws = pos;
+            while (pos < end && (text[pos] == ' ' || text[pos] == '\t' || text[pos] == '\r')) {
+                pos++;
+            }
+            tokens[count++] = (HighlightToken){ws, pos, HL_TOKEN_DEFAULT};
+            continue;
+        }
+
+        if (c == '-' && pos + 1 < end && text[pos + 1] == '-') {
+            tokens[count++] = (HighlightToken){pos, end, HL_TOKEN_COMMENT};
+            break;
+        }
+
+        if (c == '#') {
+            tokens[count++] = (HighlightToken){pos, end, HL_TOKEN_COMMENT};
+            break;
+        }
+
+        if (c == '/' && pos + 1 < end && text[pos + 1] == '*') {
+            int comment_start = pos;
+            pos += 2;
+            while (pos + 1 < end && !(text[pos] == '*' && text[pos + 1] == '/')) {
+                pos++;
+            }
+            if (pos + 1 < end) pos += 2;
+            tokens[count++] = (HighlightToken){comment_start, pos, HL_TOKEN_COMMENT};
+            continue;
+        }
+
+        if (c == '\'' || c == '"') {
+            char quote = c;
+            int str_start = pos;
+            pos++;
+            while (pos < end) {
+                if (text[pos] == quote) {
+                    if (pos + 1 < end && text[pos + 1] == quote) {
+                        pos += 2;
+                        continue;
+                    }
+                    pos++;
+                    break;
+                }
+                if (text[pos] == '\\' && pos + 1 < end) {
+                    pos += 2;
+                    continue;
+                }
+                pos++;
+            }
+            tokens[count++] = (HighlightToken){str_start, pos, HL_TOKEN_STRING};
+            continue;
+        }
+
+        if (c == '`') {
+            int str_start = pos;
+            pos++;
+            while (pos < end && text[pos] != '`') {
+                pos++;
+            }
+            if (pos < end) pos++;
+            tokens[count++] = (HighlightToken){str_start, pos, HL_TOKEN_STRING};
+            continue;
+        }
+
+        if (isdigit((unsigned char)c) || (c == '.' && pos + 1 < end && isdigit((unsigned char)text[pos + 1]))) {
+            int num_start = pos;
+            if (c == '.') pos++;
+            while (pos < end && isdigit((unsigned char)text[pos])) pos++;
+            if (pos < end && text[pos] == '.' && pos + 1 < end && isdigit((unsigned char)text[pos + 1])) {
+                pos++;
+                while (pos < end && isdigit((unsigned char)text[pos])) pos++;
+            }
+            if (pos < end && (text[pos] == 'e' || text[pos] == 'E')) {
+                pos++;
+                if (pos < end && (text[pos] == '+' || text[pos] == '-')) pos++;
+                while (pos < end && isdigit((unsigned char)text[pos])) pos++;
+            }
+            tokens[count++] = (HighlightToken){num_start, pos, HL_TOKEN_NUMBER};
+            continue;
+        }
+
+        if (is_identifier_start(c)) {
+            int id_start = pos;
+            while (pos < end && is_word_char(text[pos])) pos++;
+            HighlightTokenType type = is_sql_keyword(text, id_start, pos) ? HL_TOKEN_KEYWORD : HL_TOKEN_DEFAULT;
+            tokens[count++] = (HighlightToken){id_start, pos, type};
+            continue;
+        }
+
+        if (c == '(' || c == ')' || c == ',' || c == ';' || c == '.') {
+            tokens[count++] = (HighlightToken){pos, pos + 1, HL_TOKEN_PUNCTUATION};
+            pos++;
+            continue;
+        }
+
+        if (c == '=' || c == '+' || c == '-' || c == '*' || c == '/' || c == '%' ||
+            c == '<' || c == '>' || c == '!' || c == '|' || c == '&' || c == '^' || c == '~') {
+            int op_start = pos;
+            pos++;
+            if (pos < end) {
+                char n = text[pos];
+                if ((c == '<' && (n == '=' || n == '>' || n == '<')) ||
+                    (c == '>' && (n == '=' || n == '>')) ||
+                    (c == '!' && n == '=') ||
+                    (c == '=' && n == '=') ||
+                    (c == '|' && n == '|') ||
+                    (c == '&' && n == '&') ||
+                    (c == '-' && n == '>')) {
+                    pos++;
+                }
+            }
+            tokens[count++] = (HighlightToken){op_start, pos, HL_TOKEN_PUNCTUATION};
+            continue;
+        }
+
+        tokens[count++] = (HighlightToken){pos, pos + 1, HL_TOKEN_DEFAULT};
+        pos++;
+    }
+
+    return count;
+}
+
 int text_syntax_measure_width(DFont* font, const char* text, int start, int end, Color color) {
     if (!font || !text || start >= end) return 0;
     int len = end - start;
@@ -194,6 +390,8 @@ void text_syntax_render_range(DFont* font, const char* text, int start, int end,
     int token_count = 0;
     if (config->language == TEXT_SYNTAX_JSON) {
         token_count = json_tokenize_line(text, start, end, tokens, MAX_HIGHLIGHT_TOKENS);
+    } else if (config->language == TEXT_SYNTAX_SQL) {
+        token_count = sql_tokenize_line(text, start, end, tokens, MAX_HIGHLIGHT_TOKENS);
     }
 
     if (token_count == 0) {

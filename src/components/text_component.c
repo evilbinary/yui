@@ -183,6 +183,7 @@ static void text_component_render_text_segment(TextComponent* component, const c
 static TextSyntaxLanguage text_component_parse_syntax_language(const char* language) {
     if (!language || language[0] == '\0') return TEXT_SYNTAX_NONE;
     if (strcmp(language, "json") == 0) return TEXT_SYNTAX_JSON;
+    if (strcmp(language, "sql") == 0) return TEXT_SYNTAX_SQL;
     return TEXT_SYNTAX_NONE;
 }
 
