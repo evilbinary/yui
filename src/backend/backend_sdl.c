@@ -961,9 +961,10 @@ void backend_run(Layer* ui_root){
     print_layer_info(ui_root, 0);
     printf("========================\n");
 
+    g_ui_root = ui_root;
+
 #ifdef __EMSCRIPTEN__
     // Emscripten 环境下使用 emscripten 主循环
-    g_ui_root = ui_root;
     g_running = 1;
     printf("Emscripten: Starting main loop...\n");
 
