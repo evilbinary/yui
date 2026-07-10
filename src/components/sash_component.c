@@ -200,6 +200,24 @@ int sash_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     }
 
     if (event->state == SDL_RELEASED && event->button == SDL_BUTTON_LEFT) {
+        if (comp->target && comp->target->layout_base_valid) {
+            comp->target->layout_base_rect.h = comp->target->rect.h;
+            comp->target->layout_base_fixed_h = comp->target->fixed_height;
+        }
+        Layer* sibling = NULL;
+        if (comp->layer && comp->layer->parent) {
+            Layer* parent = comp->layer->parent;
+            for (int i = 0; i < parent->child_count - 1; i++) {
+                if (parent->children[i] == comp->layer) {
+                    sibling = parent->children[i + 1];
+                    break;
+                }
+            }
+        }
+        if (sibling && sibling->layout_base_valid) {
+            sibling->layout_base_rect.h = sibling->rect.h;
+            sibling->layout_base_fixed_h = sibling->fixed_height;
+        }
         comp->dragging = 0;
         return 0;
     }
