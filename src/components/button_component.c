@@ -187,19 +187,14 @@ void button_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     }
     // 鼠标释放事件：触发点击
     else if (event->state == SDL_RELEASED) {
-        // 只要有 PRESSED 状态就触发点击，不要求释放时还在按钮内
-        // 这样可以处理快速点击或鼠标轻微拖出按钮的情况
         if (HAS_STATE(layer, LAYER_STATE_PRESSED)) {
-            // 触发点击事件（如果存在）
             if (layer->event && layer->event->click) {
                 layer->event->click(layer);
             }
         }
-        // 无论是否点击成功，都清除 PRESSED 状态
         CLEAR_STATE(layer, LAYER_STATE_PRESSED);
     }
     // 鼠标移动事件：不清除 PRESSED 状态
-    // 只有在鼠标释放时才清除 PRESSED 状态
     else if (event->state == SDL_MOUSEMOTION) {
         // 移动时不清除 PRESSED 状态，保持按下状态
     }

@@ -278,9 +278,9 @@ void handle_mouse_event(Layer* layer, MouseEvent* event) {
 
     Point mouse_pos = {event->x, event->y};
 
-    // 先递归处理子图层的事件，让子图层优先响应
+    // 先递归处理子图层的事件，让子图层优先响应（跳过不可见图层）
     for (int i = 0; i < layer->child_count; i++) {
-        if (layer->children[i]) {
+        if (layer->children[i] && layer->children[i]->visible == VISIBLE) {
             handle_mouse_event(layer->children[i], event);
         }
     }
@@ -299,12 +299,11 @@ void handle_mouse_event(Layer* layer, MouseEvent* event) {
     // 处理当前图层的焦点切换逻辑
     if (point_in_rect(mouse_pos, layer->rect)) {
         // 处理焦点切换逻辑（只有当没有子图层获取焦点时）
-        if (!child_has_focus && layer->focusable && event->state == SDL_PRESSED) {
+        if (!child_has_focus && layer->focusable && layer->visible == VISIBLE && event->state == SDL_PRESSED) {
             // 如果当前有焦点图层，将其状态设置为NORMAL
             if (focused_layer && focused_layer != layer) {
                 focused_layer->state = LAYER_STATE_NORMAL;
             }
-            // 设置新的焦点图层
             focused_layer = layer;
             layer->state = LAYER_STATE_FOCUSED;
             // 注意：这里不返回，继续处理自定义事件处理函数
