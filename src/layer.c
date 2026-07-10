@@ -762,6 +762,24 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
         layer->event->touch = (void (*)(TouchEvent*))handler;
       }
     }
+    if (cJSON_HasObjectItem(events, "onResize")) {
+      if (!layer->event) {
+        layer->event = malloc(sizeof(Event));
+        memset(layer->event, 0, sizeof(Event));
+      }
+      const char* handler_id =
+          cJSON_GetObjectItem(events, "onResize")->valuestring;
+      const char* lookup_name = handler_id;
+      if (handler_id[0] == '@') {
+        lookup_name = handler_id + 1;
+      }
+      strcpy(layer->event->resize_name, lookup_name);
+
+      EventHandler handler = find_event_by_name(lookup_name);
+      if (handler) {
+        layer->event->resize = (void (*)(Layer*, const ResizeEvent*))handler;
+      }
+    }
   }
 
   // 解析动画属性配置

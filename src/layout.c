@@ -102,6 +102,7 @@ void layout_layer(Layer* layer){
             // 计算总权重
             float total_flex = 0;
             int fixed_width_sum = 0;
+            int no_width_count = 0;
             int valid_child_count = 0;
 
             for (int i = 0; i < layer->child_count; i++) {
@@ -119,9 +120,10 @@ void layout_layer(Layer* layer){
 
                 if (layer->children[i]->flex_ratio > 0) {
                     total_flex += layer->children[i]->flex_ratio;
+                } else if (layer->children[i]->fixed_width > 0) {
+                    fixed_width_sum += layer->children[i]->fixed_width;
                 } else {
-                    fixed_width_sum += layer->children[i]->fixed_width > 0 ?
-                                      layer->children[i]->fixed_width : 50; // 默认宽度
+                    no_width_count++;
                 }
             }
 
@@ -207,13 +209,21 @@ void layout_layer(Layer* layer){
                                         (child->flex_ratio / total_flex));
                 } else if (child->fixed_width > 0) {
                     child->rect.w = child->fixed_width;
+                } else if (no_width_count > 0) {
+                    child->rect.w = available_width / no_width_count;
                 } else {
-                    child->rect.w = 50; // 默认宽度
+                    child->rect.w = 50;
                 }
 
                 child->rect.x = current_x;
                 child->rect.y = layer->rect.y + padding_top;
-                child->rect.h = content_height;
+                if (child->fixed_height > 0) {
+                    child->rect.h = child->fixed_height;
+                } else if (child->flex_ratio > 0) {
+                    child->rect.h = content_height;
+                } else {
+                    child->rect.h = content_height;
+                }
 
                 // 应用垂直方向对齐（align属性）
                 if (layer->layout_manager->align == LAYOUT_ALIGN_CENTER) {
@@ -682,4 +692,136 @@ void layout_layer(Layer* layer){
     
     printf("layout_layer: finished processing layer %s\n", layer->id ? layer->id : "(null)");
     fflush(stdout);
+}
+
+static int layout_scale_value(int value, float scale) {
+    if (value <= 0) return value;
+    int scaled = (int)(value * scale + 0.5f);
+    return scaled > 0 ? scaled : 1;
+}
+
+static int layout_is_resizable_view(const Layer* layer) {
+    return layer && layer->type == VIEW && layer->layout_manager != NULL;
+}
+
+void layout_capture_base(Layer* layer) {
+    if (!layer) return;
+    layer->layout_base_rect = layer->rect;
+    layer->layout_base_fixed_w = layer->fixed_width;
+    layer->layout_base_fixed_h = layer->fixed_height;
+    layer->layout_base_valid = 1;
+
+    if (layer->children) {
+        for (int i = 0; i < layer->child_count; i++) {
+            if (layer->children[i]) {
+                layout_capture_base(layer->children[i]);
+            }
+        }
+    }
+    if (layer->sub) {
+        layout_capture_base(layer->sub);
+    }
+}
+
+static void layout_apply_scale(Layer* layer, float sx, float sy, int is_root) {
+    if (!layer) return;
+
+    if (!is_root && layout_is_resizable_view(layer) && layer->layout_base_valid) {
+        layer->rect.x = layout_scale_value(layer->layout_base_rect.x, sx);
+        layer->rect.y = layout_scale_value(layer->layout_base_rect.y, sy);
+        layer->rect.w = layout_scale_value(layer->layout_base_rect.w, sx);
+        layer->rect.h = layout_scale_value(layer->layout_base_rect.h, sy);
+
+        if (layer->layout_base_fixed_w > 0) {
+            layer->fixed_width = layout_scale_value(layer->layout_base_fixed_w, sx);
+        }
+        if (layer->layout_base_fixed_h > 0) {
+            layer->fixed_height = layout_scale_value(layer->layout_base_fixed_h, sy);
+        }
+    }
+
+    if (layer->children) {
+        for (int i = 0; i < layer->child_count; i++) {
+            if (layer->children[i]) {
+                layout_apply_scale(layer->children[i], sx, sy, 0);
+            }
+        }
+    }
+    if (layer->sub) {
+        layout_apply_scale(layer->sub, sx, sy, 0);
+    }
+}
+
+static void layout_restore_leaf_metrics(Layer* layer) {
+    if (!layer) return;
+    if (!layout_is_resizable_view(layer) && layer->layout_base_valid) {
+        if (layer->layout_base_fixed_w > 0) {
+            layer->fixed_width = layer->layout_base_fixed_w;
+        }
+        if (layer->layout_base_fixed_h > 0) {
+            layer->fixed_height = layer->layout_base_fixed_h;
+        }
+    }
+    if (layer->children) {
+        for (int i = 0; i < layer->child_count; i++) {
+            if (layer->children[i]) {
+                layout_restore_leaf_metrics(layer->children[i]);
+            }
+        }
+    }
+    if (layer->sub) {
+        layout_restore_leaf_metrics(layer->sub);
+    }
+}
+
+void layout_dispatch_resize_events(Layer* layer, const ResizeEvent* event) {
+    if (!layer || !event) return;
+
+    if (layer->handle_resize_event) {
+        layer->handle_resize_event(layer, event);
+    }
+        if (layer->event && layer->event->resize) {
+        layer->event->resize(layer, event);
+    } else if (layer->event && layer->event->resize_name[0] != '\0') {
+        EventHandler handler = find_event_by_name(layer->event->resize_name);
+        if (handler) {
+            handler((void*)event);
+        }
+    }
+
+    if (layer->children) {
+        for (int i = 0; i < layer->child_count; i++) {
+            if (layer->children[i]) {
+                layout_dispatch_resize_events(layer->children[i], event);
+            }
+        }
+    }
+    if (layer->sub) {
+        layout_dispatch_resize_events(layer->sub, event);
+    }
+}
+
+void layout_resize(Layer* layer, int width, int height) {
+    if (!layer || width <= 0 || height <= 0) return;
+    if (!layer->layout_base_valid) {
+        layout_capture_base(layer);
+    }
+    if (layer->layout_base_rect.w <= 0 || layer->layout_base_rect.h <= 0) return;
+
+    int old_width = layer->rect.w;
+    int old_height = layer->rect.h;
+    float sx = (float)width / (float)layer->layout_base_rect.w;
+    float sy = (float)height / (float)layer->layout_base_rect.h;
+    layout_apply_scale(layer, sx, sy, 1);
+    layer->rect.x = 0;
+    layer->rect.y = 0;
+    layer->rect.w = width;
+    layer->rect.h = height;
+    layout_restore_leaf_metrics(layer);
+    layout_layer(layer);
+
+    ResizeEvent resize_event = {
+        old_width, old_height, width, height, sx, sy
+    };
+    layout_dispatch_resize_events(layer, &resize_event);
 }

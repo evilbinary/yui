@@ -262,6 +262,15 @@ typedef struct MouseEvent {
     Uint32 timestamp;
 } MouseEvent;
 
+typedef struct ResizeEvent {
+    int old_width;
+    int old_height;
+    int new_width;
+    int new_height;
+    float scale_x;
+    float scale_y;
+} ResizeEvent;
+
 #define MAX_EVENT 512
 
 // 定义事件处理函数类型
@@ -285,6 +294,9 @@ typedef struct Event {
     // 合并的触屏事件
     char touch_name[MAX_PATH];
     void (*touch)(TouchEvent* event);  // 统一的触屏事件处理函数
+
+    char resize_name[MAX_PATH];
+    void (*resize)(Layer* layer, const ResizeEvent* event);
 } Event;
 
 // Animation结构体在animate.h中定义
@@ -397,6 +409,7 @@ typedef struct Layer {
     int (*handle_mouse_event)(Layer* layer, MouseEvent* event);
     void (*handle_scroll_event)(Layer* layer, int scroll_delta);
     void (*handle_touch_event)(Layer* layer, TouchEvent* event);
+    void (*handle_resize_event)(Layer* layer, const ResizeEvent* event);
 
     //事件注册
     register_event_fun_t register_event;
@@ -419,6 +432,12 @@ typedef struct Layer {
     int inspect_mode;         // Inspect模式
     int inspect_show_bounds; // 是否显示边界
     int inspect_show_info;   // 是否显示信息
+
+    // 初始布局快照，用于 layout_resize 等比缩放
+    Rect layout_base_rect;
+    int layout_base_fixed_w;
+    int layout_base_fixed_h;
+    unsigned char layout_base_valid;
 
 } Layer;
 // 全局变量：当前拥有焦点的图层
