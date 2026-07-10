@@ -355,6 +355,8 @@
                     "multiline": true,
                     "editable": true,
                     "scrollable": 1,
+                    "showLineNumbers": true,
+                    "lineNumberWidth": 40,
                     "events": {
                       "onChange": "@onSqlChange"
                     },

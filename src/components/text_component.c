@@ -13,6 +13,15 @@
 
 
 #define TEXT_LINE_SPACING 2
+#define TEXT_LINE_NUMBER_GAP 12
+
+static int text_component_get_left_padding(TextComponent* component) {
+    int left_padding = 5;
+    if (component && component->show_line_numbers && component->multiline) {
+        left_padding += component->line_number_width + TEXT_LINE_NUMBER_GAP;
+    }
+    return left_padding;
+}
 
 static int text_component_get_line_height(TextComponent* component) {
     if (!component || !component->layer) return 20;
@@ -873,10 +882,7 @@ int text_component_calculate_content_height(TextComponent* component) {
 
     const char* text = component->layer->text ? component->layer->text : "";
     int line_height = text_component_get_line_height(component);
-    int left_padding = 5;
-    if (component->show_line_numbers && component->multiline) {
-        left_padding += component->line_number_width;
-    }
+    int left_padding = text_component_get_left_padding(component);
     int max_width = component->layer->rect.w - (left_padding + 5);
     if (max_width < 1) max_width = 1;
 
@@ -1440,10 +1446,7 @@ static int text_component_point_in_vertical_scrollbar(Layer* layer, Point pt) {
 static void text_component_get_content_rect(TextComponent* component, Layer* layer, Rect* out) {
     if (!component || !layer || !out) return;
 
-    int left_padding = 5;
-    if (component->show_line_numbers && component->multiline) {
-        left_padding += component->line_number_width;
-    }
+    int left_padding = text_component_get_left_padding(component);
     out->x = layer->rect.x + left_padding;
     out->y = layer->rect.y + 5;
     out->w = layer->rect.w - (left_padding + 5);
@@ -1887,8 +1890,10 @@ void text_component_render(Layer* layer) {
         int current_pos = 0;
         int visual_line = 0;  // 视觉行号
         int logical_line = 1;  // 逻辑行号（从1开始）
-        // 计算文本内容区域的宽度（减去内边距和行号区域）
-        int max_width = layer->rect.w - (component->show_line_numbers ? component->line_number_width : 0) - 15;
+        // 计算文本内容区域的宽度（与正文渲染区域一致）
+        Rect content_rect_for_wrap;
+        text_component_get_content_rect(component, layer, &content_rect_for_wrap);
+        int max_width = content_rect_for_wrap.w;
         
         while (current_pos < text_len) {
             // 记录当前逻辑行的起始视觉行
@@ -1985,7 +1990,7 @@ void text_component_render(Layer* layer) {
                     backend_query_texture(line_num_tex, NULL, NULL, &num_width, &num_height);
                     
                     Rect line_num_rect = {
-                        line_number_bg.x + line_number_bg.w - num_width / scale - 5,
+                        line_number_bg.x + line_number_bg.w - num_width / scale - 10,
                         line_y,
                         num_width / scale,
                         num_height / scale
