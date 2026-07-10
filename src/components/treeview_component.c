@@ -91,7 +91,8 @@ TreeNode* treeview_create_node(const char* text) {
     node->icon = NULL;
     node->icon_text = NULL;
     node->icon_tex = NULL;
-    
+    node->extra = NULL;
+
     return node;
 }
 
@@ -120,7 +121,8 @@ void treeview_destroy_node(TreeNode* node) {
     if (node->icon_tex) backend_render_text_destroy(node->icon_tex);
     if (node->icon) free(node->icon);
     if (node->icon_text) free(node->icon_text);
-    
+    if (node->extra) cJSON_Delete((cJSON*)node->extra);
+
     free(node);
 }
 
@@ -474,7 +476,29 @@ TreeNode* parse_tree_node(cJSON* node_json, int level, TreeNode* parent) {
     if (iconText && iconText->valuestring) {
         node->icon_text = strdup(iconText->valuestring);
     }
-    
+
+    // 收集 JSON 中未被显式处理的字段到 extra，保证 JS↔C 往返不丢数据
+    {
+        static const char* known[] = {
+            "text", "expanded", "expandIcon", "collapseIcon",
+            "icon", "icon_text", "children", "expandable", NULL
+        };
+        cJSON* child = node_json->child;
+        while (child) {
+            if (child->string) {
+                int skip = 0;
+                for (int k = 0; known[k]; k++) {
+                    if (strcmp(child->string, known[k]) == 0) { skip = 1; break; }
+                }
+                if (!skip) {
+                    if (!node->extra) node->extra = cJSON_CreateObject();
+                    cJSON_AddItemToObject((cJSON*)node->extra, child->string, cJSON_Duplicate(child, 1));
+                }
+            }
+            child = child->next;
+        }
+    }
+
     // 解析children属性
     cJSON* children = cJSON_GetObjectItem(node_json, "children");
     if (children && cJSON_IsArray(children)) {
@@ -875,6 +899,17 @@ static char* treeview_node_to_json(TreeNode* node) {
     if (node->icon_text) cJSON_AddStringToObject(obj, "icon_text", node->icon_text);
     cJSON_AddBoolToObject(obj, "expanded", node->expanded);
     cJSON_AddBoolToObject(obj, "expandable", node->expandable);
+    // 合并所有 JS 侧传入的额外字段（如 _db、id 等）
+    if (node->extra) {
+        cJSON* extra = (cJSON*)node->extra;
+        cJSON* child = extra->child;
+        while (child) {
+            if (child->string) {
+                cJSON_AddItemToObject(obj, child->string, cJSON_Duplicate(child, 1));
+            }
+            child = child->next;
+        }
+    }
     char* json_str = cJSON_PrintUnformatted(obj);
     cJSON_Delete(obj);
     return json_str;

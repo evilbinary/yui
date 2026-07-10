@@ -210,47 +210,27 @@ function executeQuery() {
         sql = tabs[activeTab].sql;
     }
     if (!sql || sql.trim() === "") {
-        updateStatus("请输入 SQL 语句", "#F38BA8");
         return;
     }
+
     updateStatus("执行中...", "#F9E2AF");
 
     var result = YUI.call("mysql_query", JSON.stringify({ sql: sql }));
-    if (!result) {
+
+    if (!result || result === "[]") {
         var affectedInfo = YUI.call("mysql_exec", JSON.stringify({ sql: sql }));
         if (affectedInfo) {
-            var aff = JSON.parse(affectedInfo);
-            if (aff.error) {
-                updateStatus("错误: " + aff.error, "#F38BA8");
-                showResults([]);
-                var resultInfo = yui.find("resultInfo");
-                if (resultInfo) resultInfo.text = "(错误)";
-                return;
-            }
-            var resultInfo = yui.find("resultInfo");
-            if (resultInfo) resultInfo.text = "(影响 " + aff.affected + " 行)";
-            updateStatus("执行成功", "#A6E3A1");
-            showResults([]);
-            return;
+            var info = JSON.parse(affectedInfo);
+            updateStatus("影响 " + (info.affected || 0) + " 行", "#A6E3A1");
+            showResults([], 0);
         }
-        updateStatus("查询完成（无结果）", "#A6E3A1");
         return;
     }
 
-    try {
-        var rows = JSON.parse(result);
-        if (rows.error) {
-            updateStatus("错误: " + rows.error, "#F38BA8");
-            showResults([]);
-            return;
-        }
-        showResults(rows);
-        var resultInfo = yui.find("resultInfo");
-        if (resultInfo) resultInfo.text = "(" + rows.length + " 行)";
-        updateStatus("查询完成", "#A6E3A1");
-    } catch (e) {
-        updateStatus("解析结果失败", "#F38BA8");
-    }
+    var rows = JSON.parse(result);
+    var treeData = rowsToTreeData(rows);
+    showResults(treeData, rows.length);
+    updateStatus("查询完成, " + rows.length + " 行", "#A6E3A1");
 }
 
 function onExplain() {
@@ -391,10 +371,30 @@ function applyDbFilter(filter) {
 
 // ====================== Query Results ======================
 
-function showResults(rows) {
+// 将 SQL 查询结果行转换为 TreeView 兼容的格式
+function rowsToTreeData(rows) {
+    if (!rows || rows.length === 0) return [];
+    var cols = Object.keys(rows[0]);
+    // 构造表头
+    var header = cols.map(function(c) { return c; }).join(" | ");
+    var treeData = [];
+    // 添加行数据，每行显示为文本
+    for (var i = 0; i < rows.length; i++) {
+        var values = [];
+        for (var j = 0; j < cols.length; j++) {
+            var v = rows[i][cols[j]];
+            values.push(v !== null && v !== undefined ? String(v) : "NULL");
+        }
+        treeData.push({ text: values.join(" | ") });
+    }
+    return treeData;
+}
+
+function showResults(treeData, rowCount) {
     var grid = yui.find("resultGrid");
-    if (!grid) return;
-    grid.data = rows;
+    if (grid) grid.data = treeData;
+    var resultInfo = yui.find("resultInfo");
+    if (resultInfo) resultInfo.text = "(" + (rowCount || 0) + " 行)";
 }
 
 function clearEditor() {
@@ -444,14 +444,16 @@ function onDbSelect(layerId) {
         var statusText = yui.find("statusText");
         if (statusText) statusText.text = "数据库: " + node.text;
     } else if (node.expandable) {
-        // Category node (表/视图/存储过程/函数) - find db name from fullDbData
-        var dbName = null;
-        for (var i = 0; i < fullDbData.length && !dbName; i++) {
-            var cats = fullDbData[i].children || [];
-            for (var j = 0; j < cats.length; j++) {
-                if (cats[j].text === node.text) {
-                    dbName = cats[j]._db || fullDbData[i].text;
-                    break;
+        // Category node - prefer _db from node, fall back to search
+        var dbName = node._db;
+        if (!dbName) {
+            for (var i = 0; i < fullDbData.length && !dbName; i++) {
+                var cats = fullDbData[i].children || [];
+                for (var j = 0; j < cats.length; j++) {
+                    if (cats[j].text === node.text) {
+                        dbName = cats[j]._db || fullDbData[i].text;
+                        break;
+                    }
                 }
             }
         }
@@ -463,16 +465,18 @@ function onDbSelect(layerId) {
         var statusText = yui.find("statusText");
         if (statusText) statusText.text = "加载: " + (dbName || "?") + "." + node.text;
     } else if (node.text) {
-        // Leaf item (table/view/proc/func) - find db name from fullDbData
-        var dbName = null;
-        for (var i = 0; i < fullDbData.length && !dbName; i++) {
-            var cats = fullDbData[i].children || [];
-            for (var j = 0; j < cats.length; j++) {
-                var items = cats[j].children || [];
-                for (var k = 0; k < items.length; k++) {
-                    if (items[k].text === node.text) {
-                        dbName = fullDbData[i].text;
-                        break;
+        // Leaf item - prefer _db from node, fall back to search
+        var dbName = node._db;
+        if (!dbName) {
+            for (var i = 0; i < fullDbData.length && !dbName; i++) {
+                var cats = fullDbData[i].children || [];
+                for (var j = 0; j < cats.length; j++) {
+                    var items = cats[j].children || [];
+                    for (var k = 0; k < items.length; k++) {
+                        if (items[k].text === node.text) {
+                            dbName = fullDbData[i].text;
+                            break;
+                        }
                     }
                 }
             }
@@ -523,17 +527,19 @@ function onDbExpand(layerId) {
     }
     // 展开分类节点时加载其子项
     if (node.expandable && node.expanded) {
-        // 从 fullDbData 查找分类所属的数据库名
-        var dbName = null;
-        for (var i = 0; i < fullDbData.length; i++) {
-            var cats = fullDbData[i].children || [];
-            for (var j = 0; j < cats.length; j++) {
-                if (cats[j].text === node.text) {
-                    dbName = cats[j]._db || fullDbData[i].text;
-                    break;
+        // Prefer _db from node (preserved through C round-trip), fall back to search
+        var dbName = node._db;
+        if (!dbName) {
+            for (var i = 0; i < fullDbData.length; i++) {
+                var cats = fullDbData[i].children || [];
+                for (var j = 0; j < cats.length; j++) {
+                    if (cats[j].text === node.text) {
+                        dbName = cats[j]._db || fullDbData[i].text;
+                        break;
+                    }
                 }
+                if (dbName) break;
             }
-            if (dbName) break;
         }
         if (dbName) {
             var handlers = { "表": "mysql_db_tables", "视图": "mysql_db_views", "存储过程": "mysql_db_procedures", "函数": "mysql_db_functions" };
@@ -549,8 +555,8 @@ function onDbExpand(layerId) {
 
 function onLoad() {
   YUI.log('onLoad');
-  //connectDb();
-  loadDatabases();
+  connectDb();
+  //loadDatabases();
 }
 
 // ====================== Init ======================

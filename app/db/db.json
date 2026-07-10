@@ -430,6 +430,7 @@
                   {
                     "id": "resultGrid",
                     "type": "Treeview",
+                    "scrollable": 3,
                     "size": [660, 302],
                     "style": {
                       "color": "#CDD6F4",

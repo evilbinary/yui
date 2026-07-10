@@ -19,6 +19,7 @@ typedef struct TreeNode {
     int expandable;  // 1 = may have children (show expand icon even if child_count == 0)
     void* user_data;
     struct TreeNode* parent;
+    void* extra;             // cJSON object storing any extra JSON fields not handled by C
     char* expand_icon;   // custom icon text when collapsed (e.g. "▶")
     char* collapse_icon; // custom icon text when expanded (e.g. "▼")
     char* expand_icon_path;   // path to SVG/image for collapsed icon
