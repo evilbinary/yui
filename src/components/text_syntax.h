@@ -3,12 +3,28 @@
 
 #ifdef D_SDL
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_ttf.h>
 #else
 #include <SDL.h>
+#include <SDL_ttf.h>
 #endif
 
-typedef struct TTF_Font DFont;
-typedef SDL_Color Color;
+#ifndef YUI_TYPE_H
+#ifndef SDL2
+#define SDL2 1
+#endif
+#if SDL2
+#define Color SDL_Color
+#else
+typedef struct Color {
+    unsigned char r;
+    unsigned char g;
+    unsigned char b;
+    unsigned char a;
+} Color;
+#endif
+#define DFont TTF_Font
+#endif
 
 typedef enum {
     TEXT_SYNTAX_NONE = 0,

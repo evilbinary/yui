@@ -1,8 +1,8 @@
 #ifndef YUI_TEXT_COMPONENT_H
 #define YUI_TEXT_COMPONENT_H
 
-#include "text_syntax.h"
 #include "../ytype.h"
+#include "text_syntax.h"
 
 typedef struct Layer Layer;
 typedef struct KeyEvent KeyEvent;
