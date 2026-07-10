@@ -154,6 +154,9 @@ void treeview_component_render(Layer* layer);
 // 计算内容总高度
 int treeview_calculate_content_height(TreeViewComponent* component);
 
+// 估算内容宽度
+int treeview_estimate_content_width(TreeViewComponent* component);
+
 // 更新滚动条状态
 void treeview_update_scrollbar(TreeViewComponent* component);
 

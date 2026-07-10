@@ -582,31 +582,72 @@ TreeNode** stack = (TreeNode**)malloc(sizeof(TreeNode*) * node->child_count);
 // 计算内容总高度
 int treeview_calculate_content_height(TreeViewComponent* component) {
     if (!component) return 0;
-    
+
     int visible_count = treeview_count_visible_nodes(component);
     return visible_count * component->item_height;
+}
+
+// 估算内容宽度（基于可见节点文本长度和缩进）
+int treeview_estimate_content_width(TreeViewComponent* component) {
+    if (!component || component->root_count == 0) return 0;
+    Layer* layer = component->layer;
+    if (!layer) return 0;
+
+    int left_margin = (layer->layout_manager && layer->layout_manager->padding[3] > 0)
+        ? layer->layout_manager->padding[3] : 0;
+    float char_width = component->font_size * 0.55f;
+    int max_width = 0;
+
+    for (int i = 0; i < component->root_count; i++) {
+        TreeNode* node = component->root_nodes[i];
+
+        int text_len = node->text ? (int)strlen(node->text) : 0;
+        int indent = node->level * component->indent_width + left_margin + 20;
+        int icon_offset = (node->icon_text && strlen(node->icon_text) > 0) ? component->icon_size + 4 : 4;
+        int node_width = indent + icon_offset + (int)(text_len * char_width);
+        if (node_width > max_width) max_width = node_width;
+
+        if (node->expanded && node->child_count > 0) {
+            TreeNode** stack = (TreeNode**)malloc(sizeof(TreeNode*) * node->child_count);
+            int stack_top = 0;
+            for (int j = node->child_count - 1; j >= 0; j--) {
+                stack[stack_top++] = node->children[j];
+            }
+            while (stack_top > 0) {
+                TreeNode* current = stack[--stack_top];
+                text_len = current->text ? (int)strlen(current->text) : 0;
+                indent = current->level * component->indent_width + left_margin + 20;
+                icon_offset = (current->icon_text && strlen(current->icon_text) > 0) ? component->icon_size + 4 : 4;
+                node_width = indent + icon_offset + (int)(text_len * char_width);
+                if (node_width > max_width) max_width = node_width;
+
+                if (current->expanded && current->child_count > 0) {
+                    TreeNode** new_stack = (TreeNode**)realloc(stack, sizeof(TreeNode*) * (stack_top + current->child_count));
+                    if (new_stack) {
+                        stack = new_stack;
+                        for (int j = current->child_count - 1; j >= 0; j--) {
+                            stack[stack_top++] = current->children[j];
+                        }
+                    }
+                }
+            }
+            free(stack);
+        }
+    }
+    return max_width;
 }
 
 // 更新滚动条状态
 void treeview_update_scrollbar(TreeViewComponent* component) {
     if (!component || !component->layer) return;
-    
+
     Layer* layer = component->layer;
-    
-    // 计算内容高度
+
     int content_height = treeview_calculate_content_height(component);
     layer->content_height = content_height;
-    
-    int visible_height = layer->rect.h;
-    
-    // printf("DEBUG: treeview_update_scrollbar - content_height=%d, visible_height=%d, scrollable=%d\n", 
-    //        content_height, visible_height, layer->scrollable);
-    
-    // // 更新滚动条可见性和位置
-    // if ((layer->scrollable == 1 || layer->scrollable == 3) && layer->scrollbar_v) {
-    //     layer->scrollbar_v->visible = (content_height > visible_height);
-    //     printf("DEBUG: scrollbar_v visible set to %d\n", layer->scrollbar_v->visible);
-    // }
+
+    int content_width = treeview_estimate_content_width(component);
+    layer->content_width = content_width;
 }
 
 // 滚动到指定节点
@@ -773,7 +814,7 @@ int treeview_is_expand_icon_clicked(TreeViewComponent* component, TreeNode* node
         
         if (current == node) {
             // 找到节点，检查是否点击在展开图标上
-            int icon_x = component->layer->rect.x + current->level * component->indent_width + left_margin;
+            int icon_x = component->layer->rect.x - component->layer->scroll_offset_x + current->level * component->indent_width + left_margin;
             int icon_y = item_y + (component->item_height - 10) / 2;
             
             return (x >= icon_x && x < icon_x + 10 && y >= icon_y && y < icon_y + 10);
@@ -797,7 +838,7 @@ int treeview_is_expand_icon_clicked(TreeViewComponent* component, TreeNode* node
                 
                 if (stack_node == node) {
                     // 找到节点，检查是否点击在展开图标上
-                    int icon_x = component->layer->rect.x + stack_node->level * component->indent_width + left_margin;
+                    int icon_x = component->layer->rect.x - component->layer->scroll_offset_x + stack_node->level * component->indent_width + left_margin;
                     int icon_y = item_y + (component->item_height - 10) / 2;
                     
                     free(stack);
@@ -1018,7 +1059,7 @@ void treeview_component_render(Layer* layer) {
         
         if (should_render_node) {
             // 绘制节点
-            int text_x = layer->rect.x + node->level * component->indent_width + 20;
+            int text_x = layer->rect.x - layer->scroll_offset_x + node->level * component->indent_width + 20;
             int text_y = item_y + (component->item_height - text_height) / 2;
             
             // 绘制背景
@@ -1029,7 +1070,7 @@ void treeview_component_render(Layer* layer) {
             
             // 绘制展开/折叠图标
             if (node->child_count > 0 || node->expandable) {
-                int icon_x = layer->rect.x + node->level * component->indent_width + left_margin;
+                int icon_x = layer->rect.x - layer->scroll_offset_x + node->level * component->indent_width + left_margin;
                 int icon_y = item_y + (component->item_height - 10) / 2;
 
                 // 尝试加载 SVG/图片图标 → 文字图标 → 默认矩形 +/-
@@ -1087,7 +1128,7 @@ void treeview_component_render(Layer* layer) {
             Color text_color = node->selected ? component->selected_text_color : default_color;
             if (node->text && layer->font && layer->font->default_font) {
                 // 计算文本起始X：展开图标(10px) + 间距(8px)
-                int base_text_x = layer->rect.x + node->level * component->indent_width + left_margin + 18;
+                int base_text_x = layer->rect.x - layer->scroll_offset_x + node->level * component->indent_width + left_margin + 18;
                 int text_y_base = item_y + (component->item_height - text_height) / 2;
                 int text_x_offset = 0;
 
@@ -1188,7 +1229,7 @@ void treeview_component_render(Layer* layer) {
                 int should_render_current = !(item_y + component->item_height < visible_top || item_y > visible_bottom);
                 
                 if (should_render_current) {
-                        int current_text_x = layer->rect.x + current->level * component->indent_width + 20;
+                        int current_text_x = layer->rect.x - layer->scroll_offset_x + current->level * component->indent_width + 20;
                     int current_text_y = item_y + (component->item_height - text_height) / 2;
                     
                     // 绘制背景
@@ -1199,7 +1240,7 @@ void treeview_component_render(Layer* layer) {
                     
                     // 绘制展开/折叠图标
                     if (current->child_count > 0 || current->expandable) {
-                        int icon_x = layer->rect.x + current->level * component->indent_width + left_margin;
+                        int icon_x = layer->rect.x - layer->scroll_offset_x + current->level * component->indent_width + left_margin;
                         int icon_y = item_y + (component->item_height - 10) / 2;
 
                         Texture* icon_tex = NULL;
@@ -1255,7 +1296,7 @@ void treeview_component_render(Layer* layer) {
                     Color current_text_color = current->selected ? component->selected_text_color : component->text_color;
                     if (current->text && layer->font && layer->font->default_font) {
                         // base text x: 展开图标(10px) + 间距(10px)
-                        int base_text_x = layer->rect.x + current->level * component->indent_width + left_margin + 20;
+                        int base_text_x = layer->rect.x - layer->scroll_offset_x + current->level * component->indent_width + left_margin + 20;
                         int text_y_base = item_y + (component->item_height - text_height) / 2;
                         int text_x_offset = 0;
 
