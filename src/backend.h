@@ -19,6 +19,7 @@ void backend_set_windowsize(int width,int  height);
 void backend_set_window_size(char* title);
 void backend_set_resizable(int resizable);
 void backend_set_minimum_windowsize(int width, int height);
+void backend_resize_root_layout(Layer* root, int width, int height);
 void backend_quit();
 void backend_render_present();
 void backend_delay(int delay);
@@ -48,9 +49,11 @@ int backend_query_texture(Texture * texture,
 
 // 主循环回调类型
 typedef void (*UpdateCallback)(void);
+typedef void (*ResizeCallback)(Layer* root, int width, int height);
 
 // 注册主循环更新回调（每帧调用）
 void backend_register_update_callback(UpdateCallback callback);
+void backend_set_resize_callback(ResizeCallback callback);
 
 void backend_render_rounded_rect(Rect* rect, Color color, int radius);
 void backend_render_rounded_rect_color(Rect* rect, unsigned char r, unsigned char g, unsigned char b, unsigned char a, int radius);

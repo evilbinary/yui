@@ -34,6 +34,7 @@ int g_running=0;
 // 主循环更新回调管理
 static UpdateCallback update_callbacks[MAX_UPDATE_CALLBACKS] = {NULL};
 static int update_callback_count = 0;
+static ResizeCallback resize_callback = NULL;
 
 // 字体缓存结构
 typedef struct {
@@ -64,17 +65,27 @@ int texture_cache_initialized = 0;
 
 void handle_event(Layer* root, SDL_Event* event);
 
-static void backend_handle_window_resize(Layer* root) {
-    if (!root || !window) return;
-    int w = 0, h = 0;
-    SDL_GetWindowSize(window, &w, &h);
-    if (w <= 0 || h <= 0) return;
+void backend_resize_root_layout(Layer* root, int w, int h) {
+    if (!root) return;
     if (root->rect.w == w && root->rect.h == h) return;
     root->rect.x = 0;
     root->rect.y = 0;
     root->rect.w = w;
     root->rect.h = h;
     layout_layer(root);
+}
+
+static void backend_default_resize(Layer* root, int w, int h) {
+    backend_resize_root_layout(root, w, h);
+}
+
+static void backend_handle_window_resize(Layer* root) {
+    if (!root || !window) return;
+    int w = 0, h = 0;
+    SDL_GetWindowSize(window, &w, &h);
+    if (w <= 0 || h <= 0) return;
+    ResizeCallback cb = resize_callback ? resize_callback : backend_default_resize;
+    cb(root, w, h);
 }
 
 #ifdef __EMSCRIPTEN__
@@ -2218,6 +2229,10 @@ void backend_render_backdrop_filter(Rect* rect, int blur_radius, float saturatio
 // ====================== 主循环回调管理 ======================
 
 // 注册主循环更新回调
+void backend_set_resize_callback(ResizeCallback callback) {
+    resize_callback = callback;
+}
+
 void backend_register_update_callback(UpdateCallback callback) {
     if (!callback) return;
 
