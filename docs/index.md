@@ -34,7 +34,8 @@
 |------|------|------|------|
 | Dialog | [dialog-component.md](dialog-component.md) | ✅ 完整 | 对话框组件 |
 | Select | [select-component.md](select-component.md) | ✅ 完整 | 下拉选择组件 |
-| Button | [待补充]() | ⏳ 计划中 | 按钮组件 |
+| Text | [text-component.md](components/text-component.md) | ✅ 完整 | 文本编辑与语法高亮 |
+| Button | [button-component.md](components/button-component.md) | ✅ 完整 | 按钮组件 |
 | Input | [待补充]() | ⏳ 计划中 | 输入框组件 |
 | List | [待补充]() | ⏳ 计划中 | 列表组件 |
 | Grid | [待补充]() | ⏳ 计划中 | 网格组件 |
@@ -176,6 +177,7 @@
 - [x] theme.md
 - [x] dialog-component.md
 - [x] select-component.md
+- [x] text-component.md
 
 ### ⏳ 待完善文档
 - [ ] 组件详细文档 (Button, Input, List 等)

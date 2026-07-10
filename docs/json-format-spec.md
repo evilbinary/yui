@@ -400,18 +400,55 @@ Progress 组件支持的属性（除通用属性外）：
 
 ### 9. Text组件特有属性
 
+Text 组件用于文本显示与编辑，支持多行、滚动、行号与语法高亮。完整说明见 [Text 组件文档](components/text-component.md)。
+
 ```json
 {
   "id": "text_content",
   "type": "Text",
-  "text": "文本内容",        // 文本内容
+  "text": "文本内容",
+  "placeholder": "请输入...",
+  "multiline": true,
+  "editable": true,
+  "scrollable": 1,
+  "showLineNumbers": true,
+  "lineNumberWidth": 40,
+  "selectionColor": "#6BAF52CC",
+  "syntaxHighlight": "json",
+  "syntaxColors": {
+    "keyword": "#CBA6F7",
+    "string": "#A6E3A1",
+    "number": "#FAB387",
+    "comment": "#6C7086",
+    "punctuation": "#89DCEB"
+  },
   "style": {
-    "textColor": "#333333", // 文本颜色
-    "fontSize": 16,          // 字体大小
-    "textAlign": "left"     // 文本对齐方式
+    "color": "#CDD6F4",
+    "bgColor": "#11111B",
+    "fontSize": 14,
+    "fontFamily": "monospace",
+    "padding": [12, 12, 12, 12],
+    "cursorColor": "#89B4FA"
+  },
+  "events": {
+    "onChange": "@onTextChange"
   }
 }
 ```
+
+| 属性 | 类型 | 说明 |
+|------|------|------|
+| `text` | string | 文本内容 |
+| `placeholder` | string | 占位提示 |
+| `maxLength` | number | 最大长度 |
+| `multiline` | boolean | 多行模式 |
+| `editable` | boolean | 是否可编辑 |
+| `scrollable` | number | 滚动模式，`1` 为垂直滚动 |
+| `showLineNumbers` | boolean | 显示行号（需 `multiline`） |
+| `lineNumberWidth` | number | 行号区域宽度 |
+| `selectionColor` | string | 选区颜色 |
+| `syntaxHighlight` | string | 语法高亮：`json`、`sql`、`markdown`（或 `md`） |
+| `syntaxColors` | object | 语法高亮配色，键名见 [Text 组件文档](components/text-component.md#syntaxcolors-可用键名) |
 
 ### 10. TreeView组件特有属性
 

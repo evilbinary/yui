@@ -134,7 +134,7 @@
               {
                 "id": "sqlEditorContainer",
                 "type": "View",
-                "size": [660, 200],
+                "size": [660, 400],
                 "layout": {
                   "type": "vertical",
                   "spacing": 0
@@ -350,7 +350,7 @@
                     "type": "Text",
                     "syntaxHighlight": "sql",
                     "text": "",
-                    "size": [660, 140],
+                    "size": [660, 340],
                     "flex": 1,
                     "multiline": true,
                     "editable": true,
@@ -388,7 +388,7 @@
               {
                 "id": "resultContainer",
                 "type": "View",
-                "size": [660, 328],
+                "size": [660, 128],
                 "layout": {
                   "type": "vertical",
                   "spacing": 0
