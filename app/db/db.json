@@ -576,6 +576,122 @@
         "buttonHoverColor": "#585B70",
         "buttonTextColor": "#CDD6F4"
       }
+    },
+    {
+      "id": "fileDialogOverlay",
+      "type": "View",
+      "visible": false,
+      "position": [0, 0],
+      "size": [900, 600],
+      "style": { "bgColor": "#00000066" },
+      "layout": { "type": "absolute" },
+      "children": [
+        {
+          "id": "fileDialogPanel",
+          "type": "View",
+          "position": [120, 60],
+          "size": [660, 480],
+          "layout": { "type": "vertical", "spacing": 0, "padding": [0, 0, 0, 0] },
+          "style": { "bgColor": "#1E1E2E", "borderRadius": 8 },
+          "children": [
+            {
+              "id": "fileDialogTitleBar",
+              "type": "View",
+              "size": [660, 36],
+              "layout": { "type": "horizontal", "align": "center", "padding": [0, 16, 0, 16] },
+              "style": { "bgColor": "#181825", "borderBottomWidth": 1, "borderBottomColor": "#313244" },
+              "children": [
+                {
+                  "id": "fileDialogTitle",
+                  "type": "Label",
+                  "text": "打开文件",
+                  "style": { "color": "#CDD6F4", "fontSize": 13, "fontWeight": "bold" }
+                }
+              ]
+            },
+            {
+              "id": "fileDialogNav",
+              "type": "View",
+              "size": [660, 36],
+              "layout": { "type": "horizontal", "spacing": 6, "padding": [6, 12, 6, 12], "align": "center" },
+              "style": { "bgColor": "#11111B", "borderBottomWidth": 1, "borderBottomColor": "#313244" },
+              "children": [
+                {
+                  "id": "fileDialogUpBtn",
+                  "type": "Button",
+                  "size": [32, 24],
+                  "text": "..",
+                  "style": { "color": "#89B4FA", "bgColor": "#313244", "borderRadius": 3, "fontSize": 13 },
+                  "events": { "onClick": "@onFileBrowserUp" }
+                },
+                {
+                  "id": "fileDialogPath",
+                  "type": "Label",
+                  "size": [580, 24],
+                  "text": "./",
+                  "style": { "color": "#A6ADC8", "fontSize": 11 }
+                }
+              ]
+            },
+            {
+              "id": "fileDialogList",
+              "type": "Treeview",
+              "size": [660, 320],
+              "scrollable": 1,
+              "style": { "color": "#CDD6F4", "bgColor": "#1E1E2E", "fontSize": 12 },
+              "events": { "onSelect": "@onFileBrowserSelect" }
+            },
+            {
+              "id": "fileDialogInputRow",
+              "type": "View",
+              "size": [660, 36],
+              "layout": { "type": "horizontal", "spacing": 6, "padding": [6, 12, 6, 12], "align": "center" },
+              "style": { "bgColor": "#11111B", "borderTopWidth": 1, "borderTopColor": "#313244" },
+              "children": [
+                {
+                  "id": "fileDialogInputLabel",
+                  "type": "Label",
+                  "text": "文件名:",
+                  "style": { "color": "#6C7086", "fontSize": 11 }
+                },
+                {
+                  "id": "fileDialogInput",
+                  "type": "Input",
+                  "size": [520, 24],
+                  "text": "",
+                  "placeholder": "输入文件名...",
+                  "style": { "color": "#CDD6F4", "bgColor": "#1E1E2E", "fontSize": 11, "padding": [4, 8, 4, 8] }
+                }
+              ]
+            },
+            {
+              "id": "fileDialogButtons",
+              "type": "View",
+              "size": [660, 44],
+              "layout": { "type": "horizontal", "spacing": 10, "padding": [8, 16, 8, 16] },
+              "style": { "bgColor": "#181825", "borderTopWidth": 1, "borderTopColor": "#313244" },
+              "children": [
+                {
+                  "id": "fileDialogOkBtn",
+                  "type": "Button",
+                  "size": [72, 28],
+                  "text": "确定",
+                  "style": { "color": "#A6E3A1", "bgColor": "#313244", "borderRadius": 4, "fontSize": 12 },
+                  "events": { "onClick": "@onFileBrowserOk" }
+                },
+                {
+                  "id": "fileDialogCancelBtn",
+                  "type": "Button",
+                  "size": [72, 28],
+                  "text": "取消",
+                  "style": { "color": "#F38BA8", "bgColor": "#313244", "borderRadius": 4, "fontSize": 12 },
+                  "events": { "onClick": "@onFileBrowserCancel" }
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ],
   "events": {

@@ -12,6 +12,8 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include <dirent.h>
+#include <sys/stat.h>
 #include "../../lib/cjson/cJSON.h"
 
 // Layer 结构的最小定义
@@ -27,6 +29,7 @@ extern struct Layer* g_layer_root;
 
 JSValue js_read_file(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv);
 JSValue js_write_file(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv);
+JSValue js_list_dir(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv);
 
 // 设置文本
 static JSValue js_set_text(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
@@ -1057,6 +1060,7 @@ void js_module_register_api(void)
 
     JS_SetPropertyStr(g_js_ctx, yui_obj, "readFile", JS_NewCFunction(g_js_ctx, js_read_file, "readFile", 1));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "writeFile", JS_NewCFunction(g_js_ctx, js_write_file, "writeFile", 2));
+    JS_SetPropertyStr(g_js_ctx, yui_obj, "listDir", JS_NewCFunction(g_js_ctx, js_list_dir, "listDir", 1));
 
     // 创建并注册 Inspect 对象
     JSValue inspect_obj = JS_NewObject(g_js_ctx);
@@ -1371,4 +1375,45 @@ JSValue js_write_file(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     JS_FreeCString(ctx, file_path);
     JS_FreeCString(ctx, content);
     return JS_TRUE;
+}
+
+// 列出目录内容
+JSValue js_list_dir(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+    const char* dir_path = ".";
+    int need_free = 0;
+
+    if (argc >= 1) {
+        dir_path = JS_ToCString(ctx, argv[0]);
+        if (!dir_path) dir_path = ".";
+        else need_free = 1;
+    }
+
+    DIR* dir = opendir(dir_path);
+    if (!dir) {
+        if (need_free) JS_FreeCString(ctx, dir_path);
+        return JS_NULL;
+    }
+
+    JSValue result = JS_NewArray(ctx);
+    int idx = 0;
+    struct dirent* entry;
+
+    while ((entry = readdir(dir)) != NULL) {
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) continue;
+
+        JSValue item = JS_NewObject(ctx);
+        JS_SetPropertyStr(ctx, item, "name", JS_NewString(ctx, entry->d_name));
+
+        char full_path[1024];
+        snprintf(full_path, sizeof(full_path), "%s/%s", dir_path, entry->d_name);
+        struct stat st;
+        int is_dir = (stat(full_path, &st) == 0 && S_ISDIR(st.st_mode)) ? 1 : 0;
+        JS_SetPropertyStr(ctx, item, "isDir", JS_NewBool(ctx, is_dir));
+
+        JS_SetPropertyUint32(ctx, result, idx++, item);
+    }
+
+    closedir(dir);
+    if (need_free) JS_FreeCString(ctx, dir_path);
+    return result;
 }

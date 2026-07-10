@@ -257,19 +257,123 @@ function onFormat() {
     updateStatus("格式化完成", "#89B4FA");
 }
 
-function onSave() {
+// ====================== File Browser ======================
+
+var fileDialogMode = "open";  // "open" or "save"
+var fileDialogPath = "./";
+var fileDialogSelected = "";
+
+function showFileDialog(mode) {
+    fileDialogMode = mode;
+    fileDialogSelected = "";
+    var title = yui.find("fileDialogTitle");
+    if (title) title.text = mode === "save" ? "保存文件" : "打开文件";
+    var input = yui.find("fileDialogInput");
+    if (input) input.text = "";
+    var overlay = yui.find("fileDialogOverlay");
+    if (overlay) overlay.visible = true;
+    refreshFileList(fileDialogPath || "./");
+}
+
+function hideFileDialog() {
+    var overlay = yui.find("fileDialogOverlay");
+    if (overlay) overlay.visible = false;
+}
+
+function refreshFileList(path) {
+    fileDialogPath = path;
+    var pathLabel = yui.find("fileDialogPath");
+    if (pathLabel) pathLabel.text = path;
+
+    var entries = YUI.listDir(path);
+    var treeData = [];
+    if (entries) {
+        // Directories first, then files
+        var dirs = [];
+        var files = [];
+        for (var i = 0; i < entries.length; i++) {
+            if (entries[i].isDir) {
+                dirs.push({ text: entries[i].name, icon: "folder", icon_text: "", expandable: false, _isDir: true });
+            } else {
+                files.push({ text: entries[i].name, icon: "file", icon_text: "", _isDir: false });
+            }
+        }
+        treeData = dirs.concat(files);
+    }
+    var tree = yui.find("fileDialogList");
+    if (tree) tree.data = treeData;
+}
+
+function onFileBrowserUp() {
+    var path = fileDialogPath || "./";
+    // Strip trailing slash and go up
+    if (path.endsWith("/")) path = path.substring(0, path.length - 1);
+    if (path === "" || path === ".") {
+        fileDialogPath = "./";
+    } else {
+        var lastSlash = path.lastIndexOf("/");
+        fileDialogPath = lastSlash >= 0 ? path.substring(0, lastSlash + 1) : "./";
+    }
+    refreshFileList(fileDialogPath);
+}
+
+function onFileBrowserSelect(layerId) {
+    if (!layerId) return;
+    var layer = yui.find(layerId);
+    if (!layer) return;
+    var nodeText = layer.text;
+    if (!nodeText) return;
+    var node = JSON.parse(nodeText);
+    var name = node.text;
+
+    var newPath = fileDialogPath;
+    if (!newPath.endsWith("/")) newPath += "/";
+
+    if (node._isDir) {
+        newPath += name + "/";
+        refreshFileList(newPath);
+    } else {
+        fileDialogSelected = name;
+        var input = yui.find("fileDialogInput");
+        if (input) input.text = name;
+    }
+}
+
+function onFileBrowserOk() {
+    var input = yui.find("fileDialogInput");
+    var filename = input ? input.text.trim() : fileDialogSelected;
+    if (!filename) {
+        updateStatus("请输入文件名", "#F38BA8");
+        return;
+    }
+
+    var path = fileDialogPath;
+    if (!path.endsWith("/")) path += "/";
+    var fullPath = path + filename;
+
+    hideFileDialog();
+
+    if (fileDialogMode === "save") {
+        doSaveFile(fullPath);
+    } else {
+        doOpenFile(fullPath);
+    }
+}
+
+function onFileBrowserCancel() {
+    hideFileDialog();
+}
+
+function doSaveFile(path) {
     var editor = yui.find("sqlEditor");
     var sql = editor ? editor.text : "";
     if (!sql || sql.trim() === "") {
         updateStatus("没有内容可保存", "#F38BA8");
         return;
     }
-
     if (activeTab >= 0 && activeTab < tabs.length) {
         tabs[activeTab].sql = sql;
     }
-
-    var path = "queries/" + tabs[activeTab].name.replace(/\s+/g, "_") + ".sql";
     var ok = YUI.writeFile(path, sql);
     if (ok) {
         updateStatus("已保存到 " + path, "#A6E3A1");
@@ -278,19 +382,28 @@ function onSave() {
     }
 }
 
-function onOpen() {
-    if (activeTab < 0 || activeTab >= tabs.length) return;
-
-    var path = "queries/" + tabs[activeTab].name.replace(/\s+/g, "_") + ".sql";
+function doOpenFile(path) {
     var content = YUI.readFile(path);
     if (content) {
-        tabs[activeTab].sql = content;
+        if (activeTab >= 0 && activeTab < tabs.length) {
+            tabs[activeTab].sql = content;
+            tabs[activeTab].name = path.replace(/^.*[\\\/]/, "").replace(/\.sql$/, "") || tabs[activeTab].name;
+        }
         var editor = yui.find("sqlEditor");
         if (editor) editor.text = content;
+        renderTabs();
         updateStatus("已打开 " + path, "#A6E3A1");
     } else {
         updateStatus("打开失败: " + path, "#F38BA8");
     }
+}
+
+function onSave() {
+    showFileDialog("save");
+}
+
+function onOpen() {
+    showFileDialog("open");
 }
 
 // ====================== Database Tree (Multi-DB with Categories) ======================
