@@ -26,6 +26,26 @@ typedef struct {
 
 #define MAX_HIGHLIGHT_TOKENS 256
 
+static int syntax_utf8_char_len(const char* text, int pos, int end) {
+    if (pos >= end) return 0;
+    unsigned char c = (unsigned char)text[pos];
+    int len = 1;
+    if ((c & 0x80) == 0) len = 1;
+    else if ((c & 0xE0) == 0xC0) len = 2;
+    else if ((c & 0xF0) == 0xE0) len = 3;
+    else if ((c & 0xF8) == 0xF0) len = 4;
+    if (pos + len > end) len = end - pos;
+    return len;
+}
+
+static int syntax_append_default_token(HighlightToken tokens[], int* count, int max_tokens,
+                                       const char* text, int pos, int end) {
+    int clen = syntax_utf8_char_len(text, pos, end);
+    if (clen <= 0 || *count >= max_tokens) return pos + (clen > 0 ? clen : 1);
+    tokens[(*count)++] = (HighlightToken){pos, pos + clen, HL_TOKEN_DEFAULT};
+    return pos + clen;
+}
+
 void text_syntax_config_init(TextSyntaxConfig* config, TextSyntaxLanguage language, Color default_color) {
     if (!config) return;
     memset(config, 0, sizeof(TextSyntaxConfig));
@@ -174,8 +194,7 @@ static int json_tokenize_line(const char* text, int start, int end, HighlightTok
             continue;
         }
 
-        tokens[count++] = (HighlightToken){pos, pos + 1, HL_TOKEN_DEFAULT};
-        pos++;
+        pos = syntax_append_default_token(tokens, &count, max_tokens, text, pos, end);
     }
 
     return count;
@@ -350,8 +369,7 @@ static int sql_tokenize_line(const char* text, int start, int end, HighlightToke
             continue;
         }
 
-        tokens[count++] = (HighlightToken){pos, pos + 1, HL_TOKEN_DEFAULT};
-        pos++;
+        pos = syntax_append_default_token(tokens, &count, max_tokens, text, pos, end);
     }
 
     return count;
@@ -602,8 +620,7 @@ static int markdown_tokenize_line(const char* text, int start, int end, Highligh
             pos = ls + 1;
         }
 
-        tokens[count++] = (HighlightToken){pos, pos + 1, HL_TOKEN_DEFAULT};
-        pos++;
+        pos = syntax_append_default_token(tokens, &count, max_tokens, text, pos, end);
         md_next:;
     }
 
