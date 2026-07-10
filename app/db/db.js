@@ -210,12 +210,13 @@ function onAbout() {
 // ====================== Toolbar Actions ======================
 
 function executeQuery() {
-    var sql = "";
-    if (activeTab >= 0 && activeTab < tabs.length) {
-        sql = tabs[activeTab].sql;
-    }
+    var editor = yui.find("sqlEditor");
+    var sql = editor ? editor.text : "";
     if (!sql || sql.trim() === "") {
         return;
+    }
+    if (activeTab >= 0 && activeTab < tabs.length) {
+        tabs[activeTab].sql = sql;
     }
 
     updateStatus("执行中...", "#F9E2AF");
@@ -250,17 +251,22 @@ function onFormat() {
     formatted = formatted.replace(/\b(SELECT|FROM|WHERE|AND|OR|ORDER BY|GROUP BY|HAVING|LIMIT|JOIN|LEFT JOIN|RIGHT JOIN|INNER JOIN|ON|INSERT INTO|VALUES|UPDATE|SET|DELETE|CREATE|DROP|ALTER|TABLE|INDEX|VIEW)\b/gi,
         function(m) { return "\n" + m.toUpperCase(); });
     editor.text = formatted.trim();
+    if (activeTab >= 0 && activeTab < tabs.length) {
+        tabs[activeTab].sql = editor.text;
+    }
     updateStatus("格式化完成", "#89B4FA");
 }
 
 function onSave() {
-    var sql = "";
-    if (activeTab >= 0 && activeTab < tabs.length) {
-        sql = tabs[activeTab].sql;
-    }
+    var editor = yui.find("sqlEditor");
+    var sql = editor ? editor.text : "";
     if (!sql || sql.trim() === "") {
         updateStatus("没有内容可保存", "#F38BA8");
         return;
+    }
+
+    if (activeTab >= 0 && activeTab < tabs.length) {
+        tabs[activeTab].sql = sql;
     }
 
     var path = "queries/" + tabs[activeTab].name.replace(/\s+/g, "_") + ".sql";
