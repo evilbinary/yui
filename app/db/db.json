@@ -397,6 +397,7 @@
                       {
                         "id": "resultTab",
                         "type": "Label",
+                        "size": [80, 24],
                         "text": "查询结果",
                         "style": {
                           "color": "#CDD6F4",

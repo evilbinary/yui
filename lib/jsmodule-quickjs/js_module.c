@@ -26,6 +26,7 @@ extern struct Layer* g_layer_root;
 /* ====================== QuickJS 原生函数 ====================== */
 
 JSValue js_read_file(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv);
+JSValue js_write_file(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv);
 
 // 设置文本
 static JSValue js_set_text(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
@@ -1055,6 +1056,7 @@ void js_module_register_api(void)
     JS_SetPropertyStr(g_js_ctx, yui_obj, "themeUnload", JS_NewCFunction(g_js_ctx, js_theme_unload, "themeUnload", 1));
 
     JS_SetPropertyStr(g_js_ctx, yui_obj, "readFile", JS_NewCFunction(g_js_ctx, js_read_file, "readFile", 1));
+    JS_SetPropertyStr(g_js_ctx, yui_obj, "writeFile", JS_NewCFunction(g_js_ctx, js_write_file, "writeFile", 2));
 
     // 创建并注册 Inspect 对象
     JSValue inspect_obj = JS_NewObject(g_js_ctx);
@@ -1337,4 +1339,36 @@ JSValue js_read_file(JSContext* ctx, JSValueConst this_val, int argc, JSValueCon
     JSValue result = JS_NewString(ctx, content);
     free(content);
     return result;
+}
+
+// 文件写入函数绑定
+JSValue js_write_file(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+    if (argc < 2) {
+        return JS_ThrowTypeError(ctx, "Expected 2 arguments: file_path, content");
+    }
+
+    const char* file_path = JS_ToCString(ctx, argv[0]);
+    if (!file_path) {
+        return JS_ThrowTypeError(ctx, "Invalid file path");
+    }
+
+    const char* content = JS_ToCString(ctx, argv[1]);
+    if (!content) {
+        JS_FreeCString(ctx, file_path);
+        return JS_ThrowTypeError(ctx, "Invalid content");
+    }
+
+    FILE* f = fopen(file_path, "w");
+    if (!f) {
+        JS_FreeCString(ctx, file_path);
+        JS_FreeCString(ctx, content);
+        return JS_FALSE;
+    }
+
+    fwrite(content, 1, strlen(content), f);
+    fclose(f);
+
+    JS_FreeCString(ctx, file_path);
+    JS_FreeCString(ctx, content);
+    return JS_TRUE;
 }

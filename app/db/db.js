@@ -132,8 +132,10 @@ function onNewTab() {
 }
 
 function onSqlChange(text) {
-    if (activeTab >= 0 && activeTab < tabs.length) {
-        tabs[activeTab].sql = text;
+    // text 参数是 layer ID，不是文本内容，需要从 editor 读取
+    var editor = yui.find("sqlEditor");
+    if (editor && activeTab >= 0 && activeTab < tabs.length) {
+        tabs[activeTab].sql = editor.text;
     }
 }
 
@@ -252,11 +254,37 @@ function onFormat() {
 }
 
 function onSave() {
-    updateStatus("保存: 未实现", "#F9E2AF");
+    var sql = "";
+    if (activeTab >= 0 && activeTab < tabs.length) {
+        sql = tabs[activeTab].sql;
+    }
+    if (!sql || sql.trim() === "") {
+        updateStatus("没有内容可保存", "#F38BA8");
+        return;
+    }
+
+    var path = "queries/" + tabs[activeTab].name.replace(/\s+/g, "_") + ".sql";
+    var ok = YUI.writeFile(path, sql);
+    if (ok) {
+        updateStatus("已保存到 " + path, "#A6E3A1");
+    } else {
+        updateStatus("保存失败: " + path, "#F38BA8");
+    }
 }
 
 function onOpen() {
-    updateStatus("打开: 未实现", "#F9E2AF");
+    if (activeTab < 0 || activeTab >= tabs.length) return;
+
+    var path = "queries/" + tabs[activeTab].name.replace(/\s+/g, "_") + ".sql";
+    var content = YUI.readFile(path);
+    if (content) {
+        tabs[activeTab].sql = content;
+        var editor = yui.find("sqlEditor");
+        if (editor) editor.text = content;
+        updateStatus("已打开 " + path, "#A6E3A1");
+    } else {
+        updateStatus("打开失败: " + path, "#F38BA8");
+    }
 }
 
 // ====================== Database Tree (Multi-DB with Categories) ======================

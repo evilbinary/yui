@@ -11,3 +11,4 @@ gdb_crash.log
 .shadowkitten/
 *.log
 app/db/db.json
+queries
