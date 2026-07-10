@@ -48,10 +48,14 @@
             "style": {
                 "bgColor": "#181825"
             },
+            "layout": {
+                "type": "vertical"
+            },
             "children": [
                 {
                     "id": "home",
                     "type": "View",
+                    "flex": 1,
                     "visible": true,
                     "style": {
                         "bgColor": "#45475A"
@@ -73,6 +77,7 @@
                 {
                     "id": "list",
                     "type": "View",
+                    "flex": 1,
                     "visible": false,
                     "style": {
                         "bgColor": "#45475A"
@@ -94,6 +99,7 @@
                 {
                     "id": "detail",
                     "type": "View",
+                    "flex": 1,
                     "visible": false,
                     "style": {
                         "bgColor": "#45475A"

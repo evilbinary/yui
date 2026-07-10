@@ -361,14 +361,19 @@ void layout_layer(Layer* layer){
             
             for (int i = 0; i < layer->child_count; i++) {
                 Layer* child = layer->children[i];
-                
-                // 添加NULL检查
+
                 if (!child) {
                     printf("layout_layer: WARNING: skipping NULL child[%d]\n", i);
                     fflush(stdout);
                     continue;
                 }
-                
+
+                if (child->visible == IN_VISIBLE) {
+                    printf("layout_layer: skipping invisible child[%d] of %s\n", i, layer->id ? layer->id : "(null)");
+                    fflush(stdout);
+                    continue;
+                }
+
                 if (child->flex_ratio > 0 && total_flex > 0) {
                     child->rect.h = (int)(available_height * 
                                         (child->flex_ratio / total_flex));

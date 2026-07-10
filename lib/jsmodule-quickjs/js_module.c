@@ -190,8 +190,9 @@ static JSValue js_hide(JSContext *ctx, JSValueConst this_val, int argc, JSValueC
     if (layer_id && g_layer_root) {
         struct Layer* layer = find_layer_by_id(g_layer_root, layer_id);
         if (layer) {
-            layer_hide(layer);
-            printf("JS(QuickJS): Hide layer '%s'\n", layer_id);
+            if (layer_hide(layer)) {
+                printf("JS(QuickJS): Hide layer '%s'\n", layer_id);
+            }
         }
     }
 
@@ -210,8 +211,9 @@ static JSValue js_show(JSContext *ctx, JSValueConst this_val, int argc, JSValueC
     if (layer_id && g_layer_root) {
         struct Layer* layer = find_layer_by_id(g_layer_root, layer_id);
         if (layer) {
-            layer_show(layer);
-            printf("JS(QuickJS): Show layer '%s'\n", layer_id);
+            if (layer_show(layer)) {
+                printf("JS(QuickJS): Show layer '%s'\n", layer_id);
+            }
         }
     }
 
@@ -301,6 +303,7 @@ static JSValue js_render_from_json(JSContext *ctx, JSValueConst this_val, int ar
         JS_FreeCString(ctx, json_str);
         return JS_NewInt32(ctx, -3);
     }
+    new_layer->visible = IN_VISIBLE;
 
     if (append) {
         if (append_layer_child_qjs(parent_layer, new_layer) != 0) {
@@ -329,7 +332,6 @@ static JSValue js_render_from_json(JSContext *ctx, JSValueConst this_val, int ar
         js_module_load_from_json(page_json, NULL, 1);
         cJSON_Delete(page_json);
     }
-    layer_lifecycle_on_show(new_layer);
 
     printf("JS(QuickJS): Successfully rendered JSON to layer '%s', new layer id: '%s'\n",
            layer_id, new_layer->id);

@@ -1124,6 +1124,9 @@ int layer_show(Layer* layer) {
     if (!layer) {
         return 0;
     }
+    if (layer->visible == VISIBLE) {
+        return 0;
+    }
 
     layer_set_visible(layer, VISIBLE);
     return 1;
@@ -1131,6 +1134,9 @@ int layer_show(Layer* layer) {
 
 int layer_hide(Layer* layer) {
     if (!layer) {
+        return 0;
+    }
+    if (layer->visible == IN_VISIBLE) {
         return 0;
     }
 

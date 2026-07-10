@@ -1,6 +1,7 @@
 #include "layer_lifecycle.h"
 
 #include "cJSON.h"
+#include "layout.h"
 #include "layer.h"
 #include "layer_update.h"
 #include "ytype.h"
@@ -23,9 +24,18 @@ void layer_lifecycle_bind_events(Layer* layer, cJSON* events) {
 
     cJSON* event = events->child;
     while (event) {
-        if (layer_lifecycle_is_event(event->string)) {
-            layer->lifecycle_enabled = 1;
-            return;
+        if (!event->string) {
+            event = event->next;
+            continue;
+        }
+        if (strcmp(event->string, "onLoad") == 0) {
+            layer->lifecycle_flags |= LIFECYCLE_ON_LOAD;
+        } else if (strcmp(event->string, "onShow") == 0) {
+            layer->lifecycle_flags |= LIFECYCLE_ON_SHOW;
+        } else if (strcmp(event->string, "onHide") == 0) {
+            layer->lifecycle_flags |= LIFECYCLE_ON_HIDE;
+        } else if (strcmp(event->string, "onUnload") == 0) {
+            layer->lifecycle_flags |= LIFECYCLE_ON_UNLOAD;
         }
         event = event->next;
     }
@@ -36,7 +46,8 @@ void layer_lifecycle_set_dispatch(LayerLifecycleDispatchFn fn) {
 }
 
 static void layer_lifecycle_dispatch(Layer* layer, const char* event_type) {
-    if (!layer || !event_type || !event_type[0] || !layer->lifecycle_enabled) return;
+    if (!layer || !event_type || !event_type[0]) return;
+    if (!(layer->lifecycle_flags & LIFECYCLE_DECL_MASK)) return;
     if (!g_lifecycle_dispatch) {
         printf("LayerLifecycle: %s.%s (no JS dispatch)\n", layer->id, event_type);
         return;
@@ -45,76 +56,109 @@ static void layer_lifecycle_dispatch(Layer* layer, const char* event_type) {
 }
 
 void layer_lifecycle_on_show(Layer* layer) {
-    if (!layer || !layer->lifecycle_enabled) return;
+    if (!layer || !(layer->lifecycle_flags & LIFECYCLE_DECL_MASK)) return;
 
-    if (!layer->lifecycle_loaded) {
+    if (!(layer->lifecycle_flags & LIFECYCLE_LOADED) &&
+        (layer->lifecycle_flags & LIFECYCLE_ON_LOAD)) {
         layer_lifecycle_dispatch(layer, "onLoad");
-        layer->lifecycle_loaded = 1;
+        layer->lifecycle_flags |= LIFECYCLE_LOADED;
     }
-    if (!layer->lifecycle_shown) {
+    if (!(layer->lifecycle_flags & LIFECYCLE_SHOWN) &&
+        (layer->lifecycle_flags & LIFECYCLE_ON_SHOW)) {
         layer_lifecycle_dispatch(layer, "onShow");
-        layer->lifecycle_shown = 1;
     }
+    layer->lifecycle_flags |= LIFECYCLE_SHOWN;
 }
 
 void layer_lifecycle_on_hide(Layer* layer) {
-    if (!layer || !layer->lifecycle_enabled || !layer->lifecycle_shown) return;
-    layer_lifecycle_dispatch(layer, "onHide");
-    layer->lifecycle_shown = 0;
+    if (!layer || !(layer->lifecycle_flags & LIFECYCLE_DECL_MASK)) return;
+    if (layer->lifecycle_flags & LIFECYCLE_SHOWN) {
+        if (layer->lifecycle_flags & LIFECYCLE_ON_HIDE) {
+            layer_lifecycle_dispatch(layer, "onHide");
+        }
+        layer->lifecycle_flags &= ~LIFECYCLE_SHOWN;
+    }
+}
+
+static void layer_lifecycle_on_hide_visible(Layer* layer) {
+    if (!layer || !(layer->lifecycle_flags & LIFECYCLE_DECL_MASK)) return;
+    if (layer->lifecycle_flags & LIFECYCLE_ON_HIDE) {
+        layer_lifecycle_dispatch(layer, "onHide");
+    }
+    layer->lifecycle_flags &= ~LIFECYCLE_SHOWN;
 }
 
 void layer_lifecycle_before_destroy(Layer* layer) {
-    if (!layer || !layer->lifecycle_enabled) return;
-    if (layer->lifecycle_shown) {
+    if (!layer || !(layer->lifecycle_flags & LIFECYCLE_DECL_MASK)) return;
+    if (layer->visible == VISIBLE) {
+        layer_lifecycle_on_hide_visible(layer);
+    } else if (layer->lifecycle_flags & LIFECYCLE_SHOWN) {
         layer_lifecycle_on_hide(layer);
     }
-    if (layer->lifecycle_loaded) {
+    if ((layer->lifecycle_flags & LIFECYCLE_LOADED) &&
+        (layer->lifecycle_flags & LIFECYCLE_ON_UNLOAD)) {
         layer_lifecycle_dispatch(layer, "onUnload");
-        layer->lifecycle_loaded = 0;
+        layer->lifecycle_flags &= ~LIFECYCLE_LOADED;
     }
 }
 
-static void layer_lifecycle_init_layer(Layer* layer) {
-    if (!layer) return;
+static void layer_lifecycle_walk(Layer* layer,
+                                 void (*visit)(Layer* layer)) {
+    if (!layer || !visit) return;
 
     if (layer->children) {
         for (int i = 0; i < layer->child_count; i++) {
-            layer_lifecycle_init_layer(layer->children[i]);
+            layer_lifecycle_walk(layer->children[i], visit);
         }
     }
-    if (layer->sub) {
-        layer_lifecycle_init_layer(layer->sub);
+    if (layer->sub && layer->sub->parent == layer) {
+        layer_lifecycle_walk(layer->sub, visit);
     }
+    visit(layer);
+}
 
-    // 子节点先初始化，根 Layer 的 onLoad 最后触发（等同原 app.onLoad 时机）
-    if (layer->lifecycle_enabled && layer->visible == VISIBLE) {
+static void layer_lifecycle_startup_visit(Layer* layer) {
+    if ((layer->lifecycle_flags & LIFECYCLE_DECL_MASK) &&
+        layer->visible == VISIBLE) {
         layer_lifecycle_on_show(layer);
     }
 }
 
 void layer_lifecycle_init_tree(Layer* root) {
-    layer_lifecycle_init_layer(root);
+  // 仅遍历子树；等 JS 注册完成后再统一派发可见页面的 onLoad/onShow
+    layer_lifecycle_walk(root, layer_lifecycle_startup_visit);
 }
 
 void layer_set_visible(Layer* layer, int visible) {
     if (!layer) return;
 
+    VisibleType new_visible = (VisibleType)visible;
+
+    if (layer->visible == new_visible) {
+        if (new_visible != VISIBLE && (layer->lifecycle_flags & LIFECYCLE_SHOWN)) {
+            layer->lifecycle_flags &= ~LIFECYCLE_SHOWN;
+        }
+        return;
+    }
+
     int was_visible = (layer->visible == VISIBLE);
-    int will_visible = visible ? VISIBLE : IN_VISIBLE;
-    if (was_visible == will_visible) return;
 
     if (was_visible) {
-        layer_lifecycle_on_hide(layer);
+        layer_lifecycle_on_hide_visible(layer);
     }
 
     if (layer->set_visible) {
-        layer->set_visible(layer, will_visible);
+        layer->set_visible(layer, new_visible);
     } else {
-        layer->visible = will_visible;
+        layer->visible = new_visible;
         mark_layer_dirty(layer, DIRTY_VISIBLE);
     }
 
-    if (!was_visible && will_visible) {
+    if (!was_visible && new_visible == VISIBLE) {
         layer_lifecycle_on_show(layer);
+    }
+
+    if (layer->parent) {
+        layout_layer(layer->parent);
     }
 }

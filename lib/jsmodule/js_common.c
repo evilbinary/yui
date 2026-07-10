@@ -199,6 +199,8 @@ static EventHandler get_event_handler_by_type(const char* event_type)
         return js_module_scroll_event;
     } else if (strcmp(event_type, "change") == 0 || strcmp(event_type, "onChange") == 0) {
         return js_module_change_event;
+    } else if (layer_lifecycle_is_event(event_type)) {
+        return NULL;
     }
     printf("JS: Unknown event type: %s\n", event_type);
 
@@ -357,7 +359,7 @@ static void register_js_event_mapping(const char* event_name, const char* func_n
         event_type = dot_pos + 1;
     }
 
-    if (dot_pos != NULL && g_layer_root ) {
+    if (dot_pos != NULL && g_layer_root) {
         // 复制 id（在 . 之前的部分）
         char layer_id[128];
         int id_len = dot_pos - event_name;
@@ -365,27 +367,26 @@ static void register_js_event_mapping(const char* event_name, const char* func_n
         strncpy(layer_id, event_name, id_len);
         layer_id[id_len] = '\0';
 
-        // 根据 event_type 获取对应的事件处理函数
-        EventHandler handler = get_event_handler_by_type(event_type);
-        if (handler != NULL) {
-            Layer * layer = find_layer_by_id(g_layer_root, layer_id);
-            if (layer != NULL) {
-                js_module_set_layer_event(layer, event_type, clean_func_name, handler);
+        if (!is_page_lifecycle_event(event_type)) {
+            // 根据 event_type 获取对应的事件处理函数
+            EventHandler handler = get_event_handler_by_type(event_type);
+            if (handler != NULL) {
+                Layer * layer = find_layer_by_id(g_layer_root, layer_id);
+                if (layer != NULL) {
+                    js_module_set_layer_event(layer, event_type, clean_func_name, handler);
+                } else {
+                    printf("JS: Warning: layer '%s' not found for event '%s'\n", layer_id, event_name);
+                }
             } else {
-                printf("JS: Warning: layer '%s' not found for event '%s'\n", layer_id, event_name);
-            }
-        } else {
-            // 非标准事件类型（如 onItemClick），注册为全局处理器
-            // 以 @ 开头的是函数名引用，否则是内联 JS 代码
-            if (func_name[0] == '@') {
-                register_event_handler(clean_func_name, js_module_common_event);
-            } else {
-                register_event_handler(event_type, js_module_common_event);
+                // 非标准事件类型（如 onItemClick），注册为全局处理器
+                if (func_name[0] == '@') {
+                    register_event_handler(clean_func_name, js_module_common_event);
+                } else {
+                    register_event_handler(event_type, js_module_common_event);
+                }
             }
         }
-    }else{
-        EventHandler handler = get_event_handler_by_type(event_name);
-        // 以 @ 开头的是函数名引用，否则是内联 JS 代码
+    } else if (!is_page_lifecycle_event(event_name)) {
         if (func_name[0] == '@') {
             register_event_handler(clean_func_name, js_module_common_event);
         } else {

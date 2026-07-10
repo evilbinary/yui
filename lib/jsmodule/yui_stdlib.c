@@ -387,7 +387,6 @@ static JSValue js_render_from_json(JSContext *ctx, JSValue *this_val, int argc, 
         js_module_load_from_json(page_json, NULL, 1);
         cJSON_Delete(page_json);
     }
-    layer_lifecycle_on_show(new_layer);
 
     printf("YUI: Successfully rendered JSON to layer '%s', new layer id: '%s'\n",
            layer_id, new_layer->id);

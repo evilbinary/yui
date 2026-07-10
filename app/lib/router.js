@@ -37,10 +37,6 @@ var Router = {
         YUI.beforeRoute = function(guard) {
             return self.beforeEach(guard);
         };
-
-        if (config.defaultRoute) {
-            this.navigate(config.defaultRoute, config.defaultParams || {});
-        }
     },
 
     beforeEach: function(guard) {
@@ -134,6 +130,10 @@ var Router = {
             route: matched.route
         };
 
+        if (from && from.path === to.path && from.layerId === to.route.layerId) {
+            return true;
+        }
+
         return this._runGuards(from, to, isReplace, function() {
             if (from) {
                 self._leave(from, isReplace);
@@ -147,6 +147,7 @@ var Router = {
             var entry = self._enter(to);
             if (!entry) return false;
             self.stack.push(entry);
+            self._showEntry(entry, from ? from.layerId : null);
             return true;
         });
     },
@@ -160,7 +161,7 @@ var Router = {
         this._leave(leaving, false);
         var returning = this.current();
         if (returning) {
-            this._showEntry(returning);
+            this._showEntry(returning, leaving ? leaving.layerId : null);
         }
         return true;
     },
@@ -200,21 +201,24 @@ var Router = {
         return next();
     },
 
-    _hideAllRouteLayers: function(exceptLayerId) {
+    _hideAllRouteLayers: function(exceptLayerId, skipLayerId) {
+        var seen = {};
+        var hideId = function(layerId) {
+            if (!layerId || layerId === exceptLayerId || layerId === skipLayerId ||
+                seen[layerId]) {
+                return;
+            }
+            seen[layerId] = true;
+            YUI.hide(layerId);
+        };
         var path;
         for (path in this.routes) {
             if (!this.routes.hasOwnProperty(path)) continue;
-            var layerId = this.routes[path].layerId;
-            if (layerId && layerId !== exceptLayerId) {
-                YUI.hide(layerId);
-            }
+            hideId(this.routes[path].layerId);
         }
         for (path in this.cache) {
             if (!this.cache.hasOwnProperty(path)) continue;
-            var cachedId = this.cache[path].layerId;
-            if (cachedId && cachedId !== exceptLayerId) {
-                YUI.hide(cachedId);
-            }
+            hideId(this.cache[path].layerId);
         }
     },
 
@@ -239,11 +243,9 @@ var Router = {
 
         if (route.layerId) {
             if (this.cache[cacheKey]) {
-                YUI.show(this.cache[cacheKey].layerId);
                 return this.cache[cacheKey];
             }
 
-            YUI.show(route.layerId);
             var staticEntry = {
                 path: to.path,
                 pattern: to.pattern,
@@ -260,7 +262,6 @@ var Router = {
 
         if (route.json) {
             if (keepAlive && this.cache[cacheKey]) {
-                YUI.show(this.cache[cacheKey].layerId);
                 return this.cache[cacheKey];
             }
 
@@ -272,7 +273,6 @@ var Router = {
 
             var layerId = route.layerId || this._extractLayerId(jsonStr);
             if (keepAlive && layerId && this._findChildById(layerId)) {
-                YUI.show(layerId);
                 var cached = this.cache[cacheKey];
                 if (cached) return cached;
             }
@@ -305,8 +305,9 @@ var Router = {
         return null;
     },
 
-    _showEntry: function(entry) {
+    _showEntry: function(entry, skipHideLayerId) {
         if (!entry || !entry.layerId) return;
+        this._hideAllRouteLayers(entry.layerId, skipHideLayerId || null);
         YUI.show(entry.layerId);
     },
 

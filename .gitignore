@@ -26,3 +26,5 @@ app/watch-os5.json
 app/watch-os6.json
 router-test-out.txt
 router-test-err.txt
+router-debug.txt
+router-debug-err.txt

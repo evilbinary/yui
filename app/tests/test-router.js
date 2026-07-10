@@ -12,7 +12,7 @@ var routes = {
 var logs = [];
 var isLoggedIn = false;
 // 设为 1 启动时自动跑一遍完整流程（无需点按钮）
-var ROUTER_SELF_TEST = 0;
+var ROUTER_SELF_TEST = 1;
 
 function appendLog(msg) {
     logs.push(msg);
@@ -45,8 +45,7 @@ function updateRouteInfo() {
 function onAppLoad() {
     Router.init({
         outlet: "page_outlet",
-        routes: routes,
-        defaultRoute: "/"
+        routes: routes
     });
 
     YUI.beforeRoute(function(from, to, next) {
@@ -59,6 +58,7 @@ function onAppLoad() {
     });
 
     appendLog("app.onLoad");
+    YUI.navigate("/");
     updateRouteInfo();
 
     if (ROUTER_SELF_TEST) {
