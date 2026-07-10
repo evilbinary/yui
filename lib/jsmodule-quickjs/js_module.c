@@ -3,6 +3,7 @@
 #include "../../src/layer.h"
 #include "../../src/layer_properties.h"
 #include "../../src/layout.h"
+#include "../../src/layer_update.h"
 #include "../../src/render.h"
 #include "js_socket.h"
 #include "../../src/event.h"
@@ -639,6 +640,10 @@ static JSValue js_layer_wrapper_get_text(JSContext* ctx, JSValueConst this_val);
 static JSValue js_layer_wrapper_set_text(JSContext* ctx, JSValueConst this_val, JSValueConst val);
 static JSValue js_layer_wrapper_get_style(JSContext* ctx, JSValueConst this_val);
 static JSValue js_layer_wrapper_set_style(JSContext* ctx, JSValueConst this_val, JSValueConst val);
+static JSValue js_layer_wrapper_get_visible(JSContext* ctx, JSValueConst this_val);
+static JSValue js_layer_wrapper_set_visible(JSContext* ctx, JSValueConst this_val, JSValueConst val);
+static JSValue js_layer_wrapper_get_size(JSContext* ctx, JSValueConst this_val);
+static JSValue js_layer_wrapper_set_size(JSContext* ctx, JSValueConst this_val, JSValueConst val);
 
 // 从包装对象获取 Layer 指针
 static Layer* js_get_layer_from_wrapper(JSContext* ctx, JSValueConst val)
@@ -680,10 +685,10 @@ static JSValue js_layer_wrapper_set_text(JSContext* ctx, JSValueConst this_val, 
 {
     Layer* layer = js_get_layer_from_wrapper(ctx, this_val);
     if (!layer) return JS_UNDEFINED;
-    
+
     const char* text = JS_ToCString(ctx, val);
     if (text) {
-        layer_set_text(layer, text);
+        yui_set_text(layer, text);
         JS_FreeCString(ctx, text);
     }
     return JS_UNDEFINED;
@@ -746,6 +751,76 @@ static JSValue js_layer_wrapper_set_style(JSContext* ctx, JSValueConst this_val,
     }
     JS_FreeValue(ctx, bg_color_val);
     
+    return JS_UNDEFINED;
+}
+
+// Layer 包装对象的 visible 属性 getter
+static JSValue js_layer_wrapper_get_visible(JSContext* ctx, JSValueConst this_val)
+{
+    Layer* layer = js_get_layer_from_wrapper(ctx, this_val);
+    if (!layer) return JS_UNDEFINED;
+    return JS_NewBool(ctx, layer->visible == VISIBLE);
+}
+
+// Layer 包装对象的 visible 属性 setter
+static JSValue js_layer_wrapper_set_visible(JSContext* ctx, JSValueConst this_val, JSValueConst val)
+{
+    Layer* layer = js_get_layer_from_wrapper(ctx, this_val);
+    if (!layer) return JS_UNDEFINED;
+
+    int js_visible = JS_ToBool(ctx, val);
+    layer->visible = js_visible ? VISIBLE : IN_VISIBLE;
+    mark_layer_dirty(layer, DIRTY_VISIBLE | DIRTY_LAYOUT);
+
+    // 触发父容器重新布局
+    if (layer->parent) {
+        mark_layer_dirty(layer->parent, DIRTY_LAYOUT);
+        layout_layer(layer->parent);
+    }
+
+    return JS_UNDEFINED;
+}
+
+// Layer 包装对象的 size 属性 getter
+static JSValue js_layer_wrapper_get_size(JSContext* ctx, JSValueConst this_val)
+{
+    Layer* layer = js_get_layer_from_wrapper(ctx, this_val);
+    if (!layer) return JS_UNDEFINED;
+
+    JSValue arr = JS_NewArray(ctx);
+    JS_SetPropertyUint32(ctx, arr, 0, JS_NewInt32(ctx, layer->rect.w));
+    JS_SetPropertyUint32(ctx, arr, 1, JS_NewInt32(ctx, layer->rect.h));
+    return arr;
+}
+
+// Layer 包装对象的 size 属性 setter
+static JSValue js_layer_wrapper_set_size(JSContext* ctx, JSValueConst this_val, JSValueConst val)
+{
+    Layer* layer = js_get_layer_from_wrapper(ctx, this_val);
+    if (!layer) return JS_UNDEFINED;
+
+    if (!JS_IsArray(ctx, val)) return JS_UNDEFINED;
+
+    JSValue w_val = JS_GetPropertyUint32(ctx, val, 0);
+    JSValue h_val = JS_GetPropertyUint32(ctx, val, 1);
+
+    int w = 0, h = 0;
+    if (JS_ToInt32(ctx, &w, w_val) == 0 && JS_ToInt32(ctx, &h, h_val) == 0) {
+        layer->rect.w = w;
+        layer->rect.h = h;
+        layer->fixed_width = w;
+        layer->fixed_height = h;
+        mark_layer_dirty(layer, DIRTY_RECT | DIRTY_LAYOUT);
+
+        // 触发父容器重新布局
+        if (layer->parent) {
+            mark_layer_dirty(layer->parent, DIRTY_LAYOUT);
+            layout_layer(layer->parent);
+        }
+    }
+
+    JS_FreeValue(ctx, w_val);
+    JS_FreeValue(ctx, h_val);
     return JS_UNDEFINED;
 }
 
@@ -862,7 +937,21 @@ static JSValue js_create_layer_wrapper(JSContext* ctx, Layer* layer)
     JSAtom data_atom = JS_NewAtom(ctx, "data");
     JS_DefinePropertyGetSet(ctx, wrapper, data_atom, data_getter, data_setter, JS_PROP_CONFIGURABLE | JS_PROP_ENUMERABLE);
     JS_FreeAtom(ctx, data_atom);
-    
+
+    // 定义 visible 属性的 getter/setter
+    JSValue visible_getter = JS_NewCFunction2(ctx, (JSCFunction*)js_layer_wrapper_get_visible, "get visible", 0, JS_CFUNC_getter, 0);
+    JSValue visible_setter = JS_NewCFunction2(ctx, (JSCFunction*)js_layer_wrapper_set_visible, "set visible", 1, JS_CFUNC_setter, 0);
+    JSAtom visible_atom = JS_NewAtom(ctx, "visible");
+    JS_DefinePropertyGetSet(ctx, wrapper, visible_atom, visible_getter, visible_setter, JS_PROP_CONFIGURABLE | JS_PROP_ENUMERABLE);
+    JS_FreeAtom(ctx, visible_atom);
+
+    // 定义 size 属性的 getter/setter
+    JSValue size_getter = JS_NewCFunction2(ctx, (JSCFunction*)js_layer_wrapper_get_size, "get size", 0, JS_CFUNC_getter, 0);
+    JSValue size_setter = JS_NewCFunction2(ctx, (JSCFunction*)js_layer_wrapper_set_size, "set size", 1, JS_CFUNC_setter, 0);
+    JSAtom size_atom = JS_NewAtom(ctx, "size");
+    JS_DefinePropertyGetSet(ctx, wrapper, size_atom, size_getter, size_setter, JS_PROP_CONFIGURABLE | JS_PROP_ENUMERABLE);
+    JS_FreeAtom(ctx, size_atom);
+
     return wrapper;
 }
 
