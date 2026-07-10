@@ -78,4 +78,10 @@ void backend_set_titlebar_color(Color bg, Color text);
 // 设置窗口图标
 void backend_set_window_icon(const char* path);
 
+// 截取当前 UI 为 PNG（桌面 SDL；失败返回负值）
+int backend_screenshot(const char* path);
+
+// 设置当前 UI 根图层（在 backend_run 之前即可截图）
+void backend_set_ui_root(Layer* root);
+
 #endif

@@ -8,6 +8,7 @@
 #include "../../src/render.h"
 #include "js_socket.h"
 #include "../../src/event.h"
+#include "../../src/backend.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -30,6 +31,7 @@ extern struct Layer* g_layer_root;
 
 JSValue js_read_file(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv);
 JSValue js_write_file(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv);
+JSValue js_screenshot(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv);
 JSValue js_list_dir(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv);
 JSValue js_focus(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv);
 
@@ -1080,6 +1082,7 @@ void js_module_register_api(void)
 
     JS_SetPropertyStr(g_js_ctx, yui_obj, "readFile", JS_NewCFunction(g_js_ctx, js_read_file, "readFile", 1));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "writeFile", JS_NewCFunction(g_js_ctx, js_write_file, "writeFile", 2));
+    JS_SetPropertyStr(g_js_ctx, yui_obj, "screenshot", JS_NewCFunction(g_js_ctx, js_screenshot, "screenshot", 1));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "listDir", JS_NewCFunction(g_js_ctx, js_list_dir, "listDir", 1));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "focus", JS_NewCFunction(g_js_ctx, js_focus, "focus", 1));
 
@@ -1396,6 +1399,21 @@ JSValue js_write_file(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     JS_FreeCString(ctx, file_path);
     JS_FreeCString(ctx, content);
     return JS_TRUE;
+}
+
+JSValue js_screenshot(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+    if (argc < 1) {
+        return JS_ThrowTypeError(ctx, "Expected 1 argument: file_path");
+    }
+
+    const char* file_path = JS_ToCString(ctx, argv[0]);
+    if (!file_path) {
+        return JS_ThrowTypeError(ctx, "Invalid file path");
+    }
+
+    int rc = backend_screenshot(file_path);
+    JS_FreeCString(ctx, file_path);
+    return JS_NewInt32(ctx, rc);
 }
 
 // 列出目录内容

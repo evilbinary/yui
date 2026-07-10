@@ -3,6 +3,7 @@
 #include "render.h"
 #include "ytype.h"
 #include "popup_manager.h"
+#include "screenshot.h"
 #include <stdbool.h>  // 添加支持bool类型
 #include <math.h>     // 添加数学函数支持
 
@@ -2456,4 +2457,68 @@ void backend_set_text_input_rect(Rect* rect) {
         sdl_rect.h = rect->h;
         SDL_SetTextInputRect(&sdl_rect);
     }
+}
+
+void backend_set_ui_root(Layer* root) {
+    g_ui_root = root;
+}
+
+int backend_screenshot(const char* path) {
+    if (!renderer || !g_ui_root || !path || !path[0]) {
+        return -1;
+    }
+
+    int w = 0, h = 0;
+    SDL_GetWindowSize(window, &w, &h);
+    if (w <= 0 || h <= 0) {
+        return -2;
+    }
+
+    SDL_Texture* target = SDL_CreateTexture(
+        renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, w, h);
+    if (!target) {
+        printf("screenshot: CreateTexture failed: %s\n", SDL_GetError());
+        return -3;
+    }
+
+    SDL_Texture* prev_target = SDL_GetRenderTarget(renderer);
+    SDL_SetRenderTarget(renderer, target);
+
+    SDL_SetRenderDrawColor(renderer, 10, 13, 18, 255);
+    SDL_RenderClear(renderer);
+
+    render_layer(g_ui_root);
+    render_inspect_overlay(g_ui_root);
+    popup_manager_render();
+
+    SDL_Surface* surface = SDL_CreateRGBSurfaceWithFormat(
+        0, w, h, 32, SDL_PIXELFORMAT_ARGB8888);
+    if (!surface) {
+        SDL_SetRenderTarget(renderer, prev_target);
+        SDL_DestroyTexture(target);
+        return -4;
+    }
+
+    if (SDL_RenderReadPixels(renderer, NULL, SDL_PIXELFORMAT_ARGB8888,
+                             surface->pixels, surface->pitch) != 0) {
+        printf("screenshot: ReadPixels failed: %s\n", SDL_GetError());
+        SDL_FreeSurface(surface);
+        SDL_SetRenderTarget(renderer, prev_target);
+        SDL_DestroyTexture(target);
+        return -5;
+    }
+
+    SDL_SetRenderTarget(renderer, prev_target);
+    SDL_DestroyTexture(target);
+
+    SDL_Surface* rgba = SDL_ConvertSurfaceFormat(surface, SDL_PIXELFORMAT_RGBA32, 0);
+    SDL_FreeSurface(surface);
+    if (!rgba) {
+        return -6;
+    }
+
+    int rc = screenshot_save_png(path, (const unsigned char*)rgba->pixels,
+                                 rgba->w, rgba->h, rgba->pitch);
+    SDL_FreeSurface(rgba);
+    return rc;
 }

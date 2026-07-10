@@ -216,3 +216,15 @@ function goProduct(id) {
     YUI.navigate("/product/" + id);
     updateStatusBar();
 }
+
+function captureScreen() {
+    var route = YUI.currentRoute ? YUI.currentRoute() : null;
+    var slug = route ? route.path.replace(/\//g, "_").replace(/:/g, "-") : "home";
+    if (!slug || slug === "_") {
+        slug = "home";
+    }
+    var path = "app/shopping/capture/" + slug + ".png";
+    var code = YUI.screenshot(path);
+    YUI.log("截图 " + path + " code=" + code);
+    return code;
+}

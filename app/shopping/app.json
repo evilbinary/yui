@@ -72,6 +72,21 @@
                     }
                 },
                 {
+                    "id": "btn_capture",
+                    "type": "Button",
+                    "text": "截图",
+                    "size": [48, 36],
+                    "events": { "onClick": "@captureScreen" },
+                    "style": {
+                        "bgColor": "#1A2030",
+                        "color": "#9AA3B2",
+                        "fontSize": 12,
+                        "borderRadius": 10,
+                        "borderColor": "#2E3648",
+                        "borderWidth": 1
+                    }
+                },
+                {
                     "id": "btn_cart",
                     "type": "Button",
                     "text": "袋·0",

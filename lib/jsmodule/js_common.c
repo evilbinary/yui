@@ -1,6 +1,7 @@
 #include "js_module.h"
 #include "../../src/ytype.h"
 #include "../../src/layer_lifecycle.h"
+#include "../../src/backend.h"
 
 #include "event.h"
 
@@ -267,7 +268,7 @@ static void build_js_path(const char* js_path, const char* json_dir, char* full_
 void js_module_init_layer(Layer* root)
 {
     g_layer_root = root;
-
+    backend_set_ui_root(root);
 }
 
 // 辅助函数：获取文件所在的目录
