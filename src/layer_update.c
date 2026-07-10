@@ -1,4 +1,5 @@
 #include "layer_update.h"
+#include "layer_lifecycle.h"
 #include "layer_properties.h"
 #include "layer.h"
 #include "layout.h"
@@ -114,8 +115,7 @@ void yui_set_bg_color(Layer* layer, const char* color) {
 
 void yui_set_visible(Layer* layer, int visible) {
     if (!layer) return;
-    layer->visible = visible;
-    mark_layer_dirty(layer, DIRTY_VISIBLE);
+    layer_set_visible(layer, visible ? VISIBLE : IN_VISIBLE);
 }
 
 void yui_set_enabled(Layer* layer, int enabled) {

@@ -1,6 +1,7 @@
 #include "layer.h"
 #include "layer_properties.h"
 #include "layer_update.h"
+#include "layer_lifecycle.h"
 #include "util.h"
 #include "animate.h"
 #include "theme_manager.h"
@@ -710,6 +711,7 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
   // 解析事件绑定
   cJSON* events = cJSON_GetObjectItem(json_obj, "events");
   if (events) {
+    layer_lifecycle_bind_events(layer, events);
     if (cJSON_HasObjectItem(events, "onClick")) {
       layer->event = malloc(sizeof(Event));
       memset(layer->event, 0, sizeof(Event));
@@ -1017,6 +1019,8 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
 // ====================== 销毁函数 ======================
 void destroy_layer(Layer* layer) {
     if (!layer) return;
+
+    layer_lifecycle_before_destroy(layer);
     
     // 递归销毁子图层
     if (layer->children) {
@@ -1121,11 +1125,7 @@ int layer_show(Layer* layer) {
         return 0;
     }
 
-    if (layer->set_visible) {
-        return layer->set_visible(layer, VISIBLE);
-    }
-
-    layer->visible = VISIBLE;
+    layer_set_visible(layer, VISIBLE);
     return 1;
 }
 
@@ -1134,11 +1134,7 @@ int layer_hide(Layer* layer) {
         return 0;
     }
 
-    if (layer->set_visible) {
-        return layer->set_visible(layer, IN_VISIBLE);
-    }
-
-    layer->visible = IN_VISIBLE;
+    layer_set_visible(layer, IN_VISIBLE);
     return 1;
 }
 

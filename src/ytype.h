@@ -346,6 +346,11 @@ typedef struct Layer {
     int focusable;
     int visible;
 
+    // Layer 生命周期（声明 onLoad/onShow/onHide/onUnload 时启用）
+    unsigned char lifecycle_enabled;
+    unsigned char lifecycle_loaded;
+    unsigned char lifecycle_shown;
+
     //动画
     Animation* animation;
 
