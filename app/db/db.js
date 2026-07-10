@@ -273,6 +273,8 @@ function showFileDialog(mode) {
     var overlay = yui.find("fileDialogOverlay");
     if (overlay) overlay.visible = true;
     refreshFileList(fileDialogPath || "./");
+    // 自动聚焦输入框
+    YUI.focus("fileDialogInput");
 }
 
 function hideFileDialog() {

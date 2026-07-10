@@ -73,11 +73,23 @@ void handle_scroll_event(Layer* layer,int mouse_x,int mouse_y,int scroll_deltax,
     handler_virtical_scroll_event(layer, scroll_deltay);
     handle_horizontal_scroll_event(layer, scroll_deltay); // 水平滚动
 
-    // 递归处理子图层的键盘事件（但只有焦点图层会实际处理事件）
+    // 递归处理子图层的滚动事件，顶层优先（被遮挡的子图层跳过）
     for (int i = 0; i < layer->child_count; i++) {
-        if (layer->children[i]) {
-            handle_scroll_event(layer->children[i],mouse_x,mouse_y, scroll_deltax,scroll_deltay);
+        if (!layer->children[i]) continue;
+        if (!is_point_in_rect(mouse_x, mouse_y, layer->children[i]->rect)) continue;
+
+        // 检查是否有更上层可见兄弟图层覆盖了同一点
+        int blocked = 0;
+        for (int j = i + 1; j < layer->child_count; j++) {
+            if (layer->children[j] && layer->children[j]->visible == VISIBLE &&
+                is_point_in_rect(mouse_x, mouse_y, layer->children[j]->rect)) {
+                blocked = 1;
+                break;
+            }
         }
+        if (blocked) continue;
+
+        handle_scroll_event(layer->children[i], mouse_x, mouse_y, scroll_deltax, scroll_deltay);
     }
     
     // 处理sub图层的键盘事件

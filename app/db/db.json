@@ -367,9 +367,19 @@
                 ]
               },
               {
+                "id": "editorResultSash",
+                "type": "Sash",
+                "size": [660, 6],
+                "target": "sqlEditorContainer",
+                "minSize": 80,
+                "style": {
+                  "bgColor": "#313244"
+                }
+              },
+              {
                 "id": "resultContainer",
                 "type": "View",
-                "size": [660, 334],
+                "size": [660, 328],
                 "layout": {
                   "type": "vertical",
                   "spacing": 0
@@ -419,7 +429,7 @@
                     "id": "resultGrid",
                     "type": "Treeview",
                     "scrollable": 3,
-                    "size": [660, 302],
+                    "size": [660, 296],
                     "style": {
                       "color": "#CDD6F4",
                       "bgColor": "#11111B",

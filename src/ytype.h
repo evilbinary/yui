@@ -40,6 +40,7 @@
 #define YUI_MENU_COMPONENT 1
 #define YUI_DIALOG_COMPONENT 1
 #define YUI_CLOCK_COMPONENT 1
+#define YUI_SASH_COMPONENT 1
 
 
 #ifdef YUI_ANIMATION
@@ -489,6 +490,10 @@ extern Layer* focused_layer;
 
 #ifdef YUI_CLOCK_COMPONENT
 #include "components/clock_component.h"
+#endif
+
+#ifdef YUI_SASH_COMPONENT
+#include "components/sash_component.h"
 #endif
 
 #endif
