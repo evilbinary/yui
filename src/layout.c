@@ -3,6 +3,22 @@
 
 #define printf
 
+static int layout_horizontal_child_width(Layer* child, int available_width, float total_flex, int no_width_count) {
+    if (!child) {
+        return 50;
+    }
+    if (child->flex_ratio > 0 && total_flex > 0) {
+        return (int)(available_width * (child->flex_ratio / total_flex));
+    }
+    if (child->fixed_width > 0) {
+        return child->fixed_width;
+    }
+    if (no_width_count > 0) {
+        return available_width / no_width_count;
+    }
+    return 50;
+}
+
 static LayoutManager* clone_layout_manager(const LayoutManager* src) {
     if (!src) {
         return NULL;
@@ -152,11 +168,8 @@ void layout_layer(Layer* layer){
                 if (layer->children[i]->visible == IN_VISIBLE) continue;
                 if (!layer->children[i]) continue;
 
-                int child_width = 50; // 默认宽度
-                if (layer->children[i]->fixed_width > 0) {
-                    child_width = layer->children[i]->fixed_width;
-                }
-
+                int child_width = layout_horizontal_child_width(
+                    layer->children[i], available_width, total_flex, no_width_count);
                 total_children_width += child_width;
             }
 
