@@ -13,6 +13,23 @@
     "children": [
         { "id": "launcher_title", "type": "Label", "variant": "overline", "text": "APPS", "size": [342, 12] },
         { "id": "launcher_count", "type": "Label", "variant": "caption", "text": "", "size": [342, 12] },
-        { "id": "launcher_grid", "type": "View", "size": [342, 300], "layout": { "type": "vertical", "spacing": 10, "align": "center" } }
+        {
+            "id": "launcher_face_row",
+            "type": "View",
+            "size": [342, 60],
+            "layout": { "type": "horizontal", "spacing": 10, "align": "center" },
+            "children": [
+                {
+                    "id": "launcher_btn_face",
+                    "type": "Button",
+                    "variant": "dock-accent",
+                    "text": "◉",
+                    "size": [58, 58],
+                    "events": { "onClick": "@goWatchBack" }
+                },
+                { "id": "launcher_face_lbl", "type": "Label", "variant": "body", "text": "表盘", "flex": 1, "textAlign": "left" }
+            ]
+        },
+        { "id": "launcher_grid", "type": "View", "flex": 1, "layout": { "type": "vertical", "spacing": 10, "align": "center" } }
     ]
 }

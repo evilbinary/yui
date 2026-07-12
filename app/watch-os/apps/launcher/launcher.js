@@ -46,24 +46,6 @@ function buildLauncherGrid() {
         });
         YUI.renderFromJson("launcher_grid", rowJson);
     }
-
-    var faceRow = JSON.stringify({
-        id: "launcher_row_face",
-        type: "View",
-        size: [342, 60],
-        layout: { type: "horizontal", spacing: 10, align: "center" },
-        children: [
-            {
-                id: "launcher_app_face",
-                type: "Button",
-                variant: "dock-accent",
-                text: "◉",
-                size: [58, 58],
-                events: { onClick: "@goWatchBack" }
-            }
-        ]
-    });
-    YUI.renderFromJson("launcher_grid", faceRow);
 }
 
 function onLauncherAppClick(layerId) {
