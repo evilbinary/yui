@@ -340,19 +340,40 @@ void button_component_render(Layer* layer) {
             int text_width, text_height;
             backend_query_texture(text_texture, NULL, NULL, &text_width, &text_height);
 
+            int draw_w = text_width / scale;
+            int draw_h = text_height / scale;
+
+            // 文本/emoji 纹理可能大于按钮（彩色 emoji 位图字体尤为明显），等比缩小到按钮内边距
+            int avail_w = layer->rect.w - (text_x_offset > 0 ? text_x_offset + 10 : 12);
+            int avail_h = layer->rect.h - 8;
+            if (avail_w < 1) avail_w = 1;
+            if (avail_h < 1) avail_h = 1;
+            if (draw_w > avail_w || draw_h > avail_h) {
+                float ratio = (float)draw_w / draw_h;
+                if (draw_w * avail_h > avail_w * draw_h) {
+                    draw_w = avail_w;
+                    draw_h = (int)(avail_w / ratio);
+                } else {
+                    draw_h = avail_h;
+                    draw_w = (int)(avail_h * ratio);
+                }
+                if (draw_w < 1) draw_w = 1;
+                if (draw_h < 1) draw_h = 1;
+            }
+
             int text_x, text_y;
             if (text_x_offset > 0) {
                 int total_w = layer->rect.w - text_x_offset - 10;
-                text_x = layer->rect.x + text_x_offset + (total_w - text_width / scale) / 2;
+                text_x = layer->rect.x + text_x_offset + (total_w - draw_w) / 2;
                 if (text_x < layer->rect.x + text_x_offset) {
                     text_x = layer->rect.x + text_x_offset;
                 }
             } else {
-                text_x = layer->rect.x + (layer->rect.w - text_width / scale) / 2;
+                text_x = layer->rect.x + (layer->rect.w - draw_w) / 2;
             }
-            text_y = layer->rect.y + (layer->rect.h - text_height / scale) / 2;
+            text_y = layer->rect.y + (layer->rect.h - draw_h) / 2;
 
-            Rect text_rect = {text_x, text_y, text_width / scale, text_height / scale};
+            Rect text_rect = {text_x, text_y, draw_w, draw_h};
             backend_render_text_copy(text_texture, NULL, &text_rect);
             backend_render_text_destroy(text_texture);
         }

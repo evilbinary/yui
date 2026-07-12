@@ -46,7 +46,7 @@ typedef struct {
     Uint32 last_used;
 } FontCacheEntry;
 
-#define MAX_FONT_CACHE_ENTRIES 50
+#define MAX_FONT_CACHE_ENTRIES 150
 FontCacheEntry font_cache[MAX_FONT_CACHE_ENTRIES] = {0};
 int font_cache_initialized = 0;
 
