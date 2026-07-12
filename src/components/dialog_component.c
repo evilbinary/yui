@@ -737,7 +737,7 @@ static int dialog_render_wrapped_message(Layer* text_layer, DialogComponent* com
                 fit_len = 0;
                 int pos = 0;
                 while (line_start + pos < para_end) {
-                    int clen = utf8_char_len((unsigned char)line_start[pos]);
+                    int clen = utf8_char_len_at(line_start + pos);
                     if (clen <= 0) {
                         clen = 1;
                     }
@@ -753,7 +753,7 @@ static int dialog_render_wrapped_message(Layer* text_layer, DialogComponent* com
                     fit_len = pos;
                 }
                 if (fit_len == 0) {
-                    fit_len = utf8_char_len((unsigned char)line_start[0]);
+                    fit_len = utf8_char_len_at(line_start);
                     if (fit_len <= 0) {
                         fit_len = 1;
                     }

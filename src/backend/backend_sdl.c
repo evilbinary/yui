@@ -2,6 +2,7 @@
 #include "event.h"
 #include "render.h"
 #include "ytype.h"
+#include "util.h"
 #include "popup_manager.h"
 #include "screenshot.h"
 #include <stdbool.h>  // 添加支持bool类型
@@ -99,44 +100,6 @@ static DFont* backend_get_fallback_font_for(DFont* primary) {
         return NULL;
     }
     return backend_load_font_with_weight(g_font_fallback_path, backend_get_font_size(primary), "normal");
-}
-
-static int utf8_decode_codepoint(const char** text, Uint32* codepoint) {
-    const unsigned char* p = (const unsigned char*)(*text);
-
-    if (!p || !*p) {
-        return 0;
-    }
-
-    if (p[0] < 0x80) {
-        *codepoint = p[0];
-        *text += 1;
-        return 1;
-    }
-    if ((p[0] & 0xE0) == 0xC0 && p[1]) {
-        *codepoint = ((Uint32)(p[0] & 0x1F) << 6) | (p[1] & 0x3F);
-        *text += 2;
-        return 1;
-    }
-    if ((p[0] & 0xF0) == 0xE0 && p[1] && p[2]) {
-        *codepoint = ((Uint32)(p[0] & 0x0F) << 12) |
-                     ((Uint32)(p[1] & 0x3F) << 6) |
-                     (p[2] & 0x3F);
-        *text += 3;
-        return 1;
-    }
-    if ((p[0] & 0xF8) == 0xF0 && p[1] && p[2] && p[3]) {
-        *codepoint = ((Uint32)(p[0] & 0x07) << 18) |
-                     ((Uint32)(p[1] & 0x3F) << 12) |
-                     ((Uint32)(p[2] & 0x3F) << 6) |
-                     (p[3] & 0x3F);
-        *text += 4;
-        return 1;
-    }
-
-    *codepoint = p[0];
-    *text += 1;
-    return 1;
 }
 
 // 返回渲染应使用的单一字体；返回 NULL 表示文本需要混合排版。

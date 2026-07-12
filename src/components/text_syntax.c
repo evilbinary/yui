@@ -1,5 +1,6 @@
 #include "text_syntax.h"
 #include "../backend.h"
+#include "../util.h"
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
@@ -27,14 +28,15 @@ typedef struct {
 #define MAX_HIGHLIGHT_TOKENS 256
 
 static int syntax_utf8_char_len(const char* text, int pos, int end) {
-    if (pos >= end) return 0;
-    unsigned char c = (unsigned char)text[pos];
-    int len = 1;
-    if ((c & 0x80) == 0) len = 1;
-    else if ((c & 0xE0) == 0xC0) len = 2;
-    else if ((c & 0xF0) == 0xE0) len = 3;
-    else if ((c & 0xF8) == 0xF0) len = 4;
-    if (pos + len > end) len = end - pos;
+    int len;
+
+    if (pos >= end) {
+        return 0;
+    }
+    len = utf8_char_len_at(text + pos);
+    if (pos + len > end) {
+        len = end - pos;
+    }
     return len;
 }
 

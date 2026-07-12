@@ -2,6 +2,7 @@
 #define YUI_UTIL_H
 
 #include <limits.h>
+#include <stdint.h>
 #include <string.h>
 #include "cJSON.h"
 #include <math.h>
@@ -19,10 +20,14 @@ int is_point_in_rect(int x, int y, Rect rect);
 
 void parse_color(char* valuestring, Color* color);
 
-// UTF-8 字符处理辅助函数
+// UTF-8 字符处理
 int utf8_char_len(unsigned char c);
+int utf8_char_len_at(const char* s);
 int get_prev_utf8_char_len(const char* text, int cursor_pos);
 int get_current_utf8_char_len(const char* text, int cursor_pos);
+int utf8_safe_prefix_bytes(const char* text, int byte_len);
+int utf8_prev_prefix_bytes(const char* text, int byte_len);
+int utf8_decode_codepoint(const char** text, uint32_t* codepoint);
 
 #endif
 

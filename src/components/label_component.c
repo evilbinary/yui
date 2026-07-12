@@ -2,6 +2,7 @@
 #include "../render.h"
 #include "../backend.h"
 #include "../popup_manager.h"
+#include "../util.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -191,12 +192,16 @@ void label_component_render(Layer* layer) {
             int avail_w = layer->rect.w - (layer->rect.w > 10 ? 10 : 0);
             if (tw / scale > avail_w) {
                 component->has_overflow = 1;
-                // 截断文本: 从完整长度逐步缩短直到加上 "..." 能放进
-                int len = strlen(original_text);
-                char* truncated = malloc(len + 4);
-                while (len > 0) {
-                    memcpy(truncated, original_text, len);
-                    truncated[len] = '\0';
+                // 截断文本: 从完整长度逐步缩短直到加上 "..." 能放进（按 UTF-8 字符边界截断，避免切断 emoji）
+                int byte_len = (int)strlen(original_text);
+                char* truncated = malloc((size_t)byte_len + 4);
+                while (byte_len > 0) {
+                    int safe_len = utf8_safe_prefix_bytes(original_text, byte_len);
+                    if (safe_len <= 0) {
+                        break;
+                    }
+                    memcpy(truncated, original_text, (size_t)safe_len);
+                    truncated[safe_len] = '\0';
                     strcat(truncated, "...");
                     Texture* short_tex = backend_render_texture(layer->font->default_font, truncated, (Color){0,0,0,255});
                     if (short_tex) {
@@ -205,9 +210,9 @@ void label_component_render(Layer* layer) {
                         backend_render_text_destroy(short_tex);
                         if (stw / scale <= avail_w) break;
                     }
-                    len--;
+                    byte_len = utf8_prev_prefix_bytes(original_text, safe_len);
                 }
-                if (len > 0) {
+                if (byte_len > 0) {
                     Color text_color = layer->color;
                     Texture* final_tex = render_text(layer, truncated, text_color);
                     if (final_tex) {
