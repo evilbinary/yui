@@ -63,6 +63,145 @@ typedef struct {
 TextureCacheEntry texture_cache[MAX_TEXTURE_CACHE_ENTRIES] = {0};
 int texture_cache_initialized = 0;
 
+static char g_font_fallback_path[MAX_PATH] = "";
+
+void backend_set_font_fallback_path(const char* path) {
+    if (!path) {
+        g_font_fallback_path[0] = '\0';
+        return;
+    }
+    strncpy(g_font_fallback_path, path, sizeof(g_font_fallback_path) - 1);
+    g_font_fallback_path[sizeof(g_font_fallback_path) - 1] = '\0';
+}
+
+int backend_has_font_fallback(void) {
+    return g_font_fallback_path[0] != '\0';
+}
+
+static int backend_get_font_size(DFont* font) {
+    int i;
+
+    if (!font) {
+        return 16;
+    }
+
+    for (i = 0; i < MAX_FONT_CACHE_ENTRIES; i++) {
+        if (font_cache[i].font == font) {
+            return font_cache[i].size;
+        }
+    }
+
+    return 16;
+}
+
+static DFont* backend_get_fallback_font_for(DFont* primary) {
+    if (!backend_has_font_fallback() || !primary) {
+        return NULL;
+    }
+    return backend_load_font_with_weight(g_font_fallback_path, backend_get_font_size(primary), "normal");
+}
+
+static int utf8_decode_codepoint(const char** text, Uint32* codepoint) {
+    const unsigned char* p = (const unsigned char*)(*text);
+
+    if (!p || !*p) {
+        return 0;
+    }
+
+    if (p[0] < 0x80) {
+        *codepoint = p[0];
+        *text += 1;
+        return 1;
+    }
+    if ((p[0] & 0xE0) == 0xC0 && p[1]) {
+        *codepoint = ((Uint32)(p[0] & 0x1F) << 6) | (p[1] & 0x3F);
+        *text += 2;
+        return 1;
+    }
+    if ((p[0] & 0xF0) == 0xE0 && p[1] && p[2]) {
+        *codepoint = ((Uint32)(p[0] & 0x0F) << 12) |
+                     ((Uint32)(p[1] & 0x3F) << 6) |
+                     (p[2] & 0x3F);
+        *text += 3;
+        return 1;
+    }
+    if ((p[0] & 0xF8) == 0xF0 && p[1] && p[2] && p[3]) {
+        *codepoint = ((Uint32)(p[0] & 0x07) << 18) |
+                     ((Uint32)(p[1] & 0x3F) << 12) |
+                     ((Uint32)(p[2] & 0x3F) << 6) |
+                     (p[3] & 0x3F);
+        *text += 4;
+        return 1;
+    }
+
+    *codepoint = p[0];
+    *text += 1;
+    return 1;
+}
+
+// 返回渲染应使用的单一字体；返回 NULL 表示文本需要混合排版。
+// out_fallback 始终接收 fallback 字体（混合路径需要），调用方自行判 NULL。
+static DFont* backend_resolve_render_font(DFont* primary, const char* text, DFont** out_fallback) {
+    DFont* fallback;
+    const char* cursor;
+    int all_in_primary = 1;
+    int all_in_fallback = 1;
+    int any_in_primary = 0;
+
+    if (out_fallback) {
+        *out_fallback = NULL;
+    }
+
+    if (!primary || !text || !backend_has_font_fallback()) {
+        return primary;
+    }
+
+    fallback = backend_get_fallback_font_for(primary);
+    if (out_fallback) {
+        *out_fallback = fallback;
+    }
+    if (!fallback || fallback == primary) {
+        return primary;
+    }
+
+    cursor = text;
+    while (*cursor) {
+        Uint32 codepoint = 0;
+
+        if (!utf8_decode_codepoint(&cursor, &codepoint)) {
+            break;
+        }
+        if (TTF_GlyphIsProvided32(primary, codepoint)) {
+            any_in_primary = 1;
+        } else {
+            all_in_primary = 0;
+        }
+        if (!TTF_GlyphIsProvided32(fallback, codepoint)) {
+            all_in_fallback = 0;
+        }
+    }
+
+    if (all_in_primary) {
+        return primary;
+    }
+    // 仅当主字体完全缺字时才整串用 fallback（如纯 emoji）。
+    // emoji 字体通常也含 ASCII，不能因 all_in_fallback 就把 "🔋 85%" 整串交给 fallback，否则数字会乱码。
+    if (all_in_fallback && !any_in_primary) {
+        return fallback;
+    }
+    return NULL;  // 混合：需要分段合成
+}
+
+static DFont* backend_pick_font_for_codepoint(DFont* primary, DFont* fallback, Uint32 codepoint) {
+    if (primary && TTF_GlyphIsProvided32(primary, codepoint)) {
+        return primary;
+    }
+    if (fallback && TTF_GlyphIsProvided32(fallback, codepoint)) {
+        return fallback;
+    }
+    return primary ? primary : fallback;
+}
+
 void handle_event(Layer* root, SDL_Event* event);
 
 static void backend_handle_window_resize(Layer* root) {
@@ -1435,15 +1574,114 @@ Texture* backend_render_texture(DFont* font,const char* text,Color color){
         init_texture_cache();
     }
     
-    // 尝试从缓存中查找
+    DFont* fallback = NULL;
+    DFont* render_font = backend_resolve_render_font(font, text, &fallback);
+
+    // 尝试从缓存中查找（统一按主字体 key，混合纹理也缓存于此）
     int cached_width, cached_height;
     SDL_Texture* cached_texture = find_texture_in_cache(font, text, color, &cached_width, &cached_height);
     if (cached_texture) {
         return cached_texture;
     }
-    
-    // 缓存未命中，创建新纹理
-    SDL_Surface* surface = TTF_RenderUTF8_Blended(font, text, color);
+
+    // 混合排版：主字体与 fallback 各自覆盖部分字形，分段渲染后横向拼接
+    if (render_font == NULL && fallback && fallback != font) {
+        const char* cursor = text;
+        const char* run_starts[128];
+        const char* run_ends[128];
+        DFont* run_fonts[128];
+        SDL_Surface* surfaces[128];
+        int run_count = 0;
+        int total_w = 0;
+        int max_h = 0;
+        int i;
+        int x = 0;
+        char run_buf[256];
+        SDL_Surface* final_surface = NULL;
+        SDL_Texture* mixed_texture = NULL;
+
+        for (i = 0; i < 128; i++) {
+            surfaces[i] = NULL;
+        }
+
+        while (*cursor && run_count < 128) {
+            const char* run_start = cursor;
+            Uint32 codepoint = 0;
+            DFont* chosen;
+
+            if (!utf8_decode_codepoint(&cursor, &codepoint)) {
+                break;
+            }
+            chosen = backend_pick_font_for_codepoint(font, fallback, codepoint);
+
+            if (run_count > 0 && run_fonts[run_count - 1] == chosen) {
+                run_ends[run_count - 1] = cursor;
+            } else {
+                run_starts[run_count] = run_start;
+                run_ends[run_count] = cursor;
+                run_fonts[run_count] = chosen;
+                run_count++;
+            }
+        }
+
+        for (i = 0; i < run_count; i++) {
+            int len = (int)(run_ends[i] - run_starts[i]);
+            if (len <= 0 || len >= (int)sizeof(run_buf)) {
+                continue;
+            }
+            memcpy(run_buf, run_starts[i], (size_t)len);
+            run_buf[len] = '\0';
+            surfaces[i] = TTF_RenderUTF8_Blended(run_fonts[i], run_buf, color);
+            if (!surfaces[i]) {
+                continue;
+            }
+            total_w += surfaces[i]->w;
+            if (surfaces[i]->h > max_h) {
+                max_h = surfaces[i]->h;
+            }
+        }
+
+        if (total_w > 0 && max_h > 0) {
+            final_surface = SDL_CreateRGBSurfaceWithFormat(0, total_w, max_h, 32, SDL_PIXELFORMAT_RGBA32);
+            if (final_surface) {
+                SDL_FillRect(final_surface, NULL, SDL_MapRGBA(final_surface->format, 0, 0, 0, 0));
+                for (i = 0; i < run_count; i++) {
+                    SDL_Surface* surf = surfaces[i];
+                    SDL_Rect dst;
+                    if (!surf) {
+                        continue;
+                    }
+                    dst.x = x;
+                    dst.y = (max_h - surf->h) / 2;
+                    dst.w = surf->w;
+                    dst.h = surf->h;
+                    SDL_BlitSurface(surf, NULL, final_surface, &dst);
+                    x += surf->w;
+                    SDL_FreeSurface(surf);
+                    surfaces[i] = NULL;
+                }
+                mixed_texture = SDL_CreateTextureFromSurface(renderer, final_surface);
+                SDL_FreeSurface(final_surface);
+                if (mixed_texture) {
+                    SDL_SetTextureScaleMode(mixed_texture, SDL_ScaleModeBest);
+                    int mw = 0, mh = 0;
+                    SDL_QueryTexture(mixed_texture, NULL, NULL, &mw, &mh);
+                    add_texture_to_cache(font, text, color, mixed_texture, mw, mh);
+                    return mixed_texture;
+                }
+            }
+        }
+
+        for (i = 0; i < run_count; i++) {
+            if (surfaces[i]) {
+                SDL_FreeSurface(surfaces[i]);
+            }
+        }
+        // 合成失败则退回主字体单独渲染
+        render_font = font;
+    }
+
+    SDL_Surface* surface = TTF_RenderUTF8_Blended(render_font, text, color);
     if (!surface) {
         printf("error: TTF_RenderUTF8_Blended failed for text '%s': %s\n", text, TTF_GetError());
         return NULL;

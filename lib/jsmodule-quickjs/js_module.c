@@ -6,6 +6,7 @@
 #include "../../src/layer_update.h"
 #include "../../src/layer_lifecycle.h"
 #include "../../src/render.h"
+#include "../../src/theme_manager.h"
 #include "js_socket.h"
 #include "js_timer.h"
 #include "../../src/event.h"
@@ -340,7 +341,7 @@ static JSValue js_render_from_json(JSContext *ctx, JSValueConst this_val, int ar
     }
 
     layout_layer(parent_layer);
-    load_all_fonts(new_layer);
+    theme_manager_apply_to_tree(new_layer);
 
     cJSON* page_json = cJSON_Parse(json_str);
     if (page_json) {

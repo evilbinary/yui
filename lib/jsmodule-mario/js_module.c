@@ -4,6 +4,7 @@
 #include "../../src/layer.h"
 #include "../../src/layout.h"
 #include "../../src/render.h"
+#include "../../src/theme_manager.h"
 #include "event.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -294,7 +295,7 @@ static var_t* mario_render_from_json(vm_t* vm, var_t* env, void* data)
 
             // 为新创建的图层加载字体
             printf("JS(Mario): Loading fonts for new layer\n");
-            load_all_fonts(new_layer);
+            theme_manager_apply_to_tree(new_layer);
             printf("JS(Mario): Fonts loaded successfully\n");
 
             printf("JS(Mario): Successfully rendered JSON to layer '%s', new layer id: '%s'\n",

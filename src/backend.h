@@ -78,6 +78,10 @@ void backend_set_titlebar_color(Color bg, Color text);
 // 设置窗口图标
 void backend_set_window_icon(const char* path);
 
+// 字体 fallback：主字体缺字时自动使用备用字体（如 emoji）
+void backend_set_font_fallback_path(const char* path);
+int backend_has_font_fallback(void);
+
 // 截取当前 UI 为 PNG（桌面 SDL；失败返回负值）
 int backend_screenshot(const char* path);
 

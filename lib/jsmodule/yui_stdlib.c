@@ -386,7 +386,7 @@ static JSValue js_render_from_json(JSContext *ctx, JSValue *this_val, int argc, 
     }
 
     layout_layer(parent_layer);
-    load_all_fonts(new_layer);
+    theme_manager_apply_to_tree(new_layer);
 
     cJSON* page_json = cJSON_Parse(json_str);
     if (page_json) {

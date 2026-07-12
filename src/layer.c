@@ -6,6 +6,7 @@
 #include "animate.h"
 #include "theme_manager.h"
 #include "theme.h"
+#include "backend.h"
 
 
 
@@ -413,6 +414,20 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
   } else {
     if (parent) {
       layer->assets = parent->assets;
+    }
+  }
+
+  {
+    cJSON* font_fallback = cJSON_GetObjectItem(json_obj, "fontFallback");
+    if (font_fallback && cJSON_IsString(font_fallback) && font_fallback->valuestring[0]) {
+      char fallback_path[MAX_PATH];
+      if (layer->assets && layer->assets->path[0] != '\0') {
+        snprintf(fallback_path, sizeof(fallback_path), "%s/%s",
+                 layer->assets->path, font_fallback->valuestring);
+      } else {
+        snprintf(fallback_path, sizeof(fallback_path), "%s", font_fallback->valuestring);
+      }
+      backend_set_font_fallback_path(fallback_path);
     }
   }
 
