@@ -90,6 +90,24 @@ static char* list_resolve_template(ListComponent* component, int index, const ch
     return result;
 }
 
+static Layer* list_resolve_font_layer(Layer* list_layer, Layer* template_layer) {
+    if (template_layer && template_layer->font && template_layer->font->default_font) {
+        return template_layer;
+    }
+    return list_layer;
+}
+
+static Color list_resolve_text_color(Layer* list_layer, Layer* template_layer) {
+    Color text_color = template_layer ? template_layer->color : (Color){0, 0, 0, 0};
+    if (text_color.a == 0 && list_layer) {
+        text_color = list_layer->color;
+    }
+    if (text_color.a == 0) {
+        text_color = (Color){229, 229, 234, 255};
+    }
+    return text_color;
+}
+
 static void list_fit_texture(Rect* item_rect, int* draw_w, int* draw_h, int avail_w, int avail_h) {
     if (*draw_w <= avail_w && *draw_h <= avail_h) return;
     if (avail_w < 1) avail_w = 1;
@@ -296,7 +314,7 @@ static void list_render_item(ListComponent* component, int index, int is_hovered
     }
 
     Color bg_color = template_layer->bg_color;
-    Color text_color = template_layer->color;
+    Color text_color = list_resolve_text_color(layer, template_layer);
     int radius = template_layer->radius;
 
     if (is_pressed) {
@@ -330,6 +348,11 @@ static void list_render_item(ListComponent* component, int index, int is_hovered
         btn_template = (ButtonComponent*)template_layer->component;
     }
 
+    Layer* font_layer = list_resolve_font_layer(layer, template_layer);
+    if (font_layer && font_layer->font && !font_layer->font->default_font) {
+        load_all_fonts(font_layer);
+    }
+
     int content_x = item_rect.x + 10;
     int text_y_center = item_rect.y + item_rect.h / 2;
     int text_x_offset = 0;
@@ -337,7 +360,7 @@ static void list_render_item(ListComponent* component, int index, int is_hovered
     if (btn_template && btn_template->icon_text && btn_template->icon_text[0]) {
         char* icon_text = list_resolve_template(component, index, btn_template->icon_text);
         if (icon_text && icon_text[0]) {
-            Texture* icon_tex = render_text(template_layer, icon_text, text_color);
+            Texture* icon_tex = render_text(font_layer, icon_text, text_color);
             if (icon_tex) {
                 int iw, ih;
                 backend_query_texture(icon_tex, NULL, NULL, &iw, &ih);
@@ -358,7 +381,7 @@ static void list_render_item(ListComponent* component, int index, int is_hovered
     const char* text_template = layer_get_text(template_layer);
     char* item_text = list_resolve_template(component, index, text_template);
     if (item_text && item_text[0]) {
-        Texture* text_tex = render_text(template_layer, item_text, text_color);
+        Texture* text_tex = render_text(font_layer, item_text, text_color);
         if (text_tex) {
             int tw, th;
             backend_query_texture(text_tex, NULL, NULL, &tw, &th);

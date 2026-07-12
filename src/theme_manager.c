@@ -281,6 +281,10 @@ static void theme_manager_apply_to_layer_recursive(Layer* layer) {
             theme_manager_apply_to_layer_recursive(layer->children[i]);
         }
     }
+
+    if (layer->item_template) {
+        theme_manager_apply_to_layer_recursive(layer->item_template);
+    }
 }
 
 // 应用当前主题到图层树

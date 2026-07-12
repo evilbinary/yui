@@ -101,6 +101,10 @@ void load_all_fonts(Layer* layer) {
     if (layer->sub) {
         load_all_fonts(layer->sub);
     }
+
+    if (layer->item_template) {
+        load_all_fonts(layer->item_template);
+    }
 }
 
 void load_font(Layer* root){

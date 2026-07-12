@@ -1,4 +1,9 @@
+/**
+ * 文件管理器 - 动态 List（list_component）
+ */
+
 var filesBrowsePath = "app/watch-os";
+var filesEntries = [];
 
 function onFilesLoad() {
     refreshFilesList();
@@ -6,7 +11,6 @@ function onFilesLoad() {
 
 function onFilesShow() {
     applyWatchTheme();
-    refreshFilesList();
 }
 
 function refreshFilesList() {
@@ -20,13 +24,55 @@ function refreshFilesList() {
         YUI.setText("files_status", "无法读取目录");
         return;
     }
-    for (var i = 0; i < 6; i++) {
-        var label = "—";
-        if (i < entries.length) {
-            var e = entries[i];
-            label = (e.isDir ? "📁 " : "📄 ") + e.name;
-        }
-        YUI.setText("files_row_" + i, label);
+
+    var dirs = [];
+    var files = [];
+    for (var i = 0; i < entries.length; i++) {
+        var e = entries[i];
+        var item = {
+            name: e.name,
+            icon: e.isDir ? "📁" : "📄",
+            isDir: !!e.isDir
+        };
+        if (item.isDir) dirs.push(item);
+        else files.push(item);
     }
-    YUI.setText("files_status", entries.length + " 项");
+    filesEntries = dirs.concat(files);
+
+    YUI.update({
+        target: "files_list",
+        change: { data: filesEntries }
+    });
+
+    YUI.setText("files_status", filesEntries.length + " 项");
+}
+
+function onFilesItemClick(layerId) {
+    var raw = YUI.getText("files_list");
+    if (!raw) return;
+
+    var item;
+    try {
+        item = JSON.parse(raw);
+    } catch (e) {
+        return;
+    }
+    if (!item || !item.name) return;
+
+    if (item.isDir) {
+        filesBrowsePath = filesBrowsePath + "/" + item.name;
+        refreshFilesList();
+    }
+}
+
+function onFilesUp() {
+    var path = filesBrowsePath;
+    if (path.endsWith("/")) path = path.substring(0, path.length - 1);
+    var idx = path.lastIndexOf("/");
+    if (idx > 0) {
+        filesBrowsePath = path.substring(0, idx);
+    } else {
+        filesBrowsePath = ".";
+    }
+    refreshFilesList();
 }

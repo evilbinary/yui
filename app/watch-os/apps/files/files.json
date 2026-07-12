@@ -8,27 +8,42 @@
     "variant": "surface",
     "flex": 1,
     "scrollable": 1,
-    "layout": { "type": "vertical", "spacing": 6, "padding": [4, 16, 12, 16] },
+    "layout": { "type": "vertical", "spacing": 8, "padding": [4, 16, 12, 16] },
     "events": { "onLoad": "@onFilesLoad", "onShow": "@onFilesShow" },
     "children": [
         { "id": "files_brand", "type": "Label", "variant": "overline", "text": "FILES" },
         { "id": "files_title", "type": "Label", "variant": "title", "text": "文件管理" },
         { "id": "files_path", "type": "Label", "variant": "caption", "text": "app/watch-os/" },
-        { "id": "files_row_0", "type": "Label", "variant": "body", "text": "📁 apps", "size": [358, 20] },
-        { "id": "files_row_1", "type": "Label", "variant": "body", "text": "📁 installed", "size": [358, 20] },
-        { "id": "files_row_2", "type": "Label", "variant": "body", "text": "📁 store", "size": [358, 20] },
-        { "id": "files_row_3", "type": "Label", "variant": "body", "text": "📁 themes", "size": [358, 20] },
-        { "id": "files_row_4", "type": "Label", "variant": "body", "text": "📄 app.js", "size": [358, 20] },
-        { "id": "files_row_5", "type": "Label", "variant": "body", "text": "📄 watch-os.md", "size": [358, 20] },
-        { "id": "files_status", "type": "Label", "variant": "subtitle", "text": "浏览手表文件" },
         {
             "id": "files_actions",
             "type": "View",
             "size": [358, 36],
             "layout": { "type": "horizontal", "spacing": 8 },
             "children": [
+                { "id": "btn_files_up", "type": "Button", "variant": "secondary", "text": "上级", "flex": 1, "size": [0, 36], "events": { "onClick": "@onFilesUp" } },
                 { "id": "btn_files_refresh", "type": "Button", "variant": "primary", "text": "刷新", "flex": 1, "size": [0, 36], "events": { "onClick": "@refreshFilesList" } }
             ]
+        },
+        { "id": "files_status", "type": "Label", "variant": "subtitle", "text": "浏览手表文件" },
+        {
+            "id": "files_list",
+            "type": "List",
+            "width": 358,
+            "flex": 1,
+            "scrollable": 1,
+            "data": [],
+            "itemTemplate": {
+                "type": "Button",
+                "variant": "ghost",
+                "icon": "${icon}",
+                "text": "${name}",
+                "iconSize": 16,
+                "fontSize": 14,
+                "style": { "color": "#E5E5EA", "bgColor": "transparent" },
+                "size": [358, 36],
+                "events": { "onClick": "@onFilesItemClick" }
+            },
+            "layout": { "type": "vertical", "spacing": 4 }
         }
     ]
 }
