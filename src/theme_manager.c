@@ -283,29 +283,6 @@ static void theme_manager_apply_to_layer_recursive(Layer* layer) {
     }
 }
 
-// 递归清除已加载字体，便于主题修改字号后重新加载
-static void theme_invalidate_fonts(Layer* layer) {
-    int i;
-
-    if (!layer) {
-        return;
-    }
-
-    if (layer->font) {
-        layer->font->default_font = NULL;
-    }
-
-    for (i = 0; i < layer->child_count; i++) {
-        if (layer->children[i]) {
-            theme_invalidate_fonts(layer->children[i]);
-        }
-    }
-
-    if (layer->sub) {
-        theme_invalidate_fonts(layer->sub);
-    }
-}
-
 // 应用当前主题到图层树
 void theme_manager_apply_to_tree(Layer* root) {
     if (!root) {
@@ -325,10 +302,7 @@ void theme_manager_apply_to_tree(Layer* root) {
     
     printf("Applying theme '%s' to layer tree\n", current_theme->name);
     
-    // 递归应用
+    // 递归应用样式；字号变化时 theme_merge_style 会清空 default_font，再由 load_all_fonts 补载
     theme_manager_apply_to_layer_recursive(root);
-
-    // 主题可能修改字号，需重新加载字体
-    theme_invalidate_fonts(root);
     load_all_fonts(root);
 }

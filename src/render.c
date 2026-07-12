@@ -47,67 +47,57 @@ void load_textures(Layer* root) {
     }
 }
 
-// 递归为所有图层加载字体（使用字体缓存）
+// 递归为所有图层加载字体（backend 按 path+size+weight 缓存 TTF_Font，多图层共享同一指针）
 void load_all_fonts(Layer* layer) {
+    int i;
+
     if (!layer) return;
     
-    // 为当前图层加载字体
     if (layer->font) {
-        // 如果字体已经加载，跳过
+        int needs_load = 1;
+
         if (layer->font->default_font != NULL) {
             if ((uintptr_t)layer->font->default_font != 0xbebebebebebebebeULL) {
-                // 有效字体，跳过
+                needs_load = 0;
             } else {
-                // 损坏的字体指针，重新加载
                 layer->font->default_font = NULL;
             }
         }
-        
-        // 构建字体路径
-        char font_path[MAX_PATH];
-        
-        // 检查字体路径是否为绝对路径
-        if (layer->font->path[0] == '/') {
-            // 使用绝对路径
-            snprintf(font_path, sizeof(font_path), "%s", layer->font->path);
-        } else if (layer->assets && layer->assets->path[0] != '\0') {
-            // 使用相对路径，拼接 assets 路径
-            snprintf(font_path, sizeof(font_path), "%s/%s", layer->assets->path, layer->font->path);
-        } else {
-            // 直接使用字体路径
-            snprintf(font_path, sizeof(font_path), "%s", layer->font->path);
-        }
-        
-        // 确保字体大小和粗细有效
-        if (layer->font->size == 0) {
-            layer->font->size = 16;
-        }
-        if (strlen(layer->font->weight) == 0) {
-            strcpy(layer->font->weight, "normal");
-        }
-        
-        // 加载字体（使用缓存）
-        printf("loading font for layer '%s': %s (size: %d, weight: %s)\n", 
-               layer->id, font_path, layer->font->size, layer->font->weight);
-        
-        DFont* font = backend_load_font_with_weight(font_path, layer->font->size, layer->font->weight);
-        
-        if (font) {
-            layer->font->default_font = font;
-            printf("font loaded successfully for layer '%s': %p\n", layer->id, (void*)font);
-        } else {
-            printf("error: failed to load font for layer '%s': %s\n", layer->id, font_path);
+
+        if (needs_load) {
+            char font_path[MAX_PATH];
+            
+            if (layer->font->path[0] == '/') {
+                snprintf(font_path, sizeof(font_path), "%s", layer->font->path);
+            } else if (layer->assets && layer->assets->path[0] != '\0') {
+                snprintf(font_path, sizeof(font_path), "%s/%s", layer->assets->path, layer->font->path);
+            } else {
+                snprintf(font_path, sizeof(font_path), "%s", layer->font->path);
+            }
+            
+            if (layer->font->size == 0) {
+                layer->font->size = 16;
+            }
+            if (strlen(layer->font->weight) == 0) {
+                strcpy(layer->font->weight, "normal");
+            }
+            
+            DFont* font = backend_load_font_with_weight(font_path, layer->font->size, layer->font->weight);
+            if (font) {
+                layer->font->default_font = font;
+            } else {
+                printf("error: failed to load font for layer '%s': %s (size: %d, weight: %s)\n",
+                       layer->id, font_path, layer->font->size, layer->font->weight);
+            }
         }
     }
     
-    // 递归加载子图层的字体
     if (layer->children) {
-        for (int i = 0; i < layer->child_count; i++) {
+        for (i = 0; i < layer->child_count; i++) {
             load_all_fonts(layer->children[i]);
         }
     }
     
-    // 处理子图层
     if (layer->sub) {
         load_all_fonts(layer->sub);
     }

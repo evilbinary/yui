@@ -1433,8 +1433,9 @@ DFont* backend_load_font_with_weight(char* font_path,int size,const char* weight
         TTF_SetFontHinting(default_font, TTF_HINTING_LIGHT); 
         TTF_SetFontOutline(default_font, 0); // 无轮廓
         
-        // 将成功加载的字体添加到缓存
         add_font_to_cache(font_path, size, weight, default_font);
+        printf("font opened: %s (size: %d, weight: %s) -> %p\n",
+               font_path, size, weight, (void*)default_font);
     }
 
     return default_font;
