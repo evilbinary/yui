@@ -1192,6 +1192,21 @@ int layer_hide(Layer* layer) {
     return 1;
 }
 
+cJSON* parse_json_string(const char* json_str) {
+    if (!json_str) {
+        return NULL;
+    }
+
+    char* cleaned_json = remove_json_comments((char*)json_str);
+    if (!cleaned_json) {
+        return NULL;
+    }
+
+    cJSON* json_obj = cJSON_Parse(cleaned_json);
+    free(cleaned_json);
+    return json_obj;
+}
+
 // 从 JSON 字符串解析并创建图层
 Layer* parse_layer_from_string(const char* json_str, Layer* parent) {
     if (!json_str) {
@@ -1201,17 +1216,7 @@ Layer* parse_layer_from_string(const char* json_str, Layer* parent) {
 
     LOGD("layer", "parsing layer from JSON string (length: %zu)", strlen(json_str));
 
-    // 移除 JSON 字符串中的注释
-    char* cleaned_json = remove_json_comments((char*)json_str);
-    if (!cleaned_json) {
-        LOGE("layer", "failed to remove JSON comments");
-        return NULL;
-    }
-
-    // 解析 JSON
-    cJSON* json_obj = cJSON_Parse(cleaned_json);
-    free(cleaned_json);
-
+    cJSON* json_obj = parse_json_string(json_str);
     if (!json_obj) {
         LOGE("layer", "failed to parse JSON string");
         return NULL;

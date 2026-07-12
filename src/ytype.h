@@ -350,6 +350,10 @@ typedef struct Layer {
 
     // Layer 生命周期：声明位 + 运行时状态，见 layer_lifecycle.h
     unsigned char lifecycle_flags;
+    char lifecycle_on_load[128];
+    char lifecycle_on_show[128];
+    char lifecycle_on_hide[128];
+    char lifecycle_on_unload[128];
 
     //动画
     Animation* animation;

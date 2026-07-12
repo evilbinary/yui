@@ -10,6 +10,7 @@
 
 
 cJSON* parse_json(char* json_path);
+cJSON* parse_json_string(const char* json_str);
 Layer* layer_create_from_json(cJSON* json_obj,Layer* parent);
 Layer* parse_layer_from_string(const char* json_str, Layer* parent);
 Layer* find_layer_by_id(Layer* root, const char* id);

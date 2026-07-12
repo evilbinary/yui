@@ -19,23 +19,44 @@ int layer_lifecycle_is_event(const char* event_name) {
            strcmp(event_name, "onUnload") == 0;
 }
 
+static void lifecycle_copy_handler_name(char* dest, size_t dest_size, const char* src) {
+    if (!dest || dest_size == 0) return;
+    dest[0] = '\0';
+    if (!src || !src[0]) return;
+    if (src[0] == '@') src++;
+    strncpy(dest, src, dest_size - 1);
+    dest[dest_size - 1] = '\0';
+}
+
 void layer_lifecycle_bind_events(Layer* layer, cJSON* events) {
     if (!layer || !events || !cJSON_IsObject(events)) return;
 
     cJSON* event = events->child;
     while (event) {
-        if (!event->string) {
+        if (!event->string || !cJSON_IsString(event)) {
             event = event->next;
             continue;
         }
         if (strcmp(event->string, "onLoad") == 0) {
             layer->lifecycle_flags |= LIFECYCLE_ON_LOAD;
+            lifecycle_copy_handler_name(layer->lifecycle_on_load,
+                                        sizeof(layer->lifecycle_on_load),
+                                        event->valuestring);
         } else if (strcmp(event->string, "onShow") == 0) {
             layer->lifecycle_flags |= LIFECYCLE_ON_SHOW;
+            lifecycle_copy_handler_name(layer->lifecycle_on_show,
+                                        sizeof(layer->lifecycle_on_show),
+                                        event->valuestring);
         } else if (strcmp(event->string, "onHide") == 0) {
             layer->lifecycle_flags |= LIFECYCLE_ON_HIDE;
+            lifecycle_copy_handler_name(layer->lifecycle_on_hide,
+                                        sizeof(layer->lifecycle_on_hide),
+                                        event->valuestring);
         } else if (strcmp(event->string, "onUnload") == 0) {
             layer->lifecycle_flags |= LIFECYCLE_ON_UNLOAD;
+            lifecycle_copy_handler_name(layer->lifecycle_on_unload,
+                                        sizeof(layer->lifecycle_on_unload),
+                                        event->valuestring);
         }
         event = event->next;
     }

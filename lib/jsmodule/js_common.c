@@ -28,7 +28,7 @@ static CEventEntry g_c_event_handlers[MAX_C_EVENT_HANDLERS];
 static int g_c_event_handler_count = 0;
 
 // JS 事件映射表（存储 JS 函数名）
-#define MAX_JS_EVENTS 128
+#define MAX_JS_EVENTS 512
 typedef struct {
     char event_name[128];
     char func_name[128];
@@ -357,7 +357,7 @@ static int is_page_lifecycle_event(const char* event_name)
 static void register_js_event_mapping(const char* event_name, const char* func_name)
 {
     if (g_js_event_count >= MAX_JS_EVENTS) {
-        printf("JS: JS event map full, cannot register event: %s\n", event_name);
+        LOGW("js", "event map full, cannot register event: %s", event_name);
         return;
     }
 
@@ -474,9 +474,34 @@ static void build_registered_event_name(const char* layer_id, const char* event_
     full_event_name[full_event_name_size - 1] = '\0';
 }
 
+static const char* layer_lifecycle_handler_name(Layer* layer, const char* event_type)
+{
+    if (!layer || !event_type) return NULL;
+
+    if (strcmp(event_type, "onLoad") == 0 && layer->lifecycle_on_load[0] != '\0') {
+        return layer->lifecycle_on_load;
+    }
+    if (strcmp(event_type, "onShow") == 0 && layer->lifecycle_on_show[0] != '\0') {
+        return layer->lifecycle_on_show;
+    }
+    if (strcmp(event_type, "onHide") == 0 && layer->lifecycle_on_hide[0] != '\0') {
+        return layer->lifecycle_on_hide;
+    }
+    if (strcmp(event_type, "onUnload") == 0 && layer->lifecycle_on_unload[0] != '\0') {
+        return layer->lifecycle_on_unload;
+    }
+    return NULL;
+}
+
 static void layer_lifecycle_js_dispatch(Layer* layer, const char* event_type)
 {
     if (!layer || !event_type || !event_type[0]) {
+        return;
+    }
+
+    const char* handler_name = layer_lifecycle_handler_name(layer, event_type);
+    if (handler_name) {
+        js_module_call_event(handler_name, layer);
         return;
     }
 

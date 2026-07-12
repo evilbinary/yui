@@ -16,6 +16,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <ctype.h>
 #include <unistd.h>
 #include <dirent.h>
 #include <sys/stat.h>
@@ -341,7 +342,7 @@ static JSValue js_render_from_json(JSContext *ctx, JSValueConst this_val, int ar
     layout_layer(parent_layer);
     theme_manager_apply_to_tree(new_layer);
 
-    cJSON* page_json = cJSON_Parse(json_str);
+    cJSON* page_json = parse_json_string(json_str);
     if (page_json) {
         js_module_load_from_json(page_json, json_source_path, 1);
         cJSON_Delete(page_json);
@@ -1262,6 +1263,50 @@ int js_module_load_file(const char* filename)
 }
 
 // 调用 JS 事件函数
+static int is_js_identifier_name(const char* name)
+{
+    if (!name || !name[0]) return 0;
+    if (!isalpha((unsigned char)name[0]) && name[0] != '_') return 0;
+    for (const char* p = name + 1; *p; ++p) {
+        if (!isalnum((unsigned char)*p) && *p != '_') return 0;
+    }
+    return 1;
+}
+
+static int call_js_function_value(JSContext* ctx, JSValue func, const char* event_name, Layer* layer)
+{
+    const TouchEvent* touch = get_current_touch_event();
+    JSValue result;
+    if (touch) {
+        JSValue args[3];
+        args[0] = JS_NewString(ctx, touch_type_to_string(touch->type));
+        args[1] = JS_NewInt32(ctx, touch->deltaX);
+        args[2] = JS_NewInt32(ctx, touch->deltaY);
+        result = JS_Call(ctx, func, JS_UNDEFINED, 3, args);
+        JS_FreeValue(ctx, args[0]);
+        JS_FreeValue(ctx, args[1]);
+        JS_FreeValue(ctx, args[2]);
+    } else {
+        JSValue args[1];
+        args[0] = layer ? JS_NewString(ctx, layer->id) : JS_NULL;
+        result = JS_Call(ctx, func, JS_UNDEFINED, 1, args);
+        JS_FreeValue(ctx, args[0]);
+    }
+
+    if (JS_IsException(result)) {
+        JSValue exc = JS_GetException(ctx);
+        char err_prefix[256];
+        snprintf(err_prefix, sizeof(err_prefix), "event '%s'", event_name ? event_name : "<unknown>");
+        print_quickjs_exception(ctx, exc, err_prefix);
+        JS_FreeValue(ctx, exc);
+        JS_FreeValue(ctx, result);
+        return -1;
+    }
+
+    JS_FreeValue(ctx, result);
+    return 0;
+}
+
 int js_module_call_event(const char* event_name, Layer* layer)
 {
     if (!g_js_ctx || !event_name) return -1;
@@ -1287,41 +1332,23 @@ int js_module_call_event(const char* event_name, Layer* layer)
             return js_module_trigger_event(func_name, layer);
         }
 
-        // 准备参数：有 pending touch 时按 (type, deltaX, deltaY) 调用，否则按 layer_id
-        const TouchEvent* touch = get_current_touch_event();
-        JSValue result;
-        if (touch) {
-            JSValue args[3];
-            args[0] = JS_NewString(g_js_ctx, touch_type_to_string(touch->type));
-            args[1] = JS_NewInt32(g_js_ctx, touch->deltaX);
-            args[2] = JS_NewInt32(g_js_ctx, touch->deltaY);
-            result = JS_Call(g_js_ctx, func, JS_UNDEFINED, 3, args);
-            JS_FreeValue(g_js_ctx, args[0]);
-            JS_FreeValue(g_js_ctx, args[1]);
-            JS_FreeValue(g_js_ctx, args[2]);
-        } else {
-            JSValue args[1];
-            args[0] = layer ? JS_NewString(g_js_ctx, layer->id) : JS_NULL;
-            result = JS_Call(g_js_ctx, func, JS_UNDEFINED, 1, args);
-            JS_FreeValue(g_js_ctx, args[0]);
-        }
-
-        // 清理
+        int ret = call_js_function_value(g_js_ctx, func, event_name, layer);
         JS_FreeValue(g_js_ctx, global_obj);
         JS_FreeValue(g_js_ctx, func);
+        return ret;
+    }
 
-        if (JS_IsException(result)) {
-            JSValue exc = JS_GetException(g_js_ctx);
-            char err_prefix[256];
-            snprintf(err_prefix, sizeof(err_prefix), "event '%s'", event_name);
-            print_quickjs_exception(g_js_ctx, exc, err_prefix);
-            JS_FreeValue(g_js_ctx, exc);
-            JS_FreeValue(g_js_ctx, result);
-            return -1;
+    if (is_js_identifier_name(event_name)) {
+        JSValue global_obj = JS_GetGlobalObject(g_js_ctx);
+        JSValue func = JS_GetPropertyStr(g_js_ctx, global_obj, event_name);
+        if (JS_IsFunction(g_js_ctx, func)) {
+            int ret = call_js_function_value(g_js_ctx, func, event_name, layer);
+            JS_FreeValue(g_js_ctx, global_obj);
+            JS_FreeValue(g_js_ctx, func);
+            return ret;
         }
-
-        JS_FreeValue(g_js_ctx, result);
-        return 0;
+        JS_FreeValue(g_js_ctx, global_obj);
+        JS_FreeValue(g_js_ctx, func);
     }
 
     // 内联 JS 代码：直接 eval 执行
