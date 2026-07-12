@@ -1,316 +1,174 @@
-# YUI主题系统实现总结
+# YUI 主题系统实现说明
 
-## 实现概述
+## 架构概览
 
-主题系统已成功实现，包含以下核心组件：
+```
+app/lib/theme.js          JS API（Theme.load / setCurrent / apply）
+        ↓ YUI.themeLoad / themeSetCurrent / themeApplyToTree
+lib/jsmodule-quickjs/     QuickJS 桥接
+        ↓
+src/theme_manager.c       单例管理、遍历图层树 apply
+src/theme.c               选择器匹配、样式合并
+src/layer.c               解析 variant / variants 字段
+```
 
-## 📁 文件结构
+## 文件结构
 
-### 核心实现
+### C 实现
+
 ```
 src/
-├── theme.h              # 主题系统头文件
-├── theme.c              # 主题系统实现
-├── theme_manager.h      # 主题管理器头文件
-├── theme_manager.c      # 主题管理器实现
-└── layer.c              # 修改 - 集成主题应用逻辑
+├── theme.h               ThemeRule、选择器类型枚举
+├── theme.c               规则解析、theme_merge_style、复合选择器匹配
+├── theme_manager.h
+├── theme_manager.c       加载、setCurrent、apply_to_tree、字体 invalidate
+└── layer.c               JSON 解析 variant；创建图层时可选 apply 主题
 ```
 
-### JavaScript库
+### 主题资源
+
 ```
-app/lib/
-├── theme.js             # 主题系统JavaScript API（封装库）
-├── theme-example.js     # 游戏主题集成示例
-└── ......
+app/lib/themes/
+├── dark.json             桌面暗色
+├── light.json            桌面亮色
+├── dark-mobile.json      手机暗色
+└── light-mobile.json     手机亮色
 ```
 
-### 示例主题
+### JavaScript
+
 ```
-app/
-├── dark-theme.json      # 深色主题示例
-└── light-theme.json     # 浅色主题示例
+app/lib/theme.js          Theme 全局对象，封装 YUI C API
 ```
 
-### 测试文件
-```
-tests/
-├── test-theme.json      # 主题系统测试UI
-└── test-theme.js        # 主题系统测试脚本
+## 选择器类型
+
+```c
+typedef enum {
+    THEME_SELECTOR_ID,        // #componentId
+    THEME_SELECTOR_TYPE,    // Button, Label, View ...
+    THEME_SELECTOR_COMPOUND // Button.primary, #id.primary
+} ThemeSelectorType;
 ```
 
-## 🎯 核心功能
+### 复合选择器匹配逻辑
 
-### 1. 主题配置格式
-支持JSON格式的主题配置文件：
+- `Button.primary`：`layer.type == Button` 且 variant 列表含 `primary`
+- `Button.primary.compact`：同时含 `primary` 与 `compact`
+- `#btn_logo.primary`：`layer.id == btn_logo` 且含 `primary`
+
+variant 在图层上存为**单个字符串**（最长 128 字符），多个 modifier 以空格连接：
+
+```c
+char variant[128];  // 例如 "primary compact"
+```
+
+JSON 解析（`layer.c`）：
+
+- `"variants": ["primary", "compact"]` → 存为 `"primary compact"`
+- `"variant": "primary, compact"` → 原样存入，匹配时按空格/逗号/分号分词
+
+## 样式合并（theme_merge_style）
+
+| 属性 | 行为 |
+|------|------|
+| `color` | 写入 `layer->color`，标记 DIRTY_COLOR |
+| `bgColor` | 写入 `layer->bg_color`（`a > 0` 才应用；透明用 `#00000000`） |
+| `borderRadius` | 写入 `layer->radius` |
+| `fontSize` | 写入 `layer->font->size`；若 font 与父共享则拷贝独立 Font；清空 `default_font` 后 mark DIRTY_TEXT |
+| `spacing` / `padding` | 写入 `layout_manager` |
+| `borderColor` / `borderWidth` | 规则已解析，合并到 Layer **待实现** |
+
+## 应用流程
+
+```
+Theme.apply()
+  → theme_manager_apply_to_tree(root)
+      → 递归 theme_apply_to_layer（遍历规则链表，匹配则 merge）
+      → theme_invalidate_fonts(root)   // 清空 default_font
+      → load_all_fonts(root)           // 按新 fontSize 重新加载
+```
+
+图层创建时（`layer.c`）若已有 current_theme，也会调用一次 `theme_apply_to_layer`。
+
+规则链表：**后加载的规则在链表头部，遍历从头部开始**；JSON 文件中**靠后的规则最后应用，优先级更高**。
+
+## JavaScript API 映射
+
+| Theme.js | YUI (C) |
+|----------|---------|
+| `Theme.load(path, name)` | `YUI.themeLoad(path)` |
+| `Theme.setCurrent(name)` | `YUI.themeSetCurrent(name)` |
+| `Theme.apply()` | `YUI.themeApplyToTree()` |
+
+`themeLoad` 也接受 JSON 字符串（以 `{` 开头）。
+
+## 平台主题约定
+
+- 文件名：`{mode}-mobile.json`，`mode` 为 `dark` | `light`
+- JSON 内 `"name"` 仍为 `dark` / `light`，便于 `setCurrent("dark")` 不变
+- 桌面与手机共享同一套 modifier 命名，仅尺寸 token 不同
+
+| Token | 桌面 dark | 手机 dark-mobile |
+|-------|-----------|------------------|
+| Label | 14 | 12 |
+| Label.title | 22 | 17 |
+| Label.price | 20 | 16 |
+| Button.borderRadius | 12 | 8 |
+| View.card.borderRadius | 16 | 10 |
+
+## shopping 集成要点
+
+```javascript
+// app/shopping/app.js
+var themePlatform = "mobile";
+var suffix = themePlatform === "mobile" ? "-mobile" : "";
+Theme.load("app/lib/themes/dark" + suffix + ".json", "dark");
+```
 
 ```json
-{
-  "name": "dark-theme",
-  "version": "1.0",
-  "styles": [
-    {
-      "selector": "#componentId",    // ID选择器（优先级高）
-      "style": { "bgColor": "#16A085" }
-    },
-    {
-      "selector": "ComponentType",   // 类型选择器（优先级中）
-      "style": { "color": "#ffffff" }
-    }
-  ]
+// app/shopping/app.json — 无 inline 颜色 style
+{ "type": "Button", "variant": "primary", "text": "登录" }
+```
+
+```javascript
+// app/shopping/page/product.js — 动态路由
+function onProductShow() {
+    Theme.apply();
 }
 ```
 
-**优先级**：ID选择器 > 类型选择器 > 组件默认样式
-
-### 2. C语言API
-
-#### 主题管理
-```c
-// 加载主题
-Theme* theme_load_from_file(const char* json_path);
-
-// 设置当前主题
-int theme_manager_set_current(const char* theme_name);
-
-// 应用到图层
-void theme_apply_to_layer(Theme* theme, Layer* layer, const char* id, const char* type);
-```
-
-#### 集成到图层系统
-在 `layer.c` 中自动应用主题：
-```c
-// 在parse_layer_from_json函数中
-Theme* current_theme = theme_manager_get_current();
-if (current_theme) {
-    const char* type_name = layer_type_name[layer->type];
-    theme_apply_to_layer(current_theme, layer, layer->id, type_name);
-}
-```
-
-### 3. JavaScript API
-
-#### 核心方法
-```javascript
-// 加载并切换主题
-await Theme.switch('app/dark-theme.json', 'dark-theme');
-
-// 分步操作
-await Theme.load('app/dark-theme.json', 'dark-theme');
-Theme.setCurrent('dark-theme');
-Theme.apply();
-
-// 获取当前主题
-const current = Theme.getCurrent();
-
-// 本地存储
-Theme.saveToStorage();
-await Theme.restoreFromStorage();
-```
-
-#### UI组件
-```javascript
-// 创建主题切换按钮
-const toggleBtn = Theme.ThemeSwitcher.createButton();
-document.body.appendChild(toggleBtn);
-```
-
-#### 事件系统
-```javascript
-Theme.on('themeChanged', (data) => {
-    console.log(`主题切换: ${data.oldTheme} → ${data.newTheme}`);
-});
-```
-
-## 🔧 支持的样式属性
-
-| 属性 | 类型 | 说明 |
-|------|------|------|
-| `color` | string | 文字颜色（支持#RRGGBB、rgba()等） |
-| `bgColor` | string | 背景颜色 |
-| `fontSize` | number | 字体大小（px） |
-| `fontWeight` | string | 字体粗细（bold/normal） |
-| `borderRadius` | number | 圆角半径（px） |
-| `borderWidth` | number | 边框宽度（px） |
-| `borderColor` | string | 边框颜色 |
-| `spacing` | number | 子组件间距（px） |
-| `padding` | array | 内边距 `[top, right, bottom, left]` |
-| `opacity` | number | 透明度（0-255） |
-
-## 📖 使用步骤
-
-### 1. 创建主题文件
-
-创建 `app/dark-theme.json`：
-```json
-{
-  "name": "dark-theme",
-  "version": "1.0",
-  "styles": [
-    {
-      "selector": "Button",
-      "style": {
-        "bgColor": "#16A085",
-        "color": "#ffffff",
-        "borderRadius": 8
-      }
-    },
-    {
-      "selector": "#submitBtn",
-      "style": {
-        "bgColor": "#3498DB"
-      }
-    }
-  ]
-}
-```
-
-### 2. 在应用中加载主题
-
-```javascript
-// 方法1: 快捷切换
-await Theme.switch('app/dark-theme.json', 'dark-theme');
-
-// 方法2: 分步操作（更灵活）
-await Theme.load('app/dark-theme.json', 'dark-theme');
-Theme.setCurrent('dark-theme');
-Theme.apply();
-
-// 方法3: 自动恢复上次使用的主题
-await Theme.restoreFromStorage();
-```
-
-### 3. 创建主题切换UI
-
-```javascript
-// 创建切换按钮
-const toggleBtn = Theme.ThemeSwitcher.createButton({
-    top: '20px',
-    right: '20px'
-});
-document.body.appendChild(toggleBtn);
-```
-
-### 4. 监听主题变化
-
-```javascript
-Theme.on('themeChanged', (data) => {
-    console.log(`主题切换: ${data.oldTheme} → ${data.newTheme}`);
-    
-    // 保存用户偏好
-    Theme.saveToStorage();
-    
-    // 更新UI状态
-    updateUIState();
-});
-```
-
-## 🧪 测试
-
-运行主题系统测试：
+## 测试
 
 ```bash
-# 运行测试（实际命令取决于你的构建系统）
-ya -r tests/test-theme.json
+ya -b playground -r
+.\build\None\None\None\playground.exe .\app\shopping\app.json
 ```
 
-测试包含：
-- 主题加载测试
-- 主题切换测试
-- 事件系统测试
-- UI组件测试
+## 已知限制
 
-## 🎮 游戏集成示例
+1. `fontWeight` 写入规则但未驱动字体重新选 weight 文件
+2. 主题 `borderColor` / `borderWidth` 未写入 Layer，边框仍需 JSON inline 或后续扩展
+3. `Theme.extend`（lib 主题 + App 覆盖合并）尚未实现，需加载两份完整主题或重复 modifier 定义
+4. variant **不继承**父图层，每个控件需自行声明
 
-在记忆游戏中集成主题系统：
+## 更新日志
 
-```javascript
-// 加载所有主题
-await Theme.load('app/dark-theme.json', 'dark-theme');
-await Theme.load('app/light-theme.json', 'light-theme');
+### v1.1.0
+- `THEME_SELECTOR_COMPOUND`：`Type.modifier`、`#id.modifier`
+- Layer `variant[128]`，支持 `variants` 数组
+- `theme_invalidate_fonts` + `load_all_fonts` 于 apply 之后
+- `fontSize` 主题合并
+- `app/lib/themes/*` 通用主题与 mobile 变体
 
-// 恢复用户偏好
-await Theme.restoreFromStorage();
+### v1.0.0
+- 基础 ID / TYPE 选择器
+- theme_manager 单例
+- theme.js 封装
 
-// 创建切换按钮
-const toggleBtn = Theme.ThemeSwitcher.createButton();
-document.body.appendChild(toggleBtn);
+## 相关文件
 
-// 监听主题变化
-Theme.on('themeChanged', (data) => {
-    localStorage.setItem('game-theme', data.newTheme);
-});
-```
-
-## ⚠️ 注意事项
-
-1. **C函数实现**：需要在C代码中实现以下函数：
-   - `_themeLoad(themePath)`
-   - `_themeSetCurrent(themeName)`
-   - `_themeUnload(themeName)`
-   - `_themeApplyToTree()`
-
-2. **样式优先级**：组件JSON中的style属性会覆盖主题样式
-3. **性能**：主题切换会触发全量重绘，避免频繁切换
-4. **错误处理**：加载失败时提供回退主题
-
-## 🔄 工作流程
-
-1. **应用启动**：
-   - 加载主题库
-   - 从本地存储恢复主题
-   - 应用主题到UI
-
-2. **用户操作**：
-   - 点击主题切换按钮
-   - 显示主题选择器
-   - 选择新主题
-   - 应用并保存
-
-3. **主题切换**：
-   - 设置当前主题
-   - 遍历图层树应用样式
-   - 触发事件通知
-   - 保存到本地存储
-
-## 📝 更新日志
-
-### v1.0.0 (2026-01-17)
-- ✅ 主题系统核心实现
-- ✅ ID选择器和类型选择器
-- ✅ 优先级机制
-- ✅ 主题加载、切换、应用
-- ✅ 本地存储支持
-- ✅ 事件系统
-- ✅ UI切换组件
-- ✅ 完整测试用例
-- ✅ 详细文档
-
-## 🚀 未来扩展
-
-可能的扩展方向：
-- [ ] 动态主题生成器
-- [ ] 在线主题商店
-- [ ] 主题预览功能
-- [ ] 颜色变量系统（CSS变量风格）
-- [ ] 主题继承机制
-- [ ] 动画主题过渡效果
-
-## 📚 相关文件
-
-- 核心实现：`src/theme.h`, `src/theme.c`, `src/theme_manager.h`, `src/theme_manager.c`
-- JavaScript库：`app/lib/theme.js`
-- 使用文档：`app/lib/THEME-README.md`
-- 示例代码：`app/lib/theme-example.js`
-- 测试用例：`tests/test-theme.json`, `tests/test-theme.js`
-- 示例主题：`app/dark-theme.json`, `app/light-theme.json`
-
----
-
-**主题系统已实现完成！** 🎉
-
-您现在可以：
-1. 创建主题JSON文件
-2. 在应用中加载和切换主题
-3. 使用UI组件快速切换
-4. 监听主题变化事件
-5. 保存用户主题偏好
+- 使用文档：[theme.md](./theme.md)
+- 核心 C：`src/theme.c`, `src/theme_manager.c`
+- JS 库：`app/lib/theme.js`
+- 参考 App：`app/shopping/`
