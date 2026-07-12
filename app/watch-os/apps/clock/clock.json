@@ -1,0 +1,94 @@
+{
+    "id": "page_clock",
+    "js": ["clock.js"],
+    "type": "View",
+    "variant": "surface",
+    "flex": 1,
+    "scrollable": 1,
+    "layout": { "type": "vertical", "spacing": 8, "padding": [4, 16, 12, 16], "align": "center" },
+    "events": { "onLoad": "@onClockLoad", "onShow": "@onClockShow", "onHide": "@onClockHide" },
+    "children": [
+        { "id": "clock_brand", "type": "Label", "variant": "overline", "text": "TIME" },
+        { "id": "clock_title", "type": "Label", "variant": "title", "text": "时钟" },
+        {
+            "id": "clock_analog_wrap",
+            "type": "View",
+            "variant": "card",
+            "size": [200, 200],
+            "layout": { "type": "vertical", "align": "center", "padding": [8, 8, 8, 8] },
+            "children": [
+                {
+                    "id": "clock_analog",
+                    "type": "Clock",
+                    "size": [184, 184],
+                    "clockConfig": {
+                        "radius": 86,
+                        "borderWidth": 2,
+                        "hourHandLength": 48,
+                        "minuteHandLength": 68,
+                        "secondHandLength": 78,
+                        "handWidth": 3,
+                        "centerRadius": 5,
+                        "showNumbers": true,
+                        "fontSize": 11,
+                        "smoothSecond": true,
+                        "hourHandColor": "#FFFFFF",
+                        "minuteHandColor": "#AEAEB2",
+                        "secondHandColor": "#00D4FF",
+                        "centerColor": "#00D4FF",
+                        "borderColor": "#1C1C1E",
+                        "backgroundColor": "#000000",
+                        "numberColor": "#8E8E93"
+                    }
+                }
+            ]
+        },
+        { "id": "clock_local_time", "type": "Label", "variant": "watch-time", "text": "10:09", "size": [350, 52] },
+        { "id": "clock_local_date", "type": "Label", "variant": "watch-secondary", "text": "SUNDAY · JUL 12", "size": [350, 14] },
+        { "id": "clock_world_title", "type": "Label", "variant": "heading", "text": "世界时钟", "size": [358, 18] },
+        {
+            "id": "clock_city_0",
+            "type": "View",
+            "variant": "list-row",
+            "size": [358, 44],
+            "layout": { "type": "horizontal", "padding": [8, 12, 8, 12], "align": "center" },
+            "children": [
+                { "id": "clock_city_0_name", "type": "Label", "variant": "body", "text": "纽约", "flex": 1, "textAlign": "left" },
+                { "id": "clock_city_0_time", "type": "Label", "variant": "accent-cyan", "text": "22:09", "size": [80, 22], "textAlign": "right" }
+            ]
+        },
+        {
+            "id": "clock_city_1",
+            "type": "View",
+            "variant": "list-row",
+            "size": [358, 44],
+            "layout": { "type": "horizontal", "padding": [8, 12, 8, 12], "align": "center" },
+            "children": [
+                { "id": "clock_city_1_name", "type": "Label", "variant": "body", "text": "伦敦", "flex": 1, "textAlign": "left" },
+                { "id": "clock_city_1_time", "type": "Label", "variant": "accent-cyan", "text": "03:09", "size": [80, 22], "textAlign": "right" }
+            ]
+        },
+        {
+            "id": "clock_city_2",
+            "type": "View",
+            "variant": "list-row",
+            "size": [358, 44],
+            "layout": { "type": "horizontal", "padding": [8, 12, 8, 12], "align": "center" },
+            "children": [
+                { "id": "clock_city_2_name", "type": "Label", "variant": "body", "text": "东京", "flex": 1, "textAlign": "left" },
+                { "id": "clock_city_2_time", "type": "Label", "variant": "accent-cyan", "text": "12:09", "size": [80, 22], "textAlign": "right" }
+            ]
+        },
+        {
+            "id": "clock_city_3",
+            "type": "View",
+            "variant": "list-row",
+            "size": [358, 44],
+            "layout": { "type": "horizontal", "padding": [8, 12, 8, 12], "align": "center" },
+            "children": [
+                { "id": "clock_city_3_name", "type": "Label", "variant": "body", "text": "巴黎", "flex": 1, "textAlign": "left" },
+                { "id": "clock_city_3_time", "type": "Label", "variant": "accent-cyan", "text": "04:09", "size": [80, 22], "textAlign": "right" }
+            ]
+        }
+    ]
+}

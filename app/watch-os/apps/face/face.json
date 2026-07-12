@@ -132,12 +132,12 @@
                     "events": { "onClick": "@openTimer" }
                 },
                 {
-                    "id": "dock_calc",
+                    "id": "dock_clock",
                     "type": "Button",
                     "variant": "dock-flat",
-                    "text": "🧮",
+                    "text": "🕐",
                     "size": [52, 52],
-                    "events": { "onClick": "@openCalc" }
+                    "events": { "onClick": "@openClock" }
                 },
                 {
                     "id": "dock_launcher",

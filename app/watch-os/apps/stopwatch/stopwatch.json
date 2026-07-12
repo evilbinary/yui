@@ -1,0 +1,39 @@
+{
+    "id": "page_stopwatch",
+    "js": ["stopwatch.js"],
+    "type": "View",
+    "variant": "surface",
+    "flex": 1,
+    "layout": { "type": "vertical", "spacing": 10, "padding": [8, 16, 12, 16] },
+    "events": { "onLoad": "@onStopwatchLoad", "onShow": "@onStopwatchShow", "onHide": "@onStopwatchHide" },
+    "children": [
+        { "id": "sw_brand", "type": "Label", "variant": "overline", "text": "STOPWATCH" },
+        { "id": "sw_title", "type": "Label", "variant": "title", "text": "秒表" },
+        {
+            "id": "sw_hero",
+            "type": "View",
+            "variant": "card",
+            "size": [362, 100],
+            "layout": { "type": "vertical", "spacing": 4, "padding": [12, 16, 12, 16], "align": "center" },
+            "children": [
+                { "id": "sw_display", "type": "Label", "variant": "watch-time", "text": "00:00.0", "size": [340, 52] },
+                { "id": "sw_status", "type": "Label", "variant": "subtitle", "text": "就绪" }
+            ]
+        },
+        { "id": "sw_lap_title", "type": "Label", "variant": "heading", "text": "计次", "size": [358, 16] },
+        { "id": "sw_lap_0", "type": "Label", "variant": "body", "text": "—", "size": [358, 14] },
+        { "id": "sw_lap_1", "type": "Label", "variant": "body", "text": "—", "size": [358, 14] },
+        { "id": "sw_lap_2", "type": "Label", "variant": "body", "text": "—", "size": [358, 14] },
+        {
+            "id": "sw_actions",
+            "type": "View",
+            "size": [358, 44],
+            "layout": { "type": "horizontal", "spacing": 8 },
+            "children": [
+                { "id": "btn_sw_reset", "type": "Button", "variant": "secondary", "text": "重置", "flex": 1, "size": [0, 44], "events": { "onClick": "@resetStopwatch" } },
+                { "id": "btn_sw_lap", "type": "Button", "variant": "secondary", "text": "计次", "flex": 1, "size": [0, 44], "events": { "onClick": "@lapStopwatch" } },
+                { "id": "btn_sw_go", "type": "Button", "variant": "primary", "text": "开始", "flex": 1, "size": [0, 44], "events": { "onClick": "@toggleStopwatch" } }
+            ]
+        }
+    ]
+}

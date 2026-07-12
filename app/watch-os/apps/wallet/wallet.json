@@ -1,0 +1,60 @@
+{
+    "id": "page_wallet",
+    "js": ["wallet.js"],
+    "type": "View",
+    "variant": "surface",
+    "flex": 1,
+    "scrollable": 1,
+    "layout": { "type": "vertical", "spacing": 8, "padding": [4, 16, 12, 16] },
+    "events": { "onLoad": "@onWalletLoad", "onShow": "@onWalletShow" },
+    "children": [
+        { "id": "wallet_brand", "type": "Label", "variant": "overline", "text": "WALLET" },
+        { "id": "wallet_title", "type": "Label", "variant": "title", "text": "钱包" },
+        {
+            "id": "wallet_card_0",
+            "type": "View",
+            "variant": "card",
+            "size": [358, 88],
+            "layout": { "type": "vertical", "spacing": 6, "padding": [12, 16, 12, 16] },
+            "children": [
+                { "id": "wallet_card_0_type", "type": "Label", "variant": "caption", "text": "银联借记卡" },
+                { "id": "wallet_card_0_num", "type": "Label", "variant": "heading", "text": "···· 4826" },
+                { "id": "wallet_card_0_bank", "type": "Label", "variant": "accent-cyan", "text": "招商银行" }
+            ]
+        },
+        {
+            "id": "wallet_card_1",
+            "type": "View",
+            "variant": "card",
+            "size": [358, 88],
+            "layout": { "type": "vertical", "spacing": 6, "padding": [12, 16, 12, 16] },
+            "children": [
+                { "id": "wallet_card_1_type", "type": "Label", "variant": "caption", "text": "交通卡" },
+                { "id": "wallet_card_1_num", "type": "Label", "variant": "heading", "text": "上海公共交通卡" },
+                { "id": "wallet_card_1_balance", "type": "Label", "variant": "accent-lime", "text": "余额 ¥42.50" }
+            ]
+        },
+        {
+            "id": "wallet_pay_row",
+            "type": "View",
+            "variant": "list-row",
+            "size": [358, 56],
+            "layout": { "type": "horizontal", "padding": [10, 12, 10, 12], "align": "center", "spacing": 8 },
+            "children": [
+                { "id": "wallet_pay_lbl", "type": "Label", "variant": "body", "text": "快捷支付", "flex": 1, "textAlign": "left" },
+                { "id": "btn_wallet_pay", "type": "Button", "variant": "primary", "text": "靠近读卡器", "size": [100, 36], "events": { "onClick": "@walletPay" } }
+            ]
+        },
+        { "id": "wallet_status", "type": "Label", "variant": "subtitle", "text": "双击侧边按钮唤起钱包" },
+        {
+            "id": "wallet_tx_title",
+            "type": "Label",
+            "variant": "heading",
+            "text": "最近交易",
+            "size": [358, 16]
+        },
+        { "id": "wallet_tx_0", "type": "Label", "variant": "body", "text": "地铁 · -¥4.00 · 今天", "size": [358, 14] },
+        { "id": "wallet_tx_1", "type": "Label", "variant": "body", "text": "便利店 · -¥18.50 · 昨天", "size": [358, 14] },
+        { "id": "wallet_tx_2", "type": "Label", "variant": "body", "text": "充值 · +¥50.00 · 周一", "size": [358, 14] }
+    ]
+}

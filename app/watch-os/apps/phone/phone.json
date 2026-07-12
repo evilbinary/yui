@@ -1,0 +1,63 @@
+{
+    "id": "page_phone",
+    "js": ["phone.js"],
+    "type": "View",
+    "variant": "surface",
+    "flex": 1,
+    "scrollable": 1,
+    "layout": { "type": "vertical", "spacing": 8, "padding": [4, 16, 12, 16] },
+    "events": { "onLoad": "@onPhoneLoad", "onShow": "@onPhoneShow" },
+    "children": [
+        { "id": "phone_brand", "type": "Label", "variant": "overline", "text": "PHONE" },
+        { "id": "phone_title", "type": "Label", "variant": "title", "text": "电话" },
+        { "id": "phone_fav_title", "type": "Label", "variant": "heading", "text": "个人收藏", "size": [358, 16] },
+        {
+            "id": "phone_fav_row",
+            "type": "View",
+            "size": [358, 72],
+            "layout": { "type": "horizontal", "spacing": 10, "align": "center" },
+            "children": [
+                { "id": "fav_0", "type": "Button", "variant": "dock-flat", "text": "👩", "size": [56, 56], "events": { "onClick": "@callFav0" } },
+                { "id": "fav_1", "type": "Button", "variant": "dock-flat", "text": "👨", "size": [56, 56], "events": { "onClick": "@callFav1" } },
+                { "id": "fav_2", "type": "Button", "variant": "dock-flat", "text": "👧", "size": [56, 56], "events": { "onClick": "@callFav2" } },
+                { "id": "fav_3", "type": "Button", "variant": "dock-flat", "text": "👦", "size": [56, 56], "events": { "onClick": "@callFav3" } }
+            ]
+        },
+        { "id": "phone_fav_names", "type": "Label", "variant": "caption", "text": "妈妈 · 爸爸 · 姐姐 · 弟弟", "size": [358, 12] },
+        { "id": "phone_recent_title", "type": "Label", "variant": "heading", "text": "最近通话", "size": [358, 16] },
+        {
+            "id": "phone_call_0",
+            "type": "View",
+            "variant": "list-row",
+            "size": [358, 48],
+            "layout": { "type": "horizontal", "padding": [8, 12, 8, 12], "align": "center", "spacing": 8 },
+            "children": [
+                { "id": "phone_call_0_name", "type": "Label", "variant": "body", "text": "妈妈", "flex": 1, "textAlign": "left" },
+                { "id": "phone_call_0_time", "type": "Label", "variant": "caption", "text": "今天 09:12", "size": [100, 14], "textAlign": "right" }
+            ]
+        },
+        {
+            "id": "phone_call_1",
+            "type": "View",
+            "variant": "list-row",
+            "size": [358, 48],
+            "layout": { "type": "horizontal", "padding": [8, 12, 8, 12], "align": "center", "spacing": 8 },
+            "children": [
+                { "id": "phone_call_1_name", "type": "Label", "variant": "body", "text": "快递", "flex": 1, "textAlign": "left" },
+                { "id": "phone_call_1_time", "type": "Label", "variant": "caption", "text": "昨天 14:30", "size": [100, 14], "textAlign": "right" }
+            ]
+        },
+        {
+            "id": "phone_call_2",
+            "type": "View",
+            "variant": "list-row",
+            "size": [358, 48],
+            "layout": { "type": "horizontal", "padding": [8, 12, 8, 12], "align": "center", "spacing": 8 },
+            "children": [
+                { "id": "phone_call_2_name", "type": "Label", "variant": "body", "text": "爸爸", "flex": 1, "textAlign": "left" },
+                { "id": "phone_call_2_time", "type": "Label", "variant": "caption", "text": "周一 20:05", "size": [100, 14], "textAlign": "right" }
+            ]
+        },
+        { "id": "phone_status", "type": "Label", "variant": "subtitle", "text": "点击头像快速拨号", "size": [358, 14] }
+    ]
+}

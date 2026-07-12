@@ -64,6 +64,8 @@
     { "selector": "#face_time", "style": { "color": "#FFFFFF", "fontSize": 72, "fontWeight": "bold" } },
     { "selector": "#face_date", "style": { "color": "#8E8E93", "fontSize": 11 } },
     { "selector": "#timer_display", "style": { "color": "#00D4FF", "fontSize": 52, "fontWeight": "bold" } },
+    { "selector": "#sw_display", "style": { "color": "#00D4FF", "fontSize": 44, "fontWeight": "bold" } },
+    { "selector": "#clock_local_time", "style": { "color": "#FFFFFF", "fontSize": 40, "fontWeight": "bold" } },
     { "selector": "#status_battery", "style": { "color": "#30D158" } },
     { "selector": "#status_time", "style": { "color": "#FFFFFF", "fontSize": 12, "fontWeight": "bold" } }
   ]

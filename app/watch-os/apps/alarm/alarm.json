@@ -1,0 +1,75 @@
+{
+    "id": "page_alarm",
+    "js": ["alarm.js"],
+    "type": "View",
+    "variant": "surface",
+    "flex": 1,
+    "scrollable": 1,
+    "layout": { "type": "vertical", "spacing": 8, "padding": [4, 16, 12, 16] },
+    "events": { "onLoad": "@onAlarmLoad", "onShow": "@onAlarmShow" },
+    "children": [
+        { "id": "alarm_brand", "type": "Label", "variant": "overline", "text": "ALARM" },
+        { "id": "alarm_title", "type": "Label", "variant": "title", "text": "闹钟" },
+        {
+            "id": "alarm_row_0",
+            "type": "View",
+            "variant": "list-row",
+            "size": [358, 56],
+            "layout": { "type": "horizontal", "padding": [8, 12, 8, 12], "align": "center", "spacing": 8 },
+            "children": [
+                {
+                    "id": "alarm_info_0",
+                    "type": "View",
+                    "flex": 1,
+                    "layout": { "type": "vertical", "spacing": 2 },
+                    "children": [
+                        { "id": "alarm_time_0", "type": "Label", "variant": "accent-cyan", "text": "07:00", "size": [200, 28] },
+                        { "id": "alarm_label_0", "type": "Label", "variant": "caption", "text": "工作日" }
+                    ]
+                },
+                { "id": "btn_alarm_0", "type": "Button", "variant": "pill", "text": "开", "size": [44, 32], "events": { "onClick": "@toggleAlarm0" } }
+            ]
+        },
+        {
+            "id": "alarm_row_1",
+            "type": "View",
+            "variant": "list-row",
+            "size": [358, 56],
+            "layout": { "type": "horizontal", "padding": [8, 12, 8, 12], "align": "center", "spacing": 8 },
+            "children": [
+                {
+                    "id": "alarm_info_1",
+                    "type": "View",
+                    "flex": 1,
+                    "layout": { "type": "vertical", "spacing": 2 },
+                    "children": [
+                        { "id": "alarm_time_1", "type": "Label", "variant": "accent-cyan", "text": "08:30", "size": [200, 28] },
+                        { "id": "alarm_label_1", "type": "Label", "variant": "caption", "text": "周末" }
+                    ]
+                },
+                { "id": "btn_alarm_1", "type": "Button", "variant": "pill", "text": "关", "size": [44, 32], "events": { "onClick": "@toggleAlarm1" } }
+            ]
+        },
+        {
+            "id": "alarm_row_2",
+            "type": "View",
+            "variant": "list-row",
+            "size": [358, 56],
+            "layout": { "type": "horizontal", "padding": [8, 12, 8, 12], "align": "center", "spacing": 8 },
+            "children": [
+                {
+                    "id": "alarm_info_2",
+                    "type": "View",
+                    "flex": 1,
+                    "layout": { "type": "vertical", "spacing": 2 },
+                    "children": [
+                        { "id": "alarm_time_2", "type": "Label", "variant": "accent-cyan", "text": "22:00", "size": [200, 28] },
+                        { "id": "alarm_label_2", "type": "Label", "variant": "caption", "text": "就寝" }
+                    ]
+                },
+                { "id": "btn_alarm_2", "type": "Button", "variant": "pill", "text": "开", "size": [44, 32], "events": { "onClick": "@toggleAlarm2" } }
+            ]
+        },
+        { "id": "alarm_hint", "type": "Label", "variant": "caption", "text": "点击开关切换闹钟" }
+    ]
+}

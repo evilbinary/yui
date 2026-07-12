@@ -1,0 +1,59 @@
+{
+    "id": "page_maps",
+    "js": ["maps.js"],
+    "type": "View",
+    "variant": "surface",
+    "flex": 1,
+    "layout": { "type": "vertical", "spacing": 8, "padding": [4, 16, 12, 16], "align": "center" },
+    "events": { "onLoad": "@onMapsLoad", "onShow": "@onMapsShow", "onHide": "@onMapsHide" },
+    "children": [
+        { "id": "maps_brand", "type": "Label", "variant": "overline", "text": "MAPS" },
+        { "id": "maps_title", "type": "Label", "variant": "title", "text": "地图" },
+        {
+            "id": "maps_compass",
+            "type": "View",
+            "variant": "card",
+            "size": [200, 200],
+            "layout": { "type": "vertical", "spacing": 4, "padding": [16, 16, 16, 16], "align": "center" },
+            "children": [
+                { "id": "maps_heading_icon", "type": "Label", "variant": "accent-cyan", "text": "↑", "size": [80, 64] },
+                { "id": "maps_heading", "type": "Label", "variant": "metric-value", "text": "北 0°", "size": [160, 28] },
+                { "id": "maps_heading_lbl", "type": "Label", "variant": "caption", "text": "指南针" }
+            ]
+        },
+        {
+            "id": "maps_location_card",
+            "type": "View",
+            "variant": "list-row",
+            "size": [358, 56],
+            "layout": { "type": "vertical", "spacing": 4, "padding": [10, 12, 10, 12] },
+            "children": [
+                { "id": "maps_location_title", "type": "Label", "variant": "heading", "text": "当前位置" },
+                { "id": "maps_location", "type": "Label", "variant": "body", "text": "上海市 · 浦东新区" },
+                { "id": "maps_coords", "type": "Label", "variant": "caption", "text": "31.23°N, 121.47°E" }
+            ]
+        },
+        {
+            "id": "maps_dest_card",
+            "type": "View",
+            "variant": "list-row",
+            "size": [358, 56],
+            "layout": { "type": "vertical", "spacing": 4, "padding": [10, 12, 10, 12] },
+            "children": [
+                { "id": "maps_dest_title", "type": "Label", "variant": "heading", "text": "导航至" },
+                { "id": "maps_dest", "type": "Label", "variant": "accent-lime", "text": "陆家嘴 · 2.4 km" },
+                { "id": "maps_eta", "type": "Label", "variant": "caption", "text": "步行约 28 分钟" }
+            ]
+        },
+        {
+            "id": "maps_actions",
+            "type": "View",
+            "size": [358, 44],
+            "layout": { "type": "horizontal", "spacing": 8 },
+            "children": [
+                { "id": "btn_maps_nav", "type": "Button", "variant": "primary", "text": "开始导航", "flex": 1, "size": [0, 44], "events": { "onClick": "@startMapsNav" } },
+                { "id": "btn_maps_locate", "type": "Button", "variant": "secondary", "text": "定位", "flex": 1, "size": [0, 44], "events": { "onClick": "@refreshMapsLocation" } }
+            ]
+        }
+    ]
+}

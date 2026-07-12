@@ -4,7 +4,8 @@
     "type": "View",
     "variant": "surface",
     "flex": 1,
-    "layout": { "type": "vertical", "spacing": 14, "padding": [24, 20, 24, 20], "align": "center" },
+    "scrollable": 1,
+    "layout": { "type": "vertical", "spacing": 10, "padding": [16, 20, 20, 20], "align": "center" },
     "events": { "onLoad": "@onLauncherLoad", "onShow": "@onLauncherShow" },
     "children": [
         {
@@ -17,33 +18,38 @@
         {
             "id": "launcher_row1",
             "type": "View",
-            "size": [342, 68],
-            "layout": { "type": "horizontal", "spacing": 12, "align": "center" },
+            "size": [342, 64],
+            "layout": { "type": "horizontal", "spacing": 10, "align": "center" },
             "children": [
-                { "id": "app_health", "type": "Button", "variant": "dock-flat", "text": "🩺", "size": [64, 64], "events": { "onClick": "@openHealth" } },
-                { "id": "app_timer", "type": "Button", "variant": "dock-flat", "text": "⏱", "size": [64, 64], "events": { "onClick": "@openTimer" } },
-                { "id": "app_calc", "type": "Button", "variant": "dock-flat", "text": "🧮", "size": [64, 64], "events": { "onClick": "@openCalc" } },
-                { "id": "app_settings", "type": "Button", "variant": "dock-flat", "text": "⚙", "size": [64, 64], "events": { "onClick": "@openSettings" } }
+                { "id": "app_health", "type": "Button", "variant": "dock-flat", "text": "🩺", "size": [60, 60], "events": { "onClick": "@openHealth" } },
+                { "id": "app_timer", "type": "Button", "variant": "dock-flat", "text": "⏱", "size": [60, 60], "events": { "onClick": "@openTimer" } },
+                { "id": "app_clock", "type": "Button", "variant": "dock-flat", "text": "🕐", "size": [60, 60], "events": { "onClick": "@openClock" } },
+                { "id": "app_alarm", "type": "Button", "variant": "dock-flat", "text": "⏰", "size": [60, 60], "events": { "onClick": "@openAlarm" } }
             ]
         },
         {
             "id": "launcher_row2",
             "type": "View",
-            "size": [342, 68],
-            "layout": { "type": "horizontal", "spacing": 12, "align": "center" },
+            "size": [342, 64],
+            "layout": { "type": "horizontal", "spacing": 10, "align": "center" },
             "children": [
-                { "id": "app_workout", "type": "Button", "variant": "dock-soon", "text": "🏃", "size": [64, 64] },
-                { "id": "app_phone", "type": "Button", "variant": "dock-soon", "text": "📞", "size": [64, 64] },
-                { "id": "app_maps", "type": "Button", "variant": "dock-soon", "text": "🗺", "size": [64, 64] },
-                { "id": "app_wallet", "type": "Button", "variant": "dock-soon", "text": "💳", "size": [64, 64] }
+                { "id": "app_stopwatch", "type": "Button", "variant": "dock-flat", "text": "⏲", "size": [60, 60], "events": { "onClick": "@openStopwatch" } },
+                { "id": "app_calc", "type": "Button", "variant": "dock-flat", "text": "🧮", "size": [60, 60], "events": { "onClick": "@openCalc" } },
+                { "id": "app_workout", "type": "Button", "variant": "dock-flat", "text": "🏃", "size": [60, 60], "events": { "onClick": "@openWorkout" } },
+                { "id": "app_settings", "type": "Button", "variant": "dock-flat", "text": "⚙", "size": [60, 60], "events": { "onClick": "@openSettings" } }
             ]
         },
         {
-            "id": "launcher_hint",
-            "type": "Label",
-            "variant": "caption",
-            "text": "COMING SOON",
-            "size": [342, 12]
+            "id": "launcher_row3",
+            "type": "View",
+            "size": [342, 64],
+            "layout": { "type": "horizontal", "spacing": 10, "align": "center" },
+            "children": [
+                { "id": "app_phone", "type": "Button", "variant": "dock-flat", "text": "📞", "size": [60, 60], "events": { "onClick": "@openPhone" } },
+                { "id": "app_maps", "type": "Button", "variant": "dock-flat", "text": "🗺", "size": [60, 60], "events": { "onClick": "@openMaps" } },
+                { "id": "app_wallet", "type": "Button", "variant": "dock-flat", "text": "💳", "size": [60, 60], "events": { "onClick": "@openWallet" } },
+                { "id": "app_face", "type": "Button", "variant": "dock-accent", "text": "◉", "size": [60, 60], "events": { "onClick": "@goWatchBack" } }
+            ]
         }
     ]
 }

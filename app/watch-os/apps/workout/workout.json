@@ -1,0 +1,90 @@
+{
+    "id": "page_workout",
+    "js": ["workout.js"],
+    "type": "View",
+    "variant": "surface",
+    "flex": 1,
+    "layout": { "type": "vertical", "spacing": 8, "padding": [4, 16, 12, 16] },
+    "events": { "onLoad": "@onWorkoutLoad", "onShow": "@onWorkoutShow", "onHide": "@onWorkoutHide" },
+    "children": [
+        { "id": "workout_brand", "type": "Label", "variant": "overline", "text": "FITNESS" },
+        { "id": "workout_title", "type": "Label", "variant": "title", "text": "训练" },
+        {
+            "id": "workout_hero",
+            "type": "View",
+            "variant": "card",
+            "size": [358, 120],
+            "layout": { "type": "vertical", "spacing": 6, "padding": [12, 16, 12, 16], "align": "center" },
+            "children": [
+                { "id": "workout_activity", "type": "Label", "variant": "accent-pink", "text": "🏃 户外跑步", "size": [320, 24] },
+                { "id": "workout_elapsed", "type": "Label", "variant": "watch-time", "text": "00:00", "size": [320, 48] },
+                { "id": "workout_status", "type": "Label", "variant": "subtitle", "text": "选择运动类型" }
+            ]
+        },
+        {
+            "id": "workout_stats",
+            "type": "View",
+            "size": [358, 64],
+            "layout": { "type": "horizontal", "spacing": 8 },
+            "children": [
+                {
+                    "id": "workout_stat_hr",
+                    "type": "View",
+                    "variant": "metric-card",
+                    "flex": 1,
+                    "size": [0, 64],
+                    "layout": { "type": "vertical", "spacing": 2, "padding": [8, 8, 8, 8], "align": "center" },
+                    "children": [
+                        { "id": "workout_hr", "type": "Label", "variant": "accent-pink", "text": "—" },
+                        { "id": "workout_hr_lbl", "type": "Label", "variant": "caption", "text": "心率" }
+                    ]
+                },
+                {
+                    "id": "workout_stat_dist",
+                    "type": "View",
+                    "variant": "metric-card",
+                    "flex": 1,
+                    "size": [0, 64],
+                    "layout": { "type": "vertical", "spacing": 2, "padding": [8, 8, 8, 8], "align": "center" },
+                    "children": [
+                        { "id": "workout_dist", "type": "Label", "variant": "accent-cyan", "text": "—" },
+                        { "id": "workout_dist_lbl", "type": "Label", "variant": "caption", "text": "公里" }
+                    ]
+                },
+                {
+                    "id": "workout_stat_cal",
+                    "type": "View",
+                    "variant": "metric-card",
+                    "flex": 1,
+                    "size": [0, 64],
+                    "layout": { "type": "vertical", "spacing": 2, "padding": [8, 8, 8, 8], "align": "center" },
+                    "children": [
+                        { "id": "workout_cal", "type": "Label", "variant": "accent-amber", "text": "—" },
+                        { "id": "workout_cal_lbl", "type": "Label", "variant": "caption", "text": "千卡" }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "workout_types",
+            "type": "View",
+            "size": [358, 40],
+            "layout": { "type": "horizontal", "spacing": 6 },
+            "children": [
+                { "id": "btn_run", "type": "Button", "variant": "pill", "text": "跑步", "flex": 1, "size": [0, 36], "events": { "onClick": "@workoutSelectRun" } },
+                { "id": "btn_cycle", "type": "Button", "variant": "pill", "text": "骑行", "flex": 1, "size": [0, 36], "events": { "onClick": "@workoutSelectCycle" } },
+                { "id": "btn_swim", "type": "Button", "variant": "pill", "text": "游泳", "flex": 1, "size": [0, 36], "events": { "onClick": "@workoutSelectSwim" } }
+            ]
+        },
+        {
+            "id": "workout_actions",
+            "type": "View",
+            "size": [358, 44],
+            "layout": { "type": "horizontal", "spacing": 8 },
+            "children": [
+                { "id": "btn_workout_end", "type": "Button", "variant": "danger", "text": "结束", "flex": 1, "size": [0, 44], "events": { "onClick": "@endWorkout" } },
+                { "id": "btn_workout_go", "type": "Button", "variant": "primary", "text": "开始", "flex": 1, "size": [0, 44], "events": { "onClick": "@toggleWorkout" } }
+            ]
+        }
+    ]
+}

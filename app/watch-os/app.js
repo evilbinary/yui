@@ -15,15 +15,17 @@ var Watch = {
         { id: "launcher", path: "/launcher", json: "app/watch-os/apps/launcher/launcher.json" },
         { id: "health", path: "/apps/health", json: "app/watch-os/apps/health/health.json" },
         { id: "timer", path: "/apps/timer", json: "app/watch-os/apps/timer/timer.json" },
+        { id: "clock", path: "/apps/clock", json: "app/watch-os/apps/clock/clock.json" },
+        { id: "alarm", path: "/apps/alarm", json: "app/watch-os/apps/alarm/alarm.json" },
+        { id: "stopwatch", path: "/apps/stopwatch", json: "app/watch-os/apps/stopwatch/stopwatch.json" },
         { id: "calc", path: "/apps/calc", json: "app/watch-os/apps/calc/calc.json" },
+        { id: "workout", path: "/apps/workout", json: "app/watch-os/apps/workout/workout.json" },
+        { id: "phone", path: "/apps/phone", json: "app/watch-os/apps/phone/phone.json" },
+        { id: "maps", path: "/apps/maps", json: "app/watch-os/apps/maps/maps.json" },
+        { id: "wallet", path: "/apps/wallet", json: "app/watch-os/apps/wallet/wallet.json" },
         { id: "settings", path: "/settings", json: "app/watch-os/apps/settings/settings.json" }
     ],
-    upcoming: [
-        { icon: "🏃", name: "训练" },
-        { icon: "📞", name: "电话" },
-        { icon: "🗺", name: "地图" },
-        { icon: "💳", name: "钱包" }
-    ]
+    upcoming: []
 };
 
 var watchRoutes = {
@@ -31,7 +33,14 @@ var watchRoutes = {
     "/launcher": { json: "app/watch-os/apps/launcher/launcher.json", keepAlive: true },
     "/apps/health": { json: "app/watch-os/apps/health/health.json", keepAlive: true },
     "/apps/timer": { json: "app/watch-os/apps/timer/timer.json", keepAlive: true },
+    "/apps/clock": { json: "app/watch-os/apps/clock/clock.json", keepAlive: true },
+    "/apps/alarm": { json: "app/watch-os/apps/alarm/alarm.json", keepAlive: true },
+    "/apps/stopwatch": { json: "app/watch-os/apps/stopwatch/stopwatch.json", keepAlive: true },
     "/apps/calc": { json: "app/watch-os/apps/calc/calc.json", keepAlive: true },
+    "/apps/workout": { json: "app/watch-os/apps/workout/workout.json", keepAlive: true },
+    "/apps/phone": { json: "app/watch-os/apps/phone/phone.json", keepAlive: true },
+    "/apps/maps": { json: "app/watch-os/apps/maps/maps.json", keepAlive: true },
+    "/apps/wallet": { json: "app/watch-os/apps/wallet/wallet.json", keepAlive: true },
     "/settings": { json: "app/watch-os/apps/settings/settings.json", keepAlive: true }
 };
 
@@ -155,7 +164,14 @@ function openWatchApp(path) {
 
 function openHealth() { openWatchApp("/apps/health"); }
 function openTimer() { openWatchApp("/apps/timer"); }
+function openClock() { openWatchApp("/apps/clock"); }
+function openAlarm() { openWatchApp("/apps/alarm"); }
+function openStopwatch() { openWatchApp("/apps/stopwatch"); }
 function openCalc() { openWatchApp("/apps/calc"); }
+function openWorkout() { openWatchApp("/apps/workout"); }
+function openPhone() { openWatchApp("/apps/phone"); }
+function openMaps() { openWatchApp("/apps/maps"); }
+function openWallet() { openWatchApp("/apps/wallet"); }
 function openSettings() { openWatchApp("/settings"); }
 
 function applyWatchTheme() {
