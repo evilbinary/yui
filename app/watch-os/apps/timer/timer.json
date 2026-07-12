@@ -11,9 +11,19 @@
         "onHide": "@onTimerHide"
     },
     "children": [
+        { "id": "timer_brand", "type": "Label", "variant": "overline", "text": "TIMER" },
         { "id": "timer_title", "type": "Label", "variant": "title", "text": "计时器" },
-        { "id": "timer_display", "type": "Label", "variant": "watch-time", "text": "00:00" },
-        { "id": "timer_status", "type": "Label", "variant": "subtitle", "text": "选择时长" },
+        {
+            "id": "timer_hero",
+            "type": "View",
+            "variant": "gauge-panel",
+            "size": [362, 88],
+            "layout": { "type": "vertical", "spacing": 4, "padding": [12, 16, 12, 16], "align": "center" },
+            "children": [
+                { "id": "timer_display", "type": "Label", "variant": "watch-time", "text": "00:00" },
+                { "id": "timer_status", "type": "Label", "variant": "subtitle", "text": "选择时长" }
+            ]
+        },
         {
             "id": "timer_presets",
             "type": "View",

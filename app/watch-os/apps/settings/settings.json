@@ -8,6 +8,7 @@
     "layout": { "type": "vertical", "spacing": 8, "padding": [4, 16, 12, 16] },
     "events": { "onLoad": "@onSettingsLoad", "onShow": "@onSettingsShow" },
     "children": [
+        { "id": "settings_brand", "type": "Label", "variant": "overline", "text": "SYSTEM" },
         { "id": "settings_title", "type": "Label", "variant": "title", "text": "设置" },
         {
             "id": "settings_theme_row",

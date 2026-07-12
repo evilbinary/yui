@@ -8,6 +8,7 @@
     "layout": { "type": "vertical", "spacing": 8, "padding": [4, 16, 12, 16] },
     "events": { "onLoad": "@onHealthLoad", "onShow": "@onHealthShow" },
     "children": [
+        { "id": "health_brand", "type": "Label", "variant": "overline", "text": "FITNESS" },
         { "id": "health_title", "type": "Label", "variant": "title", "text": "健康" },
         {
             "id": "health_grid",

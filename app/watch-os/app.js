@@ -35,13 +35,13 @@ var watchRoutes = {
     "/settings": { json: "app/watch-os/apps/settings/settings.json", keepAlive: true }
 };
 
-var themePlatform = "watch";
 var clockTimer = null;
 
+var watchThemeDir = "app/watch-os/themes";
+
 function initWatchThemes() {
-    var suffix = themePlatform === "watch" ? "-watch" : "";
-    Theme.load("app/lib/themes/dark" + suffix + ".json", "dark");
-    Theme.load("app/lib/themes/light" + suffix + ".json", "light");
+    Theme.load(watchThemeDir + "/dark.json", "dark");
+    Theme.load(watchThemeDir + "/light.json", "light");
     Theme.setCurrent(Watch.themeMode);
     Theme.apply();
 }
@@ -79,6 +79,11 @@ function tickWatchClock() {
     var m = now.getMinutes();
     var timeStr = (h < 10 ? "0" : "") + h + ":" + (m < 10 ? "0" : "") + m;
     YUI.setText("status_time", timeStr);
+
+    var route = YUI.currentRoute ? YUI.currentRoute() : null;
+    if (route && route.path === "/") {
+        updateFaceClock();
+    }
 }
 
 function updateFaceClock() {
@@ -87,9 +92,6 @@ function updateFaceClock() {
     var m = now.getMinutes();
     var timeStr = (h < 10 ? "0" : "") + h + ":" + (m < 10 ? "0" : "") + m;
     YUI.setText("face_time", timeStr);
-
-    var days = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
-    YUI.setText("face_date", days[now.getDay()] + " " + (now.getMonth() + 1) + "/" + now.getDate());
 }
 
 function updateWatchChrome() {
@@ -113,14 +115,7 @@ function formatWatchNumber(n) {
 }
 
 function refreshFaceComplications() {
-    var c = Watch.complications;
-    YUI.setText("comp_steps_val", formatWatchNumber(c.steps.value));
-    YUI.setText("comp_heart_val", String(c.heart.value));
-    YUI.setText("comp_weather_val", c.weather.temp + "°");
-    YUI.setText("comp_weather_sub", c.weather.cond);
-
-    var pct = Math.min(100, Math.round((c.steps.value / c.steps.goal) * 100));
-    YUI.setText("face_ring_label", "活动 " + pct + "%");
+    /* 表盘 v2：活动环为静态 Progress，无需 JS 刷新 */
 }
 
 function refreshHealthData() {
@@ -166,3 +161,4 @@ function applyWatchTheme() {
 function getWatchThemeLabel() {
     return Watch.themeMode === "dark" ? "暗色" : "亮色";
 }
+                                                                                                                                                                                                                                                                                                                 

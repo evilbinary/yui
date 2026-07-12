@@ -2,6 +2,9 @@
     "id": "watch_os",
     "type": "View",
     "variant": "watch-bezel",
+    "assets": "app/assets",
+    "font": "Roboto-Regular.ttf",
+    "fontFallback": "NotoColorEmoji.ttf",
     "size": [390, 390],
     "text": "YUI Watch",
     "js": [
@@ -23,11 +26,11 @@
             "id": "status_bar",
             "type": "View",
             "variant": "toolbar",
-            "size": [390, 24],
+            "size": [390, 22],
             "layout": {
                 "type": "horizontal",
                 "spacing": 4,
-                "padding": [4, 12, 4, 12],
+                "padding": [2, 16, 2, 16],
                 "align": "space-between"
             },
             "children": [
@@ -36,22 +39,27 @@
                     "type": "Button",
                     "variants": ["tertiary", "compact"],
                     "text": "‹",
-                    "size": [28, 20],
+                    "size": [28, 18],
                     "visible": false,
                     "events": { "onClick": "@goWatchBack" }
                 },
                 {
                     "id": "status_time",
                     "type": "Label",
-                    "variant": "caption",
+                    "variant": "status-time",
                     "text": "10:09",
                     "flex": 1
                 },
                 {
-                    "id": "status_battery",
-                    "type": "Label",
-                    "variant": "caption",
-                    "text": "85%"
+                    "id": "status_icons",
+                    "type": "View",
+                    "size": [96, 18],
+                    "layout": { "type": "horizontal", "spacing": 2, "align": "center" },
+                    "children": [
+                        { "id": "status_signal", "type": "Label", "variant": "status-icon", "text": "📶" },
+                        { "id": "status_battery_icon", "type": "Label", "variant": "status-icon", "text": "🔋" },
+                        { "id": "status_battery", "type": "Label", "variant": "status-battery", "text": "85%" }
+                    ]
                 }
             ]
         },

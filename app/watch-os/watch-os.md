@@ -44,9 +44,9 @@ app/watch-os/
 "js": ["calc.js", "../../../calc/calc.js"]
 ```
 
-app/lib/themes/
-├── dark-watch.json
-└── light-watch.json
+├── themes/
+│   ├── dark.json
+│   └── light.json
 ```
 
 ## 实现状态总览
@@ -116,7 +116,7 @@ flowchart TB
 ## 屏幕与主题
 
 - **基准尺寸**：390×390，`View.watch-bezel`（`borderRadius: 24`）
-- **主题文件**：`dark-watch.json` / `light-watch.json`
+- **主题文件**：`themes/dark.json` / `themes/light.json`（Watch OS 本地，不放在 `app/lib/themes`）
 - **加载方式**（`app.js`）：
 
 ```javascript
@@ -247,7 +247,7 @@ Watch.complications = {
 3. 在 `Watch.apps` 注册元数据
 4. 在启动器 `apps/launcher/launcher.json` 增加入口按钮
 5. 在壳层 `app.json` 的 `js` 数组**不必**再引入该应用脚本（由各应用 `<name>.json` 的 `js` 字段在路由挂载时自动加载）
-6. 需要新样式时在 `../lib/themes/dark-watch.json` 增加规则
+6. 需要新样式时在 `themes/dark.json` 增加规则
 
 动态 JSON 应用（如计算器）：
 
@@ -292,6 +292,6 @@ Watch.complications = {
 ### v0.1.0 (P0)
 
 - Watch OS 壳层 `app/watch-os/`
-- `dark-watch.json` / `light-watch.json`
+- `themes/dark.json` / `themes/light.json`
 - 表盘、启动器、健康、计时器、计算器、设置
 - 文档 `app/watch-os/watch-os.md`

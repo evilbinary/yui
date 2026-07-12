@@ -1,14 +1,16 @@
 /**
- * 表盘 App
+ * 表盘 App - 极简数字表盘 + 活动环 + Dock
  */
 
 function onFaceLoad() {
     updateFaceClock();
-    refreshFaceComplications();
+    applyWatchTheme();
 }
 
 function onFaceShow() {
     updateFaceClock();
-    refreshFaceComplications();
     applyWatchTheme();
+}
+
+function onFaceHide() {
 }
