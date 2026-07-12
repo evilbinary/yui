@@ -6,8 +6,9 @@
 
 // 主题选择器类型
 typedef enum {
-    THEME_SELECTOR_ID,      // ID选择器（#componentId）
-    THEME_SELECTOR_TYPE     // 类型选择器（ComponentType）
+    THEME_SELECTOR_ID,       // ID选择器（#componentId）
+    THEME_SELECTOR_TYPE,     // 类型选择器（ComponentType）
+    THEME_SELECTOR_COMPOUND   // 复合选择器（Button.primary / #id.primary）
 } ThemeSelectorType;
 
 // 主题规则（对应一个选择器）

@@ -283,6 +283,99 @@ void theme_rule_destroy(ThemeRule* rule) {
     }
 }
 
+#define THEME_COMPOUND_MARKER "."
+
+static int theme_is_variant_separator(char c) {
+    return c == ' ' || c == ',' || c == ';' || c == '\t';
+}
+
+static int theme_variant_contains(const char* variant_str, const char* modifier) {
+    const char* p;
+
+    if (!variant_str || !modifier || modifier[0] == '\0') {
+        return 0;
+    }
+
+    p = variant_str;
+    while (*p) {
+        size_t len;
+
+        while (theme_is_variant_separator(*p)) {
+            p++;
+        }
+        if (*p == '\0') {
+            break;
+        }
+
+        len = 0;
+        while (p[len] && !theme_is_variant_separator(p[len])) {
+            len++;
+        }
+        if (len > 0 && strlen(modifier) == len && strncmp(p, modifier, len) == 0) {
+            return 1;
+        }
+        p += len;
+    }
+
+    return 0;
+}
+
+static int theme_variant_contains_all(const char* variant_str, const char* modifiers) {
+    const char* p;
+
+    if (!variant_str || variant_str[0] == '\0' || !modifiers || modifiers[0] != '.') {
+        return 0;
+    }
+
+    p = modifiers + 1;
+    if (*p == '\0') {
+        return 0;
+    }
+
+    while (*p) {
+        char modifier[32];
+        int i = 0;
+
+        while (*p && *p != '.' && i < (int)sizeof(modifier) - 1) {
+            modifier[i++] = *p++;
+        }
+        modifier[i] = '\0';
+        if (i == 0 || !theme_variant_contains(variant_str, modifier)) {
+            return 0;
+        }
+        if (*p == '.') {
+            p++;
+        }
+    }
+
+    return 1;
+}
+
+static int theme_match_compound_selector(const char* selector, const char* id,
+                                         const char* type, const char* variant) {
+    const char* dot = strchr(selector, THEME_COMPOUND_MARKER[0]);
+    if (!dot || dot == selector) {
+        return 0;
+    }
+
+    if (!theme_variant_contains_all(variant, dot)) {
+        return 0;
+    }
+
+    if (selector[0] == '#') {
+        size_t id_len = (size_t)(dot - selector) - 1;
+        if (id_len == 0) {
+            return 0;
+        }
+        return strncmp(id, selector + 1, id_len) == 0 && id[id_len] == '\0';
+    }
+
+    {
+        size_t type_len = (size_t)(dot - selector);
+        return strncmp(type, selector, type_len) == 0 && type[type_len] == '\0';
+    }
+}
+
 // 应用主题样式到图层
 void theme_apply_to_layer(Theme* theme, Layer* layer, const char* id, const char* type) {
     if (!theme || !layer || !id || !type) {
@@ -310,6 +403,11 @@ void theme_apply_to_layer(Theme* theme, Layer* layer, const char* id, const char
             if (strcmp(current->selector, type) == 0) {
                 should_apply = 1;
                 printf("[Theme] MATCH! Applying rule to layer id='%s'\n", id);
+            }
+        } else if (current->selector_type == THEME_SELECTOR_COMPOUND) {
+            if (theme_match_compound_selector(current->selector, id, type,
+                                              layer->variant)) {
+                should_apply = 1;
             }
         }
         
@@ -398,9 +496,17 @@ ThemeSelectorType theme_parse_selector_type(const char* selector) {
         return THEME_SELECTOR_TYPE;  // 默认按类型处理
     }
     
-    // 如果以#开头，是ID选择器
+    // 如果以#开头，是ID选择器或 #id.modifier 复合选择器
     if (selector[0] == '#') {
+        if (strchr(selector + 1, '.') != NULL) {
+            return THEME_SELECTOR_COMPOUND;
+        }
         return THEME_SELECTOR_ID;
+    }
+
+    // Type.modifier 复合选择器
+    if (strchr(selector, '.') != NULL) {
+        return THEME_SELECTOR_COMPOUND;
     }
     
     // 否则按类型选择器处理

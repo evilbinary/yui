@@ -327,6 +327,7 @@ typedef  cJSON* (*get_property_fun_t)(Layer* layer, const char* property_name);
 
 typedef struct Layer {
     char id[50];
+    char variant[128];
     int index;
     LayerType type;
     Rect rect;

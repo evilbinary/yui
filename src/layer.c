@@ -280,6 +280,44 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
   if (cJSON_HasObjectItem(json_obj, "id")) {
     strcpy(layer->id, cJSON_GetObjectItem(json_obj, "id")->valuestring);
   }
+  layer->variant[0] = '\0';
+  {
+    cJSON* variants = cJSON_GetObjectItem(json_obj, "variants");
+    if (variants && cJSON_IsArray(variants)) {
+      int variant_count = cJSON_GetArraySize(variants);
+      for (int vi = 0; vi < variant_count; vi++) {
+        cJSON* item = cJSON_GetArrayItem(variants, vi);
+        if (!item || !cJSON_IsString(item) || !item->valuestring[0]) {
+          continue;
+        }
+        if (layer->variant[0] != '\0') {
+          strncat(layer->variant, " ", sizeof(layer->variant) - strlen(layer->variant) - 1);
+        }
+        strncat(layer->variant, item->valuestring,
+                sizeof(layer->variant) - strlen(layer->variant) - 1);
+      }
+    } else if (cJSON_HasObjectItem(json_obj, "variant")) {
+      cJSON* variant_item = cJSON_GetObjectItem(json_obj, "variant");
+      if (cJSON_IsString(variant_item)) {
+        strncpy(layer->variant, variant_item->valuestring,
+                sizeof(layer->variant) - 1);
+        layer->variant[sizeof(layer->variant) - 1] = '\0';
+      } else if (cJSON_IsArray(variant_item)) {
+        int variant_count = cJSON_GetArraySize(variant_item);
+        for (int vi = 0; vi < variant_count; vi++) {
+          cJSON* item = cJSON_GetArrayItem(variant_item, vi);
+          if (!item || !cJSON_IsString(item) || !item->valuestring[0]) {
+            continue;
+          }
+          if (layer->variant[0] != '\0') {
+            strncat(layer->variant, " ", sizeof(layer->variant) - strlen(layer->variant) - 1);
+          }
+          strncat(layer->variant, item->valuestring,
+                  sizeof(layer->variant) - strlen(layer->variant) - 1);
+        }
+      }
+    }
+  }
   if (cJSON_HasObjectItem(json_obj, "type")) {
     int i=0;
     for (i = 0; i < layer_type_size; i++) {
