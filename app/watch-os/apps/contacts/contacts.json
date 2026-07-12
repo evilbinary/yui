@@ -1,0 +1,112 @@
+{
+    "id": "page_contacts",
+    "js": ["contacts.js"],
+    "type": "View",
+    "variant": "surface",
+    "flex": 1,
+    "scrollable": 1,
+    "layout": { "type": "vertical", "spacing": 6, "padding": [4, 16, 12, 16] },
+    "events": { "onLoad": "@onContactsLoad", "onShow": "@onContactsShow" },
+    "children": [
+        { "id": "contacts_brand", "type": "Label", "variant": "overline", "text": "CONTACTS" },
+        { "id": "contacts_title", "type": "Label", "variant": "title", "text": "通讯录" },
+        { "id": "contacts_count", "type": "Label", "variant": "subtitle", "text": "8 位联系人" },
+        {
+            "id": "contact_row_0",
+            "type": "View",
+            "variant": "list-row",
+            "size": [358, 48],
+            "layout": { "type": "horizontal", "padding": [8, 12, 8, 12], "align": "center", "spacing": 10 },
+            "children": [
+                { "id": "contact_0_emoji", "type": "Label", "variant": "accent-cyan", "text": "👩", "size": [28, 28] },
+                { "id": "contact_0_name", "type": "Label", "variant": "body", "text": "妈妈", "flex": 1, "textAlign": "left" },
+                { "id": "btn_call_0", "type": "Button", "variant": "pill", "text": "拨打", "size": [44, 28], "events": { "onClick": "@callContact0" } }
+            ]
+        },
+        {
+            "id": "contact_row_1",
+            "type": "View",
+            "variant": "list-row",
+            "size": [358, 48],
+            "layout": { "type": "horizontal", "padding": [8, 12, 8, 12], "align": "center", "spacing": 10 },
+            "children": [
+                { "id": "contact_1_emoji", "type": "Label", "variant": "accent-cyan", "text": "👨", "size": [28, 28] },
+                { "id": "contact_1_name", "type": "Label", "variant": "body", "text": "爸爸", "flex": 1, "textAlign": "left" },
+                { "id": "btn_call_1", "type": "Button", "variant": "pill", "text": "拨打", "size": [44, 28], "events": { "onClick": "@callContact1" } }
+            ]
+        },
+        {
+            "id": "contact_row_2",
+            "type": "View",
+            "variant": "list-row",
+            "size": [358, 48],
+            "layout": { "type": "horizontal", "padding": [8, 12, 8, 12], "align": "center", "spacing": 10 },
+            "children": [
+                { "id": "contact_2_emoji", "type": "Label", "variant": "accent-cyan", "text": "👧", "size": [28, 28] },
+                { "id": "contact_2_name", "type": "Label", "variant": "body", "text": "姐姐", "flex": 1, "textAlign": "left" },
+                { "id": "btn_call_2", "type": "Button", "variant": "pill", "text": "拨打", "size": [44, 28], "events": { "onClick": "@callContact2" } }
+            ]
+        },
+        {
+            "id": "contact_row_3",
+            "type": "View",
+            "variant": "list-row",
+            "size": [358, 48],
+            "layout": { "type": "horizontal", "padding": [8, 12, 8, 12], "align": "center", "spacing": 10 },
+            "children": [
+                { "id": "contact_3_emoji", "type": "Label", "variant": "accent-cyan", "text": "👦", "size": [28, 28] },
+                { "id": "contact_3_name", "type": "Label", "variant": "body", "text": "弟弟", "flex": 1, "textAlign": "left" },
+                { "id": "btn_call_3", "type": "Button", "variant": "pill", "text": "拨打", "size": [44, 28], "events": { "onClick": "@callContact3" } }
+            ]
+        },
+        {
+            "id": "contact_row_4",
+            "type": "View",
+            "variant": "list-row",
+            "size": [358, 48],
+            "layout": { "type": "horizontal", "padding": [8, 12, 8, 12], "align": "center", "spacing": 10 },
+            "children": [
+                { "id": "contact_4_emoji", "type": "Label", "variant": "accent-cyan", "text": "👩", "size": [28, 28] },
+                { "id": "contact_4_name", "type": "Label", "variant": "body", "text": "Alice", "flex": 1, "textAlign": "left" },
+                { "id": "btn_call_4", "type": "Button", "variant": "pill", "text": "拨打", "size": [44, 28], "events": { "onClick": "@callContact4" } }
+            ]
+        },
+        {
+            "id": "contact_row_5",
+            "type": "View",
+            "variant": "list-row",
+            "size": [358, 48],
+            "layout": { "type": "horizontal", "padding": [8, 12, 8, 12], "align": "center", "spacing": 10 },
+            "children": [
+                { "id": "contact_5_emoji", "type": "Label", "variant": "accent-cyan", "text": "👨", "size": [28, 28] },
+                { "id": "contact_5_name", "type": "Label", "variant": "body", "text": "Bob", "flex": 1, "textAlign": "left" },
+                { "id": "btn_call_5", "type": "Button", "variant": "pill", "text": "拨打", "size": [44, 28], "events": { "onClick": "@callContact5" } }
+            ]
+        },
+        {
+            "id": "contact_row_6",
+            "type": "View",
+            "variant": "list-row",
+            "size": [358, 48],
+            "layout": { "type": "horizontal", "padding": [8, 12, 8, 12], "align": "center", "spacing": 10 },
+            "children": [
+                { "id": "contact_6_emoji", "type": "Label", "variant": "accent-cyan", "text": "🏢", "size": [28, 28] },
+                { "id": "contact_6_name", "type": "Label", "variant": "body", "text": "公司前台", "flex": 1, "textAlign": "left" },
+                { "id": "btn_call_6", "type": "Button", "variant": "pill", "text": "拨打", "size": [44, 28], "events": { "onClick": "@callContact6" } }
+            ]
+        },
+        {
+            "id": "contact_row_7",
+            "type": "View",
+            "variant": "list-row",
+            "size": [358, 48],
+            "layout": { "type": "horizontal", "padding": [8, 12, 8, 12], "align": "center", "spacing": 10 },
+            "children": [
+                { "id": "contact_7_emoji", "type": "Label", "variant": "accent-cyan", "text": "🚕", "size": [28, 28] },
+                { "id": "contact_7_name", "type": "Label", "variant": "body", "text": "出租车", "flex": 1, "textAlign": "left" },
+                { "id": "btn_call_7", "type": "Button", "variant": "pill", "text": "拨打", "size": [44, 28], "events": { "onClick": "@callContact7" } }
+            ]
+        },
+        { "id": "contacts_status", "type": "Label", "variant": "subtitle", "text": "点击拨打快速呼叫" }
+    ]
+}

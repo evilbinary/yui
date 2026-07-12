@@ -27,10 +27,11 @@
             "type": "View",
             "variant": "list-row",
             "size": [358, 48],
-            "layout": { "type": "horizontal", "spacing": 8, "padding": [10, 12, 10, 12], "align": "space-between" },
+            "layout": { "type": "horizontal", "spacing": 8, "padding": [10, 12, 10, 12], "align": "center" },
             "children": [
-                { "id": "settings_battery_lbl", "type": "Label", "variant": "body", "text": "电量" },
-                { "id": "settings_battery", "type": "Label", "variant": "caption", "text": "85%" }
+                { "id": "settings_battery_lbl", "type": "Label", "variant": "body", "text": "电量", "flex": 1, "textAlign": "left" },
+                { "id": "settings_battery", "type": "Label", "variant": "caption", "text": "85%", "size": [48, 14], "textAlign": "right" },
+                { "id": "btn_settings_battery", "type": "Button", "variant": "pill", "text": "详情", "size": [44, 28], "events": { "onClick": "@openBattery" } }
             ]
         },
         {
@@ -41,7 +42,7 @@
             "layout": { "type": "vertical", "spacing": 4, "padding": [10, 12, 10, 12] },
             "children": [
                 { "id": "settings_about_title", "type": "Label", "variant": "heading", "text": "YUI Watch OS" },
-                { "id": "settings_about_ver", "type": "Label", "variant": "caption", "text": "v0.2 · 13 应用已上线" }
+                { "id": "settings_about_ver", "type": "Label", "variant": "caption", "text": "v0.3 · 18 应用已上线" }
             ]
         }
     ]

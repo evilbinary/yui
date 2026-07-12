@@ -1,0 +1,82 @@
+{
+    "id": "page_sleep",
+    "js": ["sleep.js"],
+    "type": "View",
+    "variant": "surface",
+    "flex": 1,
+    "scrollable": 1,
+    "layout": { "type": "vertical", "spacing": 8, "padding": [4, 16, 12, 16] },
+    "events": { "onLoad": "@onSleepLoad", "onShow": "@onSleepShow" },
+    "children": [
+        { "id": "sleep_brand", "type": "Label", "variant": "overline", "text": "SLEEP" },
+        { "id": "sleep_title", "type": "Label", "variant": "title", "text": "睡眠" },
+        {
+            "id": "sleep_hero",
+            "type": "View",
+            "variant": "card",
+            "size": [358, 100],
+            "layout": { "type": "vertical", "spacing": 4, "padding": [12, 16, 12, 16], "align": "center" },
+            "children": [
+                { "id": "sleep_total", "type": "Label", "variant": "watch-time", "text": "7:30", "size": [320, 48] },
+                { "id": "sleep_subtitle", "type": "Label", "variant": "subtitle", "text": "昨晚总睡眠" },
+                { "id": "sleep_range", "type": "Label", "variant": "caption", "text": "23:15 — 06:45" }
+            ]
+        },
+        {
+            "id": "sleep_stages",
+            "type": "View",
+            "variant": "card",
+            "size": [358, 120],
+            "layout": { "type": "vertical", "spacing": 8, "padding": [10, 12, 10, 12] },
+            "children": [
+                { "id": "sleep_stages_title", "type": "Label", "variant": "heading", "text": "睡眠阶段" },
+                {
+                    "id": "sleep_deep_row",
+                    "type": "View",
+                    "size": [334, 20],
+                    "layout": { "type": "horizontal", "spacing": 8, "align": "center" },
+                    "children": [
+                        { "id": "sleep_deep_lbl", "type": "Label", "variant": "caption", "text": "深睡", "size": [36, 12] },
+                        { "id": "sleep_deep_bar", "type": "Progress", "flex": 1, "size": [0, 8], "data": 28, "progressConfig": { "value": 28, "maxValue": 100, "bgColor": "#1C1C1E", "fillColor": "#5E5CE6", "radius": 8, "showText": false } },
+                        { "id": "sleep_deep_val", "type": "Label", "variant": "caption", "text": "2:06", "size": [36, 12] }
+                    ]
+                },
+                {
+                    "id": "sleep_core_row",
+                    "type": "View",
+                    "size": [334, 20],
+                    "layout": { "type": "horizontal", "spacing": 8, "align": "center" },
+                    "children": [
+                        { "id": "sleep_core_lbl", "type": "Label", "variant": "caption", "text": "核心", "size": [36, 12] },
+                        { "id": "sleep_core_bar", "type": "Progress", "flex": 1, "size": [0, 8], "data": 55, "progressConfig": { "value": 55, "maxValue": 100, "bgColor": "#1C1C1E", "fillColor": "#00D4FF", "radius": 8, "showText": false } },
+                        { "id": "sleep_core_val", "type": "Label", "variant": "caption", "text": "4:06", "size": [36, 12] }
+                    ]
+                },
+                {
+                    "id": "sleep_rem_row",
+                    "type": "View",
+                    "size": [334, 20],
+                    "layout": { "type": "horizontal", "spacing": 8, "align": "center" },
+                    "children": [
+                        { "id": "sleep_rem_lbl", "type": "Label", "variant": "caption", "text": "REM", "size": [36, 12] },
+                        { "id": "sleep_rem_bar", "type": "Progress", "flex": 1, "size": [0, 8], "data": 17, "progressConfig": { "value": 17, "maxValue": 100, "bgColor": "#1C1C1E", "fillColor": "#BF5AF2", "radius": 8, "showText": false } },
+                        { "id": "sleep_rem_val", "type": "Label", "variant": "caption", "text": "1:18", "size": [36, 12] }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "sleep_week_card",
+            "type": "View",
+            "variant": "card",
+            "size": [358, 72],
+            "layout": { "type": "vertical", "spacing": 6, "padding": [10, 12, 10, 12] },
+            "children": [
+                { "id": "sleep_week_title", "type": "Label", "variant": "heading", "text": "近 7 天" },
+                { "id": "sleep_week_text", "type": "Label", "variant": "body", "text": "平均 7.2 小时 · 趋势稳定" },
+                { "id": "sleep_week_bars", "type": "Label", "variant": "accent-lime", "text": "▁▃▅▂▇▅█", "size": [334, 16] }
+            ]
+        },
+        { "id": "sleep_tip", "type": "Label", "variant": "subtitle", "text": "就寝目标 23:00 · 睡眠良好" }
+    ]
+}

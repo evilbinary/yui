@@ -1,0 +1,73 @@
+{
+    "id": "page_notifications",
+    "js": ["notifications.js"],
+    "type": "View",
+    "variant": "surface",
+    "flex": 1,
+    "scrollable": 1,
+    "layout": { "type": "vertical", "spacing": 8, "padding": [4, 16, 12, 16] },
+    "events": { "onLoad": "@onNotificationsLoad", "onShow": "@onNotificationsShow" },
+    "children": [
+        { "id": "notif_brand", "type": "Label", "variant": "overline", "text": "NOTIFICATIONS" },
+        { "id": "notif_title", "type": "Label", "variant": "title", "text": "通知" },
+        { "id": "notif_summary", "type": "Label", "variant": "subtitle", "text": "3 条未读" },
+        {
+            "id": "notif_row_0",
+            "type": "View",
+            "variant": "list-row",
+            "size": [358, 64],
+            "layout": { "type": "vertical", "spacing": 4, "padding": [8, 12, 8, 12] },
+            "children": [
+                { "id": "notif_0_header", "type": "Label", "variant": "heading", "text": "妈妈 · 信息", "size": [334, 16] },
+                { "id": "notif_0_body", "type": "Label", "variant": "body", "text": "晚上回来吃饭吗？", "size": [334, 14] },
+                { "id": "notif_0_time", "type": "Label", "variant": "caption", "text": "18:32" }
+            ]
+        },
+        {
+            "id": "notif_row_1",
+            "type": "View",
+            "variant": "list-row",
+            "size": [358, 64],
+            "layout": { "type": "vertical", "spacing": 4, "padding": [8, 12, 8, 12] },
+            "children": [
+                { "id": "notif_1_header", "type": "Label", "variant": "heading", "text": "快递 · 电话", "size": [334, 16] },
+                { "id": "notif_1_body", "type": "Label", "variant": "body", "text": "未接来电", "size": [334, 14] },
+                { "id": "notif_1_time", "type": "Label", "variant": "caption", "text": "14:20" }
+            ]
+        },
+        {
+            "id": "notif_row_2",
+            "type": "View",
+            "variant": "list-row",
+            "size": [358, 64],
+            "layout": { "type": "vertical", "spacing": 4, "padding": [8, 12, 8, 12] },
+            "children": [
+                { "id": "notif_2_header", "type": "Label", "variant": "heading", "text": "活动 · 健康", "size": [334, 16] },
+                { "id": "notif_2_body", "type": "Label", "variant": "body", "text": "今日步数目标已完成", "size": [334, 14] },
+                { "id": "notif_2_time", "type": "Label", "variant": "caption", "text": "12:00" }
+            ]
+        },
+        {
+            "id": "notif_row_3",
+            "type": "View",
+            "variant": "list-row",
+            "size": [358, 64],
+            "layout": { "type": "vertical", "spacing": 4, "padding": [8, 12, 8, 12] },
+            "children": [
+                { "id": "notif_3_header", "type": "Label", "variant": "heading", "text": "会议 · 日历", "size": [334, 16] },
+                { "id": "notif_3_body", "type": "Label", "variant": "body", "text": "15:00 项目例会", "size": [334, 14] },
+                { "id": "notif_3_time", "type": "Label", "variant": "caption", "text": "09:15" }
+            ]
+        },
+        {
+            "id": "notif_actions",
+            "type": "View",
+            "size": [358, 40],
+            "layout": { "type": "horizontal", "spacing": 8 },
+            "children": [
+                { "id": "btn_notif_clear", "type": "Button", "variant": "secondary", "text": "全部已读", "flex": 1, "size": [0, 36], "events": { "onClick": "@clearAllNotifications" } },
+                { "id": "btn_notif_messages", "type": "Button", "variant": "primary", "text": "打开信息", "flex": 1, "size": [0, 36], "events": { "onClick": "@openMessages" } }
+            ]
+        }
+    ]
+}

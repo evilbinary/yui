@@ -1,0 +1,122 @@
+{
+    "id": "page_messages",
+    "js": ["messages.js"],
+    "type": "View",
+    "variant": "surface",
+    "flex": 1,
+    "scrollable": 1,
+    "layout": { "type": "vertical", "spacing": 8, "padding": [4, 16, 12, 16] },
+    "events": { "onLoad": "@onMessagesLoad", "onShow": "@onMessagesShow" },
+    "children": [
+        { "id": "msg_brand", "type": "Label", "variant": "overline", "text": "MESSAGES" },
+        { "id": "msg_title", "type": "Label", "variant": "title", "text": "信息" },
+        {
+            "id": "msg_row_0",
+            "type": "View",
+            "variant": "list-row",
+            "size": [358, 56],
+            "layout": { "type": "horizontal", "padding": [8, 12, 8, 12], "align": "center", "spacing": 8 },
+            "children": [
+                { "id": "msg_0_avatar", "type": "Label", "variant": "accent-cyan", "text": "👩", "size": [32, 32] },
+                {
+                    "id": "msg_0_info",
+                    "type": "View",
+                    "flex": 1,
+                    "layout": { "type": "vertical", "spacing": 2 },
+                    "children": [
+                        { "id": "msg_0_name", "type": "Label", "variant": "heading", "text": "妈妈" },
+                        { "id": "msg_0_preview", "type": "Label", "variant": "body", "text": "晚上回来吃饭吗？" }
+                    ]
+                },
+                { "id": "msg_0_time", "type": "Label", "variant": "caption", "text": "18:32", "size": [48, 14], "textAlign": "right" }
+            ]
+        },
+        {
+            "id": "msg_row_1",
+            "type": "View",
+            "variant": "list-row",
+            "size": [358, 56],
+            "layout": { "type": "horizontal", "padding": [8, 12, 8, 12], "align": "center", "spacing": 8 },
+            "children": [
+                { "id": "msg_1_avatar", "type": "Label", "variant": "accent-cyan", "text": "👥", "size": [32, 32] },
+                {
+                    "id": "msg_1_info",
+                    "type": "View",
+                    "flex": 1,
+                    "layout": { "type": "vertical", "spacing": 2 },
+                    "children": [
+                        { "id": "msg_1_name", "type": "Label", "variant": "heading", "text": "项目组" },
+                        { "id": "msg_1_preview", "type": "Label", "variant": "body", "text": "明天下午三点例会" }
+                    ]
+                },
+                { "id": "msg_1_time", "type": "Label", "variant": "caption", "text": "15:10", "size": [48, 14], "textAlign": "right" }
+            ]
+        },
+        {
+            "id": "msg_row_2",
+            "type": "View",
+            "variant": "list-row",
+            "size": [358, 56],
+            "layout": { "type": "horizontal", "padding": [8, 12, 8, 12], "align": "center", "spacing": 8 },
+            "children": [
+                { "id": "msg_2_avatar", "type": "Label", "variant": "accent-cyan", "text": "👨", "size": [32, 32] },
+                {
+                    "id": "msg_2_info",
+                    "type": "View",
+                    "flex": 1,
+                    "layout": { "type": "vertical", "spacing": 2 },
+                    "children": [
+                        { "id": "msg_2_name", "type": "Label", "variant": "heading", "text": "爸爸" },
+                        { "id": "msg_2_preview", "type": "Label", "variant": "body", "text": "好的，知道了" }
+                    ]
+                },
+                { "id": "msg_2_time", "type": "Label", "variant": "caption", "text": "昨天", "size": [48, 14], "textAlign": "right" }
+            ]
+        },
+        {
+            "id": "msg_row_3",
+            "type": "View",
+            "variant": "list-row",
+            "size": [358, 56],
+            "layout": { "type": "horizontal", "padding": [8, 12, 8, 12], "align": "center", "spacing": 8 },
+            "children": [
+                { "id": "msg_3_avatar", "type": "Label", "variant": "accent-cyan", "text": "👩", "size": [32, 32] },
+                {
+                    "id": "msg_3_info",
+                    "type": "View",
+                    "flex": 1,
+                    "layout": { "type": "vertical", "spacing": 2 },
+                    "children": [
+                        { "id": "msg_3_name", "type": "Label", "variant": "heading", "text": "Alice" },
+                        { "id": "msg_3_preview", "type": "Label", "variant": "body", "text": "See you tonight!" }
+                    ]
+                },
+                { "id": "msg_3_time", "type": "Label", "variant": "caption", "text": "周一", "size": [48, 14], "textAlign": "right" }
+            ]
+        },
+        { "id": "msg_status", "type": "Label", "variant": "subtitle", "text": "选择对话查看详情" },
+        {
+            "id": "msg_thread",
+            "type": "View",
+            "variant": "card",
+            "size": [358, 80],
+            "layout": { "type": "vertical", "spacing": 6, "padding": [10, 12, 10, 12] },
+            "children": [
+                { "id": "msg_thread_title", "type": "Label", "variant": "heading", "text": "妈妈" },
+                { "id": "msg_thread_body", "type": "Label", "variant": "body", "text": "晚上回来吃饭吗？" },
+                { "id": "msg_thread_reply", "type": "Label", "variant": "accent-lime", "text": "我：大概七点到" }
+            ]
+        },
+        {
+            "id": "msg_actions",
+            "type": "View",
+            "size": [358, 40],
+            "layout": { "type": "horizontal", "spacing": 8 },
+            "children": [
+                { "id": "btn_msg_0", "type": "Button", "variant": "pill", "text": "妈妈", "flex": 1, "size": [0, 36], "events": { "onClick": "@openMessage0" } },
+                { "id": "btn_msg_1", "type": "Button", "variant": "pill", "text": "项目组", "flex": 1, "size": [0, 36], "events": { "onClick": "@openMessage1" } },
+                { "id": "btn_msg_reply", "type": "Button", "variant": "primary", "text": "回复", "flex": 1, "size": [0, 36], "events": { "onClick": "@replyMessage" } }
+            ]
+        }
+    ]
+}

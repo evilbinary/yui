@@ -1,0 +1,88 @@
+{
+    "id": "page_battery",
+    "js": ["battery.js"],
+    "type": "View",
+    "variant": "surface",
+    "flex": 1,
+    "layout": { "type": "vertical", "spacing": 10, "padding": [8, 16, 12, 16], "align": "center" },
+    "events": { "onLoad": "@onBatteryLoad", "onShow": "@onBatteryShow" },
+    "children": [
+        { "id": "battery_brand", "type": "Label", "variant": "overline", "text": "POWER" },
+        { "id": "battery_title", "type": "Label", "variant": "title", "text": "电量" },
+        {
+            "id": "battery_hero",
+            "type": "View",
+            "variant": "card",
+            "size": [200, 200],
+            "layout": { "type": "vertical", "spacing": 4, "padding": [16, 16, 16, 16], "align": "center" },
+            "children": [
+                {
+                    "id": "battery_ring",
+                    "type": "Progress",
+                    "size": [140, 140],
+                    "shape": "circle",
+                    "value": 85,
+                    "showPercentage": false,
+                    "fillColor": "#30D158",
+                    "style": { "bgColor": "#1C1C1E", "circleWidth": 10 }
+                },
+                { "id": "battery_pct", "type": "Label", "variant": "watch-time", "text": "85%", "size": [160, 44] },
+                { "id": "battery_status", "type": "Label", "variant": "subtitle", "text": "正常使用" }
+            ]
+        },
+        {
+            "id": "battery_stats",
+            "type": "View",
+            "size": [358, 72],
+            "layout": { "type": "horizontal", "spacing": 8 },
+            "children": [
+                {
+                    "id": "battery_stat_remain",
+                    "type": "View",
+                    "variant": "metric-card",
+                    "flex": 1,
+                    "size": [0, 72],
+                    "layout": { "type": "vertical", "spacing": 2, "padding": [8, 8, 8, 8], "align": "center" },
+                    "children": [
+                        { "id": "battery_remain", "type": "Label", "variant": "accent-lime", "text": "18h" },
+                        { "id": "battery_remain_lbl", "type": "Label", "variant": "caption", "text": "预计剩余" }
+                    ]
+                },
+                {
+                    "id": "battery_stat_since",
+                    "type": "View",
+                    "variant": "metric-card",
+                    "flex": 1,
+                    "size": [0, 72],
+                    "layout": { "type": "vertical", "spacing": 2, "padding": [8, 8, 8, 8], "align": "center" },
+                    "children": [
+                        { "id": "battery_since", "type": "Label", "variant": "accent-cyan", "text": "6h 12m" },
+                        { "id": "battery_since_lbl", "type": "Label", "variant": "caption", "text": "上次充电" }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "battery_modes",
+            "type": "View",
+            "variant": "list-row",
+            "size": [358, 56],
+            "layout": { "type": "vertical", "spacing": 4, "padding": [10, 12, 10, 12] },
+            "children": [
+                { "id": "battery_mode_title", "type": "Label", "variant": "heading", "text": "低电量模式" },
+                { "id": "battery_mode_desc", "type": "Label", "variant": "body", "text": "关闭后台刷新，延长续航" }
+            ]
+        },
+        {
+            "id": "battery_actions",
+            "type": "View",
+            "size": [358, 40],
+            "layout": { "type": "horizontal", "spacing": 8 },
+            "children": [
+                { "id": "btn_battery_saver", "type": "Button", "variant": "secondary", "text": "省电模式", "flex": 1, "size": [0, 36], "events": { "onClick": "@toggleBatterySaver" } },
+                { "id": "btn_battery_refresh", "type": "Button", "variant": "primary", "text": "刷新", "flex": 1, "size": [0, 36], "events": { "onClick": "@refreshBatteryUI" } }
+            ]
+        },
+        { "id": "battery_tip", "type": "Label", "variant": "caption", "text": "点击状态栏电量可快速查看" }
+    ]
+}

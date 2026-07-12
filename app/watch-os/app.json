@@ -52,12 +52,20 @@
                     "textAlign": "left"
                 },
                 {
+                    "id": "btn_status_notif",
+                    "type": "Button",
+                    "variants": ["tertiary", "compact"],
+                    "text": "🔔",
+                    "size": [22, 18],
+                    "events": { "onClick": "@openNotifications" }
+                },
+                {
                     "id": "status_battery",
-                    "type": "Label",
-                    "variant": "status-battery",
+                    "type": "Button",
+                    "variants": ["tertiary", "compact"],
                     "text": "85%",
-                    "size": [48, 16],
-                    "textAlign": "right"
+                    "size": [42, 18],
+                    "events": { "onClick": "@openBattery" }
                 }
             ]
         },
