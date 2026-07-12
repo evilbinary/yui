@@ -3,6 +3,7 @@
 #include "../backend.h"
 #include "../popup_manager.h"
 #include "../util.h"
+#include "cJSON.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -99,6 +100,10 @@ static void hide_tooltip(LabelComponent* comp) {
 
 // 创建标签组件
 LabelComponent* label_component_create(Layer* layer) {
+    return label_component_create_from_json(layer, NULL);
+}
+
+LabelComponent* label_component_create_from_json(Layer* layer, cJSON* json_obj) {
     if (!layer) return NULL;
 
     LabelComponent* component = malloc(sizeof(LabelComponent));
@@ -108,6 +113,19 @@ LabelComponent* label_component_create(Layer* layer) {
     component->layer = layer;
     component->text_alignment = LAYOUT_CENTER;
     component->auto_size = 0;
+
+    if (json_obj) {
+        cJSON* text_align = cJSON_GetObjectItem(json_obj, "textAlign");
+        if (text_align && cJSON_IsString(text_align)) {
+            if (strcmp(text_align->valuestring, "left") == 0) {
+                component->text_alignment = LAYOUT_LEFT;
+            } else if (strcmp(text_align->valuestring, "right") == 0) {
+                component->text_alignment = LAYOUT_RIGHT;
+            } else if (strcmp(text_align->valuestring, "center") == 0) {
+                component->text_alignment = LAYOUT_CENTER;
+            }
+        }
+    }
 
     layer->component = component;
     layer->render = label_component_render;

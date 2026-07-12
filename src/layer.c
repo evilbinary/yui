@@ -981,7 +981,7 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
     layer->component = button_component_create_from_json(layer, json_obj);
 
   } else if (layer->type == LABEL) {
-    layer->component = label_component_create(layer);
+    layer->component = label_component_create_from_json(layer, json_obj);
 
   } else if (layer->type == IMAGE) {
     layer->component = image_component_create(layer);

@@ -16,6 +16,7 @@ typedef struct {
 
 // 函数声明
 LabelComponent* label_component_create(Layer* layer);
+LabelComponent* label_component_create_from_json(Layer* layer, cJSON* json_obj);
 void label_component_destroy(LabelComponent* component);
 void label_component_set_text(LabelComponent* component, const char* text);
 void label_component_set_text_alignment(LabelComponent* component, int alignment);
