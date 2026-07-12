@@ -116,8 +116,41 @@
             "id": "dock",
             "type": "View",
             "size": [350, 54],
-            "layout": { "type": "horizontal", "spacing": 10, "align": "center" },
-            "children": []
+            "layout": { "type": "horizontal", "spacing": 10, "justifyContent": "center" },
+            "children": [
+                {
+                    "id": "dock_app_messages",
+                    "type": "Button",
+                    "variant": "dock-flat",
+                    "text": "💬",
+                    "size": [52, 52],
+                    "events": { "onClick": "@onDockAppClick" }
+                },
+                {
+                    "id": "dock_app_phone",
+                    "type": "Button",
+                    "variant": "dock-flat",
+                    "text": "📞",
+                    "size": [52, 52],
+                    "events": { "onClick": "@onDockAppClick" }
+                },
+                {
+                    "id": "dock_app_health",
+                    "type": "Button",
+                    "variant": "dock-flat",
+                    "text": "🩺",
+                    "size": [52, 52],
+                    "events": { "onClick": "@onDockAppClick" }
+                },
+                {
+                    "id": "dock_launcher",
+                    "type": "Button",
+                    "variant": "dock-accent",
+                    "text": "🚀",
+                    "size": [52, 52],
+                    "events": { "onClick": "@openLauncher" }
+                }
+            ]
         }
     ]
 }

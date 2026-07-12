@@ -32,8 +32,8 @@ var WatchAppRegistry = {
             }
         }
 
-        this._scanRoot(this.appsRoot, false);
-        this._scanInstalledRegistry();
+        var scanned = this._scanRoot(this.appsRoot, false);
+        var installed = this._scanInstalledRegistry();
 
         this.apps.sort(function(a, b) {
             return (a.order || 100) - (b.order || 100);
@@ -47,30 +47,41 @@ var WatchAppRegistry = {
             }
         }
 
-        YUI.log("WatchAppRegistry: " + this.apps.length + " apps registered");
+        var launcherCount = this.getLauncherApps().length;
+        YUI.log("WatchAppRegistry: " + this.apps.length + " apps registered (" + scanned + " scanned, " + installed + " installed, " + launcherCount + " in launcher)");
         return this.routes;
     },
 
+    _readFileSafe: function(filePath) {
+        if (typeof YUI.readFile !== "function") return null;
+        try {
+            return YUI.readFile(filePath);
+        } catch (e) {
+            return null;
+        }
+    },
+
     _scanInstalledRegistry: function() {
-        if (typeof YUI.readFile !== "function") return;
-        var raw = YUI.readFile(this.installedRegistry);
-        if (!raw) return;
+        var raw = this._readFileSafe(this.installedRegistry);
+        if (!raw) return 0;
         var data;
         try {
             data = JSON.parse(raw);
         } catch (e) {
-            return;
+            return 0;
         }
         var list = data.apps || [];
+        var count = 0;
         for (var i = 0; i < list.length; i++) {
             var entry = list[i];
             if (!entry.id || !entry.source) continue;
-            this._registerApp(this._loadAppDir(entry.source, entry.id, true));
+            if (this._registerApp(this._loadAppDir(entry.source, entry.id, true))) count++;
         }
+        return count;
     },
 
     _registerApp: function(app) {
-        if (!app) return;
+        if (!app) return false;
         var existing = this.byId[app.id];
         if (existing) {
             for (var j = 0; j < this.apps.length; j++) {
@@ -83,11 +94,11 @@ var WatchAppRegistry = {
             this.apps.push(app);
         }
         this.byId[app.id] = app;
+        return true;
     },
 
     _loadInstalledRegistry: function() {
-        if (typeof YUI.readFile !== "function") return { apps: [] };
-        var raw = YUI.readFile(this.installedRegistry);
+        var raw = this._readFileSafe(this.installedRegistry);
         if (!raw) return { apps: [] };
         try {
             return JSON.parse(raw);
@@ -104,17 +115,23 @@ var WatchAppRegistry = {
     _scanRoot: function(root, isInstalled) {
         if (typeof YUI.listDir !== "function") {
             YUI.log("WatchAppRegistry: listDir not available");
-            return;
+            return 0;
         }
         var entries = YUI.listDir(root);
-        if (!entries) return;
-
-        for (var i = 0; i < entries.length; i++) {
-            if (!entries[i].isDir) continue;
-            var dirName = entries[i].name;
-            if (dirName.charAt(0) === ".") continue;
-            this._registerApp(this._loadAppDir(root, dirName, isInstalled));
+        if (!entries) {
+            YUI.log("WatchAppRegistry: cannot list " + root);
+            return 0;
         }
+
+        var count = 0;
+        for (var i = 0; i < entries.length; i++) {
+            var entry = entries[i];
+            if (!entry || !entry.isDir) continue;
+            var dirName = entry.name;
+            if (!dirName || dirName.charAt(0) === ".") continue;
+            if (this._registerApp(this._loadAppDir(root, dirName, isInstalled))) count++;
+        }
+        return count;
     },
 
     _loadAppDir: function(root, dirName, isInstalled) {
@@ -139,8 +156,7 @@ var WatchAppRegistry = {
     },
 
     _parsePageMeta: function(pagePath, dirName) {
-        if (typeof YUI.readFile !== "function") return null;
-        var raw = YUI.readFile(pagePath);
+        var raw = this._readFileSafe(pagePath);
         if (!raw) return null;
 
         var page;

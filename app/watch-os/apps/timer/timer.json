@@ -2,7 +2,7 @@
     "id": "page_timer",
     "title": "计时器",
     "icon": "⏱",
-    "watchApp": { "id": "timer", "order": 30, "dock": true },
+    "watchApp": { "id": "timer", "order": 30 },
     "js": ["timer.js"],
     "type": "View",
     "variant": "surface",

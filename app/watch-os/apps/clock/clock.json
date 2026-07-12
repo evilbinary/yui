@@ -2,7 +2,7 @@
     "id": "page_clock",
     "title": "时钟",
     "icon": "🕐",
-    "watchApp": { "id": "clock", "order": 31, "dock": true },
+    "watchApp": { "id": "clock", "order": 31 },
     "js": ["clock.js"],
     "type": "View",
     "variant": "surface",

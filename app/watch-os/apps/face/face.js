@@ -20,34 +20,11 @@ function onFaceShow() {
 function refreshFaceDock() {
     if (typeof WatchAppRegistry === "undefined") return;
 
-    YUI.update(JSON.stringify({
-        target: "dock",
-        change: { children: null }
-    }));
-
     var dockApps = WatchAppRegistry.getDockApps(3);
     for (var i = 0; i < dockApps.length; i++) {
         var app = dockApps[i];
-        var btnJson = JSON.stringify({
-            id: "dock_app_" + app.id,
-            type: "Button",
-            variant: "dock-flat",
-            text: app.icon,
-            size: [52, 52],
-            events: { onClick: "@onDockAppClick" }
-        });
-        YUI.renderFromJson("dock", btnJson);
+        YUI.setText("dock_app_" + app.id, app.icon);
     }
-
-    var launcherJson = JSON.stringify({
-        id: "dock_launcher",
-        type: "Button",
-        variant: "dock-accent",
-        text: "🚀",
-        size: [52, 52],
-        events: { onClick: "@openLauncher" }
-    });
-    YUI.renderFromJson("dock", launcherJson);
 }
 
 function onDockAppClick(layerId) {
