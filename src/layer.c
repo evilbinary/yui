@@ -523,7 +523,7 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
   // 解析列表项模板
   cJSON* item_template = cJSON_GetObjectItem(json_obj, "itemTemplate");
   if (item_template) {
-    layer->item_template = parse_layer_from_json(layer, item_template, parent);
+    layer->item_template = parse_layer_from_json(NULL, item_template, layer);
   }
 
   // 解析滚动属性 - 作为 Layer 的直接属性
@@ -1012,6 +1012,10 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
     layer->focusable = 1;
   } else if (layer->type == TREEVIEW) {
     layer->component = treeview_component_create_from_json(layer, json_obj);
+  } else if (layer->type == LAYER_LIST) {
+    layer->component = list_component_create_from_json(layer, json_obj);
+    layer->focusable = 1;
+    has_custom_children = 1;
   } else if (layer->type == SCROLLBAR) {
     // 不再创建滑块子图层
     layer->child_count = 0;
@@ -1145,6 +1149,11 @@ void destroy_layer(Layer* layer) {
     
     // 注意：不销毁 font 和 assets，因为它们可能是共享的
     // 这些应该由全局资源管理器负责
+
+    if (layer->on_destroy) {
+        layer->on_destroy(layer);
+        layer->on_destroy = NULL;
+    }
 
     layer_free_strings(layer);
     free(layer);

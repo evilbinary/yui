@@ -33,6 +33,7 @@
 #define YUI_RADIOBOX_COMPONENT 1
 #define YUI_TEXT_COMPONENT 1
 #define YUI_TREEVIEW_COMPONENT 1
+#define YUI_LIST_COMPONENT 1
 #define YUI_TAB_COMPONENT 1
 #define YUI_SLIDER_COMPONENT 1
 #define YUI_SELECT_COMPONENT 1
@@ -388,6 +389,9 @@ typedef struct Layer {
     // 数据更新回调（由组件各自注册）
     void (*on_data_update)(Layer* layer, cJSON* data);
 
+    // 销毁回调（由组件各自注册，释放 component 等资源）
+    void (*on_destroy)(Layer* layer);
+
     // 添加滚动支持字段
     int scrollable;          // 滚动类型: 0=不可滚动, 1=垂直滚动, 2=水平滚动, 3=双向滚动
     int scroll_offset;       // 垂直滚动偏移
@@ -484,6 +488,10 @@ extern Layer* focused_layer;
 
 #ifdef YUI_TREEVIEW_COMPONENT
 #include "components/treeview_component.h"
+#endif
+
+#ifdef YUI_LIST_COMPONENT
+#include "components/list_component.h"
 #endif
 
 #ifdef YUI_TAB_COMPONENT
