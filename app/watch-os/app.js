@@ -127,6 +127,24 @@ function updateWatchChrome() {
     var unread = getUnreadNotificationCount();
     YUI.setText("btn_status_notif", unread > 0 ? String(unread) : "🔔");
     YUI.setText("status_battery", Watch.battery + "%");
+    updateSwipeIndex(route ? route.path : "/");
+}
+
+function updateSwipeIndex(path) {
+    var active = -1;
+    if (path === "/notifications") active = 0;
+    else if (path === "/") active = 1;
+    else if (path === "/launcher") active = 2;
+
+    if (active < 0) {
+        YUI.hide("swipe_index");
+        return;
+    }
+
+    YUI.show("swipe_index");
+    YUI.setText("swipe_dot_left", active === 0 ? "●" : "•");
+    YUI.setText("swipe_dot_center", active === 1 ? "●" : "•");
+    YUI.setText("swipe_dot_right", active === 2 ? "●" : "•");
 }
 
 function formatWatchNumber(n) {

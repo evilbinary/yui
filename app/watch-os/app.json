@@ -77,6 +77,23 @@
             "flex": 1,
             "layout": { "type": "vertical" },
             "events": { "onTouch": "@onPageTouch" }
+        },
+        {
+            "id": "swipe_index",
+            "type": "View",
+            "size": [390, 14],
+            "layout": {
+                "type": "horizontal",
+                "spacing": 4,
+                "padding": [0, 0, 4, 0],
+                "align": "center",
+                "justifyContent": "center"
+            },
+            "children": [
+                { "id": "swipe_dot_left", "type": "Label", "variant": "caption", "text": "•", "size": [10, 10] },
+                { "id": "swipe_dot_center", "type": "Label", "variant": "caption", "text": "●", "size": [10, 10] },
+                { "id": "swipe_dot_right", "type": "Label", "variant": "caption", "text": "•", "size": [10, 10] }
+            ]
         }
     ]
 }
