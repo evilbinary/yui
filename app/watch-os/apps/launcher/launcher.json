@@ -4,39 +4,46 @@
     "type": "View",
     "variant": "surface",
     "flex": 1,
-    "layout": { "type": "vertical", "spacing": 16, "padding": [20, 24, 24, 24], "align": "center" },
+    "layout": { "type": "vertical", "spacing": 14, "padding": [24, 20, 24, 20], "align": "center" },
     "events": { "onLoad": "@onLauncherLoad", "onShow": "@onLauncherShow" },
     "children": [
         {
+            "id": "launcher_title",
+            "type": "Label",
+            "variant": "overline",
+            "text": "APPS",
+            "size": [342, 12]
+        },
+        {
             "id": "launcher_row1",
             "type": "View",
-            "size": [342, 72],
-            "layout": { "type": "horizontal", "spacing": 14, "align": "center" },
+            "size": [342, 68],
+            "layout": { "type": "horizontal", "spacing": 12, "align": "center" },
             "children": [
-                { "id": "app_health", "type": "Button", "variant": "dock-health", "text": "🩺", "size": [68, 68], "events": { "onClick": "@openHealth" } },
-                { "id": "app_timer", "type": "Button", "variant": "dock-timer", "text": "⏱", "size": [68, 68], "events": { "onClick": "@openTimer" } },
-                { "id": "app_calc", "type": "Button", "variant": "dock-calc", "text": "🧮", "size": [68, 68], "events": { "onClick": "@openCalc" } },
-                { "id": "app_settings", "type": "Button", "variant": "dock-settings", "text": "⚙", "size": [68, 68], "events": { "onClick": "@openSettings" } }
+                { "id": "app_health", "type": "Button", "variant": "dock-flat", "text": "🩺", "size": [64, 64], "events": { "onClick": "@openHealth" } },
+                { "id": "app_timer", "type": "Button", "variant": "dock-flat", "text": "⏱", "size": [64, 64], "events": { "onClick": "@openTimer" } },
+                { "id": "app_calc", "type": "Button", "variant": "dock-flat", "text": "🧮", "size": [64, 64], "events": { "onClick": "@openCalc" } },
+                { "id": "app_settings", "type": "Button", "variant": "dock-flat", "text": "⚙", "size": [64, 64], "events": { "onClick": "@openSettings" } }
             ]
         },
         {
             "id": "launcher_row2",
             "type": "View",
-            "size": [342, 72],
-            "layout": { "type": "horizontal", "spacing": 14, "align": "center" },
+            "size": [342, 68],
+            "layout": { "type": "horizontal", "spacing": 12, "align": "center" },
             "children": [
-                { "id": "app_workout", "type": "Button", "variant": "dock-soon", "text": "🏃", "size": [68, 68] },
-                { "id": "app_phone", "type": "Button", "variant": "dock-soon", "text": "📞", "size": [68, 68] },
-                { "id": "app_maps", "type": "Button", "variant": "dock-soon", "text": "🗺", "size": [68, 68] },
-                { "id": "app_wallet", "type": "Button", "variant": "dock-soon", "text": "💳", "size": [68, 68] }
+                { "id": "app_workout", "type": "Button", "variant": "dock-soon", "text": "🏃", "size": [64, 64] },
+                { "id": "app_phone", "type": "Button", "variant": "dock-soon", "text": "📞", "size": [64, 64] },
+                { "id": "app_maps", "type": "Button", "variant": "dock-soon", "text": "🗺", "size": [64, 64] },
+                { "id": "app_wallet", "type": "Button", "variant": "dock-soon", "text": "💳", "size": [64, 64] }
             ]
         },
         {
             "id": "launcher_hint",
             "type": "Label",
             "variant": "caption",
-            "text": "灰色图标即将推出",
-            "size": [342, 16]
+            "text": "COMING SOON",
+            "size": [342, 12]
         }
     ]
 }

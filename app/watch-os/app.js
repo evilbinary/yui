@@ -8,7 +8,7 @@ var Watch = {
     complications: {
         steps: { value: 8432, goal: 10000 },
         heart: { value: 72, unit: "bpm" },
-        weather: { temp: 26, cond: "晴" }
+        weather: { temp: 26, cond: "Mostly Clear" }
     },
     apps: [
         { id: "face", path: "/", json: "app/watch-os/apps/face/face.json" },
@@ -83,6 +83,9 @@ function tickWatchClock() {
     var route = YUI.currentRoute ? YUI.currentRoute() : null;
     if (route && route.path === "/") {
         updateFaceClock();
+        if (typeof updateFaceData === "function") {
+            updateFaceData();
+        }
     }
 }
 
@@ -115,7 +118,9 @@ function formatWatchNumber(n) {
 }
 
 function refreshFaceComplications() {
-    /* 表盘 v2：活动环为静态 Progress，无需 JS 刷新 */
+    if (typeof updateFaceData === "function") {
+        updateFaceData();
+    }
 }
 
 function refreshHealthData() {

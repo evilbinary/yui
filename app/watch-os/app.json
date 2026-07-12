@@ -26,11 +26,11 @@
             "id": "status_bar",
             "type": "View",
             "variant": "toolbar",
-            "size": [390, 22],
+            "size": [390, 24],
             "layout": {
                 "type": "horizontal",
-                "spacing": 4,
-                "padding": [2, 16, 2, 16],
+                "spacing": 0,
+                "padding": [4, 18, 4, 18],
                 "align": "space-between"
             },
             "children": [
@@ -53,11 +53,9 @@
                 {
                     "id": "status_icons",
                     "type": "View",
-                    "size": [96, 18],
-                    "layout": { "type": "horizontal", "spacing": 2, "align": "center" },
+                    "size": [72, 16],
+                    "layout": { "type": "horizontal", "spacing": 6, "align": "center" },
                     "children": [
-                        { "id": "status_signal", "type": "Label", "variant": "status-icon", "text": "📶" },
-                        { "id": "status_battery_icon", "type": "Label", "variant": "status-icon", "text": "🔋" },
                         { "id": "status_battery", "type": "Label", "variant": "status-battery", "text": "85%" }
                     ]
                 }
