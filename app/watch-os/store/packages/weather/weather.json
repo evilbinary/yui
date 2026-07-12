@@ -1,0 +1,21 @@
+{
+    "id": "page_weather",
+    "title": "天气",
+    "icon": "🌤",
+    "watchApp": { "id": "weather", "order": 57 },
+    "js": ["weather.js"],
+    "type": "View",
+    "variant": "surface",
+    "flex": 1,
+    "layout": { "type": "vertical", "spacing": 8, "padding": [4, 16, 12, 16], "align": "center" },
+    "events": { "onLoad": "@onWeatherLoad", "onShow": "@onWeatherShow" },
+    "children": [
+        { "id": "wx_brand", "type": "Label", "variant": "overline", "text": "WEATHER" },
+        { "id": "wx_title", "type": "Label", "variant": "title", "text": "天气" },
+        { "id": "wx_icon", "type": "Label", "variant": "accent-yellow", "text": "☀", "size": [80, 64] },
+        { "id": "wx_temp", "type": "Label", "variant": "watch-time", "text": "26°", "size": [200, 48] },
+        { "id": "wx_cond", "type": "Label", "variant": "subtitle", "text": "晴" },
+        { "id": "wx_city", "type": "Label", "variant": "caption", "text": "上海" },
+        { "id": "wx_range", "type": "Label", "variant": "body", "text": "H 28°  L 22°" }
+    ]
+}

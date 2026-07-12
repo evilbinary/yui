@@ -1,5 +1,8 @@
 {
     "id": "page_sleep",
+    "title": "睡眠",
+    "icon": "🌙",
+    "watchApp": { "id": "sleep", "order": 21 },
     "js": ["sleep.js"],
     "type": "View",
     "variant": "surface",

@@ -1,5 +1,8 @@
 {
     "id": "page_wallet",
+    "title": "钱包",
+    "icon": "💳",
+    "watchApp": { "id": "wallet", "order": 41 },
     "js": ["wallet.js"],
     "type": "View",
     "variant": "surface",

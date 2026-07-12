@@ -1,0 +1,50 @@
+{
+    "id": "page_translate",
+    "title": "翻译",
+    "icon": "🌐",
+    "watchApp": { "id": "translate", "order": 54 },
+    "js": ["translate.js"],
+    "type": "View",
+    "variant": "surface",
+    "flex": 1,
+    "layout": { "type": "vertical", "spacing": 8, "padding": [4, 16, 12, 16] },
+    "events": { "onLoad": "@onTranslateLoad", "onShow": "@onTranslateShow" },
+    "children": [
+        { "id": "tr_brand", "type": "Label", "variant": "overline", "text": "TRANSLATE" },
+        { "id": "tr_title", "type": "Label", "variant": "title", "text": "实时翻译" },
+        { "id": "tr_lang", "type": "Label", "variant": "caption", "text": "中文 ⇄ English" },
+        {
+            "id": "tr_source_card",
+            "type": "View",
+            "variant": "card",
+            "size": [358, 72],
+            "layout": { "type": "vertical", "spacing": 4, "padding": [10, 12, 10, 12] },
+            "children": [
+                { "id": "tr_source_lbl", "type": "Label", "variant": "caption", "text": "原文" },
+                { "id": "tr_source", "type": "Label", "variant": "body", "text": "你好，很高兴认识你" }
+            ]
+        },
+        {
+            "id": "tr_target_card",
+            "type": "View",
+            "variant": "card",
+            "size": [358, 72],
+            "layout": { "type": "vertical", "spacing": 4, "padding": [10, 12, 10, 12] },
+            "children": [
+                { "id": "tr_target_lbl", "type": "Label", "variant": "caption", "text": "译文" },
+                { "id": "tr_target", "type": "Label", "variant": "accent-cyan", "text": "Hello, nice to meet you" }
+            ]
+        },
+        {
+            "id": "tr_actions",
+            "type": "View",
+            "size": [358, 40],
+            "layout": { "type": "horizontal", "spacing": 8 },
+            "children": [
+                { "id": "btn_tr_swap", "type": "Button", "variant": "secondary", "text": "切换语言", "flex": 1, "size": [0, 36], "events": { "onClick": "@swapTranslateLang" } },
+                { "id": "btn_tr_listen", "type": "Button", "variant": "primary", "text": "聆听", "flex": 1, "size": [0, 36], "events": { "onClick": "@listenTranslate" } }
+            ]
+        },
+        { "id": "tr_status", "type": "Label", "variant": "subtitle", "text": "点击聆听开始翻译" }
+    ]
+}

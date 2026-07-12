@@ -1,5 +1,8 @@
 {
     "id": "page_stopwatch",
+    "title": "秒表",
+    "icon": "⏲",
+    "watchApp": { "id": "stopwatch", "order": 33 },
     "js": ["stopwatch.js"],
     "type": "View",
     "variant": "surface",

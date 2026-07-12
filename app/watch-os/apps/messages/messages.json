@@ -1,5 +1,8 @@
 {
     "id": "page_messages",
+    "title": "信息",
+    "icon": "💬",
+    "watchApp": { "id": "messages", "order": 10, "dock": true },
     "js": ["messages.js"],
     "type": "View",
     "variant": "surface",

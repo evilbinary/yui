@@ -1,5 +1,8 @@
 {
     "id": "page_health",
+    "title": "健康",
+    "icon": "🩺",
+    "watchApp": { "id": "health", "order": 20, "dock": true },
     "js": ["health.js"],
     "type": "View",
     "variant": "surface",

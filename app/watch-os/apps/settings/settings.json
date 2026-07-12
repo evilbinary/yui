@@ -1,5 +1,8 @@
 {
     "id": "page_settings",
+    "title": "设置",
+    "icon": "⚙",
+    "watchApp": { "id": "settings", "path": "/settings", "order": 90 },
     "js": ["settings.js"],
     "type": "View",
     "variant": "surface",
@@ -42,7 +45,7 @@
             "layout": { "type": "vertical", "spacing": 4, "padding": [10, 12, 10, 12] },
             "children": [
                 { "id": "settings_about_title", "type": "Label", "variant": "heading", "text": "YUI Watch OS" },
-                { "id": "settings_about_ver", "type": "Label", "variant": "caption", "text": "v0.3 · 18 应用已上线" }
+                { "id": "settings_about_ver", "type": "Label", "variant": "caption", "text": "v0.4 · 动态应用扫描" }
             ]
         }
     ]

@@ -1,0 +1,20 @@
+{
+    "packages": [
+        {
+            "id": "mindfulness",
+            "title": "正念呼吸",
+            "icon": "🧘",
+            "description": "引导呼吸，放松身心",
+            "version": "1.0.0",
+            "source": "app/watch-os/store/packages/mindfulness"
+        },
+        {
+            "id": "weather",
+            "title": "天气",
+            "icon": "🌤",
+            "description": "本地天气与预报",
+            "version": "1.0.0",
+            "source": "app/watch-os/store/packages/weather"
+        }
+    ]
+}

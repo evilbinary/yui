@@ -1,5 +1,8 @@
 {
     "id": "page_face",
+    "title": "表盘",
+    "icon": "◉",
+    "watchApp": { "id": "face", "path": "/", "order": 0, "launcher": false, "system": true },
     "js": ["face.js"],
     "type": "View",
     "variant": "surface",
@@ -113,41 +116,8 @@
             "id": "dock",
             "type": "View",
             "size": [350, 54],
-            "layout": { "type": "horizontal", "spacing": 10, "align": "center", "justifyContent": "center" },
-            "children": [
-                {
-                    "id": "dock_health",
-                    "type": "Button",
-                    "variant": "dock-flat",
-                    "text": "🩺",
-                    "size": [52, 52],
-                    "events": { "onClick": "@openHealth" }
-                },
-                {
-                    "id": "dock_timer",
-                    "type": "Button",
-                    "variant": "dock-flat",
-                    "text": "⏱",
-                    "size": [52, 52],
-                    "events": { "onClick": "@openTimer" }
-                },
-                {
-                    "id": "dock_clock",
-                    "type": "Button",
-                    "variant": "dock-flat",
-                    "text": "🕐",
-                    "size": [52, 52],
-                    "events": { "onClick": "@openClock" }
-                },
-                {
-                    "id": "dock_launcher",
-                    "type": "Button",
-                    "variant": "dock-accent",
-                    "text": "🚀",
-                    "size": [52, 52],
-                    "events": { "onClick": "@openLauncher" }
-                }
-            ]
+            "layout": { "type": "horizontal", "spacing": 10, "align": "center" },
+            "children": []
         }
     ]
 }

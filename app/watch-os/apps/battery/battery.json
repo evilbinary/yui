@@ -1,5 +1,8 @@
 {
     "id": "page_battery",
+    "title": "电量",
+    "icon": "🔋",
+    "watchApp": { "id": "battery", "order": 42 },
     "js": ["battery.js"],
     "type": "View",
     "variant": "surface",

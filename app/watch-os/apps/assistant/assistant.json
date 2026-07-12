@@ -1,0 +1,40 @@
+{
+    "id": "page_assistant",
+    "title": "AI助理",
+    "icon": "🤖",
+    "watchApp": { "id": "assistant", "order": 53 },
+    "js": ["assistant.js"],
+    "type": "View",
+    "variant": "surface",
+    "flex": 1,
+    "layout": { "type": "vertical", "spacing": 8, "padding": [4, 16, 12, 16] },
+    "events": { "onLoad": "@onAssistantLoad", "onShow": "@onAssistantShow" },
+    "children": [
+        { "id": "ai_brand", "type": "Label", "variant": "overline", "text": "ASSISTANT" },
+        { "id": "ai_title", "type": "Label", "variant": "title", "text": "AI 助理" },
+        {
+            "id": "ai_chat",
+            "type": "View",
+            "variant": "card",
+            "flex": 1,
+            "size": [358, 180],
+            "layout": { "type": "vertical", "spacing": 8, "padding": [10, 12, 10, 12] },
+            "children": [
+                { "id": "ai_msg_user", "type": "Label", "variant": "body", "text": "你：今天天气怎么样？" },
+                { "id": "ai_msg_bot", "type": "Label", "variant": "accent-cyan", "text": "YUI：26°C，晴，适合户外活动。" }
+            ]
+        },
+        {
+            "id": "ai_quick",
+            "type": "View",
+            "size": [358, 36],
+            "layout": { "type": "horizontal", "spacing": 6 },
+            "children": [
+                { "id": "btn_ai_weather", "type": "Button", "variant": "pill", "text": "天气", "flex": 1, "size": [0, 32], "events": { "onClick": "@askAiWeather" } },
+                { "id": "btn_ai_steps", "type": "Button", "variant": "pill", "text": "步数", "flex": 1, "size": [0, 32], "events": { "onClick": "@askAiSteps" } },
+                { "id": "btn_ai_time", "type": "Button", "variant": "pill", "text": "日程", "flex": 1, "size": [0, 32], "events": { "onClick": "@askAiSchedule" } }
+            ]
+        },
+        { "id": "ai_status", "type": "Label", "variant": "subtitle", "text": "语音或点击快捷提问" }
+    ]
+}

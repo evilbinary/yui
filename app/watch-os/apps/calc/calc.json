@@ -1,5 +1,8 @@
 {
     "id": "page_calc",
+    "title": "计算器",
+    "icon": "🧮",
+    "watchApp": { "id": "calc", "order": 34 },
     "js": ["calc.js", "../../../calc/calc.js"],
     "type": "View",
     "variant": "surface",

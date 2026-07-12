@@ -1,5 +1,8 @@
 {
     "id": "page_maps",
+    "title": "地图",
+    "icon": "🗺",
+    "watchApp": { "id": "maps", "order": 40 },
     "js": ["maps.js"],
     "type": "View",
     "variant": "surface",

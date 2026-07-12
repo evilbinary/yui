@@ -1,5 +1,8 @@
 {
     "id": "page_contacts",
+    "title": "通讯录",
+    "icon": "👥",
+    "watchApp": { "id": "contacts", "order": 12 },
     "js": ["contacts.js"],
     "type": "View",
     "variant": "surface",

@@ -1,5 +1,8 @@
 {
     "id": "page_notifications",
+    "title": "通知",
+    "icon": "🔔",
+    "watchApp": { "id": "notifications", "path": "/notifications", "order": 2, "launcher": false, "system": true },
     "js": ["notifications.js"],
     "type": "View",
     "variant": "surface",

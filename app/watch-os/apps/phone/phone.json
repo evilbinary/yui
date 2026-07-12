@@ -1,5 +1,8 @@
 {
     "id": "page_phone",
+    "title": "电话",
+    "icon": "📞",
+    "watchApp": { "id": "phone", "order": 11, "dock": true },
     "js": ["phone.js"],
     "type": "View",
     "variant": "surface",

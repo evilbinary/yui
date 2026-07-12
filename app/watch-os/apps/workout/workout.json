@@ -1,5 +1,8 @@
 {
     "id": "page_workout",
+    "title": "训练",
+    "icon": "🏃",
+    "watchApp": { "id": "workout", "order": 22 },
     "js": ["workout.js"],
     "type": "View",
     "variant": "surface",

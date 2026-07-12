@@ -10,6 +10,7 @@
     "js": [
         "../lib/router.js",
         "../lib/theme.js",
+        "lib/watch-app-registry.js",
         "app.js"
     ],
     "layout": {

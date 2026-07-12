@@ -1,0 +1,70 @@
+{
+    "id": "page_store",
+    "title": "应用商店",
+    "icon": "🛒",
+    "watchApp": { "id": "store", "order": 55 },
+    "js": ["store.js"],
+    "type": "View",
+    "variant": "surface",
+    "flex": 1,
+    "scrollable": 1,
+    "layout": { "type": "vertical", "spacing": 8, "padding": [4, 16, 12, 16] },
+    "events": { "onLoad": "@onStoreLoad", "onShow": "@onStoreShow" },
+    "children": [
+        { "id": "store_brand", "type": "Label", "variant": "overline", "text": "APP STORE" },
+        { "id": "store_title", "type": "Label", "variant": "title", "text": "应用商店" },
+        { "id": "store_summary", "type": "Label", "variant": "subtitle", "text": "可安装应用" },
+        {
+            "id": "store_pkg_0",
+            "type": "View",
+            "variant": "list-row",
+            "size": [358, 64],
+            "layout": { "type": "horizontal", "padding": [8, 12, 8, 12], "align": "center", "spacing": 10 },
+            "children": [
+                { "id": "store_pkg_0_icon", "type": "Label", "variant": "accent-cyan", "text": "🧘", "size": [32, 32] },
+                {
+                    "id": "store_pkg_0_info",
+                    "type": "View",
+                    "flex": 1,
+                    "layout": { "type": "vertical", "spacing": 2 },
+                    "children": [
+                        { "id": "store_pkg_0_title", "type": "Label", "variant": "heading", "text": "正念呼吸" },
+                        { "id": "store_pkg_0_desc", "type": "Label", "variant": "caption", "text": "引导呼吸放松" }
+                    ]
+                },
+                { "id": "btn_store_install_0", "type": "Button", "variant": "primary", "text": "安装", "size": [52, 32], "events": { "onClick": "@installStorePkg0" } }
+            ]
+        },
+        {
+            "id": "store_pkg_1",
+            "type": "View",
+            "variant": "list-row",
+            "size": [358, 64],
+            "layout": { "type": "horizontal", "padding": [8, 12, 8, 12], "align": "center", "spacing": 10 },
+            "children": [
+                { "id": "store_pkg_1_icon", "type": "Label", "variant": "accent-cyan", "text": "🌤", "size": [32, 32] },
+                {
+                    "id": "store_pkg_1_info",
+                    "type": "View",
+                    "flex": 1,
+                    "layout": { "type": "vertical", "spacing": 2 },
+                    "children": [
+                        { "id": "store_pkg_1_title", "type": "Label", "variant": "heading", "text": "天气" },
+                        { "id": "store_pkg_1_desc", "type": "Label", "variant": "caption", "text": "本地天气预报" }
+                    ]
+                },
+                { "id": "btn_store_install_1", "type": "Button", "variant": "primary", "text": "安装", "size": [52, 32], "events": { "onClick": "@installStorePkg1" } }
+            ]
+        },
+        { "id": "store_status", "type": "Label", "variant": "subtitle", "text": "安装后自动出现在启动器" },
+        {
+            "id": "store_actions",
+            "type": "View",
+            "size": [358, 36],
+            "layout": { "type": "horizontal", "spacing": 8 },
+            "children": [
+                { "id": "btn_store_rescan", "type": "Button", "variant": "secondary", "text": "刷新应用", "flex": 1, "size": [0, 36], "events": { "onClick": "@rescanWatchApps" } }
+            ]
+        }
+    ]
+}

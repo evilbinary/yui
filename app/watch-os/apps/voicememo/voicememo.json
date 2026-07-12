@@ -1,0 +1,60 @@
+{
+    "id": "page_voicememo",
+    "title": "语音备忘",
+    "icon": "🎙",
+    "watchApp": { "id": "voicememo", "order": 50 },
+    "js": ["voicememo.js"],
+    "type": "View",
+    "variant": "surface",
+    "flex": 1,
+    "scrollable": 1,
+    "layout": { "type": "vertical", "spacing": 8, "padding": [4, 16, 12, 16] },
+    "events": { "onLoad": "@onVoicememoLoad", "onShow": "@onVoicememoShow" },
+    "children": [
+        { "id": "vm_brand", "type": "Label", "variant": "overline", "text": "VOICE MEMOS" },
+        { "id": "vm_title", "type": "Label", "variant": "title", "text": "语音备忘" },
+        {
+            "id": "vm_row_0",
+            "type": "View",
+            "variant": "list-row",
+            "size": [358, 52],
+            "layout": { "type": "horizontal", "padding": [8, 12, 8, 12], "align": "center", "spacing": 8 },
+            "children": [
+                { "id": "vm_0_title", "type": "Label", "variant": "heading", "text": "会议要点", "flex": 1, "textAlign": "left" },
+                { "id": "vm_0_dur", "type": "Label", "variant": "caption", "text": "0:42", "size": [40, 14] }
+            ]
+        },
+        {
+            "id": "vm_row_1",
+            "type": "View",
+            "variant": "list-row",
+            "size": [358, 52],
+            "layout": { "type": "horizontal", "padding": [8, 12, 8, 12], "align": "center", "spacing": 8 },
+            "children": [
+                { "id": "vm_1_title", "type": "Label", "variant": "heading", "text": "购物清单", "flex": 1, "textAlign": "left" },
+                { "id": "vm_1_dur", "type": "Label", "variant": "caption", "text": "0:18", "size": [40, 14] }
+            ]
+        },
+        {
+            "id": "vm_row_2",
+            "type": "View",
+            "variant": "list-row",
+            "size": [358, 52],
+            "layout": { "type": "horizontal", "padding": [8, 12, 8, 12], "align": "center", "spacing": 8 },
+            "children": [
+                { "id": "vm_2_title", "type": "Label", "variant": "heading", "text": "灵感记录", "flex": 1, "textAlign": "left" },
+                { "id": "vm_2_dur", "type": "Label", "variant": "caption", "text": "1:05", "size": [40, 14] }
+            ]
+        },
+        { "id": "vm_status", "type": "Label", "variant": "subtitle", "text": "点击录制新备忘" },
+        {
+            "id": "vm_actions",
+            "type": "View",
+            "size": [358, 44],
+            "layout": { "type": "horizontal", "spacing": 8 },
+            "children": [
+                { "id": "btn_vm_record", "type": "Button", "variant": "primary", "text": "录制", "flex": 1, "size": [0, 44], "events": { "onClick": "@recordVoicememo" } }
+            ]
+        }
+    ]
+}

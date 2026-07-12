@@ -36,52 +36,10 @@ var Watch = {
         lastNight: { total: 7.5, deep: 2.1, core: 4.1, rem: 1.3, awake: 0.2, bed: "23:15", wake: "06:45" },
         week: [6.8, 7.2, 7.5, 6.5, 8.0, 7.5, 7.5]
     },
-    apps: [
-        { id: "face", path: "/", json: "app/watch-os/apps/face/face.json" },
-        { id: "launcher", path: "/launcher", json: "app/watch-os/apps/launcher/launcher.json" },
-        { id: "notifications", path: "/notifications", json: "app/watch-os/apps/notifications/notifications.json" },
-        { id: "messages", path: "/apps/messages", json: "app/watch-os/apps/messages/messages.json" },
-        { id: "contacts", path: "/apps/contacts", json: "app/watch-os/apps/contacts/contacts.json" },
-        { id: "phone", path: "/apps/phone", json: "app/watch-os/apps/phone/phone.json" },
-        { id: "health", path: "/apps/health", json: "app/watch-os/apps/health/health.json" },
-        { id: "sleep", path: "/apps/sleep", json: "app/watch-os/apps/sleep/sleep.json" },
-        { id: "workout", path: "/apps/workout", json: "app/watch-os/apps/workout/workout.json" },
-        { id: "timer", path: "/apps/timer", json: "app/watch-os/apps/timer/timer.json" },
-        { id: "clock", path: "/apps/clock", json: "app/watch-os/apps/clock/clock.json" },
-        { id: "alarm", path: "/apps/alarm", json: "app/watch-os/apps/alarm/alarm.json" },
-        { id: "stopwatch", path: "/apps/stopwatch", json: "app/watch-os/apps/stopwatch/stopwatch.json" },
-        { id: "calc", path: "/apps/calc", json: "app/watch-os/apps/calc/calc.json" },
-        { id: "maps", path: "/apps/maps", json: "app/watch-os/apps/maps/maps.json" },
-        { id: "wallet", path: "/apps/wallet", json: "app/watch-os/apps/wallet/wallet.json" },
-        { id: "battery", path: "/apps/battery", json: "app/watch-os/apps/battery/battery.json" },
-        { id: "settings", path: "/settings", json: "app/watch-os/apps/settings/settings.json" }
-    ],
-    upcoming: []
-};
-
-var watchRoutes = {
-    "/": { json: "app/watch-os/apps/face/face.json", keepAlive: true },
-    "/launcher": { json: "app/watch-os/apps/launcher/launcher.json", keepAlive: true },
-    "/notifications": { json: "app/watch-os/apps/notifications/notifications.json", keepAlive: true },
-    "/apps/messages": { json: "app/watch-os/apps/messages/messages.json", keepAlive: true },
-    "/apps/contacts": { json: "app/watch-os/apps/contacts/contacts.json", keepAlive: true },
-    "/apps/health": { json: "app/watch-os/apps/health/health.json", keepAlive: true },
-    "/apps/sleep": { json: "app/watch-os/apps/sleep/sleep.json", keepAlive: true },
-    "/apps/timer": { json: "app/watch-os/apps/timer/timer.json", keepAlive: true },
-    "/apps/clock": { json: "app/watch-os/apps/clock/clock.json", keepAlive: true },
-    "/apps/alarm": { json: "app/watch-os/apps/alarm/alarm.json", keepAlive: true },
-    "/apps/stopwatch": { json: "app/watch-os/apps/stopwatch/stopwatch.json", keepAlive: true },
-    "/apps/calc": { json: "app/watch-os/apps/calc/calc.json", keepAlive: true },
-    "/apps/workout": { json: "app/watch-os/apps/workout/workout.json", keepAlive: true },
-    "/apps/phone": { json: "app/watch-os/apps/phone/phone.json", keepAlive: true },
-    "/apps/maps": { json: "app/watch-os/apps/maps/maps.json", keepAlive: true },
-    "/apps/wallet": { json: "app/watch-os/apps/wallet/wallet.json", keepAlive: true },
-    "/apps/battery": { json: "app/watch-os/apps/battery/battery.json", keepAlive: true },
-    "/settings": { json: "app/watch-os/apps/settings/settings.json", keepAlive: true }
+    apps: []
 };
 
 var clockTimer = null;
-
 var watchThemeDir = "app/watch-os/themes";
 
 function initWatchThemes() {
@@ -91,12 +49,18 @@ function initWatchThemes() {
     Theme.apply();
 }
 
+function initWatchApps() {
+    var routes = WatchAppRegistry.init();
+    Watch.apps = WatchAppRegistry.getAll();
+    return routes;
+}
+
 function onWatchLoad() {
     initWatchThemes();
 
     Router.init({
         outlet: "page_outlet",
-        routes: watchRoutes
+        routes: initWatchApps()
     });
 
     YUI.navigate("/");
@@ -209,21 +173,16 @@ function openWatchApp(path) {
 }
 
 function openNotifications() { openWatchApp("/notifications"); }
-function openMessages() { openWatchApp("/apps/messages"); }
-function openContacts() { openWatchApp("/apps/contacts"); }
-function openHealth() { openWatchApp("/apps/health"); }
-function openSleep() { openWatchApp("/apps/sleep"); }
-function openTimer() { openWatchApp("/apps/timer"); }
-function openClock() { openWatchApp("/apps/clock"); }
-function openAlarm() { openWatchApp("/apps/alarm"); }
-function openStopwatch() { openWatchApp("/apps/stopwatch"); }
-function openCalc() { openWatchApp("/apps/calc"); }
-function openWorkout() { openWatchApp("/apps/workout"); }
-function openPhone() { openWatchApp("/apps/phone"); }
-function openMaps() { openWatchApp("/apps/maps"); }
-function openWallet() { openWatchApp("/apps/wallet"); }
-function openBattery() { openWatchApp("/apps/battery"); }
-function openSettings() { openWatchApp("/settings"); }
+function openBattery() { WatchAppRegistry.openById("battery"); }
+function openMessages() { WatchAppRegistry.openById("messages"); }
+
+function rescanWatchApps() {
+    WatchAppRegistry.init();
+    Router.routes = WatchAppRegistry.getRoutes();
+    Watch.apps = WatchAppRegistry.getAll();
+    if (typeof buildLauncherGrid === "function") buildLauncherGrid();
+    if (typeof refreshFaceDock === "function") refreshFaceDock();
+}
 
 function applyWatchTheme() {
     Theme.setCurrent(Watch.themeMode);
@@ -233,4 +192,3 @@ function applyWatchTheme() {
 function getWatchThemeLabel() {
     return Watch.themeMode === "dark" ? "暗色" : "亮色";
 }
-                                                                                                                                                                                                                                                                                                                 

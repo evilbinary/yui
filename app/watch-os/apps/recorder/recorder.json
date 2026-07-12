@@ -1,0 +1,38 @@
+{
+    "id": "page_recorder",
+    "title": "录音",
+    "icon": "🔴",
+    "watchApp": { "id": "recorder", "order": 51 },
+    "js": ["recorder.js"],
+    "type": "View",
+    "variant": "surface",
+    "flex": 1,
+    "layout": { "type": "vertical", "spacing": 10, "padding": [8, 16, 12, 16], "align": "center" },
+    "events": { "onLoad": "@onRecorderLoad", "onShow": "@onRecorderShow", "onHide": "@onRecorderHide" },
+    "children": [
+        { "id": "rec_brand", "type": "Label", "variant": "overline", "text": "RECORDER" },
+        { "id": "rec_title", "type": "Label", "variant": "title", "text": "录音" },
+        {
+            "id": "rec_hero",
+            "type": "View",
+            "variant": "card",
+            "size": [200, 140],
+            "layout": { "type": "vertical", "spacing": 8, "padding": [16, 16, 16, 16], "align": "center" },
+            "children": [
+                { "id": "rec_indicator", "type": "Label", "variant": "accent-pink", "text": "●", "size": [40, 32] },
+                { "id": "rec_display", "type": "Label", "variant": "watch-time", "text": "00:00", "size": [160, 44] },
+                { "id": "rec_status", "type": "Label", "variant": "subtitle", "text": "就绪" }
+            ]
+        },
+        {
+            "id": "rec_actions",
+            "type": "View",
+            "size": [358, 44],
+            "layout": { "type": "horizontal", "spacing": 8 },
+            "children": [
+                { "id": "btn_rec_save", "type": "Button", "variant": "secondary", "text": "保存", "flex": 1, "size": [0, 44], "events": { "onClick": "@saveRecording" } },
+                { "id": "btn_rec_go", "type": "Button", "variant": "primary", "text": "录音", "flex": 1, "size": [0, 44], "events": { "onClick": "@toggleRecording" } }
+            ]
+        }
+    ]
+}

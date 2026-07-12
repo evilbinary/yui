@@ -1,0 +1,38 @@
+{
+    "id": "page_mindfulness",
+    "title": "正念呼吸",
+    "icon": "🧘",
+    "watchApp": { "id": "mindfulness", "order": 56 },
+    "js": ["mindfulness.js"],
+    "type": "View",
+    "variant": "surface",
+    "flex": 1,
+    "layout": { "type": "vertical", "spacing": 10, "padding": [8, 16, 12, 16], "align": "center" },
+    "events": { "onLoad": "@onMindfulnessLoad", "onShow": "@onMindfulnessShow", "onHide": "@onMindfulnessHide" },
+    "children": [
+        { "id": "mind_brand", "type": "Label", "variant": "overline", "text": "MINDFULNESS" },
+        { "id": "mind_title", "type": "Label", "variant": "title", "text": "正念呼吸" },
+        {
+            "id": "mind_hero",
+            "type": "View",
+            "variant": "card",
+            "size": [200, 200],
+            "layout": { "type": "vertical", "spacing": 8, "padding": [20, 20, 20, 20], "align": "center" },
+            "children": [
+                { "id": "mind_circle", "type": "Label", "variant": "accent-cyan", "text": "◎", "size": [120, 100] },
+                { "id": "mind_phase", "type": "Label", "variant": "heading", "text": "吸气" },
+                { "id": "mind_timer", "type": "Label", "variant": "watch-time", "text": "4", "size": [80, 40] }
+            ]
+        },
+        { "id": "mind_hint", "type": "Label", "variant": "subtitle", "text": "跟随圆环节奏呼吸" },
+        {
+            "id": "mind_actions",
+            "type": "View",
+            "size": [358, 40],
+            "layout": { "type": "horizontal", "spacing": 8 },
+            "children": [
+                { "id": "btn_mind_go", "type": "Button", "variant": "primary", "text": "开始", "flex": 1, "size": [0, 40], "events": { "onClick": "@toggleMindfulness" } }
+            ]
+        }
+    ]
+}
