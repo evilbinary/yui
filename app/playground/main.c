@@ -13,6 +13,7 @@
 #include "popup_manager.h"
 #include "../lib/jsmodule/js_module.h"
 #include "yaml_cjson.h"
+#include "log.h"
 
 #if defined(_WIN32)
 #include <windows.h>
@@ -175,7 +176,7 @@ int main(int argc, char* argv[]) {
     }
 
     // 如果根图层没有设置宽度和高度，则根据窗口大小设置
-    printf("ui_root %d,%d\n",ui_root->rect.w,ui_root->rect.h);
+    LOGD("playground", "ui_root %d,%d", ui_root->rect.w, ui_root->rect.h);
 
 
     cJSON_Delete(root_json);

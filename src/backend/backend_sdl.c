@@ -5,6 +5,7 @@
 #include "util.h"
 #include "popup_manager.h"
 #include "screenshot.h"
+#include "log.h"
 #include <stdbool.h>  // 添加支持bool类型
 #include <math.h>     // 添加数学函数支持
 
@@ -1101,9 +1102,15 @@ void backend_quit(){
 
 // 打印所有图层信息的辅助函数
 void print_layer_info(Layer* layer, int depth) {
-    for (int i = 0; i < depth; i++) printf("  ");
-    printf("Layer '%s': type=%d, scrollable=%d, scrollbar_v=%p, scrollbar_h=%p\n", 
-           layer->id, layer->type, layer->scrollable, (void*)layer->scrollbar_v, (void*)layer->scrollbar_h);
+    if (yui_log_get_level() < YUI_LOG_DEBUG) return;
+    char indent[64];
+    int indent_len = depth * 2;
+    if (indent_len > (int)sizeof(indent) - 1) indent_len = (int)sizeof(indent) - 1;
+    memset(indent, ' ', indent_len);
+    indent[indent_len] = '\0';
+    LOGD("layer", "%sLayer '%s': type=%d, scrollable=%d, scrollbar_v=%p, scrollbar_h=%p",
+         indent, layer->id, layer->type, layer->scrollable,
+         (void*)layer->scrollbar_v, (void*)layer->scrollbar_h);
     
     for (int i = 0; i < layer->child_count; i++) {
         if (layer->children[i]) {
@@ -1113,10 +1120,11 @@ void print_layer_info(Layer* layer, int depth) {
 }
 
 void backend_run(Layer* ui_root){
-     // 打印所有图层信息
-    printf("=== Layer Information ===\n");
-    print_layer_info(ui_root, 0);
-    printf("========================\n");
+    if (yui_log_get_level() >= YUI_LOG_DEBUG) {
+        LOGD("layer", "=== Layer Information ===");
+        print_layer_info(ui_root, 0);
+        LOGD("layer", "========================");
+    }
 
     g_ui_root = ui_root;
 
@@ -1476,8 +1484,8 @@ DFont* backend_load_font_with_weight(char* font_path,int size,const char* weight
         TTF_SetFontOutline(default_font, 0); // 无轮廓
         
         add_font_to_cache(font_path, size, weight, default_font);
-        printf("font opened: %s (size: %d, weight: %s) -> %p\n",
-               font_path, size, weight, (void*)default_font);
+        LOGD("font", "opened: %s (size: %d, weight: %s) -> %p",
+             font_path, size, weight, (void*)default_font);
     }
 
     return default_font;
