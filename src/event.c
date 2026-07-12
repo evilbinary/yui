@@ -60,11 +60,11 @@ EventHandler find_event_by_name(const char* name) {
 
 
 // ====================== 事件处理器 ======================
-const TouchEvent* get_current_touch_event(void) {
+const struct TouchEvent* get_current_touch_event(void) {
     return current_touch_event_active ? &current_touch_event : NULL;
 }
 
-const char* touch_type_to_string(TouchType type) {
+const char* touch_type_to_string(int type) {
     switch (type) {
         case TOUCH_TYPE_START: return "start";
         case TOUCH_TYPE_MOVE: return "move";

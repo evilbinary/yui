@@ -41,6 +41,7 @@ var Watch = {
 
 var clockTimer = null;
 var watchThemeDir = "app/watch-os/themes";
+var swipeAnimating = false;
 
 function initWatchThemes() {
     Theme.load(watchThemeDir + "/dark.json", "dark");
@@ -196,25 +197,55 @@ function openMessages() { WatchAppRegistry.openById("messages"); }
 
 function onPageTouch(type, deltaX, deltaY) {
     if (type !== "swipe") return;
+    if (swipeAnimating) return;
 
     var route = YUI.currentRoute ? YUI.currentRoute() : null;
     var path = route ? route.path : "/";
     var direction = deltaX < 0 ? "left" : "right";
 
     if (path === "/") {
-        if (direction === "left") openLauncher();
-        else if (direction === "right") openNotifications();
+        if (direction === "left") swipeNavigate("/launcher", "left");
+        else if (direction === "right") swipeNavigate("/notifications", "right");
         return;
     }
     if (path === "/launcher" && direction === "right") {
-        YUI.navigate("/");
-        updateWatchChrome();
+        swipeNavigate("/", "right");
         return;
     }
     if (path === "/notifications" && direction === "left") {
-        YUI.navigate("/");
-        updateWatchChrome();
+        swipeNavigate("/", "left");
     }
+}
+
+function swipeNavigate(path, direction) {
+    var startX = direction === "left" ? 390 : -390;
+    var layerId = routeLayerId(path);
+
+    swipeAnimating = true;
+    YUI.navigate(path);
+    updateWatchChrome();
+    YUI.update({
+        target: layerId,
+        change: {
+            position: [startX, 24],
+            animation: {
+                duration: 0.28,
+                easing: "easeOut",
+                fillMode: "forwards",
+                x: 0,
+                autoPlay: true
+            }
+        }
+    });
+    setTimeout(function() {
+        swipeAnimating = false;
+    }, 320);
+}
+
+function routeLayerId(path) {
+    if (path === "/notifications") return "page_notifications";
+    if (path === "/launcher") return "page_launcher";
+    return "page_face";
 }
 
 function rescanWatchApps() {

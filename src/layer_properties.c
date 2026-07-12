@@ -1,6 +1,7 @@
 #include "layer_properties.h"
 #include "layer.h"
 #include "layer_update.h"
+#include "animate.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -173,6 +174,62 @@ static int handle_position(Layer* layer, cJSON* value, int is_creating) {
     return 1;
 }
 
+static int handle_animation(Layer* layer, cJSON* value, int is_creating) {
+    (void)is_creating;
+    if (!layer || !cJSON_IsObject(value)) return 0;
+
+    float duration = 1.0f;
+    if (cJSON_HasObjectItem(value, "duration")) {
+        duration = (float)cJSON_GetObjectItem(value, "duration")->valuedouble;
+    }
+
+    float (*easing_func)(float) = ease_in_out_quad;
+    if (cJSON_HasObjectItem(value, "easing")) {
+        const char* easing = cJSON_GetObjectItem(value, "easing")->valuestring;
+        if (strcmp(easing, "easeIn") == 0) easing_func = ease_in_quad;
+        else if (strcmp(easing, "easeOut") == 0) easing_func = ease_out_quad;
+        else if (strcmp(easing, "easeInOut") == 0) easing_func = ease_in_out_quad;
+        else if (strcmp(easing, "elasticOut") == 0) easing_func = ease_out_elastic;
+    }
+
+    if (layer->animation) {
+        animation_stop(layer);
+    }
+
+    Animation* anim = animation_create(duration, easing_func);
+    if (!anim) return 0;
+
+    if (cJSON_HasObjectItem(value, "fillMode")) {
+        const char* fill = cJSON_GetObjectItem(value, "fillMode")->valuestring;
+        if (strcmp(fill, "none") == 0) animation_set_fill_mode(anim, ANIMATION_FILL_NONE);
+        else if (strcmp(fill, "backwards") == 0) animation_set_fill_mode(anim, ANIMATION_FILL_BACKWARDS);
+        else if (strcmp(fill, "both") == 0) animation_set_fill_mode(anim, ANIMATION_FILL_BOTH);
+        else animation_set_fill_mode(anim, ANIMATION_FILL_FORWARDS);
+    } else {
+        animation_set_fill_mode(anim, ANIMATION_FILL_FORWARDS);
+    }
+
+    animation_set_target(anim, ANIMATION_PROPERTY_X,
+        cJSON_HasObjectItem(value, "x") ? (float)cJSON_GetObjectItem(value, "x")->valuedouble : (float)layer->rect.x);
+    animation_set_target(anim, ANIMATION_PROPERTY_Y,
+        cJSON_HasObjectItem(value, "y") ? (float)cJSON_GetObjectItem(value, "y")->valuedouble : (float)layer->rect.y);
+    animation_set_target(anim, ANIMATION_PROPERTY_WIDTH,
+        cJSON_HasObjectItem(value, "width") ? (float)cJSON_GetObjectItem(value, "width")->valuedouble : (float)layer->rect.w);
+    animation_set_target(anim, ANIMATION_PROPERTY_HEIGHT,
+        cJSON_HasObjectItem(value, "height") ? (float)cJSON_GetObjectItem(value, "height")->valuedouble : (float)layer->rect.h);
+    animation_set_target(anim, ANIMATION_PROPERTY_OPACITY,
+        cJSON_HasObjectItem(value, "opacity") ? (float)cJSON_GetObjectItem(value, "opacity")->valuedouble : layer->color.a / 255.0f);
+    animation_set_target(anim, ANIMATION_PROPERTY_ROTATION,
+        cJSON_HasObjectItem(value, "rotation") ? (float)cJSON_GetObjectItem(value, "rotation")->valuedouble : (float)layer->rotation);
+
+    if (cJSON_HasObjectItem(value, "autoPlay") && cJSON_IsFalse(cJSON_GetObjectItem(value, "autoPlay"))) {
+        layer->animation = anim;
+    } else {
+        animation_start(layer, anim);
+    }
+    return 1;
+}
+
 static int handle_padding(Layer* layer, cJSON* value, int is_creating) {
     if (!cJSON_IsArray(value)) return 0;
     if (!layer->layout_manager) return 0;
@@ -322,6 +379,7 @@ static const PropertyHandlerEntry property_handlers[] = {
     // 尺寸和位置属性
     {"size", handle_size},
     {"position", handle_position},
+    {"animation", handle_animation},
     {"width", handle_width},
     {"height", handle_height},
     {"padding", handle_padding},
