@@ -1,4 +1,5 @@
 #include "theme_manager.h"
+#include "render.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -282,6 +283,29 @@ static void theme_manager_apply_to_layer_recursive(Layer* layer) {
     }
 }
 
+// 递归清除已加载字体，便于主题修改字号后重新加载
+static void theme_invalidate_fonts(Layer* layer) {
+    int i;
+
+    if (!layer) {
+        return;
+    }
+
+    if (layer->font) {
+        layer->font->default_font = NULL;
+    }
+
+    for (i = 0; i < layer->child_count; i++) {
+        if (layer->children[i]) {
+            theme_invalidate_fonts(layer->children[i]);
+        }
+    }
+
+    if (layer->sub) {
+        theme_invalidate_fonts(layer->sub);
+    }
+}
+
 // 应用当前主题到图层树
 void theme_manager_apply_to_tree(Layer* root) {
     if (!root) {
@@ -303,4 +327,8 @@ void theme_manager_apply_to_tree(Layer* root) {
     
     // 递归应用
     theme_manager_apply_to_layer_recursive(root);
+
+    // 主题可能修改字号，需重新加载字体
+    theme_invalidate_fonts(root);
+    load_all_fonts(root);
 }

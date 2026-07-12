@@ -455,11 +455,28 @@ void theme_merge_style(ThemeRule* rule, Layer* layer) {
     // 圆角半径
     if (rule->radius > 0) {
         layer->radius = rule->radius;
+        mark_layer_dirty(layer, DIRTY_STYLE);
     }
     
     // 字体大小
-    if (rule->font_size > 0 && layer->font) {
-        // TODO: 需要重新加载字体或调整字体大小
+    if (rule->font_size > 0) {
+        if (!layer->font) {
+            layer->font = (Font*)malloc(sizeof(Font));
+            memset(layer->font, 0, sizeof(Font));
+            strcpy(layer->font->path, "Roboto-Regular.ttf");
+            strcpy(layer->font->weight, "normal");
+            layer->font->size = 16;
+        } else if (layer->parent && layer->parent->font == layer->font) {
+            Font* shared = layer->font;
+            layer->font = (Font*)malloc(sizeof(Font));
+            memcpy(layer->font, shared, sizeof(Font));
+            layer->font->default_font = NULL;
+        }
+        if (layer->font->size != rule->font_size) {
+            layer->font->size = rule->font_size;
+            layer->font->default_font = NULL;
+            mark_layer_dirty(layer, DIRTY_TEXT | DIRTY_LAYOUT);
+        }
     }
     
     // 边框颜色

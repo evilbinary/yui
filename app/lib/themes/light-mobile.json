@@ -1,0 +1,154 @@
+{
+  "name": "light",
+  "version": "1.0",
+  "description": "通用亮色主题（手机端）- 窄屏字号与密度优化",
+  "styles": [
+    {
+      "selector": "View",
+      "style": { "bgColor": "#F2F3F7" }
+    },
+    {
+      "selector": "Label",
+      "style": { "color": "#14161C", "fontSize": 12 }
+    },
+    {
+      "selector": "Button",
+      "style": {
+        "bgColor": "#FFFFFF",
+        "color": "#14161C",
+        "fontSize": 12,
+        "borderRadius": 8
+      }
+    },
+    {
+      "selector": "Input",
+      "style": {
+        "bgColor": "#FFFFFF",
+        "color": "#14161C",
+        "fontSize": 12,
+        "borderRadius": 8
+      }
+    },
+    {
+      "selector": "Image",
+      "style": { "bgColor": "#FFFFFF", "borderRadius": 6 }
+    },
+    {
+      "selector": "View.surface",
+      "style": { "bgColor": "#F2F3F7" }
+    },
+    {
+      "selector": "View.elevated",
+      "style": { "bgColor": "#FFFFFF", "borderRadius": 10 }
+    },
+    {
+      "selector": "View.toolbar",
+      "style": { "bgColor": "#FFFFFF" }
+    },
+    {
+      "selector": "View.card",
+      "style": { "bgColor": "#FFFFFF", "borderRadius": 10 }
+    },
+    {
+      "selector": "View.panel",
+      "style": { "bgColor": "#F5F2FF", "borderRadius": 8 }
+    },
+    {
+      "selector": "View.divider",
+      "style": { "bgColor": "#D8DCE5" }
+    },
+    {
+      "selector": "Label.title",
+      "style": { "color": "#14161C", "fontSize": 17, "fontWeight": "bold" }
+    },
+    {
+      "selector": "Label.heading",
+      "style": { "color": "#14161C", "fontSize": 15, "fontWeight": "bold" }
+    },
+    {
+      "selector": "Label.subtitle",
+      "style": { "color": "#5C6578", "fontSize": 11 }
+    },
+    {
+      "selector": "Label.body",
+      "style": { "color": "#5C6578", "fontSize": 12 }
+    },
+    {
+      "selector": "Label.caption",
+      "style": { "color": "#8B95A8", "fontSize": 9 }
+    },
+    {
+      "selector": "Label.overline",
+      "style": { "color": "#8B95A8", "fontSize": 10, "fontWeight": "bold" }
+    },
+    {
+      "selector": "Label.link",
+      "style": { "color": "#6B5CE7", "fontSize": 10 }
+    },
+    {
+      "selector": "Label.price",
+      "style": { "color": "#B87400", "fontSize": 16, "fontWeight": "bold" }
+    },
+    {
+      "selector": "Label.badge",
+      "style": { "color": "#6B5CE7", "fontSize": 9, "fontWeight": "bold" }
+    },
+    {
+      "selector": "Button.primary",
+      "style": {
+        "bgColor": "#6B5CE7",
+        "color": "#FFFFFF",
+        "fontWeight": "bold",
+        "fontSize": 12,
+        "borderRadius": 8
+      }
+    },
+    {
+      "selector": "Button.secondary",
+      "style": {
+        "bgColor": "#ECEEF3",
+        "color": "#14161C",
+        "fontSize": 12,
+        "borderRadius": 8
+      }
+    },
+    {
+      "selector": "Button.tertiary",
+      "style": {
+        "bgColor": "#EDE9FE",
+        "color": "#6B5CE7",
+        "fontSize": 11,
+        "borderRadius": 8
+      }
+    },
+    {
+      "selector": "Button.danger",
+      "style": {
+        "bgColor": "#ECEEF3",
+        "color": "#E5484D",
+        "fontSize": 12,
+        "borderRadius": 8
+      }
+    },
+    {
+      "selector": "Button.tone-a",
+      "style": { "bgColor": "#F5F2FF", "color": "#6B5CE7", "fontWeight": "bold", "fontSize": 12 }
+    },
+    {
+      "selector": "Button.tone-b",
+      "style": { "bgColor": "#FFF0F6", "color": "#D6408F", "fontWeight": "bold", "fontSize": 12 }
+    },
+    {
+      "selector": "Button.tone-c",
+      "style": { "bgColor": "#EFF6FF", "color": "#2563EB", "fontWeight": "bold", "fontSize": 12 }
+    },
+    {
+      "selector": "Button.compact",
+      "style": { "fontSize": 10, "borderRadius": 6 }
+    },
+    {
+      "selector": "Button.block",
+      "style": { "borderRadius": 8, "fontSize": 12 }
+    }
+  ]
+}

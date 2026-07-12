@@ -118,10 +118,12 @@ var routes = {
 };
 
 var themeMode = "dark";
+var themePlatform = "mobile";
 
 function initThemes() {
-    Theme.load("app/lib/themes/dark.json", "dark");
-    Theme.load("app/lib/themes/light.json", "light");
+    var suffix = themePlatform === "mobile" ? "-mobile" : "";
+    Theme.load("app/lib/themes/dark" + suffix + ".json", "dark");
+    Theme.load("app/lib/themes/light" + suffix + ".json", "light");
     Theme.setCurrent(themeMode);
     Theme.apply();
     updateThemeButton();
