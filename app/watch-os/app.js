@@ -180,7 +180,7 @@ function rescanWatchApps() {
     WatchAppRegistry.init();
     Router.routes = WatchAppRegistry.getRoutes();
     Watch.apps = WatchAppRegistry.getAll();
-    if (typeof buildLauncherGrid === "function") buildLauncherGrid();
+    if (typeof rebuildLauncherGrid === "function") rebuildLauncherGrid();
     if (typeof refreshFaceDock === "function") refreshFaceDock();
 }
 

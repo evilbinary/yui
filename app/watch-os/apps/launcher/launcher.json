@@ -14,10 +14,18 @@
         { "id": "launcher_title", "type": "Label", "variant": "overline", "text": "APPS", "size": [342, 12] },
         { "id": "launcher_count", "type": "Label", "variant": "caption", "text": "", "size": [342, 12] },
         {
+            "id": "launcher_grid",
+            "type": "Grid",
+            "width": 342,
+            "height": 60,
+            "layout": { "columns": 4, "spacing": 10 },
+            "children": []
+        },
+        {
             "id": "launcher_face_row",
-            "type": "View",
-            "size": [342, 60],
-            "layout": { "type": "horizontal", "spacing": 10, "align": "center" },
+            "type": "Grid",
+            "size": [342, 58],
+            "layout": { "columns": 4, "spacing": 10 },
             "children": [
                 {
                     "id": "launcher_btn_face",
@@ -27,88 +35,7 @@
                     "size": [58, 58],
                     "events": { "onClick": "@goWatchBack" }
                 },
-                { "id": "launcher_face_lbl", "type": "Label", "variant": "body", "text": "表盘", "flex": 1, "textAlign": "left" }
-            ]
-        },
-        {
-            "id": "launcher_grid",
-            "type": "View",
-            "width": 342,
-            "height": 410,
-            "layout": { "type": "vertical", "spacing": 10, "align": "center" },
-            "children": [
-                {
-                    "id": "launcher_row_0",
-                    "type": "View",
-                    "size": [342, 58],
-                    "layout": { "type": "horizontal", "spacing": 10, "justifyContent": "center" },
-                    "children": [
-                        { "id": "launcher_app_slot_0", "type": "Button", "variant": "dock-flat", "text": "", "size": [58, 58], "events": { "onClick": "@onLauncherAppClick" } },
-                        { "id": "launcher_app_slot_1", "type": "Button", "variant": "dock-flat", "text": "", "size": [58, 58], "events": { "onClick": "@onLauncherAppClick" } },
-                        { "id": "launcher_app_slot_2", "type": "Button", "variant": "dock-flat", "text": "", "size": [58, 58], "events": { "onClick": "@onLauncherAppClick" } },
-                        { "id": "launcher_app_slot_3", "type": "Button", "variant": "dock-flat", "text": "", "size": [58, 58], "events": { "onClick": "@onLauncherAppClick" } }
-                    ]
-                },
-                {
-                    "id": "launcher_row_1",
-                    "type": "View",
-                    "size": [342, 58],
-                    "layout": { "type": "horizontal", "spacing": 10, "justifyContent": "center" },
-                    "children": [
-                        { "id": "launcher_app_slot_4", "type": "Button", "variant": "dock-flat", "text": "", "size": [58, 58], "events": { "onClick": "@onLauncherAppClick" } },
-                        { "id": "launcher_app_slot_5", "type": "Button", "variant": "dock-flat", "text": "", "size": [58, 58], "events": { "onClick": "@onLauncherAppClick" } },
-                        { "id": "launcher_app_slot_6", "type": "Button", "variant": "dock-flat", "text": "", "size": [58, 58], "events": { "onClick": "@onLauncherAppClick" } },
-                        { "id": "launcher_app_slot_7", "type": "Button", "variant": "dock-flat", "text": "", "size": [58, 58], "events": { "onClick": "@onLauncherAppClick" } }
-                    ]
-                },
-                {
-                    "id": "launcher_row_2",
-                    "type": "View",
-                    "size": [342, 58],
-                    "layout": { "type": "horizontal", "spacing": 10, "justifyContent": "center" },
-                    "children": [
-                        { "id": "launcher_app_slot_8", "type": "Button", "variant": "dock-flat", "text": "", "size": [58, 58], "events": { "onClick": "@onLauncherAppClick" } },
-                        { "id": "launcher_app_slot_9", "type": "Button", "variant": "dock-flat", "text": "", "size": [58, 58], "events": { "onClick": "@onLauncherAppClick" } },
-                        { "id": "launcher_app_slot_10", "type": "Button", "variant": "dock-flat", "text": "", "size": [58, 58], "events": { "onClick": "@onLauncherAppClick" } },
-                        { "id": "launcher_app_slot_11", "type": "Button", "variant": "dock-flat", "text": "", "size": [58, 58], "events": { "onClick": "@onLauncherAppClick" } }
-                    ]
-                },
-                {
-                    "id": "launcher_row_3",
-                    "type": "View",
-                    "size": [342, 58],
-                    "layout": { "type": "horizontal", "spacing": 10, "justifyContent": "center" },
-                    "children": [
-                        { "id": "launcher_app_slot_12", "type": "Button", "variant": "dock-flat", "text": "", "size": [58, 58], "events": { "onClick": "@onLauncherAppClick" } },
-                        { "id": "launcher_app_slot_13", "type": "Button", "variant": "dock-flat", "text": "", "size": [58, 58], "events": { "onClick": "@onLauncherAppClick" } },
-                        { "id": "launcher_app_slot_14", "type": "Button", "variant": "dock-flat", "text": "", "size": [58, 58], "events": { "onClick": "@onLauncherAppClick" } },
-                        { "id": "launcher_app_slot_15", "type": "Button", "variant": "dock-flat", "text": "", "size": [58, 58], "events": { "onClick": "@onLauncherAppClick" } }
-                    ]
-                },
-                {
-                    "id": "launcher_row_4",
-                    "type": "View",
-                    "size": [342, 58],
-                    "layout": { "type": "horizontal", "spacing": 10, "justifyContent": "center" },
-                    "children": [
-                        { "id": "launcher_app_slot_16", "type": "Button", "variant": "dock-flat", "text": "", "size": [58, 58], "events": { "onClick": "@onLauncherAppClick" } },
-                        { "id": "launcher_app_slot_17", "type": "Button", "variant": "dock-flat", "text": "", "size": [58, 58], "events": { "onClick": "@onLauncherAppClick" } },
-                        { "id": "launcher_app_slot_18", "type": "Button", "variant": "dock-flat", "text": "", "size": [58, 58], "events": { "onClick": "@onLauncherAppClick" } },
-                        { "id": "launcher_app_slot_19", "type": "Button", "variant": "dock-flat", "text": "", "size": [58, 58], "events": { "onClick": "@onLauncherAppClick" } }
-                    ]
-                },
-                {
-                    "id": "launcher_row_5",
-                    "type": "View",
-                    "size": [342, 58],
-                    "layout": { "type": "horizontal", "spacing": 10, "justifyContent": "center" },
-                    "children": [
-                        { "id": "launcher_app_slot_20", "type": "Button", "variant": "dock-flat", "text": "", "size": [58, 58], "events": { "onClick": "@onLauncherAppClick" } },
-                        { "id": "launcher_app_slot_21", "type": "Button", "variant": "dock-flat", "text": "", "size": [58, 58], "events": { "onClick": "@onLauncherAppClick" } },
-                        { "id": "launcher_app_slot_22", "type": "Button", "variant": "dock-flat", "text": "", "size": [58, 58], "events": { "onClick": "@onLauncherAppClick" } },
-                        { "id": "launcher_app_slot_23", "type": "Button", "variant": "dock-flat", "text": "", "size": [58, 58], "events": { "onClick": "@onLauncherAppClick" } }
-                    ]
-                }
+                { "id": "launcher_face_lbl", "type": "Label", "variant": "body", "text": "表盘", "size": [58, 58], "textAlign": "left" }
             ]
         }
     ]
