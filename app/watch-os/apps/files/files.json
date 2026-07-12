@@ -7,28 +7,32 @@
     "type": "View",
     "variant": "surface",
     "flex": 1,
-    "scrollable": 1,
-    "layout": { "type": "vertical", "spacing": 8, "padding": [4, 16, 12, 16] },
+    "layout": { "type": "vertical", "spacing": 4, "padding": [2, 14, 4, 14] },
     "events": { "onLoad": "@onFilesLoad", "onShow": "@onFilesShow" },
     "children": [
-        { "id": "files_brand", "type": "Label", "variant": "overline", "text": "FILES" },
-        { "id": "files_title", "type": "Label", "variant": "title", "text": "文件管理" },
-        { "id": "files_path", "type": "Label", "variant": "caption", "text": "app/watch-os/" },
+        {
+            "id": "files_toolbar",
+            "type": "View",
+            "size": [362, 18],
+            "layout": { "type": "horizontal", "spacing": 4, "align": "center" },
+            "children": [
+                { "id": "files_path", "type": "Label", "variant": "caption", "text": "app/watch-os/", "flex": 1, "size": [0, 14], "textAlign": "left" },
+                { "id": "files_status", "type": "Label", "variant": "caption", "text": "0 项", "size": [36, 14], "textAlign": "right" }
+            ]
+        },
         {
             "id": "files_actions",
             "type": "View",
-            "size": [358, 36],
-            "layout": { "type": "horizontal", "spacing": 8 },
+            "size": [362, 22],
+            "layout": { "type": "horizontal", "spacing": 6 },
             "children": [
-                { "id": "btn_files_up", "type": "Button", "variant": "secondary", "text": "上级", "flex": 1, "size": [0, 36], "events": { "onClick": "@onFilesUp" } },
-                { "id": "btn_files_refresh", "type": "Button", "variant": "primary", "text": "刷新", "flex": 1, "size": [0, 36], "events": { "onClick": "@refreshFilesList" } }
+                { "id": "btn_files_up", "type": "Button", "variants": ["tertiary", "compact"], "text": "上级", "size": [70, 22], "events": { "onClick": "@onFilesUp" } },
+                { "id": "btn_files_refresh", "type": "Button", "variants": ["tertiary", "compact"], "text": "刷新", "size": [70, 22], "events": { "onClick": "@refreshFilesList" } }
             ]
         },
-        { "id": "files_status", "type": "Label", "variant": "subtitle", "text": "浏览手表文件" },
         {
             "id": "files_list",
             "type": "List",
-            "width": 358,
             "flex": 1,
             "scrollable": 1,
             "data": [],
@@ -37,13 +41,13 @@
                 "variant": "ghost",
                 "icon": "${icon}",
                 "text": "${name}",
-                "iconSize": 16,
-                "fontSize": 14,
+                "iconSize": 14,
+                "fontSize": 12,
                 "style": { "color": "#E5E5EA", "bgColor": "transparent" },
-                "size": [358, 36],
+                "size": [362, 28],
                 "events": { "onClick": "@onFilesItemClick" }
             },
-            "layout": { "type": "vertical", "spacing": 4 }
+            "layout": { "type": "vertical", "spacing": 2 }
         }
     ]
 }
