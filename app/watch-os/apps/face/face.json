@@ -1,0 +1,117 @@
+{
+    "id": "page_face",
+    "js": ["face.js"],
+    "type": "View",
+    "variant": "surface",
+    "flex": 1,
+    "layout": {
+        "type": "vertical",
+        "spacing": 8,
+        "padding": [8, 16, 12, 16]
+    },
+    "events": {
+        "onLoad": "@onFaceLoad",
+        "onShow": "@onFaceShow"
+    },
+    "children": [
+        { "id": "face_brand", "type": "Label", "variant": "overline", "text": "YUI NEXUS" },
+        {
+            "id": "face_hero",
+            "type": "View",
+            "variant": "glow-panel",
+            "size": [358, 88],
+            "layout": { "type": "vertical", "spacing": 2, "padding": [12, 16, 12, 16] },
+            "children": [
+                { "id": "face_time", "type": "Label", "variant": "watch-time", "text": "10:09" },
+                { "id": "face_date", "type": "Label", "variant": "subtitle", "text": "周六 7/12" }
+            ]
+        },
+        {
+            "id": "face_complications",
+            "type": "View",
+            "size": [358, 72],
+            "layout": { "type": "horizontal", "spacing": 8, "align": "space-between" },
+            "children": [
+                {
+                    "id": "comp_steps",
+                    "type": "View",
+                    "variants": ["complication", "neon-c"],
+                    "size": [112, 72],
+                    "layout": { "type": "vertical", "spacing": 2, "padding": [8, 8, 8, 8] },
+                    "children": [
+                        { "id": "comp_steps_icon", "type": "Label", "text": "👟", "variant": "body" },
+                        { "id": "comp_steps_val", "type": "Label", "variant": "accent-lime", "text": "8,432" },
+                        { "id": "comp_steps_lbl", "type": "Label", "variant": "metric-unit", "text": "步数" }
+                    ]
+                },
+                {
+                    "id": "comp_heart",
+                    "type": "View",
+                    "variants": ["complication", "neon-a"],
+                    "size": [112, 72],
+                    "layout": { "type": "vertical", "spacing": 2, "padding": [8, 8, 8, 8] },
+                    "children": [
+                        { "id": "comp_heart_icon", "type": "Label", "text": "❤", "variant": "body" },
+                        { "id": "comp_heart_val", "type": "Label", "variant": "accent-pink", "text": "72" },
+                        { "id": "comp_heart_lbl", "type": "Label", "variant": "metric-unit", "text": "bpm" }
+                    ]
+                },
+                {
+                    "id": "comp_weather",
+                    "type": "View",
+                    "variants": ["complication", "neon-b"],
+                    "size": [112, 72],
+                    "layout": { "type": "vertical", "spacing": 2, "padding": [8, 8, 8, 8] },
+                    "children": [
+                        { "id": "comp_weather_icon", "type": "Label", "text": "☀", "variant": "body" },
+                        { "id": "comp_weather_val", "type": "Label", "variant": "accent-cyan", "text": "26°" },
+                        { "id": "comp_weather_sub", "type": "Label", "variant": "metric-unit", "text": "晴" }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "face_ring_card",
+            "type": "View",
+            "variant": "card",
+            "size": [358, 56],
+            "layout": { "type": "vertical", "spacing": 4, "padding": [8, 12, 8, 12] },
+            "children": [
+                { "id": "face_ring_label", "type": "Label", "variant": "caption", "text": "活动 84%" },
+                {
+                    "id": "face_ring_bar",
+                    "type": "Progress",
+                    "size": [334, 6],
+                    "data": 84,
+                    "progressConfig": {
+                        "value": 84,
+                        "maxValue": 100,
+                        "bgColor": "#1A1A40",
+                        "fillColor": "#00F0FF",
+                        "radius": 8,
+                        "showText": false
+                    }
+                }
+            ]
+        },
+        {
+            "id": "btn_open_launcher",
+            "type": "Button",
+            "variant": "neon",
+            "text": "◈  全部应用",
+            "size": [358, 40],
+            "events": { "onClick": "@openLauncher" }
+        },
+        {
+            "id": "face_shortcuts",
+            "type": "View",
+            "size": [358, 44],
+            "layout": { "type": "horizontal", "spacing": 8 },
+            "children": [
+                { "id": "btn_short_health", "type": "Button", "variant": "tone-a", "text": "健康", "flex": 1, "size": [0, 40], "events": { "onClick": "@openHealth" } },
+                { "id": "btn_short_timer", "type": "Button", "variant": "tone-c", "text": "计时", "flex": 1, "size": [0, 40], "events": { "onClick": "@openTimer" } },
+                { "id": "btn_short_calc", "type": "Button", "variant": "tone-b", "text": "计算", "flex": 1, "size": [0, 40], "events": { "onClick": "@openCalc" } }
+            ]
+        }
+    ]
+}

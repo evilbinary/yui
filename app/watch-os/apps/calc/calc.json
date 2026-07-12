@@ -1,0 +1,57 @@
+{
+    "id": "page_calc",
+    "js": ["calc.js", "../../../calc/calc.js"],
+    "type": "View",
+    "variant": "surface",
+    "flex": 1,
+    "layout": {
+        "type": "vertical",
+        "spacing": 6,
+        "padding": [4, 12, 8, 12]
+    },
+    "events": {
+        "onLoad": "@onCalcLoad",
+        "onShow": "@onCalcShow"
+    },
+    "children": [
+        { "id": "calc_title", "type": "Label", "variant": "heading", "text": "计算器" },
+        {
+            "id": "displayView",
+            "type": "View",
+            "variant": "card",
+            "size": [366, 52],
+            "layout": { "type": "vertical", "spacing": 2, "padding": [6, 8, 6, 8] },
+            "children": [
+                { "id": "expressionDisplay", "type": "Label", "variant": "caption", "text": "", "size": [350, 14] },
+                { "id": "resultDisplay", "type": "Label", "variant": "metric-value", "text": "0", "size": [350, 28] }
+            ]
+        },
+        {
+            "id": "buttonsView",
+            "type": "Grid",
+            "layout": { "columns": 4, "spacing": 5, "padding": [0, 0, 0, 0] },
+            "children": [
+                { "id": "clearButton", "type": "Button", "variant": "danger", "text": "C", "size": [84, 40], "events": { "onClick": "@clearDisplay" } },
+                { "id": "backspaceButton", "type": "Button", "variant": "danger", "text": "⌫", "size": [84, 40], "events": { "onClick": "@backspace" } },
+                { "id": "percentButton", "type": "Button", "variant": "tone-b", "text": "%", "size": [84, 40], "events": { "onClick": "@percent" } },
+                { "id": "divideButton", "type": "Button", "variant": "tone-b", "text": "÷", "size": [84, 40], "events": { "onClick": "@operation" } },
+                { "id": "sevenButton", "type": "Button", "variant": "secondary", "text": "7", "size": [84, 40], "events": { "onClick": "@appendNumber" } },
+                { "id": "eightButton", "type": "Button", "variant": "secondary", "text": "8", "size": [84, 40], "events": { "onClick": "@appendNumber" } },
+                { "id": "nineButton", "type": "Button", "variant": "secondary", "text": "9", "size": [84, 40], "events": { "onClick": "@appendNumber" } },
+                { "id": "multiplyButton", "type": "Button", "variant": "tone-b", "text": "×", "size": [84, 40], "events": { "onClick": "@operation" } },
+                { "id": "fourButton", "type": "Button", "variant": "secondary", "text": "4", "size": [84, 40], "events": { "onClick": "@appendNumber" } },
+                { "id": "fiveButton", "type": "Button", "variant": "secondary", "text": "5", "size": [84, 40], "events": { "onClick": "@appendNumber" } },
+                { "id": "sixButton", "type": "Button", "variant": "secondary", "text": "6", "size": [84, 40], "events": { "onClick": "@appendNumber" } },
+                { "id": "subtractButton", "type": "Button", "variant": "tone-b", "text": "-", "size": [84, 40], "events": { "onClick": "@operation" } },
+                { "id": "oneButton", "type": "Button", "variant": "secondary", "text": "1", "size": [84, 40], "events": { "onClick": "@appendNumber" } },
+                { "id": "twoButton", "type": "Button", "variant": "secondary", "text": "2", "size": [84, 40], "events": { "onClick": "@appendNumber" } },
+                { "id": "threeButton", "type": "Button", "variant": "secondary", "text": "3", "size": [84, 40], "events": { "onClick": "@appendNumber" } },
+                { "id": "addButton", "type": "Button", "variant": "tone-b", "text": "+", "size": [84, 40], "events": { "onClick": "@operation" } },
+                { "id": "signButton", "type": "Button", "variant": "secondary", "text": "±", "size": [84, 40], "events": { "onClick": "@toggleSign" } },
+                { "id": "zeroButton", "type": "Button", "variant": "secondary", "text": "0", "size": [84, 40], "events": { "onClick": "@appendNumber" } },
+                { "id": "decimalButton", "type": "Button", "variant": "secondary", "text": ".", "size": [84, 40], "events": { "onClick": "@appendDecimal" } },
+                { "id": "equalsButton", "type": "Button", "variant": "primary", "text": "=", "size": [84, 40], "events": { "onClick": "@calculate" } }
+            ]
+        }
+    ]
+}

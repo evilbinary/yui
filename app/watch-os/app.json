@@ -1,0 +1,66 @@
+{
+    "id": "watch_os",
+    "type": "View",
+    "variant": "watch-bezel",
+    "size": [390, 390],
+    "text": "YUI Watch",
+    "js": [
+        "../lib/router.js",
+        "../lib/theme.js",
+        "app.js"
+    ],
+    "layout": {
+        "type": "vertical",
+        "spacing": 0,
+        "padding": [0, 0, 0, 0]
+    },
+    "events": {
+        "onLoad": "@onWatchLoad",
+        "onShow": "@onWatchShow"
+    },
+    "children": [
+        {
+            "id": "status_bar",
+            "type": "View",
+            "variant": "toolbar",
+            "size": [390, 24],
+            "layout": {
+                "type": "horizontal",
+                "spacing": 4,
+                "padding": [4, 12, 4, 12],
+                "align": "space-between"
+            },
+            "children": [
+                {
+                    "id": "btn_back",
+                    "type": "Button",
+                    "variants": ["tertiary", "compact"],
+                    "text": "‹",
+                    "size": [28, 20],
+                    "visible": false,
+                    "events": { "onClick": "@goWatchBack" }
+                },
+                {
+                    "id": "status_time",
+                    "type": "Label",
+                    "variant": "caption",
+                    "text": "10:09",
+                    "flex": 1
+                },
+                {
+                    "id": "status_battery",
+                    "type": "Label",
+                    "variant": "caption",
+                    "text": "85%"
+                }
+            ]
+        },
+        {
+            "id": "page_outlet",
+            "type": "View",
+            "variant": "surface",
+            "flex": 1,
+            "layout": { "type": "vertical" }
+        }
+    ]
+}

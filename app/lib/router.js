@@ -277,7 +277,7 @@ var Router = {
                 if (cached) return cached;
             }
 
-            var code = YUI.renderFromJson(this.outlet, jsonStr, keepAlive);
+            var code = YUI.renderFromJson(this.outlet, jsonStr, keepAlive, route.json);
 
             if (code !== 0) {
                 YUI.log("Router: failed to mount json route, code=" + code);

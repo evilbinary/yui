@@ -333,6 +333,12 @@ static JSValue js_render_from_json(JSContext *ctx, JSValue *this_val, int argc, 
         append = JS_ToBool(ctx, argv[2]);
     }
 
+    const char* json_source_path = NULL;
+    JSCStringBuf buf3;
+    if (argc >= 4) {
+        json_source_path = JS_ToCString(ctx, argv[3], &buf3);
+    }
+
     printf("YUI: render_from_json called with layer_id='%s', append=%d\n", layer_id, append);
 
     if (!g_layer_root) {
@@ -384,7 +390,7 @@ static JSValue js_render_from_json(JSContext *ctx, JSValue *this_val, int argc, 
 
     cJSON* page_json = cJSON_Parse(json_str);
     if (page_json) {
-        js_module_load_from_json(page_json, NULL, 1);
+        js_module_load_from_json(page_json, json_source_path, 1);
         cJSON_Delete(page_json);
     }
 

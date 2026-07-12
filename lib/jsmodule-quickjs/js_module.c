@@ -271,6 +271,11 @@ static JSValue js_render_from_json(JSContext *ctx, JSValueConst this_val, int ar
         append = JS_ToBool(ctx, argv[2]);
     }
 
+    const char* json_source_path = NULL;
+    if (argc >= 4) {
+        json_source_path = JS_ToCStringLen(ctx, NULL, argv[3]);
+    }
+
     printf("JS(QuickJS): renderFromJson called with layer_id='%s', append=%d\n", layer_id, append);
 
     if (!g_layer_root) {
@@ -331,9 +336,11 @@ static JSValue js_render_from_json(JSContext *ctx, JSValueConst this_val, int ar
 
     cJSON* page_json = cJSON_Parse(json_str);
     if (page_json) {
-        js_module_load_from_json(page_json, NULL, 1);
+        js_module_load_from_json(page_json, json_source_path, 1);
         cJSON_Delete(page_json);
     }
+
+    if (json_source_path) JS_FreeCString(ctx, json_source_path);
 
     printf("JS(QuickJS): Successfully rendered JSON to layer '%s', new layer id: '%s'\n",
            layer_id, new_layer->id);

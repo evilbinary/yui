@@ -1,0 +1,113 @@
+{
+    "id": "page_health",
+    "js": ["health.js"],
+    "type": "View",
+    "variant": "surface",
+    "flex": 1,
+    "scrollable": 1,
+    "layout": { "type": "vertical", "spacing": 8, "padding": [4, 16, 12, 16] },
+    "events": { "onLoad": "@onHealthLoad", "onShow": "@onHealthShow" },
+    "children": [
+        { "id": "health_title", "type": "Label", "variant": "title", "text": "健康" },
+        {
+            "id": "health_grid",
+            "type": "View",
+            "layout": { "type": "vertical", "spacing": 8 },
+            "children": [
+                {
+                    "id": "health_row1",
+                    "type": "View",
+                    "size": [358, 80],
+                    "layout": { "type": "horizontal", "spacing": 8 },
+                    "children": [
+                        {
+                            "id": "card_heart",
+                            "type": "View",
+                            "variants": ["metric-card", "neon-a"],
+                            "flex": 1,
+                            "size": [0, 80],
+                            "layout": { "type": "vertical", "spacing": 2, "padding": [10, 10, 10, 10] },
+                            "children": [
+                                { "id": "health_heart_lbl", "type": "Label", "variant": "caption", "text": "❤ 心率" },
+                                { "id": "health_heart", "type": "Label", "variant": "accent-pink", "text": "72" },
+                                { "id": "health_heart_unit", "type": "Label", "variant": "metric-unit", "text": "bpm" }
+                            ]
+                        },
+                        {
+                            "id": "card_steps",
+                            "type": "View",
+                            "variants": ["metric-card", "neon-b"],
+                            "flex": 1,
+                            "size": [0, 80],
+                            "layout": { "type": "vertical", "spacing": 2, "padding": [10, 10, 10, 10] },
+                            "children": [
+                                { "id": "health_steps_lbl", "type": "Label", "variant": "caption", "text": "👟 步数" },
+                                { "id": "health_steps", "type": "Label", "variant": "accent-cyan", "text": "8,432" },
+                                { "id": "health_steps_goal", "type": "Label", "variant": "metric-unit", "text": "目标 10,000" }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "health_row2",
+                    "type": "View",
+                    "size": [358, 80],
+                    "layout": { "type": "horizontal", "spacing": 8 },
+                    "children": [
+                        {
+                            "id": "card_calories",
+                            "type": "View",
+                            "variants": ["metric-card", "neon-c"],
+                            "flex": 1,
+                            "size": [0, 80],
+                            "layout": { "type": "vertical", "spacing": 2, "padding": [10, 10, 10, 10] },
+                            "children": [
+                                { "id": "health_cal_lbl", "type": "Label", "variant": "caption", "text": "🔥 卡路里" },
+                                { "id": "health_calories", "type": "Label", "variant": "accent-amber", "text": "342" },
+                                { "id": "health_cal_unit", "type": "Label", "variant": "metric-unit", "text": "千卡" }
+                            ]
+                        },
+                        {
+                            "id": "card_sleep",
+                            "type": "View",
+                            "variants": ["metric-card", "neon-d"],
+                            "flex": 1,
+                            "size": [0, 80],
+                            "layout": { "type": "vertical", "spacing": 2, "padding": [10, 10, 10, 10] },
+                            "children": [
+                                { "id": "health_sleep_lbl", "type": "Label", "variant": "caption", "text": "🌙 睡眠" },
+                                { "id": "health_sleep", "type": "Label", "variant": "accent-lime", "text": "7.5" },
+                                { "id": "health_sleep_unit", "type": "Label", "variant": "metric-unit", "text": "小时" }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "health_ring_card",
+            "type": "View",
+            "variant": "card",
+            "size": [358, 72],
+            "layout": { "type": "vertical", "spacing": 6, "padding": [10, 12, 10, 12] },
+            "children": [
+                { "id": "health_ring_title", "type": "Label", "variant": "heading", "text": "今日活动" },
+                {
+                    "id": "health_ring_bar",
+                    "type": "Progress",
+                    "size": [334, 8],
+                    "data": 84,
+                    "progressConfig": {
+                        "value": 84,
+                        "maxValue": 100,
+                        "bgColor": "#1A1A40",
+                        "fillColor": "#B388FF",
+                        "radius": 10,
+                        "showText": false
+                    }
+                },
+                { "id": "health_ring_text", "type": "Label", "variant": "caption", "text": "84% · 还需 1,568 步" }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,40 @@
+{
+    "id": "page_timer",
+    "js": ["timer.js"],
+    "type": "View",
+    "variant": "surface",
+    "flex": 1,
+    "layout": { "type": "vertical", "spacing": 10, "padding": [8, 16, 12, 16] },
+    "events": {
+        "onLoad": "@onTimerLoad",
+        "onShow": "@onTimerShow",
+        "onHide": "@onTimerHide"
+    },
+    "children": [
+        { "id": "timer_title", "type": "Label", "variant": "title", "text": "计时器" },
+        { "id": "timer_display", "type": "Label", "variant": "watch-time", "text": "00:00" },
+        { "id": "timer_status", "type": "Label", "variant": "subtitle", "text": "选择时长" },
+        {
+            "id": "timer_presets",
+            "type": "View",
+            "size": [358, 40],
+            "layout": { "type": "horizontal", "spacing": 6 },
+            "children": [
+                { "id": "btn_t1", "type": "Button", "variant": "pill", "text": "1分", "flex": 1, "size": [0, 36], "events": { "onClick": "@timerPreset1" } },
+                { "id": "btn_t3", "type": "Button", "variant": "pill", "text": "3分", "flex": 1, "size": [0, 36], "events": { "onClick": "@timerPreset3" } },
+                { "id": "btn_t5", "type": "Button", "variant": "pill", "text": "5分", "flex": 1, "size": [0, 36], "events": { "onClick": "@timerPreset5" } },
+                { "id": "btn_t10", "type": "Button", "variant": "pill", "text": "10分", "flex": 1, "size": [0, 36], "events": { "onClick": "@timerPreset10" } }
+            ]
+        },
+        {
+            "id": "timer_actions",
+            "type": "View",
+            "size": [358, 44],
+            "layout": { "type": "horizontal", "spacing": 8 },
+            "children": [
+                { "id": "btn_timer_reset", "type": "Button", "variant": "secondary", "text": "重置", "flex": 1, "size": [0, 44], "events": { "onClick": "@resetTimer" } },
+                { "id": "btn_timer_go", "type": "Button", "variant": "primary", "text": "开始", "flex": 1, "size": [0, 44], "events": { "onClick": "@toggleTimer" } }
+            ]
+        }
+    ]
+}
