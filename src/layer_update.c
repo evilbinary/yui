@@ -3,6 +3,7 @@
 #include "layer_properties.h"
 #include "layer.h"
 #include "layout.h"
+#include "log.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -312,7 +313,6 @@ int yui_update_from_json(Layer* root, cJSON* update_obj) {
         }
     }
     
-    printf("yui_update_from_json: 成功更新 %d 个属性\n", updated);
     return 0;
 }
 
@@ -321,14 +321,14 @@ int yui_update_from_json(Layer* root, cJSON* update_obj) {
  */
 int yui_update(Layer* root, const char* update_json) {
     if (!root || !update_json) {
-        printf("yui_update: 无效参数\n");
+        LOGE("update", "invalid arguments");
         return -1;
     }
     
     // 解析 JSON
     cJSON* json = cJSON_Parse(update_json);
     if (!json) {
-        printf("yui_update: JSON 解析失败\n");
+        LOGE("update", "failed to parse JSON");
         return -1;
     }
     
@@ -336,23 +336,20 @@ int yui_update(Layer* root, const char* update_json) {
     
     if (cJSON_IsArray(json)) {
         // 批量更新
-        printf("yui_update: 批量更新，共 %d 项\n", cJSON_GetArraySize(json));
-        
         cJSON* item = NULL;
         int index = 0;
         cJSON_ArrayForEach(item, json) {
             int ret = yui_update_from_json(root, item);
             if (ret != 0) {
-                printf("yui_update: 第 %d 项更新失败\n", index);
+                LOGW("update", "batch item %d failed", index);
             }
             index++;
         }
     } else if (cJSON_IsObject(json)) {
         // 单个更新
-        printf("yui_update: 单个更新\n");
         result = yui_update_from_json(root, json);
     } else {
-        printf("yui_update: JSON 格式错误（必须是对象或数组）\n");
+        LOGE("update", "JSON must be object or array");
         result = -1;
     }
     

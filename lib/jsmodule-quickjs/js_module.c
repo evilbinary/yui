@@ -60,7 +60,6 @@ static JSValue js_set_text(JSContext *ctx, JSValueConst this_val, int argc, JSVa
         if (layer) {
             layer_set_text(layer, text); //
         
-            printf("JS(QuickJS): Set text for layer '%s': %s\n", layer_id, text);
         }
     }
 
@@ -203,9 +202,7 @@ static JSValue js_hide(JSContext *ctx, JSValueConst this_val, int argc, JSValueC
     if (layer_id && g_layer_root) {
         struct Layer* layer = find_layer_by_id(g_layer_root, layer_id);
         if (layer) {
-            if (layer_hide(layer)) {
-                printf("JS(QuickJS): Hide layer '%s'\n", layer_id);
-            }
+            layer_hide(layer);
         }
     }
 
@@ -224,9 +221,7 @@ static JSValue js_show(JSContext *ctx, JSValueConst this_val, int argc, JSValueC
     if (layer_id && g_layer_root) {
         struct Layer* layer = find_layer_by_id(g_layer_root, layer_id);
         if (layer) {
-            if (layer_show(layer)) {
-                printf("JS(QuickJS): Show layer '%s'\n", layer_id);
-            }
+            layer_show(layer);
         }
     }
 

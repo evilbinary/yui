@@ -650,16 +650,10 @@ int js_module_trigger_event(const char* event_name, Layer* layer)
         return -1;
     }
 
-    printf("JS: Searching for event '%s' in %d registered events\n", event_name, g_js_event_count);
-
     // 在 JS 事件映射表中查找对应的函数名
     for (int i = 0; i < g_js_event_count; i++) {
-        printf("JS:   [%d] '%s' -> '%s' (comparing with '%s')\n", 
-               i, g_js_event_map[i].event_name, g_js_event_map[i].func_name, event_name);
         if (strcmp(g_js_event_map[i].event_name, event_name) == 0) {
             const char* func_name = g_js_event_map[i].func_name;
-            printf("JS: Triggering JS event '%s' -> calling function '%s'\n",
-                   event_name, func_name);
             // @ 前缀表示函数名引用：先在事件映射表中解析，再尝试直接调用
             if (func_name[0] == '@') {
                 const char* redirect = func_name + 1;
@@ -673,7 +667,6 @@ int js_module_trigger_event(const char* event_name, Layer* layer)
     }
 
     // 未找到事件映射
-    printf("JS: JS event '%s' not registered, trying direct call...\n", event_name);
     return js_module_call_event(event_name, layer);
 }
 
@@ -701,8 +694,6 @@ int js_module_call_layer_event(const char* layer_id, const char* event_type)
     // 构建完整事件名称
     char full_event_name[128];
     build_event_name(layer_id, event_type, full_event_name, sizeof(full_event_name));
-
-    printf("JS: Calling event '%s' on layer '%s'\n", full_event_name, layer_id);
 
     // 1. 首先尝试调用 C 事件处理器
     for (int i = 0; i < g_c_event_handler_count; i++) {
