@@ -14,6 +14,7 @@ set_kind("static")
 add_files(
     'js_module.c',
     'js_socket.c',
+    'js_timer.c',
     '../jsmodule/js_common.c'
 ) 
 add_includedirs('.', public=true)

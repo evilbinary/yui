@@ -7,6 +7,7 @@
 #include "../../src/layer_lifecycle.h"
 #include "../../src/render.h"
 #include "js_socket.h"
+#include "js_timer.h"
 #include "../../src/event.h"
 #include "../../src/backend.h"
 #include <stdio.h>
@@ -26,6 +27,13 @@
 static JSRuntime* g_js_rt = NULL;
 static JSContext* g_js_ctx = NULL;
 extern struct Layer* g_layer_root;
+
+static void js_module_timer_tick(void)
+{
+    if (g_js_ctx) {
+        js_timer_run(g_js_ctx);
+    }
+}
 
 /* ====================== QuickJS 原生函数 ====================== */
 
@@ -647,6 +655,7 @@ int js_module_init(void)
     // 注册 API 函数
     js_module_register_api();
     js_module_init_layer_lifecycle();
+    backend_register_update_callback(js_module_timer_tick);
 
     printf("JS(QuickJS): QuickJS engine initialized\n");
     return 0;
@@ -657,6 +666,7 @@ void js_module_cleanup(void)
 {
     js_module_shutdown();
     if (g_js_ctx) {
+        js_timer_clear_all(g_js_ctx);
         JS_FreeContext(g_js_ctx);
         g_js_ctx = NULL;
     }
@@ -1128,6 +1138,8 @@ void js_module_register_api(void)
 
     // 注册 readFile 到全局对象
     JS_SetPropertyStr(g_js_ctx, global_obj, "readFile", JS_NewCFunction(g_js_ctx, js_read_file, "readFile", 1));
+
+    js_timer_register_globals(g_js_ctx);
 
     // 注册 print 到全局对象（与 log 功能相同）
     JS_SetPropertyStr(g_js_ctx, global_obj, "print", JS_NewCFunction(g_js_ctx, js_log, "print", 1));

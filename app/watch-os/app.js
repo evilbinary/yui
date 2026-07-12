@@ -36,6 +36,7 @@ var watchRoutes = {
 };
 
 var themePlatform = "watch";
+var clockTimer = null;
 
 function initWatchThemes() {
     var suffix = themePlatform === "watch" ? "-watch" : "";
@@ -55,12 +56,21 @@ function onWatchLoad() {
 
     YUI.navigate("/");
     updateWatchChrome();
-    tickWatchClock();
+    startWatchClock();
 }
 
 function onWatchShow() {
     updateWatchChrome();
     tickWatchClock();
+}
+
+function startWatchClock() {
+    if (clockTimer !== null) return;
+    tickWatchClock();
+    clockTimer = setTimeout(function loop() {
+        tickWatchClock();
+        clockTimer = setTimeout(loop, 30000);
+    }, 30000);
 }
 
 function tickWatchClock() {
