@@ -27,4 +27,5 @@ void handle_key_event(Layer* layer, struct KeyEvent* event);
 int handle_mouse_event(Layer* layer, struct MouseEvent* event);
 int default_layer_handle_mouse_event(Layer* layer, struct MouseEvent* event);
 void handle_scrollbar_drag_event(Layer* root, int mouse_x, int mouse_y, SDL_EventType event_type);
+void layer_handle_touch_event(Layer* layer, TouchEvent* event);
 #endif

@@ -810,12 +810,11 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
       }
       strcpy(layer->event->touch_name, lookup_name);
 
-      // 查找事件处理函数
       EventHandler handler = find_event_by_name(lookup_name);
       if (handler) {
-        // 由于EventHandler和touch函数签名不同，这里需要进行类型转换
         layer->event->touch = (void (*)(TouchEvent*))handler;
       }
+      layer->handle_touch_event = layer_handle_touch_event;
     }
     if (cJSON_HasObjectItem(events, "onResize")) {
       if (!layer->event) {

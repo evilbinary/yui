@@ -176,6 +176,29 @@ function openNotifications() { openWatchApp("/notifications"); }
 function openBattery() { WatchAppRegistry.openById("battery"); }
 function openMessages() { WatchAppRegistry.openById("messages"); }
 
+function onPageTouch(type, deltaX, deltaY) {
+    if (type !== "swipe") return;
+
+    var route = YUI.currentRoute ? YUI.currentRoute() : null;
+    var path = route ? route.path : "/";
+    var direction = deltaX < 0 ? "left" : "right";
+
+    if (path === "/") {
+        if (direction === "left") openLauncher();
+        else if (direction === "right") openNotifications();
+        return;
+    }
+    if (path === "/launcher" && direction === "right") {
+        YUI.navigate("/");
+        updateWatchChrome();
+        return;
+    }
+    if (path === "/notifications" && direction === "left") {
+        YUI.navigate("/");
+        updateWatchChrome();
+    }
+}
+
 function rescanWatchApps() {
     WatchAppRegistry.init();
     Router.routes = WatchAppRegistry.getRoutes();

@@ -75,7 +75,8 @@
             "type": "View",
             "variant": "surface",
             "flex": 1,
-            "layout": { "type": "vertical" }
+            "layout": { "type": "vertical" },
+            "events": { "onTouch": "@onPageTouch" }
         }
     ]
 }

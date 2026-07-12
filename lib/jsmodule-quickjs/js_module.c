@@ -44,6 +44,8 @@ JSValue js_screenshot(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 JSValue js_list_dir(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv);
 JSValue js_focus(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv);
 
+static void print_quickjs_exception(JSContext* ctx, JSValueConst exception, const char* filename);
+
 // 设置文本
 static JSValue js_set_text(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
@@ -631,6 +633,59 @@ static JSValue js_set_event(JSContext *ctx, JSValueConst this_val, int argc, JSV
 }
 
 /* ====================== 初始化和清理 ====================== */
+
+static const char* touch_type_to_string(TouchType type) {
+    switch (type) {
+        case TOUCH_TYPE_START: return "start";
+        case TOUCH_TYPE_MOVE: return "move";
+        case TOUCH_TYPE_END: return "end";
+        case TOUCH_TYPE_SWIPE: return "swipe";
+        case TOUCH_TYPE_DOUBLE_TAP: return "doubleTap";
+        case TOUCH_TYPE_LONG_PRESS: return "longPress";
+        case TOUCH_TYPE_PINCH: return "pinch";
+        case TOUCH_TYPE_ROTATE: return "rotate";
+        default: return "unknown";
+    }
+}
+
+void js_module_dispatch_touch(Layer* layer, TouchEvent* event) {
+    if (!g_js_ctx || !layer || !event) return;
+    if (!layer->event || !layer->event->touch_name[0]) return;
+
+    const char* func_name = layer->event->touch_name;
+    const char* type_str = touch_type_to_string(event->type);
+
+    JSValue global_obj = JS_GetGlobalObject(g_js_ctx);
+    JSValue func = JS_GetPropertyStr(g_js_ctx, global_obj, func_name);
+
+    if (!JS_IsFunction(g_js_ctx, func)) {
+        JS_FreeValue(g_js_ctx, global_obj);
+        JS_FreeValue(g_js_ctx, func);
+        char full_event_name[128];
+        snprintf(full_event_name, sizeof(full_event_name), "%s.onTouch", layer->id);
+        js_module_trigger_event(full_event_name, layer);
+        return;
+    }
+
+    JSValue args[3];
+    args[0] = JS_NewString(g_js_ctx, type_str);
+    args[1] = JS_NewInt32(g_js_ctx, event->deltaX);
+    args[2] = JS_NewInt32(g_js_ctx, event->deltaY);
+    JSValue result = JS_Call(g_js_ctx, func, JS_UNDEFINED, 3, args);
+
+    JS_FreeValue(g_js_ctx, args[0]);
+    JS_FreeValue(g_js_ctx, args[1]);
+    JS_FreeValue(g_js_ctx, args[2]);
+    JS_FreeValue(g_js_ctx, global_obj);
+    JS_FreeValue(g_js_ctx, func);
+
+    if (JS_IsException(result)) {
+        JSValue exc = JS_GetException(g_js_ctx);
+        print_quickjs_exception(g_js_ctx, exc, func_name);
+        JS_FreeValue(g_js_ctx, exc);
+    }
+    JS_FreeValue(g_js_ctx, result);
+}
 
 // 初始化 JS 引擎（使用 QuickJS）
 int js_module_init(void)

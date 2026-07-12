@@ -417,6 +417,33 @@ typedef struct {
 #define MAX_TOUCHES 10
 TouchState touchState = {0};
 
+#define SWIPE_THRESHOLD_PX 48
+static int pointer_drag_active = 0;
+static int pointer_start_x = 0;
+static int pointer_start_y = 0;
+static int touch_swipe_start_x = 0;
+static int touch_swipe_start_y = 0;
+
+void propagateTouchEvent(Layer* layer, TouchEvent* event);
+
+static void backend_emit_swipe_event(Layer* root, int x, int y, int dx, int dy) {
+    int adx = dx < 0 ? -dx : dx;
+    int ady = dy < 0 ? -dy : dy;
+    if (adx < SWIPE_THRESHOLD_PX) return;
+    if (adx < ady) return;
+
+    TouchEvent touchEvent;
+    memset(&touchEvent, 0, sizeof(TouchEvent));
+    touchEvent.type = TOUCH_TYPE_SWIPE;
+    touchEvent.x = x;
+    touchEvent.y = y;
+    touchEvent.deltaX = dx;
+    touchEvent.deltaY = dy;
+    touchEvent.fingerCount = 1;
+    touchEvent.timestamp = SDL_GetTicks();
+    propagateTouchEvent(root, &touchEvent);
+}
+
 
 void backend_main_loop();
 
@@ -807,8 +834,18 @@ void handle_event(Layer* root, SDL_Event* event) {
         int event_state;
         if (event->type == SDL_MOUSEBUTTONDOWN) {
             event_state = SDL_PRESSED;
+            if (event->button.button == SDL_BUTTON_LEFT) {
+                pointer_drag_active = 1;
+                pointer_start_x = mouse_x;
+                pointer_start_y = mouse_y;
+            }
         } else if (event->type == SDL_MOUSEBUTTONUP) {
             event_state = SDL_RELEASED;
+            if (event->button.button == SDL_BUTTON_LEFT && pointer_drag_active) {
+                backend_emit_swipe_event(root, mouse_x, mouse_y,
+                    mouse_x - pointer_start_x, mouse_y - pointer_start_y);
+                pointer_drag_active = 0;
+            }
         } else if (event->type == SDL_MOUSEMOTION) {
             event_state = SDL_MOUSEMOTION;
         } else {
@@ -846,18 +883,18 @@ void handle_event(Layer* root, SDL_Event* event) {
     }
     // 触摸开始事件
     else if (event->type == SDL_FINGERDOWN) {
-        // 更新触摸状态
-        touchState.fingerCount++;
-        if (touchState.fingerCount == 1) {
-            touchState.startTime = SDL_GetTicks();
-            touchState.longPressDetected = 0;
-        }
-        
-        // 转换触摸坐标为窗口坐标
         int x, y;
         SDL_GetWindowSize(window, &x, &y);
         x = (int)(event->tfinger.x * x);
         y = (int)(event->tfinger.y * y);
+
+        touchState.fingerCount++;
+        if (touchState.fingerCount == 1) {
+            touchState.startTime = SDL_GetTicks();
+            touchState.longPressDetected = 0;
+            touch_swipe_start_x = x;
+            touch_swipe_start_y = y;
+        }
         
         // 保存触摸位置
         int touchId = event->tfinger.fingerId % MAX_TOUCHES;
@@ -965,6 +1002,11 @@ void handle_event(Layer* root, SDL_Event* event) {
         
         // 传播触摸事件
         propagateTouchEvent(root, &touchEvent);
+
+        if (touchState.fingerCount == 0) {
+            backend_emit_swipe_event(root, x, y,
+                x - touch_swipe_start_x, y - touch_swipe_start_y);
+        }
         
         // 如果所有手指都离开屏幕，重置状态
         if (touchState.fingerCount == 0) {

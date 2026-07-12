@@ -175,6 +175,20 @@ static void* js_module_scroll_event(void* data)
     return NULL;
 }
 
+void layer_handle_touch_event(Layer* layer, TouchEvent* event)
+{
+    if (!layer || !event) return;
+    if (!layer->event || !layer->event->touch_name[0]) return;
+
+    EventHandler handler = find_event_by_name(layer->event->touch_name);
+    if (handler) {
+        handler(layer);
+        return;
+    }
+
+    js_module_dispatch_touch(layer, event);
+}
+
 // Change 事件包装函数
 static void* js_module_change_event(void* data)
 {
