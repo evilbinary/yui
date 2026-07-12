@@ -1,5 +1,6 @@
 #include "theme_manager.h"
 #include "render.h"
+#include "log.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -304,7 +305,7 @@ void theme_manager_apply_to_tree(Layer* root) {
         return;
     }
     
-    printf("Applying theme '%s' to layer tree\n", current_theme->name);
+    LOGD("theme", "applying theme '%s' to layer tree", current_theme->name);
     
     // 递归应用样式；字号变化时 theme_merge_style 会清空 default_font，再由 load_all_fonts 补载
     theme_manager_apply_to_layer_recursive(root);

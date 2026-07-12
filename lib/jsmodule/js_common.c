@@ -2,6 +2,7 @@
 #include "../../src/ytype.h"
 #include "../../src/layer_lifecycle.h"
 #include "../../src/backend.h"
+#include "../../src/log.h"
 
 #include "event.h"
 
@@ -371,7 +372,7 @@ static void register_js_event_mapping(const char* event_name, const char* func_n
     strncpy(g_js_event_map[g_js_event_count].func_name, clean_func_name, 127);
     g_js_event_map[g_js_event_count].func_name[127] = '\0';
 
-    printf("JS: Registered JS event: '%s' -> '%s'\n", event_name, clean_func_name);
+    LOGD("js", "registered event '%s' -> '%s'", event_name, clean_func_name);
 
 
 
@@ -426,7 +427,7 @@ static void register_js_event_mapping(const char* event_name, const char* func_n
         g_js_event_map[g_js_event_count].event_name[127] = '\0';
         strncpy(g_js_event_map[g_js_event_count].func_name, clean_func_name, 127);
         g_js_event_map[g_js_event_count].func_name[127] = '\0';
-        printf("JS: Registered JS event (unprefixed): '%s' -> '%s'\n", event_type, clean_func_name);
+        LOGD("js", "registered event (unprefixed) '%s' -> '%s'", event_type, clean_func_name);
         g_js_event_count++;
     }
 }
@@ -504,7 +505,7 @@ static void scan_and_register_events(cJSON* json)
     // 检查 "events" 对象
     cJSON* events_obj = cJSON_GetObjectItem(json, "events");
     if (events_obj && cJSON_IsObject(events_obj)) {
-        printf("JS: Found 'events' object, registering events...\n");
+        LOGD("js", "found 'events' object, registering events");
         cJSON* event = events_obj->child;
         while (event) {
             if (cJSON_IsString(event)) {
@@ -617,10 +618,10 @@ int js_module_load_from_json(cJSON* root_json, const char* json_file_path, int a
         strcpy(json_dir, "app/mquickjs");
     }
 
-    printf("JS: %s JS from JSON directory: %s\n", append ? "Appending" : "Loading", json_dir);
+    LOGD("js", "%s JS from JSON directory: %s", append ? "Appending" : "Loading", json_dir);
 
     int total_loaded = load_js_recursive(root_json, json_dir);
-    printf("JS: %s %d JS file(s) from JSON\n", append ? "Appended" : "Loaded", total_loaded);
+    LOGD("js", "%s %d JS file(s) from JSON", append ? "Appended" : "Loaded", total_loaded);
 
     if (!append) {
         if (g_layer_root) {

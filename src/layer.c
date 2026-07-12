@@ -7,6 +7,7 @@
 #include "theme_manager.h"
 #include "theme.h"
 #include "backend.h"
+#include "log.h"
 
 
 Layer* focused_layer = NULL;
@@ -1194,16 +1195,16 @@ int layer_hide(Layer* layer) {
 // 从 JSON 字符串解析并创建图层
 Layer* parse_layer_from_string(const char* json_str, Layer* parent) {
     if (!json_str) {
-        printf("ERROR: json_str is NULL\n");
+        LOGE("layer", "json_str is NULL");
         return NULL;
     }
 
-    printf("DEBUG: Parsing layer from JSON string (length: %zu)\n", strlen(json_str));
+    LOGD("layer", "parsing layer from JSON string (length: %zu)", strlen(json_str));
 
     // 移除 JSON 字符串中的注释
     char* cleaned_json = remove_json_comments((char*)json_str);
     if (!cleaned_json) {
-        printf("ERROR: Failed to remove JSON comments\n");
+        LOGE("layer", "failed to remove JSON comments");
         return NULL;
     }
 
@@ -1212,11 +1213,11 @@ Layer* parse_layer_from_string(const char* json_str, Layer* parent) {
     free(cleaned_json);
 
     if (!json_obj) {
-        printf("ERROR: Failed to parse JSON string\n");
+        LOGE("layer", "failed to parse JSON string");
         return NULL;
     }
 
-    printf("DEBUG: JSON parsed successfully\n");
+    LOGD("layer", "JSON parsed successfully");
 
     // 创建图层
     Layer* layer = layer_create_from_json(json_obj, parent);

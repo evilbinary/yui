@@ -11,6 +11,7 @@
 #include "js_timer.h"
 #include "../../src/event.h"
 #include "../../src/backend.h"
+#include "../../src/log.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -282,7 +283,7 @@ static JSValue js_render_from_json(JSContext *ctx, JSValueConst this_val, int ar
         json_source_path = JS_ToCStringLen(ctx, NULL, argv[3]);
     }
 
-    printf("JS(QuickJS): renderFromJson called with layer_id='%s', append=%d\n", layer_id, append);
+    LOGD("js", "renderFromJson called with layer_id='%s', append=%d", layer_id, append);
 
     if (!g_layer_root) {
         JS_FreeCString(ctx, layer_id);
@@ -292,7 +293,7 @@ static JSValue js_render_from_json(JSContext *ctx, JSValueConst this_val, int ar
 
     Layer* parent_layer = find_layer_by_id(g_layer_root, layer_id);
     if (!parent_layer) {
-        printf("JS(QuickJS): ERROR - Layer '%s' not found\n", layer_id);
+        LOGE("js", "renderFromJson: layer '%s' not found", layer_id);
         JS_FreeCString(ctx, layer_id);
         JS_FreeCString(ctx, json_str);
         return JS_NewInt32(ctx, -1);
@@ -348,8 +349,7 @@ static JSValue js_render_from_json(JSContext *ctx, JSValueConst this_val, int ar
 
     if (json_source_path) JS_FreeCString(ctx, json_source_path);
 
-    printf("JS(QuickJS): Successfully rendered JSON to layer '%s', new layer id: '%s'\n",
-           layer_id, new_layer->id);
+    LOGD("js", "rendered JSON to layer '%s', new layer id: '%s'", layer_id, new_layer->id);
     JS_FreeCString(ctx, layer_id);
     JS_FreeCString(ctx, json_str);
     return JS_NewInt32(ctx, 0);
