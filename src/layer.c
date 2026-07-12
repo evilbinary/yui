@@ -9,7 +9,6 @@
 #include "backend.h"
 
 
-
 Layer* focused_layer = NULL;
 
 // 更新图层类型名称数组，添加GRID、Text、Tab、Slider、Listbox和Menu
@@ -811,10 +810,8 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
       strcpy(layer->event->touch_name, lookup_name);
 
       EventHandler handler = find_event_by_name(lookup_name);
-      if (handler) {
-        layer->event->touch = (void (*)(TouchEvent*))handler;
-      }
-      layer->handle_touch_event = layer_handle_touch_event;
+      layer->event->touch = handler;
+      layer->handle_touch_event = handle_touch_event;
     }
     if (cJSON_HasObjectItem(events, "onResize")) {
       if (!layer->event) {

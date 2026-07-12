@@ -787,8 +787,3 @@ int js_module_call_event(const char* event_name, Layer* layer)
     return 0;
 }
 
-void js_module_dispatch_touch(Layer* layer, TouchEvent* event) {
-    (void)layer;
-    (void)event;
-}
-

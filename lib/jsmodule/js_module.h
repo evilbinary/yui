@@ -43,9 +43,6 @@ int js_module_call_event(const char* event_name, Layer* layer);
 // 触发事件（根据事件名称自动查找并调用对应的 JS 函数）
 int js_module_trigger_event(const char* event_name, Layer* layer);
 
-// 触屏事件派发到 JS（type, deltaX, deltaY）
-void js_module_dispatch_touch(Layer* layer, TouchEvent* event);
-
 // 清空事件映射表
 void js_module_clear_events(void);
 

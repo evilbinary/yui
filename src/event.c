@@ -11,6 +11,8 @@ int global_event_handers_size=MAX_EVENT;
 EventEntry global_event_handlers[MAX_EVENT];
 // 当前已注册事件数量
 int event_count = 0;
+static TouchEvent current_touch_event;
+static int current_touch_event_active = 0;
 
 // 注册事件处理函数
 int register_event_handler(const char* name, EventHandler handler) {
@@ -58,6 +60,34 @@ EventHandler find_event_by_name(const char* name) {
 
 
 // ====================== 事件处理器 ======================
+const TouchEvent* get_current_touch_event(void) {
+    return current_touch_event_active ? &current_touch_event : NULL;
+}
+
+const char* touch_type_to_string(TouchType type) {
+    switch (type) {
+        case TOUCH_TYPE_START: return "start";
+        case TOUCH_TYPE_MOVE: return "move";
+        case TOUCH_TYPE_END: return "end";
+        case TOUCH_TYPE_SWIPE: return "swipe";
+        case TOUCH_TYPE_DOUBLE_TAP: return "doubleTap";
+        case TOUCH_TYPE_LONG_PRESS: return "longPress";
+        case TOUCH_TYPE_PINCH: return "pinch";
+        case TOUCH_TYPE_ROTATE: return "rotate";
+        default: return "unknown";
+    }
+}
+
+void handle_touch_event(Layer* layer, TouchEvent* event) {
+    if (!layer || !event) return;
+    if (!layer->event || !layer->event->touch) return;
+
+    current_touch_event = *event;
+    current_touch_event_active = 1;
+    layer->event->touch(layer);
+    current_touch_event_active = 0;
+}
+
 // 处理垂直滚动事件
 void handle_scroll_event(Layer* layer,int mouse_x,int mouse_y,int scroll_deltax,int scroll_deltay) {
     // 优先处理popup层的滚动事件

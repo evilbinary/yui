@@ -36,7 +36,6 @@ typedef struct {
 static JSEventMapping g_js_event_map[MAX_JS_EVENTS];
 static int g_js_event_count = 0;
 
-
 // ====================== 辅助函数 ======================
 
 int hex_to_int(char c){
@@ -108,6 +107,16 @@ int js_module_set_layer_event(Layer* layer, const char* event_name, const char* 
         layer->event->scroll = (EventHandler)event_handler;
         return 0;
     }
+    // 检查 touch 事件
+    if (strcmp(event_name, "touch") == 0 || strcmp(event_name, "onTouch") == 0) {
+        if (event_func_name) {
+            strncpy(layer->event->touch_name, event_func_name, MAX_PATH - 1);
+            layer->event->touch_name[MAX_PATH - 1] = '\0';
+        }
+        layer->event->touch = (EventHandler)event_handler;
+        layer->handle_touch_event = handle_touch_event;
+        return 0;
+    }
     // 检查 change 事件
     if (strcmp(event_name, "change") == 0 || strcmp(event_name, "onChange") == 0) {
         register_event_fun_t fn=layer->register_event;
@@ -175,18 +184,15 @@ static void* js_module_scroll_event(void* data)
     return NULL;
 }
 
-void layer_handle_touch_event(Layer* layer, TouchEvent* event)
+// Touch 事件包装函数
+static void* js_module_touch_event(void* data)
 {
-    if (!layer || !event) return;
-    if (!layer->event || !layer->event->touch_name[0]) return;
-
-    EventHandler handler = find_event_by_name(layer->event->touch_name);
-    if (handler) {
-        handler(layer);
-        return;
+    Layer* layer = (Layer*)data;
+    if (layer) {
+        printf("JS: Touch event on layer '%s'\n", layer->id);
+        js_module_call_layer_event(layer->id, "onTouch");
     }
-
-    js_module_dispatch_touch(layer, event);
+    return NULL;
 }
 
 // Change 事件包装函数
@@ -210,8 +216,10 @@ static EventHandler get_event_handler_by_type(const char* event_type)
         return js_module_click_event;
     }else if (strcmp(event_type, "press") == 0 || strcmp(event_type, "onPress") == 0) {
         return js_module_press_event;
-    }else if (strcmp(event_type, "scroll") == 0 || strcmp(event_type, "onScroll") == 0) {
+    } else if (strcmp(event_type, "scroll") == 0 || strcmp(event_type, "onScroll") == 0) {
         return js_module_scroll_event;
+    } else if (strcmp(event_type, "touch") == 0 || strcmp(event_type, "onTouch") == 0) {
+        return js_module_touch_event;
     } else if (strcmp(event_type, "change") == 0 || strcmp(event_type, "onChange") == 0) {
         return js_module_change_event;
     } else if (layer_lifecycle_is_event(event_type)) {

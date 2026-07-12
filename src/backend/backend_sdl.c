@@ -417,7 +417,7 @@ typedef struct {
 #define MAX_TOUCHES 10
 TouchState touchState = {0};
 
-#define SWIPE_THRESHOLD_PX 48
+#define SWIPE_THRESHOLD_PX 32
 static int pointer_drag_active = 0;
 static int pointer_start_x = 0;
 static int pointer_start_y = 0;

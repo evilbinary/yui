@@ -294,7 +294,7 @@ typedef struct Event {
     
     // 合并的触屏事件
     char touch_name[MAX_PATH];
-    void (*touch)(TouchEvent* event);  // 统一的触屏事件处理函数
+    void (*touch)(Layer* layer);  // 统一的触屏事件处理函数
 
     char resize_name[MAX_PATH];
     void (*resize)(Layer* layer, const ResizeEvent* event);
