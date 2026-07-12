@@ -39,7 +39,7 @@
                     "id": "activity_rings",
                     "type": "View",
                     "size": [350, 88],
-                    "layout": { "type": "horizontal", "spacing": 16, "align": "center" },
+                    "layout": { "type": "horizontal", "spacing": 16, "align": "center", "justifyContent": "center" },
                     "children": [
                         {
                             "id": "ring_move",
@@ -113,7 +113,7 @@
             "id": "dock",
             "type": "View",
             "size": [350, 54],
-            "layout": { "type": "horizontal", "spacing": 10, "align": "center" },
+            "layout": { "type": "horizontal", "spacing": 10, "align": "center", "justifyContent": "center" },
             "children": [
                 {
                     "id": "dock_health",
@@ -143,7 +143,7 @@
                     "id": "dock_launcher",
                     "type": "Button",
                     "variant": "dock-accent",
-                    "text": "⊞",
+                    "text": "🚀",
                     "size": [52, 52],
                     "events": { "onClick": "@openLauncher" }
                 }

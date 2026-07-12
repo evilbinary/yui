@@ -31,7 +31,7 @@
                 "type": "horizontal",
                 "spacing": 0,
                 "padding": [4, 18, 4, 18],
-                "align": "space-between"
+                "align": "center"
             },
             "children": [
                 {
@@ -48,16 +48,16 @@
                     "type": "Label",
                     "variant": "status-time",
                     "text": "10:09",
-                    "flex": 1
+                    "flex": 1,
+                    "textAlign": "left"
                 },
                 {
-                    "id": "status_icons",
-                    "type": "View",
-                    "size": [72, 16],
-                    "layout": { "type": "horizontal", "spacing": 6, "align": "center" },
-                    "children": [
-                        { "id": "status_battery", "type": "Label", "variant": "status-battery", "text": "85%" }
-                    ]
+                    "id": "status_battery",
+                    "type": "Label",
+                    "variant": "status-battery",
+                    "text": "85%",
+                    "size": [48, 16],
+                    "textAlign": "right"
                 }
             ]
         },
