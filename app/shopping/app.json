@@ -29,7 +29,6 @@
             "type": "View",
             "variant": "toolbar",
             "size": [390, 56],
-            "style": { "borderColor": "#2E3648", "borderWidth": 1 },
             "layout": {
                 "type": "horizontal",
                 "spacing": 6,
@@ -42,8 +41,7 @@
                     "variant": "tertiary",
                     "text": "返回",
                     "size": [48, 36],
-                    "events": { "onClick": "@goBack" },
-                    "style": { "borderColor": "#2E3648", "borderWidth": 1 }
+                    "events": { "onClick": "@goBack" }
                 },
                 {
                     "id": "btn_logo",
@@ -68,8 +66,7 @@
                     "variant": "secondary",
                     "text": "图",
                     "size": [36, 36],
-                    "events": { "onClick": "@captureScreen" },
-                    "style": { "borderColor": "#2E3648", "borderWidth": 1 }
+                    "events": { "onClick": "@captureScreen" }
                 },
                 {
                     "id": "btn_cart",
@@ -77,8 +74,7 @@
                     "variant": "secondary",
                     "text": "袋·0",
                     "size": [52, 36],
-                    "events": { "onClick": "@goCart" },
-                    "style": { "borderColor": "#2E3648", "borderWidth": 1 }
+                    "events": { "onClick": "@goCart" }
                 },
                 {
                     "id": "btn_login",
@@ -112,7 +108,6 @@
                             "type": "View",
                             "variant": "card",
                             "size": [358, 96],
-                            "style": { "borderColor": "#2E3648", "borderWidth": 1 },
                             "layout": { "type": "vertical", "spacing": 6, "padding": [18, 18, 18, 18] },
                             "children": [
                                 { "id": "home_title", "type": "Label", "variant": "title", "text": "发现精品好物" },
@@ -126,8 +121,7 @@
                             "variant": "tone-a",
                             "text": "数码电器",
                             "size": [358, 44],
-                            "events": { "onClick": "@homeGoElectronics" },
-                            "style": { "borderColor": "#7C6CFF", "borderWidth": 1 }
+                            "events": { "onClick": "@homeGoElectronics" }
                         },
                         {
                             "id": "btn_cat_fashion",
@@ -135,8 +129,7 @@
                             "variant": "tone-b",
                             "text": "时尚服饰",
                             "size": [358, 44],
-                            "events": { "onClick": "@homeGoFashion" },
-                            "style": { "borderColor": "#E879A9", "borderWidth": 1 }
+                            "events": { "onClick": "@homeGoFashion" }
                         },
                         {
                             "id": "btn_cat_books",
@@ -144,8 +137,7 @@
                             "variant": "tone-c",
                             "text": "图书文具",
                             "size": [358, 44],
-                            "events": { "onClick": "@homeGoBooks" },
-                            "style": { "borderColor": "#5B8DEF", "borderWidth": 1 }
+                            "events": { "onClick": "@homeGoBooks" }
                         },
                         { "id": "home_feat_label", "type": "Label", "variant": "overline", "text": "为你推荐" },
                         { "id": "home_feat_info", "type": "Label", "variant": "subtitle", "text": "本周热销精选" },
@@ -155,8 +147,7 @@
                             "variant": "secondary",
                             "text": "推荐商品 1",
                             "size": [358, 48],
-                            "events": { "onClick": "@homeFeat1" },
-                            "style": { "borderColor": "#2E3648", "borderWidth": 1 }
+                            "events": { "onClick": "@homeFeat1" }
                         },
                         {
                             "id": "btn_feat_2",
@@ -164,8 +155,7 @@
                             "variant": "secondary",
                             "text": "推荐商品 2",
                             "size": [358, 48],
-                            "events": { "onClick": "@homeFeat2" },
-                            "style": { "borderColor": "#2E3648", "borderWidth": 1 }
+                            "events": { "onClick": "@homeFeat2" }
                         },
                         {
                             "id": "btn_feat_3",
@@ -173,8 +163,7 @@
                             "variant": "secondary",
                             "text": "推荐商品 3",
                             "size": [358, 48],
-                            "events": { "onClick": "@homeFeat3" },
-                            "style": { "borderColor": "#2E3648", "borderWidth": 1 }
+                            "events": { "onClick": "@homeFeat3" }
                         },
                         {
                             "id": "btn_feat_4",
@@ -182,8 +171,7 @@
                             "variant": "secondary",
                             "text": "推荐商品 4",
                             "size": [358, 48],
-                            "events": { "onClick": "@homeFeat4" },
-                            "style": { "borderColor": "#2E3648", "borderWidth": 1 }
+                            "events": { "onClick": "@homeFeat4" }
                         }
                     ]
                 },
@@ -202,7 +190,6 @@
                             "type": "View",
                             "variant": "card",
                             "size": [358, 68],
-                            "style": { "borderColor": "#2E3648", "borderWidth": 1 },
                             "layout": { "type": "vertical", "spacing": 4, "padding": [14, 16, 14, 16] },
                             "children": [
                                 { "id": "category_title", "type": "Label", "variant": "heading", "text": "分类" },
@@ -215,8 +202,7 @@
                             "variant": "secondary",
                             "text": "商品 1",
                             "size": [358, 52],
-                            "events": { "onClick": "@categoryItem1" },
-                            "style": { "borderColor": "#2E3648", "borderWidth": 1 }
+                            "events": { "onClick": "@categoryItem1" }
                         },
                         {
                             "id": "btn_cat_item_2",
@@ -224,8 +210,7 @@
                             "variant": "secondary",
                             "text": "商品 2",
                             "size": [358, 52],
-                            "events": { "onClick": "@categoryItem2" },
-                            "style": { "borderColor": "#2E3648", "borderWidth": 1 }
+                            "events": { "onClick": "@categoryItem2" }
                         },
                         {
                             "id": "btn_cat_item_3",
@@ -233,8 +218,7 @@
                             "variant": "secondary",
                             "text": "商品 3",
                             "size": [358, 52],
-                            "events": { "onClick": "@categoryItem3" },
-                            "style": { "borderColor": "#2E3648", "borderWidth": 1 }
+                            "events": { "onClick": "@categoryItem3" }
                         }
                     ]
                 },
@@ -252,7 +236,6 @@
                             "type": "View",
                             "variant": "card",
                             "size": [358, 64],
-                            "style": { "borderColor": "#2E3648", "borderWidth": 1 },
                             "layout": { "type": "vertical", "spacing": 4, "padding": [14, 16, 14, 16] },
                             "children": [
                                 { "id": "cart_title", "type": "Label", "variant": "heading", "text": "购物袋" },
@@ -264,7 +247,6 @@
                             "type": "View",
                             "variant": "elevated",
                             "flex": 1,
-                            "style": { "borderColor": "#2E3648", "borderWidth": 1 },
                             "layout": { "type": "vertical", "spacing": 8, "padding": [14, 16, 14, 16] },
                             "children": [
                                 { "id": "cart_line_1", "type": "Label", "variant": "body", "text": "购物袋是空的" },
@@ -277,7 +259,6 @@
                             "type": "View",
                             "variant": "panel",
                             "size": [358, 48],
-                            "style": { "borderColor": "#7C6CFF", "borderWidth": 1 },
                             "layout": { "type": "vertical", "padding": [12, 16, 12, 16] },
                             "children": [
                                 { "id": "cart_total", "type": "Label", "variant": "price", "text": "合计  ¥0" }
@@ -296,8 +277,7 @@
                                     "text": "清空",
                                     "flex": 1,
                                     "size": [0, 42],
-                                    "events": { "onClick": "@cartClear" },
-                                    "style": { "borderColor": "#2E3648", "borderWidth": 1 }
+                                    "events": { "onClick": "@cartClear" }
                                 },
                                 {
                                     "id": "btn_cart_continue",
@@ -326,7 +306,6 @@
                             "type": "View",
                             "variant": "card",
                             "size": [358, 340],
-                            "style": { "borderColor": "#2E3648", "borderWidth": 1 },
                             "layout": { "type": "vertical", "spacing": 12, "padding": [28, 24, 28, 24] },
                             "children": [
                                 { "id": "login_title", "type": "Label", "variant": "title", "text": "欢迎回来" },
@@ -346,8 +325,7 @@
                                     "variant": "secondary",
                                     "text": "管理员登录（小红）",
                                     "size": [310, 46],
-                                    "events": { "onClick": "@loginAsAdmin" },
-                                    "style": { "borderColor": "#2E3648", "borderWidth": 1 }
+                                    "events": { "onClick": "@loginAsAdmin" }
                                 },
                                 {
                                     "id": "btn_login_cancel",
@@ -368,7 +346,6 @@
             "type": "View",
             "variant": "toolbar",
             "size": [390, 24],
-            "style": { "borderColor": "#2E3648", "borderWidth": 1 },
             "layout": { "type": "vertical", "padding": [4, 14, 4, 14] },
             "children": [
                 { "id": "status_text", "type": "Label", "variant": "caption", "text": "首页" }

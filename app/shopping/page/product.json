@@ -18,7 +18,6 @@
             "type": "View",
             "variant": "card",
             "flex": 1,
-            "style": { "borderColor": "#2E3648", "borderWidth": 1 },
             "layout": { "type": "vertical", "spacing": 12, "padding": [24, 20, 24, 20] },
             "children": [
                 { "id": "product_badge", "type": "Label", "variant": "badge", "text": "货号" },
@@ -37,8 +36,7 @@
                     "variant": "secondary",
                     "text": "加入购物袋",
                     "size": [326, 46],
-                    "events": { "onClick": "@productAddToCart" },
-                    "style": { "borderColor": "#2E3648", "borderWidth": 1 }
+                    "events": { "onClick": "@productAddToCart" }
                 },
                 {
                     "id": "btn_buy_now",
