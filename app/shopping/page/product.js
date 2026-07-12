@@ -21,6 +21,9 @@ function onProductShow() {
     YUI.setText("product_name", product.name + tag);
     YUI.setText("product_price", Shop.formatPrice(product.price));
     YUI.setText("product_desc", "正品保障 · 7天无理由退换 · 全国包邮");
+    if (typeof Theme !== "undefined") {
+        Theme.apply();
+    }
     updateStatusBar();
 }
 

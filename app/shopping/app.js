@@ -117,6 +117,27 @@ var routes = {
     "/login": { layerId: "page_login", keepAlive: true }
 };
 
+var themeMode = "dark";
+
+function initThemes() {
+    Theme.load("app/lib/themes/dark.json", "dark");
+    Theme.load("app/lib/themes/light.json", "light");
+    Theme.setCurrent(themeMode);
+    Theme.apply();
+    updateThemeButton();
+}
+
+function updateThemeButton() {
+    YUI.setText("btn_theme", themeMode === "dark" ? "暗" : "亮");
+}
+
+function toggleTheme() {
+    themeMode = themeMode === "dark" ? "light" : "dark";
+    Theme.setCurrent(themeMode);
+    Theme.apply();
+    updateThemeButton();
+}
+
 function updateCartBadge() {
     YUI.setText("btn_cart", "袋·" + Shop.cartCount());
 }
@@ -144,6 +165,8 @@ function updateStatusBar() {
 }
 
 function onAppLoad() {
+    initThemes();
+
     Router.init({
         outlet: "page_outlet",
         routes: routes
