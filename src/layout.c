@@ -403,10 +403,12 @@ void layout_layer(Layer* layer){
                 
                 child->rect.x = layer->rect.x + padding_left;
                 child->rect.y = current_y;
-                
-                // 自动计算宽度以填充可用空间
-                if(child->rect.w<=0){
+
+                // 垂直布局：子项默认横向撑满可用宽度
+                if (content_width > 0) {
                     child->rect.w = content_width;
+                } else if (child->rect.w <= 0) {
+                    child->rect.w = layer->rect.w;
                 }
                 
                 // 应用水平滚动偏移量
