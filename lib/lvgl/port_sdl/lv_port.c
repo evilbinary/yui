@@ -131,3 +131,8 @@ SDL_Renderer* lv_port_get_renderer(void)
 {
     return lv_port_disp_get_renderer();
 }
+
+void lv_port_set_sdl_event_hook(lv_port_sdl_event_fn fn, void* user_data)
+{
+    lv_port_indev_set_sdl_event_hook(fn, user_data);
+}

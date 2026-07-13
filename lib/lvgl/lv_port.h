@@ -29,9 +29,15 @@ int  lv_port_should_quit(void);
 void lv_port_request_quit(void);
 
 #if defined(YUI_LVGL_PORT_SDL)
-struct SDL_Renderer;
+#ifdef D_SDL
+#include <SDL2/SDL.h>
+#else
+#include <SDL.h>
+#endif
 typedef struct SDL_Renderer SDL_Renderer;
+typedef void (*lv_port_sdl_event_fn)(const SDL_Event* event, void* user_data);
 SDL_Renderer* lv_port_get_renderer(void);
+void lv_port_set_sdl_event_hook(lv_port_sdl_event_fn fn, void* user_data);
 #endif
 
 #ifdef __cplusplus

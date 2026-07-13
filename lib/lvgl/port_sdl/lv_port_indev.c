@@ -31,6 +31,8 @@ lv_indev_t* indev_mouse;
 static lv_point_t g_mouse_point;
 static bool g_mouse_pressed = false;
 static int g_should_quit = 0;
+static lv_port_sdl_event_fn g_sdl_event_hook = NULL;
+static void* g_sdl_event_hook_ud = NULL;
 
 /**********************
  *   GLOBAL FUNCTIONS
@@ -58,10 +60,19 @@ void lv_port_indev_deinit(void)
     g_should_quit = 0;
 }
 
+void lv_port_indev_set_sdl_event_hook(lv_port_sdl_event_fn fn, void* user_data)
+{
+    g_sdl_event_hook = fn;
+    g_sdl_event_hook_ud = user_data;
+}
+
 void lv_port_indev_poll(void)
 {
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
+        if (g_sdl_event_hook) {
+            g_sdl_event_hook(&event, g_sdl_event_hook_ud);
+        }
         if (event.type == SDL_QUIT) {
             g_should_quit = 1;
             continue;

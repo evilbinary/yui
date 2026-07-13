@@ -38,6 +38,35 @@ static int g_update_callback_count = 0;
 static ResizeCallback g_resize_callback = NULL;
 
 #if defined(YUI_LVGL_PORT_SDL)
+static void lvgl_yui_sdl_event_hook(const SDL_Event* event, void* user_data)
+{
+    Layer* root = (Layer*)user_data;
+    if (!root || !event) {
+        return;
+    }
+
+    if (event->type == SDL_MOUSEBUTTONDOWN || event->type == SDL_MOUSEBUTTONUP ||
+        event->type == SDL_MOUSEMOTION) {
+        int mouse_x;
+        int mouse_y;
+        if (event->type == SDL_MOUSEMOTION) {
+            mouse_x = event->motion.x;
+            mouse_y = event->motion.y;
+        } else {
+            mouse_x = event->button.x;
+            mouse_y = event->button.y;
+        }
+        handle_scrollbar_drag_event(root, mouse_x, mouse_y, event->type);
+    } else if (event->type == SDL_MOUSEWHEEL) {
+        int mouse_x = 0;
+        int mouse_y = 0;
+        SDL_GetMouseState(&mouse_x, &mouse_y);
+        handle_scroll_event(root, mouse_x, mouse_y, event->wheel.x, -event->wheel.y);
+    }
+}
+#endif
+
+#if defined(YUI_LVGL_PORT_SDL)
 static uint32_t fb_blend_pixel(uint32_t dst, uint32_t src)
 {
     uint8_t sa = (uint8_t)(src >> 24);
@@ -202,6 +231,9 @@ void backend_quit(void)
 void backend_set_ui_root(Layer* root)
 {
     g_ui_root = root;
+#if defined(YUI_LVGL_PORT_SDL)
+    lv_port_set_sdl_event_hook(lvgl_yui_sdl_event_hook, g_ui_root);
+#endif
 }
 
 Texture* backend_load_texture(char* path)
@@ -622,6 +654,10 @@ void backend_run(Layer* ui_root)
 {
     g_ui_root = ui_root;
     g_running = 1;
+
+#if defined(YUI_LVGL_PORT_SDL)
+    lv_port_set_sdl_event_hook(lvgl_yui_sdl_event_hook, g_ui_root);
+#endif
 
     while (g_running) {
         lv_port_tick_inc();

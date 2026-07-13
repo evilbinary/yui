@@ -17,6 +17,9 @@ void lv_port_indev_poll(void);
 int lv_port_indev_should_quit(void);
 void lv_port_indev_request_quit(void);
 
+typedef void (*lv_port_sdl_event_fn)(const SDL_Event* event, void* user_data);
+void lv_port_indev_set_sdl_event_hook(lv_port_sdl_event_fn fn, void* user_data);
+
 #ifdef __cplusplus
 }
 #endif
