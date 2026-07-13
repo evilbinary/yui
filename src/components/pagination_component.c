@@ -478,6 +478,14 @@ int pagination_component_set_property_from_json(Layer* layer, const char* key, c
     return 0;
 }
 
+static void pagination_component_apply_theme_style(Layer* layer, cJSON* style) {
+    if (!layer || !style || !layer->component) {
+        return;
+    }
+    pagination_apply_style((PaginationComponent*)layer->component, style);
+    mark_layer_dirty(layer, DIRTY_COLOR | DIRTY_TEXT | DIRTY_LAYOUT);
+}
+
 cJSON* pagination_component_get_property(Layer* layer, const char* property_name) {
     if (!layer || !property_name || !layer->component) return NULL;
 
@@ -532,6 +540,7 @@ PaginationComponent* pagination_component_create(Layer* layer) {
     layer->handle_mouse_event = pagination_component_handle_mouse_event;
     layer->get_property = pagination_component_get_property;
     layer->set_property = pagination_component_set_property_from_json;
+    layer->set_style = pagination_component_apply_theme_style;
     layer->register_event = pagination_component_register_event;
     layer->on_destroy = pagination_layer_destroy;
 

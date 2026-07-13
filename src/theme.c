@@ -1,6 +1,7 @@
 #include "theme.h"
 #include "util.h"
 #include "layer_update.h"
+#include "layer_properties.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -271,6 +272,10 @@ ThemeRule* theme_rule_create_from_json(cJSON* json) {
         rule->height = height_obj->valueint;
     }
     
+    if (style_obj && cJSON_IsObject(style_obj)) {
+        rule->style_json = cJSON_Duplicate(style_obj, 1);
+    }
+
     rule->next = NULL;
     
     return rule;
@@ -279,6 +284,9 @@ ThemeRule* theme_rule_create_from_json(cJSON* json) {
 // 销毁规则
 void theme_rule_destroy(ThemeRule* rule) {
     if (rule) {
+        if (rule->style_json) {
+            cJSON_Delete(rule->style_json);
+        }
         free(rule);
     }
 }
@@ -376,29 +384,55 @@ static int theme_match_compound_selector(const char* selector, const char* id,
     }
 }
 
+void theme_apply_component_style(Layer* layer, cJSON* style) {
+    if (!layer || !style || !cJSON_IsObject(style)) {
+        return;
+    }
+
+    if (layer->set_style) {
+        layer->set_style(layer, style);
+        return;
+    }
+
+    if (layer->set_property) {
+        cJSON* item = style->child;
+        while (item) {
+            if (item->string) {
+                layer->set_property(layer, item->string, item, 0);
+            }
+            item = item->next;
+        }
+        return;
+    }
+
+    layer_set_properties_from_json(layer, style, 0);
+}
+
 // 应用主题样式到图层
 void theme_apply_to_layer(Theme* theme, Layer* layer, const char* id, const char* type) {
     if (!theme || !layer || !id || !type) {
         return;
     }
-    
-    // 遍历所有规则，应用匹配的规则
-    ThemeRule* current = theme->rules;
+
+    ThemeRule* ordered[256];
+    int rule_count = 0;
+    for (ThemeRule* current = theme->rules; current && rule_count < 256; current = current->next) {
+        ordered[rule_count++] = current;
+    }
+
     printf("[Theme] Applying theme to layer id='%s', type='%s'\n", id, type);
-    while (current) {
+    for (int i = rule_count - 1; i >= 0; i--) {
+        ThemeRule* current = ordered[i];
         int should_apply = 0;
-        
+
         printf("[Theme] Checking rule selector='%s', type=%d\n", current->selector, current->selector_type);
-        
-        // 检查选择器是否匹配
+
         if (current->selector_type == THEME_SELECTOR_ID) {
-            // ID选择器：格式为 "#id"
-            const char* selector_id = current->selector + 1;  // 跳过#
+            const char* selector_id = current->selector + 1;
             if (strcmp(selector_id, id) == 0) {
                 should_apply = 1;
             }
         } else if (current->selector_type == THEME_SELECTOR_TYPE) {
-            // 类型选择器：直接比较
             printf("[Theme] Comparing selector '%s' with type '%s'\n", current->selector, type);
             if (strcmp(current->selector, type) == 0) {
                 should_apply = 1;
@@ -410,14 +444,11 @@ void theme_apply_to_layer(Theme* theme, Layer* layer, const char* id, const char
                 should_apply = 1;
             }
         }
-        
-        // 如果匹配，应用样式
+
         if (should_apply) {
             printf("[Theme] Merging style for layer id='%s'\n", id);
             theme_merge_style(current, layer);
         }
-        
-        current = current->next;
     }
 }
 
@@ -504,6 +535,10 @@ void theme_merge_style(ThemeRule* rule, Layer* layer) {
     if (rule->opacity > 0 && rule->opacity < 255) {
         layer->color.a = rule->opacity;
         layer->bg_color.a = rule->opacity;
+    }
+
+    if (rule->style_json) {
+        theme_apply_component_style(layer, rule->style_json);
     }
 }
 

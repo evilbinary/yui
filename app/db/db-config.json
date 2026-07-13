@@ -1,7 +1,7 @@
 {
   "windowWidth": 965,
-  "windowHeight": 833,
-  "sqlEditorContainer": 533,
+  "windowHeight": 750,
+  "sqlEditorContainer": 370,
   "theme": "latte",
   "connection": {
     "host": "localhost",

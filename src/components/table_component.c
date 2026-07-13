@@ -21,6 +21,7 @@ static void table_draw_cell_text(Layer* layer, const char* text, Color color,
 static void table_get_cell_rect(TableComponent* component, Layer* layer,
                                 int row, int col, Rect* out);
 static void table_edit_sync_scroll(TableComponent* component);
+static void table_component_apply_theme_style(Layer* layer, cJSON* style);
 
 static int table_edit_has_selection(TableComponent* component) {
     return component && component->edit_sel_start >= 0 &&
@@ -1131,6 +1132,7 @@ TableComponent* table_component_create(Layer* layer) {
     layer->focusable = 1;
     layer->on_data_update = table_data_update;
     layer->on_destroy = table_layer_destroy;
+    layer->set_style = table_component_apply_theme_style;
 
     return component;
 }
@@ -1139,6 +1141,48 @@ void table_component_destroy(TableComponent* component) {
     if (!component) return;
     table_free_columns(component);
     free(component);
+}
+
+static void table_component_apply_theme_style(Layer* layer, cJSON* style) {
+    if (!layer || !style || !layer->component) {
+        return;
+    }
+
+    TableComponent* component = (TableComponent*)layer->component;
+
+    cJSON* header_bg = cJSON_GetObjectItem(style, "headerBgColor");
+    if (header_bg && cJSON_IsString(header_bg)) {
+        parse_color(header_bg->valuestring, &component->header_bg_color);
+    }
+    cJSON* header_color = cJSON_GetObjectItem(style, "headerColor");
+    if (header_color && cJSON_IsString(header_color)) {
+        parse_color(header_color->valuestring, &component->header_text_color);
+    }
+    cJSON* row_alt = cJSON_GetObjectItem(style, "rowAltBgColor");
+    if (row_alt && cJSON_IsString(row_alt)) {
+        parse_color(row_alt->valuestring, &component->row_alt_bg_color);
+    }
+    cJSON* grid_line = cJSON_GetObjectItem(style, "gridLineColor");
+    if (grid_line && cJSON_IsString(grid_line)) {
+        parse_color(grid_line->valuestring, &component->grid_line_color);
+    }
+    cJSON* cell_focus = cJSON_GetObjectItem(style, "cellFocusColor");
+    if (cell_focus && cJSON_IsString(cell_focus)) {
+        parse_color(cell_focus->valuestring, &component->cell_focus_color);
+    }
+    cJSON* bg_color = cJSON_GetObjectItem(style, "bgColor");
+    if (bg_color && cJSON_IsString(bg_color)) {
+        parse_color(bg_color->valuestring, &layer->bg_color);
+        component->row_bg_color = layer->bg_color;
+    } else if (layer->bg_color.a > 0) {
+        component->row_bg_color = layer->bg_color;
+    }
+    cJSON* color = cJSON_GetObjectItem(style, "color");
+    if (color && cJSON_IsString(color)) {
+        parse_color(color->valuestring, &layer->color);
+    }
+
+    mark_layer_dirty(layer, DIRTY_COLOR | DIRTY_TEXT);
 }
 
 TableComponent* table_component_create_from_json(Layer* layer, cJSON* json_obj) {
@@ -1187,32 +1231,7 @@ TableComponent* table_component_create_from_json(Layer* layer, cJSON* json_obj) 
 
     cJSON* style = cJSON_GetObjectItem(json_obj, "style");
     if (style) {
-        cJSON* header_bg = cJSON_GetObjectItem(style, "headerBgColor");
-        if (header_bg && cJSON_IsString(header_bg)) {
-            parse_color(header_bg->valuestring, &component->header_bg_color);
-        }
-        cJSON* header_color = cJSON_GetObjectItem(style, "headerColor");
-        if (header_color && cJSON_IsString(header_color)) {
-            parse_color(header_color->valuestring, &component->header_text_color);
-        }
-        cJSON* row_alt = cJSON_GetObjectItem(style, "rowAltBgColor");
-        if (row_alt && cJSON_IsString(row_alt)) {
-            parse_color(row_alt->valuestring, &component->row_alt_bg_color);
-        }
-        cJSON* grid_line = cJSON_GetObjectItem(style, "gridLineColor");
-        if (grid_line && cJSON_IsString(grid_line)) {
-            parse_color(grid_line->valuestring, &component->grid_line_color);
-        }
-        cJSON* cell_focus = cJSON_GetObjectItem(style, "cellFocusColor");
-        if (cell_focus && cJSON_IsString(cell_focus)) {
-            parse_color(cell_focus->valuestring, &component->cell_focus_color);
-        }
-        if (layer->bg_color.a > 0) {
-            component->row_bg_color = layer->bg_color;
-        }
-        if (layer->color.a > 0) {
-            component->header_text_color = layer->color;
-        }
+        table_component_apply_theme_style(layer, style);
     }
 
     cJSON* events = cJSON_GetObjectItem(json_obj, "events");

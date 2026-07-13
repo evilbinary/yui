@@ -2,9 +2,11 @@
 #include "../backend.h"
 #include "../event.h"
 #include "../util.h"
+#include "../layer_update.h"
 #include <stdlib.h>
 #include <string.h>
 
+static void treeview_component_apply_theme_style(Layer* layer, cJSON* style);
 
 // 创建树视图组件
 TreeViewComponent* treeview_component_create(Layer* layer) {
@@ -42,6 +44,8 @@ TreeViewComponent* treeview_component_create(Layer* layer) {
     layer->handle_mouse_event = treeview_component_handle_mouse_event;
     layer->handle_key_event = treeview_component_handle_key_event;
     layer->focusable = 1;  // 支持键盘事件
+    layer->get_property = treeview_component_get_property;
+    layer->set_style = treeview_component_apply_theme_style;
     
     return component;
 }
@@ -344,6 +348,60 @@ static int treeview_data_update(Layer* layer, cJSON* data) {
 }
 
 
+static void treeview_component_apply_theme_style(Layer* layer, cJSON* style) {
+    if (!layer || !style || !layer->component) {
+        return;
+    }
+
+    TreeViewComponent* component = (TreeViewComponent*)layer->component;
+    Color text_color = component->text_color;
+    Color selected_text_color = component->selected_text_color;
+    Color selected_bg_color = component->selected_bg_color;
+    Color hover_bg_color = component->hover_bg_color;
+    Color expand_icon_color = component->expand_icon_color;
+
+    cJSON* color = cJSON_GetObjectItem(style, "textColor");
+    if (!color) color = cJSON_GetObjectItem(style, "color");
+    if (color && cJSON_IsString(color)) {
+        parse_color(color->valuestring, &text_color);
+        layer->color = text_color;
+    }
+
+    color = cJSON_GetObjectItem(style, "selectedTextColor");
+    if (color && cJSON_IsString(color)) {
+        parse_color(color->valuestring, &selected_text_color);
+    }
+
+    color = cJSON_GetObjectItem(style, "selectedBgColor");
+    if (color && cJSON_IsString(color)) {
+        parse_color(color->valuestring, &selected_bg_color);
+    }
+
+    color = cJSON_GetObjectItem(style, "hoverBgColor");
+    if (color && cJSON_IsString(color)) {
+        parse_color(color->valuestring, &hover_bg_color);
+    }
+
+    color = cJSON_GetObjectItem(style, "expandIconColor");
+    if (color && cJSON_IsString(color)) {
+        parse_color(color->valuestring, &expand_icon_color);
+    }
+
+    cJSON* bg_color = cJSON_GetObjectItem(style, "bgColor");
+    if (bg_color && cJSON_IsString(bg_color)) {
+        parse_color(bg_color->valuestring, &layer->bg_color);
+    }
+
+    cJSON* font_size = cJSON_GetObjectItem(style, "fontSize");
+    if (font_size && cJSON_IsNumber(font_size)) {
+        treeview_set_font_size(component, font_size->valueint);
+    }
+
+    treeview_set_colors(component, text_color, selected_text_color, selected_bg_color,
+                        hover_bg_color, expand_icon_color);
+    mark_layer_dirty(layer, DIRTY_COLOR | DIRTY_TEXT | DIRTY_LAYOUT);
+}
+
 TreeViewComponent* treeview_component_create_from_json(Layer* layer, cJSON* json_obj) {
     // 创建基础组件
     TreeViewComponent* component = treeview_component_create(layer);
@@ -355,7 +413,6 @@ TreeViewComponent* treeview_component_create_from_json(Layer* layer, cJSON* json
     
     // 注册数据更新回调
     layer->on_data_update = treeview_data_update;
-    layer->get_property = treeview_component_get_property;
     
     // 解析项目高度
     cJSON* itemHeight = cJSON_GetObjectItem(json_obj, "itemHeight");
@@ -378,38 +435,7 @@ TreeViewComponent* treeview_component_create_from_json(Layer* layer, cJSON* json
     // 解析颜色
     cJSON* style = cJSON_GetObjectItem(json_obj, "style");
     if (style) {
-        Color text_color = {205, 214, 244, 255}; // 默认 Catppuccin 文本色
-        Color selected_text_color = {205, 214, 244, 255};
-        Color selected_bg_color = {69, 71, 90, 255};    // Catppuccin surface1
-        Color hover_bg_color = {49, 50, 68, 255};       // Catppuccin surface0
-        Color expand_icon_color = {108, 112, 134, 255}; // Catppuccin overlay0
-        
-        cJSON* color = cJSON_GetObjectItem(style, "textColor");
-        if (color && color->valuestring) {
-            parse_color(color->valuestring, &text_color);
-        }
-        
-        color = cJSON_GetObjectItem(style, "selectedTextColor");
-        if (color && color->valuestring) {
-            parse_color(color->valuestring, &selected_text_color);
-        }
-        
-        color = cJSON_GetObjectItem(style, "selectedBgColor");
-        if (color && color->valuestring) {
-            parse_color(color->valuestring, &selected_bg_color);
-        }
-        
-        color = cJSON_GetObjectItem(style, "hoverBgColor");
-        if (color && color->valuestring) {
-            parse_color(color->valuestring, &hover_bg_color);
-        }
-        
-        color = cJSON_GetObjectItem(style, "expandIconColor");
-        if (color && color->valuestring) {
-            parse_color(color->valuestring, &expand_icon_color);
-        }
-        
-        treeview_set_colors(component, text_color, selected_text_color, selected_bg_color, hover_bg_color, expand_icon_color);
+        treeview_component_apply_theme_style(layer, style);
     }
 
     // 解析事件名（handler 在触发时查找，因为此时事件尚未注册）

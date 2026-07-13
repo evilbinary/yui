@@ -3,6 +3,7 @@
 #include "../backend.h"
 #include "../util.h"
 #include "../popup_manager.h"
+#include "../layer_update.h"
 #include <stdlib.h>
 #include <string.h>
 #include "cJSON.h"
@@ -48,6 +49,7 @@ static void dialog_get_button_colors(DialogComponent* component, DialogButton* b
     int selected, Color* bg, Color* text);
 static int dialog_point_in_drag_area(DialogComponent* component, Layer* layer, int x, int y);
 static void dialog_clamp_to_window(Layer* layer);
+static void dialog_component_apply_theme_style(Layer* layer, cJSON* style);
 
 // 创建对话框组件
 DialogComponent* dialog_component_create(Layer* layer) {
@@ -102,6 +104,7 @@ DialogComponent* dialog_component_create(Layer* layer) {
     layer->set_visible = dialog_layer_set_visible;
     layer->handle_mouse_event = dialog_component_handle_mouse_event;
     layer->handle_key_event = dialog_component_handle_key_event;
+    layer->set_style = dialog_component_apply_theme_style;
     
     return component;
 }
@@ -1228,54 +1231,56 @@ DialogComponent* dialog_component_create_from_json(Layer* layer, cJSON* json) {
     // 解析样式
     cJSON* style = cJSON_GetObjectItem(json, "style");
     if (style) {
-        if (cJSON_HasObjectItem(style, "titleColor")) {
-            Color title_color;
-            parse_color(cJSON_GetObjectItem(style, "titleColor")->valuestring, &title_color);
-            component->title_color = title_color;
-        }
-        if (cJSON_HasObjectItem(style, "textColor")) {
-            Color text_color;
-            parse_color(cJSON_GetObjectItem(style, "textColor")->valuestring, &text_color);
-            component->text_color = text_color;
-        }
-        if (cJSON_HasObjectItem(style, "bgColor")) {
-            Color bg_color;
-            parse_color(cJSON_GetObjectItem(style, "bgColor")->valuestring, &bg_color);
-            component->bg_color = bg_color;
-        }
-        if (cJSON_HasObjectItem(style, "borderColor")) {
-            Color border_color;
-            parse_color(cJSON_GetObjectItem(style, "borderColor")->valuestring, &border_color);
-            component->border_color = border_color;
-        }
-        if (cJSON_HasObjectItem(style, "buttonColor")) {
-            Color button_color;
-            parse_color(cJSON_GetObjectItem(style, "buttonColor")->valuestring, &button_color);
-            component->button_color = button_color;
-        }
-        if (cJSON_HasObjectItem(style, "buttonHoverColor")) {
-            Color button_hover_color;
-            parse_color(cJSON_GetObjectItem(style, "buttonHoverColor")->valuestring, &button_hover_color);
-            component->button_hover_color = button_hover_color;
-        }
-        if (cJSON_HasObjectItem(style, "buttonTextColor")) {
-            Color button_text_color;
-            parse_color(cJSON_GetObjectItem(style, "buttonTextColor")->valuestring, &button_text_color);
-            component->button_text_color = button_text_color;
-        }
-        if (cJSON_HasObjectItem(style, "buttonWidth")) {
-            component->button_width = cJSON_GetObjectItem(style, "buttonWidth")->valueint;
-        }
-        if (cJSON_HasObjectItem(style, "buttonHeight")) {
-            component->button_height = cJSON_GetObjectItem(style, "buttonHeight")->valueint;
-        }
-        if (cJSON_HasObjectItem(style, "buttonSpacing")) {
-            component->button_spacing = cJSON_GetObjectItem(style, "buttonSpacing")->valueint;
-        }
-        if (cJSON_HasObjectItem(style, "buttonAreaBottom")) {
-            component->button_area_bottom = cJSON_GetObjectItem(style, "buttonAreaBottom")->valueint;
-        }
+        dialog_component_apply_theme_style(layer, style);
     }
     
     return component;
+}
+
+static void dialog_component_apply_theme_style(Layer* layer, cJSON* style) {
+    if (!layer || !style || !layer->component) {
+        return;
+    }
+
+    DialogComponent* component = (DialogComponent*)layer->component;
+
+    if (cJSON_HasObjectItem(style, "titleColor")) {
+        parse_color(cJSON_GetObjectItem(style, "titleColor")->valuestring, &component->title_color);
+    }
+    if (cJSON_HasObjectItem(style, "textColor")) {
+        parse_color(cJSON_GetObjectItem(style, "textColor")->valuestring, &component->text_color);
+    }
+    if (cJSON_HasObjectItem(style, "color")) {
+        parse_color(cJSON_GetObjectItem(style, "color")->valuestring, &component->text_color);
+    }
+    if (cJSON_HasObjectItem(style, "bgColor")) {
+        parse_color(cJSON_GetObjectItem(style, "bgColor")->valuestring, &component->bg_color);
+        layer->bg_color = component->bg_color;
+    }
+    if (cJSON_HasObjectItem(style, "borderColor")) {
+        parse_color(cJSON_GetObjectItem(style, "borderColor")->valuestring, &component->border_color);
+    }
+    if (cJSON_HasObjectItem(style, "buttonColor")) {
+        parse_color(cJSON_GetObjectItem(style, "buttonColor")->valuestring, &component->button_color);
+    }
+    if (cJSON_HasObjectItem(style, "buttonHoverColor")) {
+        parse_color(cJSON_GetObjectItem(style, "buttonHoverColor")->valuestring, &component->button_hover_color);
+    }
+    if (cJSON_HasObjectItem(style, "buttonTextColor")) {
+        parse_color(cJSON_GetObjectItem(style, "buttonTextColor")->valuestring, &component->button_text_color);
+    }
+    if (cJSON_HasObjectItem(style, "buttonWidth")) {
+        component->button_width = cJSON_GetObjectItem(style, "buttonWidth")->valueint;
+    }
+    if (cJSON_HasObjectItem(style, "buttonHeight")) {
+        component->button_height = cJSON_GetObjectItem(style, "buttonHeight")->valueint;
+    }
+    if (cJSON_HasObjectItem(style, "buttonSpacing")) {
+        component->button_spacing = cJSON_GetObjectItem(style, "buttonSpacing")->valueint;
+    }
+    if (cJSON_HasObjectItem(style, "buttonAreaBottom")) {
+        component->button_area_bottom = cJSON_GetObjectItem(style, "buttonAreaBottom")->valueint;
+    }
+
+    mark_layer_dirty(layer, DIRTY_COLOR | DIRTY_TEXT | DIRTY_LAYOUT);
 }

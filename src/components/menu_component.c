@@ -4,9 +4,12 @@
 #include "../util.h"
 #include "../popup_manager.h"
 #include "../event.h"
+#include "../layer_update.h"
 #include <stdlib.h>
 #include <string.h>
 #include "cJSON.h"
+
+static void menu_component_apply_theme_style(Layer* layer, cJSON* style);
 
 // 创建菜单组件
 MenuComponent* menu_component_create(Layer* layer) {
@@ -46,6 +49,7 @@ MenuComponent* menu_component_create(Layer* layer) {
     // 设置组件指针和自定义渲染函数
     layer->component = component;
     layer->render = menu_component_render;
+    layer->set_style = menu_component_apply_theme_style;
 
 
     // 绑定事件处理函数
@@ -230,37 +234,7 @@ MenuComponent* menu_component_create_from_json(Layer* layer, cJSON* json) {
     // 解析样式
     cJSON* style = cJSON_GetObjectItem(json, "style");
     if (style) {
-        if (cJSON_HasObjectItem(style, "bgColor")) {
-            Color bg_color;
-            parse_color(cJSON_GetObjectItem(style, "bgColor")->valuestring, &bg_color);
-            component->bg_color = bg_color;
-        }
-        if (cJSON_HasObjectItem(style, "textColor")) {
-            Color text_color;
-            parse_color(cJSON_GetObjectItem(style, "textColor")->valuestring, &text_color);
-            component->text_color = text_color;
-        }
-        if (cJSON_HasObjectItem(style, "hoverColor")) {
-            Color hover_color;
-            parse_color(cJSON_GetObjectItem(style, "hoverColor")->valuestring, &hover_color);
-            component->hover_color = hover_color;
-        }
-        if (cJSON_HasObjectItem(style, "disabledColor")) {
-            Color disabled_color;
-            parse_color(cJSON_GetObjectItem(style, "disabledColor")->valuestring, &disabled_color);
-            component->disabled_color = disabled_color;
-        }
-        if (cJSON_HasObjectItem(style, "separatorColor")) {
-            Color separator_color;
-            parse_color(cJSON_GetObjectItem(style, "separatorColor")->valuestring, &separator_color);
-            component->separator_color = separator_color;
-        }
-        if (cJSON_HasObjectItem(style, "itemHeight")) {
-            component->item_height = cJSON_GetObjectItem(style, "itemHeight")->valueint;
-        }
-        if (cJSON_HasObjectItem(style, "showArrow")) {
-            component->show_arrow = cJSON_IsTrue(cJSON_GetObjectItem(style, "showArrow"));
-        }
+        menu_component_apply_theme_style(layer, style);
     }
 
     // 解析 onSelect 事件
@@ -276,6 +250,44 @@ MenuComponent* menu_component_create_from_json(Layer* layer, cJSON* json) {
     }
 
     return component;
+}
+
+static void menu_component_apply_theme_style(Layer* layer, cJSON* style) {
+    if (!layer || !style || !layer->component) {
+        return;
+    }
+
+    MenuComponent* component = (MenuComponent*)layer->component;
+
+    if (cJSON_HasObjectItem(style, "bgColor")) {
+        parse_color(cJSON_GetObjectItem(style, "bgColor")->valuestring, &component->bg_color);
+        layer->bg_color = component->bg_color;
+    }
+    if (cJSON_HasObjectItem(style, "textColor")) {
+        parse_color(cJSON_GetObjectItem(style, "textColor")->valuestring, &component->text_color);
+        layer->color = component->text_color;
+    }
+    if (cJSON_HasObjectItem(style, "color")) {
+        parse_color(cJSON_GetObjectItem(style, "color")->valuestring, &component->text_color);
+        layer->color = component->text_color;
+    }
+    if (cJSON_HasObjectItem(style, "hoverColor")) {
+        parse_color(cJSON_GetObjectItem(style, "hoverColor")->valuestring, &component->hover_color);
+    }
+    if (cJSON_HasObjectItem(style, "disabledColor")) {
+        parse_color(cJSON_GetObjectItem(style, "disabledColor")->valuestring, &component->disabled_color);
+    }
+    if (cJSON_HasObjectItem(style, "separatorColor")) {
+        parse_color(cJSON_GetObjectItem(style, "separatorColor")->valuestring, &component->separator_color);
+    }
+    if (cJSON_HasObjectItem(style, "itemHeight")) {
+        component->item_height = cJSON_GetObjectItem(style, "itemHeight")->valueint;
+    }
+    if (cJSON_HasObjectItem(style, "showArrow")) {
+        component->show_arrow = cJSON_IsTrue(cJSON_GetObjectItem(style, "showArrow"));
+    }
+
+    mark_layer_dirty(layer, DIRTY_COLOR | DIRTY_TEXT | DIRTY_LAYOUT);
 }
 
 // 添加菜单项

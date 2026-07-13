@@ -29,6 +29,7 @@ typedef struct ThemeRule {
     int opacity;                  // 透明度 0-255
     int width;                    // 宽度
     int height;                   // 高度
+    cJSON* style_json;            // 完整样式对象（含组件扩展属性）
     
     struct ThemeRule* next;       // 链表下一个
 } ThemeRule;
@@ -66,6 +67,9 @@ void theme_apply_to_layer(Theme* theme, Layer* layer, const char* id, const char
 
 // 合并样式（按优先级）
 void theme_merge_style(ThemeRule* rule, Layer* layer);
+
+// 将主题中的组件扩展样式应用到图层
+void theme_apply_component_style(Layer* layer, cJSON* style);
 
 // 解析选择器类型
 ThemeSelectorType theme_parse_selector_type(const char* selector);
