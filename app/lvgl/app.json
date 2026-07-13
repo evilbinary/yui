@@ -45,6 +45,13 @@
                     "text": "Native Label",
                     "size": [160, 24],
                     "position": [160, 26]
+                },
+                {
+                    "id": "native_input",
+                    "type": "Text",
+                    "text": "Native Text",
+                    "size": [160, 24],
+                    "position": [160, 26]
                 }
             ]
         },
@@ -277,7 +284,8 @@
         {
             "id": "demo_keyboard",
             "type": "LvKeyboard",
-            "size": [340, 120]
+            "size": [340, 120],
+            "textarea": "demo_textarea"
         },
         {
             "id": "demo_msgbox",

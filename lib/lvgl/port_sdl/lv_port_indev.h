@@ -11,6 +11,12 @@ extern "C" {
 
 #include "../lvgl.h"
 
+#ifdef D_SDL
+#include <SDL2/SDL.h>
+#else
+#include <SDL.h>
+#endif
+
 void lv_port_indev_init(void);
 void lv_port_indev_deinit(void);
 void lv_port_indev_poll(void);

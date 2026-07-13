@@ -241,9 +241,21 @@ LVGL_EXTRA_LAYOUT(lvgl_msgbox_layout)
 #endif
 
 #if LV_USE_KEYBOARD
+static Layer* lvgl_layer_root(Layer* layer)
+{
+    while (layer && layer->parent) {
+        layer = layer->parent;
+    }
+    return layer;
+}
+
 static void* lvgl_keyboard_create(Layer* layer, cJSON* json)
 {
     LvglComponent* component = lvgl_component_new(layer);
+    const char* textarea_id;
+    Layer* root;
+    Layer* ta_layer;
+    LvglComponent* ta_component;
 
     if (!component) {
         return NULL;
@@ -251,7 +263,17 @@ static void* lvgl_keyboard_create(Layer* layer, cJSON* json)
 
     component->obj = lv_keyboard_create(lv_port_get_root());
     lv_keyboard_set_mode(component->obj, LV_KEYBOARD_MODE_TEXT_LOWER);
-    (void)json;
+
+    textarea_id = lvgl_json_string(json, "textarea", "demo_textarea");
+    root = lvgl_layer_root(layer);
+    if (root && textarea_id[0]) {
+        ta_layer = find_layer_by_id(root, textarea_id);
+        ta_component = ta_layer ? lvgl_component_from_layer(ta_layer) : NULL;
+        if (ta_component && ta_component->obj) {
+            lv_keyboard_set_textarea(component->obj, ta_component->obj);
+        }
+    }
+
     lvgl_apply_common_style(component->obj, layer, json);
     lvgl_component_sync_rect(component);
     return component;
