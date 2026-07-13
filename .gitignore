@@ -29,3 +29,4 @@ router-test-err.txt
 router-debug.txt
 router-debug-err.txt
 app/shopping/capture/*.png
+.claude/settings.local.json

@@ -567,6 +567,7 @@
         {
           "id": "statusIcon",
           "type": "Label",
+          "size": [20, 20],
           "text": "●",
           "style": {
             "color": "#F38BA8",
@@ -578,6 +579,7 @@
           "type": "Label",
           "text": "未连接",
           "size": [300, 20],
+          "textAlign": "left",
           "style": {
             "color": "#CDD6F4",
             "fontSize": 11,

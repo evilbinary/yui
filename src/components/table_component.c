@@ -135,16 +135,133 @@ static int table_build_auto_columns(TableComponent* component, cJSON* data) {
     return 1;
 }
 
-static int table_viewport_width(Layer* layer) {
+static int table_visible_body_height(TableComponent* component, Layer* layer) {
+    if (!component || !layer) return 0;
+    int h = layer->rect.h - component->header_height;
+    return h > 0 ? h : 0;
+}
+
+static int table_body_content_height(TableComponent* component) {
+    if (!component) return 0;
+    return table_row_count(component) * component->row_height;
+}
+
+static int table_needs_vertical_scroll(TableComponent* component, Layer* layer) {
+    if (!layer || !(layer->scrollable == 1 || layer->scrollable == 3)) return 0;
+    if (!layer->scrollbar_v || !layer->scrollbar_v->visible) return 0;
+    return table_body_content_height(component) > table_visible_body_height(component, layer);
+}
+
+static int table_viewport_width(TableComponent* component, Layer* layer) {
     if (!layer) return 0;
     int w = layer->rect.w;
-    if ((layer->scrollable == 1 || layer->scrollable == 3) &&
-        layer->scrollbar_v && layer->scrollbar_v->visible &&
-        layer->content_height > layer->rect.h) {
+    if (table_needs_vertical_scroll(component, layer)) {
         int thickness = layer->scrollbar_v->thickness > 0 ? layer->scrollbar_v->thickness : 8;
         w -= thickness;
     }
     return w > 0 ? w : 0;
+}
+
+static void table_clamp_scroll(TableComponent* component, Layer* layer) {
+    if (!component || !layer) return;
+
+    int viewport_w = table_viewport_width(component, layer);
+    int max_scroll_x = layer->content_width - viewport_w;
+    if (max_scroll_x < 0) max_scroll_x = 0;
+    if (layer->scroll_offset_x > max_scroll_x) layer->scroll_offset_x = max_scroll_x;
+    if (layer->scroll_offset_x < 0) layer->scroll_offset_x = 0;
+
+    int visible_body = table_visible_body_height(component, layer);
+    int body_h = table_body_content_height(component);
+    int max_scroll_y = body_h - visible_body;
+    if (max_scroll_y < 0) max_scroll_y = 0;
+    if (layer->scroll_offset > max_scroll_y) layer->scroll_offset = max_scroll_y;
+    if (layer->scroll_offset < 0) layer->scroll_offset = 0;
+}
+
+static int table_vertical_thumb_rect(TableComponent* component, Layer* layer, Rect* thumb_out) {
+    if (!component || !layer || !thumb_out || !layer->scrollbar_v) return 0;
+
+    int content_height = layer->content_height;
+    int visible_height = layer->rect.h;
+    if (content_height <= visible_height) return 0;
+
+    int thumb_h = (int)((float)visible_height / content_height * visible_height);
+    if (thumb_h < 20) thumb_h = 20;
+    int thumb_y = layer->rect.y;
+    if (content_height > visible_height) {
+        thumb_y += (int)((float)layer->scroll_offset / (content_height - visible_height) *
+                         (visible_height - thumb_h));
+    }
+    if (thumb_y < layer->rect.y) thumb_y = layer->rect.y;
+    if (thumb_y > layer->rect.y + visible_height - thumb_h) {
+        thumb_y = layer->rect.y + visible_height - thumb_h;
+    }
+
+    int thickness = layer->scrollbar_v->thickness > 0 ? layer->scrollbar_v->thickness : 8;
+    thumb_out->x = layer->rect.x + layer->rect.w - thickness;
+    thumb_out->y = thumb_y;
+    thumb_out->w = thickness;
+    thumb_out->h = thumb_h;
+    return 1;
+}
+
+static void table_apply_vertical_thumb_drag(TableComponent* component, Layer* layer, int mouse_y) {
+    if (!layer || !layer->scrollbar_v) return;
+
+    int content_height = layer->content_height;
+    int visible_height = layer->rect.h;
+    if (content_height <= visible_height) return;
+
+    int thumb_h = (int)((float)visible_height / content_height * visible_height);
+    if (thumb_h < 20) thumb_h = 20;
+
+    int new_thumb_y = mouse_y - layer->scrollbar_v->drag_offset;
+    if (new_thumb_y < layer->rect.y) new_thumb_y = layer->rect.y;
+    if (new_thumb_y > layer->rect.y + visible_height - thumb_h) {
+        new_thumb_y = layer->rect.y + visible_height - thumb_h;
+    }
+
+    float scroll_ratio = (float)(new_thumb_y - layer->rect.y) / (visible_height - thumb_h);
+    layer->scroll_offset = (int)(scroll_ratio * (content_height - visible_height));
+    table_clamp_scroll(component, layer);
+}
+
+static int table_handle_vertical_scrollbar_mouse(TableComponent* component, Layer* layer, MouseEvent* event) {
+    if (!layer->scrollbar_v || !table_needs_vertical_scroll(component, layer)) return 0;
+
+    if (layer->scrollbar_v->is_dragging) {
+        if (event->state == SDL_MOUSEMOTION) {
+            table_apply_vertical_thumb_drag(component, layer, event->y);
+            mark_layer_dirty(layer, DIRTY_TEXT);
+            return 1;
+        }
+        if (event->state == SDL_RELEASED && event->button == SDL_BUTTON_LEFT) {
+            layer->scrollbar_v->is_dragging = 0;
+            component->pressed_row = -1;
+            return 1;
+        }
+        return 1;
+    }
+
+    if (event->button != SDL_BUTTON_LEFT) {
+        return table_point_in_scrollbar(component, layer, event->x, event->y);
+    }
+
+    if (event->state == SDL_PRESSED) {
+        Rect thumb;
+        if (table_vertical_thumb_rect(component, layer, &thumb)) {
+            Point pt = {event->x, event->y};
+            if (point_in_rect(pt, thumb)) {
+                layer->scrollbar_v->is_dragging = 1;
+                layer->scrollbar_v->drag_offset = event->y - thumb.y;
+                component->pressed_row = -1;
+                return 1;
+            }
+        }
+    }
+
+    return table_point_in_scrollbar(component, layer, event->x, event->y);
 }
 
 static void table_compute_column_widths(TableComponent* component, int viewport_width) {
@@ -190,7 +307,7 @@ void table_component_update_content_size(TableComponent* component) {
     if (!component || !component->layer) return;
 
     Layer* layer = component->layer;
-    int viewport_w = table_viewport_width(layer);
+    int viewport_w = table_viewport_width(component, layer);
     table_compute_column_widths(component, viewport_w);
 
     int content_w = table_total_content_width(component);
@@ -198,27 +315,16 @@ void table_component_update_content_size(TableComponent* component) {
     int body_h = row_count * component->row_height;
 
     layer->content_width = content_w > viewport_w ? content_w : viewport_w;
-    layer->content_height = body_h;
+    // 含表头高度，使通用滚动条算法与表体滚动范围一致（layer->rect.h 为整表高度）
+    layer->content_height = body_h + component->header_height;
 
-    int max_scroll_x = layer->content_width - viewport_w;
-    if (max_scroll_x < 0) max_scroll_x = 0;
-    if (layer->scroll_offset_x > max_scroll_x) layer->scroll_offset_x = max_scroll_x;
-    if (layer->scroll_offset_x < 0) layer->scroll_offset_x = 0;
-
-    int visible_body = layer->rect.h - component->header_height;
-    if (visible_body < 0) visible_body = 0;
-    int max_scroll_y = body_h - visible_body;
-    if (max_scroll_y < 0) max_scroll_y = 0;
-    if (layer->scroll_offset > max_scroll_y) layer->scroll_offset = max_scroll_y;
-    if (layer->scroll_offset < 0) layer->scroll_offset = 0;
+    table_clamp_scroll(component, layer);
 }
 
-static int table_get_vertical_scrollbar_track(Layer* layer, Rect* track_out) {
-    if (!layer || !track_out) return 0;
+static int table_get_vertical_scrollbar_track(TableComponent* component, Layer* layer, Rect* track_out) {
+    if (!layer || !track_out || !component) return 0;
     int visible_height = layer->rect.h;
-    if ((layer->scrollable == 1 || layer->scrollable == 3) &&
-        layer->scrollbar_v && layer->scrollbar_v->visible &&
-        layer->content_height > visible_height) {
+    if (table_needs_vertical_scroll(component, layer)) {
         int thickness = layer->scrollbar_v->thickness > 0 ? layer->scrollbar_v->thickness : 8;
         track_out->x = layer->rect.x + layer->rect.w - thickness;
         track_out->y = layer->rect.y;
@@ -229,9 +335,9 @@ static int table_get_vertical_scrollbar_track(Layer* layer, Rect* track_out) {
     return 0;
 }
 
-static int table_point_in_scrollbar(Layer* layer, int x, int y) {
+static int table_point_in_scrollbar(TableComponent* component, Layer* layer, int x, int y) {
     Rect track;
-    if (!table_get_vertical_scrollbar_track(layer, &track)) return 0;
+    if (!table_get_vertical_scrollbar_track(component, layer, &track)) return 0;
     Point pt = {x, y};
     return point_in_rect(pt, track);
 }
@@ -240,7 +346,7 @@ static int table_row_at_point(TableComponent* component, Layer* layer, int x, in
     if (!component || !layer) return -1;
     if (y < layer->rect.y + component->header_height) return -1;
 
-    int viewport_w = table_viewport_width(layer);
+    int viewport_w = table_viewport_width(component, layer);
     if (x < layer->rect.x || x >= layer->rect.x + viewport_w) return -1;
 
     int rel_y = y - (layer->rect.y + component->header_height) + layer->scroll_offset;
@@ -337,6 +443,8 @@ TableComponent* table_component_create(Layer* layer) {
     component->resizable_columns = 1;
     component->resizing_column = -1;
     component->resize_col_hover = -1;
+    component->layout_w = -1;
+    component->layout_h = -1;
 
     layer->component = component;
     layer->render = table_component_render;
@@ -504,7 +612,7 @@ static void table_draw_cell_text(Layer* layer, const char* text, Color color,
 static int table_point_in_header(TableComponent* component, Layer* layer, int x, int y) {
     if (!component || !layer) return 0;
     if (y < layer->rect.y || y >= layer->rect.y + component->header_height) return 0;
-    int viewport_w = table_viewport_width(layer);
+    int viewport_w = table_viewport_width(component, layer);
     return x >= layer->rect.x && x < layer->rect.x + viewport_w;
 }
 
@@ -520,7 +628,7 @@ static int table_resize_column_at(TableComponent* component, Layer* layer, int x
     if (!component->resizable_columns || component->column_count <= 0) return -1;
     if (!table_point_in_header(component, layer, x, y)) return -1;
 
-    int viewport_w = table_viewport_width(layer);
+    int viewport_w = table_viewport_width(component, layer);
     int half = TABLE_RESIZE_HANDLE / 2;
     if (TABLE_RESIZE_HANDLE % 2) half++;
 
@@ -659,13 +767,19 @@ void table_component_render(Layer* layer) {
         load_all_fonts(layer);
     }
 
-    table_component_update_content_size(component);
+    if (component->layout_w != layer->rect.w || component->layout_h != layer->rect.h) {
+        component->layout_w = layer->rect.w;
+        component->layout_h = layer->rect.h;
+        table_component_update_content_size(component);
+    }
+
+    table_clamp_scroll(component, layer);
 
     if (layer->bg_color.a > 0) {
         backend_render_fill_rect(&layer->rect, layer->bg_color);
     }
 
-    int viewport_w = table_viewport_width(layer);
+    int viewport_w = table_viewport_width(component, layer);
     if (component->column_count <= 0) {
         return;
     }
@@ -694,16 +808,7 @@ int table_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
         return 1;
     }
 
-    if (layer->scrollbar_v && layer->scrollbar_v->is_dragging) {
-        if (event->state == SDL_RELEASED && event->button == SDL_BUTTON_LEFT) {
-            component->pressed_row = -1;
-        }
-        return 1;
-    }
-    if (table_point_in_scrollbar(layer, event->x, event->y)) {
-        if (event->state == SDL_RELEASED && event->button == SDL_BUTTON_LEFT) {
-            component->pressed_row = -1;
-        }
+    if (table_handle_vertical_scrollbar_mouse(component, layer, event)) {
         return 1;
     }
 

@@ -48,6 +48,8 @@ typedef struct TableComponent {
     int resize_col_hover;
     int resize_drag_start_x;
     int resize_drag_start_w;
+    int layout_w;
+    int layout_h;
 } TableComponent;
 
 TableComponent* table_component_create(Layer* layer);
