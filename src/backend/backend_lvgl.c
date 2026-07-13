@@ -45,7 +45,28 @@ static void lvgl_yui_sdl_event_hook(const SDL_Event* event, void* user_data)
         return;
     }
 
-    if (event->type == SDL_MOUSEBUTTONDOWN || event->type == SDL_MOUSEBUTTONUP ||
+    if (event->type == SDL_KEYDOWN) {
+        KeyEvent key_event;
+        key_event.type = KEY_EVENT_DOWN;
+        key_event.data.key.key_code = event->key.keysym.sym;
+        key_event.data.key.mod = event->key.keysym.mod;
+        key_event.data.key.repeat = event->key.repeat;
+        handle_key_event(root, &key_event);
+    } else if (event->type == SDL_TEXTEDITING) {
+        KeyEvent key_event;
+        key_event.type = KEY_EVENT_TEXT_EDITING;
+        strncpy(key_event.data.text.text, event->edit.text, sizeof(key_event.data.text.text) - 1);
+        key_event.data.text.text[sizeof(key_event.data.text.text) - 1] = '\0';
+        key_event.data.text.start = event->edit.start;
+        key_event.data.text.length = event->edit.length;
+        handle_key_event(root, &key_event);
+    } else if (event->type == SDL_TEXTINPUT) {
+        KeyEvent key_event;
+        key_event.type = KEY_EVENT_TEXT_INPUT;
+        strncpy(key_event.data.text.text, event->text.text, sizeof(key_event.data.text.text) - 1);
+        key_event.data.text.text[sizeof(key_event.data.text.text) - 1] = '\0';
+        handle_key_event(root, &key_event);
+    } else if (event->type == SDL_MOUSEBUTTONDOWN || event->type == SDL_MOUSEBUTTONUP ||
         event->type == SDL_MOUSEMOTION) {
         int mouse_x;
         int mouse_y;
