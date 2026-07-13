@@ -3,10 +3,16 @@
 #include "../backend.h"
 #include "../layout.h"
 #include "../layer_update.h"
+#include "../layer.h"
+#include "../event.h"
+#include "cJSON.h"
 #include <stdlib.h>
 #include <string.h>
 
 extern Layer* g_ui_root;
+
+int sash_component_register_event(Layer* layer, const char* event_name,
+                                const char* event_func_name, EventHandler event_handler);
 
 SashComponent* sash_component_create(Layer* layer) {
     if (!layer) return NULL;
@@ -18,10 +24,12 @@ SashComponent* sash_component_create(Layer* layer) {
     comp->layer = layer;
     comp->min_size = 60;
     comp->target_id[0] = '\0';
+    comp->on_change_name[0] = '\0';
 
     layer->component = comp;
     layer->render = sash_component_render;
     layer->handle_mouse_event = sash_component_handle_mouse_event;
+    layer->register_event = sash_component_register_event;
 
     return comp;
 }
@@ -48,6 +56,17 @@ SashComponent* sash_component_create_from_json(Layer* layer, cJSON* json_obj) {
         }
     }
 
+    cJSON* events = cJSON_GetObjectItem(json_obj, "events");
+    if (events) {
+        cJSON* on_change = cJSON_GetObjectItem(events, "onChange");
+        if (on_change && cJSON_IsString(on_change) && on_change->valuestring) {
+            const char* name = on_change->valuestring;
+            if (name[0] == '@') name++;
+            strncpy(comp->on_change_name, name, sizeof(comp->on_change_name) - 1);
+            comp->on_change_name[sizeof(comp->on_change_name) - 1] = '\0';
+        }
+    }
+
     return comp;
 }
 
@@ -59,6 +78,121 @@ static void ensure_target(SashComponent* comp) {
     if (!comp->target && comp->target_id[0] && g_ui_root) {
         comp->target = find_layer_by_id(g_ui_root, comp->target_id);
     }
+}
+
+static Layer* sash_find_sibling(SashComponent* comp) {
+    if (!comp->layer || !comp->layer->parent) return NULL;
+
+    Layer* parent = comp->layer->parent;
+    for (int i = 0; i < parent->child_count - 1; i++) {
+        if (parent->children[i] == comp->layer) {
+            return parent->children[i + 1];
+        }
+    }
+    return NULL;
+}
+
+static int sash_apply_split(SashComponent* comp, int new_size) {
+    ensure_target(comp);
+    if (!comp->target || !comp->target->parent) return 0;
+
+    Layer* sibling = sash_find_sibling(comp);
+    if (!sibling) return 0;
+
+    if (new_size < comp->min_size) new_size = comp->min_size;
+
+    if (comp->horizontal) {
+        int total = comp->target->rect.w + sibling->rect.w;
+        if (new_size > total - 20) new_size = total - 20;
+        comp->target->rect.w = new_size;
+        comp->target->fixed_width = new_size;
+        sibling->rect.w = total - new_size;
+        sibling->fixed_width = total - new_size;
+    } else {
+        int total = comp->target->rect.h + sibling->rect.h;
+        if (new_size > total - 20) new_size = total - 20;
+        comp->target->rect.h = new_size;
+        comp->target->fixed_height = new_size;
+        sibling->rect.h = total - new_size;
+        sibling->fixed_height = total - new_size;
+    }
+
+    mark_layer_dirty(comp->target->parent, DIRTY_LAYOUT);
+    layout_layer(comp->target->parent);
+    return 1;
+}
+
+static void sash_update_layout_base(SashComponent* comp) {
+    if (comp->target && comp->target->layout_base_valid) {
+        if (comp->horizontal) {
+            comp->target->layout_base_rect.w = comp->target->rect.w;
+            comp->target->layout_base_fixed_w = comp->target->fixed_width;
+        } else {
+            comp->target->layout_base_rect.h = comp->target->rect.h;
+            comp->target->layout_base_fixed_h = comp->target->fixed_height;
+        }
+    }
+
+    Layer* sibling = sash_find_sibling(comp);
+    if (sibling && sibling->layout_base_valid) {
+        if (comp->horizontal) {
+            sibling->layout_base_rect.w = sibling->rect.w;
+            sibling->layout_base_fixed_w = sibling->fixed_width;
+        } else {
+            sibling->layout_base_rect.h = sibling->rect.h;
+            sibling->layout_base_fixed_h = sibling->fixed_height;
+        }
+    }
+}
+
+static void sash_dispatch_change(SashComponent* comp) {
+    if (!comp || comp->on_change_name[0] == '\0') return;
+
+    Layer* layer = comp->layer;
+    Layer* sibling = sash_find_sibling(comp);
+    if (!layer || !comp->target) return;
+
+    cJSON* payload = cJSON_CreateObject();
+    if (!payload) return;
+
+    if (comp->horizontal) {
+        cJSON_AddNumberToObject(payload, "targetWidth", comp->target->rect.w);
+        if (sibling) cJSON_AddNumberToObject(payload, "siblingWidth", sibling->rect.w);
+    } else {
+        cJSON_AddStringToObject(payload, "target", comp->target_id);
+        cJSON_AddNumberToObject(payload, "targetHeight", comp->target->rect.h);
+        if (sibling) cJSON_AddNumberToObject(payload, "siblingHeight", sibling->rect.h);
+    }
+
+    char* json = cJSON_PrintUnformatted(payload);
+    cJSON_Delete(payload);
+    if (!json) return;
+
+    layer_set_text(layer, json);
+    free(json);
+
+    if (comp->on_change == NULL) {
+        comp->on_change = find_event_by_name(comp->on_change_name);
+    }
+    if (comp->on_change) {
+        comp->on_change(layer);
+    }
+}
+
+int sash_component_register_event(Layer* layer, const char* event_name,
+                                const char* event_func_name, EventHandler event_handler) {
+    if (!layer || !layer->component || !event_handler) return -1;
+    if (strcmp(event_name, "change") != 0 && strcmp(event_name, "onChange") != 0) return -1;
+
+    SashComponent* comp = (SashComponent*)layer->component;
+    comp->on_change = event_handler;
+    if (event_func_name && event_func_name[0] != '\0') {
+        const char* name = event_func_name;
+        if (name[0] == '@') name++;
+        strncpy(comp->on_change_name, name, sizeof(comp->on_change_name) - 1);
+        comp->on_change_name[sizeof(comp->on_change_name) - 1] = '\0';
+    }
+    return 0;
 }
 
 void sash_component_render(Layer* layer) {
@@ -79,34 +213,28 @@ void sash_component_render(Layer* layer) {
     Color dot_color = comp->hover ? (Color){180, 180, 190, 255} : (Color){100, 100, 115, 255};
 
     if (comp->horizontal) {
-        // Left border
         Rect left_line = {layer->rect.x, layer->rect.y, 1, layer->rect.h};
         backend_render_fill_rect(&left_line, border_color);
 
-        // Vertical gripper dots
         for (int i = -1; i <= 1; i++) {
             Rect dot = {center_x - dot_r, center_y + i * dot_spacing - dot_r, dot_r * 2, dot_r * 2};
             backend_render_fill_rect(&dot, dot_color);
         }
 
-        // Hover accent on left
         if (comp->hover) {
             Rect accent = {layer->rect.x + 1, layer->rect.y, 1, layer->rect.h};
             Color accent_color = {137, 180, 250, 180};
             backend_render_fill_rect(&accent, accent_color);
         }
     } else {
-        // Top border
         Rect top_line = {layer->rect.x, layer->rect.y, layer->rect.w, 1};
         backend_render_fill_rect(&top_line, border_color);
 
-        // Horizontal gripper dots
         for (int i = -1; i <= 1; i++) {
             Rect dot = {center_x + i * dot_spacing - dot_r, center_y - dot_r, dot_r * 2, dot_r * 2};
             backend_render_fill_rect(&dot, dot_color);
         }
 
-        // Hover accent on top
         if (comp->hover) {
             Rect accent = {layer->rect.x, layer->rect.y + 1, layer->rect.w, 1};
             Color accent_color = {137, 180, 250, 180};
@@ -133,58 +261,9 @@ int sash_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
         }
 
         if (comp->dragging) {
-            ensure_target(comp);
-            if (!comp->target || !comp->target->parent) return 0;
-
-            Layer* parent = comp->target->parent;
-
-            // Find adjacent sibling (right for horizontal, below for vertical)
-            Layer* sibling = NULL;
-            for (int i = 0; i < parent->child_count - 1; i++) {
-                if (parent->children[i] == layer) {
-                    sibling = parent->children[i + 1];
-                    break;
-                }
-            }
-
-            if (comp->horizontal) {
-                int delta_x = event->x - comp->drag_start_y;  // reusing field
-                int new_w = comp->initial_height + delta_x;   // reusing field
-                if (new_w < comp->min_size) new_w = comp->min_size;
-
-                int total = 0;
-                if (sibling) {
-                    total = comp->target->rect.w + sibling->rect.w;
-                    if (new_w > total - 20) new_w = total - 20;
-                }
-
-                comp->target->rect.w = new_w;
-
-                if (sibling) {
-                    sibling->rect.w = total - new_w;
-                }
-            } else {
-                int delta_y = event->y - comp->drag_start_y;
-                int new_h = comp->initial_height + delta_y;
-                if (new_h < comp->min_size) new_h = comp->min_size;
-
-                int total = 0;
-                if (sibling) {
-                    total = comp->target->rect.h + sibling->rect.h;
-                    if (new_h > total - 20) new_h = total - 20;
-                }
-
-                comp->target->rect.h = new_h;
-                comp->target->fixed_height = new_h;
-
-                if (sibling) {
-                    sibling->rect.h = total - new_h;
-                    sibling->fixed_height = total - new_h;
-                }
-            }
-
-            mark_layer_dirty(parent, DIRTY_LAYOUT);
-            layout_layer(parent);
+            int delta = comp->horizontal ? (event->x - comp->drag_start_y) : (event->y - comp->drag_start_y);
+            int new_size = comp->initial_height + delta;
+            sash_apply_split(comp, new_size);
         }
         return 0;
     }
@@ -200,23 +279,9 @@ int sash_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     }
 
     if (event->state == SDL_RELEASED && event->button == SDL_BUTTON_LEFT) {
-        if (comp->target && comp->target->layout_base_valid) {
-            comp->target->layout_base_rect.h = comp->target->rect.h;
-            comp->target->layout_base_fixed_h = comp->target->fixed_height;
-        }
-        Layer* sibling = NULL;
-        if (comp->layer && comp->layer->parent) {
-            Layer* parent = comp->layer->parent;
-            for (int i = 0; i < parent->child_count - 1; i++) {
-                if (parent->children[i] == comp->layer) {
-                    sibling = parent->children[i + 1];
-                    break;
-                }
-            }
-        }
-        if (sibling && sibling->layout_base_valid) {
-            sibling->layout_base_rect.h = sibling->rect.h;
-            sibling->layout_base_fixed_h = sibling->fixed_height;
+        if (comp->dragging) {
+            sash_update_layout_base(comp);
+            sash_dispatch_change(comp);
         }
         comp->dragging = 0;
         return 0;

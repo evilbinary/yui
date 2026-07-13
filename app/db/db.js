@@ -727,10 +727,69 @@ function onDbExpand(layerId) {
     }
 }
 
+// ====================== Editor Layout ======================
+
+var EDITOR_LAYOUT_CONFIG = "app/db/db-config.json";
+var EDITOR_SASH_HEIGHT = 6;
+
+function applyEditorSplit(editorHeight) {
+    var editorContainer = yui.find("sqlEditorContainer");
+    var resultContainer = yui.find("resultContainer");
+    var editorPanel = yui.find("editorPanel");
+    if (!editorContainer || !resultContainer) return;
+
+    var panelH = editorPanel && editorPanel.size ? editorPanel.size[1] : 534;
+    var resultHeight = panelH - EDITOR_SASH_HEIGHT - editorHeight;
+    if (resultHeight < 20) return;
+
+    var width = editorContainer.size ? editorContainer.size[0] : 660;
+    editorContainer.size = [width, editorHeight];
+    resultContainer.size = [width, resultHeight];
+}
+
+function loadEditorLayout() {
+    if (typeof YUI.readFile !== "function") return;
+    var raw = YUI.readFile(EDITOR_LAYOUT_CONFIG);
+    if (!raw) return;
+    try {
+        var cfg = JSON.parse(raw);
+        if (cfg.sqlEditorContainer > 0) {
+            applyEditorSplit(cfg.sqlEditorContainer);
+        }
+    } catch (e) {}
+}
+
+function saveEditorLayout(editorHeight) {
+    if (typeof YUI.writeFile !== "function") return;
+    var cfg = { sqlEditorContainer: editorHeight };
+    try {
+        var raw = YUI.readFile(EDITOR_LAYOUT_CONFIG);
+        if (raw) {
+            var existing = JSON.parse(raw);
+            existing.sqlEditorContainer = editorHeight;
+            cfg = existing;
+        }
+    } catch (e) {}
+    YUI.writeFile(EDITOR_LAYOUT_CONFIG, JSON.stringify(cfg, null, 2));
+}
+
+function onEditorResultSashChange(layerId) {
+    var sash = yui.find(layerId);
+    if (!sash || !sash.text) return;
+    try {
+        var state = JSON.parse(sash.text);
+        var height = state.targetHeight || state.sqlEditorContainer;
+        if (height > 0) {
+            saveEditorLayout(height);
+        }
+    } catch (e) {}
+}
+
 // ====================== Init ======================
 
 function onLoad() {
   YUI.log('onLoad');
+  loadEditorLayout();
   connectDb();
   //loadDatabases();
 }

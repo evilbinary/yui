@@ -16,6 +16,8 @@ typedef struct {
     int min_size;
     int hover;
     int horizontal;      // 0=vertical (resize height), 1=horizontal (resize width)
+    char on_change_name[MAX_PATH];
+    EventHandler on_change;
 } SashComponent;
 
 SashComponent* sash_component_create(Layer* layer);

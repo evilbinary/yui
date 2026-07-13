@@ -343,6 +343,9 @@
                 "size": [660, 6],
                 "target": "sqlEditorContainer",
                 "minSize": 80,
+                "events": {
+                  "onChange": "@onEditorResultSashChange"
+                },
                 "style": {
                   "bgColor": "#313244"
                 }
