@@ -36,6 +36,7 @@
  **********************/
 static void disp_init(void);
 static void disp_flush(lv_disp_drv_t* disp_drv, const lv_area_t* area, lv_color_t* color_p);
+static uint32_t blend_pixel(uint32_t dst, uint32_t src);
 
 /**********************
  *  STATIC VARIABLES
@@ -48,7 +49,9 @@ static lv_disp_drv_t g_disp_drv;
 static lv_disp_draw_buf_t g_draw_buf;
 static lv_color_t* g_lv_buf1 = NULL;
 static lv_color_t* g_lv_buf2 = NULL;
-static uint32_t* g_framebuffer = NULL;
+static uint32_t* g_yui_framebuffer = NULL;
+static uint32_t* g_lvgl_overlay = NULL;
+static uint32_t* g_present_framebuffer = NULL;
 
 static int g_fb_w = LV_PORT_DISP_HOR_RES;
 static int g_fb_h = LV_PORT_DISP_VER_RES;
@@ -71,8 +74,11 @@ void lv_port_disp_init(void)
     g_lv_buf1 = (lv_color_t*)calloc(buf_size, sizeof(lv_color_t));
     g_lv_buf2 = (lv_color_t*)calloc(buf_size, sizeof(lv_color_t));
     size_t px_count = (size_t)g_fb_w * (size_t)g_fb_h;
-    g_framebuffer = (uint32_t*)calloc(px_count, sizeof(uint32_t));
-    if (!g_lv_buf1 || !g_lv_buf2 || !g_framebuffer) {
+    g_yui_framebuffer = (uint32_t*)calloc(px_count, sizeof(uint32_t));
+    g_lvgl_overlay = (uint32_t*)calloc(px_count, sizeof(uint32_t));
+    g_present_framebuffer = (uint32_t*)calloc(px_count, sizeof(uint32_t));
+    if (!g_lv_buf1 || !g_lv_buf2 || !g_yui_framebuffer || !g_lvgl_overlay ||
+        !g_present_framebuffer) {
         fprintf(stderr, "lv_port_disp_init: buffer allocation failed\n");
         return;
     }
@@ -95,10 +101,14 @@ void lv_port_disp_deinit(void)
         return;
     }
 
-    free(g_framebuffer);
+    free(g_yui_framebuffer);
+    free(g_lvgl_overlay);
+    free(g_present_framebuffer);
     free(g_lv_buf1);
     free(g_lv_buf2);
-    g_framebuffer = NULL;
+    g_yui_framebuffer = NULL;
+    g_lvgl_overlay = NULL;
+    g_present_framebuffer = NULL;
     g_lv_buf1 = NULL;
     g_lv_buf2 = NULL;
 
@@ -121,11 +131,18 @@ void lv_port_disp_deinit(void)
 
 void lv_port_disp_flush(void)
 {
-    if (!g_disp_ready || !g_texture || !g_renderer || !g_framebuffer) {
+    if (!g_disp_ready || !g_texture || !g_renderer || !g_yui_framebuffer ||
+        !g_lvgl_overlay || !g_present_framebuffer) {
         return;
     }
 
-    SDL_UpdateTexture(g_texture, NULL, g_framebuffer, g_fb_stride * (int)sizeof(uint32_t));
+    size_t px_count = (size_t)g_fb_w * (size_t)g_fb_h;
+    for (size_t i = 0; i < px_count; i++) {
+        g_present_framebuffer[i] = blend_pixel(g_yui_framebuffer[i], g_lvgl_overlay[i]);
+    }
+
+    SDL_UpdateTexture(g_texture, NULL, g_present_framebuffer,
+                      g_fb_stride * (int)sizeof(uint32_t));
     SDL_RenderClear(g_renderer);
     SDL_RenderCopy(g_renderer, g_texture, NULL, NULL);
     SDL_RenderPresent(g_renderer);
@@ -138,7 +155,7 @@ SDL_Renderer* lv_port_disp_get_renderer(void)
 
 void* lv_port_disp_get_draw_buf(void)
 {
-    return g_framebuffer;
+    return g_yui_framebuffer;
 }
 
 int lv_port_disp_get_width(void)
@@ -226,26 +243,23 @@ static uint32_t blend_pixel(uint32_t dst, uint32_t src)
 
 static void disp_flush(lv_disp_drv_t* disp_drv, const lv_area_t* area, lv_color_t* color_p)
 {
-    if (!g_framebuffer) {
+    int32_t x;
+    int32_t y;
+    int32_t w;
+
+    if (!g_lvgl_overlay) {
         lv_disp_flush_ready(disp_drv);
         return;
     }
 
-    int32_t x;
-    int32_t y;
+    w = area->x2 - area->x1 + 1;
     for (y = area->y1; y <= area->y2; y++) {
-        uint32_t* dst = g_framebuffer + (y * g_fb_stride) + area->x1;
+        uint32_t* dst = g_lvgl_overlay + (y * g_fb_stride) + area->x1;
         lv_color_t* src = color_p;
-        for (x = area->x1; x <= area->x2; x++) {
-            uint32_t pixel = lv_color_to32(*src++);
-#if LV_COLOR_SCREEN_TRANSP
-            *dst = blend_pixel(*dst, pixel);
-            dst++;
-#else
-            *dst++ = pixel;
-#endif
+        for (x = 0; x < w; x++) {
+            *dst++ = lv_color_to32(*src++);
         }
-        color_p += (area->x2 - area->x1 + 1);
+        color_p += w;
     }
 
     lv_disp_flush_ready(disp_drv);

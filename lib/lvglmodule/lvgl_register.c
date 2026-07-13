@@ -14,6 +14,7 @@ void lvgl_component_sync_rect(LvglComponent* component)
 
     lv_obj_set_pos(component->obj, component->layer->rect.x, component->layer->rect.y);
     lv_obj_set_size(component->obj, component->layer->rect.w, component->layer->rect.h);
+    lv_obj_invalidate(component->obj);
 }
 
 void lvgl_component_destroy(LvglComponent* component)

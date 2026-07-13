@@ -9,6 +9,8 @@
 extern "C" {
 #endif
 
+#include "../lvgl.h"
+
 #ifdef D_SDL
 #include <SDL2/SDL.h>
 #else
