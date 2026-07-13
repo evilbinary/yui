@@ -316,7 +316,7 @@ function onConnectionCancel() {
 
 function onOpenSettings() {
     var auto = yui.find("prefAutoConnect");
-    if (auto) auto.checked = appPreferences.autoConnect !== false;
+    if (auto) auto.data = appPreferences.autoConnect !== false;
     setInputText("prefPageSizeInput", appPreferences.pageSize);
     setInputText("prefFontSizeInput", appPreferences.fontSize);
     showOverlay("preferencesDialogOverlay");
@@ -324,7 +324,7 @@ function onOpenSettings() {
 
 function onPreferencesOk() {
     var auto = yui.find("prefAutoConnect");
-    appPreferences.autoConnect = auto ? !!auto.checked : true;
+    appPreferences.autoConnect = auto ? !!auto.data : true;
     appPreferences.pageSize = parseInt(getInputText("prefPageSizeInput"), 10) || 500;
     appPreferences.fontSize = parseInt(getInputText("prefFontSizeInput"), 10) || 13;
     if (appPreferences.pageSize < 10) appPreferences.pageSize = 10;

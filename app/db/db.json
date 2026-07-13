@@ -742,7 +742,7 @@
               "layout": { "type": "horizontal", "align": "center", "padding": [0, 16, 0, 16] },
               "style": { "bgColor": "#181825", "borderBottomWidth": 1, "borderBottomColor": "#313244" },
               "children": [
-                { "id": "connectionDialogTitle", "type": "Label", "text": "新建连接", "style": { "color": "#CDD6F4", "fontSize": 14, "fontWeight": "bold" } }
+                { "id": "connectionDialogTitle", "type": "Label", "size": [200, 24], "text": "新建连接", "style": { "color": "#CDD6F4", "fontSize": 14, "fontWeight": "bold" } }
               ]
             },
             {
@@ -800,10 +800,10 @@
               "id": "preferencesDialogTitleBar",
               "type": "View",
               "size": [460, 40],
-              "layout": { "type": "horizontal", "align": "center", "padding": [0, 16, 0, 16] },
+              "layout": { "type": "horizontal", "align": "center", "justify": "center", "padding": [0, 16, 0, 16] },
               "style": { "bgColor": "#181825", "borderBottomWidth": 1, "borderBottomColor": "#313244" },
               "children": [
-                { "id": "preferencesDialogTitle", "type": "Label", "text": "偏好设置", "style": { "color": "#CDD6F4", "fontSize": 14, "fontWeight": "bold" } }
+                { "id": "preferencesDialogTitle", "type": "Label", "size": [120, 24], "text": "偏好设置", "style": { "color": "#CDD6F4", "fontSize": 14, "fontWeight": "bold" } }
               ]
             },
             {
@@ -811,8 +811,35 @@
               "type": "View",
               "size": [460, 220],
               "layout": { "type": "vertical", "spacing": 12, "padding": [16, 20, 16, 20] },
+              "style": { "bgColor": "#1E1E2E" },
               "children": [
-                { "id": "prefAutoConnect", "type": "Checkbox", "text": "启动时自动连接数据库", "checked": true, "style": { "color": "#CDD6F4", "fontSize": 12 } },
+                {
+                  "id": "prefAutoConnectRow",
+                  "type": "View",
+                  "size": [420, 28],
+                  "layout": { "type": "horizontal", "align": "center", "spacing": 8 },
+                  "style": { "bgColor": "#1E1E2E" },
+                  "children": [
+                    {
+                      "id": "prefAutoConnect",
+                      "type": "Checkbox",
+                      "size": [20, 20],
+                      "data": true,
+                      "style": {
+                        "bgColor": "#11111B",
+                        "borderColor": "#585B70",
+                        "checkColor": "#A6E3A1"
+                      }
+                    },
+                    {
+                      "id": "prefAutoConnectLabel",
+                      "type": "Label",
+                      "size": [380, 20],
+                      "text": "启动时自动连接数据库",
+                      "style": { "color": "#CDD6F4", "fontSize": 12 }
+                    }
+                  ]
+                },
                 { "id": "prefPageSizeLabel", "type": "Label", "text": "查询结果每页行数", "style": { "color": "#A6ADC8", "fontSize": 11 } },
                 { "id": "prefPageSizeInput", "type": "Input", "size": [420, 28], "text": "500", "style": { "color": "#CDD6F4", "bgColor": "#11111B", "fontSize": 12, "padding": [6, 10, 6, 10] } },
                 { "id": "prefFontSizeLabel", "type": "Label", "text": "SQL 编辑器字号", "style": { "color": "#A6ADC8", "fontSize": 11 } },
@@ -858,7 +885,7 @@
               "layout": { "type": "horizontal", "align": "center", "padding": [0, 16, 0, 16] },
               "style": { "bgColor": "#181825", "borderBottomWidth": 1, "borderBottomColor": "#313244" },
               "children": [
-                { "id": "themeDialogTitle", "type": "Label", "text": "主题设置", "style": { "color": "#CDD6F4", "fontSize": 14, "fontWeight": "bold" } }
+                { "id": "themeDialogTitle", "type": "Label", "size": [200, 24], "text": "主题设置", "style": { "color": "#CDD6F4", "fontSize": 14, "fontWeight": "bold" } }
               ]
             },
             {

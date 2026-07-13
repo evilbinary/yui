@@ -1,14 +1,52 @@
 #include "../render.h"
 #include "../backend.h"
+#include "../util.h"
+#include "cJSON.h"
 #include <stdlib.h>
 #include <string.h>
 #include "checkbox_component.h"
+
+static int checkbox_on_data_update(Layer* layer, cJSON* data) {
+    if (!layer || !layer->component || !data) {
+        return 0;
+    }
+    if (cJSON_IsBool(data)) {
+        checkbox_component_set_checked((CheckboxComponent*)layer->component,
+                                       cJSON_IsTrue(data));
+        return 1;
+    }
+    return 0;
+}
+
+static void checkbox_apply_style_from_json(CheckboxComponent* component, cJSON* json_obj) {
+    if (!component || !json_obj) {
+        return;
+    }
+
+    cJSON* style = cJSON_GetObjectItem(json_obj, "style");
+    if (!style || !cJSON_IsObject(style)) {
+        return;
+    }
+
+    cJSON* border_color = cJSON_GetObjectItem(style, "borderColor");
+    if (border_color && cJSON_IsString(border_color)) {
+        parse_color(border_color->valuestring, &component->border_color);
+    }
+
+    cJSON* check_color = cJSON_GetObjectItem(style, "checkColor");
+    if (check_color && cJSON_IsString(check_color)) {
+        parse_color(check_color->valuestring, &component->check_color);
+    }
+}
 
 // 创建复选框组件
 CheckboxComponent* checkbox_component_create(Layer* layer, int default_checked) {
     if (!layer) {
         return NULL;
     }
+
+    Color saved_bg = layer->bg_color;
+    Color saved_fg = layer->color;
     
     CheckboxComponent* component = (CheckboxComponent*)malloc(sizeof(CheckboxComponent));
     if (!component) {
@@ -21,11 +59,11 @@ CheckboxComponent* checkbox_component_create(Layer* layer, int default_checked) 
     component->user_data = NULL;
     // 不再初始化component->label，因为我们将使用layer->label
     
-    // 设置默认颜色到layer
-    layer->bg_color = (Color){255, 255, 255, 255};         // 白色背景
-    component->border_color = (Color){100, 149, 237, 255};     // 蓝色边框
-    component->check_color = (Color){25, 25, 112, 255};        // 深蓝色勾选
-    layer->color = (Color){0, 0, 0, 255};            // 黑色标签
+    // 保留 JSON/style 已设置的颜色，否则使用默认值
+    layer->bg_color = saved_bg.a > 0 ? saved_bg : (Color){255, 255, 255, 255};
+    component->border_color = (Color){100, 149, 237, 255};
+    component->check_color = (Color){25, 25, 112, 255};
+    layer->color = saved_fg.a > 0 ? saved_fg : (Color){0, 0, 0, 255};
         
     // 设置组件指针和自定义渲染函数
     layer->component = component;
@@ -36,6 +74,8 @@ CheckboxComponent* checkbox_component_create(Layer* layer, int default_checked) 
     
     // 设置组件为可聚焦（默认情况下未禁用时可聚焦）
     layer->focusable = !HAS_STATE(layer, LAYER_STATE_DISABLED);
+    layer->on_data_update = checkbox_on_data_update;
+    layer->get_property = checkbox_component_get_property;
 
     return component;
 }
@@ -53,7 +93,11 @@ CheckboxComponent* checkbox_component_create_from_json(Layer* layer, cJSON* json
       layer->fixed_width = layer->rect.w;
       layer->fixed_height = layer->rect.h;
     }
-    return checkbox_component_create(layer, default_checked);
+    CheckboxComponent* component = checkbox_component_create(layer, default_checked);
+    if (component) {
+        checkbox_apply_style_from_json(component, json_obj);
+    }
+    return component;
 }
 
 // 销毁复选框组件
@@ -83,6 +127,20 @@ int checkbox_component_is_checked(CheckboxComponent* component) {
         return component->checked;
     }
     return 0;
+}
+
+cJSON* checkbox_component_get_property(Layer* layer, const char* property_name) {
+    if (!layer || !property_name || !layer->component) {
+        return NULL;
+    }
+
+    CheckboxComponent* component = (CheckboxComponent*)layer->component;
+
+    if (strcmp(property_name, "data") == 0) {
+        return cJSON_CreateBool(component->checked);
+    }
+
+    return NULL;
 }
 
 // 设置复选框颜色

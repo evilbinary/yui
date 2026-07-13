@@ -934,29 +934,45 @@ static JSValue js_layer_wrapper_set_size(JSContext* ctx, JSValueConst this_val, 
     return JS_UNDEFINED;
 }
 
-// 递归将 TreeNode 转换为 JS 对象
-static JSValue tree_node_to_js_object(JSContext* ctx, TreeNode* node)
+static JSValue js_cjson_to_jsvalue(JSContext* ctx, const cJSON* item)
 {
-    JSValue obj = JS_NewObject(ctx);
-    
-    if (node->text) {
-        JS_SetPropertyStr(ctx, obj, "text", JS_NewString(ctx, node->text));
+    if (!item) {
+        return JS_UNDEFINED;
     }
-    
-    if (node->expanded) {
-        JS_SetPropertyStr(ctx, obj, "expanded", JS_NewBool(ctx, 1));
+    if (cJSON_IsBool(item)) {
+        return JS_NewBool(ctx, cJSON_IsTrue(item));
     }
-    
-    if (node->child_count > 0) {
-        JSValue children = JS_NewArray(ctx);
-        for (int i = 0; i < node->child_count; i++) {
-            JSValue child_obj = tree_node_to_js_object(ctx, node->children[i]);
-            JS_SetPropertyUint32(ctx, children, i, child_obj);
+    if (cJSON_IsNull(item)) {
+        return JS_NULL;
+    }
+    if (cJSON_IsNumber(item)) {
+        return JS_NewFloat64(ctx, item->valuedouble);
+    }
+    if (cJSON_IsString(item)) {
+        return JS_NewString(ctx, item->valuestring);
+    }
+    if (cJSON_IsArray(item)) {
+        JSValue arr = JS_NewArray(ctx);
+        const cJSON* child = item->child;
+        uint32_t index = 0;
+        while (child) {
+            JS_SetPropertyUint32(ctx, arr, index++, js_cjson_to_jsvalue(ctx, child));
+            child = child->next;
         }
-        JS_SetPropertyStr(ctx, obj, "children", children);
+        return arr;
     }
-    
-    return obj;
+    if (cJSON_IsObject(item)) {
+        JSValue obj = JS_NewObject(ctx);
+        const cJSON* child = item->child;
+        while (child) {
+            if (child->string) {
+                JS_SetPropertyStr(ctx, obj, child->string, js_cjson_to_jsvalue(ctx, child));
+            }
+            child = child->next;
+        }
+        return obj;
+    }
+    return JS_UNDEFINED;
 }
 
 // Layer 包装对象的 data 属性 getter
@@ -964,19 +980,14 @@ static JSValue js_layer_wrapper_get_data(JSContext* ctx, JSValueConst this_val)
 {
     Layer* layer = js_get_layer_from_wrapper(ctx, this_val);
     if (!layer) return JS_UNDEFINED;
-    
-    if (layer->type != TREEVIEW || !layer->component) {
+
+    cJSON* value = layer_get_property_as_json(layer, "data");
+    if (!value) {
         return JS_UNDEFINED;
     }
-    
-    TreeViewComponent* component = (TreeViewComponent*)layer->component;
-    JSValue result = JS_NewArray(ctx);
-    
-    for (int i = 0; i < component->root_count; i++) {
-        JSValue node_obj = tree_node_to_js_object(ctx, component->root_nodes[i]);
-        JS_SetPropertyUint32(ctx, result, i, node_obj);
-    }
-    
+
+    JSValue result = js_cjson_to_jsvalue(ctx, value);
+    cJSON_Delete(value);
     return result;
 }
 

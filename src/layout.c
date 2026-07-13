@@ -416,9 +416,13 @@ void layout_layer(Layer* layer){
                 child->rect.x = layer->rect.x + padding_left;
                 child->rect.y = current_y;
 
-                // 垂直布局：子项默认横向撑满可用宽度
+                // 垂直布局：有固定宽度的子项保持固有宽度，其余撑满
                 if (content_width > 0) {
-                    child->rect.w = content_width;
+                    if (child->fixed_width > 0) {
+                        child->rect.w = child->fixed_width;
+                    } else {
+                        child->rect.w = content_width;
+                    }
                 } else if (child->rect.w <= 0) {
                     child->rect.w = layer->rect.w;
                 }

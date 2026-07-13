@@ -615,6 +615,9 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
     }
 
     cJSON* layout_justify = cJSON_GetObjectItem(layout, "justifyContent");
+    if (!layout_justify) {
+      layout_justify = cJSON_GetObjectItem(layout, "justify");
+    }
     if (layout_justify) {
       // 主轴对齐方式
       const char* justify_str = layout_justify->valuestring;

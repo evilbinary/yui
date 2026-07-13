@@ -355,6 +355,7 @@ TreeViewComponent* treeview_component_create_from_json(Layer* layer, cJSON* json
     
     // 注册数据更新回调
     layer->on_data_update = treeview_data_update;
+    layer->get_property = treeview_component_get_property;
     
     // 解析项目高度
     cJSON* itemHeight = cJSON_GetObjectItem(json_obj, "itemHeight");
@@ -897,16 +898,25 @@ int treeview_is_expand_icon_clicked(TreeViewComponent* component, TreeNode* node
     return 0;
 }
 
-// 序列化TreeNode为JSON
-static char* treeview_node_to_json(TreeNode* node) {
-    if (!node) return strdup("{}");
+// 序列化 TreeNode 为 cJSON
+static cJSON* treeview_node_to_cjson(TreeNode* node) {
+    if (!node) {
+        return cJSON_CreateObject();
+    }
+
     cJSON* obj = cJSON_CreateObject();
-    if (node->text) cJSON_AddStringToObject(obj, "text", node->text);
-    if (node->icon) cJSON_AddStringToObject(obj, "icon", node->icon);
-    if (node->icon_text) cJSON_AddStringToObject(obj, "icon_text", node->icon_text);
+    if (node->text) {
+        cJSON_AddStringToObject(obj, "text", node->text);
+    }
+    if (node->icon) {
+        cJSON_AddStringToObject(obj, "icon", node->icon);
+    }
+    if (node->icon_text) {
+        cJSON_AddStringToObject(obj, "icon_text", node->icon_text);
+    }
     cJSON_AddBoolToObject(obj, "expanded", node->expanded);
     cJSON_AddBoolToObject(obj, "expandable", node->expandable);
-    // 合并所有 JS 侧传入的额外字段（如 _db、id 等）
+
     if (node->extra) {
         cJSON* extra = (cJSON*)node->extra;
         cJSON* child = extra->child;
@@ -917,6 +927,43 @@ static char* treeview_node_to_json(TreeNode* node) {
             child = child->next;
         }
     }
+
+    if (node->child_count > 0) {
+        cJSON* children = cJSON_CreateArray();
+        for (int i = 0; i < node->child_count; i++) {
+            cJSON_AddItemToArray(children, treeview_node_to_cjson(node->children[i]));
+        }
+        cJSON_AddItemToObject(obj, "children", children);
+    }
+
+    return obj;
+}
+
+cJSON* treeview_component_get_property(Layer* layer, const char* property_name) {
+    if (!layer || !property_name || !layer->component) {
+        return NULL;
+    }
+
+    if (strcmp(property_name, "data") != 0) {
+        return NULL;
+    }
+
+    TreeViewComponent* component = (TreeViewComponent*)layer->component;
+    cJSON* result = cJSON_CreateArray();
+    if (!result) {
+        return NULL;
+    }
+
+    for (int i = 0; i < component->root_count; i++) {
+        cJSON_AddItemToArray(result, treeview_node_to_cjson(component->root_nodes[i]));
+    }
+
+    return result;
+}
+
+// 序列化TreeNode为JSON
+static char* treeview_node_to_json(TreeNode* node) {
+    cJSON* obj = treeview_node_to_cjson(node);
     char* json_str = cJSON_PrintUnformatted(obj);
     cJSON_Delete(obj);
     return json_str;

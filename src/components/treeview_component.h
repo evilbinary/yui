@@ -164,6 +164,8 @@ void treeview_update_scrollbar(TreeViewComponent* component);
 // 滚动到指定节点
 void treeview_scroll_to_node(TreeViewComponent* component, TreeNode* target_node);
 
+cJSON* treeview_component_get_property(Layer* layer, const char* property_name);
+
 #ifdef __cplusplus
 }
 #endif

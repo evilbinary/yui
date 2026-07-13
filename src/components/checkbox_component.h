@@ -29,5 +29,6 @@ void checkbox_component_set_disabled(CheckboxComponent* component, int disabled)
 int checkbox_component_is_disabled(CheckboxComponent* component);
 int checkbox_component_handle_mouse_event(Layer* layer, MouseEvent* event);
 void checkbox_component_render(Layer* layer);
+cJSON* checkbox_component_get_property(Layer* layer, const char* property_name);
 
 #endif  // YUI_CHECKBOX_COMPONENT_H
