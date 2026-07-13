@@ -18,6 +18,8 @@ extern float scale;
 static void table_intersect_rect(Rect* out, const Rect* a, const Rect* b);
 static void table_draw_cell_text(Layer* layer, const char* text, Color color,
                                 int x, int y, int w, int h, TableColumnAlign align);
+static void table_get_cell_rect(TableComponent* component, Layer* layer,
+                                int row, int col, Rect* out);
 
 static int table_edit_has_selection(TableComponent* component) {
     return component && component->edit_sel_start >= 0 &&
@@ -81,13 +83,26 @@ static int table_edit_text_width(Layer* layer, const char* text, int char_index)
     return (int)(tw / scale);
 }
 
-static void table_edit_move_cursor(TableComponent* component, int delta, int keep_selection) {
+static void table_edit_move_cursor(TableComponent* component, int direction, int keep_selection) {
     if (!component || component->editing_row < 0) return;
 
-    int len = (int)strlen(component->edit_buffer);
-    int new_cursor = component->edit_cursor + delta;
-    if (new_cursor < 0) new_cursor = 0;
-    if (new_cursor > len) new_cursor = len;
+    const char* text = component->edit_buffer;
+    int len = (int)strlen(text);
+    int new_cursor = component->edit_cursor;
+
+    if (direction < 0) {
+        if (component->edit_cursor > 0) {
+            new_cursor = component->edit_cursor - get_prev_utf8_char_len(text, component->edit_cursor);
+        } else {
+            new_cursor = 0;
+        }
+    } else if (direction > 0) {
+        if (component->edit_cursor < len) {
+            new_cursor = component->edit_cursor + get_current_utf8_char_len(text, component->edit_cursor);
+        } else {
+            new_cursor = len;
+        }
+    }
 
     if (keep_selection) {
         if (component->edit_sel_start < 0) {
@@ -97,13 +112,83 @@ static void table_edit_move_cursor(TableComponent* component, int delta, int kee
         component->edit_sel_end = component->edit_cursor;
     } else {
         if (table_edit_has_selection(component)) {
-            component->edit_cursor = delta < 0 ? table_edit_sel_lo(component) : table_edit_sel_hi(component);
+            component->edit_cursor = direction < 0 ? table_edit_sel_lo(component) : table_edit_sel_hi(component);
         } else {
             component->edit_cursor = new_cursor;
         }
         table_edit_clear_selection(component);
     }
     mark_layer_dirty(component->layer, DIRTY_TEXT);
+}
+
+static int table_edit_pos_from_mouse_x(TableComponent* component, Layer* layer, Rect cell, int mouse_x) {
+    if (!component || !layer) return 0;
+
+    const char* text = component->edit_buffer;
+    int len = (int)strlen(text);
+    if (len <= 0) return 0;
+
+    int draw_x = cell.x + TABLE_CELL_PAD_X;
+    int local_x = mouse_x - draw_x;
+    if (local_x <= 0) return 0;
+
+    int pos = 0;
+    while (pos < len) {
+        int next = pos + get_current_utf8_char_len(text, pos);
+        int w_pos = table_edit_text_width(layer, text, pos);
+        int w_next = table_edit_text_width(layer, text, next);
+        if (w_next >= local_x) {
+            return (local_x - w_pos) < (w_next - local_x) ? pos : next;
+        }
+        pos = next;
+    }
+    return len;
+}
+
+static int table_handle_edit_mouse(TableComponent* component, Layer* layer, MouseEvent* event) {
+    if (!component || component->editing_row < 0 || component->editing_col < 0) return 0;
+
+    Rect cell;
+    table_get_cell_rect(component, layer, component->editing_row, component->editing_col, &cell);
+    Point pt = {event->x, event->y};
+    int in_edit_cell = point_in_rect(pt, cell);
+
+    if (event->state == SDL_MOUSEMOTION) {
+        if (component->edit_mouse_selecting) {
+            int pos = in_edit_cell ? table_edit_pos_from_mouse_x(component, layer, cell, event->x) :
+                     (event->x < cell.x ? 0 : (int)strlen(component->edit_buffer));
+            component->edit_cursor = pos;
+            component->edit_sel_end = pos;
+            mark_layer_dirty(layer, DIRTY_TEXT);
+            return 1;
+        }
+        return 0;
+    }
+
+    if (event->button != SDL_BUTTON_LEFT) return 0;
+
+    if (event->state == SDL_PRESSED) {
+        if (!in_edit_cell) return 0;
+        int pos = table_edit_pos_from_mouse_x(component, layer, cell, event->x);
+        component->edit_cursor = pos;
+        component->edit_sel_start = pos;
+        component->edit_sel_end = pos;
+        component->edit_mouse_selecting = 1;
+        mark_layer_dirty(layer, DIRTY_TEXT);
+        return 1;
+    }
+
+    if (event->state == SDL_RELEASED) {
+        if (!component->edit_mouse_selecting) return 0;
+        component->edit_mouse_selecting = 0;
+        if (component->edit_sel_start == component->edit_sel_end) {
+            table_edit_clear_selection(component);
+        }
+        mark_layer_dirty(layer, DIRTY_TEXT);
+        return 1;
+    }
+
+    return 0;
 }
 
 static int table_row_count(TableComponent* component) {
@@ -496,7 +581,9 @@ static void table_cancel_edit(TableComponent* component) {
     component->edit_cursor = 0;
     component->edit_sel_start = -1;
     component->edit_sel_end = -1;
+    component->edit_mouse_selecting = 0;
     component->edit_orig_number = 0;
+    backend_stop_text_input();
 }
 
 static void table_set_cell_json_value(cJSON* row, const char* key, const char* text, int prefer_number) {
@@ -581,6 +668,14 @@ static void table_begin_edit(TableComponent* component, int row, int col) {
     table_edit_select_all_text(component);
     component->selected_row = row;
     component->selected_col = col;
+    component->edit_mouse_selecting = 0;
+
+    Rect cell;
+    table_get_cell_rect(component, layer, row, col, &cell);
+    backend_start_text_input();
+    Rect ime_rect = {cell.x, cell.y + cell.h, cell.w, 0};
+    backend_set_text_input_rect(&ime_rect);
+
     mark_layer_dirty(layer, DIRTY_TEXT);
 }
 
@@ -588,8 +683,8 @@ static void table_copy_edit_selection(TableComponent* component) {
     if (!component || component->editing_row < 0) return;
 
     if (table_edit_has_selection(component)) {
-        int lo = table_edit_sel_lo(component);
-        int hi = table_edit_sel_hi(component);
+        int lo = utf8_safe_prefix_bytes(component->edit_buffer, table_edit_sel_lo(component));
+        int hi = utf8_safe_prefix_bytes(component->edit_buffer, table_edit_sel_hi(component));
         int len = hi - lo;
         if (len <= 0) return;
         char* text = (char*)malloc((size_t)len + 1);
@@ -701,7 +796,9 @@ static void table_edit_backspace(TableComponent* component) {
     if (component->edit_cursor <= 0) return;
 
     int len = (int)strlen(component->edit_buffer);
-    int pos = component->edit_cursor - 1;
+    int char_len = get_prev_utf8_char_len(component->edit_buffer, component->edit_cursor);
+    if (char_len <= 0) char_len = 1;
+    int pos = component->edit_cursor - char_len;
     memmove(component->edit_buffer + pos,
             component->edit_buffer + component->edit_cursor,
             (size_t)(len - component->edit_cursor + 1));
@@ -721,9 +818,11 @@ static void table_edit_delete(TableComponent* component) {
     int len = (int)strlen(component->edit_buffer);
     if (component->edit_cursor >= len) return;
 
+    int char_len = get_current_utf8_char_len(component->edit_buffer, component->edit_cursor);
+    if (char_len <= 0) char_len = 1;
     memmove(component->edit_buffer + component->edit_cursor,
-            component->edit_buffer + component->edit_cursor + 1,
-            (size_t)(len - component->edit_cursor));
+            component->edit_buffer + component->edit_cursor + char_len,
+            (size_t)(len - component->edit_cursor - char_len + 1));
     mark_layer_dirty(component->layer, DIRTY_TEXT);
 }
 
@@ -800,8 +899,8 @@ static void table_render_edit_cell(TableComponent* component, Layer* layer, Rect
 
     int buflen = (int)strlen(component->edit_buffer);
     int has_sel = table_edit_has_selection(component);
-    int lo = table_edit_sel_lo(component);
-    int hi = table_edit_sel_hi(component);
+    int lo = utf8_safe_prefix_bytes(component->edit_buffer, table_edit_sel_lo(component));
+    int hi = utf8_safe_prefix_bytes(component->edit_buffer, table_edit_sel_hi(component));
 
     if (has_sel && buflen > 0 && draw_h > 0) {
         int x_lo = draw_x + table_edit_text_width(layer, component->edit_buffer, lo);
@@ -948,6 +1047,7 @@ TableComponent* table_component_create(Layer* layer) {
     component->edit_cursor = 0;
     component->edit_sel_start = -1;
     component->edit_sel_end = -1;
+    component->edit_mouse_selecting = 0;
     component->edit_orig_number = 0;
     component->editable = 1;
     component->last_click_time = 0;
@@ -1346,6 +1446,19 @@ int table_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
         return 1;
     }
 
+    if (component->editing_row >= 0) {
+        if (table_handle_edit_mouse(component, layer, event)) {
+            return 1;
+        }
+        if (event->state == SDL_PRESSED && event->button == SDL_BUTTON_LEFT) {
+            int row = table_row_at_point(component, layer, event->x, event->y);
+            int col = table_column_at_point(component, layer, event->x, event->y);
+            if (row != component->editing_row || col != component->editing_col) {
+                table_commit_edit(component);
+            }
+        }
+    }
+
     int in_header = table_point_in_header(component, layer, event->x, event->y);
     int resize_col = in_header ? table_resize_column_at(component, layer, event->x, event->y) : -1;
 
@@ -1357,6 +1470,9 @@ int table_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
         }
         if (in_header) {
             component->hovered_row = -1;
+            return 1;
+        }
+        if (component->editing_row >= 0) {
             return 1;
         }
         int row = table_row_at_point(component, layer, event->x, event->y);
@@ -1383,15 +1499,9 @@ int table_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     }
 
     if (event->state == SDL_PRESSED) {
-        if (in_body && component->editing_row >= 0) {
-            int col = table_column_at_point(component, layer, event->x, event->y);
-            if (row != component->editing_row || col != component->editing_col) {
-                table_commit_edit(component);
-            }
-        }
         component->pressed_row = in_body ? row : -1;
         component->hovered_row = in_body ? row : -1;
-        if (in_body) {
+        if (in_body && component->editing_row < 0) {
             int col = table_column_at_point(component, layer, event->x, event->y);
             component->selected_row = row;
             component->selected_col = col;
@@ -1401,6 +1511,10 @@ int table_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     }
 
     if (event->state == SDL_RELEASED) {
+        if (component->editing_row >= 0) {
+            component->pressed_row = -1;
+            return 1;
+        }
         int clicked = in_body && component->pressed_row == row && row >= 0;
         component->pressed_row = -1;
         if (clicked) {

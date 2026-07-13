@@ -59,6 +59,7 @@ typedef struct TableComponent {
     int edit_cursor;
     int edit_sel_start;
     int edit_sel_end;
+    int edit_mouse_selecting;
     int edit_orig_number;
     int editable;
     Uint32 last_click_time;
