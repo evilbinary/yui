@@ -685,6 +685,8 @@ static JSValue js_layer_wrapper_get_style(JSContext* ctx, JSValueConst this_val)
 static JSValue js_layer_wrapper_set_style(JSContext* ctx, JSValueConst this_val, JSValueConst val);
 static JSValue js_layer_wrapper_get_visible(JSContext* ctx, JSValueConst this_val);
 static JSValue js_layer_wrapper_set_visible(JSContext* ctx, JSValueConst this_val, JSValueConst val);
+static JSValue js_layer_wrapper_get_variant(JSContext* ctx, JSValueConst this_val);
+static JSValue js_layer_wrapper_set_variant(JSContext* ctx, JSValueConst this_val, JSValueConst val);
 static JSValue js_layer_wrapper_get_size(JSContext* ctx, JSValueConst this_val);
 static JSValue js_layer_wrapper_set_size(JSContext* ctx, JSValueConst this_val, JSValueConst val);
 
@@ -824,6 +826,29 @@ static JSValue js_layer_wrapper_set_visible(JSContext* ctx, JSValueConst this_va
         layout_layer(layer->parent);
     }
 
+    return JS_UNDEFINED;
+}
+
+static JSValue js_layer_wrapper_get_variant(JSContext* ctx, JSValueConst this_val)
+{
+    Layer* layer = js_get_layer_from_wrapper(ctx, this_val);
+    if (!layer) return JS_NewString(ctx, "");
+    return JS_NewString(ctx, layer->variant ? layer->variant : "");
+}
+
+static JSValue js_layer_wrapper_set_variant(JSContext* ctx, JSValueConst this_val, JSValueConst val)
+{
+    Layer* layer = js_get_layer_from_wrapper(ctx, this_val);
+    if (!layer) return JS_UNDEFINED;
+
+    const char* variant = JS_ToCString(ctx, val);
+    if (!variant) return JS_UNDEFINED;
+
+    extern int layer_set_property_from_json(Layer* layer, const char* key, cJSON* value, int is_creating);
+    cJSON* json_value = cJSON_CreateString(variant);
+    layer_set_property_from_json(layer, "variant", json_value, 0);
+    cJSON_Delete(json_value);
+    JS_FreeCString(ctx, variant);
     return JS_UNDEFINED;
 }
 
@@ -1067,6 +1092,12 @@ static JSValue js_create_layer_wrapper(JSContext* ctx, Layer* layer)
     JSAtom visible_atom = JS_NewAtom(ctx, "visible");
     JS_DefinePropertyGetSet(ctx, wrapper, visible_atom, visible_getter, visible_setter, JS_PROP_CONFIGURABLE | JS_PROP_ENUMERABLE);
     JS_FreeAtom(ctx, visible_atom);
+
+    JSValue variant_getter = JS_NewCFunction2(ctx, (JSCFunction*)js_layer_wrapper_get_variant, "get variant", 0, JS_CFUNC_getter, 0);
+    JSValue variant_setter = JS_NewCFunction2(ctx, (JSCFunction*)js_layer_wrapper_set_variant, "set variant", 1, JS_CFUNC_setter, 0);
+    JSAtom variant_atom = JS_NewAtom(ctx, "variant");
+    JS_DefinePropertyGetSet(ctx, wrapper, variant_atom, variant_getter, variant_setter, JS_PROP_CONFIGURABLE | JS_PROP_ENUMERABLE);
+    JS_FreeAtom(ctx, variant_atom);
 
     // 定义 size 属性的 getter/setter
     JSValue size_getter = JS_NewCFunction2(ctx, (JSCFunction*)js_layer_wrapper_get_size, "get size", 0, JS_CFUNC_getter, 0);

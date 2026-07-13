@@ -1,6 +1,8 @@
 #include "layer_properties.h"
 #include "layer.h"
 #include "layer_update.h"
+#include "theme_manager.h"
+#include "ytype.h"
 #include "animate.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -351,10 +353,27 @@ static int handle_data(Layer* layer, cJSON* value, int is_creating) {
     return layer_set_data(layer, value) > 0 ? 1 : 0;
 }
 
+static int handle_variant(Layer* layer, cJSON* value, int is_creating) {
+    if (!cJSON_IsString(value)) return 0;
+
+    strncpy(layer->variant, value->valuestring, sizeof(layer->variant) - 1);
+    layer->variant[sizeof(layer->variant) - 1] = '\0';
+
+    if (!is_creating && layer->id[0] != '\0') {
+        Theme* theme = theme_manager_get_current();
+        if (theme) {
+            theme_manager_apply_to_layer(layer, layer->id, layer_type_name[layer->type]);
+        }
+        mark_layer_dirty(layer, DIRTY_COLOR | DIRTY_TEXT);
+    }
+    return 1;
+}
+
 // 属性处理器查找表
 static const PropertyHandlerEntry property_handlers[] = {
     // 基础属性
     {"id", handle_id},
+    {"variant", handle_variant},
     
     // 文本属性
     {"text", handle_text},

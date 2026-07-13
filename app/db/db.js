@@ -31,34 +31,6 @@ var THEME_OPTIONS = {
     latte: { label: "Catppuccin Latte", path: "app/db/themes/latte.json" }
 };
 
-var THEME_PALETTES = {
-    mocha: {
-        tabActiveBg: "#1E1E2E",
-        tabActiveColor: "#CDD6F4",
-        tabInactiveColor: "#6C7086",
-        tabBarBg: "#11111B",
-        tabBarBorder: "#313244"
-    },
-    latte: {
-        tabActiveBg: "#FFFFFF",
-        tabActiveColor: "#4C4F69",
-        tabInactiveColor: "#9CA0B0",
-        tabBarBg: "#E6E9EF",
-        tabBarBorder: "#CCD0DA"
-    },
-    dark: {
-        tabActiveBg: "#1A2030",
-        tabActiveColor: "#F2F4F8",
-        tabInactiveColor: "#6B7280",
-        tabBarBg: "#12161E",
-        tabBarBorder: "#2E3648"
-    }
-};
-
-function getThemePalette() {
-    return THEME_PALETTES[currentTheme] || THEME_PALETTES.mocha;
-}
-
 function loadDbConfig() {
     var cfg = readAppConfig();
     if (cfg.connection) {
@@ -195,35 +167,19 @@ function initTabs() {
 }
 
 function renderTabs() {
-    var palette = getThemePalette();
     for (var i = 0; i < MAX_TABS; i++) {
         var el = yui.find("tab_" + i);
         if (!el) continue;
         if (i < tabs.length) {
-            var bg = i === activeTab ? palette.tabActiveBg : "transparent";
-            var color = i === activeTab ? palette.tabActiveColor : palette.tabInactiveColor;
             el.visible = true;
             el.size = [70, 24];
             el.text = tabs[i].name;
-            el.style = { color: color, bgColor: bg, fontSize: 11, padding: [4, 10, 4, 10], borderRadius: 4 };
+            el.variant = (i === activeTab) ? "tab active" : "tab";
         } else {
             el.visible = false;
             el.size = [0, 0];
         }
     }
-}
-
-function applyThemeUiExtras() {
-    var palette = getThemePalette();
-    var tabBar = yui.find("sqlTabBar");
-    if (tabBar) {
-        tabBar.style = { bgColor: palette.tabBarBg, borderBottomWidth: 1, borderBottomColor: palette.tabBarBorder };
-    }
-    var newTabBtn = yui.find("newTabBtn");
-    if (newTabBtn) {
-        newTabBtn.style = { color: palette.tabInactiveColor, fontSize: 14 };
-    }
-    renderTabs();
 }
 
 function saveCurrentText() {
@@ -403,10 +359,10 @@ function applyTheme(themeId, silent) {
         return;
     }
     var themeName = loaded.name || themeId;
+    currentTheme = themeId;
     YUI.themeSetCurrent(themeName);
     YUI.themeApplyToTree();
-    applyThemeUiExtras();
-    currentTheme = themeId;
+    renderTabs();
     updateThemeLabel();
     saveDbConfig();
     if (!silent) updateStatus("已切换主题: " + theme.label, "#A6E3A1");
@@ -991,9 +947,9 @@ function applyEditorSplit(editorHeight) {
     var resultHeight = panelH - EDITOR_SASH_HEIGHT - editorHeight;
     if (resultHeight < 20) return;
 
-    var width = editorContainer.size ? editorContainer.size[0] : 660;
-    editorContainer.size = [width, editorHeight];
-    resultContainer.size = [width, resultHeight];
+    // 只调整高度，宽度 0 表示跟随布局拉伸
+    editorContainer.size = [0, editorHeight];
+    resultContainer.size = [0, resultHeight];
 }
 
 function collectAppLayout(extra) {
@@ -1049,6 +1005,10 @@ function onEditorResultSashChange(layerId) {
 }
 
 function onWindowResize(layerId) {
+    var cfg = readAppConfig();
+    if (cfg.sqlEditorContainer > 0) {
+        applyEditorSplit(cfg.sqlEditorContainer);
+    }
     if (_resizeSaveTimer) clearTimeout(_resizeSaveTimer);
     _resizeSaveTimer = setTimeout(function() {
         _resizeSaveTimer = null;

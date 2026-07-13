@@ -83,7 +83,8 @@
           {
             "id": "editorPanel",
             "type": "View",
-            "size": [660, 534],
+            "flex": 1,
+            "size": [0, 534],
             "layout": {
               "type": "vertical",
               "spacing": 0
@@ -95,7 +96,7 @@
               {
                 "id": "sqlEditorContainer",
                 "type": "View",
-                "size": [660, 352],
+                "size": [0, 352],
                 "layout": {
                   "type": "vertical",
                   "spacing": 0
@@ -107,7 +108,7 @@
                   {
                     "id": "sqlToolbar",
                     "type": "View",
-                    "size": [660, 32],
+                    "size": [0, 32],
                     "layout": {
                       "type": "horizontal",
                       "spacing": 4,
@@ -204,21 +205,19 @@
                   {
                     "id": "sqlTabBar",
                     "type": "View",
-                    "size": [660, 28],
+                    "variant": "tabBar",
+                    "size": [0, 28],
                     "layout": {
                       "type": "horizontal",
                       "spacing": 0,
                       "padding": [6, 12, 6, 12],
                       "align": "center"
                     },
-                    "style": {
-                      "borderBottomWidth": 1
-                    },
                     "children": [
                       {
                         "id": "sqlTabs",
                         "type": "View",
-                        "size": [600, 28],
+                        "size": [0, 28],
                         "layout": {
                           "type": "horizontal",
                           "spacing": 0,
@@ -228,60 +227,40 @@
                           {
                             "id": "tab_0",
                             "type": "Label",
+                            "variant": "tab active",
                             "text": "Query 1",
-                            "style": {
-                              "fontSize": 11,
-                              "padding": [4, 10, 4, 10],
-                              "borderRadius": 4
-                            },
                             "events": { "onClick": "@onTabClick" }
                           },
                           {
                             "id": "tab_1",
                             "type": "Label",
+                            "variant": "tab",
                             "text": "",
                             "visible": false,
-                            "style": {
-                              "fontSize": 11,
-                              "padding": [4, 10, 4, 10],
-                              "borderRadius": 4
-                            },
                             "events": { "onClick": "@onTabClick" }
                           },
                           {
                             "id": "tab_2",
                             "type": "Label",
+                            "variant": "tab",
                             "text": "",
                             "visible": false,
-                            "style": {
-                              "fontSize": 11,
-                              "padding": [4, 10, 4, 10],
-                              "borderRadius": 4
-                            },
                             "events": { "onClick": "@onTabClick" }
                           },
                           {
                             "id": "tab_3",
                             "type": "Label",
+                            "variant": "tab",
                             "text": "",
                             "visible": false,
-                            "style": {
-                              "fontSize": 11,
-                              "padding": [4, 10, 4, 10],
-                              "borderRadius": 4
-                            },
                             "events": { "onClick": "@onTabClick" }
                           },
                           {
                             "id": "tab_4",
                             "type": "Label",
+                            "variant": "tab",
                             "text": "",
                             "visible": false,
-                            "style": {
-                              "fontSize": 11,
-                              "padding": [4, 10, 4, 10],
-                              "borderRadius": 4
-                            },
                             "events": { "onClick": "@onTabClick" }
                           }
                         ]
@@ -289,10 +268,8 @@
                       {
                         "id": "newTabBtn",
                         "type": "Label",
+                        "variant": "tabAdd",
                         "text": "+",
-                        "style": {
-                          "fontSize": 14
-                        },
                         "events": { "onClick": "@onNewTab" }
                       }
                     ]
@@ -302,7 +279,6 @@
                     "type": "Text",
                     "syntaxHighlight": "sql",
                     "text": "",
-                    "size": [660, 340],
                     "flex": 1,
                     "multiline": true,
                     "editable": true,
@@ -322,7 +298,7 @@
               {
                 "id": "editorResultSash",
                 "type": "Sash",
-                "size": [660, 6],
+                "size": [0, 6],
                 "target": "sqlEditorContainer",
                 "minSize": 80,
                 "events": {
@@ -332,7 +308,7 @@
               {
                 "id": "resultContainer",
                 "type": "View",
-                "size": [660, 176],
+                "size": [0, 176],
                 "layout": {
                   "type": "vertical",
                   "spacing": 0
@@ -344,7 +320,7 @@
                   {
                     "id": "resultTabBar",
                     "type": "View",
-                    "size": [660, 32],
+                    "size": [0, 32],
                     "layout": {
                       "type": "horizontal",
                       "spacing": 12,
@@ -400,7 +376,6 @@
                     "id": "resultTable",
                     "type": "Table",
                     "scrollable": 3,
-                    "size": [660, 296],
                     "flex": 1,
                     "autoColumns": true,
                     "rowHeight": 28,

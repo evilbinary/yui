@@ -217,6 +217,41 @@
         "borderColor": "#2E3648",
         "checkColor": "#6EE7B7"
       }
+    },
+    {
+      "selector": "View.tabBar",
+      "style": {
+        "bgColor": "#12161E",
+        "borderBottomWidth": 1,
+        "borderBottomColor": "#2E3648"
+      }
+    },
+    {
+      "selector": "Label.tab",
+      "style": {
+        "color": "#6B7280",
+        "fontSize": 11,
+        "padding": [4, 10, 4, 10],
+        "borderRadius": 4,
+        "bgColor": "transparent"
+      }
+    },
+    {
+      "selector": "Label.tab.active",
+      "style": {
+        "color": "#F2F4F8",
+        "bgColor": "#1A2030",
+        "fontSize": 11,
+        "padding": [4, 10, 4, 10],
+        "borderRadius": 4
+      }
+    },
+    {
+      "selector": "Label.tabAdd",
+      "style": {
+        "color": "#6B7280",
+        "fontSize": 14
+      }
     }
   ]
 }

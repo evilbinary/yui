@@ -1,19 +1,43 @@
-{
-  "name": "mocha",
-  "version": "1.0",
-  "description": "Catppuccin Mocha",
-  "styles": [
-    { "selector": "View", "style": { "bgColor": "#1E1E2E" } },
-    { "selector": "Label", "style": { "color": "#CDD6F4", "fontSize": 12 } },
-    { "selector": "Button", "style": { "bgColor": "#313244", "color": "#CDD6F4", "borderRadius": 4, "fontSize": 12 } },
-    { "selector": "Input", "style": { "bgColor": "#1E1E2E", "color": "#CDD6F4", "fontSize": 12 } },
-    { "selector": "Text", "style": { "color": "#CDD6F4", "bgColor": "#11111B", "fontSize": 13, "lineNumberBgColor": "#181825", "lineNumberColor": "#6C7086", "cursorColor": "#89B4FA", "selectionColor": "#45475A99", "keyword": "#CBA6F7", "string": "#A6E3A1", "number": "#FAB387", "comment": "#6C7086", "punctuation": "#89DCEB" } },
-    { "selector": "Table", "style": { "color": "#CDD6F4", "bgColor": "#11111B", "headerBgColor": "#181825", "headerColor": "#A6ADC8", "gridLineColor": "#313244", "rowAltBgColor": "#1a1a24", "rowHoverColor": "#313244", "rowSelectedColor": "#45475A" } },
-    { "selector": "Treeview", "style": { "color": "#CDD6F4", "bgColor": "#181825", "fontSize": 13, "selectedBgColor": "#45475A", "hoverBgColor": "#313244" } },
-    { "selector": "Pagination", "style": { "color": "#A6ADC8", "buttonBgColor": "#313244", "buttonHoverColor": "#45475A" } },
-    { "selector": "Sash", "style": { "bgColor": "#313244", "hoverBgColor": "#45475A", "borderColor": "#45475A", "dotColor": "#6C7086", "hoverDotColor": "#A6ADC8", "accentColor": "#89B4FAB3" } },
-    { "selector": "Checkbox", "style": { "bgColor": "#11111B", "borderColor": "#585B70", "checkColor": "#A6E3A1" } },
-    { "selector": "Menu", "style": { "bgColor": "#1E1E2E", "textColor": "#CDD6F4", "hoverColor": "#45475A", "disabledColor": "#6C7086", "separatorColor": "#585B70", "itemHeight": 29 } },
-    { "selector": "Dialog", "style": { "titleColor": "#89B4FA", "textColor": "#CDD6F4", "bgColor": "#1E1E2E", "borderColor": "#45475A", "buttonColor": "#313244", "buttonHoverColor": "#45475A", "buttonTextColor": "#CDD6F4" } }
-  ]
-}
+{
+
+  "name": "mocha",
+
+  "version": "1.0",
+
+  "description": "Catppuccin Mocha",
+
+  "styles": [
+
+    { "selector": "View", "style": { "bgColor": "#1E1E2E" } },
+
+    { "selector": "Label", "style": { "color": "#CDD6F4", "fontSize": 12 } },
+
+    { "selector": "Button", "style": { "bgColor": "#313244", "color": "#CDD6F4", "borderRadius": 4, "fontSize": 12 } },
+
+    { "selector": "Input", "style": { "bgColor": "#1E1E2E", "color": "#CDD6F4", "fontSize": 12 } },
+
+    { "selector": "Text", "style": { "color": "#CDD6F4", "bgColor": "#11111B", "fontSize": 13, "lineNumberBgColor": "#181825", "lineNumberColor": "#6C7086", "cursorColor": "#89B4FA", "selectionColor": "#45475A99", "keyword": "#CBA6F7", "string": "#A6E3A1", "number": "#FAB387", "comment": "#6C7086", "punctuation": "#89DCEB" } },
+
+    { "selector": "Table", "style": { "color": "#CDD6F4", "bgColor": "#11111B", "headerBgColor": "#181825", "headerColor": "#A6ADC8", "gridLineColor": "#313244", "rowAltBgColor": "#1a1a24", "rowHoverColor": "#313244", "rowSelectedColor": "#45475A" } },
+
+    { "selector": "Treeview", "style": { "color": "#CDD6F4", "bgColor": "#181825", "fontSize": 13, "selectedBgColor": "#45475A", "hoverBgColor": "#313244" } },
+
+    { "selector": "Pagination", "style": { "color": "#A6ADC8", "buttonBgColor": "#313244", "buttonHoverColor": "#45475A" } },
+
+    { "selector": "Sash", "style": { "bgColor": "#313244", "hoverBgColor": "#45475A", "borderColor": "#45475A", "dotColor": "#6C7086", "hoverDotColor": "#A6ADC8", "accentColor": "#89B4FAB3" } },
+
+    { "selector": "Checkbox", "style": { "bgColor": "#11111B", "borderColor": "#585B70", "checkColor": "#A6E3A1" } },
+
+    { "selector": "Menu", "style": { "bgColor": "#1E1E2E", "textColor": "#CDD6F4", "hoverColor": "#45475A", "disabledColor": "#6C7086", "separatorColor": "#585B70", "itemHeight": 29 } },
+
+    { "selector": "Dialog", "style": { "titleColor": "#89B4FA", "textColor": "#CDD6F4", "bgColor": "#1E1E2E", "borderColor": "#45475A", "buttonColor": "#313244", "buttonHoverColor": "#45475A", "buttonTextColor": "#CDD6F4" } },
+
+    { "selector": "View.tabBar", "style": { "bgColor": "#11111B", "borderBottomWidth": 1, "borderBottomColor": "#313244" } },
+    { "selector": "Label.tab", "style": { "color": "#6C7086", "fontSize": 11, "padding": [4, 10, 4, 10], "borderRadius": 4, "bgColor": "transparent" } },
+    { "selector": "Label.tab.active", "style": { "color": "#CDD6F4", "bgColor": "#1E1E2E", "fontSize": 11, "padding": [4, 10, 4, 10], "borderRadius": 4 } },
+    { "selector": "Label.tabAdd", "style": { "color": "#6C7086", "fontSize": 14 } }
+
+  ]
+
+}
+
