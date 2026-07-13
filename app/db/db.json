@@ -445,7 +445,7 @@
                         "page": 1,
                         "pageSize": 500,
                         "total": 0,
-                        "hideOnSinglePage": true,
+                        "hideOnSinglePage": false,
                         "showTotal": true,
                         "events": {
                           "onChange": "@onResultPageChange"

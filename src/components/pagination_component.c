@@ -53,12 +53,17 @@ static void pagination_clamp_page(PaginationComponent* component) {
     if (component->page > page_count) component->page = page_count;
 }
 
+static int pagination_should_hide(PaginationComponent* component) {
+    if (!component || !component->hide_on_single_page) return 0;
+    if (component->total <= 0 || component->total > component->page_size) return 0;
+    /* simple 模式单页时仍显示区间信息（如 1-50 / 50），仅 mini 整组件隐藏 */
+    if (component->mode == PAGINATION_MODE_SIMPLE) return 0;
+    return 1;
+}
+
 static void pagination_sync_visibility(PaginationComponent* component) {
     if (!component || !component->layer) return;
-    int hide = component->hide_on_single_page &&
-               component->total > 0 &&
-               component->total <= component->page_size;
-    layer_set_visible(component->layer, hide ? IN_VISIBLE : VISIBLE);
+    layer_set_visible(component->layer, pagination_should_hide(component) ? IN_VISIBLE : VISIBLE);
 }
 
 static void pagination_build_info_text(PaginationComponent* component, char* buf, size_t buf_size) {

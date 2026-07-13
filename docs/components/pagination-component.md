@@ -78,7 +78,7 @@ simple:  501-1000 / 10000          [ < ] [ > ]
 | `pageSize` | number | `20` | 每页条数 |
 | `total` | number | `0` | 总条数 |
 | `mode` | string | `"simple"` | `mini` / `simple` / `full` |
-| `hideOnSinglePage` | boolean | `false` | 总条数 ≤ `pageSize` 时自动隐藏 |
+| `hideOnSinglePage` | boolean | `false` | 单页时隐藏；simple 模式仍保留区间文案，仅 mini 整组件隐藏 |
 | `showTotal` | boolean | `true`（simple） | simple 模式显示区间/总数 |
 | `showPageCount` | boolean | `false` | mini 模式显示 `3/20` 形式 |
 
@@ -184,7 +184,7 @@ function renderResultPage(page, pageSize) {
 | `total = 0` | 显示 `0 / 0`，翻页按钮禁用 |
 | `page` 超出范围 | 内部 clamp 到 `[1, pageCount]` |
 | JS 设置 `page` / `total` | 不触发 `onChange`，仅刷新显示 |
-| `hideOnSinglePage: true` | 当 `total ≤ pageSize` 时组件隐藏 |
+| `hideOnSinglePage: true` | simple：仍显示区间（如 `1-50 / 50`），按钮自动禁用；mini：整组件隐藏 |
 
 ## 实现说明
 
