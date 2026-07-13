@@ -36,6 +36,7 @@
             "flex": 1,
             "scrollable": 1,
             "data": [],
+            "events": { "onSelect": "@onFilesItemClick" },
             "itemTemplate": {
                 "type": "Button",
                 "variant": "ghost",
@@ -44,8 +45,7 @@
                 "iconSize": 14,
                 "fontSize": 12,
                 "style": { "color": "#E5E5EA", "bgColor": "transparent" },
-                "size": [362, 28],
-                "events": { "onClick": "@onFilesItemClick" }
+                "size": [362, 28]
             },
             "layout": { "type": "vertical", "spacing": 2 }
         }

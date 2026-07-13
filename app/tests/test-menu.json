@@ -132,7 +132,7 @@
                 }
             ],
             "events": {
-                "onItemClick": "@handleMenuClick"
+                "onSelect": "@handleMenuClick"
             }
         },
         {
@@ -187,7 +187,7 @@
                 }
             ],
             "events": {
-                "onItemClick": "@handleContextMenuClick"
+                "onSelect": "@handleContextMenuClick"
             }
         },
         {

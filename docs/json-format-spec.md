@@ -475,7 +475,11 @@ Text 组件用于文本显示与编辑，支持多行、滚动、行号与语法
         {"text": "子节点2"}
       ]
     }
-  ]
+  ],
+  "events": {
+    "onSelect": "@onNodeSelected",
+    "onExpand": "@onNodeExpanded"
+  }
 }
 ```
 
@@ -612,6 +616,9 @@ Text 组件用于文本显示与编辑，支持多行、滚动、行号与语法
     "textColor": "#323232",   // 文本颜色
     "hoverColor": "#4682B4",  // 悬停颜色
     "disabledColor": "#969696" // 禁用颜色
+  },
+  "events": {
+    "onSelect": "@handleMenuSelect"
   }
 }
 ```

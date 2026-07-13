@@ -70,6 +70,9 @@
                             "key": "name"
                         }
                     },
+                    "events": {
+                        "onSelect": "@selectCategory"
+                    },
                     "itemTemplate": {
                         "type": "Button",
                         "text": "${name}",
@@ -78,9 +81,6 @@
                             "bgColor": "#E3F2FD",
                             "hoverColor": "#1976D2",
                             "hoverBgColor": "#BBDEFB"
-                        },
-                        "events": {
-                            "onClick": "@selectCategory"
                         }
                     },
                     "layout": {

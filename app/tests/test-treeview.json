@@ -154,8 +154,8 @@
                 }
             ],
             "events": {
-                "onNodeSelected": "@handleFileNodeSelected",
-                "onNodeExpanded": "@handleFileNodeExpanded"
+                "onSelect": "@handleFileNodeSelected",
+                "onExpand": "@handleFileNodeExpanded"
             }
         },
         {
@@ -229,8 +229,8 @@
                 }
             ],
             "events": {
-                "onNodeSelected": "@handleSettingsNodeSelected",
-                "onNodeExpanded": "@handleSettingsNodeExpanded"
+                "onSelect": "@handleSettingsNodeSelected",
+                "onExpand": "@handleSettingsNodeExpanded"
             }
         },
         {

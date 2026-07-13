@@ -143,10 +143,10 @@ static void parse_menu_items_from_json(MenuComponent* component, cJSON* items_js
         if (submenu_json && cJSON_IsArray(submenu_json)) {
             MenuComponent* submenu = menu_component_add_submenu(component, i);
             if (submenu) {
-                submenu->item_click_name[0] = '\0';
-                // 继承父菜单的item_click_name，让子菜单项也能触发同一事件
-                if (strlen(component->item_click_name) > 0) {
-                    strncpy(submenu->item_click_name, component->item_click_name, sizeof(submenu->item_click_name) - 1);
+                submenu->on_select_name[0] = '\0';
+                // 继承父菜单的on_select_name，让子菜单项也能触发同一事件
+                if (strlen(component->on_select_name) > 0) {
+                    strncpy(submenu->on_select_name, component->on_select_name, sizeof(submenu->on_select_name) - 1);
                 }
                 parse_menu_items_from_json(submenu, submenu_json);
             }
@@ -263,15 +263,15 @@ MenuComponent* menu_component_create_from_json(Layer* layer, cJSON* json) {
         }
     }
 
-    // 解析onItemClick事件
+    // 解析 onSelect 事件
     cJSON* events = cJSON_GetObjectItem(json, "events");
     if (events) {
-        if (cJSON_HasObjectItem(events, "onItemClick")) {
-            const char* handler_name = cJSON_GetObjectItem(events, "onItemClick")->valuestring;
+        if (cJSON_HasObjectItem(events, "onSelect")) {
+            const char* handler_name = cJSON_GetObjectItem(events, "onSelect")->valuestring;
             // 去掉@前缀
             if (handler_name[0] == '@') handler_name++;
-            strncpy(component->item_click_name, handler_name, sizeof(component->item_click_name) - 1);
-            component->item_click_name[sizeof(component->item_click_name) - 1] = '\0';
+            strncpy(component->on_select_name, handler_name, sizeof(component->on_select_name) - 1);
+            component->on_select_name[sizeof(component->on_select_name) - 1] = '\0';
         }
     }
 
@@ -499,7 +499,7 @@ static void menu_item_click(MenuComponent* component, MenuItem* item) {
     // 执行回调
     if (item->callback) {
         item->callback(item->user_data);
-    } else if (strlen(component->item_click_name) > 0) {
+    } else if (strlen(component->on_select_name) > 0) {
         // 保存原始文本，设置点击项文本供JS读取
         char saved_text[256] = {0};
         const char* orig = layer_get_text(component->layer);
@@ -514,11 +514,11 @@ static void menu_item_click(MenuComponent* component, MenuItem* item) {
             }
         }
         if (component->layer->event) {
-            strncpy(component->layer->event->click_name, component->item_click_name, MAX_PATH - 1);
+            strncpy(component->layer->event->click_name, component->on_select_name, MAX_PATH - 1);
             component->layer->event->click_name[MAX_PATH - 1] = '\0';
         }
 
-        EventHandler handler = find_event_by_name(component->item_click_name);
+        EventHandler handler = find_event_by_name(component->on_select_name);
         if (handler) handler(component->layer);
 
         // 恢复原始文本

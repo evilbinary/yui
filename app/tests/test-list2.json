@@ -67,6 +67,13 @@
             "key": "name"
         }
     },
+    "layout": {
+        "type": "vertical",
+        "spacing": 4
+    },
+    "events": {
+        "onSelect": "@selectCategory"
+    },
     "itemTemplate": {
         "type": "Button",
         "text": "${name}",
@@ -75,14 +82,7 @@
             "bgColor": "#E3F2FD",
             "hoverColor": "#1976D2",
             "hoverBgColor": "#BBDEFB"
-        },
-        "events": {
-            "onClick": "@selectCategory"
         }
-    },
-    "layout": {
-        "type": "vertical",
-        "spacing": 4
     },
     "scrollbar": {
         "scrollable": true,

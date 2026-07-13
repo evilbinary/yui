@@ -452,7 +452,7 @@
                     "showGridLines": true,
                     "data": [],
                     "events": {
-                      "onItemClick": "@onResultRowClick"
+                      "onSelect": "@onResultRowClick"
                     },
                     "style": {
                       "color": "#CDD6F4",
@@ -493,7 +493,7 @@
         { "text": "退出", "onClick": "onExit" }
       ],
       "events": {
-            "onItemClick": "@handleMenuClick"
+            "onSelect": "@handleMenuClick"
         }
     },
     {
@@ -519,7 +519,7 @@
         { "text": "导入数据库", "onClick": "onImportDb" }
       ],
       "events": {
-            "onItemClick": "@handleMenuClick"
+            "onSelect": "@handleMenuClick"
         }
     },
     {
@@ -544,7 +544,7 @@
         { "text": "关于", "onClick": "onAbout" }
       ],
       "events": {
-            "onItemClick": "@handleMenuClick"
+            "onSelect": "@handleMenuClick"
         }
     },
     {

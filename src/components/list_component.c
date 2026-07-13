@@ -163,17 +163,12 @@ static int list_point_in_item(ListComponent* component, int x, int y, int* out_i
     return 0;
 }
 
-static void list_dispatch_item_click(ListComponent* component, int index) {
+static void list_dispatch_select(ListComponent* component, int index) {
     Layer* layer = component->layer;
-    if (!layer || !layer->item_template || !layer->data || !layer->data->json) return;
+    if (!layer || component->on_select_name[0] == '\0') return;
+    if (!layer->data || !layer->data->json) return;
 
-    Layer* template_layer = layer->item_template;
-    if (!template_layer->event || !template_layer->event->click_name[0]) return;
-
-    EventHandler handler = template_layer->event->click;
-    if (!handler) {
-        handler = find_event_by_name(template_layer->event->click_name);
-    }
+    EventHandler handler = find_event_by_name(component->on_select_name);
     if (!handler) return;
 
     cJSON* item = cJSON_GetArrayItem(layer->data->json, index);
@@ -186,7 +181,7 @@ static void list_dispatch_item_click(ListComponent* component, int index) {
         layer->event = calloc(1, sizeof(Event));
     }
     if (layer->event) {
-        strncpy(layer->event->click_name, template_layer->event->click_name, MAX_PATH - 1);
+        strncpy(layer->event->click_name, component->on_select_name, MAX_PATH - 1);
         layer->event->click_name[MAX_PATH - 1] = '\0';
     }
 
@@ -259,6 +254,18 @@ ListComponent* list_component_create_from_json(Layer* layer, cJSON* json_obj) {
         cJSON* item_height = cJSON_GetObjectItem(json_obj, "itemHeight");
         if (item_height && cJSON_IsNumber(item_height)) {
             component->item_height = item_height->valueint;
+        }
+
+        cJSON* events = cJSON_GetObjectItem(json_obj, "events");
+        if (events) {
+            cJSON* on_select = cJSON_GetObjectItem(events, "onSelect");
+            if (on_select && cJSON_IsString(on_select) && on_select->valuestring) {
+                const char* handler_name = on_select->valuestring;
+                if (handler_name[0] == '@') handler_name++;
+                strncpy(component->on_select_name, handler_name,
+                        sizeof(component->on_select_name) - 1);
+                component->on_select_name[sizeof(component->on_select_name) - 1] = '\0';
+            }
         }
     }
 
@@ -458,7 +465,7 @@ int list_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
         int clicked = inside && component->pressed_index == index && index >= 0;
         component->pressed_index = -1;
         if (clicked) {
-            list_dispatch_item_click(component, index);
+            list_dispatch_select(component, index);
         }
         return inside;
     }
@@ -491,7 +498,7 @@ int list_component_handle_key_event(Layer* layer, KeyEvent* event) {
         case SDLK_RETURN:
         case SDLK_SPACE:
             if (component->hovered_index >= 0) {
-                list_dispatch_item_click(component, component->hovered_index);
+                list_dispatch_select(component, component->hovered_index);
                 return 1;
             }
             return 0;

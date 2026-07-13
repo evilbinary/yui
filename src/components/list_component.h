@@ -14,6 +14,7 @@ typedef struct ListComponent {
     int spacing;
     int hovered_index;
     int pressed_index;
+    char on_select_name[128];
 } ListComponent;
 
 ListComponent* list_component_create(Layer* layer);
