@@ -42,6 +42,7 @@ static void js_module_timer_tick(void)
 
 JSValue js_read_file(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv);
 JSValue js_write_file(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv);
+JSValue js_resize_root(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv);
 JSValue js_screenshot(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv);
 JSValue js_list_dir(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv);
 JSValue js_focus(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv);
@@ -1182,6 +1183,7 @@ void js_module_register_api(void)
 
     JS_SetPropertyStr(g_js_ctx, yui_obj, "readFile", JS_NewCFunction(g_js_ctx, js_read_file, "readFile", 1));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "writeFile", JS_NewCFunction(g_js_ctx, js_write_file, "writeFile", 2));
+    JS_SetPropertyStr(g_js_ctx, yui_obj, "resizeRoot", JS_NewCFunction(g_js_ctx, js_resize_root, "resizeRoot", 2));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "screenshot", JS_NewCFunction(g_js_ctx, js_screenshot, "screenshot", 1));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "listDir", JS_NewCFunction(g_js_ctx, js_list_dir, "listDir", 1));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "focus", JS_NewCFunction(g_js_ctx, js_focus, "focus", 1));
@@ -1551,6 +1553,21 @@ JSValue js_write_file(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     JS_FreeCString(ctx, file_path);
     JS_FreeCString(ctx, content);
     return JS_TRUE;
+}
+
+JSValue js_resize_root(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+    if (argc < 2) {
+        return JS_ThrowTypeError(ctx, "Expected 2 arguments: width, height");
+    }
+
+    int width = 0;
+    int height = 0;
+    if (JS_ToInt32(ctx, &width, argv[0]) != 0 || JS_ToInt32(ctx, &height, argv[1]) != 0) {
+        return JS_ThrowTypeError(ctx, "Invalid width or height");
+    }
+
+    extern int js_module_resize_root(int width, int height);
+    return JS_NewInt32(ctx, js_module_resize_root(width, height));
 }
 
 JSValue js_screenshot(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {

@@ -727,10 +727,28 @@ function onDbExpand(layerId) {
     }
 }
 
-// ====================== Editor Layout ======================
+// ====================== App Layout Config ======================
 
-var EDITOR_LAYOUT_CONFIG = "app/db/db-config.json";
+var APP_CONFIG_PATH = "app/db/db-config.json";
 var EDITOR_SASH_HEIGHT = 6;
+var _resizeSaveTimer = null;
+var _pendingAppLayout = null;
+
+function readAppConfig() {
+    if (typeof YUI.readFile !== "function") return {};
+    var raw = YUI.readFile(APP_CONFIG_PATH);
+    if (!raw) return {};
+    try {
+        return JSON.parse(raw);
+    } catch (e) {
+        return {};
+    }
+}
+
+function writeAppConfig(cfg) {
+    if (typeof YUI.writeFile !== "function" || !cfg) return;
+    YUI.writeFile(APP_CONFIG_PATH, JSON.stringify(cfg, null, 2));
+}
 
 function applyEditorSplit(editorHeight) {
     var editorContainer = yui.find("sqlEditorContainer");
@@ -747,30 +765,45 @@ function applyEditorSplit(editorHeight) {
     resultContainer.size = [width, resultHeight];
 }
 
-function loadEditorLayout() {
-    if (typeof YUI.readFile !== "function") return;
-    var raw = YUI.readFile(EDITOR_LAYOUT_CONFIG);
-    if (!raw) return;
-    try {
-        var cfg = JSON.parse(raw);
-        if (cfg.sqlEditorContainer > 0) {
-            applyEditorSplit(cfg.sqlEditorContainer);
+function collectAppLayout(extra) {
+    var cfg = readAppConfig();
+    var root = yui.find("dbEditor");
+    if (root && root.size) {
+        cfg.windowWidth = root.size[0];
+        cfg.windowHeight = root.size[1];
+    }
+    var editorContainer = yui.find("sqlEditorContainer");
+    if (editorContainer && editorContainer.size) {
+        cfg.sqlEditorContainer = editorContainer.size[1];
+    }
+    if (extra) {
+        for (var key in extra) {
+            if (extra.hasOwnProperty(key)) {
+                cfg[key] = extra[key];
+            }
         }
-    } catch (e) {}
+    }
+    return cfg;
 }
 
-function saveEditorLayout(editorHeight) {
-    if (typeof YUI.writeFile !== "function") return;
-    var cfg = { sqlEditorContainer: editorHeight };
-    try {
-        var raw = YUI.readFile(EDITOR_LAYOUT_CONFIG);
-        if (raw) {
-            var existing = JSON.parse(raw);
-            existing.sqlEditorContainer = editorHeight;
-            cfg = existing;
-        }
-    } catch (e) {}
-    YUI.writeFile(EDITOR_LAYOUT_CONFIG, JSON.stringify(cfg, null, 2));
+function saveAppLayout(extra) {
+    writeAppConfig(collectAppLayout(extra));
+}
+
+function loadAppLayout() {
+    _pendingAppLayout = readAppConfig();
+}
+
+function applyAppLayout(layerId) {
+    var cfg = _pendingAppLayout || readAppConfig();
+    if (!cfg) return;
+
+    if (cfg.windowWidth > 0 && cfg.windowHeight > 0 && typeof YUI.resizeRoot === "function") {
+        YUI.resizeRoot(cfg.windowWidth, cfg.windowHeight);
+    }
+    if (cfg.sqlEditorContainer > 0) {
+        applyEditorSplit(cfg.sqlEditorContainer);
+    }
 }
 
 function onEditorResultSashChange(layerId) {
@@ -778,18 +811,25 @@ function onEditorResultSashChange(layerId) {
     if (!sash || !sash.text) return;
     try {
         var state = JSON.parse(sash.text);
-        var height = state.targetHeight || state.sqlEditorContainer;
-        if (height > 0) {
-            saveEditorLayout(height);
+        if (state.targetHeight > 0) {
+            saveAppLayout({ sqlEditorContainer: state.targetHeight });
         }
     } catch (e) {}
+}
+
+function onWindowResize(layerId) {
+    if (_resizeSaveTimer) clearTimeout(_resizeSaveTimer);
+    _resizeSaveTimer = setTimeout(function() {
+        _resizeSaveTimer = null;
+        saveAppLayout();
+    }, 300);
 }
 
 // ====================== Init ======================
 
 function onLoad() {
   YUI.log('onLoad');
-  loadEditorLayout();
+  loadAppLayout();
   connectDb();
   //loadDatabases();
 }

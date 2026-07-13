@@ -2,6 +2,7 @@
 #include "../../src/ytype.h"
 #include "../../src/layer_lifecycle.h"
 #include "../../src/backend.h"
+#include "../../src/layout.h"
 #include "../../src/log.h"
 
 #include "event.h"
@@ -69,6 +70,8 @@ void js_module_set_button_style(Layer* layer, const char* bg_color)
     }
 }
 
+static void js_layer_resize_handler(Layer* layer, const ResizeEvent* event);
+
 int js_module_set_layer_event(Layer* layer, const char* event_name, const char* event_func_name, EventHandler event_handler)
 {
     if (!layer || !event_name) {
@@ -126,6 +129,15 @@ int js_module_set_layer_event(Layer* layer, const char* event_name, const char* 
         }
         return 0;
     
+    }
+    // 检查 resize 事件
+    if (strcmp(event_name, "resize") == 0 || strcmp(event_name, "onResize") == 0) {
+        if (event_func_name) {
+            strncpy(layer->event->resize_name, event_func_name, MAX_PATH - 1);
+            layer->event->resize_name[MAX_PATH - 1] = '\0';
+        }
+        layer->event->resize = js_layer_resize_handler;
+        return 0;
     }
 
 
@@ -207,6 +219,24 @@ static void* js_module_change_event(void* data)
     return NULL;
 }
 
+static void js_layer_resize_handler(Layer* layer, const ResizeEvent* event)
+{
+    if (!layer || !event) return;
+
+    char payload[192];
+    snprintf(payload, sizeof(payload),
+             "{\"oldWidth\":%d,\"oldHeight\":%d,\"newWidth\":%d,\"newHeight\":%d,\"scaleX\":%.4f,\"scaleY\":%.4f}",
+             event->old_width, event->old_height, event->new_width, event->new_height,
+             event->scale_x, event->scale_y);
+    layer_set_text(layer, payload);
+
+    if (layer->event && layer->event->resize_name[0] != '\0') {
+        js_module_call_event(layer->event->resize_name, layer);
+    } else {
+        js_module_call_layer_event(layer->id, "onResize");
+    }
+}
+
 // 根据事件类型返回对应的处理函数
 static EventHandler get_event_handler_by_type(const char* event_type)
 {
@@ -223,6 +253,8 @@ static EventHandler get_event_handler_by_type(const char* event_type)
         return js_module_touch_event;
     } else if (strcmp(event_type, "change") == 0 || strcmp(event_type, "onChange") == 0) {
         return js_module_change_event;
+    } else if (strcmp(event_type, "resize") == 0 || strcmp(event_type, "onResize") == 0) {
+        return NULL;
     } else if (layer_lifecycle_is_event(event_type)) {
         return NULL;
     }
@@ -394,13 +426,16 @@ static void register_js_event_mapping(const char* event_name, const char* func_n
         if (!is_page_lifecycle_event(event_type)) {
             // 根据 event_type 获取对应的事件处理函数
             EventHandler handler = get_event_handler_by_type(event_type);
+            Layer * layer = find_layer_by_id(g_layer_root, layer_id);
             if (handler != NULL) {
-                Layer * layer = find_layer_by_id(g_layer_root, layer_id);
                 if (layer != NULL) {
                     js_module_set_layer_event(layer, event_type, clean_func_name, handler);
                 } else {
                     printf("JS: Warning: layer '%s' not found for event '%s'\n", layer_id, event_name);
                 }
+            } else if (layer != NULL &&
+                       (strcmp(event_type, "onResize") == 0 || strcmp(event_type, "resize") == 0)) {
+                js_module_set_layer_event(layer, event_type, clean_func_name, NULL);
             } else {
                 // 非标准事件类型（如 onSelect），注册为全局处理器
                 if (func_name[0] == '@') {
@@ -925,4 +960,12 @@ char* js_module_read_file(const char* file_path) {
 
     printf("JS: Successfully read %ld bytes from file %s\n", bytes_read, file_path);
     return buffer;
+}
+
+int js_module_resize_root(int width, int height)
+{
+    if (!g_layer_root || width <= 0 || height <= 0) return -1;
+    layout_resize(g_layer_root, width, height);
+    backend_set_windowsize(width, height);
+    return 0;
 }

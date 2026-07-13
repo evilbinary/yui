@@ -421,6 +421,22 @@ static JSValue js_read_file(JSContext *ctx, JSValue *this_val, int argc, JSValue
     return result;
 }
 
+static JSValue js_resize_root(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+{
+    if (argc < 2) {
+        return JS_ThrowTypeError(ctx, "Expected 2 arguments: width, height");
+    }
+
+    int width = 0;
+    int height = 0;
+    if (JS_ToInt32(ctx, &width, argv[0]) != 0 || JS_ToInt32(ctx, &height, argv[1]) != 0) {
+        return JS_ThrowTypeError(ctx, "Invalid width or height");
+    }
+
+    extern int js_module_resize_root(int width, int height);
+    return JS_NewInt32(ctx, js_module_resize_root(width, height));
+}
+
 
 
 extern JSValue js_setTimeout(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv);
@@ -475,6 +491,7 @@ static const JSPropDef js_yui[] = {
     JS_CFUNC_DEF("show", 1, js_show ),
     JS_CFUNC_DEF("renderFromJson", 3, js_render_from_json ),
     JS_CFUNC_DEF("readFile", 1, js_read_file ),
+    JS_CFUNC_DEF("resizeRoot", 2, js_resize_root ),
     JS_CFUNC_DEF("call", 2, js_yui_call ),
     JS_CFUNC_DEF("update", 1, js_yui_update ),
     JS_CFUNC_DEF("themeLoad", 1, js_yui_themeLoad ),

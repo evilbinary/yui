@@ -5,7 +5,8 @@
   "size": [900, 600],
   "js": ["./db.js"],
   "events": {
-    "onLoad": "@onLoad"
+    "onLoad": "@onLoad",
+    "onResize": "@onWindowResize"
   },
   "icon": "app/db/icon.png",
   "layout": { "type": "absolute" },

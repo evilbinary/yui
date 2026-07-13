@@ -86,6 +86,9 @@ const char* js_module_get_select_value(const char* layer_id);
 // 文件读取函数，用于JavaScript环境
 char* js_module_read_file(const char* file_path);
 
+// 按 layout_base 等比缩放根布局并调整窗口尺寸
+int js_module_resize_root(int width, int height);
+
 int js_module_set_event(const char* layer_id, const char* event_name, const char* event_func_name);
 
 // YUI.call 桥接函数
