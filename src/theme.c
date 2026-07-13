@@ -384,6 +384,59 @@ static int theme_match_compound_selector(const char* selector, const char* id,
     }
 }
 
+static int theme_rule_matches(ThemeRule* rule, Layer* layer, const char* id, const char* type) {
+    if (!rule || !layer || !id || !type) {
+        return 0;
+    }
+
+    if (rule->selector_type == THEME_SELECTOR_ID) {
+        const char* selector_id = rule->selector + 1;
+        const char* dot = strchr(selector_id, '.');
+        if (dot) {
+            return theme_match_compound_selector(rule->selector, id, type, layer->variant);
+        }
+        return strcmp(selector_id, id) == 0;
+    }
+
+    if (rule->selector_type == THEME_SELECTOR_TYPE) {
+        return strcmp(rule->selector, type) == 0;
+    }
+
+    if (rule->selector_type == THEME_SELECTOR_COMPOUND) {
+        return theme_match_compound_selector(rule->selector, id, type, layer->variant);
+    }
+
+    return 0;
+}
+
+static int theme_rule_specificity(ThemeRule* rule) {
+    if (!rule) {
+        return 0;
+    }
+
+    if (rule->selector_type == THEME_SELECTOR_ID) {
+        int count = 1000;
+        const char* dot = strchr(rule->selector, '.');
+        while (dot) {
+            count++;
+            dot = strchr(dot + 1, '.');
+        }
+        return count;
+    }
+
+    if (rule->selector_type == THEME_SELECTOR_COMPOUND) {
+        int count = 0;
+        const char* dot = strchr(rule->selector, '.');
+        while (dot) {
+            count++;
+            dot = strchr(dot + 1, '.');
+        }
+        return count;
+    }
+
+    return 0;
+}
+
 void theme_apply_component_style(Layer* layer, cJSON* style) {
     if (!layer || !style || !cJSON_IsObject(style)) {
         return;
@@ -420,35 +473,35 @@ void theme_apply_to_layer(Theme* theme, Layer* layer, const char* id, const char
         ordered[rule_count++] = current;
     }
 
-    printf("[Theme] Applying theme to layer id='%s', type='%s'\n", id, type);
+    int max_specificity = -1;
+    for (int i = 0; i < rule_count; i++) {
+        if (!theme_rule_matches(ordered[i], layer, id, type)) {
+            continue;
+        }
+        int spec = theme_rule_specificity(ordered[i]);
+        if (spec > max_specificity) {
+            max_specificity = spec;
+        }
+    }
+
+    if (max_specificity < 0) {
+        return;
+    }
+
+    printf("[Theme] Applying theme to layer id='%s', type='%s', specificity=%d\n",
+           id, type, max_specificity);
     for (int i = rule_count - 1; i >= 0; i--) {
         ThemeRule* current = ordered[i];
-        int should_apply = 0;
-
-        printf("[Theme] Checking rule selector='%s', type=%d\n", current->selector, current->selector_type);
-
-        if (current->selector_type == THEME_SELECTOR_ID) {
-            const char* selector_id = current->selector + 1;
-            if (strcmp(selector_id, id) == 0) {
-                should_apply = 1;
-            }
-        } else if (current->selector_type == THEME_SELECTOR_TYPE) {
-            printf("[Theme] Comparing selector '%s' with type '%s'\n", current->selector, type);
-            if (strcmp(current->selector, type) == 0) {
-                should_apply = 1;
-                printf("[Theme] MATCH! Applying rule to layer id='%s'\n", id);
-            }
-        } else if (current->selector_type == THEME_SELECTOR_COMPOUND) {
-            if (theme_match_compound_selector(current->selector, id, type,
-                                              layer->variant)) {
-                should_apply = 1;
-            }
+        if (!theme_rule_matches(current, layer, id, type)) {
+            continue;
+        }
+        if (theme_rule_specificity(current) != max_specificity) {
+            continue;
         }
 
-        if (should_apply) {
-            printf("[Theme] Merging style for layer id='%s'\n", id);
-            theme_merge_style(current, layer);
-        }
+        printf("[Theme] Merging style for layer id='%s' selector='%s'\n",
+               id, current->selector);
+        theme_merge_style(current, layer);
     }
 }
 
