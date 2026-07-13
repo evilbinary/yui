@@ -51,7 +51,7 @@ add_includedirs('.', './src', public=True)
 
 if get_plat() == "stm32":
     add_files('port_yiyiya/*.c')
-    add_cflags('-DYUI_LVGL_PORT_STM32')
+    add_cflags('-DYUI_LVGL_PORT_STM32', public=True)
 else:
     add_files('port_sdl/*.c')
-    add_cflags('-DYUI_LVGL_PORT_SDL')
+    add_cflags('-DYUI_LVGL_PORT_SDL', public=True)

@@ -1,7 +1,7 @@
 #include "lvgl_component.h"
 #include "component_registry.h"
 #include "../../lib/lvgl/lvgl.h"
-#include "../../lib/lvgl/port_sdl/lv_port.h"
+#include "../../lib/lvgl/lv_port.h"
 #include "cJSON.h"
 
 #include <stdlib.h>

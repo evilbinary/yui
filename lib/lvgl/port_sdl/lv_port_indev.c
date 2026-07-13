@@ -47,10 +47,8 @@ void lv_port_indev_init(void)
     indev_drv.read_cb = mouse_read;
     indev_mouse = lv_indev_drv_register(&indev_drv);
 
-    LV_IMG_DECLARE(mouse_cursor_icon);
-    lv_obj_t* cursor_obj = lv_img_create(lv_scr_act());
-    lv_img_set_src(cursor_obj, &mouse_cursor_icon);
-    lv_indev_set_cursor(indev_mouse, cursor_obj);
+    /* Use SDL system cursor; LVGL software cursor partial refresh erases YUI framebuffer. */
+    SDL_ShowCursor(SDL_ENABLE);
 }
 
 void lv_port_indev_deinit(void)

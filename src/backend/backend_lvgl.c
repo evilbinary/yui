@@ -5,16 +5,21 @@
 #include "render.h"
 #include "popup_manager.h"
 #include "log.h"
-#include "../../lib/lvgl/port_sdl/lv_port.h"
+#include "../../lib/lvgl/lv_port.h"
+#include "../../lib/lvgl/lvgl.h"
 
 #ifdef YUI_HAS_LVGLMODULE
 #include "../../lib/lvglmodule/lvgl_component.h"
 #endif
 
+#if defined(YUI_LVGL_PORT_SDL)
 #ifdef D_SDL
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_ttf.h>
 #else
 #include <SDL.h>
+#include <SDL_ttf.h>
+#endif
 #endif
 
 #include <stdio.h>
@@ -24,10 +29,94 @@
 float scale = 1.0f;
 Layer* g_ui_root = NULL;
 static int g_running = 0;
+#if defined(YUI_LVGL_PORT_SDL)
+static int g_ttf_ready = 0;
+#endif
 
 static UpdateCallback g_update_callbacks[16];
 static int g_update_callback_count = 0;
 static ResizeCallback g_resize_callback = NULL;
+
+#if defined(YUI_LVGL_PORT_SDL)
+static uint32_t fb_blend_pixel(uint32_t dst, uint32_t src)
+{
+    uint8_t sa = (uint8_t)(src >> 24);
+    if (sa == 0) {
+        return dst;
+    }
+    if (sa == 255) {
+        return src;
+    }
+
+    uint8_t sr = (uint8_t)((src >> 16) & 0xFF);
+    uint8_t sg = (uint8_t)((src >> 8) & 0xFF);
+    uint8_t sb = (uint8_t)(src & 0xFF);
+
+    uint8_t dr = (uint8_t)((dst >> 16) & 0xFF);
+    uint8_t dg = (uint8_t)((dst >> 8) & 0xFF);
+    uint8_t db = (uint8_t)(dst & 0xFF);
+
+    uint8_t inv = (uint8_t)(255 - sa);
+    uint8_t r = (uint8_t)((sr * sa + dr * inv) / 255);
+    uint8_t g = (uint8_t)((sg * sa + dg * inv) / 255);
+    uint8_t b = (uint8_t)((sb * sa + db * inv) / 255);
+    return ((uint32_t)255 << 24) | ((uint32_t)r << 16) | ((uint32_t)g << 8) | b;
+}
+
+static int font_file_exists(const char* path)
+{
+    FILE* f;
+    if (!path || !path[0]) {
+        return 0;
+    }
+    f = fopen(path, "rb");
+    if (!f) {
+        return 0;
+    }
+    fclose(f);
+    return 1;
+}
+
+static TTF_Font* open_font_at(const char* path, int size)
+{
+    if (!font_file_exists(path)) {
+        return NULL;
+    }
+    return TTF_OpenFont(path, (int)(size * scale));
+}
+
+static void build_weighted_font_path(const char* font_path, const char* weight,
+                                     char* out, size_t out_size)
+{
+    const char* suffix = NULL;
+
+    if (!font_path || !out || out_size == 0) {
+        return;
+    }
+
+    if (weight && strcmp(weight, "bold") == 0) {
+        suffix = "-Bold";
+    } else if (weight && strcmp(weight, "light") == 0) {
+        suffix = "-Light";
+    }
+
+    if (!suffix || strstr(font_path, "Bold") || strstr(font_path, "bold")
+        || strstr(font_path, "Light") || strstr(font_path, "light")) {
+        snprintf(out, out_size, "%s", font_path);
+        return;
+    }
+
+    {
+        const char* ext = strrchr(font_path, '.');
+        if (ext) {
+            int base_len = (int)(ext - font_path);
+            snprintf(out, out_size, "%.*s%s%s", base_len, font_path, suffix, ext);
+        } else {
+            snprintf(out, out_size, "%s%s", font_path, suffix);
+        }
+    }
+}
+#endif
 
 static uint32_t* framebuffer(void)
 {
@@ -83,6 +172,15 @@ int backend_init(void)
         LOGE("backend_lvgl", "lv_port_init failed");
         return -1;
     }
+
+#if defined(YUI_LVGL_PORT_SDL)
+    if (TTF_Init() == -1) {
+        LOGE("backend_lvgl", "TTF_Init failed: %s", TTF_GetError());
+        return -1;
+    }
+    g_ttf_ready = 1;
+#endif
+
 #ifdef YUI_HAS_LVGLMODULE
     lvglmodule_register_all();
 #endif
@@ -92,6 +190,12 @@ int backend_init(void)
 
 void backend_quit(void)
 {
+#if defined(YUI_LVGL_PORT_SDL)
+    if (g_ttf_ready) {
+        TTF_Quit();
+        g_ttf_ready = 0;
+    }
+#endif
     lv_port_deinit();
 }
 
@@ -115,10 +219,55 @@ Texture* backend_load_texture_from_base64(const char* base64_data, size_t data_l
 
 Texture* backend_render_texture(DFont* font, const char* text, Color color)
 {
+#if defined(YUI_LVGL_PORT_SDL)
+    SDL_Renderer* renderer;
+    SDL_Surface* surface;
+    SDL_Surface* converted;
+    SDL_Texture* texture;
+
+    if (!font || !text || text[0] == '\0') {
+        return NULL;
+    }
+
+    renderer = lv_port_get_renderer();
+    if (!renderer) {
+        return NULL;
+    }
+
+    surface = TTF_RenderUTF8_Blended(font, text, color);
+    if (!surface) {
+        LOGE("backend_lvgl", "TTF_RenderUTF8_Blended failed: %s", TTF_GetError());
+        return NULL;
+    }
+
+    converted = SDL_ConvertSurfaceFormat(surface, SDL_PIXELFORMAT_ARGB8888, 0);
+    SDL_FreeSurface(surface);
+    if (!converted) {
+        return NULL;
+    }
+
+    texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888,
+                                SDL_TEXTUREACCESS_STREAMING,
+                                converted->w, converted->h);
+    if (!texture) {
+        SDL_FreeSurface(converted);
+        return NULL;
+    }
+
+    if (SDL_UpdateTexture(texture, NULL, converted->pixels, converted->pitch) != 0) {
+        SDL_DestroyTexture(texture);
+        SDL_FreeSurface(converted);
+        return NULL;
+    }
+
+    SDL_FreeSurface(converted);
+    return texture;
+#else
     (void)font;
     (void)text;
     (void)color;
     return NULL;
+#endif
 }
 
 void backend_render_fill_rect(Rect* rect, Color color)
@@ -179,12 +328,20 @@ void backend_render_present(void)
 
 void backend_delay(int delay)
 {
+#if defined(YUI_LVGL_PORT_SDL)
     SDL_Delay((Uint32)delay);
+#else
+    (void)delay;
+#endif
 }
 
 Uint32 backend_get_ticks(void)
 {
+#if defined(YUI_LVGL_PORT_SDL)
     return SDL_GetTicks();
+#else
+    return (Uint32)lv_tick_get();
+#endif
 }
 
 void backend_get_mouse_state(int* x, int* y)
@@ -203,29 +360,146 @@ void backend_render_clear_color(unsigned char r, unsigned char g,
 
 DFont* backend_load_font(char* font_path, int size)
 {
-    (void)font_path;
-    (void)size;
-    return NULL;
+    return backend_load_font_with_weight(font_path, size, "normal");
 }
 
 DFont* backend_load_font_with_weight(char* font_path, int size, const char* weight)
 {
+#if defined(YUI_LVGL_PORT_SDL)
+    char weighted_path[MAX_PATH];
+    TTF_Font* font = NULL;
+    const char* candidates[12];
+    int count = 0;
+    int i;
+
+    if (!g_ttf_ready || !font_path || size <= 0) {
+        return NULL;
+    }
+
+    build_weighted_font_path(font_path, weight, weighted_path, sizeof(weighted_path));
+
+    candidates[count++] = weighted_path;
+    candidates[count++] = font_path;
+
+    if (!weight || strcmp(weight, "normal") == 0) {
+        candidates[count++] = "app/assets/Roboto-Regular.ttf";
+        candidates[count++] = "assets/Roboto-Regular.ttf";
+    } else if (strcmp(weight, "bold") == 0) {
+        candidates[count++] = "app/assets/Roboto-Bold.ttf";
+        candidates[count++] = "assets/Roboto-Bold.ttf";
+    } else if (strcmp(weight, "light") == 0) {
+        candidates[count++] = "app/assets/Roboto-Light.ttf";
+        candidates[count++] = "assets/Roboto-Light.ttf";
+    }
+
+#if defined(_WIN32)
+    candidates[count++] = "C:/Windows/Fonts/segoeui.ttf";
+    candidates[count++] = "C:/Windows/Fonts/arial.ttf";
+#elif defined(__APPLE__)
+    candidates[count++] = "/System/Library/Fonts/Supplemental/Arial.ttf";
+    candidates[count++] = "/System/Library/Fonts/Helvetica.ttc";
+#else
+    candidates[count++] = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf";
+#endif
+
+    for (i = 0; i < count && !font; i++) {
+        font = open_font_at(candidates[i], size);
+        if (font) {
+            LOGD("backend_lvgl", "loaded font: %s (size %d)", candidates[i], size);
+        }
+    }
+
+    if (!font) {
+        LOGE("backend_lvgl", "failed to load font: %s (size %d, weight %s)",
+             font_path, size, weight ? weight : "normal");
+    } else {
+        TTF_SetFontHinting(font, TTF_HINTING_LIGHT);
+    }
+
+    return font;
+#else
     (void)font_path;
     (void)size;
     (void)weight;
     return NULL;
+#endif
 }
 
 void backend_render_text_destroy(Texture* texture)
 {
+#if defined(YUI_LVGL_PORT_SDL)
+    if (texture) {
+        SDL_DestroyTexture(texture);
+    }
+#else
     (void)texture;
+#endif
 }
 
 void backend_render_text_copy(Texture* texture, const Rect* srcrect, const Rect* dstrect)
 {
+#if defined(YUI_LVGL_PORT_SDL)
+    uint32_t* fb;
+    int tex_w = 0;
+    int tex_h = 0;
+    SDL_Rect src;
+    SDL_Rect dst;
+    void* pixels = NULL;
+    int pitch = 0;
+    int y;
+    int x;
+
+    fb = framebuffer();
+    if (!fb || !texture || !dstrect) {
+        return;
+    }
+
+    if (SDL_QueryTexture(texture, NULL, NULL, &tex_w, &tex_h) != 0) {
+        return;
+    }
+
+    src.x = 0;
+    src.y = 0;
+    src.w = tex_w;
+    src.h = tex_h;
+    if (srcrect) {
+        src = *srcrect;
+    }
+    dst = *dstrect;
+
+    if (SDL_LockTexture(texture, &src, &pixels, &pitch) != 0) {
+        return;
+    }
+
+    for (y = 0; y < src.h; y++) {
+        int dy = dst.y + y;
+        if (dy < 0 || dy >= fb_height()) {
+            continue;
+        }
+        for (x = 0; x < src.w; x++) {
+            int dx = dst.x + x;
+            uint8_t* px;
+            uint32_t src_pixel;
+            uint32_t* dst_px;
+
+            if (dx < 0 || dx >= fb_width()) {
+                continue;
+            }
+
+            px = (uint8_t*)pixels + y * pitch + x * 4;
+            src_pixel = ((uint32_t)px[3] << 24) | ((uint32_t)px[2] << 16)
+                      | ((uint32_t)px[1] << 8) | (uint32_t)px[0];
+            dst_px = fb + dy * fb_stride() + dx;
+            *dst_px = fb_blend_pixel(*dst_px, src_pixel);
+        }
+    }
+
+    SDL_UnlockTexture(texture);
+#else
     (void)texture;
     (void)srcrect;
     (void)dstrect;
+#endif
 }
 
 void backend_render_get_clip_rect(Rect* prev_clip)
@@ -329,12 +603,19 @@ int backend_screenshot(const char* path) { (void)path; return -1; }
 
 int backend_query_texture(Texture* texture, Uint32* format, int* access, int* w, int* h)
 {
+#if defined(YUI_LVGL_PORT_SDL)
+    if (!texture) {
+        return -1;
+    }
+    return SDL_QueryTexture(texture, format, access, w, h);
+#else
     (void)texture;
     (void)format;
     (void)access;
     if (w) *w = 0;
     if (h) *h = 0;
     return -1;
+#endif
 }
 
 void backend_run(Layer* ui_root)
@@ -362,8 +643,19 @@ void backend_run(Layer* ui_root)
             popup_manager_render();
         }
 
+#if LV_USE_PERF_MONITOR || LV_USE_MEM_MONITOR
+        {
+            lv_disp_t* disp = lv_disp_get_default();
+            if (disp) {
+                lv_obj_invalidate(lv_disp_get_layer_sys(disp));
+            }
+        }
+#endif
+
         lv_timer_handler();
         lv_port_flush();
+#if defined(YUI_LVGL_PORT_SDL)
         SDL_Delay(16);
+#endif
     }
 }

@@ -6,6 +6,7 @@
  *      INCLUDES
  *********************/
 #include "lv_port_disp.h"
+#include "../lvgl.h"
 
 #ifdef D_SDL
 #include <SDL2/SDL.h>
@@ -130,6 +131,11 @@ void lv_port_disp_flush(void)
     SDL_RenderPresent(g_renderer);
 }
 
+SDL_Renderer* lv_port_disp_get_renderer(void)
+{
+    return g_renderer;
+}
+
 void* lv_port_disp_get_draw_buf(void)
 {
     return g_framebuffer;
@@ -193,6 +199,31 @@ static void disp_init(void)
     g_fb_stride = g_fb_w;
 }
 
+static uint32_t blend_pixel(uint32_t dst, uint32_t src)
+{
+    uint8_t sa = (uint8_t)(src >> 24);
+    if (sa == 0) {
+        return dst;
+    }
+    if (sa == 255) {
+        return src;
+    }
+
+    uint8_t sr = (uint8_t)((src >> 16) & 0xFF);
+    uint8_t sg = (uint8_t)((src >> 8) & 0xFF);
+    uint8_t sb = (uint8_t)(src & 0xFF);
+
+    uint8_t dr = (uint8_t)((dst >> 16) & 0xFF);
+    uint8_t dg = (uint8_t)((dst >> 8) & 0xFF);
+    uint8_t db = (uint8_t)(dst & 0xFF);
+
+    uint8_t inv = (uint8_t)(255 - sa);
+    uint8_t r = (uint8_t)((sr * sa + dr * inv) / 255);
+    uint8_t g = (uint8_t)((sg * sa + dg * inv) / 255);
+    uint8_t b = (uint8_t)((sb * sa + db * inv) / 255);
+    return ((uint32_t)255 << 24) | ((uint32_t)r << 16) | ((uint32_t)g << 8) | b;
+}
+
 static void disp_flush(lv_disp_drv_t* disp_drv, const lv_area_t* area, lv_color_t* color_p)
 {
     if (!g_framebuffer) {
@@ -206,7 +237,13 @@ static void disp_flush(lv_disp_drv_t* disp_drv, const lv_area_t* area, lv_color_
         uint32_t* dst = g_framebuffer + (y * g_fb_stride) + area->x1;
         lv_color_t* src = color_p;
         for (x = area->x1; x <= area->x2; x++) {
-            *dst++ = lv_color_to32(*src++);
+            uint32_t pixel = lv_color_to32(*src++);
+#if LV_COLOR_SCREEN_TRANSP
+            *dst = blend_pixel(*dst, pixel);
+            dst++;
+#else
+            *dst++ = pixel;
+#endif
         }
         color_p += (area->x2 - area->x1 + 1);
     }

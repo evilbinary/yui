@@ -9,11 +9,17 @@
 extern "C" {
 #endif
 
-#include "../lvgl.h"
+#ifdef D_SDL
+#include <SDL2/SDL.h>
+#else
+#include <SDL.h>
+#endif
 
 void lv_port_disp_init(void);
 void lv_port_disp_deinit(void);
 void lv_port_disp_flush(void);
+
+SDL_Renderer* lv_port_disp_get_renderer(void);
 
 void* lv_port_disp_get_draw_buf(void);
 int lv_port_disp_get_width(void);
