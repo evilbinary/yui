@@ -20,6 +20,7 @@ static void table_draw_cell_text(Layer* layer, const char* text, Color color,
                                 int x, int y, int w, int h, TableColumnAlign align);
 static void table_get_cell_rect(TableComponent* component, Layer* layer,
                                 int row, int col, Rect* out);
+static void table_edit_sync_scroll(TableComponent* component);
 
 static int table_edit_has_selection(TableComponent* component) {
     return component && component->edit_sel_start >= 0 &&
@@ -118,6 +119,7 @@ static void table_edit_move_cursor(TableComponent* component, int direction, int
         }
         table_edit_clear_selection(component);
     }
+    table_edit_sync_scroll(component);
     mark_layer_dirty(component->layer, DIRTY_TEXT);
 }
 
@@ -129,7 +131,7 @@ static int table_edit_pos_from_mouse_x(TableComponent* component, Layer* layer, 
     if (len <= 0) return 0;
 
     int draw_x = cell.x + TABLE_CELL_PAD_X;
-    int local_x = mouse_x - draw_x;
+    int local_x = mouse_x - draw_x + component->edit_scroll_x;
     if (local_x <= 0) return 0;
 
     int pos = 0;
@@ -159,6 +161,7 @@ static int table_handle_edit_mouse(TableComponent* component, Layer* layer, Mous
                      (event->x < cell.x ? 0 : (int)strlen(component->edit_buffer));
             component->edit_cursor = pos;
             component->edit_sel_end = pos;
+            table_edit_sync_scroll(component);
             mark_layer_dirty(layer, DIRTY_TEXT);
             return 1;
         }
@@ -174,6 +177,7 @@ static int table_handle_edit_mouse(TableComponent* component, Layer* layer, Mous
         component->edit_sel_start = pos;
         component->edit_sel_end = pos;
         component->edit_mouse_selecting = 1;
+        table_edit_sync_scroll(component);
         mark_layer_dirty(layer, DIRTY_TEXT);
         return 1;
     }
@@ -585,6 +589,46 @@ static void table_get_cell_rect(TableComponent* component, Layer* layer,
     out->h = component->row_height;
 }
 
+static void table_edit_update_scroll_for_cursor(TableComponent* component, const Rect* cell) {
+    if (!component || !cell || component->editing_row < 0) return;
+
+    Layer* layer = component->layer;
+    if (!layer) return;
+
+    int visible_width = cell->w - TABLE_CELL_PAD_X * 2;
+    if (visible_width < 1) visible_width = 1;
+
+    int buflen = (int)strlen(component->edit_buffer);
+    int full_width = table_edit_text_width(layer, component->edit_buffer, buflen);
+    if (full_width <= visible_width) {
+        component->edit_scroll_x = 0;
+        return;
+    }
+
+    int cursor_x = table_edit_text_width(layer, component->edit_buffer, component->edit_cursor);
+    if (cursor_x < component->edit_scroll_x) {
+        component->edit_scroll_x = cursor_x;
+    } else if (cursor_x > component->edit_scroll_x + visible_width) {
+        component->edit_scroll_x = cursor_x - visible_width;
+    }
+
+    int max_scroll = full_width - visible_width;
+    if (max_scroll < 0) max_scroll = 0;
+    if (component->edit_scroll_x < 0) component->edit_scroll_x = 0;
+    if (component->edit_scroll_x > max_scroll) component->edit_scroll_x = max_scroll;
+}
+
+static void table_edit_sync_scroll(TableComponent* component) {
+    if (!component || component->editing_row < 0 || component->editing_col < 0) return;
+
+    Layer* layer = component->layer;
+    if (!layer) return;
+
+    Rect cell;
+    table_get_cell_rect(component, layer, component->editing_row, component->editing_col, &cell);
+    table_edit_update_scroll_for_cursor(component, &cell);
+}
+
 static void table_cancel_edit(TableComponent* component) {
     if (!component) return;
     component->editing_row = -1;
@@ -595,6 +639,7 @@ static void table_cancel_edit(TableComponent* component) {
     component->edit_sel_end = -1;
     component->edit_mouse_selecting = 0;
     component->edit_orig_number = 0;
+    component->edit_scroll_x = 0;
     backend_stop_text_input();
 }
 
@@ -681,6 +726,7 @@ static void table_begin_edit(TableComponent* component, int row, int col) {
     component->selected_row = row;
     component->selected_col = col;
     component->edit_mouse_selecting = 0;
+    component->edit_scroll_x = 0;
 
     Rect cell;
     table_get_cell_rect(component, layer, row, col, &cell);
@@ -794,6 +840,7 @@ static void table_edit_insert_text(TableComponent* component, const char* text) 
             (size_t)(len - component->edit_cursor + 1));
     memcpy(component->edit_buffer + component->edit_cursor, text, (size_t)add_len);
     component->edit_cursor += add_len;
+    table_edit_sync_scroll(component);
     mark_layer_dirty(component->layer, DIRTY_TEXT);
 }
 
@@ -802,6 +849,7 @@ static void table_edit_backspace(TableComponent* component) {
 
     if (table_edit_has_selection(component)) {
         table_edit_remove_selection(component);
+        table_edit_sync_scroll(component);
         mark_layer_dirty(component->layer, DIRTY_TEXT);
         return;
     }
@@ -815,6 +863,7 @@ static void table_edit_backspace(TableComponent* component) {
             component->edit_buffer + component->edit_cursor,
             (size_t)(len - component->edit_cursor + 1));
     component->edit_cursor = pos;
+    table_edit_sync_scroll(component);
     mark_layer_dirty(component->layer, DIRTY_TEXT);
 }
 
@@ -823,6 +872,7 @@ static void table_edit_delete(TableComponent* component) {
 
     if (table_edit_has_selection(component)) {
         table_edit_remove_selection(component);
+        table_edit_sync_scroll(component);
         mark_layer_dirty(component->layer, DIRTY_TEXT);
         return;
     }
@@ -835,6 +885,7 @@ static void table_edit_delete(TableComponent* component) {
     memmove(component->edit_buffer + component->edit_cursor,
             component->edit_buffer + component->edit_cursor + char_len,
             (size_t)(len - component->edit_cursor - char_len + 1));
+    table_edit_sync_scroll(component);
     mark_layer_dirty(component->layer, DIRTY_TEXT);
 }
 
@@ -881,7 +932,7 @@ static void table_render_edit_cell(TableComponent* component, Layer* layer, Rect
     }
     backend_render_set_clip_rect(&clip);
 
-    int draw_x = cell.x + TABLE_CELL_PAD_X;
+    int draw_x = cell.x + TABLE_CELL_PAD_X - component->edit_scroll_x;
     int draw_y = cell.y;
     int draw_w = 0;
     int draw_h = 0;
@@ -1066,6 +1117,7 @@ TableComponent* table_component_create(Layer* layer) {
     component->edit_sel_end = -1;
     component->edit_mouse_selecting = 0;
     component->edit_orig_number = 0;
+    component->edit_scroll_x = 0;
     component->editable = 1;
     component->last_click_time = 0;
     component->last_click_row = -1;
@@ -1641,6 +1693,7 @@ int table_component_handle_key_event(Layer* layer, KeyEvent* event) {
                     component->edit_cursor = 0;
                     table_edit_clear_selection(component);
                 }
+                table_edit_sync_scroll(component);
                 mark_layer_dirty(layer, DIRTY_TEXT);
                 return 1;
             case SDLK_END:
@@ -1655,11 +1708,14 @@ int table_component_handle_key_event(Layer* layer, KeyEvent* event) {
                     component->edit_cursor = (int)strlen(component->edit_buffer);
                     table_edit_clear_selection(component);
                 }
+                table_edit_sync_scroll(component);
                 mark_layer_dirty(layer, DIRTY_TEXT);
                 return 1;
             case SDLK_a:
                 if (ctrl) {
                     table_edit_select_all_text(component);
+                    component->edit_scroll_x = 0;
+                    table_edit_sync_scroll(component);
                     mark_layer_dirty(layer, DIRTY_TEXT);
                     return 1;
                 }
