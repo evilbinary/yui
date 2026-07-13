@@ -345,6 +345,10 @@ void backend_run(Layer* ui_root)
     while (g_running) {
         lv_port_tick_inc();
         lv_port_input_poll();
+        if (lv_port_should_quit()) {
+            g_running = 0;
+            break;
+        }
 
         for (int i = 0; i < g_update_callback_count; i++) {
             if (g_update_callbacks[i]) {

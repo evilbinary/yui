@@ -208,3 +208,26 @@ target("db")
     add_ldflags(' -L/mingw64/lib/ -lmariadb '),
     add_run()
 )
+
+# LVGL backend demo (YUI_PLAT=lvgl or -p lvgl)
+target("lvgl-sdl")
+(
+    add_deps("yui", "cjson", "lvgl", "lvglmodule"),
+    add_rules("mode.debug", "mode.release"),
+    set_kind("binary"),
+    add_flags(),
+    add_files("lvgl/main.c"),
+    add_run()
+)
+
+
+# LVGL backend demo (YUI_PLAT=lvgl or -p lvgl)
+target("lvgl-stm32")
+(
+    add_deps("yui", "cjson", "lvgl", "lvglmodule"),
+    add_rules("mode.debug", "mode.release"),
+    set_kind("binary"),
+    add_flags(),
+    add_files("lvgl/main.c"),
+    add_run()
+)

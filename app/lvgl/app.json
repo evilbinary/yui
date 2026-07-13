@@ -1,0 +1,60 @@
+{
+    "id": "lvgl_demo",
+    "type": "View",
+    "text": "YUI LVGL Demo",
+    "size": [390, 390],
+    "bgColor": "#1a1a2e",
+    "layout": {
+        "type": "vertical",
+        "spacing": 12,
+        "padding": [16, 16, 16, 16]
+    },
+    "children": [
+        {
+            "id": "lvgl_title",
+            "type": "LvLabel",
+            "text": "Hello from LvLabel",
+            "size": [320, 28]
+        },
+        {
+            "id": "lvgl_subtitle",
+            "type": "LvLabel",
+            "text": "LVGL widget + YUI native render",
+            "size": [320, 24]
+        },
+        {
+            "id": "native_panel",
+            "type": "View",
+            "size": [320, 80],
+            "bgColor": "#16213e",
+            "radius": 8,
+            "children": [
+                {
+                    "id": "native_btn",
+                    "type": "Button",
+                    "text": "Native Button",
+                    "size": [160, 36],
+                    "position": [12, 22]
+                }
+            ]
+        },
+        {
+            "id": "native_label",
+            "type": "Label",
+            "text": "Native Label (fill rect)",
+            "size": [320, 24]
+        },
+        {
+            "id": "color_row",
+            "type": "View",
+            "size": [320, 48],
+            "layout": { "type": "horizontal", "spacing": 8 },
+            "children": [
+                { "id": "box_red", "type": "View", "size": [72, 40], "bgColor": "#e94560", "radius": 4 },
+                { "id": "box_teal", "type": "View", "size": [72, 40], "bgColor": "#0f9b8e", "radius": 4 },
+                { "id": "box_gold", "type": "View", "size": [72, 40], "bgColor": "#f5a623", "radius": 4 },
+                { "id": "box_blue", "type": "View", "size": [72, 40], "bgColor": "#4a90d9", "radius": 4 }
+            ]
+        }
+    ]
+}
