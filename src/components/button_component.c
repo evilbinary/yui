@@ -290,10 +290,26 @@ void button_component_render(Layer* layer) {
         text_color = (Color){255, 255, 255, 150};
     }
 
-    int text_x_offset = 0;
     int text_y_center = layer->rect.y + layer->rect.h / 2;
+    const int pad_h = 6;
+    const int pad_right = 6;
+    const int icon_text_gap = 4;
+
+    // --- 先测量文本尺寸，图标+文字并存时优先保证文字按 fontSize 渲染 ---
+    Texture* text_texture = NULL;
+    int draw_w = 0, draw_h = 0;
+    if (has_text) {
+        text_texture = render_text(layer, layer_text, text_color);
+        if (text_texture) {
+            int text_width, text_height;
+            backend_query_texture(text_texture, NULL, NULL, &text_width, &text_height);
+            draw_w = text_width / scale;
+            draw_h = text_height / scale;
+        }
+    }
 
     // --- 渲染图标（优先 SVG/图片，回退到文本图标） ---
+    int icon_w = 0, icon_h = 0;
     Texture* icon_tex = NULL;
     int icon_tex_owned = 0;
     if (component->icon_path && !component->icon_tex) {
@@ -310,8 +326,16 @@ void button_component_render(Layer* layer) {
         int iw, ih;
         backend_query_texture(icon_tex, NULL, NULL, &iw, &ih);
         int icon_max = component->icon_size > 0 ? component->icon_size : layer->rect.h - 8;
-        int icon_w = iw / scale;
-        int icon_h = ih / scale;
+        icon_w = iw / scale;
+        icon_h = ih / scale;
+
+        if (has_text && draw_w > 0) {
+            // 为文字预留空间，剩余宽度才给图标，避免挤压文字字号
+            int icon_space = layer->rect.w - pad_h - pad_right - icon_text_gap - draw_w;
+            if (icon_space < 8) icon_space = 8;
+            if (icon_max > icon_space) icon_max = icon_space;
+        }
+
         if (icon_w > icon_max || icon_h > icon_max) {
             float ratio = (float)icon_w / icon_h;
             if (ratio > 1.0f) {
@@ -322,60 +346,42 @@ void button_component_render(Layer* layer) {
                 icon_w = (int)(icon_max * ratio);
             }
         }
-        int icon_x = has_text ? layer->rect.x + 6 : layer->rect.x + (layer->rect.w - icon_w) / 2;
+        int icon_x = has_text ? layer->rect.x + pad_h : layer->rect.x + (layer->rect.w - icon_w) / 2;
         int icon_y = text_y_center - icon_h / 2;
         Rect icon_rect = {icon_x, icon_y, icon_w, icon_h};
         backend_render_text_copy(icon_tex, NULL, &icon_rect);
         if (icon_tex_owned) backend_render_text_destroy(icon_tex);
-        if (has_text) {
-            text_x_offset = icon_w + 6;
-        }
     }
 
     // --- 渲染文本 ---
-    if (has_text) {
-        Texture* text_texture = render_text(layer, layer_text, text_color);
-
-        if (text_texture) {
-            int text_width, text_height;
-            backend_query_texture(text_texture, NULL, NULL, &text_width, &text_height);
-
-            int draw_w = text_width / scale;
-            int draw_h = text_height / scale;
-
-            // 文本/emoji 纹理可能大于按钮（彩色 emoji 位图字体尤为明显），等比缩小到按钮内边距
-            int avail_w = layer->rect.w - (text_x_offset > 0 ? text_x_offset + 10 : 12);
-            int avail_h = layer->rect.h - 8;
-            if (avail_w < 1) avail_w = 1;
-            if (avail_h < 1) avail_h = 1;
-            if (draw_w > avail_w || draw_h > avail_h) {
-                float ratio = (float)draw_w / draw_h;
-                if (draw_w * avail_h > avail_w * draw_h) {
-                    draw_w = avail_w;
-                    draw_h = (int)(avail_w / ratio);
-                } else {
-                    draw_h = avail_h;
-                    draw_w = (int)(avail_h * ratio);
-                }
-                if (draw_w < 1) draw_w = 1;
-                if (draw_h < 1) draw_h = 1;
-            }
-
-            int text_x, text_y;
-            if (text_x_offset > 0) {
-                int total_w = layer->rect.w - text_x_offset - 10;
-                text_x = layer->rect.x + text_x_offset + (total_w - draw_w) / 2;
-                if (text_x < layer->rect.x + text_x_offset) {
-                    text_x = layer->rect.x + text_x_offset;
-                }
+    if (text_texture) {
+        int avail_w = layer->rect.w - (icon_w > 0 ? pad_h + icon_w + icon_text_gap + pad_right : pad_h * 2);
+        int avail_h = layer->rect.h - 8;
+        if (avail_w < 1) avail_w = 1;
+        if (avail_h < 1) avail_h = 1;
+        if (draw_w > avail_w || draw_h > avail_h) {
+            float ratio = (float)draw_w / draw_h;
+            if (draw_w * avail_h > avail_w * draw_h) {
+                draw_w = avail_w;
+                draw_h = (int)(avail_w / ratio);
             } else {
-                text_x = layer->rect.x + (layer->rect.w - draw_w) / 2;
+                draw_h = avail_h;
+                draw_w = (int)(avail_h * ratio);
             }
-            text_y = layer->rect.y + (layer->rect.h - draw_h) / 2;
-
-            Rect text_rect = {text_x, text_y, draw_w, draw_h};
-            backend_render_text_copy(text_texture, NULL, &text_rect);
-            backend_render_text_destroy(text_texture);
+            if (draw_w < 1) draw_w = 1;
+            if (draw_h < 1) draw_h = 1;
         }
+
+        int text_x, text_y;
+        if (icon_w > 0) {
+            text_x = layer->rect.x + pad_h + icon_w + icon_text_gap;
+        } else {
+            text_x = layer->rect.x + (layer->rect.w - draw_w) / 2;
+        }
+        text_y = layer->rect.y + (layer->rect.h - draw_h) / 2;
+
+        Rect text_rect = {text_x, text_y, draw_w, draw_h};
+        backend_render_text_copy(text_texture, NULL, &text_rect);
+        backend_render_text_destroy(text_texture);
     }
 }
