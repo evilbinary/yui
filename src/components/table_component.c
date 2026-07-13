@@ -31,6 +31,7 @@ static int table_row_at_point(TableComponent* component, Layer* layer, int x, in
 static int table_point_in_header(TableComponent* component, Layer* layer, int x, int y);
 static int table_resize_column_at(TableComponent* component, Layer* layer, int x, int y);
 static char* table_json_value_to_string(cJSON* item);
+static void table_tooltip_schedule_show(TableComponent* component, Layer* layer);
 
 static void table_tooltip_layer_render(Layer* layer) {
     if (!layer) return;

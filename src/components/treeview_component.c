@@ -791,13 +791,95 @@ void treeview_scroll_to_node(TreeViewComponent* component, TreeNode* target_node
     }
 }
 
+static int treeview_get_visible_height(Layer* layer) {
+    int visible_height = layer->rect.h;
+    if (layer->layout_manager) {
+        visible_height -= layer->layout_manager->padding[0] + layer->layout_manager->padding[2];
+    }
+    return visible_height > 0 ? visible_height : 0;
+}
+
+static int treeview_get_visible_width(Layer* layer) {
+    int visible_width = layer->rect.w;
+    if (layer->layout_manager) {
+        visible_width -= layer->layout_manager->padding[1] + layer->layout_manager->padding[3];
+    }
+    return visible_width > 0 ? visible_width : 0;
+}
+
+static int treeview_get_vertical_scrollbar_track(Layer* layer, Rect* track_out) {
+    if (!layer || !track_out) return 0;
+
+    int visible_height = treeview_get_visible_height(layer);
+    if ((layer->scrollable == 1 || layer->scrollable == 3) &&
+        layer->scrollbar_v && layer->scrollbar_v->visible &&
+        layer->content_height > visible_height) {
+        int thickness = layer->scrollbar_v->thickness > 0 ? layer->scrollbar_v->thickness : 8;
+        track_out->x = layer->rect.x + layer->rect.w - thickness;
+        track_out->y = layer->rect.y;
+        track_out->w = thickness;
+        track_out->h = visible_height;
+        return 1;
+    }
+    return 0;
+}
+
+static int treeview_get_horizontal_scrollbar_track(Layer* layer, Rect* track_out) {
+    if (!layer || !track_out) return 0;
+
+    int visible_width = treeview_get_visible_width(layer);
+    if ((layer->scrollable == 2 || layer->scrollable == 3) &&
+        layer->scrollbar_h && layer->scrollbar_h->visible &&
+        layer->content_width > visible_width) {
+        int thickness = layer->scrollbar_h->thickness > 0 ? layer->scrollbar_h->thickness : 8;
+        track_out->x = layer->rect.x;
+        track_out->y = layer->rect.y + layer->rect.h - thickness;
+        track_out->w = visible_width;
+        track_out->h = thickness;
+        return 1;
+    }
+    return 0;
+}
+
+static int treeview_point_in_scrollbar(Layer* layer, int x, int y) {
+    Point pt = {x, y};
+    Rect track;
+    if (treeview_get_vertical_scrollbar_track(layer, &track) && point_in_rect(pt, track)) {
+        return 1;
+    }
+    if (treeview_get_horizontal_scrollbar_track(layer, &track) && point_in_rect(pt, track)) {
+        return 1;
+    }
+    return 0;
+}
+
+static int treeview_content_right_x(Layer* layer) {
+    Rect track;
+    if (treeview_get_vertical_scrollbar_track(layer, &track)) {
+        return track.x;
+    }
+    return layer->rect.x + layer->rect.w;
+}
+
+static int treeview_content_bottom_y(Layer* layer) {
+    Rect track;
+    if (treeview_get_horizontal_scrollbar_track(layer, &track)) {
+        return track.y;
+    }
+    return layer->rect.y + layer->rect.h;
+}
+
 // 根据位置获取节点
 TreeNode* treeview_get_node_from_position(TreeViewComponent* component, int x, int y) {
     if (!component || component->root_count == 0) return NULL;
-    
-    // 检查是否在组件区域内
-    if (x < component->layer->rect.x || x >= component->layer->rect.x + component->layer->rect.w ||
-        y < component->layer->rect.y || y >= component->layer->rect.y + component->layer->rect.h) {
+
+    Layer* layer = component->layer;
+    int content_right = treeview_content_right_x(layer);
+    int content_bottom = treeview_content_bottom_y(layer);
+
+    // 检查是否在内容区域内（排除滚动条轨道）
+    if (x < layer->rect.x || x >= content_right ||
+        y < layer->rect.y || y >= content_bottom) {
         return NULL;
     }
     
@@ -1000,6 +1082,16 @@ int treeview_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     if (!layer || !event || !layer->component) return 0;
     
     TreeViewComponent* component = (TreeViewComponent*)layer->component;
+    treeview_update_scrollbar(component);
+
+    if ((layer->scrollbar_v && layer->scrollbar_v->is_dragging) ||
+        (layer->scrollbar_h && layer->scrollbar_h->is_dragging)) {
+        return 1;
+    }
+
+    if (treeview_point_in_scrollbar(layer, event->x, event->y)) {
+        return 1;
+    }
     
     if (event->state == SDL_PRESSED && event->button == SDL_BUTTON_LEFT) {
         // 调整鼠标坐标以考虑滚动偏移

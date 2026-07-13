@@ -241,7 +241,8 @@ function handleMenuClick(menuId) {
     if (!menuId) return;
     var layer = yui.find(menuId);
     var itemText = layer ? layer.text : "";
-    if (itemText === "新建查询" || itemText === "打开文件" || itemText === "保存文件" || itemText === "退出") {
+    if (itemText === "新建查询" || itemText === "打开文件" || itemText === "保存文件" ||
+        itemText === "导出 CSV" || itemText === "退出") {
         onFileMenuClick(itemText);
     } else if (itemText === "新建连接" || itemText === "连接数据库" || itemText === "断开连接" || itemText === "导入数据库") {
         onDbMenuClick(itemText);
@@ -255,6 +256,7 @@ function onFileMenuClick(itemText) {
         case "新建查询": onNewTab(); break;
         case "打开文件": onOpen(); break;
         case "保存文件": onSave(); break;
+        case "导出 CSV": onExportCsv(); break;
         case "退出": onExit(); break;
     }
 }
@@ -445,17 +447,87 @@ function onFormat() {
 
 // ====================== File Browser ======================
 
-var fileDialogMode = "open";  // "open" or "save"
+var fileDialogMode = "open";  // "open" | "save" | "exportCsv"
 var fileDialogPath = "./";
 var fileDialogSelected = "";
 
-function showFileDialog(mode) {
+function formatExportTimestamp() {
+    var d = new Date();
+    function pad(n) { return n < 10 ? "0" + n : "" + n; }
+    return d.getFullYear() +
+        pad(d.getMonth() + 1) +
+        pad(d.getDate()) + "_" +
+        pad(d.getHours()) +
+        pad(d.getMinutes()) +
+        pad(d.getSeconds());
+}
+
+function collectResultColumns(rows) {
+    if (!rows || rows.length === 0) return [];
+    var seen = {};
+    var columns = [];
+    for (var r = 0; r < rows.length; r++) {
+        var row = rows[r];
+        if (!row || typeof row !== "object") continue;
+        for (var key in row) {
+            if (Object.prototype.hasOwnProperty.call(row, key) && !seen[key]) {
+                seen[key] = true;
+                columns.push(key);
+            }
+        }
+    }
+    return columns;
+}
+
+function csvEscapeField(value) {
+    if (value === null || value === undefined) return "";
+    var s = String(value);
+    if (/[",\r\n]/.test(s)) {
+        return '"' + s.replace(/"/g, '""') + '"';
+    }
+    return s;
+}
+
+function rowsToCsv(rows) {
+    var columns = collectResultColumns(rows);
+    if (columns.length === 0) return "";
+
+    var lines = [];
+    var header = [];
+    for (var i = 0; i < columns.length; i++) {
+        header.push(csvEscapeField(columns[i]));
+    }
+    lines.push(header.join(","));
+
+    for (var r = 0; r < rows.length; r++) {
+        var row = rows[r] || {};
+        var fields = [];
+        for (var c = 0; c < columns.length; c++) {
+            var val = row[columns[c]];
+            if (val === null || val === undefined) {
+                fields.push("");
+            } else if (typeof val === "object") {
+                fields.push(csvEscapeField(JSON.stringify(val)));
+            } else {
+                fields.push(csvEscapeField(val));
+            }
+        }
+        lines.push(fields.join(","));
+    }
+    return lines.join("\r\n");
+}
+
+function showFileDialog(mode, defaultName) {
     fileDialogMode = mode;
     fileDialogSelected = "";
     var title = yui.find("fileDialogTitle");
-    if (title) title.text = mode === "save" ? "保存文件" : "打开文件";
+    if (title) {
+        if (mode === "save") title.text = "保存文件";
+        else if (mode === "exportCsv") title.text = "导出 CSV";
+        else title.text = "打开文件";
+    }
     var input = yui.find("fileDialogInput");
-    if (input) input.text = "";
+    if (input) input.text = defaultName || "";
     var overlay = yui.find("fileDialogOverlay");
     if (overlay) overlay.visible = true;
     refreshFileList(fileDialogPath || "./");
@@ -543,6 +615,8 @@ function onFileBrowserOk() {
 
     if (fileDialogMode === "save") {
         doSaveFile(fullPath);
+    } else if (fileDialogMode === "exportCsv") {
+        doExportCsv(fullPath);
     } else {
         doOpenFile(fullPath);
     }
@@ -588,6 +662,37 @@ function doOpenFile(path) {
 
 function onSave() {
     showFileDialog("save");
+}
+
+function onExportCsv() {
+    if (!resultRowsAll || resultRowsAll.length === 0) {
+        updateStatus("没有可导出的查询结果", "#F38BA8");
+        return;
+    }
+    showFileDialog("exportCsv", "query_result_" + formatExportTimestamp() + ".csv");
+}
+
+function doExportCsv(path) {
+    if (!resultRowsAll || resultRowsAll.length === 0) {
+        updateStatus("没有可导出的查询结果", "#F38BA8");
+        return;
+    }
+    if (!path) {
+        updateStatus("导出失败: 无效路径", "#F38BA8");
+        return;
+    }
+    if (path.toLowerCase().indexOf(".csv") !== path.length - 4) {
+        path += ".csv";
+    }
+
+    var csv = rowsToCsv(resultRowsAll);
+    var content = "\uFEFF" + csv;
+    var ok = YUI.writeFile(path, content);
+    if (ok) {
+        updateStatus("已导出 " + resultRowsAll.length + " 行到 " + path, "#A6E3A1");
+    } else {
+        updateStatus("导出失败: " + path, "#F38BA8");
+    }
 }
 
 function onOpen() {

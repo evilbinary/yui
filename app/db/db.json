@@ -352,6 +352,17 @@
                         }
                       },
                       {
+                        "id": "btnExportCsv",
+                        "type": "Button",
+                        "size": [72, 24],
+                        "text": "导出CSV",
+                        "style": {
+                          "fontSize": 11,
+                          "borderRadius": 4
+                        },
+                        "events": { "onClick": "@onExportCsv" }
+                      },
+                      {
                         "id": "resultPager",
                         "type": "Pagination",
                         "mode": "simple",
@@ -399,7 +410,7 @@
       "id": "fileMenuPopup",
       "type": "Menu",
       "position": [0, 0],
-      "size": [40, 175],
+      "size": [40, 204],
       "text": "文件",
       "fontSize": 12,
       "style": {
@@ -409,6 +420,7 @@
         { "text": "新建查询", "onClick": "@onNewTab" },
         { "text": "打开文件", "onClick": "@onOpen" },
         { "text": "保存文件", "onClick": "@onSave" },
+        { "text": "导出 CSV", "onClick": "@onExportCsv" },
         { "separator": true },
         { "text": "退出", "onClick": "onExit" }
       ],
