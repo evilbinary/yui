@@ -371,7 +371,7 @@ e.g. "stm32f769xx.h" or "stm32f429xx.h"*/
 
 #define LV_USE_ARC          1
 
-#define LV_USE_ANIMIMG	    1
+#define LV_USE_ANIMIMG	    0
 
 #define LV_USE_BAR          1
 
@@ -419,7 +419,7 @@ e.g. "stm32f769xx.h" or "stm32f429xx.h"*/
 /*-----------
  * Widgets
  *----------*/
-#define LV_USE_CALENDAR     1
+#define LV_USE_CALENDAR     0
 #if LV_USE_CALENDAR
 # define LV_CALENDAR_WEEK_STARTS_MONDAY 0
 # if LV_CALENDAR_WEEK_STARTS_MONDAY
@@ -433,33 +433,35 @@ e.g. "stm32f769xx.h" or "stm32f429xx.h"*/
 # define LV_USE_CALENDAR_HEADER_DROPDOWN    1
 #endif  /*LV_USE_CALENDAR*/
 
-#define LV_USE_CHART        1
+#define LV_USE_CHART        0
 
-#define LV_USE_COLORWHEEL   1
+#define LV_USE_COLORWHEEL   0
 
-#define LV_USE_IMGBTN       1
+#define LV_USE_IMGBTN       0
 
-#define LV_USE_KEYBOARD     1
+#define LV_USE_KEYBOARD     0
 
-#define LV_USE_LED          1
+#define LV_USE_LED          0
 
-#define LV_USE_LIST         1
+#define LV_USE_LIST         0
 
-#define LV_USE_METER        1
+#define LV_USE_MENU         0
 
-#define LV_USE_MSGBOX       1
+#define LV_USE_METER        0
 
-#define LV_USE_SPINBOX      1
+#define LV_USE_MSGBOX       0
 
-#define LV_USE_SPINNER      1
+#define LV_USE_SPINBOX      0
 
-#define LV_USE_TABVIEW      1
+#define LV_USE_SPINNER      0
 
-#define LV_USE_TILEVIEW     1
+#define LV_USE_TABVIEW      0
 
-#define LV_USE_WIN          1
+#define LV_USE_TILEVIEW     0
 
-#define LV_USE_SPAN         1
+#define LV_USE_WIN          0
+
+#define LV_USE_SPAN         0
 #if LV_USE_SPAN
 /*A line text can contain maximum num of span descriptor */
 #  define LV_SPAN_SNIPPET_STACK_SIZE   64
@@ -479,7 +481,7 @@ e.g. "stm32f769xx.h" or "stm32f429xx.h"*/
 # define LV_THEME_DEFAULT_GROW              1
 
 /*Default transition time in [ms]*/
-# define LV_THEME_DEFAULT_TRANSITON_TIME    80
+# define LV_THEME_DEFAULT_TRANSITION_TIME    80
 #endif /*LV_USE_THEME_DEFAULT*/
 
 /*An very simple them that is a good starting point for a custom theme*/
