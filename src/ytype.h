@@ -152,12 +152,11 @@ typedef enum {
     CLOCK,  // 添加CLOCK类型
     SASH,
     TABLE,
-    PAGINATION
-} LayerType;
+    PAGINATION,
 
- 
-extern char* layer_type_name[];
-extern int layer_type_size ;
+    LAYER_TYPE_BUILTIN_MAX,
+    LAYER_TYPE_USER_BASE = 256,
+} LayerType;
 
 
 typedef struct Layer Layer;

@@ -1,5 +1,6 @@
 #include "theme_manager.h"
 #include "render.h"
+#include "component_registry.h"
 #include "log.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -271,7 +272,7 @@ static void theme_manager_apply_to_layer_recursive(Layer* layer) {
     }
     
     // 获取组件类型名称
-    const char* type_name = layer_type_name[layer->type];
+    const char* type_name = yui_type_name(layer->type);
     
     // 应用主题到当前图层
     theme_manager_apply_to_layer(layer, layer->id, type_name);

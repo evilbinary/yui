@@ -27,5 +27,6 @@ void scrollbar_component_update_position(ScrollbarComponent* component);
 int scrollbar_component_handle_mouse_event(Layer* layer, MouseEvent* event);
 void scrollbar_component_render(Layer* layer);
 ScrollbarComponent* scrollbar_component_create_from_json(Layer* layer,Layer* target_layer, cJSON* json_obj);
+void* scrollbar_component_create_from_json_adapter(Layer* layer, cJSON* json_obj);
 
 #endif  // YUI_SCROLLBAR_COMPONENT_H

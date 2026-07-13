@@ -1,5 +1,6 @@
 #include "layer.h"
 #include "render.h"
+#include "component_registry.h"
 #include "animate.h"
 #include <limits.h>
 
@@ -188,9 +189,14 @@ void render_layer(Layer* layer) {
     layer_update_animation(layer);
     
     // 根据图层类型进行不同的渲染处理
-    if(layer->render!=NULL){
-            layer->render(layer);
-    }else if(layer->type==VIEW) {
+    const YuiComponentOps* ops = yui_type_get_ops(layer->type);
+    if (ops && (ops->flags & YUI_COMP_LVGL_WIDGET)) {
+        if (layer->layout) {
+            layer->layout(layer);
+        }
+    } else if (layer->render != NULL) {
+        layer->render(layer);
+    } else if (layer->type == VIEW) {
         //printf("layer->%s %dn",layer->id,layer->type);
     // 绘制背景
         if(layer->bg_color.a > 0) {
@@ -313,8 +319,7 @@ static void render_layer_inspect(Layer* layer) {
     if (yui_inspect_show_info && layer->inspect_show_info && strlen(layer->id) > 0) {
         char line1[128], line2[128], line3[128], line4[128];
         snprintf(line1, sizeof(line1), "ID: %s", layer->id);
-        snprintf(line2, sizeof(line2), "Type: %s",
-                 layer->type >= 0 && layer->type < layer_type_size ? layer_type_name[layer->type] : "Unknown");
+        snprintf(line2, sizeof(line2), "Type: %s", yui_type_name(layer->type));
         snprintf(line3, sizeof(line3), "Pos: (%d,%d)", layer->rect.x, layer->rect.y);
         snprintf(line4, sizeof(line4), "Size: (%d,%d)", layer->rect.w, layer->rect.h);
 

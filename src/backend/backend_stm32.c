@@ -1,4 +1,5 @@
 #include "backend.h"
+#include "component_registry.h"
 #include "event.h"
 #include "render.h"
 #include "ytype.h"
@@ -63,6 +64,9 @@ static TouchState touch_states[MAX_TOUCHES] = {0};
 
 // ====================== 初始化函数 ======================
 int backend_init() {
+    yui_component_registry_init();
+    yui_components_register_builtin();
+
     // 初始化显示缓冲区
     framebuffer = (uint32_t*)SDRAM_BANK_ADDR; // 使用外部SDRAM作为帧缓冲区
     

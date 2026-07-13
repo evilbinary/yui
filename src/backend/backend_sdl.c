@@ -1,4 +1,5 @@
 #include "backend.h"
+#include "component_registry.h"
 #include "event.h"
 #include "render.h"
 #include "ytype.h"
@@ -466,6 +467,9 @@ void draw_rounded_rect(SDL_Renderer* renderer, int x, int y, int w, int h, int r
 void cleanup_corner_texture_cache();
 
 int backend_init(){
+    yui_component_registry_init();
+    yui_components_register_builtin();
+
     // Windows: 抑制系统 DLL 调试输出（DWM 等），并禁止崩溃弹窗
     #ifdef _WIN32
     SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);

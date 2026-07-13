@@ -7,18 +7,11 @@
 #include "theme_manager.h"
 #include "theme.h"
 #include "backend.h"
+#include "component_registry.h"
 #include "log.h"
 
 
 Layer* focused_layer = NULL;
-
-// 更新图层类型名称数组，添加GRID、Text、Tab、Slider、Listbox和Menu
-char* layer_type_name[] = {"View",     "Button",   "Input",   "Label",
-                           "Image",    "List",     "Grid",    "Progress",
-                           "Checkbox", "Radiobox", "Text",    "Treeview",
-                           "Tab",      "Slider",   "Select", "Scrollbar", "Menu", "Dialog", "Clock", "Sash", "Table", "Pagination"};
-
-int layer_type_size = (sizeof(layer_type_name) / sizeof(layer_type_name[0]));  // 更新图层类型数量
 
 // 全局 Inspect 模式开关
 int yui_inspect_mode_enabled = 0;
@@ -320,21 +313,10 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
     }
   }
   if (cJSON_HasObjectItem(json_obj, "type")) {
-    int i=0;
-    for (i = 0; i < layer_type_size; i++) {
-      // printf("cmp %s == %s\n", cJSON_GetObjectItem(json_obj,
-      // "type")->valuestring,layer_type_name[i] );
-      if (strcmp(cJSON_GetObjectItem(json_obj, "type")->valuestring,
-                 layer_type_name[i]) == 0) {
-        layer->type = i;
-        break;
-      }
-    }
-    if(i>layer_type_size){
-      layer->type=VIEW;
-    }
-  }else{
-    layer->type=VIEW;
+    const char* type_str = cJSON_GetObjectItem(json_obj, "type")->valuestring;
+    layer->type = yui_type_resolve(type_str);
+  } else {
+    layer->type = VIEW;
   }
 
   // 解析字体 - font、fontSize、fontWeight 都是独立属性，各自有默认值
@@ -962,91 +944,18 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
     }
   }
 
-  // 如果是INPUT类型的图层，初始化InputComponent
-  if (layer->type == INPUT_FIELD) {
-    layer->component = input_component_create_from_json(layer, json_obj);
+  int skip_children = 0;
 
-  } else if (layer->type == BUTTON) {
-    layer->component = button_component_create_from_json(layer, json_obj);
+  yui_component_instantiate(layer, json_obj, parent, &has_custom_children);
 
-  } else if (layer->type == LABEL) {
-    layer->component = label_component_create_from_json(layer, json_obj);
-
-  } else if (layer->type == IMAGE) {
-    layer->component = image_component_create(layer);
-
-  } else if (layer->type == PROGRESS) {
-    layer->component = progress_component_create_from_json(layer, json_obj);
-
-  } else if (layer->type == CHECKBOX) {
-    layer->component = checkbox_component_create_from_json(layer, json_obj);
-
-  } else if (layer->type == RADIOBOX) {
-    layer->component = radiobox_component_create_from_json(layer, json_obj);
-
-  } else if (layer->type == TEXT) {
-    layer->component = text_component_create_from_json(layer, json_obj);
-
-    // 设置可获得焦点
-    layer->focusable = 1;
-  } else if (layer->type == TAB) {
-    layer->component = tab_component_create_from_json(layer, json_obj);
-
-  } else if (layer->type == SLIDER) {
-    layer->component = slider_component_create_from_json(layer, json_obj);
-  } else if (layer->type == SELECT) {
-    layer->component = select_component_create_from_json(layer, json_obj);
-    
-    // 设置可获得焦点
-    layer->focusable = 1;
-  } else if (layer->type == TREEVIEW) {
-    layer->component = treeview_component_create_from_json(layer, json_obj);
-  } else if (layer->type == LAYER_LIST) {
-    layer->component = list_component_create_from_json(layer, json_obj);
-    layer->focusable = 1;
-    has_custom_children = 1;
-  } else if (layer->type == SCROLLBAR) {
-    // 不再创建滑块子图层
-    layer->child_count = 0;
-    layer->children = NULL;
-
-    // 创建滚动条组件
-    ScrollbarComponent* scrollbar = NULL;
-    if (parent != NULL) {
-      scrollbar = scrollbar_component_create_from_json(layer, parent, json_obj);
-    } else {
-      printf("Warning: SCROLLBAR layer %s has no parent layer\n", layer->id);
-      scrollbar = scrollbar_component_create_from_json(layer, layer, json_obj);
-    }
-    if (scrollbar) {
-      layer->component = scrollbar;
-    }
-
-    // 对于SCROLLBAR类型，不应该覆盖子图层数组，所以跳过后续的子图层解析
-    has_custom_children = 1;
-  } else if (layer->type == MENU) {
-    layer->component = menu_component_create_from_json(layer, json_obj);
-  } else if (layer->type == DIALOG) {
-    layer->component = dialog_component_create_from_json(layer, json_obj);
-  } else if (layer->type == CLOCK) {
-    layer->component = clock_component_create_from_json(layer, json_obj);
-  } else if (layer->type == SASH) {
-    layer->component = sash_component_create_from_json(layer, json_obj);
-  } else if (layer->type == TABLE) {
-    layer->component = table_component_create_from_json(layer, json_obj);
-    layer->focusable = 1;
-    has_custom_children = 1;
-    if (layer->data && layer->data->json && layer->on_data_update) {
-      layer->on_data_update(layer, layer->data->json);
-    }
-  } else if (layer->type == PAGINATION) {
-    layer->component = pagination_component_create_from_json(layer, json_obj);
-    has_custom_children = 1;
+  const YuiComponentOps* type_ops = yui_type_get_ops(layer->type);
+  if (type_ops && (type_ops->flags & YUI_COMP_SKIP_CHILDREN)) {
+    skip_children = 1;
   }
 
-  // 递归解析子图层（如果不是SCROLLBAR类型）
+  // 递归解析子图层
   cJSON* children = cJSON_GetObjectItem(json_obj, "children");
-  if (children && !has_custom_children) {
+  if (children && !has_custom_children && !skip_children) {
     layer->child_count = cJSON_GetArraySize(children);
     layer->children =
         realloc(layer->children, layer->child_count * sizeof(Layer*));
@@ -1065,7 +974,7 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
   // 主题样式会作为基础样式，可以被组件JSON中的style属性覆盖
   Theme* current_theme = theme_manager_get_current();
   if (current_theme) {
-    const char* type_name = layer_type_name[layer->type];
+    const char* type_name = yui_type_name(layer->type);
     theme_apply_to_layer(current_theme, layer, layer->id, type_name);
   }
 

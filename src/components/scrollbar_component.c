@@ -283,6 +283,16 @@ void scrollbar_component_render(Layer* layer) {
 }
 
 
+void* scrollbar_component_create_from_json_adapter(Layer* layer, cJSON* json_obj)
+{
+    Layer* target = layer && layer->parent ? layer->parent : layer;
+    if (!layer || !layer->parent) {
+        printf("Warning: SCROLLBAR layer %s has no parent layer\n",
+               layer && layer->id[0] ? layer->id : "<unknown>");
+    }
+    return scrollbar_component_create_from_json(layer, target, json_obj);
+}
+
 // 从JSON创建滚动条组件
 ScrollbarComponent* scrollbar_component_create_from_json(Layer* layer,Layer* target_layer, cJSON* json_obj) {
     if (!layer || !json_obj) {

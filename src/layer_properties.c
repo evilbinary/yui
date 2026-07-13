@@ -2,6 +2,7 @@
 #include "layer.h"
 #include "layer_update.h"
 #include "theme_manager.h"
+#include "component_registry.h"
 #include "ytype.h"
 #include "animate.h"
 #include <stdio.h>
@@ -362,7 +363,7 @@ static int handle_variant(Layer* layer, cJSON* value, int is_creating) {
     if (!is_creating && layer->id[0] != '\0') {
         Theme* theme = theme_manager_get_current();
         if (theme) {
-            theme_manager_apply_to_layer(layer, layer->id, layer_type_name[layer->type]);
+            theme_manager_apply_to_layer(layer, layer->id, yui_type_name(layer->type));
         }
         mark_layer_dirty(layer, DIRTY_COLOR | DIRTY_TEXT);
     }

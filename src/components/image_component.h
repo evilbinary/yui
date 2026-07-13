@@ -13,6 +13,7 @@ typedef struct {
 
 // 函数声明
 ImageComponent* image_component_create(Layer* layer);
+void* image_component_create_from_json(Layer* layer, cJSON* json);
 void image_component_destroy(ImageComponent* component);
 void image_component_set_source(ImageComponent* component, const char* source);
 void image_component_set_image_mode(ImageComponent* component, ImageMode mode);

@@ -11,13 +11,16 @@ add_flags()
 set_kind('static')
 add_files("*.c")
 add_files("components/*.c")
+add_files("backend/backend_common.c")
 
-if get_plat() =="stm32":
+if get_plat() == "lvgl":
+    add_files("backend/backend_lvgl.c")
+    add_cflags("-DYUI_BACKEND_LVGL")
+    add_cflags("-DYUI_HAS_LVGLMODULE")
+    add_deps("lvgl", "lvglmodule")
+elif get_plat() == "stm32":
     add_files("backend/backend_stm32.c")
-    # 添加STM32特定的编译标志
     add_cflags("-DSTM32_PLATFORM")
-    # 添加STM32特定的依赖
-    # add_deps("stm32_hal")  # 如果需要的话
 else:
-    # 默认使用SDL后端
     add_files("backend/backend_sdl.c")
+    add_cflags("-DYUI_BACKEND_SDL")

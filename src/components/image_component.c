@@ -1,8 +1,15 @@
 #include "image_component.h"
 #include "../render.h"
 #include "../backend.h"
+#include "cJSON.h"
 #include <stdlib.h>
 #include <string.h>
+
+void* image_component_create_from_json(Layer* layer, cJSON* json)
+{
+    (void)json;
+    return image_component_create(layer);
+}
 
 // 创建图片组件
 ImageComponent* image_component_create(Layer* layer) {
