@@ -22,7 +22,7 @@
 #include <string.h>
 
 float scale = 1.0f;
-static Layer* g_ui_root = NULL;
+Layer* g_ui_root = NULL;
 static int g_running = 0;
 
 static UpdateCallback g_update_callbacks[16];

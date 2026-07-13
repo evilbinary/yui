@@ -1,3 +1,9 @@
+/**
+ * @file lv_port.h
+ *
+ * YUI unified LVGL port API (SDL).
+ */
+
 #ifndef LV_PORT_H
 #define LV_PORT_H
 
@@ -5,8 +11,7 @@
 extern "C" {
 #endif
 
-struct _lv_obj_t;
-typedef struct _lv_obj_t lv_obj_t;
+#include "../lvgl.h"
 
 int  lv_port_init(void);
 void lv_port_deinit(void);
@@ -18,9 +23,11 @@ int lv_port_get_height(void);
 int lv_port_get_stride(void);
 lv_obj_t* lv_port_get_root(void);
 void lv_port_tick_inc(void);
+int lv_port_should_quit(void);
+void lv_port_request_quit(void);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif
+#endif /*LV_PORT_H*/

@@ -12,7 +12,9 @@ add_files(
     'src/misc/*.c',
     'src/widgets/*.c',
     'src/extra/*.c',
-    'src/extra/**/*.c',
+    'src/extra/layouts/*/*.c',
+    'src/extra/themes/*/*.c',
+    'src/extra/widgets/*/*.c',
 )
 
 add_cflags('-DLV_CONF_INCLUDE_SIMPLE')
