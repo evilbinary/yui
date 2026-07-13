@@ -31,6 +31,34 @@ var THEME_OPTIONS = {
     latte: { label: "Catppuccin Latte", path: "app/db/themes/latte.json" }
 };
 
+var THEME_PALETTES = {
+    mocha: {
+        tabActiveBg: "#1E1E2E",
+        tabActiveColor: "#CDD6F4",
+        tabInactiveColor: "#6C7086",
+        tabBarBg: "#11111B",
+        tabBarBorder: "#313244"
+    },
+    latte: {
+        tabActiveBg: "#FFFFFF",
+        tabActiveColor: "#4C4F69",
+        tabInactiveColor: "#9CA0B0",
+        tabBarBg: "#E6E9EF",
+        tabBarBorder: "#CCD0DA"
+    },
+    dark: {
+        tabActiveBg: "#1A2030",
+        tabActiveColor: "#F2F4F8",
+        tabInactiveColor: "#6B7280",
+        tabBarBg: "#12161E",
+        tabBarBorder: "#2E3648"
+    }
+};
+
+function getThemePalette() {
+    return THEME_PALETTES[currentTheme] || THEME_PALETTES.mocha;
+}
+
 function loadDbConfig() {
     var cfg = readAppConfig();
     if (cfg.connection) {
@@ -48,9 +76,7 @@ function loadDbConfig() {
     if (cfg.theme) currentTheme = cfg.theme;
     RESULT_PAGE_SIZE = appPreferences.pageSize || 500;
     applyPreferencesToUi();
-    if (currentTheme && currentTheme !== "mocha") {
-        applyTheme(currentTheme, true);
-    }
+    applyTheme(currentTheme || "mocha", true);
 }
 
 function saveDbConfig() {
@@ -169,12 +195,13 @@ function initTabs() {
 }
 
 function renderTabs() {
+    var palette = getThemePalette();
     for (var i = 0; i < MAX_TABS; i++) {
         var el = yui.find("tab_" + i);
         if (!el) continue;
         if (i < tabs.length) {
-            var bg = i === activeTab ? "#1E1E2E" : "transparent";
-            var color = i === activeTab ? "#CDD6F4" : "#6C7086";
+            var bg = i === activeTab ? palette.tabActiveBg : "transparent";
+            var color = i === activeTab ? palette.tabActiveColor : palette.tabInactiveColor;
             el.visible = true;
             el.size = [70, 24];
             el.text = tabs[i].name;
@@ -184,6 +211,19 @@ function renderTabs() {
             el.size = [0, 0];
         }
     }
+}
+
+function applyThemeUiExtras() {
+    var palette = getThemePalette();
+    var tabBar = yui.find("sqlTabBar");
+    if (tabBar) {
+        tabBar.style = { bgColor: palette.tabBarBg, borderBottomWidth: 1, borderBottomColor: palette.tabBarBorder };
+    }
+    var newTabBtn = yui.find("newTabBtn");
+    if (newTabBtn) {
+        newTabBtn.style = { color: palette.tabInactiveColor, fontSize: 14 };
+    }
+    renderTabs();
 }
 
 function saveCurrentText() {
@@ -365,6 +405,7 @@ function applyTheme(themeId, silent) {
     var themeName = loaded.name || themeId;
     YUI.themeSetCurrent(themeName);
     YUI.themeApplyToTree();
+    applyThemeUiExtras();
     currentTheme = themeId;
     updateThemeLabel();
     saveDbConfig();

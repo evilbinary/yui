@@ -212,9 +212,7 @@
                       "align": "center"
                     },
                     "style": {
-                      "bgColor": "#11111B",
-                      "borderBottomWidth": 1,
-                      "borderBottomColor": "#313244"
+                      "borderBottomWidth": 1
                     },
                     "children": [
                       {
@@ -232,8 +230,6 @@
                             "type": "Label",
                             "text": "Query 1",
                             "style": {
-                              "color": "#CDD6F4",
-                              "bgColor": "#1E1E2E",
                               "fontSize": 11,
                               "padding": [4, 10, 4, 10],
                               "borderRadius": 4
@@ -246,7 +242,6 @@
                             "text": "",
                             "visible": false,
                             "style": {
-                              "color": "#6C7086",
                               "fontSize": 11,
                               "padding": [4, 10, 4, 10],
                               "borderRadius": 4
@@ -259,7 +254,6 @@
                             "text": "",
                             "visible": false,
                             "style": {
-                              "color": "#6C7086",
                               "fontSize": 11,
                               "padding": [4, 10, 4, 10],
                               "borderRadius": 4
@@ -272,7 +266,6 @@
                             "text": "",
                             "visible": false,
                             "style": {
-                              "color": "#6C7086",
                               "fontSize": 11,
                               "padding": [4, 10, 4, 10],
                               "borderRadius": 4
@@ -285,7 +278,6 @@
                             "text": "",
                             "visible": false,
                             "style": {
-                              "color": "#6C7086",
                               "fontSize": 11,
                               "padding": [4, 10, 4, 10],
                               "borderRadius": 4
@@ -299,7 +291,6 @@
                         "type": "Label",
                         "text": "+",
                         "style": {
-                          "color": "#6C7086",
                           "fontSize": 14
                         },
                         "events": { "onClick": "@onNewTab" }
@@ -321,19 +312,9 @@
                     "events": {
                       "onChange": "@onSqlChange"
                     },
-                    "syntaxColors": {
-                      "keyword": "#CBA6F7",
-                      "string": "#A6E3A1",
-                      "number": "#FAB387",
-                      "comment": "#6C7086",
-                      "punctuation": "#89DCEB"
-                    },
                     "style": {
-                      "color": "#CDD6F4",
-                      "bgColor": "#11111B",
                       "fontSize": 13,
-                      "padding": [12, 12, 12, 12],
-                      "cursorColor": "#89B4FA"
+                      "padding": [12, 12, 12, 12]
                     }
                   }
                 ]
@@ -346,9 +327,6 @@
                 "minSize": 80,
                 "events": {
                   "onChange": "@onEditorResultSashChange"
-                },
-                "style": {
-                  "bgColor": "#313244"
                 }
               },
               {
@@ -412,13 +390,7 @@
                           "onChange": "@onResultPageChange"
                         },
                         "style": {
-                          "color": "#A6ADC8",
-                          "bgColor": "transparent",
                           "fontSize": 11,
-                          "disabledColor": "#45475A",
-                          "buttonBgColor": "#313244",
-                          "buttonHoverColor": "#45475A",
-                          "borderRadius": 4,
                           "itemSize": 24
                         }
                       }
@@ -440,13 +412,7 @@
                       "onSelect": "@onResultRowClick"
                     },
                     "style": {
-                      "color": "#CDD6F4",
-                      "bgColor": "#11111B",
-                      "fontSize": 13,
-                      "headerBgColor": "#181825",
-                      "headerColor": "#A6ADC8",
-                      "rowAltBgColor": "#1a1a24",
-                      "gridLineColor": "#313244"
+                      "fontSize": 13
                     }
                   }
                 ]
@@ -463,12 +429,7 @@
       "text": "文件",
       "fontSize": 12,
       "style": {
-        "itemHeight": 29,
-        "bgColor": "#1E1E2E",
-        "textColor": "#CDD6F4",
-        "hoverColor": "#45475A",
-        "disabledColor": "#6C7086",
-        "separatorColor": "#585B70"
+        "itemHeight": 29
       },
       "items": [
         { "text": "新建查询", "onClick": "@onNewTab" },
@@ -489,12 +450,7 @@
       "text": "数据库",
       "fontSize": 12,
       "style": {
-        "itemHeight": 29,
-        "bgColor": "#1E1E2E",
-        "textColor": "#CDD6F4",
-        "hoverColor": "#45475A",
-        "disabledColor": "#6C7086",
-        "separatorColor": "#585B70"
+        "itemHeight": 29
       },
       "items": [
         { "text": "新建连接", "onClick": "onNewConnection" },
@@ -515,12 +471,7 @@
       "text": "设置",
       "fontSize": 12,
       "style": {
-        "itemHeight": 29,
-        "bgColor": "#1E1E2E",
-        "textColor": "#CDD6F4",
-        "hoverColor": "#45475A",
-        "disabledColor": "#6C7086",
-        "separatorColor": "#585B70"
+        "itemHeight": 29
       },
       "items": [
         { "text": "偏好设置", "onClick": "onOpenSettings" },
@@ -583,24 +534,12 @@
       "fontSize": 12,
       "size": [360, 240],
       "buttons": [
-        { "text": "确定", "default": true, 
+        { "text": "确定", "default": true,
           "style": {
-            "bgColor": "#313244",
-            "hoverColor": "#45475A",
-            "textColor": "#F38BA8",
             "width": 72,
             "height": 28
           }}
-      ],
-      "style": {
-        "titleColor": "#89B4FA",
-        "textColor": "#CDD6F4",
-        "bgColor": "#1E1E2E",
-        "borderColor": "#45475A",
-        "buttonColor": "#45475A",
-        "buttonHoverColor": "#585B70",
-        "buttonTextColor": "#CDD6F4"
-      }
+      ]
     },
     {
       "id": "fileDialogOverlay",
@@ -824,12 +763,7 @@
                       "id": "prefAutoConnect",
                       "type": "Checkbox",
                       "size": [20, 20],
-                      "data": true,
-                      "style": {
-                        "bgColor": "#11111B",
-                        "borderColor": "#585B70",
-                        "checkColor": "#A6E3A1"
-                      }
+                      "data": true
                     },
                     {
                       "id": "prefAutoConnectLabel",

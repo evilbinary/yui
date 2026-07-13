@@ -4,12 +4,15 @@
 #include "../layout.h"
 #include "../layer_update.h"
 #include "../layer.h"
+#include "../util.h"
 #include "../event.h"
 #include "cJSON.h"
 #include <stdlib.h>
 #include <string.h>
 
 extern Layer* g_ui_root;
+
+static void sash_component_set_style(Layer* layer, cJSON* style);
 
 int sash_component_register_event(Layer* layer, const char* event_name,
                                 const char* event_func_name, EventHandler event_handler);
@@ -25,11 +28,18 @@ SashComponent* sash_component_create(Layer* layer) {
     comp->min_size = 60;
     comp->target_id[0] = '\0';
     comp->on_change_name[0] = '\0';
+    comp->bg_color = (Color){49, 50, 68, 255};
+    comp->hover_bg_color = (Color){100, 100, 115, 255};
+    comp->border_color = (Color){69, 71, 90, 255};
+    comp->dot_color = (Color){100, 100, 115, 255};
+    comp->hover_dot_color = (Color){180, 180, 190, 255};
+    comp->accent_color = (Color){137, 180, 250, 180};
 
     layer->component = comp;
     layer->render = sash_component_render;
     layer->handle_mouse_event = sash_component_handle_mouse_event;
     layer->register_event = sash_component_register_event;
+    layer->set_style = sash_component_set_style;
 
     return comp;
 }
@@ -67,7 +77,44 @@ SashComponent* sash_component_create_from_json(Layer* layer, cJSON* json_obj) {
         }
     }
 
+    cJSON* style = cJSON_GetObjectItem(json_obj, "style");
+    if (style && layer->set_style) {
+        layer->set_style(layer, style);
+    }
+
     return comp;
+}
+
+static void sash_component_set_style(Layer* layer, cJSON* style) {
+    if (!layer || !style || !layer->component) return;
+
+    SashComponent* comp = (SashComponent*)layer->component;
+
+    cJSON* item = style->child;
+    while (item) {
+        if (!item->string || !cJSON_IsString(item)) {
+            item = item->next;
+            continue;
+        }
+        Color color;
+        if (strcmp(item->string, "bgColor") == 0) {
+            parse_color(item->valuestring, &comp->bg_color);
+            layer->bg_color = comp->bg_color;
+        } else if (strcmp(item->string, "hoverBgColor") == 0) {
+            parse_color(item->valuestring, &comp->hover_bg_color);
+        } else if (strcmp(item->string, "borderColor") == 0) {
+            parse_color(item->valuestring, &comp->border_color);
+        } else if (strcmp(item->string, "dotColor") == 0) {
+            parse_color(item->valuestring, &comp->dot_color);
+        } else if (strcmp(item->string, "hoverDotColor") == 0) {
+            parse_color(item->valuestring, &comp->hover_dot_color);
+        } else if (strcmp(item->string, "accentColor") == 0) {
+            parse_color(item->valuestring, &comp->accent_color);
+        }
+        item = item->next;
+    }
+
+    mark_layer_dirty(layer, DIRTY_COLOR);
 }
 
 void sash_component_destroy(SashComponent* comp) {
@@ -199,7 +246,7 @@ void sash_component_render(Layer* layer) {
     if (!layer) return;
 
     SashComponent* comp = (SashComponent*)layer->component;
-    Color bg = comp && comp->hover ? (Color){100, 100, 115, 255} : (Color){49, 50, 68, 255};
+    Color bg = comp && comp->hover ? comp->hover_bg_color : (comp ? comp->bg_color : (Color){49, 50, 68, 255});
 
     backend_render_fill_rect(&layer->rect, bg);
 
@@ -209,8 +256,8 @@ void sash_component_render(Layer* layer) {
     int dot_spacing = 10;
     int center_x = layer->rect.x + layer->rect.w / 2;
     int center_y = layer->rect.y + layer->rect.h / 2;
-    Color border_color = {69, 71, 90, 255};
-    Color dot_color = comp->hover ? (Color){180, 180, 190, 255} : (Color){100, 100, 115, 255};
+    Color border_color = comp->border_color;
+    Color dot_color = comp->hover ? comp->hover_dot_color : comp->dot_color;
 
     if (comp->horizontal) {
         Rect left_line = {layer->rect.x, layer->rect.y, 1, layer->rect.h};
@@ -223,8 +270,7 @@ void sash_component_render(Layer* layer) {
 
         if (comp->hover) {
             Rect accent = {layer->rect.x + 1, layer->rect.y, 1, layer->rect.h};
-            Color accent_color = {137, 180, 250, 180};
-            backend_render_fill_rect(&accent, accent_color);
+            backend_render_fill_rect(&accent, comp->accent_color);
         }
     } else {
         Rect top_line = {layer->rect.x, layer->rect.y, layer->rect.w, 1};
@@ -237,8 +283,7 @@ void sash_component_render(Layer* layer) {
 
         if (comp->hover) {
             Rect accent = {layer->rect.x, layer->rect.y + 1, layer->rect.w, 1};
-            Color accent_color = {137, 180, 250, 180};
-            backend_render_fill_rect(&accent, accent_color);
+            backend_render_fill_rect(&accent, comp->accent_color);
         }
     }
 }

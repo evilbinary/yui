@@ -216,6 +216,81 @@ static void text_component_parse_syntax_colors(TextComponent* component, cJSON* 
     }
 }
 
+static const char* const TEXT_SYNTAX_COLOR_KEYS[] = {
+    "keyword", "string", "number", "comment", "punctuation", NULL
+};
+
+static void text_component_apply_syntax_color_key(TextComponent* component, const char* key, const char* value) {
+    if (!component || !key || !value) return;
+    Color color = component->syntax_config.default_color;
+    parse_color(value, &color);
+    text_syntax_config_set_color(&component->syntax_config, key, color);
+}
+
+static void text_component_apply_theme_style(Layer* layer, cJSON* style) {
+    if (!layer || !style || !layer->component) return;
+
+    TextComponent* component = (TextComponent*)layer->component;
+
+    cJSON* bg_color = cJSON_GetObjectItem(style, "bgColor");
+    if (bg_color && cJSON_IsString(bg_color)) {
+        parse_color(bg_color->valuestring, &layer->bg_color);
+    }
+
+    cJSON* color = cJSON_GetObjectItem(style, "color");
+    if (color && cJSON_IsString(color)) {
+        parse_color(color->valuestring, &layer->color);
+        component->syntax_config.default_color = layer->color;
+    }
+
+    cJSON* font_size = cJSON_GetObjectItem(style, "fontSize");
+    if (font_size && cJSON_IsNumber(font_size) && layer->font) {
+        layer->font->size = font_size->valueint;
+        component->line_height_valid = 0;
+    }
+
+    cJSON* line_number_bg = cJSON_GetObjectItem(style, "lineNumberBgColor");
+    if (line_number_bg && cJSON_IsString(line_number_bg)) {
+        Color c;
+        parse_color(line_number_bg->valuestring, &c);
+        text_component_set_line_number_bg_color(component, c);
+    }
+
+    cJSON* line_number_color = cJSON_GetObjectItem(style, "lineNumberColor");
+    if (line_number_color && cJSON_IsString(line_number_color)) {
+        Color c;
+        parse_color(line_number_color->valuestring, &c);
+        text_component_set_line_number_color(component, c);
+    }
+
+    cJSON* cursor_color = cJSON_GetObjectItem(style, "cursorColor");
+    if (cursor_color && cJSON_IsString(cursor_color)) {
+        Color c;
+        parse_color(cursor_color->valuestring, &c);
+        text_component_set_cursor_color(component, c);
+    }
+
+    cJSON* selection_color = cJSON_GetObjectItem(style, "selectionColor");
+    if (selection_color && cJSON_IsString(selection_color)) {
+        Color c;
+        parse_color(selection_color->valuestring, &c);
+        text_component_set_selection_color(component, c);
+    }
+
+    cJSON* syntax_colors = cJSON_GetObjectItem(style, "syntaxColors");
+    if (syntax_colors && cJSON_IsObject(syntax_colors)) {
+        text_component_parse_syntax_colors(component, syntax_colors);
+    }
+
+    for (int i = 0; TEXT_SYNTAX_COLOR_KEYS[i]; i++) {
+        cJSON* item = cJSON_GetObjectItem(style, TEXT_SYNTAX_COLOR_KEYS[i]);
+        if (item && cJSON_IsString(item)) {
+            text_component_apply_syntax_color_key(component, TEXT_SYNTAX_COLOR_KEYS[i], item->valuestring);
+        }
+    }
+
+    mark_layer_dirty(layer, DIRTY_COLOR | DIRTY_TEXT);
+}
 
 // 创建文本组件
 TextComponent* text_component_create(Layer* layer) {
@@ -269,6 +344,7 @@ TextComponent* text_component_create(Layer* layer) {
     layer->handle_mouse_event = text_component_handle_mouse_event;
     layer->register_event = text_component_register_event;
     layer->get_property = text_component_get_property;
+    layer->set_style = text_component_apply_theme_style;
 
     return component;
 }
@@ -343,35 +419,6 @@ TextComponent* text_component_create_from_json(Layer* layer,cJSON* json_obj){
         }
     }
 
-    // 解析cursorColor属性 (从style对象中读取)
-    cJSON* style_obj = cJSON_GetObjectItem(json_obj, "style");
-    if (style_obj && cJSON_HasObjectItem(style_obj, "cursorColor")) {
-        cJSON* color_obj = cJSON_GetObjectItem(style_obj, "cursorColor");
-        if (cJSON_IsString(color_obj)) {
-            // 使用util.c中的parse_color函数解析十六进制颜色字符串
-            Color cursor_color = {255, 255, 255, 255}; // 默认白色
-            parse_color(color_obj->valuestring, &cursor_color);
-            text_component_set_cursor_color(layer->component, cursor_color);
-        }
-        else if (cJSON_IsObject(color_obj)) {
-            // 兼容旧的RGB对象格式
-            Color cursor_color = {255, 255, 255, 255}; // 默认白色
-            if (cJSON_HasObjectItem(color_obj, "r")) {
-                cursor_color.r = cJSON_GetObjectItem(color_obj, "r")->valueint;
-            }
-            if (cJSON_HasObjectItem(color_obj, "g")) {
-                cursor_color.g = cJSON_GetObjectItem(color_obj, "g")->valueint;
-            }
-            if (cJSON_HasObjectItem(color_obj, "b")) {
-                cursor_color.b = cJSON_GetObjectItem(color_obj, "b")->valueint;
-            }
-            if (cJSON_HasObjectItem(color_obj, "a")) {
-                cursor_color.a = cJSON_GetObjectItem(color_obj, "a")->valueint;
-            }
-            text_component_set_cursor_color(layer->component, cursor_color);
-        }
-    }
-
       // 解析事件绑定
     cJSON* events = cJSON_GetObjectItem(json_obj, "events");
     if (events) {
@@ -398,6 +445,11 @@ TextComponent* text_component_create_from_json(Layer* layer,cJSON* json_obj){
     }
     if (cJSON_HasObjectItem(json_obj, "syntaxColors")) {
         text_component_parse_syntax_colors(component, cJSON_GetObjectItem(json_obj, "syntaxColors"));
+    }
+
+    cJSON* style_obj = cJSON_GetObjectItem(json_obj, "style");
+    if (style_obj && layer->set_style) {
+        layer->set_style(layer, style_obj);
     }
 
     return component;

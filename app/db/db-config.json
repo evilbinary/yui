@@ -1,8 +1,8 @@
 {
-  "windowWidth": 965,
-  "windowHeight": 750,
-  "sqlEditorContainer": 370,
-  "theme": "latte",
+  "windowWidth": 974,
+  "windowHeight": 725,
+  "sqlEditorContainer": 358,
+  "theme": "mocha",
   "connection": {
     "host": "localhost",
     "user": "root",

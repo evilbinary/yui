@@ -1181,6 +1181,14 @@ static void table_component_apply_theme_style(Layer* layer, cJSON* style) {
     if (color && cJSON_IsString(color)) {
         parse_color(color->valuestring, &layer->color);
     }
+    cJSON* row_hover = cJSON_GetObjectItem(style, "rowHoverColor");
+    if (row_hover && cJSON_IsString(row_hover)) {
+        parse_color(row_hover->valuestring, &component->row_hover_color);
+    }
+    cJSON* row_selected = cJSON_GetObjectItem(style, "rowSelectedColor");
+    if (row_selected && cJSON_IsString(row_selected)) {
+        parse_color(row_selected->valuestring, &component->row_selected_color);
+    }
 
     mark_layer_dirty(layer, DIRTY_COLOR | DIRTY_TEXT);
 }

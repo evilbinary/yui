@@ -18,6 +18,12 @@ typedef struct {
     int horizontal;      // 0=vertical (resize height), 1=horizontal (resize width)
     char on_change_name[MAX_PATH];
     EventHandler on_change;
+    Color bg_color;
+    Color hover_bg_color;
+    Color border_color;
+    Color dot_color;
+    Color hover_dot_color;
+    Color accent_color;
 } SashComponent;
 
 SashComponent* sash_component_create(Layer* layer);

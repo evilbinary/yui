@@ -145,6 +145,78 @@
     {
       "selector": "Button.block",
       "style": { "borderRadius": 10 }
+    },
+    {
+      "selector": "Menu",
+      "style": {
+        "bgColor": "#12161E",
+        "textColor": "#F2F4F8",
+        "hoverColor": "#1E2433",
+        "disabledColor": "#6B7280",
+        "separatorColor": "#2E3648",
+        "itemHeight": 29
+      }
+    },
+    {
+      "selector": "Dialog",
+      "style": {
+        "titleColor": "#7C6CFF",
+        "textColor": "#F2F4F8",
+        "bgColor": "#12161E",
+        "borderColor": "#2E3648",
+        "buttonColor": "#1A2030",
+        "buttonHoverColor": "#1E2433",
+        "buttonTextColor": "#F2F4F8"
+      }
+    },
+    {
+      "selector": "Text",
+      "style": {
+        "color": "#F2F4F8",
+        "bgColor": "#0A0D12",
+        "fontSize": 13,
+        "lineNumberBgColor": "#12161E",
+        "lineNumberColor": "#6B7280",
+        "cursorColor": "#7C6CFF",
+        "selectionColor": "#2E364899",
+        "keyword": "#A78BFA",
+        "string": "#6EE7B7",
+        "number": "#FBBF24",
+        "comment": "#6B7280",
+        "punctuation": "#93C5FD"
+      }
+    },
+    {
+      "selector": "Table",
+      "style": {
+        "color": "#F2F4F8",
+        "bgColor": "#0A0D12",
+        "headerBgColor": "#12161E",
+        "headerColor": "#9AA3B2",
+        "gridLineColor": "#2E3648",
+        "rowAltBgColor": "#12161E",
+        "rowHoverColor": "#1E2433",
+        "rowSelectedColor": "#2E3648"
+      }
+    },
+    {
+      "selector": "Sash",
+      "style": {
+        "bgColor": "#2E3648",
+        "hoverBgColor": "#1E2433",
+        "borderColor": "#2E3648",
+        "dotColor": "#6B7280",
+        "hoverDotColor": "#9AA3B2",
+        "accentColor": "#7C6CFFB3"
+      }
+    },
+    {
+      "selector": "Checkbox",
+      "style": {
+        "bgColor": "#1A2030",
+        "borderColor": "#2E3648",
+        "checkColor": "#6EE7B7"
+      }
     }
   ]
 }

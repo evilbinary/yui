@@ -1,6 +1,7 @@
 #include "../render.h"
 #include "../backend.h"
 #include "../util.h"
+#include "../layer_update.h"
 #include "cJSON.h"
 #include <stdlib.h>
 #include <string.h>
@@ -18,14 +19,19 @@ static int checkbox_on_data_update(Layer* layer, cJSON* data) {
     return 0;
 }
 
-static void checkbox_apply_style_from_json(CheckboxComponent* component, cJSON* json_obj) {
-    if (!component || !json_obj) {
+static void checkbox_apply_style(CheckboxComponent* component, Layer* layer, cJSON* style) {
+    if (!component || !layer || !style || !cJSON_IsObject(style)) {
         return;
     }
 
-    cJSON* style = cJSON_GetObjectItem(json_obj, "style");
-    if (!style || !cJSON_IsObject(style)) {
-        return;
+    cJSON* bg_color = cJSON_GetObjectItem(style, "bgColor");
+    if (bg_color && cJSON_IsString(bg_color)) {
+        parse_color(bg_color->valuestring, &layer->bg_color);
+    }
+
+    cJSON* color = cJSON_GetObjectItem(style, "color");
+    if (color && cJSON_IsString(color)) {
+        parse_color(color->valuestring, &layer->color);
     }
 
     cJSON* border_color = cJSON_GetObjectItem(style, "borderColor");
@@ -37,6 +43,26 @@ static void checkbox_apply_style_from_json(CheckboxComponent* component, cJSON* 
     if (check_color && cJSON_IsString(check_color)) {
         parse_color(check_color->valuestring, &component->check_color);
     }
+
+    mark_layer_dirty(layer, DIRTY_COLOR);
+}
+
+static void checkbox_component_set_style(Layer* layer, cJSON* style) {
+    if (!layer || !layer->component) return;
+    checkbox_apply_style((CheckboxComponent*)layer->component, layer, style);
+}
+
+static void checkbox_apply_style_from_json(CheckboxComponent* component, cJSON* json_obj) {
+    if (!component || !json_obj) {
+        return;
+    }
+
+    cJSON* style = cJSON_GetObjectItem(json_obj, "style");
+    if (!style || !cJSON_IsObject(style)) {
+        return;
+    }
+
+    checkbox_apply_style(component, component->layer, style);
 }
 
 // 创建复选框组件
@@ -76,6 +102,7 @@ CheckboxComponent* checkbox_component_create(Layer* layer, int default_checked) 
     layer->focusable = !HAS_STATE(layer, LAYER_STATE_DISABLED);
     layer->on_data_update = checkbox_on_data_update;
     layer->get_property = checkbox_component_get_property;
+    layer->set_style = checkbox_component_set_style;
 
     return component;
 }
