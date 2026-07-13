@@ -1,3 +1,18 @@
 {
-  "sqlEditorContainer": 167
+  "windowWidth": 982,
+  "windowHeight": 710,
+  "sqlEditorContainer": 282,
+  "theme": "dark",
+  "connection": {
+    "host": "localhost",
+    "user": "root",
+    "password": "root",
+    "database": "",
+    "port": 3306
+  },
+  "preferences": {
+    "autoConnect": true,
+    "pageSize": 500,
+    "fontSize": 13
+  }
 }

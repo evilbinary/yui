@@ -17,6 +17,105 @@ var dbConfig = {
     port: 3306
 };
 
+var appPreferences = {
+    autoConnect: true,
+    pageSize: 500,
+    fontSize: 13
+};
+
+var currentTheme = "mocha";
+
+var THEME_OPTIONS = {
+    mocha: { label: "Catppuccin Mocha", path: "app/db/themes/mocha.json" },
+    dark: { label: "Dark", path: "app/lib/themes/dark.json" },
+    latte: { label: "Catppuccin Latte", path: "app/db/themes/latte.json" }
+};
+
+function loadDbConfig() {
+    var cfg = readAppConfig();
+    if (cfg.connection) {
+        if (cfg.connection.host) dbConfig.host = cfg.connection.host;
+        if (cfg.connection.user) dbConfig.user = cfg.connection.user;
+        if (cfg.connection.password !== undefined) dbConfig.password = cfg.connection.password;
+        if (cfg.connection.database !== undefined) dbConfig.database = cfg.connection.database;
+        if (cfg.connection.port) dbConfig.port = cfg.connection.port;
+    }
+    if (cfg.preferences) {
+        if (cfg.preferences.autoConnect !== undefined) appPreferences.autoConnect = cfg.preferences.autoConnect;
+        if (cfg.preferences.pageSize) appPreferences.pageSize = cfg.preferences.pageSize;
+        if (cfg.preferences.fontSize) appPreferences.fontSize = cfg.preferences.fontSize;
+    }
+    if (cfg.theme) currentTheme = cfg.theme;
+    RESULT_PAGE_SIZE = appPreferences.pageSize || 500;
+    applyPreferencesToUi();
+    if (currentTheme && currentTheme !== "mocha") {
+        applyTheme(currentTheme, true);
+    }
+}
+
+function saveDbConfig() {
+    var cfg = readAppConfig();
+    cfg.connection = {
+        host: dbConfig.host,
+        user: dbConfig.user,
+        password: dbConfig.password,
+        database: dbConfig.database || "",
+        port: dbConfig.port
+    };
+    cfg.preferences = {
+        autoConnect: appPreferences.autoConnect,
+        pageSize: appPreferences.pageSize,
+        fontSize: appPreferences.fontSize
+    };
+    cfg.theme = currentTheme;
+    writeAppConfig(cfg);
+}
+
+function applyPreferencesToUi() {
+    var pager = yui.find("resultPager");
+    if (pager) pager.pageSize = RESULT_PAGE_SIZE;
+    var editor = yui.find("sqlEditor");
+    if (editor) {
+        editor.style = { fontSize: appPreferences.fontSize };
+    }
+}
+
+function showOverlay(id) {
+    var el = yui.find(id);
+    if (el) el.visible = true;
+}
+
+function hideOverlay(id) {
+    var el = yui.find(id);
+    if (el) el.visible = false;
+}
+
+function getInputText(id) {
+    var input = yui.find(id);
+    return input && input.text ? String(input.text) : "";
+}
+
+function setInputText(id, value) {
+    var input = yui.find(id);
+    if (input) input.text = value != null ? String(value) : "";
+}
+
+function fillConnectionForm() {
+    setInputText("connHostInput", dbConfig.host);
+    setInputText("connPortInput", dbConfig.port);
+    setInputText("connUserInput", dbConfig.user);
+    setInputText("connPasswordInput", dbConfig.password);
+    setInputText("connDatabaseInput", dbConfig.database || "");
+}
+
+function readConnectionForm() {
+    dbConfig.host = getInputText("connHostInput") || "localhost";
+    dbConfig.port = parseInt(getInputText("connPortInput"), 10) || 3306;
+    dbConfig.user = getInputText("connUserInput") || "root";
+    dbConfig.password = getInputText("connPasswordInput");
+    dbConfig.database = getInputText("connDatabaseInput");
+}
+
 function connectDb() {
     print("Connecting to MySQL...");
     updateStatus("连接中...", "#F9E2AF");
@@ -182,8 +281,107 @@ function onSettingsMenuClick(itemText) {
 }
 
 function onNewConnection() {
-    // 打开连接配置面板 — 先用默认值直接连接
+    fillConnectionForm();
+    showOverlay("connectionDialogOverlay");
+    YUI.focus("connHostInput");
+}
+
+function onConnectionTest() {
+    readConnectionForm();
+    updateStatus("正在测试连接...", "#F9E2AF");
+    var result = YUI.call("mysql_connect", JSON.stringify(dbConfig));
+    if (!result) {
+        updateStatus("测试失败: 无返回", "#F38BA8");
+        return;
+    }
+    var info = JSON.parse(result);
+    if (info.success) {
+        updateStatus("连接测试成功", "#A6E3A1");
+    } else {
+        updateStatus("连接测试失败: " + (info.error || "未知错误"), "#F38BA8");
+    }
+}
+
+function onConnectionOk() {
+    readConnectionForm();
+    saveDbConfig();
+    hideOverlay("connectionDialogOverlay");
+    disconnectDb();
     connectDb();
+}
+
+function onConnectionCancel() {
+    hideOverlay("connectionDialogOverlay");
+}
+
+function onOpenSettings() {
+    var auto = yui.find("prefAutoConnect");
+    if (auto) auto.checked = appPreferences.autoConnect !== false;
+    setInputText("prefPageSizeInput", appPreferences.pageSize);
+    setInputText("prefFontSizeInput", appPreferences.fontSize);
+    showOverlay("preferencesDialogOverlay");
+}
+
+function onPreferencesOk() {
+    var auto = yui.find("prefAutoConnect");
+    appPreferences.autoConnect = auto ? !!auto.checked : true;
+    appPreferences.pageSize = parseInt(getInputText("prefPageSizeInput"), 10) || 500;
+    appPreferences.fontSize = parseInt(getInputText("prefFontSizeInput"), 10) || 13;
+    if (appPreferences.pageSize < 10) appPreferences.pageSize = 10;
+    if (appPreferences.pageSize > 5000) appPreferences.pageSize = 5000;
+    if (appPreferences.fontSize < 10) appPreferences.fontSize = 10;
+    if (appPreferences.fontSize > 24) appPreferences.fontSize = 24;
+    RESULT_PAGE_SIZE = appPreferences.pageSize;
+    applyPreferencesToUi();
+    saveDbConfig();
+    hideOverlay("preferencesDialogOverlay");
+    updateStatus("偏好设置已保存", "#A6E3A1");
+}
+
+function onPreferencesCancel() {
+    hideOverlay("preferencesDialogOverlay");
+}
+
+function updateThemeLabel() {
+    var label = yui.find("themeCurrentLabel");
+    var theme = THEME_OPTIONS[currentTheme];
+    if (label) {
+        label.text = "当前主题：" + (theme ? theme.label : currentTheme);
+    }
+}
+
+function applyTheme(themeId, silent) {
+    var theme = THEME_OPTIONS[themeId];
+    if (!theme) return;
+    if (typeof YUI.themeLoad !== "function") {
+        if (!silent) updateStatus("主题 API 不可用", "#F38BA8");
+        return;
+    }
+    var loaded = YUI.themeLoad(theme.path);
+    if (!loaded || loaded.success === false) {
+        if (!silent) updateStatus("主题加载失败: " + theme.path, "#F38BA8");
+        return;
+    }
+    var themeName = loaded.name || themeId;
+    YUI.themeSetCurrent(themeName);
+    YUI.themeApplyToTree();
+    currentTheme = themeId;
+    updateThemeLabel();
+    saveDbConfig();
+    if (!silent) updateStatus("已切换主题: " + theme.label, "#A6E3A1");
+}
+
+function onThemeSettings() {
+    updateThemeLabel();
+    showOverlay("themeDialogOverlay");
+}
+
+function onThemePickMocha() { applyTheme("mocha"); }
+function onThemePickDark() { applyTheme("dark"); }
+function onThemePickLatte() { applyTheme("latte"); }
+
+function onThemeDialogClose() {
+    hideOverlay("themeDialogOverlay");
 }
 
 function onExit() {
@@ -192,14 +390,6 @@ function onExit() {
 
 function onImportDb() {
     updateStatus("导入功能开发中", "#F9E2AF");
-}
-
-function onOpenSettings() {
-    updateStatus("设置功能开发中", "#F9E2AF");
-}
-
-function onThemeSettings() {
-    updateStatus("主题设置开发中", "#F9E2AF");
 }
 
 function onAbout() {
@@ -829,11 +1019,14 @@ function onWindowResize(layerId) {
 
 function onLoad() {
   YUI.log('onLoad');
+  loadDbConfig();
   loadAppLayout();
-  connectDb();
-  //loadDatabases();
+  if (appPreferences.autoConnect !== false) {
+    connectDb();
+  } else {
+    updateStatus("未连接", "#F38BA8");
+  }
 }
 
 // ====================== Init ======================
 initTabs();
-updateStatus("未连接", "#F38BA8");

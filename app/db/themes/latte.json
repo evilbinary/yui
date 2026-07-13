@@ -1,0 +1,15 @@
+{
+  "name": "latte",
+  "version": "1.0",
+  "description": "Catppuccin Latte",
+  "styles": [
+    { "selector": "View", "style": { "bgColor": "#EFF1F5" } },
+    { "selector": "Label", "style": { "color": "#4C4F69", "fontSize": 12 } },
+    { "selector": "Button", "style": { "bgColor": "#CCD0DA", "color": "#4C4F69", "borderRadius": 4, "fontSize": 12 } },
+    { "selector": "Input", "style": { "bgColor": "#FFFFFF", "color": "#4C4F69", "fontSize": 12 } },
+    { "selector": "Text", "style": { "color": "#4C4F69", "bgColor": "#FFFFFF", "fontSize": 13 } },
+    { "selector": "Table", "style": { "color": "#4C4F69", "bgColor": "#FFFFFF", "headerBgColor": "#E6E9EF", "headerColor": "#5C5F77", "gridLineColor": "#CCD0DA", "rowAltBgColor": "#F5F7FA" } },
+    { "selector": "Treeview", "style": { "color": "#4C4F69", "bgColor": "#E6E9EF", "fontSize": 13 } },
+    { "selector": "Pagination", "style": { "color": "#5C5F77", "buttonBgColor": "#CCD0DA", "buttonHoverColor": "#BCC0CC" } }
+  ]
+}

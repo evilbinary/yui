@@ -717,6 +717,175 @@
           ]
         }
       ]
+    },
+    {
+      "id": "connectionDialogOverlay",
+      "type": "View",
+      "visible": false,
+      "position": [0, 0],
+      "size": [900, 600],
+      "style": { "bgColor": "#00000066" },
+      "layout": { "type": "absolute" },
+      "children": [
+        {
+          "id": "connectionDialogPanel",
+          "type": "View",
+          "position": [200, 100],
+          "size": [500, 380],
+          "layout": { "type": "vertical", "spacing": 0 },
+          "style": { "bgColor": "#1E1E2E", "borderRadius": 8 },
+          "children": [
+            {
+              "id": "connectionDialogTitleBar",
+              "type": "View",
+              "size": [500, 40],
+              "layout": { "type": "horizontal", "align": "center", "padding": [0, 16, 0, 16] },
+              "style": { "bgColor": "#181825", "borderBottomWidth": 1, "borderBottomColor": "#313244" },
+              "children": [
+                { "id": "connectionDialogTitle", "type": "Label", "text": "新建连接", "style": { "color": "#CDD6F4", "fontSize": 14, "fontWeight": "bold" } }
+              ]
+            },
+            {
+              "id": "connectionDialogBody",
+              "type": "View",
+              "size": [500, 280],
+              "layout": { "type": "vertical", "spacing": 10, "padding": [16, 20, 16, 20] },
+              "children": [
+                { "id": "connHostLabel", "type": "Label", "text": "主机", "style": { "color": "#A6ADC8", "fontSize": 11 } },
+                { "id": "connHostInput", "type": "Input", "size": [460, 28], "text": "localhost", "style": { "color": "#CDD6F4", "bgColor": "#11111B", "fontSize": 12, "padding": [6, 10, 6, 10] } },
+                { "id": "connPortLabel", "type": "Label", "text": "端口", "style": { "color": "#A6ADC8", "fontSize": 11 } },
+                { "id": "connPortInput", "type": "Input", "size": [460, 28], "text": "3306", "style": { "color": "#CDD6F4", "bgColor": "#11111B", "fontSize": 12, "padding": [6, 10, 6, 10] } },
+                { "id": "connUserLabel", "type": "Label", "text": "用户名", "style": { "color": "#A6ADC8", "fontSize": 11 } },
+                { "id": "connUserInput", "type": "Input", "size": [460, 28], "text": "root", "style": { "color": "#CDD6F4", "bgColor": "#11111B", "fontSize": 12, "padding": [6, 10, 6, 10] } },
+                { "id": "connPasswordLabel", "type": "Label", "text": "密码", "style": { "color": "#A6ADC8", "fontSize": 11 } },
+                { "id": "connPasswordInput", "type": "Input", "size": [460, 28], "text": "", "password": true, "style": { "color": "#CDD6F4", "bgColor": "#11111B", "fontSize": 12, "padding": [6, 10, 6, 10] } },
+                { "id": "connDatabaseLabel", "type": "Label", "text": "默认数据库（可选）", "style": { "color": "#A6ADC8", "fontSize": 11 } },
+                { "id": "connDatabaseInput", "type": "Input", "size": [460, 28], "text": "", "style": { "color": "#CDD6F4", "bgColor": "#11111B", "fontSize": 12, "padding": [6, 10, 6, 10] } }
+              ]
+            },
+            {
+              "id": "connectionDialogButtons",
+              "type": "View",
+              "size": [500, 60],
+              "layout": { "type": "horizontal", "spacing": 10, "padding": [12, 20, 12, 20] },
+              "style": { "bgColor": "#181825", "borderTopWidth": 1, "borderTopColor": "#313244" },
+              "children": [
+                { "id": "connTestBtn", "type": "Button", "size": [88, 30], "text": "测试连接", "style": { "color": "#89B4FA", "bgColor": "#313244", "borderRadius": 4, "fontSize": 12 }, "events": { "onClick": "@onConnectionTest" } },
+                { "id": "connOkBtn", "type": "Button", "size": [88, 30], "text": "连接", "style": { "color": "#A6E3A1", "bgColor": "#313244", "borderRadius": 4, "fontSize": 12 }, "events": { "onClick": "@onConnectionOk" } },
+                { "id": "connCancelBtn", "type": "Button", "size": [88, 30], "text": "取消", "style": { "color": "#F38BA8", "bgColor": "#313244", "borderRadius": 4, "fontSize": 12 }, "events": { "onClick": "@onConnectionCancel" } }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "preferencesDialogOverlay",
+      "type": "View",
+      "visible": false,
+      "position": [0, 0],
+      "size": [900, 600],
+      "style": { "bgColor": "#00000066" },
+      "layout": { "type": "absolute" },
+      "children": [
+        {
+          "id": "preferencesDialogPanel",
+          "type": "View",
+          "position": [220, 120],
+          "size": [460, 320],
+          "layout": { "type": "vertical", "spacing": 0 },
+          "style": { "bgColor": "#1E1E2E", "borderRadius": 8 },
+          "children": [
+            {
+              "id": "preferencesDialogTitleBar",
+              "type": "View",
+              "size": [460, 40],
+              "layout": { "type": "horizontal", "align": "center", "padding": [0, 16, 0, 16] },
+              "style": { "bgColor": "#181825", "borderBottomWidth": 1, "borderBottomColor": "#313244" },
+              "children": [
+                { "id": "preferencesDialogTitle", "type": "Label", "text": "偏好设置", "style": { "color": "#CDD6F4", "fontSize": 14, "fontWeight": "bold" } }
+              ]
+            },
+            {
+              "id": "preferencesDialogBody",
+              "type": "View",
+              "size": [460, 220],
+              "layout": { "type": "vertical", "spacing": 12, "padding": [16, 20, 16, 20] },
+              "children": [
+                { "id": "prefAutoConnect", "type": "Checkbox", "text": "启动时自动连接数据库", "checked": true, "style": { "color": "#CDD6F4", "fontSize": 12 } },
+                { "id": "prefPageSizeLabel", "type": "Label", "text": "查询结果每页行数", "style": { "color": "#A6ADC8", "fontSize": 11 } },
+                { "id": "prefPageSizeInput", "type": "Input", "size": [420, 28], "text": "500", "style": { "color": "#CDD6F4", "bgColor": "#11111B", "fontSize": 12, "padding": [6, 10, 6, 10] } },
+                { "id": "prefFontSizeLabel", "type": "Label", "text": "SQL 编辑器字号", "style": { "color": "#A6ADC8", "fontSize": 11 } },
+                { "id": "prefFontSizeInput", "type": "Input", "size": [420, 28], "text": "13", "style": { "color": "#CDD6F4", "bgColor": "#11111B", "fontSize": 12, "padding": [6, 10, 6, 10] } }
+              ]
+            },
+            {
+              "id": "preferencesDialogButtons",
+              "type": "View",
+              "size": [460, 60],
+              "layout": { "type": "horizontal", "spacing": 10, "padding": [12, 20, 12, 20] },
+              "style": { "bgColor": "#181825", "borderTopWidth": 1, "borderTopColor": "#313244" },
+              "children": [
+                { "id": "prefOkBtn", "type": "Button", "size": [88, 30], "text": "保存", "style": { "color": "#A6E3A1", "bgColor": "#313244", "borderRadius": 4, "fontSize": 12 }, "events": { "onClick": "@onPreferencesOk" } },
+                { "id": "prefCancelBtn", "type": "Button", "size": [88, 30], "text": "取消", "style": { "color": "#F38BA8", "bgColor": "#313244", "borderRadius": 4, "fontSize": 12 }, "events": { "onClick": "@onPreferencesCancel" } }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "themeDialogOverlay",
+      "type": "View",
+      "visible": false,
+      "position": [0, 0],
+      "size": [900, 600],
+      "style": { "bgColor": "#00000066" },
+      "layout": { "type": "absolute" },
+      "children": [
+        {
+          "id": "themeDialogPanel",
+          "type": "View",
+          "position": [220, 130],
+          "size": [460, 300],
+          "layout": { "type": "vertical", "spacing": 0 },
+          "style": { "bgColor": "#1E1E2E", "borderRadius": 8 },
+          "children": [
+            {
+              "id": "themeDialogTitleBar",
+              "type": "View",
+              "size": [460, 40],
+              "layout": { "type": "horizontal", "align": "center", "padding": [0, 16, 0, 16] },
+              "style": { "bgColor": "#181825", "borderBottomWidth": 1, "borderBottomColor": "#313244" },
+              "children": [
+                { "id": "themeDialogTitle", "type": "Label", "text": "主题设置", "style": { "color": "#CDD6F4", "fontSize": 14, "fontWeight": "bold" } }
+              ]
+            },
+            {
+              "id": "themeDialogBody",
+              "type": "View",
+              "size": [460, 200],
+              "layout": { "type": "vertical", "spacing": 10, "padding": [20, 24, 20, 24] },
+              "children": [
+                { "id": "themeCurrentLabel", "type": "Label", "text": "当前主题：Mocha", "style": { "color": "#A6ADC8", "fontSize": 12 } },
+                { "id": "themeMochaBtn", "type": "Button", "size": [412, 36], "text": "Catppuccin Mocha（深色）", "style": { "color": "#CDD6F4", "bgColor": "#313244", "borderRadius": 4, "fontSize": 12 }, "events": { "onClick": "@onThemePickMocha" } },
+                { "id": "themeDarkBtn", "type": "Button", "size": [412, 36], "text": "Dark（通用深色）", "style": { "color": "#CDD6F4", "bgColor": "#313244", "borderRadius": 4, "fontSize": 12 }, "events": { "onClick": "@onThemePickDark" } },
+                { "id": "themeLatteBtn", "type": "Button", "size": [412, 36], "text": "Catppuccin Latte（浅色）", "style": { "color": "#4C4F69", "bgColor": "#CCD0DA", "borderRadius": 4, "fontSize": 12 }, "events": { "onClick": "@onThemePickLatte" } }
+              ]
+            },
+            {
+              "id": "themeDialogButtons",
+              "type": "View",
+              "size": [460, 60],
+              "layout": { "type": "horizontal", "spacing": 10, "padding": [12, 20, 12, 20] },
+              "style": { "bgColor": "#181825", "borderTopWidth": 1, "borderTopColor": "#313244" },
+              "children": [
+                { "id": "themeCloseBtn", "type": "Button", "size": [88, 30], "text": "关闭", "style": { "color": "#89B4FA", "bgColor": "#313244", "borderRadius": 4, "fontSize": 12 }, "events": { "onClick": "@onThemeDialogClose" } }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ],
   "events": {

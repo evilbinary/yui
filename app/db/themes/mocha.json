@@ -1,0 +1,15 @@
+{
+  "name": "mocha",
+  "version": "1.0",
+  "description": "Catppuccin Mocha",
+  "styles": [
+    { "selector": "View", "style": { "bgColor": "#1E1E2E" } },
+    { "selector": "Label", "style": { "color": "#CDD6F4", "fontSize": 12 } },
+    { "selector": "Button", "style": { "bgColor": "#313244", "color": "#CDD6F4", "borderRadius": 4, "fontSize": 12 } },
+    { "selector": "Input", "style": { "bgColor": "#1E1E2E", "color": "#CDD6F4", "fontSize": 12 } },
+    { "selector": "Text", "style": { "color": "#CDD6F4", "bgColor": "#11111B", "fontSize": 13 } },
+    { "selector": "Table", "style": { "color": "#CDD6F4", "bgColor": "#11111B", "headerBgColor": "#181825", "headerColor": "#A6ADC8", "gridLineColor": "#313244", "rowAltBgColor": "#1a1a24" } },
+    { "selector": "Treeview", "style": { "color": "#CDD6F4", "bgColor": "#181825", "fontSize": 13 } },
+    { "selector": "Pagination", "style": { "color": "#A6ADC8", "buttonBgColor": "#313244", "buttonHoverColor": "#45475A" } }
+  ]
+}
