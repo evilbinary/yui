@@ -371,6 +371,13 @@ void layout_layer(Layer* layer){
 
             printf("layout_layer: available_height: %d\n", available_height);
             fflush(stdout);
+
+            int last_visible_index = -1;
+            for (int j = 0; j < layer->child_count; j++) {
+                Layer* candidate = layer->children[j];
+                if (!candidate || candidate->visible == IN_VISIBLE) continue;
+                last_visible_index = j;
+            }
             
             for (int i = 0; i < layer->child_count; i++) {
                 Layer* child = layer->children[i];
@@ -392,6 +399,11 @@ void layout_layer(Layer* layer){
                                         (child->flex_ratio / total_flex));
                 } else if (child->fixed_height > 0) {
                     child->rect.h = child->fixed_height;
+                    // 无 flex/自动高度子项时，将剩余高度给最后一个子项
+                    if (i == last_visible_index && total_flex == 0 &&
+                        no_height_count == 0 && available_height > 0) {
+                        child->rect.h += available_height;
+                    }
                 } else {
                     // 自动计算高度
                     if (no_height_count > 0) {
