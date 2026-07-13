@@ -8,8 +8,7 @@
 LvglComponent* lvgl_component_new(Layer* layer);
 LvglComponent* lvgl_component_from_layer(Layer* layer);
 
-void lvgl_widget_destroy(Layer* layer);
-void lvgl_widget_layout(Layer* layer);
+void lvgl_bind_all_layer_events(Layer* root);
 
 /** Copy string into LVGL heap; caller passes pointer to lv_mem_free-compatible APIs. */
 char* lvgl_strdup_lv(const char* src);

@@ -59,6 +59,57 @@ char* lvgl_strdup_lv(const char* src)
     return dup;
 }
 
+static void lvgl_widget_on_clicked(lv_event_t* e)
+{
+    LvglComponent* component = (LvglComponent*)lv_event_get_user_data(e);
+    Layer* layer;
+
+    if (lv_event_get_code(e) != LV_EVENT_CLICKED) {
+        return;
+    }
+    if (!component || !component->layer || !component->obj) {
+        return;
+    }
+
+    layer = component->layer;
+    if (layer->event && layer->event->click) {
+        layer->event->click(layer);
+    }
+}
+
+void lvgl_widget_bind_layer_events(Layer* layer)
+{
+    LvglComponent* component = lvgl_component_from_layer(layer);
+
+    if (!component || !component->obj || !layer || !layer->event) {
+        return;
+    }
+    if (!layer->event->click && layer->event->click_name[0] == '\0') {
+        return;
+    }
+
+    lv_obj_add_flag(component->obj, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_event_cb(component->obj, lvgl_widget_on_clicked, LV_EVENT_CLICKED, component);
+}
+
+void lvgl_bind_all_layer_events(Layer* root)
+{
+    int i;
+
+    if (!root) {
+        return;
+    }
+
+    lvgl_widget_bind_layer_events(root);
+
+    for (i = 0; i < root->child_count; i++) {
+        lvgl_bind_all_layer_events(root->children[i]);
+    }
+    if (root->sub) {
+        lvgl_bind_all_layer_events(root->sub);
+    }
+}
+
 cJSON* lvgl_json_get(cJSON* json, const char* key)
 {
     cJSON* value;

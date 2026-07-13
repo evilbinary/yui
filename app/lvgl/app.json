@@ -5,6 +5,10 @@
     "size": [390, 480],
     "bgColor": "#1a1a2e",
     "scrollable": 1,
+    "js": ["app.js"],
+    "events": {
+        "onLoad": "@onAppLoad"
+    },
     "layout": {
         "type": "vertical",
         "spacing": 8,
@@ -65,14 +69,22 @@
         {
             "id": "demo_label",
             "type": "LvLabel",
-            "text": "LvLabel: Hello from LvLabel",
+            "text": "LvLabel: Hello from LvLabel (click me)",
             "size": [340, 24],
-            "color": "#ffffff"
+            "color": "#ff0000",
+            "events": {
+                "onClick": "@onDemoLabelClick"
+            }
         },
         {
             "id": "demo_btn",
             "type": "LvBtn",
             "text": "LvBtn",
+            "style": {
+                "color": "#eaeaea",
+                "bgColor": "rgba(0,0,255,80)",
+                "radius": 14
+            },
             "size": [120, 36]
         },
         {
