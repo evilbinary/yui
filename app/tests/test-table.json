@@ -34,7 +34,7 @@
         { "id": 5, "name": "Eve", "role": "Admin", "status": "active" }
       ],
       "events": {
-        "onItemClick": "@onTableItemClick"
+        "onSelect": "@onTableSelect"
       },
       "style": {
         "bgColor": "#11111B",

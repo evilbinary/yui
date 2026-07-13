@@ -402,7 +402,7 @@ static void register_js_event_mapping(const char* event_name, const char* func_n
                     printf("JS: Warning: layer '%s' not found for event '%s'\n", layer_id, event_name);
                 }
             } else {
-                // 非标准事件类型（如 onItemClick），注册为全局处理器
+                // 非标准事件类型（如 onSelect），注册为全局处理器
                 if (func_name[0] == '@') {
                     register_event_handler(clean_func_name, js_module_common_event);
                 } else {

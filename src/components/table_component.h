@@ -42,7 +42,7 @@ typedef struct TableComponent {
     Color row_hover_color;
     Color row_selected_color;
     Color grid_line_color;
-    char item_click_name[128];
+    char on_select_name[128];
 } TableComponent;
 
 TableComponent* table_component_create(Layer* layer);

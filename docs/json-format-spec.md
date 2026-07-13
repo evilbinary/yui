@@ -501,7 +501,7 @@ Text 组件用于文本显示与编辑，支持多行、滚动、行号与语法
     { "id": 1, "name": "Alice" }
   ],
   "events": {
-    "onItemClick": "@onRowSelected"
+    "onSelect": "@onRowSelected"
   },
   "style": {
     "headerBgColor": "#181825",

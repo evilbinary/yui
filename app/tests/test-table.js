@@ -1,4 +1,4 @@
-function onTableItemClick(layerId) {
+function onTableSelect(layerId) {
     var layer = yui.find(layerId);
     if (!layer || !layer.text) return;
     try {

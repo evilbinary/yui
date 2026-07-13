@@ -250,12 +250,12 @@ static int table_row_at_point(TableComponent* component, Layer* layer, int x, in
     return idx;
 }
 
-static void table_dispatch_item_click(TableComponent* component, int index) {
+static void table_dispatch_select(TableComponent* component, int index) {
     Layer* layer = component->layer;
-    if (!layer || component->item_click_name[0] == '\0') return;
+    if (!layer || component->on_select_name[0] == '\0') return;
     if (!layer->data || !layer->data->json || !cJSON_IsArray(layer->data->json)) return;
 
-    EventHandler handler = find_event_by_name(component->item_click_name);
+    EventHandler handler = find_event_by_name(component->on_select_name);
     if (!handler) return;
 
     cJSON* item = cJSON_GetArrayItem(layer->data->json, index);
@@ -268,7 +268,7 @@ static void table_dispatch_item_click(TableComponent* component, int index) {
         layer->event = calloc(1, sizeof(Event));
     }
     if (layer->event) {
-        strncpy(layer->event->click_name, component->item_click_name, MAX_PATH - 1);
+        strncpy(layer->event->click_name, component->on_select_name, MAX_PATH - 1);
         layer->event->click_name[MAX_PATH - 1] = '\0';
     }
 
@@ -411,13 +411,13 @@ TableComponent* table_component_create_from_json(Layer* layer, cJSON* json_obj) 
 
     cJSON* events = cJSON_GetObjectItem(json_obj, "events");
     if (events) {
-        cJSON* on_item_click = cJSON_GetObjectItem(events, "onItemClick");
-        if (on_item_click && cJSON_IsString(on_item_click) && on_item_click->valuestring) {
-            const char* handler_name = on_item_click->valuestring;
+        cJSON* on_select = cJSON_GetObjectItem(events, "onSelect");
+        if (on_select && cJSON_IsString(on_select) && on_select->valuestring) {
+            const char* handler_name = on_select->valuestring;
             if (handler_name[0] == '@') handler_name++;
-            strncpy(component->item_click_name, handler_name,
-                    sizeof(component->item_click_name) - 1);
-            component->item_click_name[sizeof(component->item_click_name) - 1] = '\0';
+            strncpy(component->on_select_name, handler_name,
+                    sizeof(component->on_select_name) - 1);
+            component->on_select_name[sizeof(component->on_select_name) - 1] = '\0';
         }
     }
 
@@ -626,7 +626,7 @@ int table_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
         component->pressed_row = -1;
         if (clicked) {
             component->selected_row = row;
-            table_dispatch_item_click(component, row);
+            table_dispatch_select(component, row);
         }
         return in_body;
     }
