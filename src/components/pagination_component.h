@@ -31,6 +31,7 @@ typedef struct PaginationComponent {
     PaginationZone pressed_zone;
 
     char on_change_name[MAX_PATH];
+    EventHandler on_change;
 
     Color text_color;
     Color active_color;
@@ -48,6 +49,8 @@ void pagination_component_destroy(PaginationComponent* component);
 
 int pagination_component_set_property_from_json(Layer* layer, const char* key, cJSON* value, int is_creating);
 cJSON* pagination_component_get_property(Layer* layer, const char* property_name);
+int pagination_component_register_event(Layer* layer, const char* event_name, const char* event_func_name, EventHandler event_handler);
+void pagination_component_trigger_on_change(PaginationComponent* component);
 
 void pagination_component_render(Layer* layer);
 int pagination_component_handle_mouse_event(Layer* layer, MouseEvent* event);

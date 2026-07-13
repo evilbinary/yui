@@ -188,10 +188,9 @@ static int pagination_zone_enabled(PaginationComponent* component, PaginationZon
 static void pagination_dispatch_change(PaginationComponent* component) {
     if (!component || component->on_change_name[0] == '\0') return;
 
-    EventHandler handler = find_event_by_name(component->on_change_name);
-    if (!handler) return;
-
     Layer* layer = component->layer;
+    if (!layer) return;
+
     int page_count = pagination_component_get_page_count(component);
     int offset = (component->page - 1) * component->page_size;
     int start = component->total > 0 ? offset + 1 : 0;
@@ -214,17 +213,43 @@ static void pagination_dispatch_change(PaginationComponent* component) {
     cJSON_Delete(payload);
     if (!json) return;
 
-    if (!layer->event) {
-        layer->event = calloc(1, sizeof(Event));
-    }
-    if (layer->event) {
-        strncpy(layer->event->click_name, component->on_change_name, MAX_PATH - 1);
-        layer->event->click_name[MAX_PATH - 1] = '\0';
-    }
-
     layer_set_text(layer, json);
     free(json);
-    handler(layer);
+
+    pagination_component_trigger_on_change(component);
+}
+
+void pagination_component_trigger_on_change(PaginationComponent* component) {
+    if (!component || component->on_change_name[0] == '\0') return;
+
+    if (component->on_change == NULL) {
+        const char* event_name = component->on_change_name;
+        component->on_change = find_event_by_name(event_name);
+    }
+
+    if (component->on_change) {
+        component->on_change(component->layer);
+    } else {
+        printf("pagination_component_trigger_on_change: event not found '%s'\n",
+               component->on_change_name);
+        print_registered_events();
+    }
+}
+
+int pagination_component_register_event(Layer* layer, const char* event_name,
+                                        const char* event_func_name, EventHandler event_handler) {
+    if (!layer || !layer->component || !event_handler) return -1;
+    if (strcmp(event_name, "change") != 0 && strcmp(event_name, "onChange") != 0) return -1;
+
+    PaginationComponent* component = (PaginationComponent*)layer->component;
+    component->on_change = event_handler;
+    if (event_func_name && event_func_name[0] != '\0') {
+        const char* name = event_func_name;
+        if (name[0] == '@') name++;
+        strncpy(component->on_change_name, name, sizeof(component->on_change_name) - 1);
+        component->on_change_name[sizeof(component->on_change_name) - 1] = '\0';
+    }
+    return 0;
 }
 
 static void pagination_change_page(PaginationComponent* component, int delta) {
@@ -507,6 +532,7 @@ PaginationComponent* pagination_component_create(Layer* layer) {
     layer->handle_mouse_event = pagination_component_handle_mouse_event;
     layer->get_property = pagination_component_get_property;
     layer->set_property = pagination_component_set_property_from_json;
+    layer->register_event = pagination_component_register_event;
     layer->on_destroy = pagination_layer_destroy;
 
     return component;
