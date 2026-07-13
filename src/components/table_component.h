@@ -43,6 +43,11 @@ typedef struct TableComponent {
     Color row_selected_color;
     Color grid_line_color;
     char on_select_name[128];
+    int resizable_columns;
+    int resizing_column;
+    int resize_col_hover;
+    int resize_drag_start_x;
+    int resize_drag_start_w;
 } TableComponent;
 
 TableComponent* table_component_create(Layer* layer);

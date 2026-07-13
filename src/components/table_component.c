@@ -11,6 +11,8 @@
 extern float scale;
 
 #define TABLE_CELL_PAD_X 8
+#define TABLE_COL_MIN_WIDTH 40
+#define TABLE_RESIZE_HANDLE 6
 
 static int table_row_count(TableComponent* component) {
     if (!component || !component->layer || !component->layer->data || !component->layer->data->json) {
@@ -332,6 +334,9 @@ TableComponent* table_component_create(Layer* layer) {
     component->row_hover_color = (Color){49, 50, 68, 255};
     component->row_selected_color = (Color){69, 71, 90, 255};
     component->grid_line_color = (Color){49, 50, 68, 255};
+    component->resizable_columns = 1;
+    component->resizing_column = -1;
+    component->resize_col_hover = -1;
 
     layer->component = component;
     layer->render = table_component_render;
@@ -376,6 +381,11 @@ TableComponent* table_component_create_from_json(Layer* layer, cJSON* json_obj) 
     cJSON* auto_columns = cJSON_GetObjectItem(json_obj, "autoColumns");
     if (auto_columns) {
         component->auto_columns = cJSON_IsTrue(auto_columns);
+    }
+
+    cJSON* resizable_columns = cJSON_GetObjectItem(json_obj, "resizableColumns");
+    if (resizable_columns) {
+        component->resizable_columns = cJSON_IsTrue(resizable_columns);
     }
 
     cJSON* columns = cJSON_GetObjectItem(json_obj, "columns");
@@ -429,6 +439,18 @@ int table_component_get_row_count(TableComponent* component) {
     return table_row_count(component);
 }
 
+static void table_intersect_rect(Rect* out, const Rect* a, const Rect* b) {
+    if (!out || !a || !b) return;
+    int x1 = a->x > b->x ? a->x : b->x;
+    int y1 = a->y > b->y ? a->y : b->y;
+    int x2 = (a->x + a->w) < (b->x + b->w) ? (a->x + a->w) : (b->x + b->w);
+    int y2 = (a->y + a->h) < (b->y + b->h) ? (a->y + a->h) : (b->y + b->h);
+    out->x = x1;
+    out->y = y1;
+    out->w = x2 > x1 ? x2 - x1 : 0;
+    out->h = y2 > y1 ? y2 - y1 : 0;
+}
+
 static void table_draw_cell_text(Layer* layer, const char* text, Color color,
                                 int x, int y, int w, int h, TableColumnAlign align) {
     if (!layer || !text || !layer->font || !layer->font->default_font) return;
@@ -438,11 +460,21 @@ static void table_draw_cell_text(Layer* layer, const char* text, Color color,
 
     int tw = 0, th = 0;
     backend_query_texture(tex, NULL, NULL, &tw, &th);
-    int draw_w = tw / (int)scale;
-    int draw_h = th / (int)scale;
-    int max_w = w - TABLE_CELL_PAD_X * 2;
-    if (max_w < 1) max_w = 1;
-    if (draw_w > max_w) draw_w = max_w;
+    int draw_w = (int)(tw / scale);
+    int draw_h = (int)(th / scale);
+    if (draw_w < 1) draw_w = 1;
+    if (draw_h < 1) draw_h = 1;
+
+    int max_h = h - 2;
+    if (max_h < 1) max_h = 1;
+
+    // 高度超出时等比缩小；宽度超出由裁剪处理，避免横向挤压变形
+    if (draw_h > max_h) {
+        float ratio = (float)draw_w / (float)draw_h;
+        draw_h = max_h;
+        draw_w = (int)(max_h * ratio);
+        if (draw_w < 1) draw_w = 1;
+    }
 
     int draw_x = x + TABLE_CELL_PAD_X;
     if (align == TABLE_ALIGN_CENTER) {
@@ -453,9 +485,66 @@ static void table_draw_cell_text(Layer* layer, const char* text, Color color,
     int draw_y = y + (h - draw_h) / 2;
     if (draw_y < y) draw_y = y;
 
+    Rect cell_clip = {x, y, w, h};
+    Rect prev_clip;
+    backend_render_get_clip_rect(&prev_clip);
+    Rect clip = cell_clip;
+    if (prev_clip.w > 0 && prev_clip.h > 0) {
+        table_intersect_rect(&clip, &cell_clip, &prev_clip);
+    }
+    backend_render_set_clip_rect(&clip);
+
     Rect dst = {draw_x, draw_y, draw_w, draw_h};
     backend_render_text_copy(tex, NULL, &dst);
     backend_render_text_destroy(tex);
+
+    backend_render_set_clip_rect(&prev_clip);
+}
+
+static int table_point_in_header(TableComponent* component, Layer* layer, int x, int y) {
+    if (!component || !layer) return 0;
+    if (y < layer->rect.y || y >= layer->rect.y + component->header_height) return 0;
+    int viewport_w = table_viewport_width(layer);
+    return x >= layer->rect.x && x < layer->rect.x + viewport_w;
+}
+
+static int table_column_right_x(TableComponent* component, Layer* layer, int col_index) {
+    int x = layer->rect.x - layer->scroll_offset_x;
+    for (int i = 0; i <= col_index && i < component->column_count; i++) {
+        x += component->columns[i].computed_width;
+    }
+    return x;
+}
+
+static int table_resize_column_at(TableComponent* component, Layer* layer, int x, int y) {
+    if (!component->resizable_columns || component->column_count <= 0) return -1;
+    if (!table_point_in_header(component, layer, x, y)) return -1;
+
+    int viewport_w = table_viewport_width(layer);
+    int half = TABLE_RESIZE_HANDLE / 2;
+    if (TABLE_RESIZE_HANDLE % 2) half++;
+
+    for (int i = 0; i < component->column_count; i++) {
+        int edge_x = table_column_right_x(component, layer, i);
+        if (edge_x < layer->rect.x - half || edge_x > layer->rect.x + viewport_w + half) {
+            continue;
+        }
+        if (x >= edge_x - half && x <= edge_x + half) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+static void table_apply_column_resize(TableComponent* component, int col_index, int new_width) {
+    if (!component || col_index < 0 || col_index >= component->column_count) return;
+    if (new_width < TABLE_COL_MIN_WIDTH) new_width = TABLE_COL_MIN_WIDTH;
+
+    TableColumn* col = &component->columns[col_index];
+    col->width = new_width;
+    col->flex = 0.0f;
+    table_component_update_content_size(component);
+    mark_layer_dirty(component->layer, DIRTY_LAYOUT | DIRTY_TEXT);
 }
 
 static void table_render_header(TableComponent* component, Layer* layer, int viewport_w) {
@@ -476,8 +565,11 @@ static void table_render_header(TableComponent* component, Layer* layer, int vie
                                  cell.x, cell.y, cell.w, cell.h, col->align);
         }
         if (component->show_grid_lines) {
+            int highlight = component->resizable_columns &&
+                (component->resizing_column == i || component->resize_col_hover == i);
+            Color line_color = highlight ? (Color){137, 180, 250, 255} : component->grid_line_color;
             Rect line = {cell.x + cell.w - 1, cell.y, 1, cell.h};
-            backend_render_fill_rect(&line, component->grid_line_color);
+            backend_render_fill_rect(&line, line_color);
         }
         x += col->computed_width;
     }
@@ -587,6 +679,21 @@ int table_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
 
     TableComponent* component = (TableComponent*)layer->component;
 
+    if (component->resizing_column >= 0) {
+        if (event->state == SDL_MOUSEMOTION) {
+            int delta = event->x - component->resize_drag_start_x;
+            table_apply_column_resize(component, component->resizing_column,
+                                      component->resize_drag_start_w + delta);
+            return 1;
+        }
+        if (event->state == SDL_RELEASED && event->button == SDL_BUTTON_LEFT) {
+            component->resizing_column = -1;
+            component->resize_col_hover = table_resize_column_at(component, layer, event->x, event->y);
+            return 1;
+        }
+        return 1;
+    }
+
     if (layer->scrollbar_v && layer->scrollbar_v->is_dragging) {
         if (event->state == SDL_RELEASED && event->button == SDL_BUTTON_LEFT) {
             component->pressed_row = -1;
@@ -600,13 +707,37 @@ int table_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
         return 1;
     }
 
-    int row = table_row_at_point(component, layer, event->x, event->y);
-    int in_body = row >= 0;
+    int in_header = table_point_in_header(component, layer, event->x, event->y);
+    int resize_col = in_header ? table_resize_column_at(component, layer, event->x, event->y) : -1;
 
     if (event->state == SDL_MOUSEMOTION) {
-        component->hovered_row = in_body ? row : -1;
-        return in_body;
+        int prev_hover = component->resize_col_hover;
+        component->resize_col_hover = resize_col;
+        if (prev_hover != resize_col && (prev_hover >= 0 || resize_col >= 0)) {
+            mark_layer_dirty(layer, DIRTY_TEXT);
+        }
+        if (in_header) {
+            component->hovered_row = -1;
+            return 1;
+        }
+        int row = table_row_at_point(component, layer, event->x, event->y);
+        component->hovered_row = row >= 0 ? row : -1;
+        return row >= 0;
     }
+
+    if (in_header && event->button == SDL_BUTTON_LEFT) {
+        if (event->state == SDL_PRESSED && resize_col >= 0) {
+            component->resizing_column = resize_col;
+            component->resize_drag_start_x = event->x;
+            component->resize_drag_start_w = component->columns[resize_col].computed_width;
+            component->pressed_row = -1;
+            return 1;
+        }
+        return 1;
+    }
+
+    int row = table_row_at_point(component, layer, event->x, event->y);
+    int in_body = row >= 0;
 
     if (event->button != SDL_BUTTON_LEFT) {
         return in_body;
