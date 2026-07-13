@@ -438,32 +438,28 @@
                         }
                       },
                       {
-                        "id": "resultPagePrev",
-                        "type": "Button",
-                        "size": [56, 24],
-                        "text": "上一页",
-                        "disabled": true,
+                        "id": "resultPager",
+                        "type": "Pagination",
+                        "mode": "simple",
+                        "size": [220, 28],
+                        "page": 1,
+                        "pageSize": 500,
+                        "total": 0,
+                        "hideOnSinglePage": true,
+                        "showTotal": true,
+                        "events": {
+                          "onChange": "@onResultPageChange"
+                        },
                         "style": {
                           "color": "#A6ADC8",
-                          "bgColor": "#313244",
+                          "bgColor": "transparent",
+                          "fontSize": 11,
+                          "disabledColor": "#45475A",
+                          "buttonBgColor": "#313244",
+                          "buttonHoverColor": "#45475A",
                           "borderRadius": 4,
-                          "fontSize": 11
-                        },
-                        "events": { "onClick": "@onResultPagePrev" }
-                      },
-                      {
-                        "id": "resultPageNext",
-                        "type": "Button",
-                        "size": [56, 24],
-                        "text": "下一页",
-                        "disabled": true,
-                        "style": {
-                          "color": "#A6ADC8",
-                          "bgColor": "#313244",
-                          "borderRadius": 4,
-                          "fontSize": 11
-                        },
-                        "events": { "onClick": "@onResultPageNext" }
+                          "itemSize": 24
+                        }
                       }
                     ]
                   },

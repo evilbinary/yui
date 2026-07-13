@@ -80,6 +80,7 @@ YUI框架支持以下核心组件类型：
 | TEXT | 文本组件 | `"type": "Text"` |
 | TREEVIEW | 树形视图组件 | `"type": "Treeview"` |
 | TABLE | 表格组件 | `"type": "Table"` |
+| PAGINATION | 分页组件 | `"type": "Pagination"` |
 | TAB | 选项卡组件 | `"type": "Tab"` |
 | SLIDER | 滑块组件 | `"type": "Slider"` |
 | SELECT | 选择器组件 | `"type": "Select"` |

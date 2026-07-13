@@ -1,0 +1,47 @@
+{
+  "id": "paginationTest",
+  "type": "View",
+  "size": [480, 200],
+  "js": [],
+  "layout": { "type": "vertical", "spacing": 16, "padding": [20, 20, 20, 20] },
+  "style": { "bgColor": "#1E1E2E" },
+  "children": [
+    {
+      "id": "miniPager",
+      "type": "Pagination",
+      "mode": "mini",
+      "size": [88, 24],
+      "page": 2,
+      "pageSize": 10,
+      "total": 95,
+      "showPageCount": true,
+      "style": {
+        "color": "#CDD6F4",
+        "fontSize": 11,
+        "buttonBgColor": "#313244",
+        "buttonHoverColor": "#45475A",
+        "borderRadius": 4
+      },
+      "events": { "onChange": "@onPagerChange" }
+    },
+    {
+      "id": "simplePager",
+      "type": "Pagination",
+      "mode": "simple",
+      "size": [240, 28],
+      "page": 3,
+      "pageSize": 50,
+      "total": 1000,
+      "showTotal": true,
+      "style": {
+        "color": "#A6ADC8",
+        "fontSize": 11,
+        "buttonBgColor": "#313244",
+        "buttonHoverColor": "#45475A",
+        "borderRadius": 4,
+        "itemSize": 24
+      },
+      "events": { "onChange": "@onPagerChange" }
+    }
+  ]
+}

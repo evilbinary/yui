@@ -227,13 +227,27 @@ table_component_update_content_size
 ## 示例
 
 - 单元测试：`app/tests/test-table.json`
-- DB 编辑器查询结果：`app/db/db.json` 中 `resultTable`
+- DB 编辑器查询结果：`app/db/db.json` 中 `resultTable` + `resultPager`
+- 分页组件测试：`app/tests/test-pagination.json`
 
 运行测试：
 
 ```bash
 ./build/db app/tests/test-table.json
 ```
+
+## 与 Pagination 组合
+
+大数据量时，Table 只接收当前页 slice，分页状态由 [Pagination 组件](pagination-component.md) 管理：
+
+```javascript
+function onResultPageChange(layerId) {
+    var state = JSON.parse(yui.find(layerId).text);
+    yui.find("resultTable").data = allRows.slice(state.offset, state.offset + state.limit);
+}
+```
+
+详见 [pagination-component.md](pagination-component.md)。
 
 ## 后续规划
 

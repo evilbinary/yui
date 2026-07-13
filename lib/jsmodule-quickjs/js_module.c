@@ -826,6 +826,70 @@ static JSValue js_layer_wrapper_set_visible(JSContext* ctx, JSValueConst this_va
     return JS_UNDEFINED;
 }
 
+static JSValue js_layer_wrapper_get_number_property(JSContext* ctx, Layer* layer, const char* key)
+{
+    if (!layer || !key) return JS_UNDEFINED;
+    extern cJSON* layer_get_property_as_json(Layer* layer, const char* key);
+    cJSON* value = layer_get_property_as_json(layer, key);
+    if (!value) return JS_UNDEFINED;
+    JSValue result = JS_UNDEFINED;
+    if (cJSON_IsNumber(value)) {
+        result = JS_NewFloat64(ctx, value->valuedouble);
+    }
+    cJSON_Delete(value);
+    return result;
+}
+
+static JSValue js_layer_wrapper_set_number_property(JSContext* ctx, Layer* layer, const char* key, JSValueConst val)
+{
+    if (!layer || !key) return JS_UNDEFINED;
+    double number = 0;
+    if (JS_ToFloat64(ctx, &number, val) != 0) return JS_UNDEFINED;
+    extern int layer_set_property_from_json(Layer* layer, const char* key, cJSON* value, int is_creating);
+    cJSON* json_value = cJSON_CreateNumber(number);
+    if (json_value) {
+        layer_set_property_from_json(layer, key, json_value, 0);
+        cJSON_Delete(json_value);
+    }
+    return JS_UNDEFINED;
+}
+
+static JSValue js_layer_wrapper_get_page(JSContext* ctx, JSValueConst this_val)
+{
+    Layer* layer = js_get_layer_from_wrapper(ctx, this_val);
+    return js_layer_wrapper_get_number_property(ctx, layer, "page");
+}
+
+static JSValue js_layer_wrapper_set_page(JSContext* ctx, JSValueConst this_val, JSValueConst val)
+{
+    Layer* layer = js_get_layer_from_wrapper(ctx, this_val);
+    return js_layer_wrapper_set_number_property(ctx, layer, "page", val);
+}
+
+static JSValue js_layer_wrapper_get_page_size(JSContext* ctx, JSValueConst this_val)
+{
+    Layer* layer = js_get_layer_from_wrapper(ctx, this_val);
+    return js_layer_wrapper_get_number_property(ctx, layer, "pageSize");
+}
+
+static JSValue js_layer_wrapper_set_page_size(JSContext* ctx, JSValueConst this_val, JSValueConst val)
+{
+    Layer* layer = js_get_layer_from_wrapper(ctx, this_val);
+    return js_layer_wrapper_set_number_property(ctx, layer, "pageSize", val);
+}
+
+static JSValue js_layer_wrapper_get_total(JSContext* ctx, JSValueConst this_val)
+{
+    Layer* layer = js_get_layer_from_wrapper(ctx, this_val);
+    return js_layer_wrapper_get_number_property(ctx, layer, "total");
+}
+
+static JSValue js_layer_wrapper_set_total(JSContext* ctx, JSValueConst this_val, JSValueConst val)
+{
+    Layer* layer = js_get_layer_from_wrapper(ctx, this_val);
+    return js_layer_wrapper_set_number_property(ctx, layer, "total", val);
+}
+
 // Layer 包装对象的 size 属性 getter
 static JSValue js_layer_wrapper_get_size(JSContext* ctx, JSValueConst this_val)
 {
@@ -998,6 +1062,24 @@ static JSValue js_create_layer_wrapper(JSContext* ctx, Layer* layer)
     JSAtom size_atom = JS_NewAtom(ctx, "size");
     JS_DefinePropertyGetSet(ctx, wrapper, size_atom, size_getter, size_setter, JS_PROP_CONFIGURABLE | JS_PROP_ENUMERABLE);
     JS_FreeAtom(ctx, size_atom);
+
+    JSValue page_getter = JS_NewCFunction2(ctx, (JSCFunction*)js_layer_wrapper_get_page, "get page", 0, JS_CFUNC_getter, 0);
+    JSValue page_setter = JS_NewCFunction2(ctx, (JSCFunction*)js_layer_wrapper_set_page, "set page", 1, JS_CFUNC_setter, 0);
+    JSAtom page_atom = JS_NewAtom(ctx, "page");
+    JS_DefinePropertyGetSet(ctx, wrapper, page_atom, page_getter, page_setter, JS_PROP_CONFIGURABLE | JS_PROP_ENUMERABLE);
+    JS_FreeAtom(ctx, page_atom);
+
+    JSValue page_size_getter = JS_NewCFunction2(ctx, (JSCFunction*)js_layer_wrapper_get_page_size, "get pageSize", 0, JS_CFUNC_getter, 0);
+    JSValue page_size_setter = JS_NewCFunction2(ctx, (JSCFunction*)js_layer_wrapper_set_page_size, "set pageSize", 1, JS_CFUNC_setter, 0);
+    JSAtom page_size_atom = JS_NewAtom(ctx, "pageSize");
+    JS_DefinePropertyGetSet(ctx, wrapper, page_size_atom, page_size_getter, page_size_setter, JS_PROP_CONFIGURABLE | JS_PROP_ENUMERABLE);
+    JS_FreeAtom(ctx, page_size_atom);
+
+    JSValue total_getter = JS_NewCFunction2(ctx, (JSCFunction*)js_layer_wrapper_get_total, "get total", 0, JS_CFUNC_getter, 0);
+    JSValue total_setter = JS_NewCFunction2(ctx, (JSCFunction*)js_layer_wrapper_set_total, "set total", 1, JS_CFUNC_setter, 0);
+    JSAtom total_atom = JS_NewAtom(ctx, "total");
+    JS_DefinePropertyGetSet(ctx, wrapper, total_atom, total_getter, total_setter, JS_PROP_CONFIGURABLE | JS_PROP_ENUMERABLE);
+    JS_FreeAtom(ctx, total_atom);
 
     return wrapper;
 }

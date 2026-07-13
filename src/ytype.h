@@ -43,6 +43,7 @@
 #define YUI_CLOCK_COMPONENT 1
 #define YUI_SASH_COMPONENT 1
 #define YUI_TABLE_COMPONENT 1
+#define YUI_PAGINATION_COMPONENT 1
 
 
 #ifdef YUI_ANIMATION
@@ -150,7 +151,8 @@ typedef enum {
     DIALOG,  // 添加DIALOG类型
     CLOCK,  // 添加CLOCK类型
     SASH,
-    TABLE
+    TABLE,
+    PAGINATION
 } LayerType;
 
  
@@ -327,6 +329,7 @@ typedef enum {
 
 typedef  int (*register_event_fun_t)(Layer* layer, const char* event_name, const char* event_func_name, EventHandler event_handler);
 typedef  cJSON* (*get_property_fun_t)(Layer* layer, const char* property_name);
+typedef  int (*set_property_fun_t)(Layer* layer, const char* key, cJSON* value, int is_creating);
 
 typedef struct Layer {
     char id[50];
@@ -429,8 +432,9 @@ typedef struct Layer {
     register_event_fun_t register_event;
     int (*unregister_event)(Layer* layer, const char* event_name);
     
-    //组件属性获取函数
+    //组件属性获取/设置函数
     get_property_fun_t get_property;
+    set_property_fun_t set_property;
 
     // 毛玻璃效果相关属性
     int backdrop_filter;     // 是否启用毛玻璃效果
@@ -535,6 +539,10 @@ extern Layer* focused_layer;
 
 #ifdef YUI_TABLE_COMPONENT
 #include "components/table_component.h"
+#endif
+
+#ifdef YUI_PAGINATION_COMPONENT
+#include "components/pagination_component.h"
 #endif
 
 #endif

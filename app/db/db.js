@@ -524,73 +524,47 @@ function applyDbFilter(filter) {
 
 var RESULT_PAGE_SIZE = 500;
 var resultRowsAll = [];
-var resultPage = 0;
 
 function showResults(rows, rowCount) {
     resultRowsAll = rows || [];
-    resultPage = 0;
-    renderResultPage(rowCount != null ? rowCount : resultRowsAll.length);
+    var total = rowCount != null ? rowCount : resultRowsAll.length;
+    var pager = yui.find("resultPager");
+    if (pager) {
+        pager.pageSize = RESULT_PAGE_SIZE;
+        pager.total = total;
+        pager.page = 1;
+    }
+    renderResultPage(1, RESULT_PAGE_SIZE);
 }
 
-function renderResultPage(totalCount) {
-    var total = totalCount != null ? totalCount : resultRowsAll.length;
-    var pageCount = total > 0 ? Math.ceil(total / RESULT_PAGE_SIZE) : 0;
-    if (pageCount > 0 && resultPage >= pageCount) {
-        resultPage = pageCount - 1;
-    }
-    if (pageCount === 0) {
-        resultPage = 0;
-    }
-
-    var start = resultPage * RESULT_PAGE_SIZE;
-    var end = Math.min(start + RESULT_PAGE_SIZE, total);
-    var pageRows = total > 0 ? resultRowsAll.slice(start, end) : [];
+function renderResultPage(page, pageSize) {
+    page = page || 1;
+    pageSize = pageSize || RESULT_PAGE_SIZE;
+    var start = (page - 1) * pageSize;
+    var end = Math.min(start + pageSize, resultRowsAll.length);
 
     var table = yui.find("resultTable");
-    if (table) table.data = pageRows;
+    if (table) table.data = resultRowsAll.slice(start, end);
 
     var resultInfo = yui.find("resultInfo");
     if (resultInfo) {
-        if (total === 0) {
+        if (resultRowsAll.length === 0) {
             resultInfo.text = "(0 行)";
-        } else if (total <= RESULT_PAGE_SIZE) {
-            resultInfo.text = "(" + total + " 行)";
+        } else if (resultRowsAll.length <= pageSize) {
+            resultInfo.text = "(" + resultRowsAll.length + " 行)";
         } else {
-            resultInfo.text = "显示 " + (start + 1) + "-" + end + " / " + total + " 行";
+            resultInfo.text = "共 " + resultRowsAll.length + " 行";
         }
     }
-
-    var prevBtn = yui.find("resultPagePrev");
-    var nextBtn = yui.find("resultPageNext");
-    var prevEnabled = resultPage > 0;
-    var nextEnabled = pageCount > 0 && resultPage < pageCount - 1;
-    if (prevBtn) {
-        prevBtn.style = {
-            color: prevEnabled ? "#A6ADC8" : "#45475A",
-            bgColor: prevEnabled ? "#313244" : "#272836"
-        };
-    }
-    if (nextBtn) {
-        nextBtn.style = {
-            color: nextEnabled ? "#A6ADC8" : "#45475A",
-            bgColor: nextEnabled ? "#313244" : "#272836"
-        };
-    }
 }
 
-function onResultPagePrev() {
-    if (resultPage <= 0) return;
-    resultPage--;
-    renderResultPage();
-}
-
-function onResultPageNext() {
-    var pageCount = resultRowsAll.length > 0
-        ? Math.ceil(resultRowsAll.length / RESULT_PAGE_SIZE)
-        : 0;
-    if (resultPage >= pageCount - 1) return;
-    resultPage++;
-    renderResultPage();
+function onResultPageChange(layerId) {
+    var pager = yui.find(layerId);
+    if (!pager || !pager.text) return;
+    try {
+        var state = JSON.parse(pager.text);
+        renderResultPage(state.page, state.pageSize);
+    } catch (e) {}
 }
 
 function onResultRowClick(layerId) {

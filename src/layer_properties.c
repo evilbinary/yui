@@ -434,6 +434,11 @@ int layer_set_property_from_json(Layer* layer, const char* key, cJSON* value, in
             return property_handlers[i].handler(layer, value, is_creating);
         }
     }
+
+    if (layer->set_property) {
+        int result = layer->set_property(layer, key, value, is_creating);
+        if (result) return result;
+    }
     
     // 未找到处理器
     return 0;
