@@ -20,7 +20,7 @@
             "type": "LvLabel",
             "text": "YUI + LVGL Widget Gallery",
             "size": [340, 28],
-            "color": "#eaeaea"
+            "color": "#f5a623"
         },
         {
             "id": "lvgl_subtitle",
