@@ -79,6 +79,7 @@ YUI框架支持以下核心组件类型：
 | RADIOBOX | 单选框组件 | `"type": "Radiobox"` |
 | TEXT | 文本组件 | `"type": "Text"` |
 | TREEVIEW | 树形视图组件 | `"type": "Treeview"` |
+| TABLE | 表格组件 | `"type": "Table"` |
 | TAB | 选项卡组件 | `"type": "Tab"` |
 | SLIDER | 滑块组件 | `"type": "Slider"` |
 | SELECT | 选择器组件 | `"type": "Select"` |
@@ -477,6 +478,49 @@ Text 组件用于文本显示与编辑，支持多行、滚动、行号与语法
   ]
 }
 ```
+
+### 10.1 Table组件特有属性
+
+多列数据表格，详见 [Table 组件文档](components/table-component.md)。
+
+```json
+{
+  "id": "resultTable",
+  "type": "Table",
+  "scrollable": 3,
+  "autoColumns": true,
+  "rowHeight": 28,
+  "headerHeight": 32,
+  "stripeRows": true,
+  "showGridLines": true,
+  "columns": [
+    { "key": "id", "title": "ID", "width": 60, "align": "right" },
+    { "key": "name", "title": "名称", "flex": 1 }
+  ],
+  "data": [
+    { "id": 1, "name": "Alice" }
+  ],
+  "events": {
+    "onItemClick": "@onRowSelected"
+  },
+  "style": {
+    "headerBgColor": "#181825",
+    "headerColor": "#A6ADC8",
+    "rowAltBgColor": "#1a1a24",
+    "gridLineColor": "#313244"
+  }
+}
+```
+
+| 属性 | 类型 | 说明 |
+|------|------|------|
+| `columns` | array | 列定义：`key`、`title`、`width`、`flex`、`align` |
+| `data` | array | 行对象数组 |
+| `autoColumns` | boolean | 从首行字段自动生成列 |
+| `rowHeight` | number | 行高 |
+| `headerHeight` | number | 表头高度 |
+| `stripeRows` | boolean | 斑马纹 |
+| `showGridLines` | boolean | 网格线 |
 
 ### 11. Tab组件特有属性
 

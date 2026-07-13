@@ -1,0 +1,60 @@
+{
+  "id": "tableTestApp",
+  "text": "Table Test",
+  "type": "View",
+  "size": [720, 480],
+  "js": ["./test-table.js"],
+  "layout": { "type": "absolute" },
+  "style": {
+    "bgColor": "#1E1E2E",
+    "color": "#CDD6F4"
+  },
+  "children": [
+    {
+      "id": "userTable",
+      "type": "Table",
+      "position": [20, 20],
+      "size": [680, 400],
+      "scrollable": 3,
+      "rowHeight": 30,
+      "headerHeight": 34,
+      "stripeRows": true,
+      "showGridLines": true,
+      "columns": [
+        { "key": "id", "title": "ID", "width": 60, "align": "right" },
+        { "key": "name", "title": "Name", "flex": 1 },
+        { "key": "role", "title": "Role", "width": 120 },
+        { "key": "status", "title": "Status", "width": 100, "align": "center" }
+      ],
+      "data": [
+        { "id": 1, "name": "Alice", "role": "Admin", "status": "active" },
+        { "id": 2, "name": "Bob", "role": "Editor", "status": "active" },
+        { "id": 3, "name": "Carol", "role": "Viewer", "status": "disabled" },
+        { "id": 4, "name": "Dave", "role": "Editor", "status": "active" },
+        { "id": 5, "name": "Eve", "role": "Admin", "status": "active" }
+      ],
+      "events": {
+        "onItemClick": "@onTableItemClick"
+      },
+      "style": {
+        "bgColor": "#11111B",
+        "color": "#CDD6F4",
+        "fontSize": 13,
+        "headerBgColor": "#181825",
+        "headerColor": "#A6ADC8",
+        "rowAltBgColor": "#1a1a24",
+        "gridLineColor": "#313244"
+      }
+    },
+    {
+      "id": "statusLabel",
+      "type": "Label",
+      "position": [20, 430],
+      "text": "点击表格行查看详情",
+      "style": {
+        "color": "#6C7086",
+        "fontSize": 12
+      }
+    }
+  ]
+}

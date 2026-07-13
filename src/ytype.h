@@ -42,6 +42,7 @@
 #define YUI_DIALOG_COMPONENT 1
 #define YUI_CLOCK_COMPONENT 1
 #define YUI_SASH_COMPONENT 1
+#define YUI_TABLE_COMPONENT 1
 
 
 #ifdef YUI_ANIMATION
@@ -148,7 +149,8 @@ typedef enum {
     MENU,  // 添加MENU类型
     DIALOG,  // 添加DIALOG类型
     CLOCK,  // 添加CLOCK类型
-    SASH
+    SASH,
+    TABLE
 } LayerType;
 
  
@@ -529,6 +531,10 @@ extern Layer* focused_layer;
 
 #ifdef YUI_SASH_COMPONENT
 #include "components/sash_component.h"
+#endif
+
+#ifdef YUI_TABLE_COMPONENT
+#include "components/table_component.h"
 #endif
 
 #endif

@@ -440,15 +440,28 @@
                     ]
                   },
                   {
-                    "id": "resultGrid",
-                    "type": "Treeview",
+                    "id": "resultTable",
+                    "type": "Table",
                     "scrollable": 3,
                     "size": [660, 296],
                     "flex": 1,
+                    "autoColumns": true,
+                    "rowHeight": 28,
+                    "headerHeight": 32,
+                    "stripeRows": true,
+                    "showGridLines": true,
+                    "data": [],
+                    "events": {
+                      "onItemClick": "@onResultRowClick"
+                    },
                     "style": {
                       "color": "#CDD6F4",
                       "bgColor": "#11111B",
-                      "fontSize": 13
+                      "fontSize": 13,
+                      "headerBgColor": "#181825",
+                      "headerColor": "#A6ADC8",
+                      "rowAltBgColor": "#1a1a24",
+                      "gridLineColor": "#313244"
                     }
                   }
                 ]

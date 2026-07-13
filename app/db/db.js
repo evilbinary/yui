@@ -234,8 +234,7 @@ function executeQuery() {
     }
 
     var rows = JSON.parse(result);
-    var treeData = rowsToTreeData(rows);
-    showResults(treeData, rows.length);
+    showResults(rows, rows.length);
     updateStatus("查询完成, " + rows.length + " 行", "#A6E3A1");
 }
 
@@ -523,38 +522,30 @@ function applyDbFilter(filter) {
 
 // ====================== Query Results ======================
 
-// 将 SQL 查询结果行转换为 TreeView 兼容的格式
-function rowsToTreeData(rows) {
-    if (!rows || rows.length === 0) return [];
-    var cols = Object.keys(rows[0]);
-    // 构造表头
-    var header = cols.map(function(c) { return c; }).join(" | ");
-    var treeData = [];
-    // 添加行数据，每行显示为文本
-    for (var i = 0; i < rows.length; i++) {
-        var values = [];
-        for (var j = 0; j < cols.length; j++) {
-            var v = rows[i][cols[j]];
-            values.push(v !== null && v !== undefined ? String(v) : "NULL");
-        }
-        treeData.push({ text: values.join(" | ") });
-    }
-    return treeData;
-}
-
-function showResults(treeData, rowCount) {
-    var grid = yui.find("resultGrid");
-    if (grid) grid.data = treeData;
+function showResults(rows, rowCount) {
+    var table = yui.find("resultTable");
+    if (table) table.data = rows || [];
     var resultInfo = yui.find("resultInfo");
     if (resultInfo) resultInfo.text = "(" + (rowCount || 0) + " 行)";
+}
+
+function onResultRowClick(layerId) {
+    var layer = yui.find(layerId);
+    if (!layer || !layer.text) return;
+    try {
+        var row = JSON.parse(layer.text);
+        if (row) {
+            updateStatus("选中行: " + JSON.stringify(row), "#89B4FA");
+        }
+    } catch (e) {}
 }
 
 function clearEditor() {
     var editor = yui.find("sqlEditor");
     if (editor) editor.text = "";
     if (activeTab >= 0 && activeTab < tabs.length) tabs[activeTab].sql = "";
-    var resultGrid = yui.find("resultGrid");
-    if (resultGrid) resultGrid.data = [];
+    var resultTable = yui.find("resultTable");
+    if (resultTable) resultTable.data = [];
     var resultInfo = yui.find("resultInfo");
     if (resultInfo) resultInfo.text = "(0 行)";
     updateStatus("就绪", "#F38BA8");
