@@ -49,14 +49,38 @@ static void lvgl_yui_sdl_event_hook(const SDL_Event* event, void* user_data)
         event->type == SDL_MOUSEMOTION) {
         int mouse_x;
         int mouse_y;
+        int event_state;
+        SDL_Point mouse_pos;
+
         if (event->type == SDL_MOUSEMOTION) {
             mouse_x = event->motion.x;
             mouse_y = event->motion.y;
+            event_state = SDL_MOUSEMOTION;
         } else {
             mouse_x = event->button.x;
             mouse_y = event->button.y;
+            if (event->type == SDL_MOUSEBUTTONDOWN) {
+                event_state = SDL_PRESSED;
+            } else {
+                event_state = SDL_RELEASED;
+            }
         }
+
         handle_scrollbar_drag_event(root, mouse_x, mouse_y, event->type);
+
+        mouse_pos.x = mouse_x;
+        mouse_pos.y = mouse_y;
+        if (SDL_PointInRect(&mouse_pos, &root->rect)) {
+            MouseEvent mouse_event = {
+                .x = mouse_x,
+                .y = mouse_y,
+                .button = (event->type == SDL_MOUSEMOTION) ? SDL_BUTTON_LEFT : event->button.button,
+                .state = event_state,
+                .clicks = (event->type == SDL_MOUSEBUTTONDOWN || event->type == SDL_MOUSEBUTTONUP)
+                          ? event->button.clicks : 0
+            };
+            handle_mouse_event(root, &mouse_event);
+        }
     } else if (event->type == SDL_MOUSEWHEEL) {
         int mouse_x = 0;
         int mouse_y = 0;
