@@ -2,6 +2,7 @@
 #include "../backend.h"
 #include "../event.h"
 #include "../layer_update.h"
+#include "../popup_manager.h"
 #include "../render.h"
 #include "../util.h"
 #include <stdio.h>
@@ -14,6 +15,8 @@ extern float scale;
 #define TABLE_COL_MIN_WIDTH 40
 #define TABLE_RESIZE_HANDLE 6
 #define TABLE_DOUBLE_CLICK_MS 400
+#define TABLE_TOOLTIP_DELAY_MS 400
+#define TABLE_TOOLTIP_ROW_NONE -2
 
 static void table_intersect_rect(Rect* out, const Rect* a, const Rect* b);
 static void table_draw_cell_text(Layer* layer, const char* text, Color color,
@@ -22,6 +25,261 @@ static void table_get_cell_rect(TableComponent* component, Layer* layer,
                                 int row, int col, Rect* out);
 static void table_edit_sync_scroll(TableComponent* component);
 static void table_component_apply_theme_style(Layer* layer, cJSON* style);
+
+static int table_viewport_width(TableComponent* component, Layer* layer);
+static int table_row_at_point(TableComponent* component, Layer* layer, int x, int y);
+static int table_point_in_header(TableComponent* component, Layer* layer, int x, int y);
+static int table_resize_column_at(TableComponent* component, Layer* layer, int x, int y);
+static char* table_json_value_to_string(cJSON* item);
+
+static void table_tooltip_layer_render(Layer* layer) {
+    if (!layer) return;
+
+    Color bg = {50, 50, 60, 230};
+    Color text_color = {220, 220, 220, 255};
+
+    backend_render_fill_rect(&layer->rect, bg);
+
+    Texture* tex = render_text(layer, layer->text, text_color);
+    if (!tex) return;
+
+    int tw = 0, th = 0;
+    backend_query_texture(tex, NULL, NULL, &tw, &th);
+    Rect text_rect = {
+        layer->rect.x + 6,
+        layer->rect.y + 4,
+        tw / scale,
+        th / scale
+    };
+    backend_render_text_copy(tex, NULL, &text_rect);
+    backend_render_text_destroy(tex);
+}
+
+static void table_hide_tooltip(TableComponent* component) {
+    if (!component || !component->tooltip_popup) return;
+
+    Layer* tl = ((PopupLayer*)component->tooltip_popup)->layer;
+    popup_manager_remove(tl);
+    if (tl && tl->text) free(tl->text);
+    if (tl) free(tl);
+    component->tooltip_popup = NULL;
+}
+
+static void table_tooltip_reset(TableComponent* component) {
+    if (!component) return;
+    table_hide_tooltip(component);
+    component->tooltip_row = TABLE_TOOLTIP_ROW_NONE;
+    component->tooltip_col = -1;
+    component->tooltip_overflow = 0;
+}
+
+static int table_measure_text_width(Layer* layer, const char* text) {
+    if (!layer || !text || !text[0] || !layer->font || !layer->font->default_font) return 0;
+
+    Texture* tex = backend_render_texture(layer->font->default_font, text, (Color){255, 255, 255, 255});
+    if (!tex) return 0;
+
+    int tw = 0, th = 0;
+    backend_query_texture(tex, NULL, NULL, &tw, &th);
+    backend_render_text_destroy(tex);
+    return tw / scale;
+}
+
+static int table_text_overflows(Layer* layer, const char* text, int cell_w) {
+    int avail = cell_w - TABLE_CELL_PAD_X * 2;
+    if (avail < 1) avail = 1;
+    return table_measure_text_width(layer, text) > avail;
+}
+
+static int table_column_index_at_x(TableComponent* component, Layer* layer, int x) {
+    if (!component || !layer) return -1;
+
+    int viewport_left = layer->rect.x;
+    int viewport_right = layer->rect.x + table_viewport_width(component, layer);
+    if (x < viewport_left || x >= viewport_right) return -1;
+
+    int col_x = layer->rect.x - layer->scroll_offset_x;
+    for (int c = 0; c < component->column_count; c++) {
+        int cw = component->columns[c].computed_width;
+        int cell_left = col_x;
+        int cell_right = col_x + cw;
+        int hit_left = cell_left > viewport_left ? cell_left : viewport_left;
+        int hit_right = cell_right < viewport_right ? cell_right : viewport_right;
+        if (hit_left < hit_right && x >= hit_left && x < hit_right) {
+            return c;
+        }
+        col_x += cw;
+    }
+    return -1;
+}
+
+static char* table_get_body_cell_text(TableComponent* component, int row, int col) {
+    if (!component || !component->layer || row < 0 || col < 0 || col >= component->column_count) {
+        return NULL;
+    }
+
+    Layer* layer = component->layer;
+    if (!layer->data || !layer->data->json || !cJSON_IsArray(layer->data->json)) {
+        return NULL;
+    }
+
+    cJSON* row_json = cJSON_GetArrayItem(layer->data->json, row);
+    if (!row_json) return NULL;
+
+    cJSON* value = cJSON_GetObjectItem(row_json, component->columns[col].key);
+    return table_json_value_to_string(value);
+}
+
+static const char* table_get_tooltip_text(TableComponent* component, int row, int col,
+                                          char** owned_text) {
+    if (!component || col < 0 || col >= component->column_count) return NULL;
+    if (owned_text) *owned_text = NULL;
+
+    if (row < 0) {
+        return component->columns[col].title;
+    }
+
+    char* text = table_get_body_cell_text(component, row, col);
+    if (owned_text) *owned_text = text;
+    return text;
+}
+
+static void table_show_tooltip(TableComponent* component, Layer* layer,
+                               const char* text, int mouse_x, int mouse_y) {
+    if (!component || !layer || !text || !text[0] || component->tooltip_popup) return;
+    if (!layer->font || !layer->font->default_font) return;
+
+    int tw = table_measure_text_width(layer, text);
+    if (tw <= 0) return;
+
+    Layer* tl = calloc(1, sizeof(Layer));
+    if (!tl) return;
+
+    tl->type = LABEL;
+    tl->visible = VISIBLE;
+    tl->font = layer->font;
+
+    int pad = 6;
+    int sw = 800, sh = 600;
+    backend_get_windowsize(&sw, &sh);
+
+    tl->rect.x = mouse_x + 12;
+    tl->rect.y = mouse_y + 12;
+    tl->rect.w = tw + pad * 2;
+    tl->rect.h = layer->font->size + pad * 2;
+    if (tl->rect.h < 24) tl->rect.h = 24;
+
+    if (tl->rect.x + tl->rect.w > sw) tl->rect.x = mouse_x - tl->rect.w - 4;
+    if (tl->rect.y + tl->rect.h > sh) tl->rect.y = mouse_y - tl->rect.h - 4;
+
+    tl->text = strdup(text);
+    if (!tl->text) {
+        free(tl);
+        return;
+    }
+    tl->render = table_tooltip_layer_render;
+
+    PopupLayer* popup = popup_layer_create(tl, POPUP_TYPE_TOOLTIP, 100);
+    if (popup && popup_manager_add(popup)) {
+        component->tooltip_popup = popup;
+    } else {
+        free(tl->text);
+        free(tl);
+    }
+}
+
+static void table_tooltip_update_hover(TableComponent* component, Layer* layer, int x, int y) {
+    if (!component || !layer) return;
+
+    if (component->resizing_column >= 0 || component->editing_row >= 0) {
+        table_tooltip_reset(component);
+        return;
+    }
+
+    int row = TABLE_TOOLTIP_ROW_NONE;
+    int col = -1;
+
+    if (table_point_in_header(component, layer, x, y)) {
+        if (table_resize_column_at(component, layer, x, y) >= 0) {
+            table_tooltip_reset(component);
+            return;
+        }
+        row = -1;
+        col = table_column_index_at_x(component, layer, x);
+    } else {
+        int body_row = table_row_at_point(component, layer, x, y);
+        if (body_row >= 0) {
+            row = body_row;
+            col = table_column_index_at_x(component, layer, x);
+        }
+    }
+
+    if (col < 0) {
+        table_tooltip_reset(component);
+        return;
+    }
+
+    char* owned_text = NULL;
+    const char* text = table_get_tooltip_text(component, row, col, &owned_text);
+    if (!text || !text[0]) {
+        free(owned_text);
+        table_tooltip_reset(component);
+        return;
+    }
+
+    int cell_w = component->columns[col].computed_width;
+    int overflows = table_text_overflows(layer, text, cell_w);
+    free(owned_text);
+
+    if (!overflows) {
+        table_tooltip_reset(component);
+        return;
+    }
+
+    if (row != component->tooltip_row || col != component->tooltip_col) {
+        table_hide_tooltip(component);
+        component->tooltip_row = row;
+        component->tooltip_col = col;
+        component->tooltip_overflow = 1;
+        component->tooltip_hover_start = backend_get_ticks();
+        table_tooltip_schedule_show(component, layer);
+        return;
+    }
+
+    component->tooltip_overflow = 1;
+    table_tooltip_schedule_show(component, layer);
+}
+
+static void table_tooltip_schedule_show(TableComponent* component, Layer* layer) {
+    if (!component || !layer) return;
+    if (component->tooltip_overflow && !component->tooltip_popup) {
+        mark_layer_dirty(layer, DIRTY_TEXT);
+    }
+}
+
+static void table_tooltip_try_show(TableComponent* component, Layer* layer) {
+    if (!component || !layer || component->tooltip_popup) return;
+    if (component->tooltip_row < -1 || component->tooltip_col < 0 || !component->tooltip_overflow) return;
+
+    Uint32 now = backend_get_ticks();
+    if (now - component->tooltip_hover_start < TABLE_TOOLTIP_DELAY_MS) {
+        table_tooltip_schedule_show(component, layer);
+        return;
+    }
+
+    char* owned_text = NULL;
+    const char* text = table_get_tooltip_text(component, component->tooltip_row,
+                                              component->tooltip_col, &owned_text);
+    if (!text || !text[0]) {
+        free(owned_text);
+        return;
+    }
+
+    int mx = 0, my = 0;
+    backend_get_mouse_state(&mx, &my);
+    table_show_tooltip(component, layer, text, mx, my);
+    free(owned_text);
+}
 
 static int table_edit_has_selection(TableComponent* component) {
     return component && component->edit_sel_start >= 0 &&
@@ -553,26 +811,8 @@ static int table_row_at_point(TableComponent* component, Layer* layer, int x, in
 }
 
 static int table_column_at_point(TableComponent* component, Layer* layer, int x, int y) {
-    int row = table_row_at_point(component, layer, x, y);
-    if (row < 0) return -1;
-
-    int viewport_left = layer->rect.x;
-    int viewport_right = layer->rect.x + table_viewport_width(component, layer);
-    if (x < viewport_left || x >= viewport_right) return -1;
-
-    int col_x = layer->rect.x - layer->scroll_offset_x;
-    for (int c = 0; c < component->column_count; c++) {
-        int cw = component->columns[c].computed_width;
-        int cell_left = col_x;
-        int cell_right = col_x + cw;
-        int hit_left = cell_left > viewport_left ? cell_left : viewport_left;
-        int hit_right = cell_right < viewport_right ? cell_right : viewport_right;
-        if (hit_left < hit_right && x >= hit_left && x < hit_right) {
-            return c;
-        }
-        col_x += cw;
-    }
-    return -1;
+    if (table_row_at_point(component, layer, x, y) < 0) return -1;
+    return table_column_index_at_x(component, layer, x);
 }
 
 static void table_get_cell_rect(TableComponent* component, Layer* layer,
@@ -1069,6 +1309,7 @@ static int table_data_update(Layer* layer, cJSON* data) {
     layer->data->size = cJSON_GetArraySize(data);
     component->hovered_row = -1;
     component->pressed_row = -1;
+    table_tooltip_reset(component);
     table_cancel_edit(component);
     component->selected_col = -1;
     if (component->selected_row >= layer->data->size) {
@@ -1123,6 +1364,8 @@ TableComponent* table_component_create(Layer* layer) {
     component->last_click_time = 0;
     component->last_click_row = -1;
     component->last_click_col = -1;
+    component->tooltip_row = TABLE_TOOLTIP_ROW_NONE;
+    component->tooltip_col = -1;
     component->cell_focus_color = (Color){49, 50, 68, 255};
 
     layer->component = component;
@@ -1139,6 +1382,7 @@ TableComponent* table_component_create(Layer* layer) {
 
 void table_component_destroy(TableComponent* component) {
     if (!component) return;
+    table_tooltip_reset(component);
     table_free_columns(component);
     free(component);
 }
@@ -1517,6 +1761,7 @@ void table_component_render(Layer* layer) {
 
     table_render_header(component, layer, viewport_w);
     table_render_rows(component, layer, viewport_w);
+    table_tooltip_try_show(component, layer);
 }
 
 int table_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
@@ -1567,14 +1812,25 @@ int table_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
         }
         if (in_header) {
             component->hovered_row = -1;
+            table_tooltip_update_hover(component, layer, event->x, event->y);
             return 1;
         }
         if (component->editing_row >= 0) {
+            table_tooltip_reset(component);
             return 1;
         }
         int row = table_row_at_point(component, layer, event->x, event->y);
         component->hovered_row = row >= 0 ? row : -1;
+        if (row >= 0) {
+            table_tooltip_update_hover(component, layer, event->x, event->y);
+        } else {
+            table_tooltip_reset(component);
+        }
         return row >= 0;
+    }
+
+    if (event->state == SDL_PRESSED) {
+        table_tooltip_reset(component);
     }
 
     if (in_header && event->button == SDL_BUTTON_LEFT) {

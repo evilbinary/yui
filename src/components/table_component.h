@@ -67,6 +67,11 @@ typedef struct TableComponent {
     int last_click_row;
     int last_click_col;
     Color cell_focus_color;
+    void* tooltip_popup;
+    int tooltip_row;
+    int tooltip_col;
+    Uint32 tooltip_hover_start;
+    int tooltip_overflow;
 } TableComponent;
 
 TableComponent* table_component_create(Layer* layer);
