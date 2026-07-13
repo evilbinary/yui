@@ -347,7 +347,8 @@ static int handle_source(Layer* layer, cJSON* value, int is_creating) {
 
 // data 属性处理器（通过回调分派给组件）
 static int handle_data(Layer* layer, cJSON* value, int is_creating) {
-    return layer_set_data(layer, value);
+    (void)is_creating;
+    return layer_set_data(layer, value) > 0 ? 1 : 0;
 }
 
 // 属性处理器查找表
@@ -403,8 +404,8 @@ static const PropertyHandlerEntry property_handlers[] = {
 int layer_set_data(Layer* layer, cJSON* data) {
     if (!layer || !data) return 0;
     if (layer->on_data_update) {
-        layer->on_data_update(layer, data);
-        return 1;
+        int adopted = layer->on_data_update(layer, data);
+        return adopted ? 2 : 1;
     }
     return 0;
 }

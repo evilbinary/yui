@@ -937,8 +937,10 @@ static JSValue js_layer_wrapper_set_data(JSContext* ctx, JSValueConst this_val, 
     if (json_str) {
         cJSON* data_json = cJSON_Parse(json_str);
         if (data_json) {
-            layer_set_property_from_json(layer, "data", data_json, 0);
-            cJSON_Delete(data_json);
+            int result = layer_set_data(layer, data_json);
+            if (result != 2) {
+                cJSON_Delete(data_json);
+            }
         }
         JS_FreeCString(ctx, json_str);
     }

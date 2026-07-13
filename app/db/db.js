@@ -522,11 +522,75 @@ function applyDbFilter(filter) {
 
 // ====================== Query Results ======================
 
+var RESULT_PAGE_SIZE = 500;
+var resultRowsAll = [];
+var resultPage = 0;
+
 function showResults(rows, rowCount) {
+    resultRowsAll = rows || [];
+    resultPage = 0;
+    renderResultPage(rowCount != null ? rowCount : resultRowsAll.length);
+}
+
+function renderResultPage(totalCount) {
+    var total = totalCount != null ? totalCount : resultRowsAll.length;
+    var pageCount = total > 0 ? Math.ceil(total / RESULT_PAGE_SIZE) : 0;
+    if (pageCount > 0 && resultPage >= pageCount) {
+        resultPage = pageCount - 1;
+    }
+    if (pageCount === 0) {
+        resultPage = 0;
+    }
+
+    var start = resultPage * RESULT_PAGE_SIZE;
+    var end = Math.min(start + RESULT_PAGE_SIZE, total);
+    var pageRows = total > 0 ? resultRowsAll.slice(start, end) : [];
+
     var table = yui.find("resultTable");
-    if (table) table.data = rows || [];
+    if (table) table.data = pageRows;
+
     var resultInfo = yui.find("resultInfo");
-    if (resultInfo) resultInfo.text = "(" + (rowCount || 0) + " 行)";
+    if (resultInfo) {
+        if (total === 0) {
+            resultInfo.text = "(0 行)";
+        } else if (total <= RESULT_PAGE_SIZE) {
+            resultInfo.text = "(" + total + " 行)";
+        } else {
+            resultInfo.text = "显示 " + (start + 1) + "-" + end + " / " + total + " 行";
+        }
+    }
+
+    var prevBtn = yui.find("resultPagePrev");
+    var nextBtn = yui.find("resultPageNext");
+    var prevEnabled = resultPage > 0;
+    var nextEnabled = pageCount > 0 && resultPage < pageCount - 1;
+    if (prevBtn) {
+        prevBtn.style = {
+            color: prevEnabled ? "#A6ADC8" : "#45475A",
+            bgColor: prevEnabled ? "#313244" : "#272836"
+        };
+    }
+    if (nextBtn) {
+        nextBtn.style = {
+            color: nextEnabled ? "#A6ADC8" : "#45475A",
+            bgColor: nextEnabled ? "#313244" : "#272836"
+        };
+    }
+}
+
+function onResultPagePrev() {
+    if (resultPage <= 0) return;
+    resultPage--;
+    renderResultPage();
+}
+
+function onResultPageNext() {
+    var pageCount = resultRowsAll.length > 0
+        ? Math.ceil(resultRowsAll.length / RESULT_PAGE_SIZE)
+        : 0;
+    if (resultPage >= pageCount - 1) return;
+    resultPage++;
+    renderResultPage();
 }
 
 function onResultRowClick(layerId) {
@@ -544,10 +608,7 @@ function clearEditor() {
     var editor = yui.find("sqlEditor");
     if (editor) editor.text = "";
     if (activeTab >= 0 && activeTab < tabs.length) tabs[activeTab].sql = "";
-    var resultTable = yui.find("resultTable");
-    if (resultTable) resultTable.data = [];
-    var resultInfo = yui.find("resultInfo");
-    if (resultInfo) resultInfo.text = "(0 行)";
+    showResults([], 0);
     updateStatus("就绪", "#F38BA8");
 }
 

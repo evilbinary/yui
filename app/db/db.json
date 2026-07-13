@@ -436,6 +436,34 @@
                           "color": "#6C7086",
                           "fontSize": 11
                         }
+                      },
+                      {
+                        "id": "resultPagePrev",
+                        "type": "Button",
+                        "size": [56, 24],
+                        "text": "上一页",
+                        "disabled": true,
+                        "style": {
+                          "color": "#A6ADC8",
+                          "bgColor": "#313244",
+                          "borderRadius": 4,
+                          "fontSize": 11
+                        },
+                        "events": { "onClick": "@onResultPagePrev" }
+                      },
+                      {
+                        "id": "resultPageNext",
+                        "type": "Button",
+                        "size": [56, 24],
+                        "text": "下一页",
+                        "disabled": true,
+                        "style": {
+                          "color": "#A6ADC8",
+                          "bgColor": "#313244",
+                          "borderRadius": 4,
+                          "fontSize": 11
+                        },
+                        "events": { "onClick": "@onResultPageNext" }
                       }
                     ]
                   },

@@ -392,8 +392,8 @@ typedef struct Layer {
     //事件
     Event* event;
 
-    // 数据更新回调（由组件各自注册）
-    void (*on_data_update)(Layer* layer, cJSON* data);
+    // 数据更新回调（由组件各自注册）；返回 1 表示已接管 data 所有权
+    int (*on_data_update)(Layer* layer, cJSON* data);
 
     // 销毁回调（由组件各自注册，释放 component 等资源）
     void (*on_destroy)(Layer* layer);

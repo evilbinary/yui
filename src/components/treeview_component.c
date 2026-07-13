@@ -329,8 +329,8 @@ void treeview_set_font_size(TreeViewComponent* component, int size) {
 }
 
 
-static void treeview_data_update(Layer* layer, cJSON* data) {
-    if (!layer || !layer->component) return;
+static int treeview_data_update(Layer* layer, cJSON* data) {
+    if (!layer || !layer->component) return 0;
     TreeViewComponent* component = (TreeViewComponent*)layer->component;
     treeview_clear_all_root_nodes(component);
     if (cJSON_IsArray(data)) {
@@ -340,6 +340,7 @@ static void treeview_data_update(Layer* layer, cJSON* data) {
             if (node) treeview_add_root_node(component, node);
         }
     }
+    return 0;
 }
 
 

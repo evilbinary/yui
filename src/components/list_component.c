@@ -190,28 +190,33 @@ static void list_dispatch_select(ListComponent* component, int index) {
     handler(layer);
 }
 
-static void list_data_update(Layer* layer, cJSON* data) {
-    if (!layer || !layer->component || !data || !cJSON_IsArray(data)) return;
+static int list_data_update(Layer* layer, cJSON* data) {
+    if (!layer || !layer->component || !data || !cJSON_IsArray(data)) return 0;
 
     ListComponent* component = (ListComponent*)layer->component;
     list_sync_item_metrics(component);
 
-    if (layer->data) {
-        if (layer->data->json) cJSON_Delete(layer->data->json);
-        free(layer->data);
-        layer->data = NULL;
+    int already_owned = layer->data && layer->data->json == data;
+    if (!already_owned) {
+        if (layer->data) {
+            if (layer->data->json) cJSON_Delete(layer->data->json);
+            free(layer->data);
+            layer->data = NULL;
+        }
+
+        layer->data = (Data*)malloc(sizeof(Data));
+        if (!layer->data) return 0;
+
+        layer->data->json = data;
     }
 
-    layer->data = (Data*)malloc(sizeof(Data));
-    if (!layer->data) return;
-
-    layer->data->json = cJSON_Duplicate(data, 1);
     layer->data->size = cJSON_GetArraySize(data);
     component->hovered_index = -1;
     component->pressed_index = -1;
 
     list_component_update_content_size(component);
     mark_layer_dirty(layer, DIRTY_LAYOUT | DIRTY_TEXT);
+    return already_owned ? 0 : 1;
 }
 
 static void list_layer_destroy(Layer* layer) {
