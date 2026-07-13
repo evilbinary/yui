@@ -200,6 +200,24 @@
       }
     },
     {
+      "selector": "Treeview",
+      "style": {
+        "color": "#F2F4F8",
+        "bgColor": "#12161E",
+        "fontSize": 13,
+        "selectedBgColor": "#1E2433",
+        "hoverBgColor": "#1A2030"
+      }
+    },
+    {
+      "selector": "Pagination",
+      "style": {
+        "color": "#9AA3B2",
+        "buttonBgColor": "#1A2030",
+        "buttonHoverColor": "#1E2433"
+      }
+    },
+    {
       "selector": "Sash",
       "style": {
         "bgColor": "#2E3648",

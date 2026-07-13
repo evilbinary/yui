@@ -69,8 +69,6 @@
                 "flex": 1,
                 "scrollable": 1,
                 "style": {
-                  "color": "#CDD6F4",
-                  "bgColor": "#181825",
                   "fontSize": 13
                 },
                 "events": {
@@ -269,6 +267,7 @@
                         "id": "newTabBtn",
                         "type": "Label",
                         "variant": "tabAdd",
+                        "size": [28, 22],
                         "text": "+",
                         "events": { "onClick": "@onNewTab" }
                       }
