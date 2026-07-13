@@ -55,3 +55,10 @@ if get_plat() == "stm32":
 else:
     add_files('port_sdl/*.c')
     add_cflags('-DYUI_LVGL_PORT_SDL', public=True)
+
+target("lvgl_extra")
+set_kind("static")
+add_deps("lvgl")
+add_files(*_extra_widget_sources())
+add_cflags('-DLV_CONF_INCLUDE_SIMPLE')
+add_includedirs('.', './src', public=True)

@@ -18,7 +18,7 @@ if get_plat() == "lvgl":
     add_cflags("-DYUI_BACKEND_LVGL")
     add_cflags("-DYUI_HAS_LVGLMODULE")
     add_cflags("-DYUI_LVGL_PORT_SDL")
-    add_deps("lvgl", "lvglmodule")
+    add_deps("lvgl", "lvgl_extra", "lvglmodule")
 elif get_plat() == "stm32":
     add_files("backend/backend_stm32.c")
     add_cflags("-DSTM32_PLATFORM")

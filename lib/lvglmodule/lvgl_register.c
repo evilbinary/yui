@@ -1,10 +1,6 @@
 #include "lvgl_component.h"
-#include "component_registry.h"
 #include "../../lib/lvgl/lvgl.h"
-#include "../../lib/lvgl/lv_port.h"
-#include "cJSON.h"
-
-#include <stdlib.h>
+#include "lvgl_widget.h"
 
 void lvgl_component_sync_rect(LvglComponent* component)
 {
@@ -12,9 +8,23 @@ void lvgl_component_sync_rect(LvglComponent* component)
         return;
     }
 
-    lv_obj_set_pos(component->obj, component->layer->rect.x, component->layer->rect.y);
-    lv_obj_set_size(component->obj, component->layer->rect.w, component->layer->rect.h);
-    lv_obj_invalidate(component->obj);
+    lv_coord_t x = (lv_coord_t)component->layer->rect.x;
+    lv_coord_t y = (lv_coord_t)component->layer->rect.y;
+    lv_coord_t w = (lv_coord_t)component->layer->rect.w;
+    lv_coord_t h = (lv_coord_t)component->layer->rect.h;
+    int changed = 0;
+
+    if (lv_obj_get_x(component->obj) != x || lv_obj_get_y(component->obj) != y) {
+        lv_obj_set_pos(component->obj, x, y);
+        changed = 1;
+    }
+    if (lv_obj_get_width(component->obj) != w || lv_obj_get_height(component->obj) != h) {
+        lv_obj_set_size(component->obj, w, h);
+        changed = 1;
+    }
+    if (changed) {
+        lv_obj_invalidate(component->obj);
+    }
 }
 
 void lvgl_component_destroy(LvglComponent* component)
@@ -29,53 +39,7 @@ void lvgl_component_destroy(LvglComponent* component)
     free(component);
 }
 
-#if LV_USE_LABEL
-
-static void* lvgl_label_create(Layer* layer, cJSON* json)
-{
-    (void)json;
-    LvglComponent* component = (LvglComponent*)calloc(1, sizeof(LvglComponent));
-    if (!component) {
-        return NULL;
-    }
-
-    component->layer = layer;
-    component->obj = lv_label_create(lv_port_get_root());
-    if (layer->text && layer->text[0]) {
-        lv_label_set_text(component->obj, layer->text);
-    }
-    lvgl_component_sync_rect(component);
-    return component;
-}
-
-static void lvgl_label_destroy(Layer* layer)
-{
-    if (!layer || !layer->component) {
-        return;
-    }
-    lvgl_component_destroy((LvglComponent*)layer->component);
-    layer->component = NULL;
-}
-
-static void lvgl_label_layout(Layer* layer)
-{
-    if (!layer || !layer->component) {
-        return;
-    }
-    lvgl_component_sync_rect((LvglComponent*)layer->component);
-}
-
-#endif
-
 void lvglmodule_register_all(void)
 {
-#if LV_USE_LABEL
-    yui_component_register("LvLabel", &(YuiComponentOps){
-        .create       = lvgl_label_create,
-        .destroy      = lvgl_label_destroy,
-        .on_layout    = lvgl_label_layout,
-        .flags        = YUI_COMP_LVGL_WIDGET,
-        .backend_mask = YUI_BACKEND_LVGL,
-    });
-#endif
+    lvgl_widgets_register_all();
 }

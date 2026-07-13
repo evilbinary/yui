@@ -2,30 +2,33 @@
     "id": "lvgl_demo",
     "type": "View",
     "text": "YUI LVGL Demo",
-    "size": [390, 390],
+    "size": [390, 480],
     "bgColor": "#1a1a2e",
+    "scrollable": 1,
     "layout": {
         "type": "vertical",
-        "spacing": 12,
-        "padding": [16, 16, 16, 16]
+        "spacing": 8,
+        "padding": [12, 12, 12, 12]
     },
     "children": [
         {
             "id": "lvgl_title",
             "type": "LvLabel",
-            "text": "Hello from LvLabel",
-            "size": [320, 28]
+            "text": "YUI + LVGL Widget Gallery",
+            "size": [340, 28],
+            "color": "#eaeaea"
         },
         {
             "id": "lvgl_subtitle",
             "type": "LvLabel",
-            "text": "LVGL widget + YUI native render",
-            "size": [320, 24]
+            "text": "Native YUI layers below LVGL overlay widgets",
+            "size": [340, 22],
+            "color": "#a0a0b0"
         },
         {
             "id": "native_panel",
             "type": "View",
-            "size": [320, 80],
+            "size": [340, 72],
             "bgColor": "#16213e",
             "radius": 8,
             "children": [
@@ -33,28 +36,274 @@
                     "id": "native_btn",
                     "type": "Button",
                     "text": "Native Button",
-                    "size": [160, 36],
-                    "position": [12, 22]
+                    "size": [140, 32],
+                    "position": [12, 20]
+                },
+                {
+                    "id": "native_label",
+                    "type": "Label",
+                    "text": "Native Label",
+                    "size": [160, 24],
+                    "position": [160, 26]
                 }
             ]
         },
         {
-            "id": "native_label",
-            "type": "Label",
-            "text": "Native Label (fill rect)",
-            "size": [320, 24]
+            "id": "sec_core",
+            "type": "LvLabel",
+            "text": "--- Core LVGL Widgets ---",
+            "size": [340, 22],
+            "color": "#f5a623"
+        },
+        {
+            "id": "demo_label",
+            "type": "LvLabel",
+            "text": "LvLabel: Hello from LvLabel",
+            "size": [340, 24],
+            "color": "#ffffff"
+        },
+        {
+            "id": "demo_btn",
+            "type": "LvBtn",
+            "text": "LvBtn",
+            "size": [120, 36]
+        },
+        {
+            "id": "demo_bar",
+            "type": "LvBar",
+            "size": [340, 20],
+            "value": 65,
+            "min": 0,
+            "max": 100
+        },
+        {
+            "id": "demo_slider",
+            "type": "LvSlider",
+            "size": [340, 20],
+            "value": 40,
+            "min": 0,
+            "max": 100
+        },
+        {
+            "id": "row_switch",
+            "type": "View",
+            "size": [340, 36],
+            "layout": { "type": "horizontal", "spacing": 16 },
+            "children": [
+                {
+                    "id": "demo_switch",
+                    "type": "LvSwitch",
+                    "size": [52, 28],
+                    "checked": true
+                },
+                {
+                    "id": "demo_checkbox",
+                    "type": "LvCheckbox",
+                    "text": "LvCheckbox",
+                    "size": [160, 28],
+                    "checked": true
+                },
+                {
+                    "id": "demo_led",
+                    "type": "LvLed",
+                    "size": [24, 24],
+                    "on": true,
+                    "color": "#00ff88",
+                    "brightness": 220
+                }
+            ]
+        },
+        {
+            "id": "demo_arc",
+            "type": "LvArc",
+            "size": [80, 80],
+            "value": 70,
+            "min": 0,
+            "max": 100
+        },
+        {
+            "id": "demo_dropdown",
+            "type": "LvDropdown",
+            "size": [200, 36],
+            "options": ["Option A", "Option B", "Option C"]
+        },
+        {
+            "id": "demo_roller",
+            "type": "LvRoller",
+            "size": [120, 80],
+            "options": ["Mon", "Tue", "Wed", "Thu", "Fri"]
+        },
+        {
+            "id": "demo_btnmatrix",
+            "type": "LvBtnMatrix",
+            "size": [340, 48],
+            "buttons": ["1", "2", "3", "4", "5", "+", "-", "="]
+        },
+        {
+            "id": "demo_textarea",
+            "type": "LvTextarea",
+            "text": "LvTextarea input",
+            "size": [340, 56]
+        },
+        {
+            "id": "demo_line",
+            "type": "LvLine",
+            "size": [340, 24],
+            "lineWidth": 3,
+            "color": "#4a90d9",
+            "points": [[0, 12], [80, 4], [160, 20], [240, 8], [320, 16]]
+        },
+        {
+            "id": "demo_img",
+            "type": "LvImg",
+            "size": [48, 48]
+        },
+        {
+            "id": "demo_canvas",
+            "type": "LvCanvas",
+            "size": [120, 48]
+        },
+        {
+            "id": "demo_table",
+            "type": "LvTable",
+            "size": [340, 72],
+            "rows": 2,
+            "cols": 3,
+            "cells": [
+                ["Name", "Type", "Value"],
+                ["LvTable", "widget", "OK"]
+            ]
+        },
+        {
+            "id": "demo_spinbox",
+            "type": "LvSpinbox",
+            "size": [100, 36],
+            "value": 42,
+            "min": 0,
+            "max": 99
+        },
+        {
+            "id": "demo_spinner",
+            "type": "LvSpinner",
+            "size": [40, 40],
+            "time": 1000,
+            "arcLength": 60
+        },
+        {
+            "id": "sec_extra",
+            "type": "LvLabel",
+            "text": "--- Extra LVGL Widgets ---",
+            "size": [340, 22],
+            "color": "#f5a623"
+        },
+        {
+            "id": "demo_chart",
+            "type": "LvChart",
+            "size": [340, 100],
+            "points": [10, 25, 15, 40, 30, 35, 50, 45, 38, 55]
+        },
+        {
+            "id": "demo_list",
+            "type": "LvList",
+            "size": [340, 88],
+            "items": ["List item 1", "List item 2", "List item 3"]
+        },
+        {
+            "id": "demo_span",
+            "type": "LvSpan",
+            "text": "LvSpan rich text line",
+            "size": [340, 24],
+            "color": "#7ec8ff"
+        },
+        {
+            "id": "demo_imgbtn",
+            "type": "LvImgbtn",
+            "size": [48, 48]
+        },
+        {
+            "id": "row_meter_color",
+            "type": "View",
+            "size": [340, 100],
+            "layout": { "type": "horizontal", "spacing": 12 },
+            "children": [
+                {
+                    "id": "demo_meter",
+                    "type": "LvMeter",
+                    "size": [100, 100],
+                    "value": 65
+                },
+                {
+                    "id": "demo_colorwheel",
+                    "type": "LvColorwheel",
+                    "size": [100, 100]
+                },
+                {
+                    "id": "demo_animimg",
+                    "type": "LvAnimimg",
+                    "size": [48, 48]
+                }
+            ]
+        },
+        {
+            "id": "demo_tabview",
+            "type": "LvTabview",
+            "size": [340, 120],
+            "tabHeight": 28,
+            "tabs": ["Tab A", "Tab B", "Tab C"]
+        },
+        {
+            "id": "demo_tileview",
+            "type": "LvTileview",
+            "size": [340, 100]
+        },
+        {
+            "id": "demo_win",
+            "type": "LvWin",
+            "text": "LvWin Title",
+            "size": [280, 100],
+            "headerHeight": 28
+        },
+        {
+            "id": "demo_menu",
+            "type": "LvMenu",
+            "text": "LvMenu",
+            "size": [340, 120]
+        },
+        {
+            "id": "demo_calendar",
+            "type": "LvCalendar",
+            "size": [340, 200]
+        },
+        {
+            "id": "demo_keyboard",
+            "type": "LvKeyboard",
+            "size": [340, 120]
+        },
+        {
+            "id": "demo_msgbox",
+            "type": "LvMsgbox",
+            "title": "LvMsgbox",
+            "text": "Message box example",
+            "size": [280, 120]
         },
         {
             "id": "color_row",
             "type": "View",
-            "size": [320, 48],
+            "size": [340, 44],
             "layout": { "type": "horizontal", "spacing": 8 },
             "children": [
-                { "id": "box_red", "type": "View", "size": [72, 40], "bgColor": "#e94560", "radius": 4 },
-                { "id": "box_teal", "type": "View", "size": [72, 40], "bgColor": "#0f9b8e", "radius": 4 },
-                { "id": "box_gold", "type": "View", "size": [72, 40], "bgColor": "#f5a623", "radius": 4 },
-                { "id": "box_blue", "type": "View", "size": [72, 40], "bgColor": "#4a90d9", "radius": 4 }
+                { "id": "box_red", "type": "View", "size": [76, 36], "bgColor": "#e94560", "radius": 4 },
+                { "id": "box_teal", "type": "View", "size": [76, 36], "bgColor": "#0f9b8e", "radius": 4 },
+                { "id": "box_gold", "type": "View", "size": [76, 36], "bgColor": "#f5a623", "radius": 4 },
+                { "id": "box_blue", "type": "View", "size": [76, 36], "bgColor": "#4a90d9", "radius": 4 }
             ]
+        },
+        {
+            "id": "footer",
+            "type": "LvLabel",
+            "text": "Scroll to see all widgets",
+            "size": [340, 20],
+            "color": "#666680"
         }
     ]
 }

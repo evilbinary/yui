@@ -212,7 +212,7 @@ target("db")
 # LVGL backend demo (YUI_PLAT=lvgl or -p lvgl)
 target("lvgl-sdl")
 (
-    add_deps("yui", "cjson", "lvgl", "lvglmodule"),
+    add_deps("yui", "cjson", "lvgl", "lvgl_extra", "lvglmodule"),
     add_rules("mode.debug", "mode.release"),
     set_kind("binary"),
     add_flags(),
@@ -224,7 +224,7 @@ target("lvgl-sdl")
 # LVGL backend demo (YUI_PLAT=lvgl or -p lvgl)
 target("lvgl-stm32")
 (
-    add_deps("yui", "cjson", "lvgl", "lvglmodule"),
+    add_deps("yui", "cjson", "lvgl", "lvgl_extra", "lvglmodule"),
     add_rules("mode.debug", "mode.release"),
     set_kind("binary"),
     add_flags(),
