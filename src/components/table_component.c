@@ -323,6 +323,11 @@ static int table_body_content_height(TableComponent* component) {
     return table_row_count(component) * component->row_height;
 }
 
+static int table_total_scroll_height(TableComponent* component) {
+    if (!component) return 0;
+    return table_body_content_height(component) + component->header_height;
+}
+
 static int table_needs_vertical_scroll(TableComponent* component, Layer* layer) {
     if (!layer || !(layer->scrollable == 1 || layer->scrollable == 3)) return 0;
     if (!layer->scrollbar_v || !layer->scrollbar_v->visible) return 0;
@@ -359,7 +364,7 @@ static void table_clamp_scroll(TableComponent* component, Layer* layer) {
 static int table_vertical_thumb_rect(TableComponent* component, Layer* layer, Rect* thumb_out) {
     if (!component || !layer || !thumb_out || !layer->scrollbar_v) return 0;
 
-    int content_height = layer->content_height;
+    int content_height = table_total_scroll_height(component);
     int visible_height = layer->rect.h;
     if (content_height <= visible_height) return 0;
 
@@ -384,9 +389,9 @@ static int table_vertical_thumb_rect(TableComponent* component, Layer* layer, Re
 }
 
 static void table_apply_vertical_thumb_drag(TableComponent* component, Layer* layer, int mouse_y) {
-    if (!layer || !layer->scrollbar_v) return;
+    if (!component || !layer || !layer->scrollbar_v) return;
 
-    int content_height = layer->content_height;
+    int content_height = table_total_scroll_height(component);
     int visible_height = layer->rect.h;
     if (content_height <= visible_height) return;
 
@@ -401,6 +406,7 @@ static void table_apply_vertical_thumb_drag(TableComponent* component, Layer* la
 
     float scroll_ratio = (float)(new_thumb_y - layer->rect.y) / (visible_height - thumb_h);
     layer->scroll_offset = (int)(scroll_ratio * (content_height - visible_height));
+    layer->content_height = content_height;
     table_clamp_scroll(component, layer);
 }
 
@@ -426,7 +432,13 @@ static int table_point_in_scrollbar(TableComponent* component, Layer* layer, int
 }
 
 static int table_handle_vertical_scrollbar_mouse(TableComponent* component, Layer* layer, MouseEvent* event) {
-    if (!layer->scrollbar_v || !table_needs_vertical_scroll(component, layer)) return 0;
+    if (!layer->scrollbar_v) return 0;
+
+    table_component_update_content_size(component);
+
+    if (!table_needs_vertical_scroll(component, layer) && !layer->scrollbar_v->is_dragging) {
+        return 0;
+    }
 
     if (layer->scrollbar_v->is_dragging) {
         if (event->state == SDL_MOUSEMOTION) {
@@ -1401,10 +1413,11 @@ void table_component_render(Layer* layer) {
         load_all_fonts(layer);
     }
 
+    table_component_update_content_size(component);
+
     if (component->layout_w != layer->rect.w || component->layout_h != layer->rect.h) {
         component->layout_w = layer->rect.w;
         component->layout_h = layer->rect.h;
-        table_component_update_content_size(component);
     }
 
     table_clamp_scroll(component, layer);

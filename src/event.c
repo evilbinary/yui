@@ -405,9 +405,10 @@ static void process_layer_scrollbar(Layer* layer, int mouse_x, int mouse_y, SDL_
                 // 根据滚动条位置计算新的滚动偏移
                 float scroll_ratio = (float)(new_scrollbar_y - layer->rect.y) / (visible_height - scrollbar_height);
                 layer->scroll_offset = (int)(scroll_ratio * (content_height - visible_height));
-                
-                // 重新布局子元素
-                layout_layer(layer);
+
+                if (layer->layout_manager && layer->child_count > 0) {
+                    layout_layer(layer);
+                }
             }
         }
     }
@@ -455,9 +456,10 @@ static void process_layer_scrollbar(Layer* layer, int mouse_x, int mouse_y, SDL_
                 // 根据滚动条位置计算新的滚动偏移
                 float scroll_ratio = (float)(new_scrollbar_x - layer->rect.x) / (visible_width - scrollbar_width);
                 layer->scroll_offset_x = (int)(scroll_ratio * (content_width - visible_width));
-                
-                // 重新布局子元素
-                layout_layer(layer);
+
+                if (layer->layout_manager && layer->child_count > 0) {
+                    layout_layer(layer);
+                }
             }
         }
     }
@@ -508,9 +510,10 @@ static void process_layer_scrollbar(Layer* layer, int mouse_x, int mouse_y, SDL_
                 // 根据滚动条位置计算新的滚动偏移
                 float scroll_ratio = (float)(new_scrollbar_y - layer->rect.y) / (visible_height - scrollbar_height);
                 layer->scroll_offset = (int)(scroll_ratio * (content_height - visible_height));
-                
-                // 重新布局子元素
-                layout_layer(layer);
+
+                if (layer->layout_manager && layer->child_count > 0) {
+                    layout_layer(layer);
+                }
             }
         }
     }
