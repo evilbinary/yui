@@ -1514,6 +1514,44 @@ static void text_component_get_content_rect(TextComponent* component, Layer* lay
     }
 }
 
+static void text_component_get_line_range_at_pos(TextComponent* component, Layer* layer,
+                                                 int pos, int* out_start, int* out_end) {
+    if (!component || !layer || !out_start || !out_end) return;
+
+    const char* text = layer->text ? layer->text : "";
+    int text_len = (int)strlen(text);
+    if (pos < 0) pos = 0;
+    if (pos > text_len) pos = text_len;
+
+    if (!component->multiline) {
+        *out_start = 0;
+        *out_end = text_len;
+        return;
+    }
+
+    Rect render_rect;
+    text_component_get_content_rect(component, layer, &render_rect);
+    text_component_ensure_layout(component, render_rect.w);
+
+    for (int i = 0; i < component->layout_count; i++) {
+        int start = component->layout_starts[i];
+        int end = (i + 1 < component->layout_count)
+            ? component->layout_starts[i + 1] : text_len;
+        while (end > start && text[end - 1] == '\n') {
+            end--;
+        }
+
+        if (pos >= start && pos <= end) {
+            *out_start = start;
+            *out_end = end;
+            return;
+        }
+    }
+
+    *out_start = get_line_start(component, pos);
+    *out_end = get_line_end(component, pos);
+}
+
 // 处理鼠标事件
 int text_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     if (!layer || !event || !layer->component) {
@@ -1560,17 +1598,25 @@ int text_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
             }
         }
         if (point_in_rect(pt, content_rect)) {
-            // 计算点击位置对应的文本位置
             int click_pos = text_component_get_position_from_point(component, pt, layer);
-            component->cursor_pos = click_pos;
-            
-            // 开始新选择
-            component->selection_start = click_pos;
-            component->selection_end = click_pos;
-            component->is_selecting = 1;
-            
-            // 更新滚动位置，确保光标可见
-            text_component_update_scroll_for_cursor(component);
+
+            if (event->clicks >= 2) {
+                int line_start, line_end;
+                text_component_get_line_range_at_pos(component, layer, click_pos,
+                                                       &line_start, &line_end);
+                component->selection_start = line_start;
+                component->selection_end = line_end;
+                component->cursor_pos = line_end;
+                component->is_selecting = 0;
+                text_component_update_scroll_for_cursor(component);
+                mark_layer_dirty(layer, DIRTY_TEXT);
+            } else {
+                component->cursor_pos = click_pos;
+                component->selection_start = click_pos;
+                component->selection_end = click_pos;
+                component->is_selecting = 1;
+                text_component_update_scroll_for_cursor(component);
+            }
         } else if (point_in_rect(pt, layer->rect)) {
             component->selection_start = -1;
             component->selection_end = -1;

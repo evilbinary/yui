@@ -264,6 +264,7 @@ typedef struct MouseEvent {
     int y;
     int button;
     int state;
+    int clicks;         // 连击次数（1=单击，2=双击）
     Uint32 timestamp;
 } MouseEvent;
 

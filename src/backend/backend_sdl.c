@@ -857,7 +857,9 @@ void handle_event(Layer* root, SDL_Event* event) {
             .x = mouse_x,
             .y = mouse_y,
             .button = event->button.button,
-            .state = event_state
+            .state = event_state,
+            .clicks = (event->type == SDL_MOUSEBUTTONDOWN || event->type == SDL_MOUSEBUTTONUP)
+                      ? event->button.clicks : 0
         };
 
         // 调用事件系统处理滚动条拖动
