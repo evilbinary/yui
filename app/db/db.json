@@ -16,24 +16,6 @@
   },
   "children": [
         {
-          "position": [0, 0],
-          "id": "toolbar",
-          "type": "View",
-          "size": [900, 30],
-          "layout": {
-            "type": "horizontal",
-            "spacing": 0,
-            "padding": [0, 0, 0, 0],
-            "align": "center"
-          },
-          "style": {
-            "bgColor": "#181825",
-            "borderBottomWidth": 1,
-            "borderBottomColor": "#313244"
-          },
-          "children": []
-        },
-        {
           "id": "mainContent",
         "type": "View",
         "position": [0, 36],
@@ -62,33 +44,7 @@
               "borderRightColor": "#313244"
             },
             "children": [
-              {
-                "id": "dbListHeader",
-                "type": "View",
-                "size": [224, 32],
-                "layout": {
-                  "type": "horizontal",
-                  "align": "center",
-                  "padding": [8, 12, 8, 12]
-                },
-                "style": {
-                  "bgColor": "#181825",
-                  "borderBottomWidth": 1,
-                  "borderBottomColor": "#313244"
-                },
-                "children": [
-                  {
-                    "id": "dbListTitle",
-                    "type": "Label",
-                    "text": "数据库",
-                    "style": {
-                      "color": "#A6ADC8",
-                      "fontSize": 11,
-                      "fontWeight": "bold"
-                    }
-                  }
-                ]
-              },
+              
               {
                 "id": "dbListSearch",
                 "type": "Input",
@@ -138,7 +94,7 @@
               {
                 "id": "sqlEditorContainer",
                 "type": "View",
-                "size": [660, 400],
+                "size": [660, 352],
                 "layout": {
                   "type": "vertical",
                   "spacing": 0
@@ -394,7 +350,7 @@
               {
                 "id": "resultContainer",
                 "type": "View",
-                "size": [660, 128],
+                "size": [660, 176],
                 "layout": {
                   "type": "vertical",
                   "spacing": 0
