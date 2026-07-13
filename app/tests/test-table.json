@@ -50,7 +50,7 @@
       "id": "statusLabel",
       "type": "Label",
       "position": [20, 430],
-      "text": "点击表格行查看详情",
+      "text": "点击行选中；双击或 F2/Enter 编辑单元格；Ctrl+C 复制单元格，Ctrl+Shift+C 复制整行",
       "style": {
         "color": "#6C7086",
         "fontSize": 12

@@ -8,6 +8,8 @@
 extern "C" {
 #endif
 
+#define TABLE_EDIT_BUF_SIZE 512
+
 typedef enum {
     TABLE_ALIGN_LEFT,
     TABLE_ALIGN_CENTER,
@@ -50,6 +52,19 @@ typedef struct TableComponent {
     int resize_drag_start_w;
     int layout_w;
     int layout_h;
+    int selected_col;
+    int editing_row;
+    int editing_col;
+    char edit_buffer[TABLE_EDIT_BUF_SIZE];
+    int edit_cursor;
+    int edit_sel_start;
+    int edit_sel_end;
+    int edit_orig_number;
+    int editable;
+    Uint32 last_click_time;
+    int last_click_row;
+    int last_click_col;
+    Color cell_focus_color;
 } TableComponent;
 
 TableComponent* table_component_create(Layer* layer);
@@ -59,6 +74,7 @@ void table_component_update_content_size(TableComponent* component);
 int table_component_get_row_count(TableComponent* component);
 void table_component_render(Layer* layer);
 int table_component_handle_mouse_event(Layer* layer, MouseEvent* event);
+int table_component_handle_key_event(Layer* layer, KeyEvent* event);
 
 #ifdef __cplusplus
 }
