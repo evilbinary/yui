@@ -41,6 +41,24 @@ void lvgl_widget_layout(Layer* layer)
     }
 }
 
+char* lvgl_strdup_lv(const char* src)
+{
+    size_t len;
+    char* dup;
+
+    if (!src) {
+        return NULL;
+    }
+
+    len = strlen(src) + 1;
+    dup = (char*)lv_mem_alloc(len);
+    if (!dup) {
+        return NULL;
+    }
+    memcpy(dup, src, len);
+    return dup;
+}
+
 cJSON* lvgl_json_get(cJSON* json, const char* key)
 {
     cJSON* value;

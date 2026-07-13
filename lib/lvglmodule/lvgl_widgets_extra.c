@@ -333,7 +333,10 @@ static void* lvgl_imgbtn_create(Layer* layer, cJSON* json)
     if (source[0]) {
         lv_imgbtn_set_src(component->obj, LV_IMGBTN_STATE_RELEASED, NULL, source, NULL);
     } else {
-        lv_imgbtn_set_src(component->obj, LV_IMGBTN_STATE_RELEASED, NULL, LV_SYMBOL_OK, NULL);
+        /* imgbtn uses lv_draw_img; LV_SYMBOL_* is not valid here (crashes in decoder). */
+        lv_obj_set_style_bg_color(component->obj, lv_palette_main(LV_PALETTE_BLUE), 0);
+        lv_obj_set_style_bg_opa(component->obj, LV_OPA_COVER, 0);
+        lv_obj_set_style_radius(component->obj, 8, 0);
     }
     lvgl_apply_common_style(component->obj, layer, json);
     lvgl_component_sync_rect(component);
@@ -353,7 +356,16 @@ static void* lvgl_menu_create(Layer* layer, cJSON* json)
     }
 
     component->obj = lv_menu_create(lv_port_get_root());
-    page = lv_menu_page_create(component->obj, layer->text ? layer->text : "Menu");
+    {
+        const char* title_src = (layer->text && layer->text[0]) ? layer->text : "Menu";
+        char* title = lvgl_strdup_lv(title_src);
+        if (!title) {
+            lv_obj_del(component->obj);
+            free(component);
+            return NULL;
+        }
+        page = lv_menu_page_create(component->obj, title);
+    }
     lv_menu_set_page(component->obj, page);
     (void)json;
     lvgl_apply_common_style(component->obj, layer, json);

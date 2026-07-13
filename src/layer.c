@@ -1061,6 +1061,11 @@ void destroy_layer(Layer* layer) {
     if (layer->on_destroy) {
         layer->on_destroy(layer);
         layer->on_destroy = NULL;
+    } else {
+        const YuiComponentOps* ops = yui_type_get_ops(layer->type);
+        if (ops && ops->destroy) {
+            ops->destroy(layer);
+        }
     }
 
     layer_free_strings(layer);

@@ -11,6 +11,9 @@ LvglComponent* lvgl_component_from_layer(Layer* layer);
 void lvgl_widget_destroy(Layer* layer);
 void lvgl_widget_layout(Layer* layer);
 
+/** Copy string into LVGL heap; caller passes pointer to lv_mem_free-compatible APIs. */
+char* lvgl_strdup_lv(const char* src);
+
 cJSON* lvgl_json_get(cJSON* json, const char* key);
 int lvgl_json_int(cJSON* json, const char* key, int default_value);
 const char* lvgl_json_string(cJSON* json, const char* key, const char* default_value);
