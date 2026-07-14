@@ -372,13 +372,6 @@ void layout_layer(Layer* layer){
             printf("layout_layer: available_height: %d\n", available_height);
             fflush(stdout);
 
-            int last_visible_index = -1;
-            for (int j = 0; j < layer->child_count; j++) {
-                Layer* candidate = layer->children[j];
-                if (!candidate || candidate->visible == IN_VISIBLE) continue;
-                last_visible_index = j;
-            }
-            
             for (int i = 0; i < layer->child_count; i++) {
                 Layer* child = layer->children[i];
 
@@ -399,11 +392,6 @@ void layout_layer(Layer* layer){
                                         (child->flex_ratio / total_flex));
                 } else if (child->fixed_height > 0) {
                     child->rect.h = child->fixed_height;
-                    // 无 flex/自动高度子项时，将剩余高度给最后一个子项
-                    if (i == last_visible_index && total_flex == 0 &&
-                        no_height_count == 0 && available_height > 0) {
-                        child->rect.h += available_height;
-                    }
                 } else {
                     // 自动计算高度
                     if (no_height_count > 0) {
@@ -743,4 +731,35 @@ void layout_resize(Layer* layer, int width, int height) {
         old_width, old_height, width, height, sx, sy
     };
     layout_dispatch_resize_events(layer, &resize_event);
+}
+
+void layer_dump(const Layer* layer, int depth)
+{
+    int i;
+    int pad;
+
+    if (!layer) {
+        return;
+    }
+
+    for (pad = 0; pad < depth; pad++) {
+        fprintf(stdout, "  ");
+    }
+    fprintf(stdout, "[%s] type=%d rect=(x=%d y=%d w=%d h=%d) fixed=(w=%d h=%d) visible=%d\n",
+            layer->id ? layer->id : "(null)",
+            layer->type,
+            layer->rect.x, layer->rect.y, layer->rect.w, layer->rect.h,
+            layer->fixed_width, layer->fixed_height,
+            layer->visible);
+
+    if (layer->children) {
+        for (i = 0; i < layer->child_count; i++) {
+            if (layer->children[i]) {
+                layer_dump(layer->children[i], depth + 1);
+            }
+        }
+    }
+    if (layer->sub) {
+        layer_dump(layer->sub, depth + 1);
+    }
 }

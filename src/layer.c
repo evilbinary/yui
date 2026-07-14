@@ -428,8 +428,12 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
     } else {
       layer->rect.h = layer->rect.w;
     }
-    layer->fixed_width = layer->rect.w;
     layer->fixed_height = layer->rect.h;
+    if (layer->rect.w > 0) {
+      layer->fixed_width = layer->rect.w;
+    } else {
+      layer->fixed_width = 0;
+    }
   }
 
   // 解析固定尺寸
