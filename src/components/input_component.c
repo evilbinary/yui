@@ -471,46 +471,44 @@ int input_component_handle_key_event(Layer* layer,  KeyEvent* event) {
             int old_cursor = component->cursor_pos;
             switch (event->data.key.key_code) {
                 case SDLK_BACKSPACE:
-                    if (current_length > 0 && component->cursor_pos > 0) {
-                        if (component->selection_start != component->selection_end) {
-                            int start = component->selection_start < component->selection_end ?
-                                        component->selection_start : component->selection_end;
-                            int end = component->selection_start > component->selection_end ?
-                                      component->selection_start : component->selection_end;
+                    if (component->selection_start != component->selection_end) {
+                        int start = component->selection_start < component->selection_end ?
+                                    component->selection_start : component->selection_end;
+                        int end = component->selection_start > component->selection_end ?
+                                  component->selection_start : component->selection_end;
 
-                            memmove(buf + start, buf + end,
-                                   current_length - end + 1);
-                            component->cursor_pos = start;
-                        } else {
-                            int char_len = get_prev_utf8_char_len(buf, component->cursor_pos);
-                            if (char_len <= 0) char_len = 1;
-                            memmove(buf + component->cursor_pos - char_len,
-                                   buf + component->cursor_pos,
-                                   current_length - component->cursor_pos + 1);
-                            component->cursor_pos -= char_len;
-                        }
+                        memmove(buf + start, buf + end,
+                               current_length - end + 1);
+                        component->cursor_pos = start;
+                        text_changed = 1;
+                    } else if (current_length > 0 && component->cursor_pos > 0) {
+                        int char_len = get_prev_utf8_char_len(buf, component->cursor_pos);
+                        if (char_len <= 0) char_len = 1;
+                        memmove(buf + component->cursor_pos - char_len,
+                               buf + component->cursor_pos,
+                               current_length - component->cursor_pos + 1);
+                        component->cursor_pos -= char_len;
                         text_changed = 1;
                     }
                     break;
 
                 case SDLK_DELETE:
-                    if (current_length > 0 && component->cursor_pos < current_length) {
-                        if (component->selection_start != component->selection_end) {
-                            int start = component->selection_start < component->selection_end ?
-                                        component->selection_start : component->selection_end;
-                            int end = component->selection_start > component->selection_end ?
-                                      component->selection_start : component->selection_end;
+                    if (component->selection_start != component->selection_end) {
+                        int start = component->selection_start < component->selection_end ?
+                                    component->selection_start : component->selection_end;
+                        int end = component->selection_start > component->selection_end ?
+                                  component->selection_start : component->selection_end;
 
-                            memmove(buf + start, buf + end,
-                                   current_length - end + 1);
-                            component->cursor_pos = start;
-                        } else {
-                            int char_len = get_current_utf8_char_len(buf, component->cursor_pos);
-                            if (char_len <= 0) char_len = 1;
-                            memmove(buf + component->cursor_pos,
-                                   buf + component->cursor_pos + char_len,
-                                   current_length - component->cursor_pos - char_len + 1);
-                        }
+                        memmove(buf + start, buf + end,
+                               current_length - end + 1);
+                        component->cursor_pos = start;
+                        text_changed = 1;
+                    } else if (current_length > 0 && component->cursor_pos < current_length) {
+                        int char_len = get_current_utf8_char_len(buf, component->cursor_pos);
+                        if (char_len <= 0) char_len = 1;
+                        memmove(buf + component->cursor_pos,
+                               buf + component->cursor_pos + char_len,
+                               current_length - component->cursor_pos - char_len + 1);
                         text_changed = 1;
                     }
                     break;
