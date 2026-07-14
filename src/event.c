@@ -79,16 +79,6 @@ const char* touch_type_to_string(int type) {
     }
 }
 
-void handle_touch_event(Layer* layer, TouchEvent* event) {
-    if (!layer || !event) return;
-    if (!layer->event || !layer->event->touch) return;
-
-    current_touch_event = *event;
-    current_touch_event_active = 1;
-    layer->event->touch(layer);
-    current_touch_event_active = 0;
-}
-
 // 处理垂直滚动事件
 void handle_scroll_event(Layer* layer,int mouse_x,int mouse_y,int scroll_deltax,int scroll_deltay) {
     // 优先处理popup层的滚动事件
@@ -300,6 +290,30 @@ int default_layer_handle_mouse_event(Layer* layer, MouseEvent* event) {
     return 0;
 }
 
+static int default_scrollable_touch_handler(Layer* layer, TouchEvent* event) {
+    if (!layer || !event) return 0;
+    if (layer->scrollable != 1 && layer->scrollable != 3) return 0;
+
+    if (event->type == TOUCH_TYPE_START) {
+        return is_point_in_rect(event->x, event->y, layer->rect);
+    }
+
+    if (event->type == TOUCH_TYPE_MOVE) {
+        int adx = event->deltaX < 0 ? -event->deltaX : event->deltaX;
+        int ady = event->deltaY < 0 ? -event->deltaY : event->deltaY;
+        if (adx < 2 && ady < 2) return 1;
+        if (adx > ady) return 0;
+        layout_scroll_vertical(layer, event->deltaY);
+        return 1;
+    }
+
+    if (event->type == TOUCH_TYPE_END) {
+        return is_point_in_rect(event->x, event->y, layer->rect);
+    }
+
+    return 0;
+}
+
 // 处理鼠标事件，返回非0表示事件已被消费，调用者应停止传播
 int handle_mouse_event(Layer* layer, MouseEvent* event) {
     if (!layer || !event) {
@@ -356,6 +370,40 @@ int handle_mouse_event(Layer* layer, MouseEvent* event) {
     if (layer->sub) {
         int consumed = handle_mouse_event(layer->sub, event);
         if (consumed) return 1;
+    }
+
+    return 0;
+}
+
+// 处理触摸事件，返回非0表示事件已被消费
+int handle_touch_event(Layer* layer, TouchEvent* event) {
+    if (!layer || !event) return 0;
+
+    for (int i = layer->child_count - 1; i >= 0; i--) {
+        if (layer->children[i] && layer->children[i]->visible == VISIBLE) {
+            if (handle_touch_event(layer->children[i], event)) return 1;
+        }
+    }
+
+    if (layer->sub && layer->sub->visible == VISIBLE) {
+        if (handle_touch_event(layer->sub, event)) return 1;
+    }
+
+    if (layer->handle_touch_event) {
+        int consumed = layer->handle_touch_event(layer, event);
+        if (consumed) return 1;
+    } else if ((layer->type == VIEW || layer->type == GRID) &&
+               (layer->scrollable == 1 || layer->scrollable == 3)) {
+        int consumed = default_scrollable_touch_handler(layer, event);
+        if (consumed) return 1;
+    }
+
+    if (layer->event && layer->event->touch) {
+        current_touch_event = *event;
+        current_touch_event_active = 1;
+        layer->event->touch(layer);
+        current_touch_event_active = 0;
+        return 1;
     }
 
     return 0;

@@ -767,3 +767,28 @@ void layer_dump(const Layer* layer, int depth)
         layer_dump(layer->sub, depth + 1);
     }
 }
+
+int layout_scroll_vertical(Layer* layer, int delta_y) {
+    if (!layer || delta_y == 0) return 0;
+
+    int content_height = layer->content_height;
+    int visible_height = layer->rect.h;
+    if (layer->layout_manager) {
+        visible_height -= layer->layout_manager->padding[0] + layer->layout_manager->padding[2];
+    }
+    if (content_height <= visible_height) return 0;
+
+    int old_offset = layer->scroll_offset;
+    layer->scroll_offset -= delta_y;
+    if (layer->scroll_offset < 0) {
+        layer->scroll_offset = 0;
+    } else if (layer->scroll_offset > content_height - visible_height) {
+        layer->scroll_offset = content_height - visible_height;
+    }
+
+    if (layer->scroll_offset != old_offset) {
+        layout_layer(layer);
+        return 1;
+    }
+    return 0;
+}

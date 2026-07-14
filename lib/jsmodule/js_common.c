@@ -118,7 +118,6 @@ int js_module_set_layer_event(Layer* layer, const char* event_name, const char* 
             layer->event->touch_name[MAX_PATH - 1] = '\0';
         }
         layer->event->touch = (EventHandler)event_handler;
-        layer->handle_touch_event = handle_touch_event;
         return 0;
     }
     // 检查 change 事件

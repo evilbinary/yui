@@ -10,7 +10,6 @@
 #include "component_registry.h"
 #include "log.h"
 
-
 Layer* focused_layer = NULL;
 
 // 全局 Inspect 模式开关
@@ -844,7 +843,6 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
 
       EventHandler handler = find_event_by_name(lookup_name);
       layer->event->touch = handler;
-      layer->handle_touch_event = handle_touch_event;
     }
     if (cJSON_HasObjectItem(events, "onResize")) {
       if (!layer->event) {

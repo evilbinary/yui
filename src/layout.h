@@ -10,6 +10,7 @@ void layout_layer(Layer* layer);
 void layout_capture_base(Layer* layer);
 void layout_resize(Layer* layer, int width, int height);
 void layout_dispatch_resize_events(Layer* layer, const ResizeEvent* event);
+int layout_scroll_vertical(Layer* layer, int delta_y);
 void layer_dump(const Layer* layer, int depth);
 
 #endif
