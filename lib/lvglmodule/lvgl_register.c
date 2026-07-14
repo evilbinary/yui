@@ -4,15 +4,20 @@
 
 void lvgl_component_sync_rect(LvglComponent* component)
 {
+    lv_coord_t x;
+    lv_coord_t y;
+    lv_coord_t w;
+    lv_coord_t h;
+    int changed = 0;
+
     if (!component || !component->obj || !component->layer) {
         return;
     }
 
-    lv_coord_t x = (lv_coord_t)component->layer->rect.x;
-    lv_coord_t y = (lv_coord_t)component->layer->rect.y;
-    lv_coord_t w = (lv_coord_t)component->layer->rect.w;
-    lv_coord_t h = (lv_coord_t)component->layer->rect.h;
-    int changed = 0;
+    x = (lv_coord_t)component->layer->rect.x;
+    y = (lv_coord_t)component->layer->rect.y;
+    w = (lv_coord_t)component->layer->rect.w;
+    h = (lv_coord_t)component->layer->rect.h;
 
     if (lv_obj_get_x(component->obj) != x || lv_obj_get_y(component->obj) != y) {
         lv_obj_set_pos(component->obj, x, y);
@@ -46,6 +51,11 @@ __attribute__((used)) static const void* lvgl_force_link_calendar_header_arrow =
 #if LV_USE_CALENDAR && LV_USE_CALENDAR_HEADER_DROPDOWN
 __attribute__((used)) static const void* lvgl_force_link_calendar_header_dropdown =
     &lv_calendar_header_dropdown_class;
+#endif
+#if LV_USE_MSGBOX
+__attribute__((used)) static const void* lvgl_force_link_msgbox_class = &lv_msgbox_class;
+__attribute__((used)) static const void* lvgl_force_link_msgbox_backdrop_class =
+    &lv_msgbox_backdrop_class;
 #endif
 
 void lvglmodule_register_all(void)

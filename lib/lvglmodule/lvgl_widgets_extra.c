@@ -224,7 +224,10 @@ static void* lvgl_msgbox_create(Layer* layer, cJSON* json)
     LvglComponent* component = lvgl_component_new(layer);
     const char* title;
     const char* text;
-    static const char* btns[] = {"OK", ""};
+    lv_obj_t* title_label;
+    lv_obj_t* body_label;
+    lv_obj_t* ok_btn;
+    lv_obj_t* ok_label;
 
     if (!component) {
         return NULL;
@@ -232,8 +235,31 @@ static void* lvgl_msgbox_create(Layer* layer, cJSON* json)
 
     title = lvgl_json_string(json, "title", "Message");
     text = layer->text && layer->text[0] ? layer->text : lvgl_json_string(json, "text", "Hello");
-    component->obj = lv_msgbox_create(lv_port_get_root(), title, text, btns, true);
-    lvgl_apply_text_style(component->obj, layer, json);
+
+    /* Use a plain container instead of lv_msgbox (upstream widget has init bugs). */
+    component->obj = lv_obj_create(lv_port_get_root());
+    lv_obj_set_flex_flow(component->obj, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(component->obj, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START,
+                          LV_FLEX_ALIGN_START);
+    lv_obj_set_style_pad_all(component->obj, 8, 0);
+    lv_obj_set_style_pad_row(component->obj, 6, 0);
+
+    if (title && title[0]) {
+        title_label = lv_label_create(component->obj);
+        lv_label_set_text(title_label, title);
+    }
+
+    body_label = lv_label_create(component->obj);
+    lv_label_set_text(body_label, text);
+    lv_label_set_long_mode(body_label, LV_LABEL_LONG_WRAP);
+    lv_obj_set_width(body_label, LV_PCT(100));
+
+    ok_btn = lv_btn_create(component->obj);
+    ok_label = lv_label_create(ok_btn);
+    lv_label_set_text(ok_label, "OK");
+    lv_obj_center(ok_label);
+
+    lvgl_apply_common_style(component->obj, layer, json);
     lvgl_widget_finish_create(layer, component, json);
     return component;
 }
