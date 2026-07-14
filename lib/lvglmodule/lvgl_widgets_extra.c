@@ -258,10 +258,6 @@ static void* lvgl_msgbox_create(Layer* layer, cJSON* json)
                           LV_FLEX_ALIGN_START);
     lv_obj_set_style_pad_all(component->obj, 8, 0);
     lv_obj_set_style_pad_row(component->obj, 6, 0);
-    lv_obj_set_style_radius(component->obj, 8, 0);
-    lv_obj_set_style_border_width(component->obj, 1, 0);
-    lv_obj_set_style_border_color(component->obj, lv_color_hex(0x45475A), 0);
-    lv_obj_set_style_bg_color(component->obj, lv_color_hex(0x1E1E2E), 0);
 
     header = lv_obj_create(component->obj);
     lv_obj_set_width(header, LV_PCT(100));
@@ -269,18 +265,13 @@ static void* lvgl_msgbox_create(Layer* layer, cJSON* json)
     lv_obj_set_flex_flow(header, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(header, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER,
                           LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_bg_opa(header, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_width(header, 0, 0);
     lv_obj_set_style_pad_all(header, 0, 0);
 
     title_label = lv_label_create(header);
     lv_label_set_text(title_label, title && title[0] ? title : "Message");
-    lv_obj_set_style_text_color(title_label, lv_color_hex(0x89B4FA), 0);
 
     close_btn = lv_btn_create(header);
     lv_obj_set_size(close_btn, 24, 24);
-    lv_obj_set_style_bg_opa(close_btn, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_shadow_width(close_btn, 0, 0);
     lv_obj_add_event_cb(close_btn, lvgl_msgbox_close_event_cb, LV_EVENT_CLICKED, NULL);
     close_label = lv_label_create(close_btn);
     lv_label_set_text(close_label, LV_SYMBOL_CLOSE);
@@ -290,27 +281,28 @@ static void* lvgl_msgbox_create(Layer* layer, cJSON* json)
     lv_label_set_text(body_label, text);
     lv_label_set_long_mode(body_label, LV_LABEL_LONG_WRAP);
     lv_obj_set_width(body_label, LV_PCT(100));
-    lv_obj_set_style_text_color(body_label, lv_color_hex(0xCDD6F4), 0);
 
     btn_row = lv_obj_create(component->obj);
     lv_obj_set_width(btn_row, LV_PCT(100));
     lv_obj_set_height(btn_row, LV_SIZE_CONTENT);
     lv_obj_set_flex_flow(btn_row, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(btn_row, LV_FLEX_ALIGN_END, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_bg_opa(btn_row, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_width(btn_row, 0, 0);
     lv_obj_set_style_pad_all(btn_row, 0, 0);
 
     ok_btn = lv_btn_create(btn_row);
     lv_obj_set_size(ok_btn, 72, 28);
-    lv_obj_set_style_radius(ok_btn, 4, 0);
-    lv_obj_set_style_bg_color(ok_btn, lv_color_hex(0x313244), 0);
     ok_label = lv_label_create(ok_btn);
     lv_label_set_text(ok_label, "OK");
-    lv_obj_set_style_text_color(ok_label, lv_color_hex(0xCDD6F4), 0);
     lv_obj_center(ok_label);
 
-    lvgl_apply_common_style(component->obj, layer, json);
+    if (lvgl_has_visual_style(layer, json)) {
+        lvgl_apply_common_style(component->obj, layer, json);
+        lvgl_apply_label_style(title_label, layer, json);
+        lvgl_apply_label_style(body_label, layer, json);
+        lvgl_apply_label_style(close_label, layer, json);
+        lvgl_apply_label_style(ok_label, layer, json);
+    }
+
     lvgl_widget_finish_create(layer, component, json);
     return component;
 }

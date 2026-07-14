@@ -26,7 +26,9 @@ const char** lvgl_build_btnmatrix_map(cJSON* json, const char* key, uint16_t* ou
 void lvgl_free_btnmatrix_map(const char** map, uint16_t count);
 
 lv_color_t lvgl_color_from_yui(Color color);
+int lvgl_has_visual_style(Layer* layer, cJSON* json);
 void lvgl_apply_common_style(lv_obj_t* obj, Layer* layer, cJSON* json);
+void lvgl_apply_label_style(lv_obj_t* obj, Layer* layer, cJSON* json);
 void lvgl_apply_text_style(lv_obj_t* obj, Layer* layer, cJSON* json);
 void lvgl_apply_range(lv_obj_t* obj, cJSON* json, int default_min, int default_max);
 int lvgl_apply_value(lv_obj_t* obj, cJSON* json, Layer* layer, int default_value);

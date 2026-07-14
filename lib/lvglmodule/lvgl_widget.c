@@ -401,10 +401,65 @@ lv_color_t lvgl_color_from_yui(Color color)
     return lv_color_make(color.r, color.g, color.b);
 }
 
+int lvgl_has_visual_style(Layer* layer, cJSON* json)
+{
+    cJSON* style;
+
+    if (lvgl_json_get(json, "bgColor") || lvgl_json_get(json, "color") ||
+        lvgl_json_get(json, "borderColor") || lvgl_json_get(json, "radius")) {
+        return 1;
+    }
+
+    style = json ? cJSON_GetObjectItem(json, "style") : NULL;
+    if (style && cJSON_IsObject(style)) {
+        if (cJSON_HasObjectItem(style, "bgColor") || cJSON_HasObjectItem(style, "color") ||
+            cJSON_HasObjectItem(style, "borderColor") || cJSON_HasObjectItem(style, "radius") ||
+            cJSON_HasObjectItem(style, "borderWidth")) {
+            return 1;
+        }
+    }
+
+    if (layer && (layer->bg_color.a > 0 || layer->color.a > 0 || layer->radius > 0)) {
+        return 1;
+    }
+
+    return 0;
+}
+
+void lvgl_apply_label_style(lv_obj_t* obj, Layer* layer, cJSON* json)
+{
+    const lv_font_t* font;
+    cJSON* color_item;
+    Color text_color = layer->color;
+
+    if (!obj || !layer) {
+        return;
+    }
+
+    lv_obj_set_style_bg_opa(obj, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(obj, 0, 0);
+    lv_obj_set_style_shadow_width(obj, 0, 0);
+
+    color_item = lvgl_json_get(json, "color");
+    if (color_item && cJSON_IsString(color_item)) {
+        parse_color(color_item->valuestring, &text_color);
+    }
+    if (text_color.a > 0) {
+        lv_obj_set_style_text_color(obj, lvgl_color_from_yui(text_color), 0);
+    }
+
+    font = lvgl_font_get(layer);
+    if (font) {
+        lv_obj_set_style_text_font(obj, font, 0);
+    }
+}
+
 void lvgl_apply_common_style(lv_obj_t* obj, Layer* layer, cJSON* json)
 {
     cJSON* bg_color_item;
     cJSON* color_item;
+    cJSON* border_color_item;
+    cJSON* radius_item;
     Color bg_color = layer->bg_color;
     Color text_color = layer->color;
 
@@ -415,12 +470,11 @@ void lvgl_apply_common_style(lv_obj_t* obj, Layer* layer, cJSON* json)
     bg_color_item = lvgl_json_get(json, "bgColor");
     if (bg_color_item && cJSON_IsString(bg_color_item)) {
         parse_color(bg_color_item->valuestring, &bg_color);
-    }
-    if (bg_color.a > 0) {
+        lv_obj_set_style_bg_color(obj, lvgl_color_from_yui(bg_color), 0);
+        lv_obj_set_style_bg_opa(obj, bg_color.a > 0 ? bg_color.a : LV_OPA_COVER, 0);
+    } else if (bg_color.a > 0) {
         lv_obj_set_style_bg_color(obj, lvgl_color_from_yui(bg_color), 0);
         lv_obj_set_style_bg_opa(obj, bg_color.a, 0);
-    } else {
-        lv_obj_set_style_bg_opa(obj, LV_OPA_TRANSP, 0);
     }
 
     color_item = lvgl_json_get(json, "color");
@@ -431,7 +485,19 @@ void lvgl_apply_common_style(lv_obj_t* obj, Layer* layer, cJSON* json)
         lv_obj_set_style_text_color(obj, lvgl_color_from_yui(text_color), 0);
     }
 
-    if (layer->radius > 0) {
+    border_color_item = lvgl_json_get(json, "borderColor");
+    if (border_color_item && cJSON_IsString(border_color_item)) {
+        Color border_color;
+
+        parse_color(border_color_item->valuestring, &border_color);
+        lv_obj_set_style_border_color(obj, lvgl_color_from_yui(border_color), 0);
+        lv_obj_set_style_border_width(obj, (lv_coord_t)lvgl_json_int(json, "borderWidth", 1), 0);
+    }
+
+    radius_item = lvgl_json_get(json, "radius");
+    if (radius_item && cJSON_IsNumber(radius_item)) {
+        lv_obj_set_style_radius(obj, (lv_coord_t)radius_item->valueint, 0);
+    } else if (layer->radius > 0) {
         lv_obj_set_style_radius(obj, (lv_coord_t)layer->radius, 0);
     }
 
@@ -442,18 +508,7 @@ void lvgl_apply_common_style(lv_obj_t* obj, Layer* layer, cJSON* json)
 
 void lvgl_apply_text_style(lv_obj_t* obj, Layer* layer, cJSON* json)
 {
-    const lv_font_t* font;
-
-    lvgl_apply_common_style(obj, layer, json);
-    if (!obj || !layer) {
-        return;
-    }
-
-    (void)json;
-    font = lvgl_font_get(layer);
-    if (font) {
-        lv_obj_set_style_text_font(obj, font, 0);
-    }
+    lvgl_apply_label_style(obj, layer, json);
 }
 
 void lvgl_apply_range(lv_obj_t* obj, cJSON* json, int default_min, int default_max)
