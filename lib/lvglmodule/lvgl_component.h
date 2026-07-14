@@ -15,6 +15,7 @@ typedef struct LvglComponent {
 } LvglComponent;
 
 void lvgl_component_sync_rect(LvglComponent* component);
+void lvgl_dump_layer_rects(const Layer* layer, int depth);
 void lvgl_component_destroy(LvglComponent* component);
 void lvgl_widgets_register_all(void);
 void lvglmodule_register_all(void);

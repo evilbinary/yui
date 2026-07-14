@@ -27,6 +27,9 @@ var symbolToOp = {
 
 function initCalculator() {
     YUI.log("LVGL calculator ready");
+    // YUI.inspect.enable();
+    // YUI.inspect.setShowBounds(true);
+    // YUI.inspect.setShowInfo(true);
     updateDisplay();
 }
 

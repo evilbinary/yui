@@ -2,7 +2,7 @@
     "id": "lvgl_calc",
     "type": "View",
     "text": "LVGL Calculator",
-    "size": [320, 526],
+    "size": [400, 600],
     "bgColor": "#121218",
     "js": ["calc.js"],
     "events": {
@@ -11,48 +11,46 @@
     "layout": {
         "type": "vertical",
         "spacing": 10,
-        "padding": [16, 16, 16, 16]
+        "padding": [20, 20, 20, 20],
+        "align": "center",
+        "justify": "center"
     },
     "children": [
         {
-            "id": "calc_title",
-            "type": "LvLabel",
-            "text": "LVGL Calculator",
-            "size": [288, 28],
-            "color": "#f5a623"
-        },
-        {
             "id": "calc_display",
             "type": "View",
-            "size": [288, 96],
+            "size": [0, 96],
             "bgColor": "#1e1e2e",
             "radius": 10,
             "layout": {
                 "type": "vertical",
                 "spacing": 4,
-                "padding": [10, 12, 10, 12]
+                "padding": [10, 12, 10, 12],
+                "align": "center"
             },
             "children": [
                 {
                     "id": "calc_expression",
                     "type": "LvLabel",
                     "text": "",
-                    "size": [264, 24],
-                    "color": "#a0a0b0"
+                    "size": [0, 24],
+                    "color": "#a0a0b0",
+                    "textAlign": "right"
                 },
                 {
                     "id": "calc_result",
                     "type": "LvLabel",
                     "text": "0",
-                    "size": [264, 44],
-                    "color": "#eaeaea"
+                    "size": [0, 44],
+                    "color": "#eaeaea",
+                    "textAlign": "right"
                 }
             ]
         },
         {
             "id": "calc_keypad",
             "type": "LvBtnMatrix",
-            "size": [288, 300],
+            "size": [0, 300],
             "buttons": [
                 "C", "<-", "%", "/",
                 "\n",
@@ -71,10 +69,11 @@
         {
             "id": "calc_memory",
             "type": "View",
-            "size": [288, 40],
+            "size": [0, 40],
             "layout": {
                 "type": "horizontal",
-                "spacing": 8
+                "spacing": 8,
+                "justify": "center"
             },
             "children": [
                 {

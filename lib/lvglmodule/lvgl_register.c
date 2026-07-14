@@ -1,6 +1,23 @@
 #include "lvgl_component.h"
 #include "../../lib/lvgl/lvgl.h"
+#include "../../lib/lvgl/lv_port.h"
 #include "lvgl_widget.h"
+
+static void lvgl_component_refresh_btnmatrix_map(lv_obj_t* obj)
+{
+#if LV_USE_BTNMATRIX
+    const char** map;
+
+    if (!obj || !lv_obj_check_type(obj, &lv_btnmatrix_class)) {
+        return;
+    }
+
+    map = lv_btnmatrix_get_map(obj);
+    if (map) {
+        lv_btnmatrix_set_map(obj, map);
+    }
+#endif
+}
 
 void lvgl_component_sync_rect(LvglComponent* component)
 {
@@ -8,7 +25,6 @@ void lvgl_component_sync_rect(LvglComponent* component)
     lv_coord_t y;
     lv_coord_t w;
     lv_coord_t h;
-    int changed = 0;
 
     if (!component || !component->obj || !component->layer) {
         return;
@@ -19,16 +35,55 @@ void lvgl_component_sync_rect(LvglComponent* component)
     w = (lv_coord_t)component->layer->rect.w;
     h = (lv_coord_t)component->layer->rect.h;
 
-    if (lv_obj_get_x(component->obj) != x || lv_obj_get_y(component->obj) != y) {
-        lv_obj_set_pos(component->obj, x, y);
-        changed = 1;
+    if (w <= 0 || h <= 0) {
+        return;
     }
-    if (lv_obj_get_width(component->obj) != w || lv_obj_get_height(component->obj) != h) {
-        lv_obj_set_size(component->obj, w, h);
-        changed = 1;
+
+    lv_obj_set_pos(component->obj, x, y);
+    lv_obj_set_size(component->obj, w, h);
+    lvgl_component_refresh_btnmatrix_map(component->obj);
+    lv_obj_invalidate(component->obj);
+}
+
+
+void lvgl_dump_layer_rects(const Layer* layer, int depth)
+{
+    int i;
+    int pad;
+    LvglComponent* component;
+    lv_area_t coords;
+
+    if (!layer) {
+        return;
     }
-    if (changed) {
-        lv_obj_invalidate(component->obj);
+
+    for (pad = 0; pad < depth; pad++) {
+        fprintf(stdout, "  ");
+    }
+
+    component = lvgl_component_from_layer((Layer*)layer);
+    if (component && component->obj) {
+        lv_obj_get_coords(component->obj, &coords);
+        fprintf(stdout, "[%s] layer=(%d,%d %dx%d) lvgl=(%d,%d %dx%d)\n",
+                layer->id ? layer->id : "(null)",
+                layer->rect.x, layer->rect.y, layer->rect.w, layer->rect.h,
+                coords.x1, coords.y1,
+                coords.x2 - coords.x1 + 1, coords.y2 - coords.y1 + 1);
+    } else {
+        fprintf(stdout, "[%s] layer=(%d,%d %dx%d)\n",
+                layer->id ? layer->id : "(null)",
+                layer->rect.x, layer->rect.y, layer->rect.w, layer->rect.h);
+    }
+
+    if (layer->children) {
+        for (i = 0; i < layer->child_count; i++) {
+            if (layer->children[i]) {
+                lvgl_dump_layer_rects(layer->children[i], depth + 1);
+            }
+        }
+    }
+    if (layer->sub) {
+        lvgl_dump_layer_rects(layer->sub, depth + 1);
     }
 }
 

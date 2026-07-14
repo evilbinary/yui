@@ -155,6 +155,10 @@ int main(int argc, char* argv[])
     load_textures(ui_root);
     layout_layer(ui_root);
 
+    fprintf(stdout, "===== layer dump (after first layout) =====\n");
+    layer_dump(ui_root, 0);
+    fprintf(stdout, "===========================================\n");
+
     printf("加载并执行 JS 文件...\n");
     js_count = js_module_load_from_json(root_json, json_path, 0);
     if (js_count <= 0) {
@@ -180,6 +184,14 @@ int main(int argc, char* argv[])
     cJSON_Delete(root_json);
 
     layout_layer(ui_root);
+
+    fprintf(stdout, "===== layer dump (after second layout) =====\n");
+    layer_dump(ui_root, 0);
+    fprintf(stdout, "============================================\n");
+
+    fprintf(stdout, "===== lvgl dump (after sync) =====\n");
+    lvgl_dump_layer_rects(ui_root, 0);
+    fprintf(stdout, "==================================\n");
 
     LOGI("lvgl", "entering main loop (%dx%d)", ui_root->rect.w, ui_root->rect.h);
     backend_run(ui_root);

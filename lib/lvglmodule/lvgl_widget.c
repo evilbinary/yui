@@ -478,10 +478,30 @@ static const char* lvgl_style_text_hint(lv_obj_t* obj, Layer* layer, cJSON* json
     return lvgl_json_string(json, "text", NULL);
 }
 
+static lv_text_align_t lvgl_text_align_from_json(cJSON* json)
+{
+    const char* align = lvgl_json_string(json, "textAlign", NULL);
+
+    if (!align) {
+        return LV_TEXT_ALIGN_AUTO;
+    }
+    if (strcmp(align, "center") == 0) {
+        return LV_TEXT_ALIGN_CENTER;
+    }
+    if (strcmp(align, "right") == 0) {
+        return LV_TEXT_ALIGN_RIGHT;
+    }
+    if (strcmp(align, "left") == 0) {
+        return LV_TEXT_ALIGN_LEFT;
+    }
+    return LV_TEXT_ALIGN_AUTO;
+}
+
 void lvgl_apply_label_style(lv_obj_t* obj, Layer* layer, cJSON* json)
 {
     const lv_font_t* font;
     cJSON* color_item;
+    lv_text_align_t text_align;
     Color text_color = layer->color;
 
     if (!obj || !layer) {
@@ -491,6 +511,11 @@ void lvgl_apply_label_style(lv_obj_t* obj, Layer* layer, cJSON* json)
     lv_obj_set_style_bg_opa(obj, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(obj, 0, 0);
     lv_obj_set_style_shadow_width(obj, 0, 0);
+
+    text_align = lvgl_text_align_from_json(json);
+    if (text_align != LV_TEXT_ALIGN_AUTO) {
+        lv_obj_set_style_text_align(obj, text_align, 0);
+    }
 
     color_item = lvgl_json_get(json, "color");
     if (color_item && cJSON_IsString(color_item)) {

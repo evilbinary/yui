@@ -37,6 +37,10 @@ int lv_port_init(void)
 
     g_root = lv_obj_create(lv_scr_act());
     lv_obj_set_size(g_root, lv_port_disp_get_width(), lv_port_disp_get_height());
+    lv_obj_set_pos(g_root, 0, 0);
+    lv_obj_set_style_pad_all(g_root, 0, LV_PART_MAIN);
+    lv_obj_set_style_pad_row(g_root, 0, LV_PART_MAIN);
+    lv_obj_set_style_pad_column(g_root, 0, LV_PART_MAIN);
     lv_obj_set_style_bg_opa(lv_scr_act(), LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(lv_scr_act(), 0, 0);
     lv_obj_clear_flag(lv_scr_act(), LV_OBJ_FLAG_SCROLLABLE);

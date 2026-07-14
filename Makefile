@@ -19,6 +19,13 @@ build-db:
 gdb: build-db
 	gdb -x  gdb.gdb ./build/None/None/None/db.exe  app/db/db.json
 
+build-lvgl:
+	ya -b lvgl-sdl -p lvgl
+
+
+gdb-lvgl: build-lvgl
+	gdb -x  gdb.gdb  ./build/lvgl/None/None/lvgl-sdl.exe app/lvgl/calc.json
+
 db:  
 	ya -b db
 	./build/None/None/None/db.exe  app/db/db.json
