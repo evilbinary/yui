@@ -39,6 +39,15 @@ void lvgl_component_destroy(LvglComponent* component)
     free(component);
 }
 
+#if LV_USE_CALENDAR && LV_USE_CALENDAR_HEADER_ARROW
+__attribute__((used)) static const void* lvgl_force_link_calendar_header_arrow =
+    &lv_calendar_header_arrow_class;
+#endif
+#if LV_USE_CALENDAR && LV_USE_CALENDAR_HEADER_DROPDOWN
+__attribute__((used)) static const void* lvgl_force_link_calendar_header_dropdown =
+    &lv_calendar_header_dropdown_class;
+#endif
+
 void lvglmodule_register_all(void)
 {
     lvgl_widgets_register_all();

@@ -28,6 +28,9 @@ void lvgl_apply_text_style(lv_obj_t* obj, Layer* layer, cJSON* json);
 void lvgl_apply_range(lv_obj_t* obj, cJSON* json, int default_min, int default_max);
 int lvgl_apply_value(lv_obj_t* obj, cJSON* json, Layer* layer, int default_value);
 
+void lvgl_widget_destroy(Layer* layer);
+void lvgl_widget_layout(Layer* layer);
+
 void lvgl_widgets_register_all(void);
 void lvgl_widgets_extra_register_all(void);
 
