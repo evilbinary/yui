@@ -165,11 +165,16 @@ LVGL_LAYOUT(lvgl_arc_layout)
 static void lvgl_dropdown_destroy(Layer* layer)
 {
     LvglComponent* component = lvgl_component_from_layer(layer);
+    char* options = NULL;
+
     if (component && component->widget_data) {
-        free(component->widget_data);
+        options = (char*)component->widget_data;
         component->widget_data = NULL;
     }
     lvgl_widget_destroy(layer);
+    if (options) {
+        free(options);
+    }
 }
 
 static void* lvgl_dropdown_create(Layer* layer, cJSON* json)
@@ -202,11 +207,16 @@ LVGL_LAYOUT(lvgl_dropdown_layout)
 static void lvgl_roller_destroy(Layer* layer)
 {
     LvglComponent* component = lvgl_component_from_layer(layer);
+    char* options = NULL;
+
     if (component && component->widget_data) {
-        free(component->widget_data);
+        options = (char*)component->widget_data;
         component->widget_data = NULL;
     }
     lvgl_widget_destroy(layer);
+    if (options) {
+        free(options);
+    }
 }
 
 static void* lvgl_roller_create(Layer* layer, cJSON* json)
@@ -236,16 +246,20 @@ LVGL_LAYOUT(lvgl_roller_layout)
 static void lvgl_btnmatrix_destroy(Layer* layer)
 {
     LvglComponent* component = lvgl_component_from_layer(layer);
+    const char** map = NULL;
+    uint16_t count = 0;
+
     if (component && component->widget_data) {
-        const char** map = (const char**)component->widget_data;
-        uint16_t count = 0;
+        map = (const char**)component->widget_data;
         while (map[count] && map[count][0] != '\0') {
             count++;
         }
-        lvgl_free_btnmatrix_map(map, count);
         component->widget_data = NULL;
     }
     lvgl_widget_destroy(layer);
+    if (map) {
+        lvgl_free_btnmatrix_map(map, count);
+    }
 }
 
 static void* lvgl_btnmatrix_create(Layer* layer, cJSON* json)

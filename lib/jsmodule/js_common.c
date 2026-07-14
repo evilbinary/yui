@@ -727,8 +727,8 @@ int js_module_trigger_event(const char* event_name, Layer* layer)
         }
     }
 
-    // 未找到事件映射
-    return js_module_call_event(event_name, layer);
+    // 未找到事件映射：不要对带点号的事件名做 eval
+    return -1;
 }
 
 

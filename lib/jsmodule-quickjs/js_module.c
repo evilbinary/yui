@@ -664,7 +664,11 @@ int js_module_init(void)
 // 清理 JS 引擎
 void js_module_cleanup(void)
 {
-    js_module_shutdown();
+    if (g_layer_root) {
+        js_module_shutdown();
+    }
+    g_layer_root = NULL;
+
     if (g_js_ctx) {
         js_timer_clear_all(g_js_ctx);
         JS_FreeContext(g_js_ctx);
@@ -1477,6 +1481,10 @@ int js_module_call_event(const char* event_name, Layer* layer)
         }
         JS_FreeValue(g_js_ctx, global_obj);
         JS_FreeValue(g_js_ctx, func);
+    }
+
+    if (strchr(event_name, '.') != NULL) {
+        return -1;
     }
 
     // 内联 JS 代码：直接 eval 执行

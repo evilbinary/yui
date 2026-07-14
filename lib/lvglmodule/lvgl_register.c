@@ -120,6 +120,7 @@ void lvgl_component_destroy(LvglComponent* component)
         return;
     }
     if (component->obj) {
+        component->layer = NULL;
         lv_obj_del(component->obj);
         component->obj = NULL;
     }

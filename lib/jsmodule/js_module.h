@@ -20,6 +20,9 @@ int js_module_init(void);
 // 清理 JS 引擎
 void js_module_cleanup(void);
 
+// 销毁 UI 树后解除 JS 对根图层的引用（destroy_layer 在 free 前调用）
+void js_module_detach_layer_root_if(Layer* layer);
+
 // 加载并执行 JS 文件
 int js_module_load_file(const char* filename);
 

@@ -63,7 +63,11 @@ int js_module_init(void)
 // 清理 JS 引擎
 void js_module_cleanup(void)
 {
-    js_module_shutdown();
+    if (g_layer_root) {
+        js_module_shutdown();
+    }
+    g_layer_root = NULL;
+
     if (g_js_ctx) {
         JS_FreeContext(g_js_ctx);
         g_js_ctx = NULL;
