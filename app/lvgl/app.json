@@ -35,6 +35,7 @@
             "size": [340, 72],
             "bgColor": "#16213e",
             "radius": 8,
+            "layout": { "type": "absolute" },
             "children": [
                 {
                     "id": "native_btn",

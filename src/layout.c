@@ -458,6 +458,33 @@ void layout_layer(Layer* layer){
                 }
                 current_y += child->rect.h + spacing;
             }
+        } else if (layer->layout_manager->type == LAYOUT_ABSOLUTE) {
+            for (int i = 0; i < layer->child_count; i++) {
+                Layer* child = layer->children[i];
+                int rel_x;
+                int rel_y;
+
+                if (!child || child->visible == IN_VISIBLE) {
+                    continue;
+                }
+
+                if (!child->layout_base_valid) {
+                    child->layout_base_rect = child->rect;
+                    child->layout_base_valid = 1;
+                }
+
+                rel_x = child->layout_base_rect.x;
+                rel_y = child->layout_base_rect.y;
+                child->rect.x = layer->rect.x + rel_x;
+                child->rect.y = layer->rect.y + rel_y;
+
+                if (layer->scrollable == 1 || layer->scrollable == 3) {
+                    child->rect.y -= layer->scroll_offset;
+                }
+                if (layer->scrollable == 2 || layer->scrollable == 3) {
+                    child->rect.x -= layer->scroll_offset_x;
+                }
+            }
         }
     } else if (layer->layout_manager) {
         printf("layout_layer: layer %s has layout_manager but no children\n", layer->id ? layer->id : "(null)");
