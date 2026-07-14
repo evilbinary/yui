@@ -60,9 +60,37 @@ static int input_get_label_width(Layer* layer) {
     return label_width / scale;
 }
 
+static int input_get_line_height(Layer* layer) {
+    if (!layer || !layer->font) return 16;
+
+    if (layer->font->default_font) {
+        Texture* tex = render_text(layer, "Ag", layer->color);
+        if (tex) {
+            int tw = 0, th = 0;
+            backend_query_texture(tex, NULL, NULL, &tw, &th);
+            backend_render_text_destroy(tex);
+            int line_h = th / scale;
+            if (line_h < 1) line_h = 1;
+            return line_h;
+        }
+    }
+
+    return layer->font->size > 0 ? layer->font->size + 2 : 16;
+}
+
 static void input_get_padding(Layer* layer, int* top, int* right, int* bottom, int* left) {
     *top = *right = *bottom = *left = 5;
-    if (layer->layout_manager) {
+
+    InputComponent* component = layer && layer->component ?
+                                (InputComponent*)layer->component : NULL;
+    if (component) {
+        *top = component->padding[0];
+        *right = component->padding[1];
+        *bottom = component->padding[2];
+        *left = component->padding[3];
+    }
+
+    if (layer && layer->layout_manager) {
         if (layer->layout_manager->padding[0] > 0) *top = layer->layout_manager->padding[0];
         if (layer->layout_manager->padding[1] > 0) *right = layer->layout_manager->padding[1];
         if (layer->layout_manager->padding[2] > 0) *bottom = layer->layout_manager->padding[2];
@@ -76,6 +104,15 @@ static void input_get_content_rect(Layer* layer, Rect* out) {
     int pad_top, pad_right, pad_bottom, pad_left;
     input_get_padding(layer, &pad_top, &pad_right, &pad_bottom, &pad_left);
 
+    int line_h = input_get_line_height(layer);
+    int max_v_pad = layer->rect.h - line_h;
+    if (max_v_pad < 0) max_v_pad = 0;
+    int v_pad_total = pad_top + pad_bottom;
+    if (v_pad_total > max_v_pad) {
+        pad_top = max_v_pad / 2;
+        pad_bottom = max_v_pad - pad_top;
+    }
+
     int label_w = input_get_label_width(layer);
     int label_gap = label_w > 0 ? 5 : 0;
 
@@ -85,6 +122,38 @@ static void input_get_content_rect(Layer* layer, Rect* out) {
     out->h = layer->rect.h - pad_top - pad_bottom;
     if (out->w < 1) out->w = 1;
     if (out->h < 1) out->h = 1;
+}
+
+static int input_get_text_draw_y(Layer* layer, const Rect* content, int line_h) {
+    if (!layer || !content) return 0;
+    if (line_h < 1) line_h = 1;
+    if (line_h > content->h) line_h = content->h;
+    return content->y + (content->h - line_h) / 2;
+}
+
+static void input_component_apply_style(Layer* layer, cJSON* style) {
+    if (!layer || !style || !layer->component || !cJSON_IsObject(style)) return;
+
+    InputComponent* component = (InputComponent*)layer->component;
+    cJSON* padding = cJSON_GetObjectItem(style, "padding");
+    if (!padding || !cJSON_IsArray(padding)) return;
+
+    int count = cJSON_GetArraySize(padding);
+    if (count >= 4) {
+        component->padding[0] = cJSON_GetArrayItem(padding, 0)->valueint;
+        component->padding[1] = cJSON_GetArrayItem(padding, 1)->valueint;
+        component->padding[2] = cJSON_GetArrayItem(padding, 2)->valueint;
+        component->padding[3] = cJSON_GetArrayItem(padding, 3)->valueint;
+    } else if (count == 2) {
+        int vertical = cJSON_GetArrayItem(padding, 0)->valueint;
+        int horizontal = cJSON_GetArrayItem(padding, 1)->valueint;
+        component->padding[0] = component->padding[2] = vertical;
+        component->padding[1] = component->padding[3] = horizontal;
+    } else if (count == 1) {
+        int all = cJSON_GetArrayItem(padding, 0)->valueint;
+        component->padding[0] = component->padding[1] =
+        component->padding[2] = component->padding[3] = all;
+    }
 }
 
 static int input_text_width(Layer* layer, const char* text, int byte_len) {
@@ -220,6 +289,8 @@ InputComponent* input_component_create(Layer* layer) {
     component->selection_end = 0;
     component->scroll_x = 0;
     component->is_selecting = 0;
+    component->padding[0] = component->padding[1] =
+    component->padding[2] = component->padding[3] = 5;
 
     // 设置组件指针和自定义渲染函数
     layer->component = component;
@@ -227,6 +298,7 @@ InputComponent* input_component_create(Layer* layer) {
     layer->handle_mouse_event = input_component_handle_mouse_event;
     layer->handle_key_event = input_component_handle_key_event;
     layer->register_event = input_component_register_event;
+    layer->set_style = input_component_apply_style;
 
     // 设置组件为可聚焦
     layer->focusable = 1;
@@ -260,6 +332,11 @@ InputComponent* input_component_create_from_json(Layer* layer, cJSON* json_obj) 
             if (comp->change_name) free(comp->change_name);
             comp->change_name = strdup(event_name);
         }
+    }
+
+    cJSON* style = cJSON_GetObjectItem(json_obj, "style");
+    if (style) {
+        input_component_apply_style(layer, style);
     }
 
     return component;
@@ -635,46 +712,35 @@ void input_component_render(Layer* layer) {
     backend_render_get_clip_rect(&prev_clip);
     backend_render_set_clip_rect(&content);
 
+    int line_h = input_get_line_height(layer);
     int draw_x = content.x - component->scroll_x;
-    int draw_y = content.y;
-    int draw_h = content.h;
+    int draw_y = input_get_text_draw_y(layer, &content, line_h);
     int buflen = is_placeholder ? 0 : (int)strlen(display_text);
 
     if (buflen > 0 && layer->font && layer->font->default_font) {
-        Texture* tex = render_text(layer, display_text, text_color);
-        if (tex) {
-            int tw = 0, th = 0;
-            backend_query_texture(tex, NULL, NULL, &tw, &th);
-            int natural_h = th / scale;
-            if (natural_h < 1) natural_h = 1;
-            if (natural_h > draw_h) natural_h = draw_h;
-            draw_y = content.y + (content.h - natural_h) / 2;
-            backend_render_text_destroy(tex);
-
-            if (!is_placeholder && input_has_selection(component)) {
-                Color sel_fg = {17, 17, 27, 255};
-                int lo = utf8_safe_prefix_bytes(display_text, input_sel_lo(component));
-                int hi = utf8_safe_prefix_bytes(display_text, input_sel_hi(component));
-                int x_lo = draw_x + input_text_width(layer, display_text, lo);
-                int x_hi = draw_x + input_text_width(layer, display_text, hi);
-                if (x_hi > x_lo) {
-                    Rect sel = {x_lo, draw_y, x_hi - x_lo, natural_h};
-                    backend_render_fill_rect(&sel, component->selection_color);
-                }
-
-                input_draw_text_part(layer, display_text, text_color, draw_x, draw_y);
-
-                if (hi > lo) {
-                    char part[MAX_TEXT];
-                    int sel_len = hi - lo;
-                    if (sel_len >= MAX_TEXT) sel_len = MAX_TEXT - 1;
-                    memcpy(part, display_text + lo, (size_t)sel_len);
-                    part[sel_len] = '\0';
-                    input_draw_text_part(layer, part, sel_fg, x_lo, draw_y);
-                }
-            } else {
-                input_draw_text_part(layer, display_text, text_color, draw_x, draw_y);
+        if (!is_placeholder && input_has_selection(component)) {
+            Color sel_fg = {17, 17, 27, 255};
+            int lo = utf8_safe_prefix_bytes(display_text, input_sel_lo(component));
+            int hi = utf8_safe_prefix_bytes(display_text, input_sel_hi(component));
+            int x_lo = draw_x + input_text_width(layer, display_text, lo);
+            int x_hi = draw_x + input_text_width(layer, display_text, hi);
+            if (x_hi > x_lo) {
+                Rect sel = {x_lo, draw_y, x_hi - x_lo, line_h};
+                backend_render_fill_rect(&sel, component->selection_color);
             }
+
+            input_draw_text_part(layer, display_text, text_color, draw_x, draw_y);
+
+            if (hi > lo) {
+                char part[MAX_TEXT];
+                int sel_len = hi - lo;
+                if (sel_len >= MAX_TEXT) sel_len = MAX_TEXT - 1;
+                memcpy(part, display_text + lo, (size_t)sel_len);
+                part[sel_len] = '\0';
+                input_draw_text_part(layer, part, sel_fg, x_lo, draw_y);
+            }
+        } else {
+            input_draw_text_part(layer, display_text, text_color, draw_x, draw_y);
         }
     } else if (is_placeholder) {
         input_draw_text_part(layer, display_text, text_color, content.x, draw_y);
@@ -685,8 +751,9 @@ void input_component_render(Layer* layer) {
         if (component->cursor_pos > 0) {
             cursor_x += input_text_width(layer, display_text, component->cursor_pos);
         }
-        int cursor_y = content.y + 2;
-        int cursor_height = content.h - 4;
+        int cursor_y = draw_y;
+        int cursor_height = line_h;
+        if (cursor_height > content.h) cursor_height = content.h;
         if (cursor_x < content.x) cursor_x = content.x;
         if (cursor_x > content.x + content.w - 1) cursor_x = content.x + content.w - 1;
         backend_render_line(cursor_x, cursor_y, cursor_x, cursor_y + cursor_height, component->cursor_color);
