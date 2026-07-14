@@ -14,14 +14,71 @@
 
 #define TEXT_LINE_SPACING 2
 #define TEXT_LINE_NUMBER_GAP 12
+#define TEXT_DEFAULT_PADDING 5
+#define TEXT_INTERNAL_SCROLLBAR_WIDTH 5
+
+static void text_component_get_padding(Layer* layer, int* top, int* right, int* bottom, int* left)
+{
+    int pad_top;
+    int pad_right;
+    int pad_bottom;
+    int pad_left;
+
+    if (!layer) {
+        if (top) {
+            *top = TEXT_DEFAULT_PADDING;
+        }
+        if (right) {
+            *right = TEXT_DEFAULT_PADDING;
+        }
+        if (bottom) {
+            *bottom = TEXT_DEFAULT_PADDING;
+        }
+        if (left) {
+            *left = TEXT_DEFAULT_PADDING;
+        }
+        return;
+    }
+
+    pad_top = layer_padding_get(layer, 0);
+    pad_right = layer_padding_get(layer, 1);
+    pad_bottom = layer_padding_get(layer, 2);
+    pad_left = layer_padding_get(layer, 3);
+    if (pad_top == 0 && pad_right == 0 && pad_bottom == 0 && pad_left == 0) {
+        pad_top = pad_right = pad_bottom = pad_left = TEXT_DEFAULT_PADDING;
+    }
+
+    if (top) {
+        *top = pad_top;
+    }
+    if (right) {
+        *right = pad_right;
+    }
+    if (bottom) {
+        *bottom = pad_bottom;
+    }
+    if (left) {
+        *left = pad_left;
+    }
+}
 
 static int text_component_get_left_padding(TextComponent* component) {
-    int left_padding = 5;
+    int left_padding = TEXT_DEFAULT_PADDING;
+    Layer* layer = component ? component->layer : NULL;
+
+    if (layer) {
+        left_padding = layer_padding_get(layer, 3);
+        if (left_padding == 0) {
+            left_padding = TEXT_DEFAULT_PADDING;
+        }
+    }
     if (component && component->show_line_numbers && component->multiline) {
         left_padding += component->line_number_width + TEXT_LINE_NUMBER_GAP;
     }
     return left_padding;
 }
+
+static void text_component_get_content_rect(TextComponent* component, Layer* layer, Rect* out);
 
 static int text_component_get_line_height(TextComponent* component) {
     if (!component || !component->layer) return 20;
@@ -286,6 +343,14 @@ static void text_component_apply_theme_style(Layer* layer, cJSON* style) {
         cJSON* item = cJSON_GetObjectItem(style, TEXT_SYNTAX_COLOR_KEYS[i]);
         if (item && cJSON_IsString(item)) {
             text_component_apply_syntax_color_key(component, TEXT_SYNTAX_COLOR_KEYS[i], item->valuestring);
+        }
+    }
+
+    {
+        cJSON* padding = cJSON_GetObjectItem(style, "padding");
+        if (padding && layer_padding_apply_from_json(layer->padding, padding) && layer->layout_manager) {
+            memcpy(layer->layout_manager->padding, layer->padding, sizeof(layer->padding));
+            mark_layer_dirty(layer, DIRTY_LAYOUT);
         }
     }
 
@@ -845,12 +910,8 @@ void text_component_update_scroll_for_cursor(TextComponent* component) {
     }
     
     // 准备渲染区域（与渲染函数中的逻辑一致）
-    Rect render_rect = component->layer->rect;
-    int left_padding = 5;
-    render_rect.x += left_padding;
-    render_rect.y += 5;
-    render_rect.w -= (left_padding + 5);
-    render_rect.h -= 10;
+    Rect render_rect;
+    text_component_get_content_rect(component, component->layer, &render_rect);
     
     // 计算整个文本的宽度
     int full_text_width = 0;
@@ -934,8 +995,9 @@ int text_component_calculate_content_height(TextComponent* component) {
 
     const char* text = component->layer->text ? component->layer->text : "";
     int line_height = text_component_get_line_height(component);
-    int left_padding = text_component_get_left_padding(component);
-    int max_width = component->layer->rect.w - (left_padding + 5);
+    Rect content_rect;
+    text_component_get_content_rect(component, component->layer, &content_rect);
+    int max_width = content_rect.w;
     if (max_width < 1) max_width = 1;
 
     text_component_ensure_layout(component, max_width);
@@ -1460,9 +1522,7 @@ static int text_component_get_vertical_scrollbar_track(Layer* layer, Rect* track
     if (!layer || !track_out) return 0;
 
     int visible_height = layer->rect.h;
-    if (layer->layout_manager) {
-        visible_height -= layer->layout_manager->padding[0] + layer->layout_manager->padding[2];
-    }
+    visible_height -= layer_padding_get(layer, 0) + layer_padding_get(layer, 2);
 
     if ((layer->scrollable == 1 || layer->scrollable == 3) &&
         layer->scrollbar_v && layer->scrollbar_v->visible &&
@@ -1478,12 +1538,19 @@ static int text_component_get_vertical_scrollbar_track(Layer* layer, Rect* track
     TextComponent* component = (TextComponent*)layer->component;
     if (component && component->multiline &&
         layer->scrollable != 1 && layer->scrollable != 3) {
-        int inner_visible = layer->rect.h - 10;
-        if (layer->content_height <= inner_visible) return 0;
-        track_out->x = layer->rect.x + layer->rect.w - 10;
-        track_out->y = layer->rect.y + 5;
-        track_out->w = 5;
-        track_out->h = layer->rect.h - 10;
+        int pad_top;
+        int pad_right;
+        int pad_bottom;
+        int inner_visible;
+        text_component_get_padding(layer, &pad_top, &pad_right, &pad_bottom, NULL);
+        inner_visible = layer->rect.h - pad_top - pad_bottom;
+        if (layer->content_height <= inner_visible) {
+            return 0;
+        }
+        track_out->x = layer->rect.x + layer->rect.w - pad_right - TEXT_INTERNAL_SCROLLBAR_WIDTH;
+        track_out->y = layer->rect.y + pad_top;
+        track_out->w = TEXT_INTERNAL_SCROLLBAR_WIDTH;
+        track_out->h = layer->rect.h - pad_top - pad_bottom;
         return 1;
     }
     return 0;
@@ -1498,11 +1565,16 @@ static int text_component_point_in_vertical_scrollbar(Layer* layer, Point pt) {
 static void text_component_get_content_rect(TextComponent* component, Layer* layer, Rect* out) {
     if (!component || !layer || !out) return;
 
+    int pad_top;
+    int pad_right;
+    int pad_bottom;
     int left_padding = text_component_get_left_padding(component);
+    text_component_get_padding(layer, &pad_top, &pad_right, &pad_bottom, NULL);
+
     out->x = layer->rect.x + left_padding;
-    out->y = layer->rect.y + 5;
-    out->w = layer->rect.w - (left_padding + 5);
-    out->h = layer->rect.h - 10;
+    out->y = layer->rect.y + pad_top;
+    out->w = layer->rect.w - left_padding - pad_right;
+    out->h = layer->rect.h - pad_top - pad_bottom;
 
     Rect track;
     if (text_component_get_vertical_scrollbar_track(layer, &track)) {
@@ -1960,13 +2032,16 @@ void text_component_render(Layer* layer) {
     
     // 如果显示行号且为多行模式，绘制行号背景和行号
     if (component->show_line_numbers && component->multiline) {
-        // 绘制行号背景区域
-        Rect line_number_bg = {
-            layer->rect.x + 5,
-            layer->rect.y + 5,
-            component->line_number_width,
-            layer->rect.h - 10
-        };
+        int pad_top;
+        int pad_right;
+        int pad_bottom;
+        int pad_left;
+        Rect line_number_bg;
+        text_component_get_padding(layer, &pad_top, &pad_right, &pad_bottom, &pad_left);
+        line_number_bg.x = layer->rect.x + pad_left;
+        line_number_bg.y = layer->rect.y + pad_top;
+        line_number_bg.w = component->line_number_width;
+        line_number_bg.h = layer->rect.h - pad_top - pad_bottom;
         backend_render_fill_rect(&line_number_bg, component->line_number_bg_color);
         
         // 绘制分隔线
@@ -2636,19 +2711,21 @@ void text_component_render(Layer* layer) {
     
     // 多行滚动条：仅当未启用 layer 通用垂直滚动条时自绘，避免与 render_vertical_scrollbar 重复
     if (component->multiline && layer->scrollable != 1 && layer->scrollable != 3) {
-        // 使用已经计算好的内容高度，而不是重新计算
+        int pad_top;
+        int pad_right;
+        int pad_bottom;
         int total_text_height = layer->content_height;
-        int visible_height = layer->rect.h - 10; // 减去内边距
-        
+        int visible_height;
+        Rect scrollbar_bg;
+        text_component_get_padding(layer, &pad_top, &pad_right, &pad_bottom, NULL);
+        visible_height = layer->rect.h - pad_top - pad_bottom;
+
         // 只有当文本总高度大于可见高度时才显示滚动条
         if (total_text_height > visible_height) {
-            // 绘制滚动条背景
-            Rect scrollbar_bg = {
-                layer->rect.x + layer->rect.w - 10, // 右侧留出10像素宽度的滚动条
-                layer->rect.y + 5, // 顶部内边距
-                5, // 滚动条宽度
-                layer->rect.h - 10 // 滚动条高度（减去上下内边距）
-            };
+            scrollbar_bg.x = layer->rect.x + layer->rect.w - pad_right - TEXT_INTERNAL_SCROLLBAR_WIDTH;
+            scrollbar_bg.y = layer->rect.y + pad_top;
+            scrollbar_bg.w = TEXT_INTERNAL_SCROLLBAR_WIDTH;
+            scrollbar_bg.h = layer->rect.h - pad_top - pad_bottom;
             Color scrollbar_bg_color = {200, 200, 200, 255};
             backend_render_fill_rect(&scrollbar_bg, scrollbar_bg_color);
             
@@ -2684,10 +2761,16 @@ void text_component_update_content_height(TextComponent* component) {
     int content_height = text_component_calculate_content_height(component);
     component->layer->content_height = content_height;
     
-    // 如果内容高度小于可见区域高度（减去内边距），重置滚动偏移
-    int visible_height = component->layer->rect.h - 10; // 与滚动条计算保持一致
-    if (content_height <= visible_height) {
-        component->layer->scroll_offset = 0;
+    {
+        int pad_top;
+        int pad_right;
+        int pad_bottom;
+        int visible_height;
+        text_component_get_padding(component->layer, &pad_top, &pad_right, &pad_bottom, NULL);
+        visible_height = component->layer->rect.h - pad_top - pad_bottom;
+        if (content_height <= visible_height) {
+            component->layer->scroll_offset = 0;
+        }
     }
 }
 

@@ -17,7 +17,6 @@ typedef struct {
     int password_mode;     // 是否为密码模式
     int scroll_x;          // 水平滚动偏移
     int is_selecting;      // 鼠标拖选中文本
-    int padding[4];        // top, right, bottom, left
     Color cursor_color;    // 光标颜色
     Color selection_color; // 选中背景颜色
     EventHandler on_change;

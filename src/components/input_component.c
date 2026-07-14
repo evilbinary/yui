@@ -2,6 +2,7 @@
 #include "../render.h"
 #include "../backend.h"
 #include "../event.h"
+#include "../layer.h"
 #include "../layer_update.h"
 #include "../util.h"
 #include <stdlib.h>
@@ -79,22 +80,20 @@ static int input_get_line_height(Layer* layer) {
 }
 
 static void input_get_padding(Layer* layer, int* top, int* right, int* bottom, int* left) {
-    *top = *right = *bottom = *left = 5;
+    const int k_default = 5;
 
-    InputComponent* component = layer && layer->component ?
-                                (InputComponent*)layer->component : NULL;
-    if (component) {
-        *top = component->padding[0];
-        *right = component->padding[1];
-        *bottom = component->padding[2];
-        *left = component->padding[3];
+    if (!layer) {
+        *top = *right = *bottom = *left = k_default;
+        return;
     }
 
-    if (layer && layer->layout_manager) {
-        if (layer->layout_manager->padding[0] > 0) *top = layer->layout_manager->padding[0];
-        if (layer->layout_manager->padding[1] > 0) *right = layer->layout_manager->padding[1];
-        if (layer->layout_manager->padding[2] > 0) *bottom = layer->layout_manager->padding[2];
-        if (layer->layout_manager->padding[3] > 0) *left = layer->layout_manager->padding[3];
+    *top = layer_padding_get(layer, 0);
+    *right = layer_padding_get(layer, 1);
+    *bottom = layer_padding_get(layer, 2);
+    *left = layer_padding_get(layer, 3);
+
+    if (*top == 0 && *right == 0 && *bottom == 0 && *left == 0) {
+        *top = *right = *bottom = *left = k_default;
     }
 }
 
@@ -132,27 +131,16 @@ static int input_get_text_draw_y(Layer* layer, const Rect* content, int line_h) 
 }
 
 static void input_component_apply_style(Layer* layer, cJSON* style) {
-    if (!layer || !style || !layer->component || !cJSON_IsObject(style)) return;
+    if (!layer || !style || !cJSON_IsObject(style)) {
+        return;
+    }
 
-    InputComponent* component = (InputComponent*)layer->component;
     cJSON* padding = cJSON_GetObjectItem(style, "padding");
-    if (!padding || !cJSON_IsArray(padding)) return;
-
-    int count = cJSON_GetArraySize(padding);
-    if (count >= 4) {
-        component->padding[0] = cJSON_GetArrayItem(padding, 0)->valueint;
-        component->padding[1] = cJSON_GetArrayItem(padding, 1)->valueint;
-        component->padding[2] = cJSON_GetArrayItem(padding, 2)->valueint;
-        component->padding[3] = cJSON_GetArrayItem(padding, 3)->valueint;
-    } else if (count == 2) {
-        int vertical = cJSON_GetArrayItem(padding, 0)->valueint;
-        int horizontal = cJSON_GetArrayItem(padding, 1)->valueint;
-        component->padding[0] = component->padding[2] = vertical;
-        component->padding[1] = component->padding[3] = horizontal;
-    } else if (count == 1) {
-        int all = cJSON_GetArrayItem(padding, 0)->valueint;
-        component->padding[0] = component->padding[1] =
-        component->padding[2] = component->padding[3] = all;
+    if (padding && layer_padding_apply_from_json(layer->padding, padding)) {
+        if (layer->layout_manager) {
+            memcpy(layer->layout_manager->padding, layer->padding, sizeof(layer->padding));
+        }
+        mark_layer_dirty(layer, DIRTY_LAYOUT);
     }
 }
 
@@ -289,8 +277,6 @@ InputComponent* input_component_create(Layer* layer) {
     component->selection_end = 0;
     component->scroll_x = 0;
     component->is_selecting = 0;
-    component->padding[0] = component->padding[1] =
-    component->padding[2] = component->padding[3] = 5;
 
     // 设置组件指针和自定义渲染函数
     layer->component = component;
