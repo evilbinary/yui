@@ -47,7 +47,8 @@ static int dialog_layout_button_rect(DialogComponent* component, Layer* layer,
     int index, Rect* out_rect);
 static void dialog_get_button_colors(DialogComponent* component, DialogButton* button,
     int selected, Color* bg, Color* text);
-static int dialog_point_in_drag_area(DialogComponent* component, Layer* layer, int x, int y);
+static int dialog_point_in_close_button(DialogComponent* component, Layer* layer, int x, int y);
+static void dialog_get_close_button_rect(Layer* layer, Rect* out_rect);
 static void dialog_clamp_to_window(Layer* layer);
 static void dialog_component_apply_theme_style(Layer* layer, cJSON* style);
 
@@ -480,8 +481,8 @@ static void dialog_parse_button_style(DialogButton* button, cJSON* style) {
         button->has_bg_color = 1;
     }
     if (cJSON_HasObjectItem(style, "color")) {
-        parse_color(cJSON_GetObjectItem(style, "color")->valuestring, &button->bg_color);
-        button->has_bg_color = 1;
+        parse_color(cJSON_GetObjectItem(style, "color")->valuestring, &button->text_color);
+        button->has_text_color = 1;
     }
     if (cJSON_HasObjectItem(style, "hoverColor")) {
         parse_color(cJSON_GetObjectItem(style, "hoverColor")->valuestring, &button->hover_color);
@@ -490,6 +491,9 @@ static void dialog_parse_button_style(DialogButton* button, cJSON* style) {
     if (cJSON_HasObjectItem(style, "textColor")) {
         parse_color(cJSON_GetObjectItem(style, "textColor")->valuestring, &button->text_color);
         button->has_text_color = 1;
+    }
+    if (cJSON_HasObjectItem(style, "borderRadius")) {
+        button->radius = cJSON_GetObjectItem(style, "borderRadius")->valueint;
     }
 }
 
@@ -559,6 +563,23 @@ static void dialog_get_button_colors(DialogComponent* component, DialogButton* b
     *text = button->has_text_color ? button->text_color : component->button_text_color;
 }
 
+static void dialog_get_close_button_rect(Layer* layer, Rect* out_rect) {
+    if (!layer || !out_rect) {
+        return;
+    }
+    out_rect->w = 24;
+    out_rect->h = 24;
+    out_rect->x = layer->rect.x + layer->rect.w - out_rect->w - 8;
+    out_rect->y = layer->rect.y + 8;
+}
+
+static int dialog_point_in_close_button(DialogComponent* component, Layer* layer, int x, int y) {
+  (void)component;
+    Rect close_rect = {0};
+    dialog_get_close_button_rect(layer, &close_rect);
+    return is_point_in_rect(x, y, close_rect);
+}
+
 static int dialog_point_in_drag_area(DialogComponent* component, Layer* layer, int x, int y) {
     if (!component || !layer || !component->movable) {
         return 0;
@@ -566,6 +587,9 @@ static int dialog_point_in_drag_area(DialogComponent* component, Layer* layer, i
 
     Rect* rect = &layer->rect;
     if (x < rect->x || x >= rect->x + rect->w) {
+        return 0;
+    }
+    if (dialog_point_in_close_button(component, layer, x, y)) {
         return 0;
     }
 
@@ -929,7 +953,15 @@ int dialog_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
             return 0;
         }
         component->selected_button = dialog_get_button_at_position(component, layer, event->x, event->y);
+        component->close_hovered = dialog_point_in_close_button(component, layer, event->x, event->y);
     } else if (event->state == SDL_PRESSED && event->button == SDL_BUTTON_LEFT) {
+        if (dialog_point_in_close_button(component, layer, event->x, event->y)) {
+            if (component->on_close) {
+                component->on_close(component, -1);
+            }
+            dialog_component_hide(component);
+            return 0;
+        }
         if (dialog_point_in_drag_area(component, layer, event->x, event->y)) {
             component->dragging = 1;
             component->drag_offset_x = event->x - layer->rect.x;
@@ -1027,6 +1059,34 @@ void dialog_component_render(Layer* layer) {
     
     int current_y = rect->y + 20;
     
+    // 绘制标题栏关闭按钮
+    {
+        Rect close_rect = {0};
+        Color close_bg = component->close_hovered ? (Color){200, 200, 200, 60}
+                                                  : (Color){0, 0, 0, 0};
+        Color close_color = component->close_hovered ? component->title_color
+                                                     : (Color){component->title_color.r,
+                                                               component->title_color.g,
+                                                               component->title_color.b, 180};
+        dialog_get_close_button_rect(layer, &close_rect);
+        if (close_bg.a > 0) {
+            backend_render_fill_rect(&close_rect, close_bg);
+        }
+        Texture* close_tex = render_text(text_layer, "×", close_color);
+        if (close_tex) {
+            int cw = 0, ch = 0;
+            backend_query_texture(close_tex, NULL, NULL, &cw, &ch);
+            Rect close_text = {
+                close_rect.x + (close_rect.w - cw / scale) / 2,
+                close_rect.y + (close_rect.h - ch / scale) / 2,
+                cw / scale,
+                ch / scale
+            };
+            backend_render_text_copy(close_tex, NULL, &close_text);
+            backend_render_text_destroy(close_tex);
+        }
+    }
+    
     // 绘制标题
     if (strlen(component->title) > 0) {
         Texture* title_texture = render_text(text_layer, component->title, component->title_color);
@@ -1087,7 +1147,11 @@ void dialog_component_render(Layer* layer) {
             dialog_get_button_colors(component, button, i == component->selected_button,
                                      &button_color, &button_text_color);
 
-            backend_render_fill_rect(&button_rect, button_color);
+            if (button->radius > 0) {
+                backend_render_rounded_rect(&button_rect, button_color, button->radius);
+            } else {
+                backend_render_fill_rect(&button_rect, button_color);
+            }
 
             Texture* button_texture = render_text(text_layer, button->text, button_text_color);
             if (button_texture) {

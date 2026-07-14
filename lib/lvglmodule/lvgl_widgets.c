@@ -48,6 +48,7 @@ static void* lvgl_btn_create(Layer* layer, cJSON* json)
     lv_label_set_text(label, text);
     lv_obj_center(label);
     lvgl_apply_common_style(component->obj, layer, json);
+    lvgl_apply_text_style(label, layer, json);
     lvgl_widget_finish_create(layer, component, json);
     return component;
 }

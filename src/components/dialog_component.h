@@ -21,6 +21,7 @@ typedef struct {
     int has_bg_color;                // 是否自定义背景色
     int has_hover_color;             // 是否自定义悬停色
     int has_text_color;              // 是否自定义文字色
+    int radius;                      // 按钮圆角，0 表示方形
 } DialogButton;
 
 // 对话框类型
@@ -67,6 +68,7 @@ struct DialogComponent {
     int button_height;         // 默认按钮高度
     int button_spacing;        // 按钮间距
     int button_area_bottom;    // 按钮区距底部距离
+    int close_hovered;         // 标题栏关闭按钮悬停
     
     // 回调函数
     void (*on_close)(DialogComponent* dialog, int button_index);

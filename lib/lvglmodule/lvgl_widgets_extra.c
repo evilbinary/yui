@@ -219,13 +219,28 @@ LVGL_EXTRA_LAYOUT(lvgl_win_layout)
 #endif
 
 #if LV_USE_MSGBOX
+static void lvgl_msgbox_close_event_cb(lv_event_t* e)
+{
+    lv_obj_t* btn = lv_event_get_target(e);
+    lv_obj_t* header = lv_obj_get_parent(btn);
+    lv_obj_t* mbox = header ? lv_obj_get_parent(header) : NULL;
+
+    if (mbox) {
+        lv_obj_add_flag(mbox, LV_OBJ_FLAG_HIDDEN);
+    }
+}
+
 static void* lvgl_msgbox_create(Layer* layer, cJSON* json)
 {
     LvglComponent* component = lvgl_component_new(layer);
     const char* title;
     const char* text;
+    lv_obj_t* header;
     lv_obj_t* title_label;
+    lv_obj_t* close_btn;
+    lv_obj_t* close_label;
     lv_obj_t* body_label;
+    lv_obj_t* btn_row;
     lv_obj_t* ok_btn;
     lv_obj_t* ok_label;
 
@@ -236,27 +251,63 @@ static void* lvgl_msgbox_create(Layer* layer, cJSON* json)
     title = lvgl_json_string(json, "title", "Message");
     text = layer->text && layer->text[0] ? layer->text : lvgl_json_string(json, "text", "Hello");
 
-    /* Use a plain container instead of lv_msgbox (upstream widget has init bugs). */
+    /* Plain container instead of lv_msgbox (upstream widget has init bugs). */
     component->obj = lv_obj_create(lv_port_get_root());
     lv_obj_set_flex_flow(component->obj, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_flex_align(component->obj, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START,
                           LV_FLEX_ALIGN_START);
     lv_obj_set_style_pad_all(component->obj, 8, 0);
     lv_obj_set_style_pad_row(component->obj, 6, 0);
+    lv_obj_set_style_radius(component->obj, 8, 0);
+    lv_obj_set_style_border_width(component->obj, 1, 0);
+    lv_obj_set_style_border_color(component->obj, lv_color_hex(0x45475A), 0);
+    lv_obj_set_style_bg_color(component->obj, lv_color_hex(0x1E1E2E), 0);
 
-    if (title && title[0]) {
-        title_label = lv_label_create(component->obj);
-        lv_label_set_text(title_label, title);
-    }
+    header = lv_obj_create(component->obj);
+    lv_obj_set_width(header, LV_PCT(100));
+    lv_obj_set_height(header, LV_SIZE_CONTENT);
+    lv_obj_set_flex_flow(header, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(header, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER,
+                          LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_bg_opa(header, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(header, 0, 0);
+    lv_obj_set_style_pad_all(header, 0, 0);
+
+    title_label = lv_label_create(header);
+    lv_label_set_text(title_label, title && title[0] ? title : "Message");
+    lv_obj_set_style_text_color(title_label, lv_color_hex(0x89B4FA), 0);
+
+    close_btn = lv_btn_create(header);
+    lv_obj_set_size(close_btn, 24, 24);
+    lv_obj_set_style_bg_opa(close_btn, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_shadow_width(close_btn, 0, 0);
+    lv_obj_add_event_cb(close_btn, lvgl_msgbox_close_event_cb, LV_EVENT_CLICKED, NULL);
+    close_label = lv_label_create(close_btn);
+    lv_label_set_text(close_label, LV_SYMBOL_CLOSE);
+    lv_obj_center(close_label);
 
     body_label = lv_label_create(component->obj);
     lv_label_set_text(body_label, text);
     lv_label_set_long_mode(body_label, LV_LABEL_LONG_WRAP);
     lv_obj_set_width(body_label, LV_PCT(100));
+    lv_obj_set_style_text_color(body_label, lv_color_hex(0xCDD6F4), 0);
 
-    ok_btn = lv_btn_create(component->obj);
+    btn_row = lv_obj_create(component->obj);
+    lv_obj_set_width(btn_row, LV_PCT(100));
+    lv_obj_set_height(btn_row, LV_SIZE_CONTENT);
+    lv_obj_set_flex_flow(btn_row, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(btn_row, LV_FLEX_ALIGN_END, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_bg_opa(btn_row, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(btn_row, 0, 0);
+    lv_obj_set_style_pad_all(btn_row, 0, 0);
+
+    ok_btn = lv_btn_create(btn_row);
+    lv_obj_set_size(ok_btn, 72, 28);
+    lv_obj_set_style_radius(ok_btn, 4, 0);
+    lv_obj_set_style_bg_color(ok_btn, lv_color_hex(0x313244), 0);
     ok_label = lv_label_create(ok_btn);
     lv_label_set_text(ok_label, "OK");
+    lv_obj_set_style_text_color(ok_label, lv_color_hex(0xCDD6F4), 0);
     lv_obj_center(ok_label);
 
     lvgl_apply_common_style(component->obj, layer, json);

@@ -1,7 +1,7 @@
 {
   "windowWidth": 1030,
-  "windowHeight": 896,
-  "sqlEditorContainer": 374,
+  "windowHeight": 796,
+  "sqlEditorContainer": 274,
   "theme": "dark",
   "connection": {
     "host": "localhost",

@@ -1,4 +1,5 @@
 #include "lvgl_widget.h"
+#include "lvgl_font.h"
 #include "component_registry.h"
 #include "../../lib/lvgl/lv_port.h"
 #include "../../src/event.h"
@@ -441,9 +442,17 @@ void lvgl_apply_common_style(lv_obj_t* obj, Layer* layer, cJSON* json)
 
 void lvgl_apply_text_style(lv_obj_t* obj, Layer* layer, cJSON* json)
 {
+    const lv_font_t* font;
+
     lvgl_apply_common_style(obj, layer, json);
-    if (layer && layer->font && layer->font->size > 0) {
-        lv_obj_set_style_text_font(obj, LV_FONT_DEFAULT, 0);
+    if (!obj || !layer) {
+        return;
+    }
+
+    (void)json;
+    font = lvgl_font_get(layer);
+    if (font) {
+        lv_obj_set_style_text_font(obj, font, 0);
     }
 }
 

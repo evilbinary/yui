@@ -548,14 +548,23 @@
               "id": "fileDialogTitleBar",
               "type": "View",
               "size": [660, 36],
-              "layout": { "type": "horizontal", "align": "center", "padding": [0, 16, 0, 16] },
+              "layout": { "type": "horizontal", "align": "center", "justify": "space-between", "padding": [0, 12, 0, 12] },
               "style": { "bgColor": "#181825", "borderBottomWidth": 1, "borderBottomColor": "#313244" },
               "children": [
                 {
                   "id": "fileDialogTitle",
                   "type": "Label",
+                  "size": [560, 24],
                   "text": "打开文件",
                   "style": { "color": "#CDD6F4", "fontSize": 13, "fontWeight": "bold" }
+                },
+                {
+                  "id": "fileDialogCloseBtn",
+                  "type": "Button",
+                  "size": [28, 28],
+                  "text": "×",
+                  "style": { "color": "#A6ADC8", "bgColor": "transparent", "fontSize": 16 },
+                  "events": { "onClick": "@onFileBrowserCancel" }
                 }
               ]
             },
@@ -664,10 +673,11 @@
               "id": "connectionDialogTitleBar",
               "type": "View",
               "size": [500, 40],
-              "layout": { "type": "horizontal", "align": "center", "padding": [0, 16, 0, 16] },
+              "layout": { "type": "horizontal", "align": "center", "justify": "space-between", "padding": [0, 12, 0, 12] },
               "style": { "bgColor": "#181825", "borderBottomWidth": 1, "borderBottomColor": "#313244" },
               "children": [
-                { "id": "connectionDialogTitle", "type": "Label", "size": [200, 24], "text": "新建连接", "style": { "color": "#CDD6F4", "fontSize": 14, "fontWeight": "bold" } }
+                { "id": "connectionDialogTitle", "type": "Label", "size": [400, 24], "text": "新建连接", "style": { "color": "#CDD6F4", "fontSize": 14, "fontWeight": "bold" } },
+                { "id": "connectionDialogCloseBtn", "type": "Button", "size": [28, 28], "text": "×", "style": { "color": "#A6ADC8", "bgColor": "transparent", "fontSize": 16 }, "events": { "onClick": "@onConnectionCancel" } }
               ]
             },
             {
@@ -725,10 +735,11 @@
               "id": "preferencesDialogTitleBar",
               "type": "View",
               "size": [460, 40],
-              "layout": { "type": "horizontal", "align": "center", "justify": "center", "padding": [0, 16, 0, 16] },
+              "layout": { "type": "horizontal", "align": "center", "justify": "space-between", "padding": [0, 12, 0, 12] },
               "style": { "bgColor": "#181825", "borderBottomWidth": 1, "borderBottomColor": "#313244" },
               "children": [
-                { "id": "preferencesDialogTitle", "type": "Label", "size": [120, 24], "text": "偏好设置", "style": { "color": "#CDD6F4", "fontSize": 14, "fontWeight": "bold" } }
+                { "id": "preferencesDialogTitle", "type": "Label", "size": [360, 24], "text": "偏好设置", "style": { "color": "#CDD6F4", "fontSize": 14, "fontWeight": "bold" } },
+                { "id": "preferencesDialogCloseBtn", "type": "Button", "size": [28, 28], "text": "×", "style": { "color": "#A6ADC8", "bgColor": "transparent", "fontSize": 16 }, "events": { "onClick": "@onPreferencesCancel" } }
               ]
             },
             {
@@ -802,10 +813,11 @@
               "id": "themeDialogTitleBar",
               "type": "View",
               "size": [460, 40],
-              "layout": { "type": "horizontal", "align": "center", "padding": [0, 16, 0, 16] },
+              "layout": { "type": "horizontal", "align": "center", "justify": "space-between", "padding": [0, 12, 0, 12] },
               "style": { "bgColor": "#181825", "borderBottomWidth": 1, "borderBottomColor": "#313244" },
               "children": [
-                { "id": "themeDialogTitle", "type": "Label", "size": [200, 24], "text": "主题设置", "style": { "color": "#CDD6F4", "fontSize": 14, "fontWeight": "bold" } }
+                { "id": "themeDialogTitle", "type": "Label", "size": [360, 24], "text": "主题设置", "style": { "color": "#CDD6F4", "fontSize": 14, "fontWeight": "bold" } },
+                { "id": "themeDialogCloseBtn", "type": "Button", "size": [28, 28], "text": "×", "style": { "color": "#A6ADC8", "bgColor": "transparent", "fontSize": 16 }, "events": { "onClick": "@onThemeDialogClose" } }
               ]
             },
             {
