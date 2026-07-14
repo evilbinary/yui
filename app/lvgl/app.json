@@ -101,7 +101,10 @@
             "size": [340, 20],
             "value": 40,
             "min": 0,
-            "max": 100
+            "max": 100,
+            "events": {
+                "onChange": "@onDemoSliderChange"
+            }
         },
         {
             "id": "row_switch",
@@ -113,7 +116,10 @@
                     "id": "demo_switch",
                     "type": "LvSwitch",
                     "size": [52, 28],
-                    "checked": true
+                    "checked": true,
+                    "events": {
+                        "onChange": "@onDemoSwitchChange"
+                    }
                 },
                 {
                     "id": "demo_checkbox",

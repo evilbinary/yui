@@ -45,7 +45,7 @@ static void* lvgl_chart_create(Layer* layer, cJSON* json)
     }
 
     lvgl_apply_common_style(component->obj, layer, json);
-    lvgl_component_sync_rect(component);
+    lvgl_widget_finish_create(layer, component, json);
     return component;
 }
 LVGL_EXTRA_LAYOUT(lvgl_chart_layout)
@@ -70,7 +70,7 @@ static void* lvgl_led_create(Layer* layer, cJSON* json)
     } else {
         lv_led_off(component->obj);
     }
-    lvgl_component_sync_rect(component);
+    lvgl_widget_finish_create(layer, component, json);
     return component;
 }
 LVGL_EXTRA_LAYOUT(lvgl_led_layout)
@@ -89,7 +89,7 @@ static void* lvgl_spinner_create(Layer* layer, cJSON* json)
                                        (uint32_t)lvgl_json_int(json, "time", 1000),
                                        (uint32_t)lvgl_json_int(json, "arcLength", 60));
     lvgl_apply_common_style(component->obj, layer, json);
-    lvgl_component_sync_rect(component);
+    lvgl_widget_finish_create(layer, component, json);
     return component;
 }
 LVGL_EXTRA_LAYOUT(lvgl_spinner_layout)
@@ -109,7 +109,7 @@ static void* lvgl_spinbox_create(Layer* layer, cJSON* json)
                          lvgl_json_int(json, "max", 100));
     lv_spinbox_set_value(component->obj, lvgl_json_int(json, "value", 0));
     lvgl_apply_text_style(component->obj, layer, json);
-    lvgl_component_sync_rect(component);
+    lvgl_widget_finish_create(layer, component, json);
     return component;
 }
 LVGL_EXTRA_LAYOUT(lvgl_spinbox_layout)
@@ -139,7 +139,7 @@ static void* lvgl_list_create(Layer* layer, cJSON* json)
         lv_list_add_text(component->obj, layer->text);
     }
     lvgl_apply_text_style(component->obj, layer, json);
-    lvgl_component_sync_rect(component);
+    lvgl_widget_finish_create(layer, component, json);
     return component;
 }
 LVGL_EXTRA_LAYOUT(lvgl_list_layout)
@@ -171,7 +171,7 @@ static void* lvgl_tabview_create(Layer* layer, cJSON* json)
         lv_tabview_add_tab(component->obj, "Tab 2");
     }
     lvgl_apply_common_style(component->obj, layer, json);
-    lvgl_component_sync_rect(component);
+    lvgl_widget_finish_create(layer, component, json);
     return component;
 }
 LVGL_EXTRA_LAYOUT(lvgl_tabview_layout)
@@ -191,7 +191,7 @@ static void* lvgl_tileview_create(Layer* layer, cJSON* json)
     lv_tileview_add_tile(component->obj, 1, 0, LV_DIR_LEFT | LV_DIR_RIGHT);
     (void)json;
     lvgl_apply_common_style(component->obj, layer, json);
-    lvgl_component_sync_rect(component);
+    lvgl_widget_finish_create(layer, component, json);
     return component;
 }
 LVGL_EXTRA_LAYOUT(lvgl_tileview_layout)
@@ -212,7 +212,7 @@ static void* lvgl_win_create(Layer* layer, cJSON* json)
     title = layer->text && layer->text[0] ? layer->text : lvgl_json_string(json, "text", "Window");
     lv_win_add_title(component->obj, title);
     lvgl_apply_common_style(component->obj, layer, json);
-    lvgl_component_sync_rect(component);
+    lvgl_widget_finish_create(layer, component, json);
     return component;
 }
 LVGL_EXTRA_LAYOUT(lvgl_win_layout)
@@ -234,7 +234,7 @@ static void* lvgl_msgbox_create(Layer* layer, cJSON* json)
     text = layer->text && layer->text[0] ? layer->text : lvgl_json_string(json, "text", "Hello");
     component->obj = lv_msgbox_create(lv_port_get_root(), title, text, btns, true);
     lvgl_apply_text_style(component->obj, layer, json);
-    lvgl_component_sync_rect(component);
+    lvgl_widget_finish_create(layer, component, json);
     return component;
 }
 LVGL_EXTRA_LAYOUT(lvgl_msgbox_layout)
@@ -275,7 +275,7 @@ static void* lvgl_keyboard_create(Layer* layer, cJSON* json)
     }
 
     lvgl_apply_common_style(component->obj, layer, json);
-    lvgl_component_sync_rect(component);
+    lvgl_widget_finish_create(layer, component, json);
     return component;
 }
 LVGL_EXTRA_LAYOUT(lvgl_keyboard_layout)
@@ -293,7 +293,7 @@ static void* lvgl_calendar_create(Layer* layer, cJSON* json)
     component->obj = lv_calendar_create(lv_port_get_root());
     (void)json;
     lvgl_apply_common_style(component->obj, layer, json);
-    lvgl_component_sync_rect(component);
+    lvgl_widget_finish_create(layer, component, json);
     return component;
 }
 LVGL_EXTRA_LAYOUT(lvgl_calendar_layout)
@@ -310,7 +310,7 @@ static void* lvgl_colorwheel_create(Layer* layer, cJSON* json)
 
     component->obj = lv_colorwheel_create(lv_port_get_root(), true);
     (void)json;
-    lvgl_component_sync_rect(component);
+    lvgl_widget_finish_create(layer, component, json);
     return component;
 }
 LVGL_EXTRA_LAYOUT(lvgl_colorwheel_layout)
@@ -334,7 +334,7 @@ static void* lvgl_meter_create(Layer* layer, cJSON* json)
                                        lv_palette_main(LV_PALETTE_GREY), -10);
     lv_meter_set_indicator_value(component->obj, indic, lvgl_json_int(json, "value", 40));
     lvgl_apply_common_style(component->obj, layer, json);
-    lvgl_component_sync_rect(component);
+    lvgl_widget_finish_create(layer, component, json);
     return component;
 }
 LVGL_EXTRA_LAYOUT(lvgl_meter_layout)
@@ -361,7 +361,7 @@ static void* lvgl_imgbtn_create(Layer* layer, cJSON* json)
         lv_obj_set_style_radius(component->obj, 8, 0);
     }
     lvgl_apply_common_style(component->obj, layer, json);
-    lvgl_component_sync_rect(component);
+    lvgl_widget_finish_create(layer, component, json);
     return component;
 }
 LVGL_EXTRA_LAYOUT(lvgl_imgbtn_layout)
@@ -391,7 +391,7 @@ static void* lvgl_menu_create(Layer* layer, cJSON* json)
     lv_menu_set_page(component->obj, page);
     (void)json;
     lvgl_apply_common_style(component->obj, layer, json);
-    lvgl_component_sync_rect(component);
+    lvgl_widget_finish_create(layer, component, json);
     return component;
 }
 LVGL_EXTRA_LAYOUT(lvgl_menu_layout)
@@ -414,7 +414,7 @@ static void* lvgl_span_create(Layer* layer, cJSON* json)
     lv_span_set_text(span, text);
     lv_spangroup_refr_mode(component->obj);
     lvgl_apply_text_style(component->obj, layer, json);
-    lvgl_component_sync_rect(component);
+    lvgl_widget_finish_create(layer, component, json);
     return component;
 }
 LVGL_EXTRA_LAYOUT(lvgl_span_layout)
@@ -431,7 +431,7 @@ static void* lvgl_animimg_create(Layer* layer, cJSON* json)
 
     component->obj = lv_animimg_create(lv_port_get_root());
     (void)json;
-    lvgl_component_sync_rect(component);
+    lvgl_widget_finish_create(layer, component, json);
     return component;
 }
 LVGL_EXTRA_LAYOUT(lvgl_animimg_layout)

@@ -1,9 +1,14 @@
 #include "lvgl_widget.h"
+#include "component_registry.h"
 #include "../../lib/lvgl/lv_port.h"
+#include "../../src/event.h"
 #include "../../src/util.h"
 
 #include <stdlib.h>
 #include <string.h>
+
+int lvgl_widget_register_event(Layer* layer, const char* event_name,
+                               const char* event_func_name, EventHandler event_handler);
 
 LvglComponent* lvgl_component_new(Layer* layer)
 {
@@ -12,14 +17,25 @@ LvglComponent* lvgl_component_new(Layer* layer)
         return NULL;
     }
     component->layer = layer;
+    if (layer) {
+        layer->register_event = lvgl_widget_register_event;
+    }
     return component;
 }
 
 LvglComponent* lvgl_component_from_layer(Layer* layer)
 {
+    const YuiComponentOps* ops;
+
     if (!layer || !layer->component) {
         return NULL;
     }
+
+    ops = yui_type_get_ops(layer->type);
+    if (!ops || !(ops->flags & YUI_COMP_LVGL_WIDGET)) {
+        return NULL;
+    }
+
     return (LvglComponent*)layer->component;
 }
 
@@ -59,6 +75,36 @@ char* lvgl_strdup_lv(const char* src)
     return dup;
 }
 
+static void lvgl_widget_resolve_handlers(Layer* layer, LvglComponent* component)
+{
+    if (!layer || !component) {
+        return;
+    }
+
+    if (layer->event && !layer->event->click && layer->event->click_name[0] != '\0') {
+        layer->event->click = (void (*)(Layer*))find_event_by_name(layer->event->click_name);
+    }
+
+    if (!component->on_change && component->on_change_name[0] != '\0') {
+        component->on_change = find_event_by_name(component->on_change_name);
+    }
+}
+
+static void lvgl_widget_trigger_on_change(LvglComponent* component)
+{
+    Layer* layer;
+
+    if (!component || !component->layer) {
+        return;
+    }
+
+    layer = component->layer;
+    lvgl_widget_resolve_handlers(layer, component);
+    if (component->on_change) {
+        component->on_change(layer);
+    }
+}
+
 static void lvgl_widget_on_clicked(lv_event_t* e)
 {
     LvglComponent* component = (LvglComponent*)lv_event_get_user_data(e);
@@ -72,24 +118,126 @@ static void lvgl_widget_on_clicked(lv_event_t* e)
     }
 
     layer = component->layer;
+    lvgl_widget_resolve_handlers(layer, component);
     if (layer->event && layer->event->click) {
         layer->event->click(layer);
     }
 }
 
+static void lvgl_widget_on_value_changed(lv_event_t* e)
+{
+    LvglComponent* component = (LvglComponent*)lv_event_get_user_data(e);
+
+    if (lv_event_get_code(e) != LV_EVENT_VALUE_CHANGED) {
+        return;
+    }
+    if (!component || !component->layer || !component->obj) {
+        return;
+    }
+
+    lvgl_widget_trigger_on_change(component);
+}
+
+void lvgl_widget_parse_events(Layer* layer, LvglComponent* component, cJSON* json)
+{
+    cJSON* events;
+    cJSON* on_change;
+
+    if (!layer || !component || !json) {
+        return;
+    }
+
+    events = cJSON_GetObjectItem(json, "events");
+    if (!events) {
+        return;
+    }
+
+    on_change = cJSON_GetObjectItem(events, "onChange");
+    if (!on_change || !cJSON_IsString(on_change) || !on_change->valuestring) {
+        return;
+    }
+
+    {
+        const char* event_name = on_change->valuestring;
+        if (event_name[0] == '@') {
+            event_name++;
+        }
+        strncpy(component->on_change_name, event_name, sizeof(component->on_change_name) - 1);
+        component->on_change_name[sizeof(component->on_change_name) - 1] = '\0';
+        component->on_change = find_event_by_name(event_name);
+    }
+}
+
+void lvgl_widget_finish_create(Layer* layer, LvglComponent* component, cJSON* json)
+{
+    if (!component) {
+        return;
+    }
+
+    lvgl_widget_parse_events(layer, component, json);
+    lvgl_component_sync_rect(component);
+}
+
+int lvgl_widget_register_event(Layer* layer, const char* event_name,
+                               const char* event_func_name, EventHandler event_handler)
+{
+    LvglComponent* component;
+    const char* name;
+
+    if (!layer || !layer->component || !event_name) {
+        return -1;
+    }
+    if (strcmp(event_name, "change") != 0 && strcmp(event_name, "onChange") != 0) {
+        return -1;
+    }
+
+    component = (LvglComponent*)layer->component;
+    component->on_change = event_handler;
+    name = event_func_name;
+    if (name && name[0] == '@') {
+        name++;
+    }
+    if (name) {
+        strncpy(component->on_change_name, name, sizeof(component->on_change_name) - 1);
+        component->on_change_name[sizeof(component->on_change_name) - 1] = '\0';
+    } else {
+        component->on_change_name[0] = '\0';
+    }
+    return 0;
+}
+
 void lvgl_widget_bind_layer_events(Layer* layer)
 {
     LvglComponent* component = lvgl_component_from_layer(layer);
+    int bind_click = 0;
+    int bind_change = 0;
 
-    if (!component || !component->obj || !layer || !layer->event) {
+    if (!component || !component->obj || !layer) {
         return;
     }
-    if (!layer->event->click && layer->event->click_name[0] == '\0') {
+
+    lvgl_widget_resolve_handlers(layer, component);
+
+    if (layer->event &&
+        (layer->event->click || layer->event->click_name[0] != '\0')) {
+        bind_click = 1;
+    }
+    if (component->on_change || component->on_change_name[0] != '\0') {
+        bind_change = 1;
+    }
+
+    if (!bind_click && !bind_change) {
         return;
     }
 
-    lv_obj_add_flag(component->obj, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_add_event_cb(component->obj, lvgl_widget_on_clicked, LV_EVENT_CLICKED, component);
+    if (bind_click) {
+        lv_obj_add_flag(component->obj, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_add_event_cb(component->obj, lvgl_widget_on_clicked, LV_EVENT_CLICKED, component);
+    }
+    if (bind_change) {
+        lv_obj_add_event_cb(component->obj, lvgl_widget_on_value_changed,
+                            LV_EVENT_VALUE_CHANGED, component);
+    }
 }
 
 void lvgl_bind_all_layer_events(Layer* root)

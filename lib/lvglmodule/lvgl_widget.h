@@ -9,6 +9,9 @@ LvglComponent* lvgl_component_new(Layer* layer);
 LvglComponent* lvgl_component_from_layer(Layer* layer);
 
 void lvgl_bind_all_layer_events(Layer* root);
+void lvgl_widget_finish_create(Layer* layer, LvglComponent* component, cJSON* json);
+int lvgl_widget_register_event(Layer* layer, const char* event_name,
+                               const char* event_func_name, EventHandler event_handler);
 
 /** Copy string into LVGL heap; caller passes pointer to lv_mem_free-compatible APIs. */
 char* lvgl_strdup_lv(const char* src);

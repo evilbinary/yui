@@ -24,7 +24,7 @@ static void* lvgl_label_create(Layer* layer, cJSON* json)
         lv_label_set_text(component->obj, text);
     }
     lvgl_apply_text_style(component->obj, layer, json);
-    lvgl_component_sync_rect(component);
+    lvgl_widget_finish_create(layer, component, json);
     return component;
 }
 LVGL_LAYOUT(lvgl_label_layout)
@@ -48,7 +48,7 @@ static void* lvgl_btn_create(Layer* layer, cJSON* json)
     lv_label_set_text(label, text);
     lv_obj_center(label);
     lvgl_apply_common_style(component->obj, layer, json);
-    lvgl_component_sync_rect(component);
+    lvgl_widget_finish_create(layer, component, json);
     return component;
 }
 LVGL_LAYOUT(lvgl_btn_layout)
@@ -67,7 +67,7 @@ static void* lvgl_bar_create(Layer* layer, cJSON* json)
     lvgl_apply_common_style(component->obj, layer, json);
     lvgl_apply_range(component->obj, json, 0, 100);
     lvgl_apply_value(component->obj, json, layer, 0);
-    lvgl_component_sync_rect(component);
+    lvgl_widget_finish_create(layer, component, json);
     return component;
 }
 LVGL_LAYOUT(lvgl_bar_layout)
@@ -86,7 +86,7 @@ static void* lvgl_slider_create(Layer* layer, cJSON* json)
     lvgl_apply_common_style(component->obj, layer, json);
     lvgl_apply_range(component->obj, json, 0, 100);
     lvgl_apply_value(component->obj, json, layer, 0);
-    lvgl_component_sync_rect(component);
+    lvgl_widget_finish_create(layer, component, json);
     return component;
 }
 LVGL_LAYOUT(lvgl_slider_layout)
@@ -106,7 +106,7 @@ static void* lvgl_switch_create(Layer* layer, cJSON* json)
     if (lvgl_json_bool(json, "checked", 0)) {
         lv_obj_add_state(component->obj, LV_STATE_CHECKED);
     }
-    lvgl_component_sync_rect(component);
+    lvgl_widget_finish_create(layer, component, json);
     return component;
 }
 LVGL_LAYOUT(lvgl_switch_layout)
@@ -130,7 +130,7 @@ static void* lvgl_checkbox_create(Layer* layer, cJSON* json)
     if (lvgl_json_bool(json, "checked", 0)) {
         lv_obj_add_state(component->obj, LV_STATE_CHECKED);
     }
-    lvgl_component_sync_rect(component);
+    lvgl_widget_finish_create(layer, component, json);
     return component;
 }
 LVGL_LAYOUT(lvgl_checkbox_layout)
@@ -150,7 +150,7 @@ static void* lvgl_arc_create(Layer* layer, cJSON* json)
     lvgl_apply_range(component->obj, json, 0, 100);
     lvgl_apply_value(component->obj, json, layer, 40);
     lv_arc_set_bg_angles(component->obj, 0, 360);
-    lvgl_component_sync_rect(component);
+    lvgl_widget_finish_create(layer, component, json);
     return component;
 }
 LVGL_LAYOUT(lvgl_arc_layout)
@@ -187,7 +187,7 @@ static void* lvgl_dropdown_create(Layer* layer, cJSON* json)
         lv_dropdown_set_text(component->obj, layer->text);
     }
     lvgl_apply_text_style(component->obj, layer, json);
-    lvgl_component_sync_rect(component);
+    lvgl_widget_finish_create(layer, component, json);
     return component;
 }
 LVGL_LAYOUT(lvgl_dropdown_layout)
@@ -221,7 +221,7 @@ static void* lvgl_roller_create(Layer* layer, cJSON* json)
     component->widget_data = options;
     lv_roller_set_options(component->obj, options, LV_ROLLER_MODE_NORMAL);
     lvgl_apply_text_style(component->obj, layer, json);
-    lvgl_component_sync_rect(component);
+    lvgl_widget_finish_create(layer, component, json);
     return component;
 }
 LVGL_LAYOUT(lvgl_roller_layout)
@@ -263,7 +263,7 @@ static void* lvgl_btnmatrix_create(Layer* layer, cJSON* json)
         lv_btnmatrix_set_map(component->obj, map);
     }
     lvgl_apply_common_style(component->obj, layer, json);
-    lvgl_component_sync_rect(component);
+    lvgl_widget_finish_create(layer, component, json);
     return component;
 }
 LVGL_LAYOUT(lvgl_btnmatrix_layout)
@@ -289,7 +289,7 @@ static void* lvgl_textarea_create(Layer* layer, cJSON* json)
         lv_textarea_set_one_line(component->obj, true);
     }
     lvgl_apply_text_style(component->obj, layer, json);
-    lvgl_component_sync_rect(component);
+    lvgl_widget_finish_create(layer, component, json);
     return component;
 }
 LVGL_LAYOUT(lvgl_textarea_layout)
@@ -353,7 +353,7 @@ static void* lvgl_line_create(Layer* layer, cJSON* json)
         lv_obj_set_style_line_color(component->obj, lvgl_color_from_yui(layer->color), 0);
     }
     lv_obj_set_style_line_width(component->obj, (lv_coord_t)lvgl_json_int(json, "lineWidth", 2), 0);
-    lvgl_component_sync_rect(component);
+    lvgl_widget_finish_create(layer, component, json);
     return component;
 }
 LVGL_LAYOUT(lvgl_line_layout)
@@ -377,7 +377,7 @@ static void* lvgl_img_create(Layer* layer, cJSON* json)
         lv_img_set_src(component->obj, LV_SYMBOL_IMAGE);
     }
     lvgl_apply_common_style(component->obj, layer, json);
-    lvgl_component_sync_rect(component);
+    lvgl_widget_finish_create(layer, component, json);
     return component;
 }
 LVGL_LAYOUT(lvgl_img_layout)
@@ -429,7 +429,7 @@ static void* lvgl_canvas_create(Layer* layer, cJSON* json)
     lv_canvas_fill_bg(component->obj, lv_color_hex(0x334455), LV_OPA_COVER);
     data->descriptor = *(lv_canvas_get_img(component->obj));
     component->widget_data = data;
-    lvgl_component_sync_rect(component);
+    lvgl_widget_finish_create(layer, component, json);
     return component;
 }
 LVGL_LAYOUT(lvgl_canvas_layout)
@@ -478,7 +478,7 @@ static void* lvgl_table_create(Layer* layer, cJSON* json)
     }
 
     lvgl_apply_text_style(component->obj, layer, json);
-    lvgl_component_sync_rect(component);
+    lvgl_widget_finish_create(layer, component, json);
     return component;
 }
 LVGL_LAYOUT(lvgl_table_layout)

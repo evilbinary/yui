@@ -481,7 +481,7 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
   }
   // 禁用
   cJSON* disabled = cJSON_GetObjectItem(json_obj, "disabled");
-  if (data) {
+  if (disabled) {
     if (cJSON_IsTrue(disabled)) {
       SET_STATE(layer, LAYER_STATE_DISABLED);
     }

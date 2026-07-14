@@ -10,6 +10,8 @@ typedef struct LvglComponent {
     Layer* layer;
     lv_obj_t* obj;
     void* widget_data;
+    EventHandler on_change;
+    char on_change_name[MAX_PATH];
 } LvglComponent;
 
 void lvgl_component_sync_rect(LvglComponent* component);
