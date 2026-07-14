@@ -24,6 +24,7 @@ int  lv_port_get_width(void);
 int  lv_port_get_height(void);
 int  lv_port_get_stride(void);
 lv_obj_t* lv_port_get_root(void);
+int  lv_port_resize(int width, int height);
 void lv_port_tick_inc(void);
 int  lv_port_should_quit(void);
 void lv_port_request_quit(void);

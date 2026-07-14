@@ -100,6 +100,13 @@ lv_obj_t* lv_port_get_root(void)
     return g_root;
 }
 
+int lv_port_resize(int width, int height)
+{
+    (void)width;
+    (void)height;
+    return -1;
+}
+
 void lv_port_tick_inc(void)
 {
     /* Board tick should call lv_tick_inc() from ISR or HAL; no-op here. */
