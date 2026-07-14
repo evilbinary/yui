@@ -19,6 +19,15 @@ build-db:
 gdb: build-db
 	gdb -x  gdb.gdb ./build/None/None/None/db.exe  app/db/db.json
 
+
+gdb-watch: build-db
+	gdb -x  gdb.gdb ./build/None/None/None/db.exe  app/watch-os/app.json
+
+
+watch-os: build-db
+	./build/None/None/None/db.exe  app/watch-os/app.json
+
+
 build-lvgl:
 	ya -b lvgl-sdl -p lvgl
 

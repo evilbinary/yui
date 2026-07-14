@@ -11,5 +11,8 @@
     "pageSize": 500,
     "fontSize": 13
   },
-  "theme": "mocha"
+  "theme": "dark",
+  "windowWidth": 900,
+  "windowHeight": 742,
+  "sqlEditorContainer": 435
 }

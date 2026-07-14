@@ -38,10 +38,10 @@
                 {
                     "id": "btn_back",
                     "type": "Button",
-                    "variants": ["tertiary", "compact"],
-                    "text": "‹",
+                    "text": "<",
                     "size": [28, 18],
                     "visible": false,
+                    "style": { "bgColor": "transparent", "color": "#8E8E93", "fontSize": 14 },
                     "events": { "onClick": "@goWatchBack" }
                 },
                 {
@@ -55,17 +55,19 @@
                 {
                     "id": "btn_status_notif",
                     "type": "Button",
-                    "variants": ["tertiary", "compact"],
-                    "text": "🔔",
+                    "icon": "🔔",
+                    "text": "",
                     "size": [22, 18],
+                    "style": { "bgColor": "transparent" },
                     "events": { "onClick": "@openNotifications" }
                 },
                 {
                     "id": "status_battery",
                     "type": "Button",
-                    "variants": ["tertiary", "compact"],
-                    "text": "85%",
+                    "icon": "🔋",
+                    "text": "",
                     "size": [42, 18],
+                    "style": { "bgColor": "transparent" },
                     "events": { "onClick": "@openBattery" }
                 }
             ]

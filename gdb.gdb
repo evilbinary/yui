@@ -12,7 +12,7 @@ handle SIGILL stop print pass
 handle SIGFPE stop print pass
 handle SIGBUS stop print pass
 # 运行程序
-run app/lvgl/calc.json
+run app/watch-os/app.json
 # 程序崩溃后自动执行backtrace
 bt full
 # 可选：打印更多调试信息
