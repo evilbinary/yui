@@ -151,7 +151,7 @@ void handler_virtical_scroll_event(Layer* layer, int scroll_delta) {
         
         // 触发滚动事件回调
         if (layer->event && layer->event->scroll) {
-            layer->event->scroll(layer);
+            EVENT_INVOKE(layer->event->scroll, layer);
         }
         // 重新布局子元素
         layout_layer(layer);
@@ -187,7 +187,7 @@ void handle_horizontal_scroll_event(Layer* layer, int scroll_delta) {
         
         // 触发滚动事件回调
         if (layer->event && layer->event->scroll) {
-            layer->event->scroll(layer);
+            EVENT_INVOKE(layer->event->scroll, layer);
         }
         // 重新布局子元素
         layout_layer(layer);
@@ -282,7 +282,7 @@ int default_layer_handle_mouse_event(Layer* layer, MouseEvent* event) {
                 }
             }
             if (!has_handler) {
-                layer->event->click(layer);
+                EVENT_INVOKE(layer->event->click, layer);
             }
         }
     }
@@ -410,7 +410,7 @@ int handle_touch_event(Layer* layer, TouchEvent* event) {
     if (layer->event && layer->event->touch) {
         current_touch_event = *event;
         current_touch_event_active = 1;
-        layer->event->touch(layer);
+        EVENT_INVOKE(layer->event->touch, layer);
         current_touch_event_active = 0;
         return 1;
     }

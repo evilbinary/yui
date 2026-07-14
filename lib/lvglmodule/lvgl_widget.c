@@ -146,7 +146,7 @@ static void lvgl_widget_on_clicked(lv_event_t* e)
     layer = component->layer;
     lvgl_widget_resolve_handlers(layer, component);
     if (layer->event && layer->event->click) {
-        layer->event->click(layer);
+        EVENT_INVOKE(layer->event->click, layer);
     }
 }
 

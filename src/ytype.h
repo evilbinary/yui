@@ -290,19 +290,22 @@ typedef struct {
 
 typedef struct Event {
     char click_name[MAX_PATH];
-    void (*click)(Layer*);  // 事件回调函数指针
-    void (*press)(Layer*);
+    EventHandler click;
+    EventHandler press;
     // 添加滚动事件回调函数指针
-    void (*scroll)(Layer*)    ; 
     char scroll_name[MAX_PATH];
-    
+    EventHandler scroll;
+
     // 合并的触屏事件
     char touch_name[MAX_PATH];
-    void (*touch)(Layer* layer);  // 统一的触屏事件处理函数
+    EventHandler touch;
 
     char resize_name[MAX_PATH];
     void (*resize)(Layer* layer, const ResizeEvent* event);
 } Event;
+
+#define EVENT_INVOKE(handler, layer) \
+    do { if ((handler)) (handler)((void*)(layer)); } while (0)
 
 // Animation结构体在animate.h中定义
 

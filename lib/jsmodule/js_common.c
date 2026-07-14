@@ -786,17 +786,17 @@ int js_module_trigger_layer_event(Layer* layer, const char* event_name)
     if (layer->event) {
         // 检查 click 事件
         if (strcmp(event_name, "click") == 0 && layer->event->click) {
-            layer->event->click(layer);
+            EVENT_INVOKE(layer->event->click, layer);
             return 0;
         }
         // 检查 press 事件
         if (strcmp(event_name, "press") == 0 && layer->event->press) {
-            layer->event->press(layer);
+            EVENT_INVOKE(layer->event->press, layer);
             return 0;
         }
         // 检查 scroll 事件
         if (strcmp(event_name, "scroll") == 0 && layer->event->scroll) {
-            layer->event->scroll(layer);
+            EVENT_INVOKE(layer->event->scroll, layer);
             return 0;
         }
     }

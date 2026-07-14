@@ -40,7 +40,7 @@ static void button_cancel_pointer(ButtonComponent* component, Layer* layer) {
 
 static void button_fire_click(Layer* layer) {
     if (layer && layer->event && layer->event->click) {
-        layer->event->click(layer);
+        layer->event->click((void*)layer);
     }
 }
 
@@ -193,7 +193,7 @@ int button_component_handle_key_event(Layer* layer, KeyEvent* event) {
             CLEAR_STATE(layer, LAYER_STATE_PRESSED);
             // 在按键释放时触发点击事件
             if (layer->event && layer->event->click) {
-                layer->event->click(layer);
+                EVENT_INVOKE(layer->event->click, layer);
             }
         }
     }

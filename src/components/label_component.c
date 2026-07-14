@@ -345,7 +345,7 @@ int label_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     // 分发点击事件
     if (layer->event && layer->event->click) {
         if (event->state == SDL_RELEASED && event->button == SDL_BUTTON_LEFT && inside) {
-            layer->event->click(layer);
+            EVENT_INVOKE(layer->event->click, layer);
         }
     }
     return 0;

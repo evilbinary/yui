@@ -102,38 +102,33 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
-    // 设置 UI 根图层到 JS 模块
+    // 设置 UI 根图层（须在加载 JS 之前，以便事件绑定能找到图层）
     js_module_init_layer(ui_root);
 
-    // 初始化字体缓存（backend已经初始化）
-    // 在parse_layer后加载所有字体
     load_all_fonts(ui_root);
 
-     // 加载并执行 JS 文件
-     printf("加载并执行 JS 文件...\n");
-     int count = js_module_load_from_json(root_json, json_path, 0);
- 
-     // 如果主 JSON 中没有找到 js 文件，检查是否有 source 属性
-     if (count <= 0) {
-         cJSON* source = cJSON_GetObjectItem(root_json, "source");
-         if (source && cJSON_IsString(source)) {
-             const char* source_path = source->valuestring;
-             printf("DEBUG: No JS found in main JSON, checking source file: %s\n", source_path);
- 
-             // 加载 source 指向的文件（支持 JSON 和 YAML）
-             cJSON* source_json = parse_yaml_json_file((char*)source_path);
-             if (source_json) {
-                 // 从 source JSON 中加载 JS（传递 source 文件路径）
-                 int source_count = js_module_load_from_json(source_json, source_path, 0);
-                 printf("DEBUG: Loaded %d JS file(s) from source JSON\n", source_count);
-                 cJSON_Delete(source_json);
-                 count += source_count;
-             } else {
-                 printf("ERROR: Failed to load source JSON file: %s\n", source_path);
-             }
-         }
-     }
-     print_registered_events();
+    // 先加载 source 中的 JS，再加载主 JSON，确保 onLoad 触发时脚本已就绪
+    printf("加载并执行 JS 文件...\n");
+    int count = 0;
+    cJSON* source = cJSON_GetObjectItem(root_json, "source");
+    if (source && cJSON_IsString(source)) {
+        const char* source_path = source->valuestring;
+        printf("DEBUG: Loading JS from source file: %s\n", source_path);
+        cJSON* source_json = parse_yaml_json_file((char*)source_path);
+        if (source_json) {
+            count = js_module_load_from_json(source_json, source_path, 0);
+            printf("DEBUG: Loaded %d JS file(s) from source JSON\n", count);
+            cJSON_Delete(source_json);
+        } else {
+            printf("ERROR: Failed to load source JSON file: %s\n", source_path);
+        }
+    }
+    if (count <= 0) {
+        count = js_module_load_from_json(root_json, json_path, 0);
+    } else {
+        js_module_load_from_json(root_json, json_path, 1);
+    }
+    print_registered_events();
 
     // 如果根图层没有设置宽度和高度，则根据窗口大小设置
     if (ui_root->rect.w <= 0 || ui_root->rect.h <= 0) {

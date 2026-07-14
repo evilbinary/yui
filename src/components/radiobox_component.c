@@ -187,7 +187,7 @@ int radiobox_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
 
         // 如果有点击事件回调，调用它
         if (layer->event && layer->event->click) {
-            layer->event->click(layer);
+            EVENT_INVOKE(layer->event->click, layer);
         }
     }
     return 0;

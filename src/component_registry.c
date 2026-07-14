@@ -118,6 +118,10 @@ int yui_type_resolve(const char* type_name)
         yui_component_registry_init();
     }
 
+    if (strcmp(type_name, "main") == 0 || strcmp(type_name, "app") == 0) {
+        return VIEW;
+    }
+
     for (int i = 0; i < LAYER_TYPE_BUILTIN_MAX; i++) {
         if (g_builtin_registered[i] && strcmp(g_builtin_names[i], type_name) == 0) {
             return i;

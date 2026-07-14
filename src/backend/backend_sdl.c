@@ -532,9 +532,11 @@ int backend_init(){
         renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_SOFTWARE);
     }
 
-    // 如果成功创建渲染器，禁用交换间隔（仅对某些平台有效）
+    // 如果成功创建渲染器，禁用交换间隔（Emscripten 使用 rAF 主循环，勿调用 GL API）
     if (renderer) {
+#ifndef __EMSCRIPTEN__
         SDL_GL_SetSwapInterval(0);
+#endif
     }
 
     if (!renderer) {
@@ -1121,10 +1123,7 @@ void backend_run(Layer* ui_root){
     g_running = 1;
     printf("Emscripten: Starting main loop...\n");
 
-    // 设置主循环时序，避免渲染器创建时的冲突
-    emscripten_set_main_loop_timing(0, 60);
-
-    // 启动主循环
+    // 先注册主循环，再设置时序（顺序不可颠倒）
     emscripten_set_main_loop(backend_main_loop, 0, 1);
 #else
     // 桌面环境使用普通循环
@@ -1198,6 +1197,92 @@ DFont* backend_load_font(char* font_path,int size){
     return backend_load_font_with_weight(font_path, size, "normal");
 }
 
+#ifdef __EMSCRIPTEN__
+static void emscripten_font_variant_path(const char* font_path, const char* variant,
+                                         char* out_path, size_t out_size)
+{
+    const char* regular_suffix = "-Regular";
+    const char* pos;
+
+    if (!font_path || !out_path || out_size == 0) {
+        return;
+    }
+
+    out_path[0] = '\0';
+    if (strstr(font_path, variant)) {
+        strncpy(out_path, font_path, out_size - 1);
+        out_path[out_size - 1] = '\0';
+        return;
+    }
+
+    pos = strstr(font_path, regular_suffix);
+    if (pos) {
+        snprintf(out_path, out_size, "%.*s-%s%s",
+                 (int)(pos - font_path), font_path, variant, pos + strlen(regular_suffix));
+        return;
+    }
+
+    pos = strrchr(font_path, '.');
+    if (pos) {
+        snprintf(out_path, out_size, "%.*s-%s%s",
+                 (int)(pos - font_path), font_path, variant, pos);
+        return;
+    }
+
+    strncpy(out_path, font_path, out_size - 1);
+    out_path[out_size - 1] = '\0';
+}
+
+static TTF_Font* emscripten_open_font_file(const char* path, int size)
+{
+    FILE* f;
+    long file_size;
+    unsigned char* font_data;
+    SDL_RWops* rw;
+    TTF_Font* font;
+
+    if (!path || !path[0]) {
+        return NULL;
+    }
+
+    f = fopen(path, "rb");
+    if (!f) {
+        return NULL;
+    }
+
+    fseek(f, 0, SEEK_END);
+    file_size = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    if (file_size <= 0) {
+        fclose(f);
+        return NULL;
+    }
+
+    font_data = (unsigned char*)malloc((size_t)file_size);
+    if (!font_data) {
+        fclose(f);
+        return NULL;
+    }
+
+    if (fread(font_data, 1, (size_t)file_size, f) != (size_t)file_size) {
+        free(font_data);
+        fclose(f);
+        return NULL;
+    }
+    fclose(f);
+
+    rw = SDL_RWFromConstMem(font_data, (int)file_size);
+    if (!rw) {
+        free(font_data);
+        return NULL;
+    }
+
+    font = TTF_OpenFontRW(rw, 1, size * scale);
+    free(font_data);
+    return font;
+}
+#endif
+
 DFont* backend_load_font_with_weight(char* font_path,int size,const char* weight){
     // 初始化字体缓存
     if (!font_cache_initialized) {
@@ -1210,181 +1295,49 @@ DFont* backend_load_font_with_weight(char* font_path,int size,const char* weight
         return cached_font;
     }
 
-#ifdef __EMSCRIPTEN__
-    // Emscripten 环境下，检查文件是否存在并打印文件系统信息
-    printf("=== Emscripten Font Debug ===\n");
-    printf("Requested font path: %s\n", font_path);
-
-    // 检查 TTF 是否已初始化
-    static int ttf_initialized = -1;
-    if (ttf_initialized == -1) {
-        // 检查 SDL_TTF 是否已初始化
-        ttf_initialized = TTF_WasInit();
-        printf("TTF_WasInit: %d\n", ttf_initialized);
-        
-        // 如果没有初始化，尝试初始化
-        if (ttf_initialized == 0) {
-            printf("SDL_TTF not initialized, attempting to initialize...\n");
-            if (TTF_Init() == -1) {
-                printf("TTF_Init failed: %s\n", TTF_GetError());
-            } else {
-                printf("TTF_Init succeeded\n");
-                ttf_initialized = TTF_WasInit();
-                printf("TTF_WasInit after init: %d\n", ttf_initialized);
-            }
-        }
-    }
-    
-    if (ttf_initialized == 0) {
-        printf("Error: SDL_TTF not initialized!\n");
-        printf("=== End Debug ===\n");
-        return NULL;
-    }
-
-    // 检查文件是否存在
-    FILE* test_file = fopen(font_path, "rb");
-    if (test_file) {
-        printf("Font file EXISTS: %s\n", font_path);
-        fseek(test_file, 0, SEEK_END);
-        long file_size = ftell(test_file);
-        printf("Font file size: %ld bytes\n", file_size);
-        fclose(test_file);
-    } else {
-        printf("Font file NOT found: %s\n", font_path);
-    }
-
-    // 列出一些可能的位置并检查文件大小
-    const char* test_paths[] = {
-        "Roboto-Regular.ttf",
-        "assets/Roboto-Regular.ttf",
-        "app/assets/Roboto-Regular.ttf",
-        "app/assets/",
-        "app/assets/Roboto-Bold.ttf",
-        "app/assets/Roboto-Light.ttf",
-        NULL
-    };
-
-    for (int i = 0; test_paths[i]; i++) {
-        FILE* f = fopen(test_paths[i], "rb");
-        if (f) {
-            printf("Found path: %s\n", test_paths[i]);
-            fseek(f, 0, SEEK_END);
-            long sz = ftell(f);
-            printf("  Size: %ld bytes\n", sz);
-            fclose(f);
-        }
-    }
-    
-    // 显示 TTF 错误信息
-    printf("TTF Error: %s\n", TTF_GetError());
-    printf("=== End Debug ===\n");
-#endif
-
     char full_path[MAX_PATH];
     TTF_Font* default_font = NULL;
 
 #ifdef __EMSCRIPTEN__
-    // Emscripten 环境下，需要读取文件内容到内存，然后使用 TTF_OpenFontRW
-    // 因为 SDL_TTF 无法直接访问预加载的虚拟文件系统
-    
-    const char* font_filename = NULL;
-    
-    // 根据字体粗细选择字体文件路径
+    const char* try_paths[6];
+    int try_count = 0;
+    int use_synthetic_style = 0;
+
+    if (TTF_WasInit() == 0 && TTF_Init() == -1) {
+        LOGW("font", "SDL_ttf init failed: %s", TTF_GetError());
+        return NULL;
+    }
+
     if (strcmp(weight, "bold") == 0) {
-        snprintf(full_path, sizeof(full_path), "%s", font_path);
-        if (strstr(font_path, "Bold") == NULL && strstr(font_path, "bold") == NULL) {
-            char* ext = strrchr(font_path, '.');
-            if (ext) {
-                int base_len = ext - font_path;
-                snprintf(full_path, sizeof(full_path), "%.*s-Bold%s", base_len, font_path, ext);
-            }
-        }
-        font_filename = full_path;
+        emscripten_font_variant_path(font_path, "Bold", full_path, sizeof(full_path));
+        try_paths[try_count++] = full_path;
+        try_paths[try_count++] = "app/assets/Roboto-Bold.ttf";
+        try_paths[try_count++] = font_path;
+        try_paths[try_count++] = "app/assets/Roboto-Regular.ttf";
+        use_synthetic_style = 1;
     } else if (strcmp(weight, "light") == 0) {
-        snprintf(full_path, sizeof(full_path), "%s", font_path);
-        if (strstr(font_path, "Light") == NULL && strstr(font_path, "light") == NULL) {
-            char* ext = strrchr(font_path, '.');
-            if (ext) {
-                int base_len = ext - font_path;
-                snprintf(full_path, sizeof(full_path), "%.*s-Light%s", base_len, font_path, ext);
-            }
-        }
-        font_filename = full_path;
+        emscripten_font_variant_path(font_path, "Light", full_path, sizeof(full_path));
+        try_paths[try_count++] = full_path;
+        try_paths[try_count++] = "app/assets/Roboto-Light.ttf";
+        try_paths[try_count++] = font_path;
+        try_paths[try_count++] = "app/assets/Roboto-Regular.ttf";
     } else {
-        font_filename = font_path;
+        try_paths[try_count++] = font_path;
+        try_paths[try_count++] = "app/assets/Roboto-Regular.ttf";
     }
-    
-    // 尝试的字体路径列表
-    const char* font_paths_to_try[] = {
-        font_filename,
-        "app/assets/Roboto-Regular.ttf",
-        "app/assets/Roboto-Bold.ttf",
-        "app/assets/Roboto-Light.ttf",
-        NULL
-    };
-    
-    // 根据权重过滤路径
-    const char* actual_paths[10];
-    int path_count = 0;
-    
-    for (int i = 0; font_paths_to_try[i] && path_count < 10; i++) {
-        const char* path = font_paths_to_try[i];
-        int include = 0;
-        
-        if (strcmp(weight, "bold") == 0) {
-            include = (strstr(path, "Bold") != NULL || strstr(path, "bold") != NULL);
-        } else if (strcmp(weight, "light") == 0) {
-            include = (strstr(path, "Light") != NULL || strstr(path, "light") != NULL);
-        } else {
-            include = (strstr(path, "Regular") != NULL || path == font_filename);
-        }
-        
-        if (include) {
-            actual_paths[path_count++] = path;
-        }
-    }
-    
-    // 尝试加载字体
-    for (int i = 0; i < path_count && !default_font; i++) {
-        const char* path = actual_paths[i];
-        
-        // 读取文件内容到内存
-        FILE* f = fopen(path, "rb");
-        if (!f) continue;
-        
-        // 获取文件大小
-        fseek(f, 0, SEEK_END);
-        long file_size = ftell(f);
-        fseek(f, 0, SEEK_SET);
-        
-        if (file_size > 0) {
-            // 分配内存并读取文件
-            unsigned char* font_data = (unsigned char*)malloc(file_size);
-            if (font_data) {
-                size_t bytes_read = fread(font_data, 1, file_size, f);
-                if (bytes_read == (size_t)file_size) {
-                    // 使用 SDL_RWFromConstMem,这个更安全
-                    SDL_RWops* rw = SDL_RWFromConstMem(font_data, (int)file_size);
-                    if (rw) {
-                        // 第二个参数为1,让 TTF_OpenFontRW 自动关闭 rw
-                        // 但这不会 free font_data,因为 SDL_RWFromConstMem 不拥有内存
-                        default_font = TTF_OpenFontRW(rw, 1, size*scale);
-                        if (default_font) {
-                            printf("Emscripten: Successfully loaded font from: %s (size: %ld bytes)\n",
-                                   path, file_size);
-                        }
-                    }
-                }
-                free(font_data);
+
+    for (int i = 0; i < try_count && !default_font; i++) {
+        default_font = emscripten_open_font_file(try_paths[i], size);
+        if (default_font && strcmp(weight, "bold") == 0 && use_synthetic_style) {
+            if (!strstr(try_paths[i], "Bold") && !strstr(try_paths[i], "bold")) {
+                TTF_SetFontStyle(default_font, TTF_STYLE_BOLD);
             }
         }
-        fclose(f);
     }
-    
+
     if (!default_font) {
-        printf("Warning: Could not load font '%s' (weight: %s) in Emscripten environment\n", 
-               font_path, weight);
-        printf("  Error: %s\n", TTF_GetError());
+        LOGW("font", "emscripten font load failed: %s (weight: %s) %s",
+             font_path, weight, TTF_GetError());
     }
 #else
     // 非 Emscripten 环境，使用普通的 TTF_OpenFont
