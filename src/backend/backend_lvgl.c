@@ -378,8 +378,9 @@ void backend_get_windowsize(int* width, int* height)
 
 void backend_set_windowsize(int width, int height)
 {
-    (void)width;
-    (void)height;
+    if (width > 0 && height > 0) {
+        lv_port_resize(width, height);
+    }
 }
 
 void backend_set_window_size(char* title)

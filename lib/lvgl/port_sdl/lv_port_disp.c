@@ -173,6 +173,71 @@ int lv_port_disp_get_stride(void)
     return g_fb_stride;
 }
 
+int lv_port_disp_resize(int width, int height)
+{
+    lv_disp_t* disp;
+    size_t px_count;
+
+    if (!g_disp_ready || width <= 0 || height <= 0) {
+        return -1;
+    }
+    if (width == g_fb_w && height == g_fb_h) {
+        return 0;
+    }
+
+    if (g_window) {
+        SDL_SetWindowSize(g_window, width, height);
+    }
+
+    free(g_yui_framebuffer);
+    free(g_lvgl_overlay);
+    free(g_present_framebuffer);
+    g_yui_framebuffer = NULL;
+    g_lvgl_overlay = NULL;
+    g_present_framebuffer = NULL;
+
+    g_fb_w = width;
+    g_fb_h = height;
+    g_fb_stride = width;
+
+    px_count = (size_t)g_fb_w * (size_t)g_fb_h;
+    g_yui_framebuffer = (uint32_t*)calloc(px_count, sizeof(uint32_t));
+    g_lvgl_overlay = (uint32_t*)calloc(px_count, sizeof(uint32_t));
+    g_present_framebuffer = (uint32_t*)calloc(px_count, sizeof(uint32_t));
+    if (!g_yui_framebuffer || !g_lvgl_overlay || !g_present_framebuffer) {
+        fprintf(stderr, "lv_port_disp_resize: buffer allocation failed\n");
+        return -1;
+    }
+
+    if (g_texture) {
+        SDL_DestroyTexture(g_texture);
+        g_texture = NULL;
+    }
+    if (g_renderer) {
+        g_texture = SDL_CreateTexture(
+            g_renderer,
+            SDL_PIXELFORMAT_ARGB8888,
+            SDL_TEXTUREACCESS_STREAMING,
+            g_fb_w,
+            g_fb_h);
+        if (!g_texture) {
+            fprintf(stderr, "lv_port_disp_resize: SDL_CreateTexture failed: %s\n",
+                    SDL_GetError());
+            return -1;
+        }
+    }
+
+    g_disp_drv.hor_res = g_fb_w;
+    g_disp_drv.ver_res = g_fb_h;
+    disp = lv_disp_get_default();
+    if (disp) {
+        lv_disp_drv_update(disp, &g_disp_drv);
+        lv_obj_invalidate(lv_scr_act());
+    }
+
+    return 0;
+}
+
 /**********************
  *   STATIC FUNCTIONS
  **********************/

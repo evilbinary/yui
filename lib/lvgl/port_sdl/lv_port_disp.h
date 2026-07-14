@@ -27,6 +27,7 @@ void* lv_port_disp_get_draw_buf(void);
 int lv_port_disp_get_width(void);
 int lv_port_disp_get_height(void);
 int lv_port_disp_get_stride(void);
+int lv_port_disp_resize(int width, int height);
 
 #ifdef __cplusplus
 }

@@ -1,0 +1,111 @@
+{
+    "id": "lvgl_calc",
+    "type": "View",
+    "text": "LVGL Calculator",
+    "size": [320, 526],
+    "bgColor": "#121218",
+    "js": ["calc.js"],
+    "events": {
+        "onLoad": "@initCalculator"
+    },
+    "layout": {
+        "type": "vertical",
+        "spacing": 10,
+        "padding": [16, 16, 16, 16]
+    },
+    "children": [
+        {
+            "id": "calc_title",
+            "type": "LvLabel",
+            "text": "LVGL Calculator",
+            "size": [288, 28],
+            "color": "#f5a623"
+        },
+        {
+            "id": "calc_display",
+            "type": "View",
+            "size": [288, 96],
+            "bgColor": "#1e1e2e",
+            "radius": 10,
+            "layout": {
+                "type": "vertical",
+                "spacing": 4,
+                "padding": [10, 12, 10, 12]
+            },
+            "children": [
+                {
+                    "id": "calc_expression",
+                    "type": "LvLabel",
+                    "text": "",
+                    "size": [264, 24],
+                    "color": "#a0a0b0"
+                },
+                {
+                    "id": "calc_result",
+                    "type": "LvLabel",
+                    "text": "0",
+                    "size": [264, 44],
+                    "color": "#eaeaea"
+                }
+            ]
+        },
+        {
+            "id": "calc_keypad",
+            "type": "LvBtnMatrix",
+            "size": [288, 300],
+            "buttons": [
+                "C", "<-", "%", "/",
+                "\n",
+                "7", "8", "9", "x",
+                "\n",
+                "4", "5", "6", "-",
+                "\n",
+                "1", "2", "3", "+",
+                "\n",
+                "+/-", "0", ".", "="
+            ],
+            "events": {
+                "onChange": "@onKeypadChange"
+            }
+        },
+        {
+            "id": "calc_memory",
+            "type": "View",
+            "size": [288, 40],
+            "layout": {
+                "type": "horizontal",
+                "spacing": 8
+            },
+            "children": [
+                {
+                    "id": "mem_mc",
+                    "type": "LvBtn",
+                    "text": "MC",
+                    "size": [64, 32],
+                    "events": { "onClick": "@memoryClear" }
+                },
+                {
+                    "id": "mem_mr",
+                    "type": "LvBtn",
+                    "text": "MR",
+                    "size": [64, 32],
+                    "events": { "onClick": "@memoryRecall" }
+                },
+                {
+                    "id": "mem_mplus",
+                    "type": "LvBtn",
+                    "text": "M+",
+                    "size": [64, 32],
+                    "events": { "onClick": "@memoryAdd" }
+                },
+                {
+                    "id": "mem_mminus",
+                    "type": "LvBtn",
+                    "text": "M-",
+                    "size": [64, 32],
+                    "events": { "onClick": "@memorySubtract" }
+                }
+            ]
+        }
+    ]
+}

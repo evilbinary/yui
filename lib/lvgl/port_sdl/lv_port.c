@@ -99,6 +99,17 @@ int lv_port_get_stride(void)
     return lv_port_disp_get_stride();
 }
 
+int lv_port_resize(int width, int height)
+{
+    if (lv_port_disp_resize(width, height) != 0) {
+        return -1;
+    }
+    if (g_root) {
+        lv_obj_set_size(g_root, (lv_coord_t)width, (lv_coord_t)height);
+    }
+    return 0;
+}
+
 lv_obj_t* lv_port_get_root(void)
 {
     return g_root;

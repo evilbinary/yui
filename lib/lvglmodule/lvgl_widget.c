@@ -3,6 +3,7 @@
 #include "component_registry.h"
 #include "../../lib/lvgl/lv_port.h"
 #include "../../src/event.h"
+#include "../../src/layer.h"
 #include "../../src/util.h"
 
 #include <stdlib.h>
@@ -53,9 +54,20 @@ void lvgl_widget_destroy(Layer* layer)
 void lvgl_widget_layout(Layer* layer)
 {
     LvglComponent* component = lvgl_component_from_layer(layer);
-    if (component) {
-        lvgl_component_sync_rect(component);
+
+    if (!component || !component->obj) {
+        return;
     }
+
+    if (layer->text && layer->text[0]) {
+        if (lv_obj_check_type(component->obj, &lv_label_class)) {
+            lv_label_set_text(component->obj, layer->text);
+        } else if (lv_obj_check_type(component->obj, &lv_textarea_class)) {
+            lv_textarea_set_text(component->obj, layer->text);
+        }
+    }
+
+    lvgl_component_sync_rect(component);
 }
 
 char* lvgl_strdup_lv(const char* src)
@@ -128,12 +140,24 @@ static void lvgl_widget_on_clicked(lv_event_t* e)
 static void lvgl_widget_on_value_changed(lv_event_t* e)
 {
     LvglComponent* component = (LvglComponent*)lv_event_get_user_data(e);
+    Layer* layer;
 
     if (lv_event_get_code(e) != LV_EVENT_VALUE_CHANGED) {
         return;
     }
     if (!component || !component->layer || !component->obj) {
         return;
+    }
+
+    layer = component->layer;
+    if (lv_obj_check_type(component->obj, &lv_btnmatrix_class)) {
+        uint16_t btn_id = lv_btnmatrix_get_selected_btn(component->obj);
+        const char* txt = lv_btnmatrix_get_btn_text(component->obj, btn_id);
+
+        if (txt && txt[0] && strcmp(txt, "\n") != 0) {
+            layer_set_text(layer, txt);
+        }
+        lv_btnmatrix_set_selected_btn(component->obj, LV_BTNMATRIX_BTN_NONE);
     }
 
     lvgl_widget_trigger_on_change(component);
