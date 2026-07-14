@@ -14,6 +14,7 @@ typedef struct ListComponent {
     int spacing;
     int hovered_index;
     int pressed_index;
+    int touch_scrolled;
     char on_select_name[128];
 } ListComponent;
 
@@ -27,6 +28,7 @@ int list_component_index_at_y(ListComponent* component, int x, int y);
 
 int list_component_handle_mouse_event(Layer* layer, MouseEvent* event);
 int list_component_handle_key_event(Layer* layer, KeyEvent* event);
+int list_component_handle_touch_event(Layer* layer, TouchEvent* event);
 void list_component_render(Layer* layer);
 
 #ifdef __cplusplus

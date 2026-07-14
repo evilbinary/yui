@@ -3,6 +3,7 @@
 #include "../backend.h"
 #include "../event.h"
 #include "../layer_update.h"
+#include "../layout.h"
 #include "../render.h"
 #include "../util.h"
 #include <stdlib.h>
@@ -239,6 +240,7 @@ ListComponent* list_component_create(Layer* layer) {
     layer->render = list_component_render;
     layer->handle_mouse_event = list_component_handle_mouse_event;
     layer->handle_key_event = list_component_handle_key_event;
+    layer->handle_touch_event = list_component_handle_touch_event;
     layer->focusable = 1;
     layer->on_data_update = list_data_update;
     layer->on_destroy = list_layer_destroy;
@@ -476,6 +478,63 @@ int list_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     }
 
     return inside;
+}
+
+static int list_can_vertical_pan(const Layer* layer) {
+    if (!layer) return 0;
+
+    int visible_height = layer->rect.h;
+    if (layer->layout_manager) {
+        visible_height -= layer->layout_manager->padding[0] + layer->layout_manager->padding[2];
+    }
+    return layer->content_height > visible_height;
+}
+
+int list_component_handle_touch_event(Layer* layer, TouchEvent* event) {
+    if (!layer || !event || !layer->component) return 0;
+
+    ListComponent* component = (ListComponent*)layer->component;
+    int index = -1;
+    int inside = list_point_in_item(component, event->x, event->y, &index);
+    int can_pan = list_can_vertical_pan(layer);
+    int consumed = 0;
+
+    if (event->type == TOUCH_TYPE_START) {
+        component->touch_scrolled = 0;
+        if (inside) {
+            component->pressed_index = index;
+            component->hovered_index = index;
+        }
+        consumed = inside || can_pan;
+    } else if (event->type == TOUCH_TYPE_MOVE) {
+        int adx = event->deltaX < 0 ? -event->deltaX : event->deltaX;
+        int ady = event->deltaY < 0 ? -event->deltaY : event->deltaY;
+        if (ady >= adx && (adx >= 2 || ady >= 2)) {
+            if (layout_scroll_vertical(layer, event->deltaY)) {
+                component->touch_scrolled = 1;
+                component->pressed_index = -1;
+                consumed = 1;
+            }
+        }
+        if (!consumed) {
+            consumed = inside || can_pan;
+        }
+    } else if (event->type == TOUCH_TYPE_END) {
+        if (component->touch_scrolled) {
+            component->pressed_index = -1;
+            component->touch_scrolled = 0;
+            consumed = 1;
+        } else {
+            int clicked = inside && component->pressed_index == index && index >= 0;
+            component->pressed_index = -1;
+            if (clicked) {
+                list_dispatch_select(component, index);
+            }
+            consumed = inside || clicked;
+        }
+    }
+
+    return consumed;
 }
 
 int list_component_handle_key_event(Layer* layer, KeyEvent* event) {

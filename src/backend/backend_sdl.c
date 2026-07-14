@@ -426,8 +426,6 @@ static int pointer_start_y = 0;
 static int touch_swipe_start_x = 0;
 static int touch_swipe_start_y = 0;
 
-void propagateTouchEvent(Layer* layer, TouchEvent* event);
-
 static void backend_emit_swipe_event(Layer* root, int x, int y, int dx, int dy) {
     int adx = dx < 0 ? -dx : dx;
     int ady = dy < 0 ? -dy : dy;
@@ -443,7 +441,7 @@ static void backend_emit_swipe_event(Layer* root, int x, int y, int dx, int dy) 
     touchEvent.deltaY = dy;
     touchEvent.fingerCount = 1;
     touchEvent.timestamp = SDL_GetTicks();
-    propagateTouchEvent(root, &touchEvent);
+    handle_touch_event(root, &touchEvent);
 }
 
 
@@ -474,6 +472,11 @@ int backend_init(){
     #ifdef _WIN32
     SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
     #endif
+
+    // 桌面开发：鼠标合成触摸事件（须在 SDL_Init 之前）
+    // MOUSE_TOUCH_EVENTS = 鼠标 → 触摸；TOUCH_MOUSE_EVENTS = 触摸 → 鼠标（勿搞反）
+    SDL_SetHint(SDL_HINT_MOUSE_TOUCH_EVENTS, "1");
+    SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "0");
 
     // 初始化SDL
     SDL_Init(SDL_INIT_VIDEO);
@@ -767,30 +770,6 @@ int pointInLayer(SDL_Point* point, Layer* layer) {
     return SDL_PointInRect(point, &layer->rect);
 }
 
-// 递归处理图层的触屏事件
-void propagateTouchEvent(Layer* layer, TouchEvent* event) {
-    if (!layer || !event) return;
-    
-    // 检查点是否在当前图层内
-    SDL_Point point = {event->x, event->y};
-    if (pointInLayer(&point, layer)) {
-        // 调用当前图层的触摸事件处理函数
-        if (layer->handle_touch_event) {
-            layer->handle_touch_event(layer,event);
-        }
-        
-        // 递归处理子图层
-        for (int i = 0; i < layer->child_count; i++) {
-            propagateTouchEvent(layer->children[i], event);
-        }
-        
-        // 处理子图层
-        if (layer->sub) {
-            propagateTouchEvent(layer->sub, event);
-        }
-    }
-}
-
 void handle_event(Layer* root, SDL_Event* event) {
     // 处理键盘事件
     if (event->type == SDL_KEYDOWN) {
@@ -922,7 +901,7 @@ void handle_event(Layer* root, SDL_Event* event) {
         touchEvent.timestamp = SDL_GetTicks();
         
         // 传播触摸事件
-        propagateTouchEvent(root, &touchEvent);
+        handle_touch_event(root, &touchEvent);
         
         // 双击检测
         Uint32 currentTime = SDL_GetTicks();
@@ -931,7 +910,7 @@ void handle_event(Layer* root, SDL_Event* event) {
             if (touchState.tapCount == 2) {
                 // 触发双击事件
                 touchEvent.type = TOUCH_TYPE_DOUBLE_TAP;
-                propagateTouchEvent(root, &touchEvent);
+                handle_touch_event(root, &touchEvent);
                 touchState.tapCount = 0;
             }
         } else {
@@ -970,13 +949,13 @@ void handle_event(Layer* root, SDL_Event* event) {
         touchEvent.timestamp = SDL_GetTicks();
         
         // 传播触摸事件
-        propagateTouchEvent(root, &touchEvent);
+        handle_touch_event(root, &touchEvent);
         
         // 长按检测（500ms）
         if (touchState.fingerCount == 1 && !touchState.longPressDetected) {
             if (SDL_GetTicks() - touchState.startTime > 500) {
                 touchEvent.type = TOUCH_TYPE_LONG_PRESS;
-                propagateTouchEvent(root, &touchEvent);
+                handle_touch_event(root, &touchEvent);
                 touchState.longPressDetected = 1;
             }
         }
@@ -1008,7 +987,7 @@ void handle_event(Layer* root, SDL_Event* event) {
         touchEvent.timestamp = SDL_GetTicks();
         
         // 传播触摸事件
-        propagateTouchEvent(root, &touchEvent);
+        handle_touch_event(root, &touchEvent);
 
         if (touchState.fingerCount == 0) {
             backend_emit_swipe_event(root, x, y,
@@ -1040,14 +1019,14 @@ void handle_event(Layer* root, SDL_Event* event) {
         if (event->mgesture.dDist != 0.0f) {
             touchEvent.type = TOUCH_TYPE_PINCH;
             touchEvent.scale = 1.0f + event->mgesture.dDist;
-            propagateTouchEvent(root, &touchEvent);
+            handle_touch_event(root, &touchEvent);
         }
         
         // 处理旋转
         if (event->mgesture.dTheta != 0.0f) {
             touchEvent.type = TOUCH_TYPE_ROTATE;
             touchEvent.rotation = event->mgesture.dTheta;
-            propagateTouchEvent(root, &touchEvent);
+            handle_touch_event(root, &touchEvent);
         }
     }
 }

@@ -314,6 +314,17 @@ static int default_scrollable_touch_handler(Layer* layer, TouchEvent* event) {
     return 0;
 }
 
+static int dispatch_layer_touch_handler(Layer* layer, TouchEvent* event) {
+    if (layer->handle_touch_event) {
+        return layer->handle_touch_event(layer, event);
+    }
+    if ((layer->type == VIEW || layer->type == GRID) &&
+        (layer->scrollable == 1 || layer->scrollable == 3)) {
+        return default_scrollable_touch_handler(layer, event);
+    }
+    return 0;
+}
+
 // 处理鼠标事件，返回非0表示事件已被消费，调用者应停止传播
 int handle_mouse_event(Layer* layer, MouseEvent* event) {
     if (!layer || !event) {
@@ -389,14 +400,8 @@ int handle_touch_event(Layer* layer, TouchEvent* event) {
         if (handle_touch_event(layer->sub, event)) return 1;
     }
 
-    if (layer->handle_touch_event) {
-        int consumed = layer->handle_touch_event(layer, event);
-        if (consumed) return 1;
-    } else if ((layer->type == VIEW || layer->type == GRID) &&
-               (layer->scrollable == 1 || layer->scrollable == 3)) {
-        int consumed = default_scrollable_touch_handler(layer, event);
-        if (consumed) return 1;
-    }
+    int consumed = dispatch_layer_touch_handler(layer, event);
+    if (consumed) return 1;
 
     if (layer->event && layer->event->touch) {
         current_touch_event = *event;

@@ -1,5 +1,6 @@
 #include "layout.h"
 #include "util.h"
+#include "layer_update.h"
 
 #define printf
 
@@ -74,9 +75,11 @@ void layout_layer(Layer* layer){
         fflush(stdout);
         return;
     }
-     // 计算layer的内容尺寸 - 通用算法
-     layer->content_width = layer->rect.w;
-     layer->content_height = layer->rect.h;
+     // 计算 layer 的内容尺寸 - 通用算法（List 由 list_component 维护 content 尺寸）
+     if (layer->type != LAYER_LIST) {
+         layer->content_width = layer->rect.w;
+         layer->content_height = layer->rect.h;
+     }
      
     // 应用布局管理器
     if (layer->layout_manager && layer->child_count > 0) {
@@ -788,6 +791,7 @@ int layout_scroll_vertical(Layer* layer, int delta_y) {
 
     if (layer->scroll_offset != old_offset) {
         layout_layer(layer);
+        mark_layer_dirty(layer, DIRTY_LAYOUT);
         return 1;
     }
     return 0;
