@@ -181,11 +181,33 @@ ThemeRule* theme_rule_create_from_json(cJSON* json) {
     if (!style_obj || !cJSON_IsObject(style_obj)) {
         style_obj = cJSON_GetObjectItem(json, "properties");
     }
-    if (!style_obj || !cJSON_IsObject(style_obj)) {
+
+    // 与 style 同级的图层属性（scrollable、scrollbar 等）
+    cJSON* props_obj = cJSON_CreateObject();
+    if (props_obj) {
+        cJSON* child = json->child;
+        while (child) {
+            if (child->string &&
+                strcmp(child->string, "selector") != 0 &&
+                strcmp(child->string, "style") != 0 &&
+                strcmp(child->string, "properties") != 0) {
+                cJSON_AddItemToObject(props_obj, child->string, cJSON_Duplicate(child, 1));
+            }
+            child = child->next;
+        }
+        if (props_obj->child) {
+            rule->props_json = props_obj;
+        } else {
+            cJSON_Delete(props_obj);
+        }
+    }
+
+    if ((!style_obj || !cJSON_IsObject(style_obj)) && !rule->props_json) {
         free(rule);
         return NULL;
     }
-    
+
+    if (style_obj && cJSON_IsObject(style_obj)) {
     // 颜色
     cJSON* color_obj = cJSON_GetObjectItem(style_obj, "color");
     if (color_obj && cJSON_IsString(color_obj)) {
@@ -271,8 +293,7 @@ ThemeRule* theme_rule_create_from_json(cJSON* json) {
     if (height_obj && cJSON_IsNumber(height_obj)) {
         rule->height = height_obj->valueint;
     }
-    
-    if (style_obj && cJSON_IsObject(style_obj)) {
+
         rule->style_json = cJSON_Duplicate(style_obj, 1);
     }
 
@@ -286,6 +307,9 @@ void theme_rule_destroy(ThemeRule* rule) {
     if (rule) {
         if (rule->style_json) {
             cJSON_Delete(rule->style_json);
+        }
+        if (rule->props_json) {
+            cJSON_Delete(rule->props_json);
         }
         free(rule);
     }
@@ -461,6 +485,13 @@ void theme_apply_component_style(Layer* layer, cJSON* style) {
     layer_set_properties_from_json(layer, style, 0);
 }
 
+void theme_apply_layer_properties(Layer* layer, cJSON* props) {
+    if (!layer || !props || !cJSON_IsObject(props)) {
+        return;
+    }
+    layer_set_properties_from_json(layer, props, 0);
+}
+
 // 应用主题样式到图层
 void theme_apply_to_layer(Theme* theme, Layer* layer, const char* id, const char* type) {
     if (!theme || !layer || !id || !type) {
@@ -592,6 +623,10 @@ void theme_merge_style(ThemeRule* rule, Layer* layer) {
 
     if (rule->style_json) {
         theme_apply_component_style(layer, rule->style_json);
+    }
+
+    if (rule->props_json) {
+        theme_apply_layer_properties(layer, rule->props_json);
     }
 }
 

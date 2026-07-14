@@ -585,17 +585,28 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
 
     cJSON* visible = cJSON_GetObjectItem(scrollbar, "visible");
     if (visible) {
-      layer->scrollbar->visible = visible->valueint;
+      int vis = cJSON_IsTrue(visible) ? 1 : 0;
+      layer->scrollbar->visible = vis;
+      if (layer->scrollbar_v) layer->scrollbar_v->visible = vis;
+      if (layer->scrollbar_h) layer->scrollbar_h->visible = vis;
     }
 
     cJSON* thickness = cJSON_GetObjectItem(scrollbar, "thickness");
     if (thickness) {
       layer->scrollbar->thickness = thickness->valueint;
+      if (layer->scrollbar_v) layer->scrollbar_v->thickness = thickness->valueint;
+      if (layer->scrollbar_h) layer->scrollbar_h->thickness = thickness->valueint;
     }
 
     cJSON* color = cJSON_GetObjectItem(scrollbar, "color");
     if (color) {
       parse_color(color->valuestring, &layer->scrollbar->color);
+      if (layer->scrollbar_v) {
+        parse_color(color->valuestring, &layer->scrollbar_v->color);
+      }
+      if (layer->scrollbar_h) {
+        parse_color(color->valuestring, &layer->scrollbar_h->color);
+      }
     }
   }
 

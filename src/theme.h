@@ -30,6 +30,7 @@ typedef struct ThemeRule {
     int width;                    // 宽度
     int height;                   // 高度
     cJSON* style_json;            // 完整样式对象（含组件扩展属性）
+    cJSON* props_json;            // 与 style 同级的图层属性（scrollable、scrollbar 等）
     
     struct ThemeRule* next;       // 链表下一个
 } ThemeRule;
@@ -70,6 +71,9 @@ void theme_merge_style(ThemeRule* rule, Layer* layer);
 
 // 将主题中的组件扩展样式应用到图层
 void theme_apply_component_style(Layer* layer, cJSON* style);
+
+// 将主题中的图层属性应用到图层（与 style 同级，如 scrollable、scrollbar）
+void theme_apply_layer_properties(Layer* layer, cJSON* props);
 
 // 解析选择器类型
 ThemeSelectorType theme_parse_selector_type(const char* selector);

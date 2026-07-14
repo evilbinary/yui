@@ -291,6 +291,46 @@ static int handle_scrollable(Layer* layer, cJSON* value, int is_creating) {
     return 1;
 }
 
+static void layer_apply_scrollbar_config(Layer* layer, cJSON* scrollbar) {
+    if (!layer || !scrollbar || !cJSON_IsObject(scrollbar)) return;
+
+    if (!layer->scrollbar) {
+        layer->scrollbar = (Scrollbar*)malloc(sizeof(Scrollbar));
+        if (layer->scrollbar) memset(layer->scrollbar, 0, sizeof(Scrollbar));
+    }
+
+    cJSON* visible = cJSON_GetObjectItem(scrollbar, "visible");
+    if (visible) {
+        int vis = cJSON_IsTrue(visible) ? 1 : 0;
+        if (layer->scrollbar) layer->scrollbar->visible = vis;
+        if (layer->scrollbar_v) layer->scrollbar_v->visible = vis;
+        if (layer->scrollbar_h) layer->scrollbar_h->visible = vis;
+    }
+
+    cJSON* thickness = cJSON_GetObjectItem(scrollbar, "thickness");
+    if (thickness && cJSON_IsNumber(thickness)) {
+        if (layer->scrollbar) layer->scrollbar->thickness = thickness->valueint;
+        if (layer->scrollbar_v) layer->scrollbar_v->thickness = thickness->valueint;
+        if (layer->scrollbar_h) layer->scrollbar_h->thickness = thickness->valueint;
+    }
+
+    cJSON* color = cJSON_GetObjectItem(scrollbar, "color");
+    if (color && cJSON_IsString(color)) {
+        Color parsed;
+        parse_color(color->valuestring, &parsed);
+        if (layer->scrollbar) layer->scrollbar->color = parsed;
+        if (layer->scrollbar_v) layer->scrollbar_v->color = parsed;
+        if (layer->scrollbar_h) layer->scrollbar_h->color = parsed;
+    }
+}
+
+static int handle_scrollbar(Layer* layer, cJSON* value, int is_creating) {
+    (void)is_creating;
+    layer_apply_scrollbar_config(layer, value);
+    mark_layer_dirty(layer, DIRTY_STYLE);
+    return 1;
+}
+
 // 尺寸属性处理器
 static int handle_width(Layer* layer, cJSON* value, int is_creating) {
     if (!cJSON_IsNumber(value)) return 0;
@@ -416,6 +456,7 @@ static const PropertyHandlerEntry property_handlers[] = {
     {"enabled", handle_enabled},
     {"focusable", handle_focusable},
     {"scrollable", handle_scrollable},
+    {"scrollbar", handle_scrollbar},
     
     // 结束标记
     {NULL, NULL}
