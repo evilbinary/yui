@@ -5,6 +5,45 @@
 #include <string.h>
 #include "cJSON.h"
 
+#define BUTTON_TAP_SLOP 10
+
+static int button_point_inside(const Layer* layer, int x, int y) {
+    return layer &&
+           x >= layer->rect.x &&
+           x < layer->rect.x + layer->rect.w &&
+           y >= layer->rect.y &&
+           y < layer->rect.y + layer->rect.h;
+}
+
+static int button_exceeded_slop(const ButtonComponent* component, int x, int y) {
+    if (!component) return 0;
+    int dx = x - component->press_x;
+    int dy = y - component->press_y;
+    if (dx < 0) dx = -dx;
+    if (dy < 0) dy = -dy;
+    return dx > BUTTON_TAP_SLOP || dy > BUTTON_TAP_SLOP;
+}
+
+static void button_begin_pointer(ButtonComponent* component, Layer* layer, int x, int y) {
+    component->press_x = x;
+    component->press_y = y;
+    component->pointer_active = 1;
+    component->drag_cancelled = 0;
+    SET_STATE(layer, LAYER_STATE_PRESSED);
+}
+
+static void button_cancel_pointer(ButtonComponent* component, Layer* layer) {
+    component->pointer_active = 0;
+    component->drag_cancelled = 0;
+    CLEAR_STATE(layer, LAYER_STATE_PRESSED);
+}
+
+static void button_fire_click(Layer* layer) {
+    if (layer && layer->event && layer->event->click) {
+        layer->event->click(layer);
+    }
+}
+
 // 创建按钮组件（内部通用初始化）
 ButtonComponent* button_component_create(Layer* layer) {
     return button_component_create_from_json(layer, NULL);
@@ -68,7 +107,8 @@ ButtonComponent* button_component_create_from_json(Layer* layer, cJSON* json_obj
     
     // 绑定事件处理函数
     layer->handle_mouse_event = button_component_handle_mouse_event;
-    
+    layer->handle_touch_event = button_component_handle_touch_event;
+
     // 绑定键盘事件处理函数
     layer->handle_key_event = button_component_handle_key_event;
     
@@ -167,38 +207,65 @@ int button_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
         return 0;
     }
 
-    // 检查鼠标是否在按钮范围内
-    int is_inside = (event->x >= layer->rect.x &&
-                     event->x < layer->rect.x + layer->rect.w &&
-                     event->y >= layer->rect.y &&
-                     event->y < layer->rect.y + layer->rect.h);
+    int is_inside = button_point_inside(layer, event->x, event->y);
 
-    // 更新悬停状态
     if (is_inside) {
         SET_STATE(layer, LAYER_STATE_HOVER);
     } else {
         CLEAR_STATE(layer, LAYER_STATE_HOVER);
     }
 
-    // 鼠标按下事件：设置 PRESSED 状态
     if (event->state == SDL_PRESSED) {
         if (is_inside) {
-            SET_STATE(layer, LAYER_STATE_PRESSED);
+            button_begin_pointer(component, layer, event->x, event->y);
         }
-    }
-    // 鼠标释放事件：触发点击
-    else if (event->state == SDL_RELEASED) {
-        if (HAS_STATE(layer, LAYER_STATE_PRESSED)) {
-            if (layer->event && layer->event->click) {
-                layer->event->click(layer);
-            }
+    } else if (event->state == SDL_MOUSEMOTION) {
+        if (component->pointer_active && button_exceeded_slop(component, event->x, event->y)) {
+            component->drag_cancelled = 1;
+            button_cancel_pointer(component, layer);
         }
-        CLEAR_STATE(layer, LAYER_STATE_PRESSED);
+    } else if (event->state == SDL_RELEASED) {
+        if (component->pointer_active && !component->drag_cancelled && is_inside) {
+            button_fire_click(layer);
+        }
+        button_cancel_pointer(component, layer);
     }
-    // 鼠标移动事件：不清除 PRESSED 状态
-    else if (event->state == SDL_MOUSEMOTION) {
-        // 移动时不清除 PRESSED 状态，保持按下状态
+    return 0;
+}
+
+int button_component_handle_touch_event(Layer* layer, TouchEvent* event) {
+    ButtonComponent* component = (ButtonComponent*)layer->component;
+    if (!component || !event || HAS_STATE(layer, LAYER_STATE_DISABLED)) {
+        return 0;
     }
+
+    int is_inside = button_point_inside(layer, event->x, event->y);
+
+    if (event->type == TOUCH_TYPE_START) {
+        if (is_inside) {
+            button_begin_pointer(component, layer, event->x, event->y);
+        }
+        return 0;
+    }
+
+    if (event->type == TOUCH_TYPE_MOVE) {
+        if (component->pointer_active && button_exceeded_slop(component, event->x, event->y)) {
+            component->drag_cancelled = 1;
+            button_cancel_pointer(component, layer);
+        }
+        return 0;
+    }
+
+    if (event->type == TOUCH_TYPE_END) {
+        int clicked = 0;
+        if (component->pointer_active && !component->drag_cancelled && is_inside) {
+            button_fire_click(layer);
+            clicked = 1;
+        }
+        button_cancel_pointer(component, layer);
+        return clicked;
+    }
+
     return 0;
 }
 
