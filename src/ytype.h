@@ -427,7 +427,7 @@ typedef struct Layer {
     int (*handle_key_event)(Layer* layer, KeyEvent* event);
     int (*handle_mouse_event)(Layer* layer, MouseEvent* event);
     void (*handle_scroll_event)(Layer* layer, int scroll_delta);
-    void (*handle_touch_event)(Layer* layer, TouchEvent* event);
+    int (*handle_touch_event)(Layer* layer, TouchEvent* event);
     void (*handle_resize_event)(Layer* layer, const ResizeEvent* event);
 
     //事件注册
