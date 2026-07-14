@@ -10,7 +10,8 @@
 #include <stdbool.h>  // 添加支持bool类型
 #include <math.h>     // 添加数学函数支持
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(__EMSCRIPTEN__)
+#define YUI_WIN32_NATIVE 1
 #include <windows.h>
 #include <SDL_syswm.h>
 #include <dwmapi.h>
@@ -469,7 +470,7 @@ int backend_init(){
     yui_components_register_builtin();
 
     // Windows: 抑制系统 DLL 调试输出（DWM 等），并禁止崩溃弹窗
-    #ifdef _WIN32
+    #ifdef YUI_WIN32_NATIVE
     SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
     #endif
 
@@ -492,7 +493,7 @@ int backend_init(){
     SDL_SetHint(SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1");
 
     // Windows: 强制使用 OpenGL 渲染器以避免 Direct3D 的颜色问题
-    #ifdef _WIN32
+    #ifdef YUI_WIN32_NATIVE
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "opengl");
     printf("Windows detected: Forcing OpenGL renderer to avoid Direct3D color issues\n");
     #endif
@@ -612,7 +613,7 @@ int backend_init(){
 }
 
 
-#ifdef _WIN32
+#ifdef YUI_WIN32_NATIVE
 
 // WCA_USEDARKMODECOLORS 可能未在旧 SDK 中定义
 #ifndef WCA_USEDARKMODECOLORS
@@ -627,9 +628,6 @@ typedef struct _WINDOWCOMPOSITIONATTRIBDATA {
     PVOID pvData;
     DWORD cbData;
 } WINDOWCOMPOSITIONATTRIBDATA, *PWINDOWCOMPOSITIONATTRIBDATA;
-#endif
-
-
 #endif
 
 // 保存标题栏颜色用于重新应用
@@ -728,8 +726,6 @@ void backend_set_titlebar_color(Color bg, Color text) {
     SDL_VERSION(&wmInfo.version);
 
     if (SDL_GetWindowWMInfo(window, &wmInfo)) {
-
-        #ifdef _WIN32
         HWND hwnd = wmInfo.info.win.window;
 
         // 首次调用时安装窗口子类化
@@ -738,10 +734,17 @@ void backend_set_titlebar_color(Color bg, Color text) {
         }
 
         apply_titlebar_dark_mode(hwnd);
-
-        #endif // _WIN32
     }
 }
+
+#else /* !YUI_WIN32_NATIVE */
+
+void backend_set_titlebar_color(Color bg, Color text) {
+    (void)bg;
+    (void)text;
+}
+
+#endif /* YUI_WIN32_NATIVE */
 
 // 设置窗口图标
 void backend_set_window_icon(const char* path) {
@@ -1134,7 +1137,7 @@ void backend_run(Layer* ui_root){
             if (event.type == SDL_QUIT) running = 0;
             handle_event(ui_root, &event);
 
-#ifdef _WIN32
+#ifdef YUI_WIN32_NATIVE
             // 窗口移动/大小改变后重新应用标题栏暗色
             if (event.type == SDL_WINDOWEVENT) {
                 switch (event.window.event) {
@@ -1172,7 +1175,7 @@ void backend_run(Layer* ui_root){
 
         SDL_RenderPresent(renderer);
 
-#ifdef _WIN32
+#ifdef YUI_WIN32_NATIVE
         // 第一帧渲染后重新应用暗色（此时窗口已完全显示）
         static int first_frame = 1;
         if (first_frame) {

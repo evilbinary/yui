@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 {
   "connection": {
     "host": "localhost",
@@ -15,4 +16,23 @@
   "windowWidth": 900,
   "windowHeight": 742,
   "sqlEditorContainer": 435
+=======
+{
+  "windowWidth": 1030,
+  "windowHeight": 866,
+  "sqlEditorContainer": 274,
+  "theme": "dark",
+  "connection": {
+    "host": "localhost",
+    "user": "root",
+    "password": "root",
+    "database": "",
+    "port": 3306
+  },
+  "preferences": {
+    "autoConnect": true,
+    "pageSize": 500,
+    "fontSize": 13
+  }
+>>>>>>> Stashed changes
 }
