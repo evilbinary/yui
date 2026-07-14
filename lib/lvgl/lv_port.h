@@ -3,7 +3,7 @@
  *
  * YUI unified LVGL port API.
  * Implementations live under port_sdl / port_yiyiya (stm32) / future ports.
- * Build selects one port via YUI_LVGL_PORT_SDL or YUI_LVGL_PORT_STM32.
+ * Build selects one port via YUI_LVGL_PORT_SDL or YUI_LVGL_PORT_YIYIYA.
  */
 
 #ifndef YUI_LV_PORT_H

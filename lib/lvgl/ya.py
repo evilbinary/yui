@@ -49,9 +49,9 @@ add_cflags('-DLV_CONF_INCLUDE_SIMPLE')
 
 add_includedirs('.', './src', public=True)
 
-if get_plat() == "stm32":
+if get_plat() == "yiyiya":
     add_files('port_yiyiya/*.c')
-    add_cflags('-DYUI_LVGL_PORT_STM32', public=True)
+    add_cflags('-DYUI_LVGL_PORT_YIYIYA', public=True)
 else:
     add_files('port_sdl/*.c')
     add_cflags('-DYUI_LVGL_PORT_SDL', public=True)
