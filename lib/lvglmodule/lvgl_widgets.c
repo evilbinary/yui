@@ -281,6 +281,7 @@ static void* lvgl_btnmatrix_create(Layer* layer, cJSON* json)
         component->widget_data = (void*)map;
         lv_btnmatrix_set_map(component->obj, map);
     }
+    lv_btnmatrix_set_btn_ctrl_all(component->obj, LV_BTNMATRIX_CTRL_CLICK_TRIG);
     lv_obj_set_style_border_width(component->obj, 0, 0);
     lv_obj_set_style_pad_all(component->obj, 0, LV_PART_MAIN);
     lv_obj_set_style_pad_row(component->obj, 6, LV_PART_MAIN);
@@ -309,6 +310,7 @@ static void lvgl_btnmatrix_layout(Layer* layer)
     map = lv_btnmatrix_get_map(component->obj);
     if (map) {
         lv_btnmatrix_set_map(component->obj, map);
+        lv_btnmatrix_set_btn_ctrl_all(component->obj, LV_BTNMATRIX_CTRL_CLICK_TRIG);
     }
 }
 #endif

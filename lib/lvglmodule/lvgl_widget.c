@@ -152,8 +152,13 @@ static void lvgl_widget_on_value_changed(lv_event_t* e)
     layer = component->layer;
     if (lv_obj_check_type(component->obj, &lv_btnmatrix_class)) {
         uint16_t btn_id = lv_btnmatrix_get_selected_btn(component->obj);
-        const char* txt = lv_btnmatrix_get_btn_text(component->obj, btn_id);
+        const char* txt;
 
+        if (btn_id == LV_BTNMATRIX_BTN_NONE) {
+            return;
+        }
+
+        txt = lv_btnmatrix_get_btn_text(component->obj, btn_id);
         if (txt && txt[0] && strcmp(txt, "\n") != 0) {
             layer_set_text(layer, txt);
         }
