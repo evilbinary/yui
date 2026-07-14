@@ -189,6 +189,7 @@ int main(int argc, char* argv[])
     layer_dump(ui_root, 0);
     fprintf(stdout, "============================================\n");
 
+    lvgl_apply_layer_rects(ui_root);
     fprintf(stdout, "===== lvgl dump (after sync) =====\n");
     lvgl_dump_layer_rects(ui_root, 0);
     fprintf(stdout, "==================================\n");

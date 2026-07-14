@@ -3,22 +3,6 @@
 #include "../../lib/lvgl/lv_port.h"
 #include "lvgl_widget.h"
 
-static void lvgl_component_refresh_btnmatrix_map(lv_obj_t* obj)
-{
-#if LV_USE_BTNMATRIX
-    const char** map;
-
-    if (!obj || !lv_obj_check_type(obj, &lv_btnmatrix_class)) {
-        return;
-    }
-
-    map = lv_btnmatrix_get_map(obj);
-    if (map) {
-        lv_btnmatrix_set_map(obj, map);
-    }
-#endif
-}
-
 void lvgl_component_sync_rect(LvglComponent* component)
 {
     lv_coord_t x;
@@ -41,10 +25,53 @@ void lvgl_component_sync_rect(LvglComponent* component)
 
     lv_obj_set_pos(component->obj, x, y);
     lv_obj_set_size(component->obj, w, h);
-    lvgl_component_refresh_btnmatrix_map(component->obj);
+    lv_obj_refr_size(component->obj);
+    lv_obj_refr_pos(component->obj);
     lv_obj_invalidate(component->obj);
 }
 
+static void lvgl_apply_layer_rects_walk(Layer* layer)
+{
+    int i;
+    LvglComponent* component;
+
+    if (!layer || layer->visible == IN_VISIBLE) {
+        return;
+    }
+
+    component = lvgl_component_from_layer(layer);
+    if (component) {
+        lvgl_component_sync_rect(component);
+    }
+
+    if (layer->children) {
+        for (i = 0; i < layer->child_count; i++) {
+            if (layer->children[i]) {
+                lvgl_apply_layer_rects_walk(layer->children[i]);
+            }
+        }
+    }
+    if (layer->sub) {
+        lvgl_apply_layer_rects_walk(layer->sub);
+    }
+}
+
+void lvgl_apply_layer_rects(Layer* root)
+{
+    lv_obj_t* lv_root;
+
+    if (!root) {
+        return;
+    }
+
+    lv_root = lv_port_get_root();
+    if (lv_root) {
+        lv_obj_refr_size(lv_root);
+        lv_obj_refr_pos(lv_root);
+    }
+
+    lvgl_apply_layer_rects_walk(root);
+}
 
 void lvgl_dump_layer_rects(const Layer* layer, int depth)
 {
