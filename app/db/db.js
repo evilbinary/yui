@@ -780,8 +780,9 @@ function loadCategoryItems(dbName, category, handler) {
     }
 }
 
-function onSearchDb(text) {
-    applyDbFilter(text ? text : "");
+function onSearchDb(layerId) {
+    var input = yui.find(layerId || "dbListSearch");
+    applyDbFilter(input && input.text ? input.text : "");
 }
 
 function applyDbFilter(filter) {

@@ -15,7 +15,12 @@ typedef struct {
     int selection_end;     // 选择结束位置
     int max_length;        // 最大输入长度
     int password_mode;     // 是否为密码模式
+    int scroll_x;          // 水平滚动偏移
+    int is_selecting;      // 鼠标拖选中文本
     Color cursor_color;    // 光标颜色
+    Color selection_color; // 选中背景颜色
+    EventHandler on_change;
+    char* change_name;
 } InputComponent;
 
 // 函数声明
@@ -28,6 +33,8 @@ void input_component_set_max_length(InputComponent* component, int max_length);
 void input_component_set_cursor_color(InputComponent* component, Color cursor_color);
 int input_component_handle_key_event(Layer* layer, KeyEvent* event);
 int input_component_handle_mouse_event(Layer* layer,MouseEvent* event);
+int input_component_register_event(Layer* layer, const char* event_name,
+                                   const char* event_func_name, EventHandler event_handler);
 void input_component_render(Layer* layer);
 
 #endif  // YUI_INPUT_COMPONENT_H

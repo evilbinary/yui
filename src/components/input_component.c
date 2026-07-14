@@ -1,10 +1,205 @@
 #include "input_component.h"
 #include "../render.h"
 #include "../backend.h"
+#include "../event.h"
+#include "../layer_update.h"
+#include "../util.h"
 #include <stdlib.h>
 #include <string.h>
 
-#define printf 
+extern Layer* focused_layer;
+
+static void input_component_trigger_on_change(InputComponent* component) {
+    if (!component || !component->layer || !component->on_change) return;
+    component->on_change(component->layer);
+}
+
+static void input_component_focus(InputComponent* component) {
+    if (!component || !component->layer) return;
+    Layer* layer = component->layer;
+
+    if (focused_layer && focused_layer != layer) {
+        CLEAR_STATE(focused_layer, LAYER_STATE_FOCUSED);
+    }
+    focused_layer = layer;
+    SET_STATE(layer, LAYER_STATE_FOCUSED);
+
+    backend_start_text_input();
+    Rect rect = {
+        layer->rect.x,
+        layer->rect.y + layer->rect.h,
+        layer->rect.w,
+        0
+    };
+    backend_set_text_input_rect(&rect);
+}
+
+static void input_component_blur(InputComponent* component) {
+    if (!component || !component->layer) return;
+    Layer* layer = component->layer;
+
+    CLEAR_STATE(layer, LAYER_STATE_FOCUSED);
+    if (focused_layer == layer) {
+        focused_layer = NULL;
+    }
+    backend_stop_text_input();
+}
+
+static int input_get_label_width(Layer* layer) {
+    const char* label_text = layer_get_label(layer);
+    if (!label_text[0] || !layer->font || !layer->font->default_font) {
+        return 0;
+    }
+
+    Texture* label_texture = backend_render_texture(layer->font->default_font, label_text, layer->color);
+    if (!label_texture) return 0;
+
+    int label_width = 0;
+    backend_query_texture(label_texture, NULL, NULL, &label_width, NULL);
+    backend_render_text_destroy(label_texture);
+    return label_width / scale;
+}
+
+static void input_get_padding(Layer* layer, int* top, int* right, int* bottom, int* left) {
+    *top = *right = *bottom = *left = 5;
+    if (layer->layout_manager) {
+        if (layer->layout_manager->padding[0] > 0) *top = layer->layout_manager->padding[0];
+        if (layer->layout_manager->padding[1] > 0) *right = layer->layout_manager->padding[1];
+        if (layer->layout_manager->padding[2] > 0) *bottom = layer->layout_manager->padding[2];
+        if (layer->layout_manager->padding[3] > 0) *left = layer->layout_manager->padding[3];
+    }
+}
+
+static void input_get_content_rect(Layer* layer, Rect* out) {
+    if (!layer || !out) return;
+
+    int pad_top, pad_right, pad_bottom, pad_left;
+    input_get_padding(layer, &pad_top, &pad_right, &pad_bottom, &pad_left);
+
+    int label_w = input_get_label_width(layer);
+    int label_gap = label_w > 0 ? 5 : 0;
+
+    out->x = layer->rect.x + pad_left + label_w + label_gap;
+    out->y = layer->rect.y + pad_top;
+    out->w = layer->rect.w - pad_left - pad_right - label_w - label_gap;
+    out->h = layer->rect.h - pad_top - pad_bottom;
+    if (out->w < 1) out->w = 1;
+    if (out->h < 1) out->h = 1;
+}
+
+static int input_text_width(Layer* layer, const char* text, int byte_len) {
+    if (!layer || !text || byte_len <= 0) return 0;
+
+    if (byte_len >= MAX_TEXT) byte_len = MAX_TEXT - 1;
+    char prefix[MAX_TEXT];
+    memcpy(prefix, text, (size_t)byte_len);
+    prefix[byte_len] = '\0';
+
+    Texture* tex = render_text(layer, prefix, layer->color);
+    if (!tex) return 0;
+
+    int tw = 0, th = 0;
+    backend_query_texture(tex, NULL, NULL, &tw, &th);
+    backend_render_text_destroy(tex);
+    return tw / scale;
+}
+
+static int input_has_selection(InputComponent* component) {
+    return component && component->selection_start != component->selection_end;
+}
+
+static int input_sel_lo(InputComponent* component) {
+    if (!component) return 0;
+    return component->selection_start < component->selection_end ?
+           component->selection_start : component->selection_end;
+}
+
+static int input_sel_hi(InputComponent* component) {
+    if (!component) return 0;
+    return component->selection_start > component->selection_end ?
+           component->selection_start : component->selection_end;
+}
+
+static void input_sync_scroll(InputComponent* component) {
+    if (!component || !component->layer) return;
+
+    Layer* layer = component->layer;
+    Rect content;
+    input_get_content_rect(layer, &content);
+
+    int visible_w = content.w;
+    const char* text = layer->text ? layer->text : "";
+    int len = (int)strlen(text);
+    int full_w = input_text_width(layer, text, len);
+    if (full_w <= visible_w) {
+        component->scroll_x = 0;
+        return;
+    }
+
+    int view_lo = input_text_width(layer, text, component->cursor_pos);
+    int view_hi = view_lo;
+    if (input_has_selection(component)) {
+        view_lo = input_text_width(layer, text, input_sel_lo(component));
+        view_hi = input_text_width(layer, text, input_sel_hi(component));
+    }
+
+    if (view_lo < component->scroll_x) {
+        component->scroll_x = view_lo;
+    }
+    if (view_hi > component->scroll_x + visible_w) {
+        component->scroll_x = view_hi - visible_w;
+    }
+
+    int max_scroll = full_w - visible_w;
+    if (max_scroll < 0) max_scroll = 0;
+    if (component->scroll_x < 0) component->scroll_x = 0;
+    if (component->scroll_x > max_scroll) component->scroll_x = max_scroll;
+}
+
+static int input_pos_from_mouse_x(InputComponent* component, Layer* layer, int mouse_x) {
+    if (!component || !layer) return 0;
+
+    const char* text = layer->text ? layer->text : "";
+    int len = (int)strlen(text);
+    if (len <= 0) return 0;
+
+    Rect content;
+    input_get_content_rect(layer, &content);
+    int local_x = mouse_x - content.x + component->scroll_x;
+    if (local_x <= 0) return 0;
+
+    int pos = 0;
+    while (pos < len) {
+        int next = pos + get_current_utf8_char_len(text, pos);
+        if (next <= pos) next = pos + 1;
+        int w_pos = input_text_width(layer, text, pos);
+        int w_next = input_text_width(layer, text, next);
+        if (w_next >= local_x) {
+            return (local_x - w_pos) < (w_next - local_x) ? pos : next;
+        }
+        pos = next;
+    }
+    return len;
+}
+
+static void input_draw_text_part(Layer* layer, const char* text, Color color,
+                                 int draw_x, int draw_y) {
+    if (!text || !text[0]) return;
+
+    Texture* tex = render_text(layer, text, color);
+    if (!tex) return;
+
+    int tw = 0, th = 0;
+    backend_query_texture(tex, NULL, NULL, &tw, &th);
+    int part_w = tw / scale;
+    int part_h = th / scale;
+    if (part_w < 1) part_w = 1;
+    if (part_h < 1) part_h = 1;
+
+    Rect dst = {draw_x, draw_y, part_w, part_h};
+    backend_render_text_copy(tex, NULL, &dst);
+    backend_render_text_destroy(tex);
+}
 
 // 创建输入组件
 InputComponent* input_component_create(Layer* layer) {
@@ -23,17 +218,21 @@ InputComponent* input_component_create(Layer* layer) {
     component->cursor_pos = 0;
     component->selection_start = 0;
     component->selection_end = 0;
+    component->scroll_x = 0;
+    component->is_selecting = 0;
 
     // 设置组件指针和自定义渲染函数
     layer->component = component;
     layer->render = input_component_render;
     layer->handle_mouse_event = input_component_handle_mouse_event;
     layer->handle_key_event = input_component_handle_key_event;
+    layer->register_event = input_component_register_event;
 
     // 设置组件为可聚焦
     layer->focusable = 1;
 
     component->cursor_color = (Color){255, 0, 0, 255};
+    component->selection_color = (Color){137, 180, 250, 255};
     return component;
 }
 
@@ -51,12 +250,25 @@ InputComponent* input_component_create_from_json(Layer* layer, cJSON* json_obj) 
         input_component_set_max_length(layer->component, cJSON_GetObjectItem(json_obj, "maxLength")->valueint);
     }
 
+    cJSON* events = cJSON_GetObjectItem(json_obj, "events");
+    if (events && cJSON_HasObjectItem(events, "onChange")) {
+        cJSON* on_change_obj = cJSON_GetObjectItem(events, "onChange");
+        if (cJSON_IsString(on_change_obj)) {
+            const char* event_name = on_change_obj->valuestring;
+            if (event_name[0] == '@') event_name++;
+            InputComponent* comp = (InputComponent*)layer->component;
+            if (comp->change_name) free(comp->change_name);
+            comp->change_name = strdup(event_name);
+        }
+    }
+
     return component;
 }
 
 // 销毁输入组件
 void input_component_destroy(InputComponent* component) {
     if (component) {
+        if (component->change_name) free(component->change_name);
         free(component);
     }
 }
@@ -71,6 +283,7 @@ void input_component_set_text(InputComponent* component, const char* text) {
     component->cursor_pos = strlen(component->layer->text);
     component->selection_start = component->cursor_pos;
     component->selection_end = component->cursor_pos;
+    input_sync_scroll(component);
 }
 
 // 设置占位文本
@@ -134,6 +347,14 @@ int input_component_handle_key_event(Layer* layer,  KeyEvent* event) {
 
     int current_length = strlen(buf);
     int text_changed = 0;
+    int view_changed = 0;
+
+    if (component->selection_start != component->selection_end) {
+        component->selection_start = utf8_safe_prefix_bytes(buf, component->selection_start);
+        component->selection_end = utf8_safe_prefix_bytes(buf, component->selection_end);
+    }
+    component->cursor_pos = utf8_safe_prefix_bytes(buf, component->cursor_pos);
+    if (component->cursor_pos > current_length) component->cursor_pos = current_length;
 
     switch (event->type) {
         case KEY_EVENT_TEXT_INPUT:
@@ -168,9 +389,11 @@ int input_component_handle_key_event(Layer* layer,  KeyEvent* event) {
             }
             break;
 
-        case KEY_EVENT_DOWN:
+        case KEY_EVENT_DOWN: {
+            int shift = event->data.key.mod & KMOD_SHIFT;
+            int old_cursor = component->cursor_pos;
             switch (event->data.key.key_code) {
-                case 8:  // Backspace
+                case SDLK_BACKSPACE:
                     if (current_length > 0 && component->cursor_pos > 0) {
                         if (component->selection_start != component->selection_end) {
                             int start = component->selection_start < component->selection_end ?
@@ -182,16 +405,18 @@ int input_component_handle_key_event(Layer* layer,  KeyEvent* event) {
                                    current_length - end + 1);
                             component->cursor_pos = start;
                         } else {
-                            memmove(buf + component->cursor_pos - 1,
+                            int char_len = get_prev_utf8_char_len(buf, component->cursor_pos);
+                            if (char_len <= 0) char_len = 1;
+                            memmove(buf + component->cursor_pos - char_len,
                                    buf + component->cursor_pos,
                                    current_length - component->cursor_pos + 1);
-                            component->cursor_pos--;
+                            component->cursor_pos -= char_len;
                         }
                         text_changed = 1;
                     }
                     break;
 
-                case 127:  // Delete
+                case SDLK_DELETE:
                     if (current_length > 0 && component->cursor_pos < current_length) {
                         if (component->selection_start != component->selection_end) {
                             int start = component->selection_start < component->selection_end ?
@@ -203,157 +428,166 @@ int input_component_handle_key_event(Layer* layer,  KeyEvent* event) {
                                    current_length - end + 1);
                             component->cursor_pos = start;
                         } else {
+                            int char_len = get_current_utf8_char_len(buf, component->cursor_pos);
+                            if (char_len <= 0) char_len = 1;
                             memmove(buf + component->cursor_pos,
-                                   buf + component->cursor_pos + 1,
-                                   current_length - component->cursor_pos);
+                                   buf + component->cursor_pos + char_len,
+                                   current_length - component->cursor_pos - char_len + 1);
                         }
                         text_changed = 1;
                     }
                     break;
 
-                case 37:  // Left arrow
+                case SDLK_LEFT:
                     if (component->cursor_pos > 0) {
-                        component->cursor_pos--;
+                        int char_len = get_prev_utf8_char_len(buf, component->cursor_pos);
+                        if (char_len <= 0) char_len = 1;
+                        component->cursor_pos -= char_len;
                     }
                     break;
 
-                case 39:  // Right arrow
+                case SDLK_RIGHT:
                     if (component->cursor_pos < current_length) {
-                        component->cursor_pos++;
+                        int char_len = get_current_utf8_char_len(buf, component->cursor_pos);
+                        if (char_len <= 0) char_len = 1;
+                        component->cursor_pos += char_len;
                     }
                     break;
 
-                case 36:  // Home
+                case SDLK_HOME:
                     component->cursor_pos = 0;
                     break;
 
-                case 35:  // End
+                case SDLK_END:
                     component->cursor_pos = current_length;
                     break;
             }
 
-            component->selection_start = component->cursor_pos;
-            component->selection_end = component->cursor_pos;
+            if (shift) {
+                if (component->selection_start == component->selection_end) {
+                    component->selection_start = old_cursor;
+                }
+                component->selection_end = component->cursor_pos;
+            } else if (event->data.key.key_code == SDLK_LEFT ||
+                       event->data.key.key_code == SDLK_RIGHT ||
+                       event->data.key.key_code == SDLK_HOME ||
+                       event->data.key.key_code == SDLK_END) {
+                if (input_has_selection(component)) {
+                    component->cursor_pos = event->data.key.key_code == SDLK_LEFT ||
+                                            event->data.key.key_code == SDLK_HOME
+                                            ? input_sel_lo(component) : input_sel_hi(component);
+                }
+                component->selection_start = component->cursor_pos;
+                component->selection_end = component->cursor_pos;
+            } else {
+                component->selection_start = component->cursor_pos;
+                component->selection_end = component->cursor_pos;
+            }
+            view_changed = 1;
             break;
+        }
     }
 
     if (text_changed) {
         layer_set_text(layer, buf);
+        input_component_trigger_on_change(component);
+    }
+    if (text_changed || view_changed) {
+        input_sync_scroll(component);
+        mark_layer_dirty(layer, DIRTY_TEXT);
     }
     return 0;
 }
 
-// 定义一个静态变量来跟踪上一次点击的组件
-static InputComponent* last_clicked_component = NULL;
-// 添加一个标记来跟踪是否应该强制保持焦点
-static bool force_focus_debug = false;
+int input_component_register_event(Layer* layer, const char* event_name,
+                                   const char* event_func_name, EventHandler event_handler) {
+    if (!layer || !layer->component) return -1;
+    if (strcmp(event_name, "change") != 0 && strcmp(event_name, "onChange") != 0) {
+        return -1;
+    }
 
-// 添加焦点状态检查函数用于调试
-void input_component_debug_focus_state() {
-    printf("\n--- FOCUS STATE DEBUG INFO ---");
-    printf("\nLast clicked component address: %p", last_clicked_component);
-    printf("\n--- END FOCUS DEBUG INFO --\n");
+    InputComponent* component = (InputComponent*)layer->component;
+    component->on_change = event_handler;
+    if (event_func_name && event_func_name[0] == '@') {
+        event_func_name++;
+    }
+    if (component->change_name) free(component->change_name);
+    component->change_name = event_func_name ? strdup(event_func_name) : NULL;
+    return 0;
 }
 
 // 处理鼠标事件
 int input_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
-    if (!layer || !layer->component) {
-        printf("Mouse event skipped: invalid layer or component\n");
+    if (!layer || !layer->component || !event) {
         return 0;
     }
     InputComponent* component = (InputComponent*)layer->component;
+    Point pt = {event->x, event->y};
 
-    printf("input_component_handle_mouse_event: layer address=%p, component address=%p\n", layer, component);
-    printf("event x=%d, y=%d, state=%d\n", event->x, event->y, event->state);
-    printf("Component current state before processing: %d\n", layer->state);
-    int is_click = (event->state == 1);
+    Rect content;
+    input_get_content_rect(layer, &content);
+    int is_inside = point_in_rect(pt, layer->rect);
+    int in_content = point_in_rect(pt, content);
 
-    // Calculate component boundaries for debugging
-    printf("Component boundaries: x=%d, y=%d, w=%d, h=%d\n", 
-           component->layer->rect.x, component->layer->rect.y, 
-           component->layer->rect.w, component->layer->rect.h);
-    
-   int is_inside = (event->x >= component->layer->rect.x && 
-                     event->x < component->layer->rect.x + component->layer->rect.w &&
-                     event->y >= component->layer->rect.y && 
-                     event->y < component->layer->rect.y + component->layer->rect.h);
-    
-    // 更新悬停状态
     if (is_inside) {
         SET_STATE(layer, LAYER_STATE_HOVER);
     } else {
         CLEAR_STATE(layer, LAYER_STATE_HOVER);
     }
-    
-    printf("Mouse position is inside component: %s\n", is_inside ? "YES" : "NO");
-    printf("Is click event: %s\n", is_click ? "YES" : "NO");
 
-    // 检查是否点击在输入框内
-    if (is_inside) { 
-        if (is_click) {
-            // 点击时，设置为聚焦状态
-            SET_STATE(layer, LAYER_STATE_FOCUSED);
-            last_clicked_component = component;  // 记录最后点击的组件
-            // 设置强制焦点标记用于调试
-            force_focus_debug = true;
-            printf("State set to FOCUSED (value: %d) on click inside\n", layer->state);
-            printf("Last clicked component updated to: %p\n", last_clicked_component);
-            printf("DEBUG: force_focus_debug flag set to TRUE\n");
-            
-            // TODO: 根据点击位置计算光标位置
-            // 这里简化处理，暂时设置为文本末尾
-            component->cursor_pos = layer->text ? strlen(layer->text) : 0;
-            component->selection_start = component->cursor_pos;
-            component->selection_end = component->cursor_pos;
-            
-            // 调用调试函数检查焦点状态
-            input_component_debug_focus_state();
+    if (event->state == SDL_MOUSEMOTION && component->is_selecting) {
+        int pos = in_content ? input_pos_from_mouse_x(component, layer, event->x) :
+                  (event->x < content.x ? 0 : (layer->text ? (int)strlen(layer->text) : 0));
+        component->cursor_pos = pos;
+        component->selection_end = pos;
+        input_sync_scroll(component);
+        mark_layer_dirty(layer, DIRTY_TEXT);
+        return 1;
+    }
+
+    if (event->state == SDL_PRESSED && event->button == SDL_BUTTON_LEFT) {
+        if (is_inside) {
+            input_component_focus(component);
+            int pos = in_content ? input_pos_from_mouse_x(component, layer, event->x) :
+                      (event->x < content.x ? 0 : (layer->text ? (int)strlen(layer->text) : 0));
+            component->cursor_pos = pos;
+            component->selection_start = pos;
+            component->selection_end = pos;
+            component->is_selecting = 1;
+            input_sync_scroll(component);
+            mark_layer_dirty(layer, DIRTY_TEXT);
+            return 1;
         }
-    } else if (is_click) {
-        printf("Click outside component: current component=%p, last_clicked_component=%p\n", component, last_clicked_component);
-        // 点击输入框外，只有当这个组件是最后点击的组件时才取消聚焦
-        if (component == last_clicked_component) {
-            // 清除聚焦状态
-            CLEAR_STATE(layer, LAYER_STATE_FOCUSED);
-            last_clicked_component = NULL;  // 清除最后点击的组件记录
-            // 重置强制焦点标记
-            force_focus_debug = false;
-            printf("Focus state cleared (current value: %d) on click outside (last clicked component)\n", layer->state);
-            printf("DEBUG: force_focus_debug flag set to FALSE\n");
-            input_component_debug_focus_state();
-        } else {
-            printf("Not resetting state: current component is not the last clicked component\n");
+        if (focused_layer == layer) {
+            input_component_blur(component);
+            component->is_selecting = 0;
+        }
+    } else if (event->state == SDL_RELEASED && event->button == SDL_BUTTON_LEFT) {
+        if (component->is_selecting) {
+            component->is_selecting = 0;
+            if (component->selection_start == component->selection_end) {
+                component->selection_start = component->cursor_pos;
+                component->selection_end = component->cursor_pos;
+            }
+            mark_layer_dirty(layer, DIRTY_TEXT);
+            return 1;
         }
     }
-    return 0;
+
+    return is_inside;
 }
 
 // 渲染输入组件
 void input_component_render(Layer* layer) {
     if (!layer || !layer->component) {
-        printf("Render skipped: invalid layer or component\n");
         return;
     }
     
     InputComponent* component = (InputComponent*)layer->component;
     const char* label_text = layer_get_label(layer);
-    
-    printf("\n--- RENDER CYCLE START ---\n");
-    printf("Rendering input component: layer address=%p, component address=%p\n", layer, component);
-    
-    // 调用调试函数检查焦点状态
-    input_component_debug_focus_state();
-    
-    printf("Layer state during render: %d (NORMAL=%d, FOCUSED=%d, DISABLED=%d)\n", 
-           layer->state, LAYER_STATE_NORMAL, LAYER_STATE_FOCUSED, LAYER_STATE_DISABLED);
-    printf("State flags: FOCUSED=%d, HOVER=%d, PRESSED=%d, DISABLED=%d\n",
-           HAS_STATE(layer, LAYER_STATE_FOCUSED), HAS_STATE(layer, LAYER_STATE_HOVER),
-           HAS_STATE(layer, LAYER_STATE_PRESSED), HAS_STATE(layer, LAYER_STATE_DISABLED));
-
-    // 绘制输入框背景和边框（一步完成）
     Color border_color = (Color){150, 150, 150, 255};
     if (HAS_STATE(layer, LAYER_STATE_FOCUSED)) {
-        border_color = (Color){70, 130, 180, 255}; // 聚焦时使用蓝色边框
+        border_color = (Color){70, 130, 180, 255};
     }
     
     if (layer->bg_color.a > 0) {
@@ -364,196 +598,99 @@ void input_component_render(Layer* layer) {
             backend_render_rect_color(&layer->rect, border_color.r, border_color.g, border_color.b, border_color.a);
         }
     }
-    
-    // 渲染输入框标签
+
+    int pad_top, pad_right, pad_bottom, pad_left;
+    input_get_padding(layer, &pad_top, &pad_right, &pad_bottom, &pad_left);
+
     if (label_text[0] != '\0') {
-        // 使用ttf渲染文本
-        
         Color text_color = layer->color;
-        Texture* text_texture = render_text(layer,label_text, text_color);
-        
+        Texture* text_texture = render_text(layer, label_text, text_color);
         if (text_texture) {
             int text_width, text_height;
             backend_query_texture(text_texture, NULL, NULL, &text_width, &text_height);
-            
             Rect text_rect = {
-                layer->rect.x + 5,  // 左侧留5像素边距
-                layer->rect.y + (layer->rect.h - text_height/ scale) / 2,
+                layer->rect.x + pad_left,
+                layer->rect.y + (layer->rect.h - text_height / scale) / 2,
                 text_width / scale,
                 text_height / scale
             };
-            
-            // 确保文本不会超出输入框边界
-            if (text_rect.x + text_rect.w > layer->rect.x + layer->rect.w - 5) {
-                text_rect.w = layer->rect.x + layer->rect.w - 5 - text_rect.x;
-            }
-            
-            if (text_rect.y + text_rect.h > layer->rect.y + layer->rect.h) {
-                text_rect.h = layer->rect.y + layer->rect.h - text_rect.y;
-            }
-            
-            backend_render_text_copy(text_texture,NULL,&text_rect);
+            backend_render_text_copy(text_texture, NULL, &text_rect);
             backend_render_text_destroy(text_texture);
-
         }
     }
-    
-    // 全局调试选项：如果启用了强制焦点，则将组件状态设置为聚焦
-    // 注意：在实际生产环境中应禁用此调试选项
-    if (force_focus_debug) {
-        SET_STATE(layer, LAYER_STATE_FOCUSED);
-        printf("DEBUG: Forcing component to FOCUSED state due to global debug flag\n");
-    }
-    
-    // 渲染文本
+
     Color text_color = layer->color;
     const char* display_text = layer->text ? layer->text : "";
-    
-    // 如果没有输入文本且不是聚焦状态，显示占位文本
+    int is_placeholder = 0;
     if ((!layer->text || layer->text[0] == '\0') && !HAS_STATE(layer, LAYER_STATE_FOCUSED) &&
         strlen(component->placeholder) > 0) {
         display_text = component->placeholder;
-        text_color = (Color){150, 150, 150, 150};  // 占位文本使用灰色
+        text_color = (Color){150, 150, 150, 150};
+        is_placeholder = 1;
     }
-    
-    // 注意：标签文本已经在前面渲染过了，这里不需要重复渲染
-    
-    Texture* text_texture = render_text(layer, display_text, text_color);
-    
-    if (text_texture) {
-        int text_width, text_height;
-        backend_query_texture(text_texture, NULL, NULL, &text_width, &text_height);
-        
-        int start_x = layer->rect.x + 5;  // 默认左侧留5像素边距
-        
-        // 如果图层有label文本，将text_rect放在label文字的右边
-        if (label_text[0] != '\0' && layer->font && layer->font->default_font) {
-            // 计算label文本的宽度
-            Texture* label_texture = backend_render_texture(layer->font->default_font, label_text, layer->color);
-            if (label_texture) {
-                int label_width;
-                backend_query_texture(label_texture, NULL, NULL, &label_width, NULL);
-                backend_render_text_destroy(label_texture);
-                
-                // 将text_rect放在label文字的右边，留出5像素间距
-                start_x = layer->rect.x + label_width / scale + 10;
-            }
-        }
-        
-        Rect text_rect = {
-            start_x,
-            layer->rect.y + (layer->rect.h - text_height / scale) / 2,
-            text_width / scale,
-            text_height / scale
-        };
-        
-        // 确保文本不会超出输入框边界
-        if (text_rect.x + text_rect.w > layer->rect.x + layer->rect.w - 5) {
-            text_rect.w = layer->rect.x + layer->rect.w - 5 - text_rect.x;
-        }
-        
-        if (text_rect.y + text_rect.h > layer->rect.y + layer->rect.h) {
-            text_rect.h = layer->rect.y + layer->rect.h - text_rect.y;
-        }
-        
-        backend_render_text_copy(text_texture, NULL, &text_rect);
-        backend_render_text_destroy(text_texture);
-    }
-    
-    // 调试信息：检查当前状态和组件实例
-    printf("Rendering input component: state=%d, LAYER_STATE_FOCUSED=%d\n", 
-           layer->state, LAYER_STATE_FOCUSED);
-    
-    // 比较当前组件和最后点击的组件是否为同一实例
-    printf("Component comparison: render component=%p, last_clicked_component=%p\n", 
-           component, last_clicked_component);
-    if (component == last_clicked_component) {
-        printf("This component is the last clicked component.\n");
-    } else {
-        printf("This component is NOT the last clicked component.\n");
-    }
-    
-    // DEBUG OPTION: Uncomment the line below to force the component to be in focused state
-    // layer->state = LAYER_STATE_FOCUSED;
-    
-    // 全局调试选项：如果启用了强制焦点，则将组件状态设置为聚焦
-    if (force_focus_debug) {
-        SET_STATE(layer, LAYER_STATE_FOCUSED);
-        printf("DEBUG: Forcing component to FOCUSED state due to global debug flag\n");
-    }
-    
-    // 聚焦状态下绘制光标
-    if (HAS_STATE(layer, LAYER_STATE_FOCUSED)) {
-        // 调试信息：检查焦点状态和光标属性
-        printf("Cursor rendering: state=%d, color=(%d,%d,%d,%d)\n", 
-               layer->state, 
-               component->cursor_color.r, component->cursor_color.g, 
-               component->cursor_color.b, component->cursor_color.a);
-        
-        // 计算光标位置
-        int cursor_x = layer->rect.x + 5;  // 默认左侧边距
-        int cursor_y = layer->rect.y + 5;
-        int cursor_height = layer->rect.h - 10;
-        
-        // 如果有文本，计算光标前面的文本宽度，更新光标x坐标
-        if (component->cursor_pos > 0 && layer->text && layer->text[0] != '\0') {
-            // 创建光标前的子串
-            char cursor_text[component->cursor_pos + 1];
-            strncpy(cursor_text, layer->text, component->cursor_pos);
-            cursor_text[component->cursor_pos] = '\0';
-            
-            // 如果图层有标签文本，需要调整起始位置
-            if (label_text[0] != '\0' && layer->font && layer->font->default_font) {
-                Texture* label_texture = backend_render_texture(layer->font->default_font, label_text, layer->color);
-                if (label_texture) {
-                    int label_width;
-                    backend_query_texture(label_texture, NULL, NULL, &label_width, NULL);
-                    backend_render_text_destroy(label_texture);
-                    
-                    // 将光标起始位置放在label文字的右边，留出5像素间距
-                    cursor_x = layer->rect.x + label_width / scale + 10;
+
+    Rect content;
+    input_get_content_rect(layer, &content);
+    Rect prev_clip;
+    backend_render_get_clip_rect(&prev_clip);
+    backend_render_set_clip_rect(&content);
+
+    int draw_x = content.x - component->scroll_x;
+    int draw_y = content.y;
+    int draw_h = content.h;
+    int buflen = is_placeholder ? 0 : (int)strlen(display_text);
+
+    if (buflen > 0 && layer->font && layer->font->default_font) {
+        Texture* tex = render_text(layer, display_text, text_color);
+        if (tex) {
+            int tw = 0, th = 0;
+            backend_query_texture(tex, NULL, NULL, &tw, &th);
+            int natural_h = th / scale;
+            if (natural_h < 1) natural_h = 1;
+            if (natural_h > draw_h) natural_h = draw_h;
+            draw_y = content.y + (content.h - natural_h) / 2;
+            backend_render_text_destroy(tex);
+
+            if (!is_placeholder && input_has_selection(component)) {
+                Color sel_fg = {17, 17, 27, 255};
+                int lo = utf8_safe_prefix_bytes(display_text, input_sel_lo(component));
+                int hi = utf8_safe_prefix_bytes(display_text, input_sel_hi(component));
+                int x_lo = draw_x + input_text_width(layer, display_text, lo);
+                int x_hi = draw_x + input_text_width(layer, display_text, hi);
+                if (x_hi > x_lo) {
+                    Rect sel = {x_lo, draw_y, x_hi - x_lo, natural_h};
+                    backend_render_fill_rect(&sel, component->selection_color);
                 }
-            }
-            
-            // 计算光标前文本的宽度
-            if (layer->font && layer->font->default_font) {
-                Texture* cursor_text_texture = backend_render_texture(layer->font->default_font, cursor_text, text_color);
-                if (cursor_text_texture) {
-                    int text_width;
-                    backend_query_texture(cursor_text_texture, NULL, NULL, &text_width, NULL);
-                    backend_render_text_destroy(cursor_text_texture);
-                    
-                    // 更新光标x坐标
-                    cursor_x += text_width / scale;
+
+                input_draw_text_part(layer, display_text, text_color, draw_x, draw_y);
+
+                if (hi > lo) {
+                    char part[MAX_TEXT];
+                    int sel_len = hi - lo;
+                    if (sel_len >= MAX_TEXT) sel_len = MAX_TEXT - 1;
+                    memcpy(part, display_text + lo, (size_t)sel_len);
+                    part[sel_len] = '\0';
+                    input_draw_text_part(layer, part, sel_fg, x_lo, draw_y);
                 }
-            }
-        } else if (label_text[0] != '\0' && layer->font && layer->font->default_font) {
-            // 没有文本但有标签，将光标放在标签右侧
-            Texture* label_texture = backend_render_texture(layer->font->default_font, label_text, layer->color);
-            if (label_texture) {
-                int label_width;
-                backend_query_texture(label_texture, NULL, NULL, &label_width, NULL);
-                backend_render_text_destroy(label_texture);
-                
-                cursor_x = layer->rect.x + label_width / scale + 10;
+            } else {
+                input_draw_text_part(layer, display_text, text_color, draw_x, draw_y);
             }
         }
-        
-        printf("Cursor position: x=%d, y=%d, height=%d\n", cursor_x, cursor_y, cursor_height);
-        
-        // 确保光标不超出输入框的右边界
-        int input_right_boundary = layer->rect.x + layer->rect.w;
-        if (cursor_x > input_right_boundary) {
-            cursor_x = input_right_boundary - 2; // 留出2像素边距
-            printf("DEBUG: Cursor position adjusted to stay within input bounds. New x=%d\n", cursor_x);
+    } else if (is_placeholder) {
+        input_draw_text_part(layer, display_text, text_color, content.x, draw_y);
+    }
+
+    if (HAS_STATE(layer, LAYER_STATE_FOCUSED) && !is_placeholder) {
+        int cursor_x = draw_x;
+        if (component->cursor_pos > 0) {
+            cursor_x += input_text_width(layer, display_text, component->cursor_pos);
         }
-        
-        // 使用自定义光标颜色绘制垂直线作为光标
+        int cursor_y = content.y + 2;
+        int cursor_height = content.h - 4;
+        if (cursor_x < content.x) cursor_x = content.x;
+        if (cursor_x > content.x + content.w - 1) cursor_x = content.x + content.w - 1;
         backend_render_line(cursor_x, cursor_y, cursor_x, cursor_y + cursor_height, component->cursor_color);
-    } else {
-        printf("Not rendering cursor: state=%d (expected FOCUSED flag to be set)\n", 
-               layer->state);
     }
-    
-    printf("--- RENDER CYCLE END ---\n\n");
+
+    backend_render_set_clip_rect(&prev_clip);
 }
