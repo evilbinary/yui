@@ -55,7 +55,7 @@ def add_flags():
         tool['ld']='emcc'
         tool['ar']='emar'
         if platform.system()=='Windows':
-            mingw64='/mingw64'
+            mingw64='E:\\soft\\msys2\\mingw64'
             add_cflags(
             # '--use-port=sdl2 ',
             '-g',
@@ -226,7 +226,7 @@ def add_flags():
             '-F../libs/'
             )
     elif platform.system()=='Windows':
-        mingw64='/mingw64'
+        mingw64='E:\\soft\\msys2\\mingw64'
         if get_plat() in['emscripten','em']:
             tool=get_toolchain_node()
             tool['cc']='emcc'

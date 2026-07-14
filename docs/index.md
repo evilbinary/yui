@@ -10,6 +10,7 @@
 
 ### 🏗️ 架构设计
 - [架构设计文档](architecture.md) - 系统架构、模块关系和设计原理
+- [LVGL Backend 与组件注册设计](lvgl-backend-design.md) - LVGL 后端、component_registry、lvglmodule 方案（草案）
 - [功能特性说明](feature.md) - 框架核心功能详细介绍
 
 ### 🎨 UI 开发
