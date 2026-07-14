@@ -722,6 +722,7 @@ void backend_run(Layer* ui_root)
         backend_render_clear_color(30, 30, 30, 255);
         if (g_ui_root) {
             render_layer(g_ui_root);
+            render_inspect_overlay(g_ui_root);
             popup_manager_render();
         }
 

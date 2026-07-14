@@ -120,24 +120,6 @@ int main(int argc, char* argv[])
     js_module_init_layer(ui_root);
     load_all_fonts(ui_root);
 
-    printf("加载并执行 JS 文件...\n");
-    js_count = js_module_load_from_json(root_json, json_path, 0);
-    if (js_count <= 0) {
-        cJSON* source = cJSON_GetObjectItem(root_json, "source");
-        if (source && cJSON_IsString(source)) {
-            const char* source_path = source->valuestring;
-            cJSON* source_json = parse_yaml_json_file(source_path);
-
-            if (source_json) {
-                int source_count = js_module_load_from_json(source_json, source_path, 0);
-                cJSON_Delete(source_json);
-                js_count += source_count;
-            }
-        }
-    }
-    print_registered_events();
-    lvgl_module_init_layer(ui_root);
-
     if (ui_root->rect.w <= 0 || ui_root->rect.h <= 0) {
         int window_width;
         int window_height;
@@ -152,12 +134,6 @@ int main(int argc, char* argv[])
     } else {
         backend_set_windowsize(ui_root->rect.w, ui_root->rect.h);
     }
-
-    if (ui_root->text) {
-        backend_set_window_size(ui_root->text);
-    }
-
-    cJSON_Delete(root_json);
 
     if (!ui_root->font) {
         ui_root->font = malloc(sizeof(Font));
@@ -177,6 +153,32 @@ int main(int argc, char* argv[])
     }
 
     load_textures(ui_root);
+    layout_layer(ui_root);
+
+    printf("加载并执行 JS 文件...\n");
+    js_count = js_module_load_from_json(root_json, json_path, 0);
+    if (js_count <= 0) {
+        cJSON* source = cJSON_GetObjectItem(root_json, "source");
+        if (source && cJSON_IsString(source)) {
+            const char* source_path = source->valuestring;
+            cJSON* source_json = parse_yaml_json_file(source_path);
+
+            if (source_json) {
+                int source_count = js_module_load_from_json(source_json, source_path, 0);
+                cJSON_Delete(source_json);
+                js_count += source_count;
+            }
+        }
+    }
+    print_registered_events();
+    lvgl_module_init_layer(ui_root);
+
+    if (ui_root->text) {
+        backend_set_window_size(ui_root->text);
+    }
+
+    cJSON_Delete(root_json);
+
     layout_layer(ui_root);
 
     LOGI("lvgl", "entering main loop (%dx%d)", ui_root->rect.w, ui_root->rect.h);
