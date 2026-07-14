@@ -52,3 +52,11 @@ void lvglmodule_register_all(void)
 {
     lvgl_widgets_register_all();
 }
+
+void lvgl_module_init_layer(Layer* root)
+{
+    if (!root) {
+        return;
+    }
+    lvgl_bind_all_layer_events(root);
+}

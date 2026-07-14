@@ -18,5 +18,6 @@ void lvgl_component_sync_rect(LvglComponent* component);
 void lvgl_component_destroy(LvglComponent* component);
 void lvgl_widgets_register_all(void);
 void lvglmodule_register_all(void);
+void lvgl_module_init_layer(Layer* root);
 
 #endif

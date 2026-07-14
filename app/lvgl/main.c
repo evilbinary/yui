@@ -21,7 +21,7 @@
 #include "util.h"
 #include "yaml_cjson.h"
 #include "../lib/jsmodule/js_module.h"
-#include "../lib/lvglmodule/lvgl_widget.h"
+#include "../lib/lvglmodule/lvgl_component.h"
 #include "log.h"
 
 #if defined(_WIN32)
@@ -136,7 +136,7 @@ int main(int argc, char* argv[])
         }
     }
     print_registered_events();
-    lvgl_bind_all_layer_events(ui_root);
+    lvgl_module_init_layer(ui_root);
 
     if (ui_root->rect.w <= 0 || ui_root->rect.h <= 0) {
         int window_width;
