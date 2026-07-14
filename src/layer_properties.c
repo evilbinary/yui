@@ -234,25 +234,18 @@ static int handle_animation(Layer* layer, cJSON* value, int is_creating) {
 }
 
 static int handle_padding(Layer* layer, cJSON* value, int is_creating) {
-    if (!cJSON_IsArray(value)) return 0;
-    if (!layer->layout_manager) return 0;
-    
-    int count = cJSON_GetArraySize(value);
-    if (count >= 4) {
-        layer->layout_manager->padding[0] = cJSON_GetArrayItem(value, 0)->valueint;  // top
-        layer->layout_manager->padding[1] = cJSON_GetArrayItem(value, 1)->valueint;  // right
-        layer->layout_manager->padding[2] = cJSON_GetArrayItem(value, 2)->valueint;  // bottom
-        layer->layout_manager->padding[3] = cJSON_GetArrayItem(value, 3)->valueint;  // left
-    } else if (count == 2) {
-        int vertical = cJSON_GetArrayItem(value, 0)->valueint;
-        int horizontal = cJSON_GetArrayItem(value, 1)->valueint;
-        layer->layout_manager->padding[0] = layer->layout_manager->padding[2] = vertical;
-        layer->layout_manager->padding[1] = layer->layout_manager->padding[3] = horizontal;
-    } else if (count == 1) {
-        int all = cJSON_GetArrayItem(value, 0)->valueint;
-        layer->layout_manager->padding[0] = layer->layout_manager->padding[2] = all;
-        layer->layout_manager->padding[1] = layer->layout_manager->padding[3] = all;
+    if (!layer_padding_apply_from_json(layer->padding, value)) {
+        return 0;
     }
+
+    if (!layer->layout_manager) {
+        layer->layout_manager = (LayoutManager*)calloc(1, sizeof(LayoutManager));
+        if (!layer->layout_manager) {
+            return 0;
+        }
+        layer->layout_manager->type = LAYOUT_VERTICAL;
+    }
+    memcpy(layer->layout_manager->padding, layer->padding, sizeof(layer->padding));
     
     if (!is_creating) {
         mark_layer_dirty(layer, DIRTY_LAYOUT);
@@ -518,15 +511,15 @@ static cJSON* create_size_json(Rect rect) {
 
 // 辅助函数：创建内边距 JSON 对象
 static cJSON* create_padding_json(Layer* layer) {
-    if (!layer->layout_manager) {
+    if (!layer) {
         return cJSON_CreateNull();
     }
     
     cJSON* array = cJSON_CreateArray();
-    cJSON_AddItemToArray(array, cJSON_CreateNumber(layer->layout_manager->padding[0]));  // top
-    cJSON_AddItemToArray(array, cJSON_CreateNumber(layer->layout_manager->padding[1]));  // right
-    cJSON_AddItemToArray(array, cJSON_CreateNumber(layer->layout_manager->padding[2]));  // bottom
-    cJSON_AddItemToArray(array, cJSON_CreateNumber(layer->layout_manager->padding[3]));  // left
+    cJSON_AddItemToArray(array, cJSON_CreateNumber(layer_padding_get(layer, 0)));
+    cJSON_AddItemToArray(array, cJSON_CreateNumber(layer_padding_get(layer, 1)));
+    cJSON_AddItemToArray(array, cJSON_CreateNumber(layer_padding_get(layer, 2)));
+    cJSON_AddItemToArray(array, cJSON_CreateNumber(layer_padding_get(layer, 3)));
     return array;
 }
 

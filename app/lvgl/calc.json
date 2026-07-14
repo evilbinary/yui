@@ -53,6 +53,9 @@
             "id": "calc_keypad",
             "type": "LvBtnMatrix",
             "size": [0, 300],
+            "style":{
+                "padding": [10, 12, 10, 12]
+            },
             "buttons": [
                 "C", "<-", "%", "/",
                 "\n",

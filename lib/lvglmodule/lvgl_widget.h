@@ -28,6 +28,7 @@ void lvgl_free_btnmatrix_map(const char** map, uint16_t count);
 lv_color_t lvgl_color_from_yui(Color color);
 int lvgl_has_visual_style(Layer* layer, cJSON* json);
 void lvgl_style_clear_container_chrome(lv_obj_t* obj);
+void lvgl_apply_layer_padding(lv_obj_t* obj, const Layer* layer, lv_style_selector_t selector);
 void lvgl_apply_common_style(lv_obj_t* obj, Layer* layer, cJSON* json);
 void lvgl_apply_label_style(lv_obj_t* obj, Layer* layer, cJSON* json);
 void lvgl_apply_text_style(lv_obj_t* obj, Layer* layer, cJSON* json);

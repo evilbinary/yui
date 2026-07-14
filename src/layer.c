@@ -18,6 +18,43 @@ int yui_inspect_mode_enabled = 0;
 int yui_inspect_show_bounds = 1;
 int yui_inspect_show_info = 1;
 
+int layer_padding_apply_from_json(int padding[4], cJSON* value)
+{
+    if (!padding || !value || !cJSON_IsArray(value)) {
+        return 0;
+    }
+
+    int count = cJSON_GetArraySize(value);
+    if (count >= 4) {
+        padding[0] = cJSON_GetArrayItem(value, 0)->valueint;
+        padding[1] = cJSON_GetArrayItem(value, 1)->valueint;
+        padding[2] = cJSON_GetArrayItem(value, 2)->valueint;
+        padding[3] = cJSON_GetArrayItem(value, 3)->valueint;
+    } else if (count == 2) {
+        int vertical = cJSON_GetArrayItem(value, 0)->valueint;
+        int horizontal = cJSON_GetArrayItem(value, 1)->valueint;
+        padding[0] = padding[2] = vertical;
+        padding[1] = padding[3] = horizontal;
+    } else if (count == 1) {
+        int all = cJSON_GetArrayItem(value, 0)->valueint;
+        padding[0] = padding[1] = padding[2] = padding[3] = all;
+    } else {
+        return 0;
+    }
+    return 1;
+}
+
+int layer_padding_get(const Layer* layer, int index)
+{
+    if (!layer || index < 0 || index > 3) {
+        return 0;
+    }
+    if (layer->layout_manager && layer->layout_manager->padding[index] != 0) {
+        return layer->layout_manager->padding[index];
+    }
+    return layer->padding[index];
+}
+
 // 移除JSON字符串中的注释
 static char* remove_json_comments(char* json_str) {
   if (!json_str) return NULL;
@@ -269,6 +306,7 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
 
   // 用于标记是否已经自定义处理了子图层（如SCROLLBAR类型）
   int has_custom_children = 0;
+  int layout_padding_set = 0;
 
   // 解析基础属性
   if (cJSON_HasObjectItem(json_obj, "id")) {
@@ -631,15 +669,11 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
     }
 
     cJSON* padding = cJSON_GetObjectItem(layout, "padding");
-    if (padding && cJSON_GetArraySize(padding) == 4) {
-      layer->layout_manager->padding[0] =
-          cJSON_GetArrayItem(padding, 0)->valueint;  // top
-      layer->layout_manager->padding[1] =
-          cJSON_GetArrayItem(padding, 1)->valueint;  // right
-      layer->layout_manager->padding[2] =
-          cJSON_GetArrayItem(padding, 2)->valueint;  // bottom
-      layer->layout_manager->padding[3] =
-          cJSON_GetArrayItem(padding, 3)->valueint;  // left
+    if (padding) {
+        layout_padding_set = layer_padding_apply_from_json(layer->layout_manager->padding, padding);
+        if (layout_padding_set) {
+            memcpy(layer->padding, layer->layout_manager->padding, sizeof(layer->padding));
+        }
     }
 
     // 解析Grid布局的列数
@@ -679,6 +713,15 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
       layer->radius = cJSON_GetObjectItem(style, "borderRadius")->valueint;
     }  else {
       layer->radius = 0;  // 默认没有圆角
+    }
+
+    {
+      cJSON* style_padding = cJSON_GetObjectItem(style, "padding");
+      if (style_padding &&
+          layer_padding_apply_from_json(layer->padding, style_padding) &&
+          !layout_padding_set && layer->layout_manager) {
+        memcpy(layer->layout_manager->padding, layer->padding, sizeof(layer->padding));
+      }
     }
 
     // 从style.mode中解析图片渲染模式（优先级高于imageMode）

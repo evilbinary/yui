@@ -263,6 +263,16 @@ LVGL_LAYOUT(lvgl_roller_layout)
 #endif
 
 #if LV_USE_BTNMATRIX
+static void lvgl_btnmatrix_apply_spacing(lv_obj_t* obj, const Layer* layer)
+{
+    lv_obj_set_style_border_width(obj, 0, LV_PART_MAIN);
+    lvgl_apply_layer_padding(obj, layer, LV_PART_MAIN);
+    lv_obj_set_style_pad_row(obj, 6, LV_PART_MAIN);
+    lv_obj_set_style_pad_column(obj, 6, LV_PART_MAIN);
+    lv_obj_set_style_shadow_width(obj, 0, LV_PART_ITEMS);
+    lv_obj_set_style_shadow_opa(obj, LV_OPA_TRANSP, LV_PART_ITEMS);
+}
+
 static void lvgl_btnmatrix_destroy(Layer* layer)
 {
     LvglComponent* component = lvgl_component_from_layer(layer);
@@ -302,10 +312,7 @@ static void* lvgl_btnmatrix_create(Layer* layer, cJSON* json)
         lv_btnmatrix_set_map(component->obj, map);
     }
     lv_btnmatrix_set_btn_ctrl_all(component->obj, LV_BTNMATRIX_CTRL_CLICK_TRIG);
-    lv_obj_set_style_border_width(component->obj, 0, 0);
-    lv_obj_set_style_pad_all(component->obj, 0, LV_PART_MAIN);
-    lv_obj_set_style_pad_row(component->obj, 6, LV_PART_MAIN);
-    lv_obj_set_style_pad_column(component->obj, 6, LV_PART_MAIN);
+    lvgl_btnmatrix_apply_spacing(component->obj, layer);
     lv_obj_set_style_text_align(component->obj, LV_TEXT_ALIGN_CENTER, LV_PART_ITEMS);
     lv_obj_set_style_radius(component->obj, 6, LV_PART_ITEMS);
     lvgl_apply_common_style(component->obj, layer, json);
@@ -323,9 +330,7 @@ static void lvgl_btnmatrix_layout(Layer* layer)
     }
 
     lvgl_widget_layout(layer);
-    lv_obj_set_style_pad_all(component->obj, 0, LV_PART_MAIN);
-    lv_obj_set_style_pad_row(component->obj, 6, LV_PART_MAIN);
-    lv_obj_set_style_pad_column(component->obj, 6, LV_PART_MAIN);
+    lvgl_btnmatrix_apply_spacing(component->obj, layer);
 
     map = lv_btnmatrix_get_map(component->obj);
     if (map) {

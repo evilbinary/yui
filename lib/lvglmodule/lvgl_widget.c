@@ -68,6 +68,19 @@ void lvgl_widget_layout(Layer* layer)
     }
 
     lvgl_component_sync_rect(component);
+    lvgl_apply_layer_padding(component->obj, layer, LV_PART_MAIN);
+}
+
+void lvgl_apply_layer_padding(lv_obj_t* obj, const Layer* layer, lv_style_selector_t selector)
+{
+    if (!obj || !layer) {
+        return;
+    }
+
+    lv_obj_set_style_pad_top(obj, (lv_coord_t)layer->padding[0], selector);
+    lv_obj_set_style_pad_right(obj, (lv_coord_t)layer->padding[1], selector);
+    lv_obj_set_style_pad_bottom(obj, (lv_coord_t)layer->padding[2], selector);
+    lv_obj_set_style_pad_left(obj, (lv_coord_t)layer->padding[3], selector);
 }
 
 char* lvgl_strdup_lv(const char* src)
@@ -587,6 +600,8 @@ void lvgl_apply_common_style(lv_obj_t* obj, Layer* layer, cJSON* json)
     if (HAS_STATE(layer, LAYER_STATE_DISABLED)) {
         lv_obj_add_state(obj, LV_STATE_DISABLED);
     }
+
+    lvgl_apply_layer_padding(obj, layer, LV_PART_MAIN);
 }
 
 void lvgl_apply_text_style(lv_obj_t* obj, Layer* layer, cJSON* json)

@@ -80,17 +80,10 @@ void layout_layer(Layer* layer){
     if (layer->layout_manager && layer->child_count > 0) {
         printf("layout_layer: applying layout manager for layer %s\n", layer->id ? layer->id : "(null)");
         fflush(stdout);
-        // 检查layout_manager的padding是否有效
-        if (!layer->layout_manager->padding) {
-            printf("layout_layer: ERROR: layer %s has invalid layout_manager padding!\n", layer->id ? layer->id : "(null)");
-            fflush(stdout);
-            return;
-        }
-        
-        int padding_top = layer->layout_manager->padding[0];
-        int padding_right = layer->layout_manager->padding[1];
-        int padding_bottom = layer->layout_manager->padding[2];
-        int padding_left = layer->layout_manager->padding[3];
+        int padding_top = layer_padding_get(layer, 0);
+        int padding_right = layer_padding_get(layer, 1);
+        int padding_bottom = layer_padding_get(layer, 2);
+        int padding_left = layer_padding_get(layer, 3);
         int spacing = layer->layout_manager->spacing;
         
         if(layer->parent!=NULL){
@@ -490,10 +483,10 @@ void layout_layer(Layer* layer){
         if (columns <= 0) columns = 1;
         
         int spacing = layer->layout_manager ? layer->layout_manager->spacing : 0;
-        int padding_top = layer->layout_manager ? layer->layout_manager->padding[0] : 0;
-        int padding_right = layer->layout_manager ? layer->layout_manager->padding[1] : 0;
-        int padding_bottom = layer->layout_manager ? layer->layout_manager->padding[2] : 0;
-        int padding_left = layer->layout_manager ? layer->layout_manager->padding[3] : 0;
+        int padding_top = layer_padding_get(layer, 0);
+        int padding_right = layer_padding_get(layer, 1);
+        int padding_bottom = layer_padding_get(layer, 2);
+        int padding_left = layer_padding_get(layer, 3);
         
         // 计算可用空间
         int available_width = layer->rect.w - padding_left - padding_right;
