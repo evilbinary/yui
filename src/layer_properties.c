@@ -344,7 +344,16 @@ static int handle_source(Layer* layer, cJSON* value, int is_creating) {
 // data 属性处理器（通过回调分派给组件）
 static int handle_data(Layer* layer, cJSON* value, int is_creating) {
     (void)is_creating;
-    return layer_set_data(layer, value) > 0 ? 1 : 0;
+    // YUI.update 传入的 value 位于临时解析树中，更新结束后会被释放；
+    // 组件会接管 data 指针，因此必须先复制一份。
+    cJSON* copy = cJSON_Duplicate(value, 1);
+    if (!copy) return 0;
+
+    int result = layer_set_data(layer, copy);
+    if (result != 2) {
+        cJSON_Delete(copy);
+    }
+    return result > 0 ? 1 : 0;
 }
 
 static int handle_variant(Layer* layer, cJSON* value, int is_creating) {

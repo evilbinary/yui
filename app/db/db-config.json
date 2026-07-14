@@ -1,8 +1,4 @@
 {
-  "windowWidth": 1030,
-  "windowHeight": 796,
-  "sqlEditorContainer": 274,
-  "theme": "dark",
   "connection": {
     "host": "localhost",
     "user": "root",
@@ -14,5 +10,6 @@
     "autoConnect": true,
     "pageSize": 500,
     "fontSize": 13
-  }
+  },
+  "theme": "mocha"
 }
