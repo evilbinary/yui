@@ -3,6 +3,8 @@
 
 #define printf
 
+static int layout_scale_value(int value, float scale);
+
 static int layout_horizontal_child_width(Layer* child, int available_width, float total_flex, int no_width_count) {
     if (!child) {
         return 50;
@@ -440,6 +442,15 @@ void layout_layer(Layer* layer){
                 current_y += child->rect.h + spacing;
             }
         } else if (layer->layout_manager->type == LAYOUT_ABSOLUTE) {
+            float sx = 1.0f;
+            float sy = 1.0f;
+            if (layer->layout_base_valid && layer->layout_base_rect.w > 0) {
+                sx = (float)layer->rect.w / (float)layer->layout_base_rect.w;
+            }
+            if (layer->layout_base_valid && layer->layout_base_rect.h > 0) {
+                sy = (float)layer->rect.h / (float)layer->layout_base_rect.h;
+            }
+
             for (int i = 0; i < layer->child_count; i++) {
                 Layer* child = layer->children[i];
                 int rel_x;
@@ -454,8 +465,8 @@ void layout_layer(Layer* layer){
                     child->layout_base_valid = 1;
                 }
 
-                rel_x = child->layout_base_rect.x;
-                rel_y = child->layout_base_rect.y;
+                rel_x = layout_scale_value(child->layout_base_rect.x, sx);
+                rel_y = layout_scale_value(child->layout_base_rect.y, sy);
                 child->rect.x = layer->rect.x + rel_x;
                 child->rect.y = layer->rect.y + rel_y;
 
