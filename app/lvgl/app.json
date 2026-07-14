@@ -310,7 +310,17 @@
             "type": "LvMsgbox",
             "title": "LvMsgbox",
             "text": "Message box example",
-            "size": [280, 120]
+            "size": [280, 120],
+            "buttons": [
+            {
+                "text": "确认",
+                "default": true,
+                "style": {
+                "width": 72,
+                "height": 28
+                }
+            }
+            ]
         },
         {
             "id": "color_row",

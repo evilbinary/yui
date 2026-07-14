@@ -1,4 +1,5 @@
 #include "lvgl_widget.h"
+#include "lvgl_font.h"
 #include "component_registry.h"
 #include "../../lib/lvgl/lv_port.h"
 
@@ -219,15 +220,79 @@ LVGL_EXTRA_LAYOUT(lvgl_win_layout)
 #endif
 
 #if LV_USE_MSGBOX
+static void lvgl_msgbox_hide(lv_obj_t* mbox)
+{
+    if (mbox) {
+        lv_obj_add_flag(mbox, LV_OBJ_FLAG_HIDDEN);
+    }
+}
+
 static void lvgl_msgbox_close_event_cb(lv_event_t* e)
 {
     lv_obj_t* btn = lv_event_get_target(e);
     lv_obj_t* header = lv_obj_get_parent(btn);
     lv_obj_t* mbox = header ? lv_obj_get_parent(header) : NULL;
 
-    if (mbox) {
-        lv_obj_add_flag(mbox, LV_OBJ_FLAG_HIDDEN);
+    lvgl_msgbox_hide(mbox);
+}
+
+static void lvgl_msgbox_btn_event_cb(lv_event_t* e)
+{
+    lv_obj_t* btn = lv_event_get_target(e);
+    lv_obj_t* btn_row = lv_obj_get_parent(btn);
+    lv_obj_t* mbox = btn_row ? lv_obj_get_parent(btn_row) : NULL;
+
+    lvgl_msgbox_hide(mbox);
+}
+
+static lv_obj_t* lvgl_msgbox_create_button(lv_obj_t* btn_row, cJSON* btn_json, Layer* layer,
+                                           cJSON* root_json, int apply_root_label_style)
+{
+    lv_obj_t* btn;
+    lv_obj_t* label;
+    const char* text;
+    int width = 72;
+    int height = 28;
+    cJSON* style;
+
+    if (!btn_row) {
+        return NULL;
     }
+
+    text = btn_json ? lvgl_json_string(btn_json, "text", "OK") : "OK";
+    style = btn_json ? cJSON_GetObjectItem(btn_json, "style") : NULL;
+    if (style) {
+        cJSON* width_item = cJSON_GetObjectItem(style, "width");
+        cJSON* height_item = cJSON_GetObjectItem(style, "height");
+        if (width_item && cJSON_IsNumber(width_item)) {
+            width = width_item->valueint;
+        }
+        if (height_item && cJSON_IsNumber(height_item)) {
+            height = height_item->valueint;
+        }
+    }
+
+    btn = lv_btn_create(btn_row);
+    lv_obj_set_size(btn, (lv_coord_t)width, (lv_coord_t)height);
+    lv_obj_set_style_pad_hor(btn, 6, 0);
+    lv_obj_set_style_pad_ver(btn, 4, 0);
+    lv_obj_set_style_border_width(btn, 0, 0);
+    lv_obj_set_style_outline_width(btn, 0, 0);
+    lv_obj_add_event_cb(btn, lvgl_msgbox_btn_event_cb, LV_EVENT_CLICKED, NULL);
+
+    label = lv_label_create(btn);
+    lv_label_set_text(label, text);
+    lv_obj_set_style_text_font(label, lvgl_font_get_for_text(text, layer), 0);
+    lv_obj_center(label);
+
+    if (lvgl_has_visual_style(layer, btn_json)) {
+        lvgl_apply_common_style(btn, layer, btn_json);
+        lvgl_apply_label_style(label, layer, btn_json);
+    } else if (apply_root_label_style) {
+        lvgl_apply_label_style(label, layer, root_json);
+    }
+
+    return btn;
 }
 
 static void* lvgl_msgbox_create(Layer* layer, cJSON* json)
@@ -241,8 +306,9 @@ static void* lvgl_msgbox_create(Layer* layer, cJSON* json)
     lv_obj_t* close_label;
     lv_obj_t* body_label;
     lv_obj_t* btn_row;
-    lv_obj_t* ok_btn;
-    lv_obj_t* ok_label;
+    cJSON* buttons;
+    int apply_root_style;
+    int i;
 
     if (!component) {
         return NULL;
@@ -250,6 +316,7 @@ static void* lvgl_msgbox_create(Layer* layer, cJSON* json)
 
     title = lvgl_json_string(json, "title", "Message");
     text = layer->text && layer->text[0] ? layer->text : lvgl_json_string(json, "text", "Hello");
+    apply_root_style = lvgl_has_visual_style(layer, json);
 
     /* Plain container instead of lv_msgbox (upstream widget has init bugs). */
     component->obj = lv_obj_create(lv_port_get_root());
@@ -293,20 +360,25 @@ static void* lvgl_msgbox_create(Layer* layer, cJSON* json)
     lv_obj_set_style_pad_all(btn_row, 0, 0);
     lvgl_style_clear_container_chrome(btn_row);
 
-    ok_btn = lv_btn_create(btn_row);
-    lv_obj_set_size(ok_btn, 72, 28);
-    lv_obj_set_style_border_width(ok_btn, 0, 0);
-    lv_obj_set_style_outline_width(ok_btn, 0, 0);
-    ok_label = lv_label_create(ok_btn);
-    lv_label_set_text(ok_label, "OK");
-    lv_obj_center(ok_label);
+    buttons = cJSON_GetObjectItem(json, "buttons");
+    if (buttons && cJSON_IsArray(buttons) && cJSON_GetArraySize(buttons) > 0) {
+        int count = cJSON_GetArraySize(buttons);
+        if (count > 1) {
+            lv_obj_set_style_pad_column(btn_row, 8, 0);
+        }
+        for (i = 0; i < count; i++) {
+            cJSON* btn_json = cJSON_GetArrayItem(buttons, i);
+            lvgl_msgbox_create_button(btn_row, btn_json, layer, json, apply_root_style);
+        }
+    } else {
+        lvgl_msgbox_create_button(btn_row, NULL, layer, json, apply_root_style);
+    }
 
-    if (lvgl_has_visual_style(layer, json)) {
+    if (apply_root_style) {
         lvgl_apply_common_style(component->obj, layer, json);
         lvgl_apply_label_style(title_label, layer, json);
         lvgl_apply_label_style(body_label, layer, json);
         lvgl_apply_label_style(close_label, layer, json);
-        lvgl_apply_label_style(ok_label, layer, json);
     }
 
     lvgl_widget_finish_create(layer, component, json);

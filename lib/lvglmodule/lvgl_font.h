@@ -7,5 +7,6 @@ struct _lv_font_t;
 typedef struct _lv_font_t lv_font_t;
 
 const lv_font_t* lvgl_font_get(Layer* layer);
+const lv_font_t* lvgl_font_get_for_text(const char* text, Layer* layer);
 
 #endif

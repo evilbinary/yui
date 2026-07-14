@@ -87,3 +87,32 @@ const lv_font_t* lvgl_font_get(Layer* layer)
 {
     return lvgl_font_pick_nearest(lvgl_font_target_size(layer));
 }
+
+static int lvgl_text_has_multibyte(const char* text)
+{
+    const unsigned char* p = (const unsigned char*)text;
+
+    if (!p) {
+        return 0;
+    }
+    while (*p) {
+        if (*p >= 0x80) {
+            return 1;
+        }
+        p++;
+    }
+    return 0;
+}
+
+const lv_font_t* lvgl_font_get_for_text(const char* text, Layer* layer)
+{
+    if (!text || !text[0]) {
+        return lvgl_font_get(layer);
+    }
+#if LV_FONT_SIMSUN_16_CJK
+    if (lvgl_text_has_multibyte(text)) {
+        return &lv_font_simsun_16_cjk;
+    }
+#endif
+    return lvgl_font_get(layer);
+}

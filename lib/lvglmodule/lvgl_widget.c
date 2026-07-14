@@ -438,6 +438,22 @@ void lvgl_style_clear_container_chrome(lv_obj_t* obj)
     lv_obj_set_style_outline_width(obj, 0, 0);
 }
 
+static const char* lvgl_style_text_hint(lv_obj_t* obj, Layer* layer, cJSON* json)
+{
+    const char* text;
+
+    if (obj && lv_obj_check_type(obj, &lv_label_class)) {
+        text = lv_label_get_text(obj);
+        if (text && text[0]) {
+            return text;
+        }
+    }
+    if (layer && layer->text && layer->text[0]) {
+        return layer->text;
+    }
+    return lvgl_json_string(json, "text", NULL);
+}
+
 void lvgl_apply_label_style(lv_obj_t* obj, Layer* layer, cJSON* json)
 {
     const lv_font_t* font;
@@ -460,7 +476,7 @@ void lvgl_apply_label_style(lv_obj_t* obj, Layer* layer, cJSON* json)
         lv_obj_set_style_text_color(obj, lvgl_color_from_yui(text_color), 0);
     }
 
-    font = lvgl_font_get(layer);
+    font = lvgl_font_get_for_text(lvgl_style_text_hint(obj, layer, json), layer);
     if (font) {
         lv_obj_set_style_text_font(obj, font, 0);
     }
