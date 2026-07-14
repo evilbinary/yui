@@ -525,6 +525,7 @@ void lvgl_apply_label_style(lv_obj_t* obj, Layer* layer, cJSON* json)
     color_item = lvgl_json_get(json, "color");
     if (color_item && cJSON_IsString(color_item)) {
         parse_color(color_item->valuestring, &text_color);
+        layer->color = text_color;
     }
     if (text_color.a > 0) {
         lv_obj_set_style_text_color(obj, lvgl_color_from_yui(text_color), 0);

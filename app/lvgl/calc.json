@@ -34,7 +34,8 @@
                     "type": "LvLabel",
                     "text": "",
                     "size": [0, 24],
-                    "color": "#a0a0b0",
+                    "color": "#c8c8d8",
+                    "fontSize": 16,
                     "textAlign": "right"
                 },
                 {
@@ -42,7 +43,8 @@
                     "type": "LvLabel",
                     "text": "0",
                     "size": [0, 44],
-                    "color": "#eaeaea",
+                    "color": "#383848",
+                    "fontSize": 32,
                     "textAlign": "right"
                 }
             ]

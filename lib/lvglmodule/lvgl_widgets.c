@@ -23,11 +23,31 @@ static void* lvgl_label_create(Layer* layer, cJSON* json)
     if (text[0]) {
         lv_label_set_text(component->obj, text);
     }
+    {
+        cJSON* color_item = lvgl_json_get(json, "color");
+        if (color_item && cJSON_IsString(color_item)) {
+            parse_color(color_item->valuestring, &layer->color);
+        }
+    }
     lvgl_apply_text_style(component->obj, layer, json);
     lvgl_widget_finish_create(layer, component, json);
     return component;
 }
-LVGL_LAYOUT(lvgl_label_layout)
+
+static void lvgl_label_layout(Layer* layer)
+{
+    LvglComponent* component = lvgl_component_from_layer(layer);
+
+    if (!component || !component->obj) {
+        return;
+    }
+
+    lvgl_widget_layout(layer);
+
+    if (layer->color.a > 0) {
+        lv_obj_set_style_text_color(component->obj, lvgl_color_from_yui(layer->color), 0);
+    }
+}
 #endif
 
 #if LV_USE_BTN

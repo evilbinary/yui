@@ -122,7 +122,6 @@ function performCalculation() {
 
     result = Math.round(result * 1000000000000) / 1000000000000;
     calcState.currentValue = String(result);
-    calcState.expression = "";
     calcState.operation = "";
 }
 
@@ -143,9 +142,10 @@ function calculate() {
         return;
     }
 
-    calcState.expression = calcState.previousValue + " " +
+    var completedExpression = calcState.previousValue + " " +
         opSymbols[calcState.operation] + " " + calcState.currentValue + " =";
     performCalculation();
+    calcState.expression = completedExpression;
     calcState.resetOnNextInput = true;
     updateDisplay();
 }
