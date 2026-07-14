@@ -266,12 +266,15 @@ static void* lvgl_msgbox_create(Layer* layer, cJSON* json)
     lv_obj_set_flex_align(header, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER,
                           LV_FLEX_ALIGN_CENTER);
     lv_obj_set_style_pad_all(header, 0, 0);
+    lvgl_style_clear_container_chrome(header);
 
     title_label = lv_label_create(header);
     lv_label_set_text(title_label, title && title[0] ? title : "Message");
 
     close_btn = lv_btn_create(header);
     lv_obj_set_size(close_btn, 24, 24);
+    lv_obj_set_style_border_width(close_btn, 0, 0);
+    lv_obj_set_style_outline_width(close_btn, 0, 0);
     lv_obj_add_event_cb(close_btn, lvgl_msgbox_close_event_cb, LV_EVENT_CLICKED, NULL);
     close_label = lv_label_create(close_btn);
     lv_label_set_text(close_label, LV_SYMBOL_CLOSE);
@@ -288,9 +291,12 @@ static void* lvgl_msgbox_create(Layer* layer, cJSON* json)
     lv_obj_set_flex_flow(btn_row, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(btn_row, LV_FLEX_ALIGN_END, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_set_style_pad_all(btn_row, 0, 0);
+    lvgl_style_clear_container_chrome(btn_row);
 
     ok_btn = lv_btn_create(btn_row);
     lv_obj_set_size(ok_btn, 72, 28);
+    lv_obj_set_style_border_width(ok_btn, 0, 0);
+    lv_obj_set_style_outline_width(ok_btn, 0, 0);
     ok_label = lv_label_create(ok_btn);
     lv_label_set_text(ok_label, "OK");
     lv_obj_center(ok_label);

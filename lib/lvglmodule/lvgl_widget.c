@@ -426,6 +426,18 @@ int lvgl_has_visual_style(Layer* layer, cJSON* json)
     return 0;
 }
 
+void lvgl_style_clear_container_chrome(lv_obj_t* obj)
+{
+    if (!obj) {
+        return;
+    }
+
+    lv_obj_set_style_border_width(obj, 0, 0);
+    lv_obj_set_style_bg_opa(obj, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_shadow_width(obj, 0, 0);
+    lv_obj_set_style_outline_width(obj, 0, 0);
+}
+
 void lvgl_apply_label_style(lv_obj_t* obj, Layer* layer, cJSON* json)
 {
     const lv_font_t* font;
