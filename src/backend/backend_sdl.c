@@ -99,9 +99,32 @@ static int backend_get_font_size(DFont* font) {
 }
 
 static DFont* backend_get_fallback_font_for(DFont* primary) {
+    DFont* fallback;
+
     if (!backend_has_font_fallback() || !primary) {
         return NULL;
     }
+
+#ifdef __EMSCRIPTEN__
+    if (g_font_fallback_path[0]) {
+        fallback = backend_load_font_with_weight(g_font_fallback_path,
+                                                 backend_get_font_size(primary), "normal");
+        if (fallback) {
+            return fallback;
+        }
+    }
+    fallback = backend_load_font_with_weight("app/assets/NotoEmoji-Regular.ttf",
+                                             backend_get_font_size(primary), "normal");
+    if (fallback) {
+        return fallback;
+    }
+    fallback = backend_load_font_with_weight("app/assets/NotoSansSymbols2-Regular.ttf",
+                                             backend_get_font_size(primary), "normal");
+    if (fallback) {
+        return fallback;
+    }
+#endif
+
     return backend_load_font_with_weight(g_font_fallback_path, backend_get_font_size(primary), "normal");
 }
 
@@ -165,7 +188,24 @@ static DFont* backend_pick_font_for_codepoint(DFont* primary, DFont* fallback, U
     if (fallback && TTF_GlyphIsProvided32(fallback, codepoint)) {
         return fallback;
     }
-    return primary ? primary : fallback;
+    return NULL;
+}
+
+static int backend_text_fits_font(DFont* font, const char* text) {
+    int w = 0;
+    int h = 0;
+
+    if (!font || !text || !text[0]) {
+        return 0;
+    }
+    return TTF_SizeUTF8(font, text, &w, &h) == 0 && w > 0 && h > 0;
+}
+
+static SDL_Surface* backend_render_blended_utf8(DFont* font, const char* text, SDL_Color color) {
+    if (!backend_text_fits_font(font, text)) {
+        return NULL;
+    }
+    return TTF_RenderUTF8_Blended(font, text, color);
 }
 
 void handle_event(Layer* root, SDL_Event* event);
@@ -1301,7 +1341,6 @@ DFont* backend_load_font_with_weight(char* font_path,int size,const char* weight
 #ifdef __EMSCRIPTEN__
     const char* try_paths[6];
     int try_count = 0;
-    int use_synthetic_style = 0;
 
     if (TTF_WasInit() == 0 && TTF_Init() == -1) {
         LOGW("font", "SDL_ttf init failed: %s", TTF_GetError());
@@ -1314,7 +1353,6 @@ DFont* backend_load_font_with_weight(char* font_path,int size,const char* weight
         try_paths[try_count++] = "app/assets/Roboto-Bold.ttf";
         try_paths[try_count++] = font_path;
         try_paths[try_count++] = "app/assets/Roboto-Regular.ttf";
-        use_synthetic_style = 1;
     } else if (strcmp(weight, "light") == 0) {
         emscripten_font_variant_path(font_path, "Light", full_path, sizeof(full_path));
         try_paths[try_count++] = full_path;
@@ -1328,11 +1366,7 @@ DFont* backend_load_font_with_weight(char* font_path,int size,const char* weight
 
     for (int i = 0; i < try_count && !default_font; i++) {
         default_font = emscripten_open_font_file(try_paths[i], size);
-        if (default_font && strcmp(weight, "bold") == 0 && use_synthetic_style) {
-            if (!strstr(try_paths[i], "Bold") && !strstr(try_paths[i], "bold")) {
-                TTF_SetFontStyle(default_font, TTF_STYLE_BOLD);
-            }
-        }
+        /* Emscripten: 不用 TTF_SetFontStyle 模拟粗体，会触发 zero width；仅使用真实 Bold 文件 */
     }
 
     if (!default_font) {
@@ -1568,6 +1602,9 @@ Texture* backend_render_texture(DFont* font,const char* text,Color color){
                 break;
             }
             chosen = backend_pick_font_for_codepoint(font, fallback, codepoint);
+            if (!chosen) {
+                continue;
+            }
 
             if (run_count > 0 && run_fonts[run_count - 1] == chosen) {
                 run_ends[run_count - 1] = cursor;
@@ -1586,7 +1623,7 @@ Texture* backend_render_texture(DFont* font,const char* text,Color color){
             }
             memcpy(run_buf, run_starts[i], (size_t)len);
             run_buf[len] = '\0';
-            surfaces[i] = TTF_RenderUTF8_Blended(run_fonts[i], run_buf, color);
+            surfaces[i] = backend_render_blended_utf8(run_fonts[i], run_buf, color);
             if (!surfaces[i]) {
                 continue;
             }
@@ -1636,9 +1673,12 @@ Texture* backend_render_texture(DFont* font,const char* text,Color color){
         render_font = font;
     }
 
-    SDL_Surface* surface = TTF_RenderUTF8_Blended(render_font, text, color);
+    SDL_Surface* surface = backend_render_blended_utf8(render_font, text, color);
+    if (!surface && fallback && fallback != render_font) {
+        surface = backend_render_blended_utf8(fallback, text, color);
+    }
     if (!surface) {
-        printf("error: TTF_RenderUTF8_Blended failed for text '%s': %s\n", text, TTF_GetError());
+        LOGD("font", "skip unrenderable text: '%s'", text);
         return NULL;
     }
     

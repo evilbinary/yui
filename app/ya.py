@@ -196,6 +196,27 @@ target("calc.html")
     add_run()
 )
 
+target("watch-os") 
+(
+    add_deps("socket","yui","quickjs","jsmodule-quickjs","yaml2json"),
+    add_rules("mode.debug", "mode.release"),
+    set_kind("binary"),
+    add_flags(),
+    add_files("watch-os/main.c"),
+    add_run()
+)
+
+
+target("watch-os.html") 
+(
+    add_deps("socket","yui","quickjs","jsmodule-quickjs","yaml2json"),
+    add_rules("mode.debug", "mode.release"),
+    set_kind("binary"),
+    add_flags(),
+    add_files("watch-os/main.c"),
+    add_run()
+)
+
 
 target("db")
 (
