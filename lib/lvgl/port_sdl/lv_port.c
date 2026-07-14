@@ -44,9 +44,11 @@ int lv_port_init(void)
     lv_obj_set_style_bg_opa(lv_scr_act(), LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(lv_scr_act(), 0, 0);
     lv_obj_clear_flag(lv_scr_act(), LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_clear_flag(lv_scr_act(), LV_OBJ_FLAG_CLICKABLE);
     lv_obj_set_style_bg_opa(g_root, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(g_root, 0, 0);
     lv_obj_clear_flag(g_root, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_clear_flag(g_root, LV_OBJ_FLAG_CLICKABLE);
 
     lv_disp_t* disp = lv_disp_get_default();
     if (disp) {

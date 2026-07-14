@@ -76,12 +76,21 @@ static void lvgl_yui_sdl_event_hook(const SDL_Event* event, void* user_data)
             mouse_y = event->motion.y;
             handle_scrollbar_drag_event(root, mouse_x, mouse_y, event->type);
         } else {
-            /* Pointer clicks are handled by LVGL indev; forwarding button
-             * events to YUI handle_mouse_event would duplicate onClick for
-             * LvBtn and other lvglmodule widgets. */
+            MouseEvent mouse_event;
+            int event_state;
+
             mouse_x = event->button.x;
             mouse_y = event->button.y;
+            event_state = (event->type == SDL_MOUSEBUTTONDOWN) ? SDL_PRESSED : SDL_RELEASED;
             handle_scrollbar_drag_event(root, mouse_x, mouse_y, event->type);
+
+            mouse_event.x = mouse_x;
+            mouse_event.y = mouse_y;
+            mouse_event.button = event->button.button;
+            mouse_event.state = event_state;
+            mouse_event.clicks = event->button.clicks;
+            mouse_event.timestamp = SDL_GetTicks();
+            handle_mouse_event(root, &mouse_event);
         }
     } else if (event->type == SDL_MOUSEWHEEL) {
         int mouse_x = 0;

@@ -157,7 +157,9 @@ static void* js_module_common_event(void* data)
             if (js_module_trigger_event(name, layer) != 0) {
                 char full_name[256];
                 snprintf(full_name, sizeof(full_name), "%s.%s", layer->id, name);
-                js_module_trigger_event(full_name, layer);
+                if (js_module_trigger_event(full_name, layer) != 0) {
+                    js_module_call_event(name, layer);
+                }
             }
         }
     }

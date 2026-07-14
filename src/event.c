@@ -2,6 +2,7 @@
 #include "util.h"
 #include "backend.h"
 #include "popup_manager.h"
+#include "component_registry.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
@@ -269,23 +270,25 @@ int default_layer_handle_mouse_event(Layer* layer, MouseEvent* event) {
         }
     }
 
-    // 通用点击事件分发（所有layer组件都会检查）
+    // 通用点击事件分发：仅 native 渲染组件走 YUI 鼠标路径；
+    // LVGL 及后续其他后端组件由各自 indev/输入系统处理。
     if (layer->event && layer->event->click) {
-        if (event->state == SDL_RELEASED && event->button == SDL_BUTTON_LEFT) {
-            if (point_in_rect(mouse_pos, layer->rect)) {
-                bool has_handler = has_child_handler_at_point(layer, mouse_pos);
-                if (!has_handler && layer->parent) {
-                    for (int i = 0; i < layer->parent->child_count && !has_handler; i++) {
-                        Layer* sibling = layer->parent->children[i];
-                        if (sibling && sibling != layer && sibling->handle_mouse_event &&
-                            point_in_rect(mouse_pos, sibling->rect)) {
-                            has_handler = true;
-                        }
+        const YuiComponentOps* ops = yui_type_get_ops(layer->type);
+        if (ops && (ops->flags & YUI_COMP_NATIVE_RENDER) &&
+            event->state == SDL_RELEASED && event->button == SDL_BUTTON_LEFT &&
+            point_in_rect(mouse_pos, layer->rect)) {
+            bool has_handler = has_child_handler_at_point(layer, mouse_pos);
+            if (!has_handler && layer->parent) {
+                for (int i = 0; i < layer->parent->child_count && !has_handler; i++) {
+                    Layer* sibling = layer->parent->children[i];
+                    if (sibling && sibling != layer && sibling->handle_mouse_event &&
+                        point_in_rect(mouse_pos, sibling->rect)) {
+                        has_handler = true;
                     }
                 }
-                if (!has_handler) {
-                    layer->event->click(layer);
-                }
+            }
+            if (!has_handler) {
+                layer->event->click(layer);
             }
         }
     }
