@@ -27,6 +27,7 @@ int list_component_get_item_count(ListComponent* component);
 int list_component_index_at_y(ListComponent* component, int x, int y);
 
 int list_component_handle_mouse_event(Layer* layer, MouseEvent* event);
+void list_component_handle_scroll_event(Layer* layer, int scroll_delta);
 int list_component_handle_key_event(Layer* layer, KeyEvent* event);
 int list_component_handle_touch_event(Layer* layer, TouchEvent* event);
 void list_component_render(Layer* layer);

@@ -239,6 +239,7 @@ ListComponent* list_component_create(Layer* layer) {
     layer->component = component;
     layer->render = list_component_render;
     layer->handle_mouse_event = list_component_handle_mouse_event;
+    layer->handle_scroll_event = list_component_handle_scroll_event;
     layer->handle_key_event = list_component_handle_key_event;
     layer->handle_touch_event = list_component_handle_touch_event;
     layer->focusable = 1;
@@ -478,6 +479,13 @@ int list_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     }
 
     return inside;
+}
+
+void list_component_handle_scroll_event(Layer* layer, int scroll_delta) {
+    if (!layer || !layer->component || scroll_delta == 0) return;
+
+    list_component_update_content_size((ListComponent*)layer->component);
+    layout_scroll_vertical(layer, -scroll_delta * 20);
 }
 
 static int list_can_vertical_pan(const Layer* layer) {

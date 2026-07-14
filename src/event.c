@@ -90,7 +90,11 @@ void handle_scroll_event(Layer* layer,int mouse_x,int mouse_y,int scroll_deltax,
     if (!is_point_in_rect(mouse_x, mouse_y, layer->rect)) {
         return; // 鼠标不在图层内，不处理滚动事件
     }
-    
+
+    if (layer->handle_scroll_event) {
+        layer->handle_scroll_event(layer, scroll_deltay);
+    }
+
     handler_virtical_scroll_event(layer, scroll_deltay);
     handle_horizontal_scroll_event(layer, scroll_deltay); // 水平滚动
 
