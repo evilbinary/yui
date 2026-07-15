@@ -151,8 +151,43 @@ function validateJsonInternal(jsonText) {
 
 // renderFromJson 创建的新图层默认隐藏，需显式 show（与 Router 行为一致）
 function showRenderedLayer(json) {
-    YUI.log("showRenderedLayer: Showing rendered layer: " + json.id);
-    YUI.show(json.id);
+    if (json && json.id) {
+        YUI.log("showRenderedLayer: Showing rendered layer: " + json.id);
+        YUI.show(json.id);
+    }
+}
+
+// 判断是否为可渲染的 UI 组件 JSON（而非增量更新指令）
+function isUiComponentJson(json) {
+    return json && typeof json === 'object' && json.type;
+}
+
+// 从编辑器内容提取用于预览的 UI JSON
+// 数组格式时：第一项若是 UI 定义，只预览该项（后续 target/change 是 API 历史，不应在每次编辑时重放）
+function extractPreviewUiJson(json) {
+    if (Array.isArray(json)) {
+        if (json.length > 0 && isUiComponentJson(json[0])) {
+            return json[0];
+        }
+        return null;
+    }
+    if (isUiComponentJson(json)) {
+        return json;
+    }
+    return null;
+}
+
+// 将 UI JSON 渲染到预览区
+function renderPreviewUi(uiJson) {
+    var jsonString = JSON.stringify(uiJson, null, 4);
+    var result = YUI.renderFromJson("previewLabel", jsonString);
+    if (result === 0) {
+        showRenderedLayer(uiJson);
+        return true;
+    }
+    var previewText = jsonToPreviewText(uiJson);
+    YUI.setText("previewLabel", previewText);
+    return false;
 }
 
 // 内部刷新预览函数
@@ -161,81 +196,18 @@ function refreshPreviewInternal(json) {
         return;
     }
 
-    // 根据更新模式处理不同
-    if (editorState.updateMode === 'incremental') {
-        // 增量模式：如果是数组，需要分别处理
-        if (Array.isArray(json)) {
-            YUI.log("refreshPreviewInternal: Processing incremental array with " + json.length + " items");
-            
-            if (json.length > 0) {
-                // 检查第一个元素是否包含id
-                var firstItem = json[0];
-                
-                if (firstItem && firstItem.id) {
-                    // 第一个元素有id，使用renderFromJson渲染
-                    var firstJsonString = JSON.stringify(firstItem, null, 4);
-                    YUI.log("refreshPreviewInternal: Rendering first item with renderFromJson");
-                    YUI.log("refreshPreviewInternal: First item JSON: " + firstJsonString);
-                    var result = YUI.renderFromJson("previewLabel", firstJsonString);
-                    
-                    if (result === 0) {
-                        YUI.log("refreshPreviewInternal: Successfully rendered first item");
-                        showRenderedLayer(firstItem);
-                    } else {
-                        YUI.log("refreshPreviewInternal: Failed to render first item, result = " + result);
-                    }
-                    
-                    // 对其余元素使用YUI.update
-                    for (var i = 1; i < json.length; i++) {
-                        var updateItem = json[i];
-                        var updateString = JSON.stringify(updateItem);
-                        YUI.log("refreshPreviewInternal: Updating item " + i + " with YUI.update");
-                        YUI.log("refreshPreviewInternal: Update item " + i + ": " + updateString);
-                        YUI.update(updateString);
-                    }
-                } else {
-                    // 第一个元素没有id，对所有元素使用YUI.update
-                    YUI.log("refreshPreviewInternal: No id found in first item, using YUI.update for all items");
-                    for (var i = 0; i < json.length; i++) {
-                        var updateItem = json[i];
-                        var updateString = JSON.stringify(updateItem);
-                        YUI.log("refreshPreviewInternal: Updating item " + i + " with YUI.update");
-                        YUI.log("refreshPreviewInternal: Update item " + i + ": " + updateString);
-                        YUI.update(updateString);
-                    }
-                }
-            }
-        } else {
-            // 不是数组，直接渲染
-            var jsonString = JSON.stringify(json, null, 4);
-            YUI.log("refreshPreviewInternal: Processing non-array in incremental mode");
-            var result = YUI.renderFromJson("previewLabel", jsonString);
-            
-            if (result === 0) {
-                YUI.log("refreshPreviewInternal: Successfully rendered non-array item");
-                showRenderedLayer(json);
-            } else {
-                YUI.log("refreshPreviewInternal: Failed to render non-array item, result = " + result);
-                // 如果渲染失败，回退到文本显示
-                var previewText = jsonToPreviewText(json);
-                YUI.setText("previewLabel", previewText);
-            }
-        }
-    } else {
-        // 全量模式：直接使用renderFromJson
-        var jsonString = JSON.stringify(json, null, 4);
-        YUI.log("refreshPreviewInternal: Processing full update");
-        YUI.log("refreshPreviewInternal: JSON Text: " + jsonString);
-        
-        var result = YUI.renderFromJson("previewLabel", jsonString);
-        if (result === 0) {
-            YUI.log("refreshPreviewInternal: Successfully rendered full update");
-            showRenderedLayer(json);
-        } else {
-            YUI.log("refreshPreviewInternal: Failed to render full update, result = " + result);
-            // 如果渲染失败，回退到文本显示
-            var previewText = jsonToPreviewText(json);
-            YUI.setText("previewLabel", previewText);
+    var uiJson = extractPreviewUiJson(json);
+    if (uiJson) {
+        YUI.log("refreshPreviewInternal: Rendering UI preview for id=" + uiJson.id);
+        renderPreviewUi(uiJson);
+        return;
+    }
+
+    // 纯增量更新数组（无 UI 根节点）：仅 replay update 指令
+    if (Array.isArray(json)) {
+        YUI.log("refreshPreviewInternal: Applying " + json.length + " incremental updates");
+        for (var i = 0; i < json.length; i++) {
+            YUI.update(JSON.stringify(json[i]));
         }
     }
 }
@@ -369,13 +341,29 @@ function handleApiResponse(response, messageText, updateMode) {
                             combinedArray.push(jresponse[i]);
                         }
                         YUI.setText("jsonEditor", JSON.stringify(combinedArray, null, 2));
+                        editorState.jsonContent = combinedArray;
+                        editorState.isValid = true;
                     } catch (e) {
                         // 原始文本不是有效的JSON，直接追加jresponse
                         YUI.setText("jsonEditor", jresponseText);
                     }
                 } else {
-                    // 原始文本是数组格式或为空，直接使用jresponse
-                    YUI.setText("jsonEditor", jresponseText);
+                    // 已是数组：保留第一项 UI 定义，只追加新的增量记录
+                    try {
+                        var existingArray = JSON.parse(originalText);
+                        var combinedFromArray = [];
+                        if (Array.isArray(existingArray) && existingArray.length > 0 && isUiComponentJson(existingArray[0])) {
+                            combinedFromArray.push(existingArray[0]);
+                        }
+                        for (var j = 0; j < jresponse.length; j++) {
+                            combinedFromArray.push(jresponse[j]);
+                        }
+                        YUI.setText("jsonEditor", JSON.stringify(combinedFromArray, null, 2));
+                        editorState.jsonContent = combinedFromArray;
+                        editorState.isValid = true;
+                    } catch (e2) {
+                        YUI.setText("jsonEditor", jresponseText);
+                    }
                 }
 
                 // 显示详细信息
@@ -412,33 +400,11 @@ function handleApiResponse(response, messageText, updateMode) {
                 
                 // /YUI.setText("previewResult", details);
                 YUI.log("handleApiResponse: Full UI update applied", details);
-                
-                // 获取原始文本并追加jresponse数组
-                var originalText = YUI.getText("jsonEditor");
-                var jresponseText = JSON.stringify(jresponse, null, 2);
-                
-                // 如果原始文本不为空，且不是数组格式，则追加
-                if (originalText && !originalText.trim().startsWith('[')) {
-                    // 原始文本不是数组格式，创建一个包含原始内容和jresponse的数组
-                    try {
-                        var originalJson = JSON.parse(originalText);
-                        var combinedArray = [originalJson];
-                        // 将jresponse中的每个元素添加到数组
-                        for (var i = 0; i < jresponse.length; i++) {
-                            combinedArray.push(jresponse[i]);
-                        }
-                        YUI.setText("jsonEditor", JSON.stringify(combinedArray, null, 2));
-                    } catch (e) {
-                        // 原始文本不是有效的JSON，直接追加jresponse
-                        YUI.setText("jsonEditor", jresponseText);
-                    }
-                } else {
-                    // 原始文本是数组格式或为空，直接使用jresponse
-                    YUI.setText("jsonEditor", jresponseText);
-                }
+
+                YUI.setText("jsonEditor", JSON.stringify(response, null, 2));
+                editorState.jsonContent = response;
+                editorState.isValid = true;
                 refreshPreviewInternal(response);
-                // 这里应该调用 YUI.render 或其他函数来渲染完整的 UI
-                // 例如：YUI.renderFromJson(response);
             } else {
                 //YUI.setText("previewResult", "❌ 全量更新失败 - 无效的响应格式\n\n响应: " + JSON.stringify(response));
             }
