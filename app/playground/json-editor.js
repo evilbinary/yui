@@ -77,66 +77,39 @@ function isUiComponentJson(json) {
     return json && typeof json === 'object' && json.type;
 }
 
-// 读取编辑器里已有的增量更新项（纯 {target, change} 数组）
-function readEditorUpdateItems() {
-    var text = YUI.getText("jsonEditor");
-    var items = [];
-    try {
-        var parsed = JSON.parse(text);
-        if (Array.isArray(parsed)) {
-            for (var i = 0; i < parsed.length; i++) {
-                if (parsed[i] && parsed[i].target && parsed[i].change) {
-                    items.push(parsed[i]);
-                }
-            }
-        }
-    } catch (e) {
-        // 解析失败时忽略
-    }
-    return items;
-}
-
-// 开始 SSE 流：编辑器保持已有增量项，新数据逐条追加
+// 开始 SSE 流：清空预览，流式结束后再一次性写入编辑器
 function beginIncrementalStream(messageText) {
     streamState.active = true;
     streamState.appliedCount = 0;
     streamState.statusLines = [];
     streamState.typewriterText = "AI 生成中: " + messageText + "\n";
 
-    var existingUpdates = readEditorUpdateItems();
-    jresponse = existingUpdates.slice();
-    streamState.editorItemCount = existingUpdates.length;
+    jresponse = [];
+    resetPreviewForIncremental();
 
-    if (existingUpdates.length === 0) {
-        YUI.setText("jsonEditor", "[\n]");
-        editorState.jsonContent = [];
-    } else {
-        YUI.setText("jsonEditor", JSON.stringify(existingUpdates, null, 4));
-        editorState.jsonContent = existingUpdates;
-    }
+    YUI.setText("jsonEditor", "[\n]");
+    editorState.jsonContent = [];
     editorState.isValid = true;
 
     YUI.setText("inputLabel", streamState.typewriterText);
 }
 
-// 向编辑器数组末尾追加一条 JSON（不整段重写）
-function appendOneItemToEditorArray(item) {
-    var editorText = YUI.getText("jsonEditor");
-    var itemLines = JSON.stringify(item, null, 4).split("\n");
-    var indented = "  " + itemLines.join("\n  ");
-    var trimmed = editorText.replace(/\s*\]\s*$/, "");
-    var isEmptyArray = trimmed.trim() === '[';
-    var newText = trimmed + (isEmptyArray ? "\n" : ",\n") + indented + "\n]";
-
-    YUI.setText("jsonEditor", newText);
-    streamState.editorItemCount++;
-
-    try {
-        editorState.jsonContent = JSON.parse(newText);
-        editorState.isValid = true;
-    } catch (e) {
-        YUI.log("appendOneItemToEditorArray: invalid JSON after append");
+// 流式状态栏用简短摘要，避免把整段 change JSON 写入 inputLabel
+function summarizeUpdateChange(change) {
+    if (!change || typeof change !== "object") {
+        return "";
     }
+    if (Array.isArray(change.children)) {
+        return "children×" + change.children.length;
+    }
+    var keys = Object.keys(change);
+    if (keys.length === 0) {
+        return "";
+    }
+    if (keys.length <= 3) {
+        return keys.join(", ");
+    }
+    return keys.slice(0, 3).join(", ") + "…";
 }
 
 // 显示本条动态更新状态
@@ -146,7 +119,8 @@ function showStreamUpdateLine(update, meta) {
     if (meta && meta.index && meta.total) {
         prefix = "[" + meta.index + "/" + meta.total + "]";
     }
-    var line = prefix + " " + update.target + " → " + JSON.stringify(update.change);
+    var summary = summarizeUpdateChange(update.change);
+    var line = prefix + " " + update.target + (summary ? " → " + summary : "");
     streamState.statusLines.push(line);
 
     var status = streamState.typewriterText + "\n── 动态更新 ──\n" + streamState.statusLines.join("\n");
@@ -178,6 +152,8 @@ function appendStreamToken(delta) {
 function finishIncrementalStream(info, messageText) {
     streamState.active = false;
     hideAiLoading();
+    syncEditorWithJresponse();
+    showPreviewRootIfPresent();
     var count = info && info.count ? info.count : streamState.appliedCount;
     var lines = streamState.statusLines.join("\n");
     var tail = "\n── 完成 ──\n共 " + count + " 条更新: " + messageText;
@@ -193,7 +169,7 @@ function syncEditorWithJresponse() {
     editorState.isValid = true;
 }
 
-// 应用单条增量更新（预览 + 编辑器逐条追加）
+// 应用单条增量更新（流式时只 YUI.update，结束后再写编辑器）
 function applySingleIncrementalUpdate(rawUpdate) {
     if (!rawUpdate || !rawUpdate.target) {
         return;
@@ -205,32 +181,30 @@ function applySingleIncrementalUpdate(rawUpdate) {
 
     jresponse.push(update);
     YUI.update(JSON.stringify(update));
-    showLayersFromUpdate(update);
 
     if (streamState.active) {
-        revealPreviewDuringStream();
-        appendOneItemToEditorArray(update);
+        if (streamState.appliedCount === 0) {
+            revealPreviewDuringStream();
+        }
         showStreamUpdateLine(update, meta);
     } else {
+        showLayersFromUpdate(update);
         syncEditorWithJresponse();
     }
 
-    YUI.log("applySingleIncrementalUpdate: " + update.target + " -> " + JSON.stringify(update.change));
+    YUI.log("applySingleIncrementalUpdate: " + update.target + " -> " + summarizeUpdateChange(update.change));
 }
 
-// 批量应用增量更新
+// 批量应用增量更新（单次批量 YUI.update，避免逐条 show 触发布局）
 function applyIncrementalUpdates(updates) {
     if (!Array.isArray(updates) || updates.length === 0) {
         return;
     }
-    for (var i = 0; i < updates.length; i++) {
-        jresponse.push(updates[i]);
-    }
+    resetPreviewForIncremental();
+    jresponse = updates.slice();
     YUI.update(JSON.stringify(updates));
-    for (var i = 0; i < updates.length; i++) {
-        showLayersFromUpdate(updates[i]);
-    }
     syncEditorWithJresponse();
+    showPreviewRootIfPresent();
 }
 
 // 全量模式默认：单个 UI 组件树
@@ -439,7 +413,12 @@ function isIncrementalUpdateItem(item) {
     return item && item.target && item.change;
 }
 
-// 增量更新后确保相关图层可见
+// 增量更新后确保预览根节点可见（仅一次，避免逐条 show 触发布局）
+function showPreviewRootIfPresent() {
+    YUI.show("root");
+}
+
+// 非流式单条更新时仍可显式 show 目标节点
 function showLayersFromUpdate(update) {
     if (!update) {
         return;
@@ -459,14 +438,19 @@ function showLayersFromUpdate(update) {
 
 function replayIncrementalUpdates(updates) {
     resetPreviewForIncremental();
+    var batch = [];
     for (var i = 0; i < updates.length; i++) {
         if (!isIncrementalUpdateItem(updates[i])) {
             continue;
         }
-        var normalized = normalizeStreamUpdate(updates[i]);
-        YUI.update(JSON.stringify(normalized.update));
-        showLayersFromUpdate(normalized.update);
+        batch.push(normalizeStreamUpdate(updates[i]).update);
     }
+    if (batch.length === 1) {
+        YUI.update(JSON.stringify(batch[0]));
+    } else if (batch.length > 1) {
+        YUI.update(JSON.stringify(batch));
+    }
+    showPreviewRootIfPresent();
 }
 
 // 内部刷新预览函数
@@ -589,6 +573,9 @@ function sendMessage() {
             onError: function(err) {
                 streamState.active = false;
                 hideAiLoading();
+                if (jresponse.length > 0) {
+                    syncEditorWithJresponse();
+                }
                 YUI.setText("inputLabel", "生成失败: " + err);
                 YUI.setText("previewLabel", "❌ 增量流式更新失败\n\n" + err);
             }
