@@ -19,6 +19,7 @@
 #include "sash_component.h"
 #include "table_component.h"
 #include "pagination_component.h"
+#include "loading_component.h"
 
 static void scrollbar_after_create(Layer* layer, cJSON* json);
 static void table_after_create(Layer* layer, cJSON* json);
@@ -71,6 +72,8 @@ static const struct {
       YUI_COMP_NATIVE_RENDER | YUI_COMP_FOCUSABLE | YUI_COMP_CUSTOM_CHILDREN, table_after_create },
     { PAGINATION,  "Pagination", (YuiComponentCreateFn)pagination_component_create_from_json,
       YUI_COMP_NATIVE_RENDER | YUI_COMP_CUSTOM_CHILDREN, NULL },
+    { LOADING,     "Loading",    (YuiComponentCreateFn)loading_component_create_from_json,
+      YUI_COMP_NATIVE_RENDER, NULL },
 };
 
 static void scrollbar_after_create(Layer* layer, cJSON* json)

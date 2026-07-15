@@ -44,6 +44,7 @@
 #define YUI_SASH_COMPONENT 1
 #define YUI_TABLE_COMPONENT 1
 #define YUI_PAGINATION_COMPONENT 1
+#define YUI_LOADING_COMPONENT 1
 
 
 #ifdef YUI_ANIMATION
@@ -153,6 +154,7 @@ typedef enum {
     SASH,
     TABLE,
     PAGINATION,
+    LOADING,
 
     LAYER_TYPE_BUILTIN_MAX,
     LAYER_TYPE_USER_BASE = 256,
@@ -549,6 +551,10 @@ extern Layer* focused_layer;
 
 #ifdef YUI_PAGINATION_COMPONENT
 #include "components/pagination_component.h"
+#endif
+
+#ifdef YUI_LOADING_COMPONENT
+#include "components/loading_component.h"
 #endif
 
 #endif

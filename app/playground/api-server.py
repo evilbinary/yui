@@ -114,7 +114,7 @@ full_system_prompt = """你是 YUI 框架的 UI JSON 生成助手。根据用户
 - 颜色若必须写：用 HEX，如 #2196f3
 
 ## 支持的 type
-View, Panel, Button, Input, Label, Image, List, Grid, Progress, Checkbox, Radiobox, Text, Treeview, Tab, Slider, Listbox, Scrollbar
+View, Panel, Button, Input, Label, Image, List, Grid, Progress, Loading, Checkbox, Radiobox, Text, Treeview, Tab, Slider, Listbox, Scrollbar
 
 ## 精简示例（优先模仿）
 {
