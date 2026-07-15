@@ -313,13 +313,19 @@ void button_component_render(Layer* layer) {
 
     // 绘制背景
     if (bg_color.a > 0) {
-        // 先渲染背景色
-        if (layer->radius > 0) {
-            backend_render_rounded_rect(&layer->rect, bg_color, layer->radius);
-        } else {
-            backend_render_fill_rect(&layer->rect, bg_color);
+        int drew_rounded_fill = 0;
+        if (has_bg && layer->radius > 0) {
+            /* 带边框路径会一并绘制圆角填充，避免重复叠加圆角纹理 */
+            drew_rounded_fill = 1;
         }
-        
+        if (!drew_rounded_fill) {
+            if (layer->radius > 0) {
+                backend_render_rounded_rect(&layer->rect, bg_color, layer->radius);
+            } else {
+                backend_render_fill_rect(&layer->rect, bg_color);
+            }
+        }
+
         // 如果启用了毛玻璃效果，在背景色上应用效果（混合模式）
         if (layer->backdrop_filter) {
             backend_render_backdrop_filter(&layer->rect, layer->blur_radius, layer->saturation, layer->brightness);

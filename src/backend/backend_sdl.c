@@ -265,8 +265,8 @@ EM_JS(int, emscripten_render_emoji_rgba, (const char* utf8, int font_px, int* ou
     var family = '"Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif';
     ctx.font = px + 'px ' + family;
     var metrics = ctx.measureText(text);
-    var w = Math.max(1, Math.ceil(metrics.width) + 8);
-    var h = Math.max(1, px + 8);
+    var w = Math.max(1, Math.ceil(metrics.width) + 4);
+    var h = Math.max(1, px + 4);
     canvas.width = w;
     canvas.height = h;
     ctx.clearRect(0, 0, w, h);
@@ -285,6 +285,39 @@ EM_JS(int, emscripten_render_emoji_rgba, (const char* utf8, int font_px, int* ou
     setValue(out_h, h, 'i32');
     return ptr;
 });
+
+static void backend_clean_surface_alpha_fringe(SDL_Surface* surface, Uint8 alpha_threshold) {
+    int x;
+    int y;
+
+    if (!surface || !surface->pixels || !surface->format) {
+        return;
+    }
+
+    if (SDL_MUSTLOCK(surface)) {
+        SDL_LockSurface(surface);
+    }
+
+    for (y = 0; y < surface->h; y++) {
+        Uint8* row = (Uint8*)surface->pixels + y * surface->pitch;
+        for (x = 0; x < surface->w; x++) {
+            Uint32* pixel = (Uint32*)(row + x * 4);
+            Uint8 r = 0;
+            Uint8 g = 0;
+            Uint8 b = 0;
+            Uint8 a = 0;
+
+            SDL_GetRGBA(*pixel, surface->format, &r, &g, &b, &a);
+            if (a < alpha_threshold) {
+                *pixel = SDL_MapRGBA(surface->format, 0, 0, 0, 0);
+            }
+        }
+    }
+
+    if (SDL_MUSTLOCK(surface)) {
+        SDL_UnlockSurface(surface);
+    }
+}
 
 static SDL_Surface* backend_render_emscripten_emoji_surface(const char* text, int target_px) {
     int out_w = 0;
@@ -325,6 +358,7 @@ static SDL_Surface* backend_render_emscripten_emoji_surface(const char* text, in
         return NULL;
     }
 
+    backend_clean_surface_alpha_fringe(owned, 24);
     SDL_SetSurfaceBlendMode(owned, SDL_BLENDMODE_BLEND);
     return owned;
 }
@@ -1811,6 +1845,7 @@ Texture* backend_render_texture(DFont* font,const char* text,Color color){
             em_texture = SDL_CreateTextureFromSurface(renderer, em_surface);
             SDL_FreeSurface(em_surface);
             if (em_texture) {
+                SDL_SetTextureBlendMode(em_texture, SDL_BLENDMODE_BLEND);
                 SDL_SetTextureScaleMode(em_texture, SDL_ScaleModeBest);
                 int width = 0;
                 int height = 0;
@@ -2136,16 +2171,14 @@ static SDL_Texture* get_corner_texture(SDL_Renderer* renderer, int radius, SDL_C
     SDL_PixelFormatEnumToMasks(pixel_format, &bpp, &rmask, &gmask, &bmask, &amask);
     
     // 绘制抗锯齿圆角到surface
-    Uint32* pixels = (Uint32*)surface->pixels;
-    int pitch = surface->pitch / 4;
-    
     for (int y = 0; y < size; y++) {
+        Uint32* row = (Uint32*)((Uint8*)surface->pixels + y * surface->pitch);
         for (int x = 0; x < size; x++) {
             // 计算到圆心的距离（这是左上角，圆心在radius, radius）
             float dx = x - radius;
             float dy = y - radius;
             float distance = sqrt(dx * dx + dy * dy);
-            
+
             float alpha = 0.0f;
             if (distance <= radius) {
                 alpha = 1.0f; // 完全在圆内
@@ -2154,21 +2187,12 @@ static SDL_Texture* get_corner_texture(SDL_Renderer* renderer, int radius, SDL_C
                 float t = distance - radius;
                 alpha = 1.0f - t; // 线性衰减
             }
-            
+
             if (alpha > 0.01f) {
                 Uint8 a = (Uint8)(alpha * color.a);
-                // 根据像素格式设置颜色值
-                Uint32 pixel = 0;
-                if (pixel_format == SDL_PIXELFORMAT_ARGB8888) {
-                    // ARGB格式: AARRGGBB
-                    pixel = (a << 24) | (color.r << 16) | (color.g << 8) | color.b;
-                } else {
-                    // 默认RGBA格式: RRGGBBAA
-                    pixel = (color.r << 24) | (color.g << 16) | (color.b << 8) | a;
-                }
-                pixels[y * pitch + x] = pixel;
+                row[x] = SDL_MapRGBA(surface->format, color.r, color.g, color.b, a);
             } else {
-                pixels[y * pitch + x] = 0; // 完全透明
+                row[x] = SDL_MapRGBA(surface->format, 0, 0, 0, 0);
             }
         }
     }
