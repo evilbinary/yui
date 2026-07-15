@@ -4,6 +4,8 @@
 #include "layer.h"
 #include "layout.h"
 #include "log.h"
+#include "render.h"
+#include "theme_manager.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -187,6 +189,147 @@ int yui_remove_all_children(Layer* parent) {
 
 // ====================== 属性更新 ======================
 
+static int update_single_property(Layer* layer, const char* key, cJSON* value);
+
+static Layer* find_child_by_id(Layer* parent, const char* id) {
+    if (!parent || !id || !parent->children) {
+        return NULL;
+    }
+    for (int i = 0; i < parent->child_count; i++) {
+        if (parent->children[i] && strcmp(parent->children[i]->id, id) == 0) {
+            return parent->children[i];
+        }
+    }
+    return NULL;
+}
+
+static void layer_apply_default_size(Layer* layer) {
+    if (!layer) {
+        return;
+    }
+    if (layer->rect.w <= 0) {
+        layer->rect.w = (layer->type == BUTTON) ? 120 : 200;
+        layer->fixed_width = layer->rect.w;
+    }
+    if (layer->rect.h <= 0) {
+        layer->rect.h = (layer->type == BUTTON) ? 40 : 32;
+        layer->fixed_height = layer->rect.h;
+    }
+}
+
+static int merge_child_from_json(Layer* child, cJSON* json_obj) {
+    if (!child || !json_obj || !cJSON_IsObject(json_obj)) {
+        return 0;
+    }
+
+    int count = 0;
+    cJSON* item = NULL;
+    cJSON_ArrayForEach(item, json_obj) {
+        if (update_single_property(child, item->string, item)) {
+            count++;
+        }
+    }
+    return count;
+}
+
+static int yui_append_child_from_json(Layer* parent, cJSON* child_json) {
+    if (!parent || !child_json || !cJSON_IsObject(child_json)) {
+        return -1;
+    }
+
+    Layer* new_child = parse_layer_from_json(NULL, child_json, parent);
+    if (!new_child) {
+        return -1;
+    }
+
+    layer_apply_default_size(new_child);
+    if (new_child->visible != VISIBLE) {
+        layer_set_visible(new_child, VISIBLE);
+    }
+
+    load_all_fonts(new_child);
+    theme_manager_apply_to_tree(new_child);
+
+    Layer** new_children = (Layer**)realloc(
+        parent->children, (size_t)(parent->child_count + 1) * sizeof(Layer*));
+    if (!new_children) {
+        destroy_layer(new_child);
+        return -1;
+    }
+
+    parent->children = new_children;
+    parent->children[parent->child_count++] = new_child;
+    return 0;
+}
+
+static int yui_apply_children_array(Layer* parent, cJSON* children_array) {
+    if (!parent || !cJSON_IsArray(children_array)) {
+        return 0;
+    }
+
+    int changed = 0;
+    int count = cJSON_GetArraySize(children_array);
+    for (int i = 0; i < count; i++) {
+        cJSON* child_json = cJSON_GetArrayItem(children_array, i);
+        if (!child_json || !cJSON_IsObject(child_json)) {
+            continue;
+        }
+
+        cJSON* id_item = cJSON_GetObjectItem(child_json, "id");
+        Layer* existing = NULL;
+        if (id_item && cJSON_IsString(id_item)) {
+            existing = find_child_by_id(parent, id_item->valuestring);
+        }
+
+        if (existing) {
+            if (merge_child_from_json(existing, child_json) > 0) {
+                changed = 1;
+            }
+        } else if (yui_append_child_from_json(parent, child_json) == 0) {
+            changed = 1;
+        }
+    }
+
+    if (changed) {
+        mark_layer_dirty(parent, DIRTY_CHILDREN | DIRTY_LAYOUT);
+    }
+    return changed;
+}
+
+static int yui_apply_child_path(Layer* parent, const char* child_spec, cJSON* value) {
+    if (!parent || !child_spec || !cJSON_IsObject(value)) {
+        return 0;
+    }
+
+    char* endptr = NULL;
+    long index = strtol(child_spec, &endptr, 10);
+    if (endptr && *endptr == '\0') {
+        if (index >= 0 && index < parent->child_count) {
+            merge_child_from_json(parent->children[index], value);
+            mark_layer_dirty(parent, DIRTY_CHILDREN | DIRTY_LAYOUT);
+            return 1;
+        }
+        if (index == parent->child_count && yui_append_child_from_json(parent, value) == 0) {
+            mark_layer_dirty(parent, DIRTY_CHILDREN | DIRTY_LAYOUT);
+            return 1;
+        }
+        return 0;
+    }
+
+    Layer* existing = find_child_by_id(parent, child_spec);
+    if (existing) {
+        merge_child_from_json(existing, value);
+        mark_layer_dirty(parent, DIRTY_CHILDREN | DIRTY_LAYOUT);
+        return 1;
+    }
+
+    if (yui_append_child_from_json(parent, value) == 0) {
+        mark_layer_dirty(parent, DIRTY_CHILDREN | DIRTY_LAYOUT);
+        return 1;
+    }
+    return 0;
+}
+
 /**
  * 更新单个属性
  * @return 1 表示已处理，0 表示未处理（需要继续处理）
@@ -238,6 +381,14 @@ static int update_single_property(Layer* layer, const char* key, cJSON* value) {
         }
         
         return 1;
+    }
+
+    if (strcmp(key, "children") == 0 && cJSON_IsArray(value)) {
+        return yui_apply_children_array(layer, value) ? 1 : 0;
+    }
+
+    if (strncmp(key, "children.", 9) == 0 && cJSON_IsObject(value)) {
+        return yui_apply_child_path(layer, key + 9, value);
     }
     
     // 使用共享的属性处理器（is_creating = 0 表示更新模式）
@@ -306,11 +457,12 @@ int yui_update_from_json(Layer* root, cJSON* update_obj) {
     
     // 如果有布局变化，重新计算布局
     if (target_layer->dirty_flags & (DIRTY_RECT | DIRTY_LAYOUT | DIRTY_CHILDREN)) {
+        layout_layer(target_layer);
         if (target_layer->parent) {
             layout_layer(target_layer->parent);
-        } else {
-            layout_layer(target_layer);
         }
+    } else if (updated > 0) {
+        layout_layer(target_layer);
     }
     
     return 0;

@@ -152,6 +152,7 @@ function applySingleIncrementalUpdate(rawUpdate) {
 
     jresponse.push(update);
     YUI.update(JSON.stringify(update));
+    showLayersFromUpdate(update);
 
     if (streamState.active) {
         appendOneItemToEditorArray(update);
@@ -172,6 +173,9 @@ function applyIncrementalUpdates(updates) {
         jresponse.push(updates[i]);
     }
     YUI.update(JSON.stringify(updates));
+    for (var i = 0; i < updates.length; i++) {
+        showLayersFromUpdate(updates[i]);
+    }
     syncEditorWithJresponse();
 }
 
@@ -381,6 +385,36 @@ function isIncrementalUpdateItem(item) {
     return item && item.target && item.change;
 }
 
+// 增量更新后确保相关图层可见
+function showLayersFromUpdate(update) {
+    if (!update) {
+        return;
+    }
+    if (update.target) {
+        YUI.show(update.target);
+    }
+    if (update.change && update.change.children && Array.isArray(update.change.children)) {
+        for (var i = 0; i < update.change.children.length; i++) {
+            var child = update.change.children[i];
+            if (child && child.id) {
+                YUI.show(child.id);
+            }
+        }
+    }
+}
+
+function replayIncrementalUpdates(updates) {
+    resetPreviewForIncremental();
+    for (var i = 0; i < updates.length; i++) {
+        if (!isIncrementalUpdateItem(updates[i])) {
+            continue;
+        }
+        var normalized = normalizeStreamUpdate(updates[i]);
+        YUI.update(JSON.stringify(normalized.update));
+        showLayersFromUpdate(normalized.update);
+    }
+}
+
 // 内部刷新预览函数
 function refreshPreviewInternal(json) {
     if (!json) {
@@ -395,12 +429,7 @@ function refreshPreviewInternal(json) {
         }
         if (isIncrementalUpdateItem(json[0])) {
             YUI.log("refreshPreviewInternal: Replaying " + json.length + " incremental updates");
-            resetPreviewForIncremental();
-            for (var i = 0; i < json.length; i++) {
-                if (isIncrementalUpdateItem(json[i])) {
-                    YUI.update(JSON.stringify(json[i]));
-                }
-            }
+            replayIncrementalUpdates(json);
             return;
         }
     }
