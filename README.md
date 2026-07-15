@@ -51,14 +51,19 @@ brew install sdl2 sdl2_ttf sdl2_image cjson
 sudo apt-get install libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev libcjson-dev
 ```
 
+**ymake**
+```bash
+pip install yymake
+```
+
 ### Build & Run
 
 ```bash
 # Build the project
-python ya.py -b yui
+ya -b yui
 
 # Run the application
-python ya.py -r yui
+ya -r yui
 ```
 
 ### Basic Configuration
