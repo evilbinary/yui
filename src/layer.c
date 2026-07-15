@@ -1027,11 +1027,15 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
   }
 
   // 应用主题样式（在解析完所有属性后，但在返回前）
-  // 主题样式会作为基础样式，可以被组件JSON中的style属性覆盖
   Theme* current_theme = theme_manager_get_current();
   if (current_theme) {
     const char* type_name = yui_type_name(layer->type);
     theme_apply_to_layer(current_theme, layer, layer->id, type_name);
+  }
+
+  // 组件 JSON 的 style 在主题之后再次应用，确保本地配置覆盖主题
+  if (style && cJSON_IsObject(style) && layer->set_style) {
+    layer->set_style(layer, style);
   }
 
   return layer;

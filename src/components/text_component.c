@@ -284,6 +284,38 @@ static void text_component_apply_syntax_color_key(TextComponent* component, cons
     text_syntax_config_set_color(&component->syntax_config, key, color);
 }
 
+static int text_component_apply_selection_color_from_json(TextComponent* component, cJSON* color_obj) {
+    if (!component || !color_obj) {
+        return 0;
+    }
+
+    Color selection_color = component->selection_color;
+    if (cJSON_IsString(color_obj)) {
+        parse_color(color_obj->valuestring, &selection_color);
+        text_component_set_selection_color(component, selection_color);
+        return 1;
+    }
+
+    if (cJSON_IsObject(color_obj)) {
+        if (cJSON_HasObjectItem(color_obj, "r")) {
+            selection_color.r = cJSON_GetObjectItem(color_obj, "r")->valueint;
+        }
+        if (cJSON_HasObjectItem(color_obj, "g")) {
+            selection_color.g = cJSON_GetObjectItem(color_obj, "g")->valueint;
+        }
+        if (cJSON_HasObjectItem(color_obj, "b")) {
+            selection_color.b = cJSON_GetObjectItem(color_obj, "b")->valueint;
+        }
+        if (cJSON_HasObjectItem(color_obj, "a")) {
+            selection_color.a = cJSON_GetObjectItem(color_obj, "a")->valueint;
+        }
+        text_component_set_selection_color(component, selection_color);
+        return 1;
+    }
+
+    return 0;
+}
+
 static void text_component_apply_theme_style(Layer* layer, cJSON* style) {
     if (!layer || !style || !layer->component) return;
 
@@ -328,11 +360,7 @@ static void text_component_apply_theme_style(Layer* layer, cJSON* style) {
     }
 
     cJSON* selection_color = cJSON_GetObjectItem(style, "selectionColor");
-    if (selection_color && cJSON_IsString(selection_color)) {
-        Color c;
-        parse_color(selection_color->valuestring, &c);
-        text_component_set_selection_color(component, c);
-    }
+    text_component_apply_selection_color_from_json(component, selection_color);
 
     cJSON* syntax_colors = cJSON_GetObjectItem(style, "syntaxColors");
     if (syntax_colors && cJSON_IsObject(syntax_colors)) {
@@ -456,32 +484,10 @@ TextComponent* text_component_create_from_json(Layer* layer,cJSON* json_obj){
         text_component_set_line_number_width(layer->component, cJSON_GetObjectItem(json_obj, "lineNumberWidth")->valueint);
     }
     
-    // 解析selectionColor属性
+    // 解析selectionColor属性（顶层，兼容旧配置；style 内由 set_style 处理）
     if (cJSON_HasObjectItem(json_obj, "selectionColor")) {
-        cJSON* color_obj = cJSON_GetObjectItem(json_obj, "selectionColor");
-        if (cJSON_IsString(color_obj)) {
-            // 使用util.c中的parse_color函数解析十六进制颜色字符串
-            Color selection_color = {70, 130, 180, 100}; // 默认值
-            parse_color(color_obj->valuestring, &selection_color);
-            text_component_set_selection_color(layer->component, selection_color);
-        }
-        else if (cJSON_IsObject(color_obj)) {
-            // 兼容旧的RGB对象格式
-            Color selection_color = {70, 130, 180, 100}; // 默认值
-            if (cJSON_HasObjectItem(color_obj, "r")) {
-                selection_color.r = cJSON_GetObjectItem(color_obj, "r")->valueint;
-            }
-            if (cJSON_HasObjectItem(color_obj, "g")) {
-                selection_color.g = cJSON_GetObjectItem(color_obj, "g")->valueint;
-            }
-            if (cJSON_HasObjectItem(color_obj, "b")) {
-                selection_color.b = cJSON_GetObjectItem(color_obj, "b")->valueint;
-            }
-            if (cJSON_HasObjectItem(color_obj, "a")) {
-                selection_color.a = cJSON_GetObjectItem(color_obj, "a")->valueint;
-            }
-            text_component_set_selection_color(layer->component, selection_color);
-        }
+        text_component_apply_selection_color_from_json(
+            layer->component, cJSON_GetObjectItem(json_obj, "selectionColor"));
     }
 
       // 解析事件绑定
