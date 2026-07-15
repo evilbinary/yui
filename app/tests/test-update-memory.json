@@ -1,0 +1,205 @@
+{
+    "id": "updateMemTestApp",
+    "type": "View",
+    "size": [900, 700],
+    "js": "test-update-memory.js",
+    "style": {
+        "bgColor": "#1e1e2e"
+    },
+    "layout": {
+        "type": "vertical",
+        "spacing": 10,
+        "padding": [16, 16, 16, 16]
+    },
+    "children": [
+        {
+            "id": "title",
+            "type": "Label",
+            "text": "YUI.update 内存压力测试",
+            "size": [0, 32],
+            "style": {
+                "color": "#cdd6f4",
+                "fontSize": 20
+            }
+        },
+        {
+            "id": "statusLabel",
+            "type": "Label",
+            "text": "状态：就绪（请用任务管理器观察 playground 进程内存）",
+            "size": [0, 40],
+            "style": {
+                "color": "#a6adc8",
+                "fontSize": 12
+            }
+        },
+        {
+            "id": "statsLabel",
+            "type": "Label",
+            "text": "统计：轮次 0 | update 0 | 耗时 0ms",
+            "size": [0, 24],
+            "style": {
+                "color": "#89b4fa",
+                "fontSize": 12,
+                "fontFamily": "monospace"
+            }
+        },
+        {
+            "id": "btnRow1",
+            "type": "View",
+            "size": [0, 36],
+            "layout": {
+                "type": "horizontal",
+                "spacing": 8
+            },
+            "children": [
+                {
+                    "id": "seq50Btn",
+                    "type": "Button",
+                    "text": "顺序×50",
+                    "size": [100, 32],
+                    "style": {
+                        "bgColor": "#89b4fa",
+                        "color": "#1e1e2e",
+                        "fontSize": 12,
+                        "borderRadius": 4
+                    },
+                    "events": { "onClick": "@stressSequential50" }
+                },
+                {
+                    "id": "seq200Btn",
+                    "type": "Button",
+                    "text": "顺序×200",
+                    "size": [100, 32],
+                    "style": {
+                        "bgColor": "#89b4fa",
+                        "color": "#1e1e2e",
+                        "fontSize": 12,
+                        "borderRadius": 4
+                    },
+                    "events": { "onClick": "@stressSequential200" }
+                },
+                {
+                    "id": "batch50Btn",
+                    "type": "Button",
+                    "text": "批量×50",
+                    "size": [100, 32],
+                    "style": {
+                        "bgColor": "#a6e3a1",
+                        "color": "#1e1e2e",
+                        "fontSize": 12,
+                        "borderRadius": 4
+                    },
+                    "events": { "onClick": "@stressBatch50" }
+                },
+                {
+                    "id": "batch200Btn",
+                    "type": "Button",
+                    "text": "批量×200",
+                    "size": [100, 32],
+                    "style": {
+                        "bgColor": "#a6e3a1",
+                        "color": "#1e1e2e",
+                        "fontSize": 12,
+                        "borderRadius": 4
+                    },
+                    "events": { "onClick": "@stressBatch200" }
+                }
+            ]
+        },
+        {
+            "id": "btnRow2",
+            "type": "View",
+            "size": [0, 36],
+            "layout": {
+                "type": "horizontal",
+                "spacing": 8
+            },
+            "children": [
+                {
+                    "id": "rounds5Btn",
+                    "type": "Button",
+                    "text": "5轮×50(重置)",
+                    "size": [110, 32],
+                    "style": {
+                        "bgColor": "#f9e2af",
+                        "color": "#1e1e2e",
+                        "fontSize": 12,
+                        "borderRadius": 4
+                    },
+                    "events": { "onClick": "@stressRounds5" }
+                },
+                {
+                    "id": "rounds10Btn",
+                    "type": "Button",
+                    "text": "10轮×50(重置)",
+                    "size": [120, 32],
+                    "style": {
+                        "bgColor": "#f9e2af",
+                        "color": "#1e1e2e",
+                        "fontSize": 12,
+                        "borderRadius": 4
+                    },
+                    "events": { "onClick": "@stressRounds10" }
+                },
+                {
+                    "id": "noResetBtn",
+                    "type": "Button",
+                    "text": "10轮×50(不重置)",
+                    "size": [130, 32],
+                    "style": {
+                        "bgColor": "#fab387",
+                        "color": "#1e1e2e",
+                        "fontSize": 12,
+                        "borderRadius": 4
+                    },
+                    "events": { "onClick": "@stressNoReset10" }
+                },
+                {
+                    "id": "minesweeperBtn",
+                    "type": "Button",
+                    "text": "扫雷UI×1",
+                    "size": [100, 32],
+                    "style": {
+                        "bgColor": "#cba6f7",
+                        "color": "#1e1e2e",
+                        "fontSize": 12,
+                        "borderRadius": 4
+                    },
+                    "events": { "onClick": "@stressMinesweeper" }
+                },
+                {
+                    "id": "resetBtn",
+                    "type": "Button",
+                    "text": "重置预览",
+                    "size": [90, 32],
+                    "style": {
+                        "bgColor": "#45475a",
+                        "color": "#cdd6f4",
+                        "fontSize": 12,
+                        "borderRadius": 4
+                    },
+                    "events": { "onClick": "@resetPreviewOnly" }
+                }
+            ]
+        },
+        {
+            "id": "previewLabel",
+            "type": "View",
+            "size": [0, 0],
+            "flex": 1,
+            "style": {
+                "bgColor": "#11111b",
+                "borderWidth": 1,
+                "borderColor": "#313244"
+            },
+            "layout": {
+                "type": "vertical",
+                "spacing": 0
+            },
+            "children": []
+        }
+    ],
+    "events": {
+        "onLoad": "@onLoad"
+    }
+}
