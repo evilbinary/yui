@@ -5,7 +5,7 @@ YUI Playground API Server
 提供消息发送接口，支持增量和全量更新模式
 """
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Response, stream_with_context
 from flask_cors import CORS
 import json
 import time
@@ -335,6 +335,146 @@ def send_message_incremental():
         print(traceback.format_exc())
         return jsonify({"error": str(e)}), 500
 
+# 增量更新 SSE 流式间隔（秒），控制 UI 逐条更新节奏
+INCREMENTAL_STREAM_UPDATE_DELAY = 0.18
+
+def _sse_event(event_type, payload):
+    """格式化为 SSE 事件块"""
+    return "event: {}\ndata: {}\n\n".format(
+        event_type,
+        json.dumps(payload, ensure_ascii=False)
+    )
+
+def _normalize_json_config(json_config):
+    """将请求中的 json 字段统一为字符串（供 system prompt 使用）"""
+    if json_config is None:
+        return ""
+    if isinstance(json_config, str):
+        return json_config
+    return json.dumps(json_config, ensure_ascii=False)
+
+def _strip_markdown_json_fence(content):
+    if not isinstance(content, str):
+        return content
+    text = content.strip()
+    if text.startswith('```json'):
+        text = text[7:]
+    elif text.startswith('```'):
+        text = text[3:]
+    if text.endswith('```'):
+        text = text[:-3]
+    return text.strip()
+
+def parse_incremental_content(content):
+    """将模型回复解析为增量更新数组"""
+    content = _strip_markdown_json_fence(content)
+    if not content:
+        return []
+    try:
+        parsed = json.loads(content) if isinstance(content, str) else content
+        if isinstance(parsed, dict):
+            return [parsed]
+        if isinstance(parsed, list):
+            return parsed
+    except json.JSONDecodeError as err:
+        print(f"[ERROR] Failed to parse incremental JSON: {err}")
+        print(f"[ERROR] Response content: {content}")
+    return []
+
+def _stream_incremental_updates(message, json_config):
+    """SSE 生成器：先打字机输出 token，再逐条推送 update 事件"""
+    lower_msg = message.lower()
+    config_text = _normalize_json_config(json_config)
+    full_content = ""
+
+    try:
+        print(f"[DEBUG] SSE stream calling AI API with model: {model}")
+        stream = client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": config_text + ' ' + incremental_system_prompt},
+                {"role": "user", "content": message}
+            ],
+            stream=True,
+        )
+
+        for chunk in stream:
+            choice = chunk.choices[0]
+            delta = ""
+            if choice.delta and getattr(choice.delta, "content", None):
+                delta = choice.delta.content
+            if delta:
+                full_content += delta
+                yield _sse_event("token", {"delta": delta})
+
+        print(f"[DEBUG] SSE stream completed, content length: {len(full_content)}")
+    except Exception as ai_err:
+        print(f"[ERROR] SSE AI stream failed: {type(ai_err).__name__}: {ai_err}")
+        print(traceback.format_exc())
+        yield _sse_event("error", {"error": str(ai_err)})
+        full_content = ""
+
+    updates = parse_incremental_content(full_content)
+    if not updates:
+        updates = _fallback_incremental_updates(message, lower_msg)
+        preview = json.dumps(updates, ensure_ascii=False)
+        for ch in preview:
+            yield _sse_event("token", {"delta": ch})
+            time.sleep(0.008)
+
+    for i, update in enumerate(updates):
+        apply_updates([update])
+        payload = dict(update)
+        payload['index'] = i + 1
+        payload['total'] = len(updates)
+        yield _sse_event("update", payload)
+        time.sleep(INCREMENTAL_STREAM_UPDATE_DELAY)
+
+    yield _sse_event("done", {"count": len(updates), "message": message})
+
+@app.route('/api/message/incremental/stream', methods=['POST'])
+def send_message_incremental_stream():
+    """增量更新 SSE 流式接口：token 打字机 + 逐条 update"""
+    try:
+        try:
+            data = request.get_json()
+        except Exception as json_error:
+            return jsonify({
+                "error": "Invalid JSON format",
+                "details": str(json_error),
+            }), 400
+
+        if not data:
+            return jsonify({"error": "Invalid JSON"}), 400
+
+        message = data.get('message', '').strip()
+        json_config = data.get('json', {})
+
+        if not message:
+            return jsonify({"error": "Message cannot be empty"}), 400
+
+        message_entry = {
+            "id": len(message_history) + 1,
+            "message": message,
+            "timestamp": datetime.now().isoformat(),
+            "type": "incremental_stream"
+        }
+        message_history.append(message_entry)
+
+        return Response(
+            stream_with_context(_stream_incremental_updates(message, json_config)),
+            mimetype='text/event-stream',
+            headers={
+                'Cache-Control': 'no-cache',
+                'Connection': 'keep-alive',
+                'X-Accel-Buffering': 'no',
+            }
+        )
+    except Exception as e:
+        print(f"[ERROR] Exception in /api/message/incremental/stream: {e}")
+        print(traceback.format_exc())
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/api/message/full', methods=['POST'])
 def send_message_full():
     """
@@ -472,38 +612,9 @@ def generate_incremental_updates(message, json_config):
             reasoning_content = completion.choices[0].message.reasoning_content
             print(f"===== 模型推理过程 =====\n{reasoning_content}")
 
-        # 获取模型回复内容
         content = completion.choices[0].message.content
         print(f"===== 模型回复 =====\n{content}")
-
-        # 处理可能包含的Markdown代码块标记
-        if isinstance(content, str):
-            # 移除可能的Markdown代码块标记
-            if content.startswith('```json'):
-                content = content[7:]  # 移除开头的```json
-            if content.startswith('```'):
-                content = content[3:]   # 移除开头的```
-            if content.endswith('```'):
-                content = content[:-3]  # 移除结尾的```
-            content = content.strip()  # 移除前后空白
-
-        # 尝试解析为JSON（可能是对象或数组）
-        try:
-            parsed_result = json.loads(content) if isinstance(content, str) else content
-            # 标准化为数组格式返回
-            if isinstance(parsed_result, dict):
-                # 单个更新对象转为数组
-                updates = [parsed_result]
-            elif isinstance(parsed_result, list):
-                # 已经是数组格式
-                updates = parsed_result
-            else:
-                print(f"[ERROR] Parsed content is neither dict nor list, using fallback")
-                updates = []
-        except json.JSONDecodeError as json_err:
-            print(f"[ERROR] Failed to parse model response as JSON: {json_err}")
-            print(f"[ERROR] Response content: {content}")
-            updates = []
+        updates = parse_incremental_content(content)
             
     except Exception as ai_err:
         print(f"[ERROR] AI API call failed: {type(ai_err).__name__}: {str(ai_err)}")
@@ -538,11 +649,11 @@ def _fallback_incremental_updates(message, lower_msg):
     elif "删除" in message or "remove" in lower_msg or "delete" in lower_msg:
         # 删除操作示例
         if "第一个" in message or "first" in lower_msg:
-            return [{"target": "listContainer", "change": {"children.0": null}}]
+            return [{"target": "listContainer", "change": {"children.0": None}}]
         elif "清空" in message or "clear" in lower_msg:
-            return [{"target": "listContainer", "change": {"children": null}}]
+            return [{"target": "listContainer", "change": {"children": None}}]
         else:
-            return [{"target": "tempElement", "change": {"tempElement": null}}]
+            return [{"target": "tempElement", "change": {"tempElement": None}}]
     elif "重置" in message or "reset" in lower_msg:
         return [
             {"target": "statusLabel", "change": {"text": "状态：已重置", "color": "#333333"}},
@@ -661,7 +772,8 @@ if __name__ == '__main__':
     print("=" * 60)
     print("Server is running on http://localhost:5000")
     print("\nAvailable endpoints:")
-    print("  POST /api/message/incremental  - 增量更新接口")
+    print("  POST /api/message/incremental         - 增量更新接口")
+    print("  POST /api/message/incremental/stream  - 增量更新 SSE 流式接口")
     print("  POST /api/message/full         - 全量更新接口")
     print("  GET  /api/history              - 获取消息历史")
     print("  GET  /api/state                - 获取当前UI状态")

@@ -5,6 +5,101 @@ var APIClient = {
     // API 基础配置
     baseURL: 'http://localhost:5000',
     
+    // 发送消息（增量更新模式 - SSE 流式打字机）
+    sendMessageIncrementalStream: function(message, jsonConfig, handlers) {
+        YUI.log("APIClient: Sending incremental stream message...");
+        handlers = handlers || {};
+
+        var url = this.baseURL + '/api/message/incremental/stream';
+        var data = {
+            message: message,
+            json: jsonConfig
+        };
+
+        var streamHandlers = {
+            onToken: function(payload) {
+                if (handlers.onToken && payload && payload.delta) {
+                    handlers.onToken(payload.delta);
+                }
+            },
+            onUpdate: function(update) {
+                if (handlers.onUpdate && update && update.target) {
+                    handlers.onUpdate(update);
+                }
+            },
+            onDone: function(info) {
+                if (handlers.onDone) {
+                    handlers.onDone(info || {});
+                }
+            },
+            onError: function(err) {
+                YUI.log("APIClient: SSE stream error - " + err);
+                if (handlers.onError) {
+                    handlers.onError(err);
+                }
+            }
+        };
+
+        if (typeof http_post_sse !== 'undefined') {
+            var result = http_post_sse(url, JSON.stringify(data), streamHandlers, {
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                contentType: 'application/json',
+                timeout: 120000
+            });
+            if (result === 0) {
+                return;
+            }
+        }
+
+        YUI.log("APIClient: SSE unavailable, falling back to batch incremental");
+        this.sendMessageIncremental(message, jsonConfig, function(updates) {
+            if (!Array.isArray(updates)) {
+                if (handlers.onError) {
+                    handlers.onError("Invalid incremental response");
+                }
+                return;
+            }
+
+            var preview = JSON.stringify(updates);
+            var charIndex = 0;
+
+            function emitNextChar() {
+                if (charIndex >= preview.length) {
+                    emitNextUpdate(0);
+                    return;
+                }
+                if (handlers.onToken) {
+                    handlers.onToken(preview.charAt(charIndex));
+                }
+                charIndex++;
+                setTimeout(emitNextChar, 8);
+            }
+
+            function emitNextUpdate(index) {
+                if (index >= updates.length) {
+                    if (handlers.onDone) {
+                        handlers.onDone({ count: updates.length, fallback: true });
+                    }
+                    return;
+                }
+                var item = updates[index];
+                handlers.onUpdate({
+                    target: item.target,
+                    change: item.change,
+                    index: index + 1,
+                    total: updates.length
+                });
+                setTimeout(function() {
+                    emitNextUpdate(index + 1);
+                }, 180);
+            }
+
+            emitNextChar();
+        });
+    },
+
     // 发送消息（增量更新模式）
     sendMessageIncremental: function(message, jsonConfig, callback) {
         YUI.log("APIClient: Sending incremental message...");

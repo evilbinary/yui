@@ -244,6 +244,209 @@ function parse_http_response(response) {
     };
 }
 
+/**
+ * HTTP POST SSE 流式请求
+ * @param {string} url
+ * @param {string} data - POST body
+ * @param {object} handlers - { onToken, onUpdate, onDone, onError, onEvent }
+ * @param {object} options - { headers, timeout, contentType }
+ * @returns {number} 0 成功，-1 失败
+ */
+function http_post_sse(url, data, handlers, options) {
+    handlers = handlers || {};
+    options = options || {};
+    var timeout = options.timeout || 120000;
+    var headers = options.headers || {};
+    var contentType = options.contentType || "application/json";
+
+    var urlParts = parse_url(url);
+    if (!urlParts) {
+        if (handlers.onError) {
+            handlers.onError("Invalid URL: " + url);
+        }
+        return -1;
+    }
+
+    var host = urlParts.host;
+    var port = urlParts.port || 80;
+    var path = urlParts.path || "/";
+
+    YUI.log("HTTP POST SSE: " + url);
+
+    var sock = Socket.socket(Socket.TCP);
+    if (sock < 0) {
+        if (handlers.onError) {
+            handlers.onError("Failed to create socket");
+        }
+        return -1;
+    }
+
+    if (typeof data !== 'string') {
+        data = JSON.stringify(data);
+    }
+
+    var requestLines = [];
+    requestLines.push("POST " + path + " HTTP/1.1");
+    requestLines.push("Host: " + host);
+    requestLines.push("User-Agent: YUI-HTTP-Client/1.0");
+    requestLines.push("Content-Type: " + contentType);
+    requestLines.push("Accept: text/event-stream");
+    requestLines.push("Content-Length: " + data.length);
+    requestLines.push("Connection: close");
+
+    for (var key in headers) {
+        requestLines.push(key + ": " + headers[key]);
+    }
+
+    requestLines.push("");
+    requestLines.push(data);
+
+    var request = requestLines.join("\r\n");
+    var raw = "";
+    var headersParsed = false;
+    var status = 0;
+    var eventType = "message";
+    var dataLines = [];
+    var startTime = Date.now();
+
+    function dispatchEvent() {
+        if (dataLines.length === 0) {
+            return;
+        }
+        var payloadText = dataLines.join("\n");
+        var payload = payloadText;
+        try {
+            payload = JSON.parse(payloadText);
+        } catch (e) {
+            payload = payloadText;
+        }
+
+        if (handlers.onEvent) {
+            handlers.onEvent(eventType, payload);
+        }
+        if (eventType === "token" && handlers.onToken) {
+            handlers.onToken(payload);
+        } else if (eventType === "update" && handlers.onUpdate) {
+            handlers.onUpdate(payload);
+        } else if (eventType === "done" && handlers.onDone) {
+            handlers.onDone(payload);
+        } else if (eventType === "error" && handlers.onError) {
+            if (typeof payload === "object" && payload.error) {
+                handlers.onError(payload.error);
+            } else {
+                handlers.onError(String(payload));
+            }
+        }
+
+        eventType = "message";
+        dataLines = [];
+    }
+
+    function processSseBuffer() {
+        while (true) {
+            var newlineIdx = raw.indexOf("\n");
+            if (newlineIdx < 0) {
+                break;
+            }
+
+            var line = raw.substring(0, newlineIdx);
+            raw = raw.substring(newlineIdx + 1);
+            if (line.length > 0 && line.charAt(line.length - 1) === '\r') {
+                line = line.substring(0, line.length - 1);
+            }
+
+            if (line === "") {
+                dispatchEvent();
+                continue;
+            }
+
+            if (line.indexOf("event:") === 0) {
+                eventType = line.substring(6);
+                if (eventType.charAt(0) === ' ') {
+                    eventType = eventType.substring(1);
+                }
+            } else if (line.indexOf("data:") === 0) {
+                var dataPart = line.substring(5);
+                if (dataPart.charAt(0) === ' ') {
+                    dataPart = dataPart.substring(1);
+                }
+                dataLines.push(dataPart);
+            }
+        }
+    }
+
+    try {
+        var connectResult = Socket.connect(sock, host, port, timeout);
+        if (connectResult !== 0) {
+            if (handlers.onError) {
+                handlers.onError("Failed to connect to " + host + ":" + port);
+            }
+            return -1;
+        }
+
+        var sent = Socket.send(sock, request, 0);
+        if (sent < 0) {
+            if (handlers.onError) {
+                handlers.onError("Failed to send request");
+            }
+            return -1;
+        }
+
+        while (true) {
+            if (Date.now() - startTime > timeout) {
+                if (handlers.onError) {
+                    handlers.onError("SSE timeout");
+                }
+                return -1;
+            }
+
+            var buffer = Socket.recv(sock, 0, 4096);
+            if (typeof buffer !== 'string' || buffer.length === 0) {
+                break;
+            }
+
+            if (!headersParsed) {
+                raw += buffer;
+                var sep = raw.indexOf("\r\n\r\n");
+                if (sep < 0) {
+                    continue;
+                }
+
+                var headerBlock = raw.substring(0, sep);
+                raw = raw.substring(sep + 4);
+                var parsed = parse_http_response(headerBlock + "\r\n\r\n");
+                status = parsed.status;
+                headersParsed = true;
+
+                if (status < 200 || status >= 300) {
+                    if (handlers.onError) {
+                        handlers.onError("HTTP " + status);
+                    }
+                    return -1;
+                }
+
+                processSseBuffer();
+            } else {
+                raw += buffer;
+                processSseBuffer();
+            }
+        }
+
+        if (dataLines.length > 0) {
+            dispatchEvent();
+        }
+
+        return 0;
+    } catch (e) {
+        if (handlers.onError) {
+            handlers.onError(e.message || String(e));
+        }
+        return -1;
+    } finally {
+        Socket.close(sock);
+    }
+}
+
 // 导出函数（在YUI环境中，这些函数会自动成为全局函数）
 YUI.log("HTTP module loaded");
 

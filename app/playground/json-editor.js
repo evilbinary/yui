@@ -13,27 +13,217 @@ var editorState = {
 // 存储增量更新历史
 var jresponse = [];
 
+// SSE 流式状态
+var streamState = {
+    active: false,
+    appliedCount: 0,
+    statusLines: [],
+    typewriterText: ""
+};
+
+// 判断是否为可渲染的 UI 组件 JSON（而非增量更新指令）
+function isUiComponentJson(json) {
+    return json && typeof json === 'object' && json.type;
+}
+
+// 读取编辑器里已有的增量更新项（纯 {target, change} 数组）
+function readEditorUpdateItems() {
+    var text = YUI.getText("jsonEditor");
+    var items = [];
+    try {
+        var parsed = JSON.parse(text);
+        if (Array.isArray(parsed)) {
+            for (var i = 0; i < parsed.length; i++) {
+                if (parsed[i] && parsed[i].target && parsed[i].change) {
+                    items.push(parsed[i]);
+                }
+            }
+        }
+    } catch (e) {
+        // 解析失败时忽略
+    }
+    return items;
+}
+
+// 开始 SSE 流：编辑器保持已有增量项，新数据逐条追加
+function beginIncrementalStream(messageText) {
+    streamState.active = true;
+    streamState.appliedCount = 0;
+    streamState.statusLines = [];
+    streamState.typewriterText = "AI 生成中: " + messageText + "\n";
+
+    var existingUpdates = readEditorUpdateItems();
+    jresponse = existingUpdates.slice();
+    streamState.editorItemCount = existingUpdates.length;
+
+    if (existingUpdates.length === 0) {
+        YUI.setText("jsonEditor", "[\n]");
+        editorState.jsonContent = [];
+    } else {
+        YUI.setText("jsonEditor", JSON.stringify(existingUpdates, null, 4));
+        editorState.jsonContent = existingUpdates;
+    }
+    editorState.isValid = true;
+
+    YUI.setText("inputLabel", streamState.typewriterText);
+}
+
+// 向编辑器数组末尾追加一条 JSON（不整段重写）
+function appendOneItemToEditorArray(item) {
+    var editorText = YUI.getText("jsonEditor");
+    var itemLines = JSON.stringify(item, null, 4).split("\n");
+    var indented = "  " + itemLines.join("\n  ");
+    var trimmed = editorText.replace(/\s*\]\s*$/, "");
+    var isEmptyArray = trimmed.trim() === '[';
+    var newText = trimmed + (isEmptyArray ? "\n" : ",\n") + indented + "\n]";
+
+    YUI.setText("jsonEditor", newText);
+    streamState.editorItemCount++;
+
+    try {
+        editorState.jsonContent = JSON.parse(newText);
+        editorState.isValid = true;
+    } catch (e) {
+        YUI.log("appendOneItemToEditorArray: invalid JSON after append");
+    }
+}
+
+// 显示本条动态更新状态
+function showStreamUpdateLine(update, meta) {
+    streamState.appliedCount++;
+    var prefix = "#" + streamState.appliedCount;
+    if (meta && meta.index && meta.total) {
+        prefix = "[" + meta.index + "/" + meta.total + "]";
+    }
+    var line = prefix + " " + update.target + " → " + JSON.stringify(update.change);
+    streamState.statusLines.push(line);
+
+    var status = streamState.typewriterText + "\n── 动态更新 ──\n" + streamState.statusLines.join("\n");
+    YUI.setText("inputLabel", status);
+}
+
+// 剥离 SSE 附带的序号字段，得到纯增量指令
+function normalizeStreamUpdate(raw) {
+    return {
+        update: {
+            target: raw.target,
+            change: raw.change
+        },
+        meta: {
+            index: raw.index,
+            total: raw.total
+        }
+    };
+}
+
+function appendStreamToken(delta) {
+    streamState.typewriterText += delta;
+    if (streamState.appliedCount === 0) {
+        YUI.setText("inputLabel", streamState.typewriterText);
+    }
+}
+
+function finishIncrementalStream(info, messageText) {
+    streamState.active = false;
+    var count = info && info.count ? info.count : streamState.appliedCount;
+    var lines = streamState.statusLines.join("\n");
+    var tail = "\n── 完成 ──\n共 " + count + " 条更新: " + messageText;
+    YUI.setText("inputLabel", streamState.typewriterText + "\n── 动态更新 ──\n" + lines + tail);
+    YUI.log("finishIncrementalStream: " + count + " updates");
+}
+
+// 将 jresponse 同步回编辑器（非流式批量时使用）
+function syncEditorWithJresponse() {
+    var text = JSON.stringify(jresponse, null, 4);
+    YUI.setText("jsonEditor", text);
+    editorState.jsonContent = jresponse.slice();
+    editorState.isValid = true;
+}
+
+// 应用单条增量更新（预览 + 编辑器逐条追加）
+function applySingleIncrementalUpdate(rawUpdate) {
+    if (!rawUpdate || !rawUpdate.target) {
+        return;
+    }
+
+    var normalized = normalizeStreamUpdate(rawUpdate);
+    var update = normalized.update;
+    var meta = normalized.meta;
+
+    jresponse.push(update);
+    YUI.update(JSON.stringify(update));
+
+    if (streamState.active) {
+        appendOneItemToEditorArray(update);
+        showStreamUpdateLine(update, meta);
+    } else {
+        syncEditorWithJresponse();
+    }
+
+    YUI.log("applySingleIncrementalUpdate: " + update.target + " -> " + JSON.stringify(update.change));
+}
+
+// 批量应用增量更新
+function applyIncrementalUpdates(updates) {
+    if (!Array.isArray(updates) || updates.length === 0) {
+        return;
+    }
+    for (var i = 0; i < updates.length; i++) {
+        jresponse.push(updates[i]);
+    }
+    YUI.update(JSON.stringify(updates));
+    syncEditorWithJresponse();
+}
+
+// 全量模式默认：单个 UI 组件树
+function getDefaultFullJson() {
+    return {
+        "id": "root",
+        "type": "View",
+        "size": [400, 500],
+        "layout": {"type": "vertical", "spacing": 8},
+        "children": [
+            {"id": "title", "type": "Label", "text": "标题", "size": [0, 32]},
+            {"id": "ok", "type": "Button", "text": "确定", "size": [120, 40]}
+        ]
+    };
+}
+
+// 增量模式默认：空数组，SSE 逐条追加 {target, change}
+function getDefaultIncrementalJson() {
+    return [];
+}
+
+// 按更新模式写入编辑器模板并刷新预览
+function applyEditorTemplate(mode) {
+    jresponse = [];
+    var text;
+    var json;
+
+    if (mode === 'incremental') {
+        json = getDefaultIncrementalJson();
+        text = "[\n]";
+        YUI.setText("inputLabel", "增量模式：[] 起始，SSE 每条 {target, change} 逐条追加");
+    } else {
+        json = getDefaultFullJson();
+        text = JSON.stringify(json, null, 4);
+        YUI.setText("inputLabel", "全量模式：编辑完整 UI JSON");
+    }
+
+    YUI.setText("jsonEditor", text);
+    editorState.jsonContent = json;
+    editorState.isValid = true;
+    refreshPreviewInternal(json);
+
+    YUI.log("applyEditorTemplate: mode=" + mode);
+}
+
 // 初始化JSON编辑器 - onLoad 事件触发
 function initJsonEditor() {
     YUI.log("initJsonEditor: Initializing JSON editor...");
 
-    // 设置默认的示例JSON
-    var defaultJson = {
-        "id": "root",
-        "type": "Label",
-        "text": "Hello World"
-    };
-    // 格式化并设置到编辑器
-    // 注意: mquickjs 的 JSON.stringify 不支持第三个参数（缩进）
-    var formattedJson = JSON.stringify(defaultJson, null, 4);
-    YUI.setText("jsonEditor", formattedJson);
-
-    // 初始验证
-    validateJsonInternal(formattedJson);
-
-    // 初始预览
-    refreshPreviewInternal(defaultJson);
-    YUI.setText('jsonEditor', formattedJson);
+    var mode = editorState.updateMode || 'incremental';
+    applyEditorTemplate(mode);
 
     YUI.log("initJsonEditor: JSON editor initialized!");
 }
@@ -56,9 +246,14 @@ function onJsonChange() {
 // 更新模式变更时触发 - onChange 事件
 function onUpdateModeChange() {
     var selectedValue = YUI.getProperty("updateModeSelect", "value");
-    
+    var prevMode = editorState.updateMode;
+
     editorState.updateMode = selectedValue;
     YUI.log("onUpdateModeChange: Update mode changed to " + selectedValue);
+
+    if (prevMode !== selectedValue) {
+        applyEditorTemplate(selectedValue);
+    }
 }
 
 // 验证JSON - 验证按钮 onClick 事件
@@ -157,26 +352,6 @@ function showRenderedLayer(json) {
     }
 }
 
-// 判断是否为可渲染的 UI 组件 JSON（而非增量更新指令）
-function isUiComponentJson(json) {
-    return json && typeof json === 'object' && json.type;
-}
-
-// 从编辑器内容提取用于预览的 UI JSON
-// 数组格式时：第一项若是 UI 定义，只预览该项（后续 target/change 是 API 历史，不应在每次编辑时重放）
-function extractPreviewUiJson(json) {
-    if (Array.isArray(json)) {
-        if (json.length > 0 && isUiComponentJson(json[0])) {
-            return json[0];
-        }
-        return null;
-    }
-    if (isUiComponentJson(json)) {
-        return json;
-    }
-    return null;
-}
-
 // 将 UI JSON 渲染到预览区
 function renderPreviewUi(uiJson) {
     var jsonString = JSON.stringify(uiJson, null, 4);
@@ -190,25 +365,51 @@ function renderPreviewUi(uiJson) {
     return false;
 }
 
+// 增量预览：先重置 outlet，再按顺序重放所有 update
+function resetPreviewForIncremental() {
+    var emptyRoot = {
+        "id": "root",
+        "type": "View",
+        "size": [400, 500],
+        "layout": {"type": "vertical", "spacing": 8},
+        "children": []
+    };
+    renderPreviewUi(emptyRoot);
+}
+
+function isIncrementalUpdateItem(item) {
+    return item && item.target && item.change;
+}
+
 // 内部刷新预览函数
 function refreshPreviewInternal(json) {
     if (!json) {
         return;
     }
 
-    var uiJson = extractPreviewUiJson(json);
+    // 增量模式：纯 update 数组
+    if (Array.isArray(json)) {
+        if (json.length === 0) {
+            resetPreviewForIncremental();
+            return;
+        }
+        if (isIncrementalUpdateItem(json[0])) {
+            YUI.log("refreshPreviewInternal: Replaying " + json.length + " incremental updates");
+            resetPreviewForIncremental();
+            for (var i = 0; i < json.length; i++) {
+                if (isIncrementalUpdateItem(json[i])) {
+                    YUI.update(JSON.stringify(json[i]));
+                }
+            }
+            return;
+        }
+    }
+
+    // 全量模式：单个 UI 组件树
+    var uiJson = isUiComponentJson(json) ? json : null;
     if (uiJson) {
         YUI.log("refreshPreviewInternal: Rendering UI preview for id=" + uiJson.id);
         renderPreviewUi(uiJson);
-        return;
-    }
-
-    // 纯增量更新数组（无 UI 根节点）：仅 replay update 指令
-    if (Array.isArray(json)) {
-        YUI.log("refreshPreviewInternal: Applying " + json.length + " incremental updates");
-        for (var i = 0; i < json.length; i++) {
-            YUI.update(JSON.stringify(json[i]));
-        }
     }
 }
 
@@ -280,13 +481,27 @@ function sendMessage() {
     var updateMode = editorState.updateMode || 'incremental'; // 默认为增量更新
     
     // 显示发送中状态
-    YUI.setText("inputLabel", "生成文本: " + messageText + " 更新模式: " + updateMode);
+    YUI.setText("inputLabel", "生成中: " + messageText + " | 模式: " + updateMode);
     
     // 根据更新模式调用相应的API
     if (updateMode === 'incremental') {
-        // 使用增量更新模式
-        APIClient.sendMessageIncremental(messageText, json, function(response) {
-            handleApiResponse(response, messageText, updateMode);
+        beginIncrementalStream(messageText);
+
+        APIClient.sendMessageIncrementalStream(messageText, json, {
+            onToken: function(delta) {
+                appendStreamToken(delta);
+            },
+            onUpdate: function(update) {
+                applySingleIncrementalUpdate(update);
+            },
+            onDone: function(info) {
+                finishIncrementalStream(info, messageText);
+            },
+            onError: function(err) {
+                streamState.active = false;
+                YUI.setText("inputLabel", "生成失败: " + err);
+                YUI.setText("previewLabel", "❌ 增量流式更新失败\n\n" + err);
+            }
         });
     } else if (updateMode === 'full') {
         // 使用全量更新模式
@@ -312,70 +527,16 @@ function handleApiResponse(response, messageText, updateMode) {
         if (updateMode === 'incremental') {
             // 处理增量更新响应（直接是 updates 数组）
             if (Array.isArray(response) && response.length > 0) {
-                // 确保每个更新项都有正确的格式（target和change字段）
-                
-                // 将当前响应追加到 jresponse 数组
-                response.forEach(function(update) {
-                    jresponse.push(update);
-                });
-                
-                var updateString = JSON.stringify(response);
-                YUI.log("handleApiResponse: Formatted updates: " + updateString);
-                YUI.log("handleApiResponse: Original updates: " + JSON.stringify(response));
-                YUI.update(updateString);
-                
-                
-                
-                // 获取原始文本并追加jresponse数组
-                var originalText = YUI.getText("jsonEditor");
-                var jresponseText = JSON.stringify(jresponse, null, 2);
-                
-                // 如果原始文本不为空，且不是数组格式，则追加
-                if (originalText && !originalText.trim().startsWith('[')) {
-                    // 原始文本不是数组格式，创建一个包含原始内容和jresponse的数组
-                    try {
-                        var originalJson = JSON.parse(originalText);
-                        var combinedArray = [originalJson];
-                        // 将jresponse中的每个元素添加到数组
-                        for (var i = 0; i < jresponse.length; i++) {
-                            combinedArray.push(jresponse[i]);
-                        }
-                        YUI.setText("jsonEditor", JSON.stringify(combinedArray, null, 2));
-                        editorState.jsonContent = combinedArray;
-                        editorState.isValid = true;
-                    } catch (e) {
-                        // 原始文本不是有效的JSON，直接追加jresponse
-                        YUI.setText("jsonEditor", jresponseText);
-                    }
-                } else {
-                    // 已是数组：保留第一项 UI 定义，只追加新的增量记录
-                    try {
-                        var existingArray = JSON.parse(originalText);
-                        var combinedFromArray = [];
-                        if (Array.isArray(existingArray) && existingArray.length > 0 && isUiComponentJson(existingArray[0])) {
-                            combinedFromArray.push(existingArray[0]);
-                        }
-                        for (var j = 0; j < jresponse.length; j++) {
-                            combinedFromArray.push(jresponse[j]);
-                        }
-                        YUI.setText("jsonEditor", JSON.stringify(combinedFromArray, null, 2));
-                        editorState.jsonContent = combinedFromArray;
-                        editorState.isValid = true;
-                    } catch (e2) {
-                        YUI.setText("jsonEditor", jresponseText);
-                    }
-                }
+                applyIncrementalUpdates(response);
 
-                // 显示详细信息
                 var details = "✅ 增量更新成功！\n\n";
                 details += "更新详情:\n";
                 jresponse.forEach(function(update, index) {
                     details += (index + 1) + ". " + update.target + ": " + JSON.stringify(update.change) + "\n";
                 });
                 
-                YUI.log("handleApiResponse: Incremental updates applied: " + updateString);
+                YUI.log("handleApiResponse: Incremental updates applied");
                 YUI.log("handleApiResponse: Total jresponse array length: " + jresponse.length);
-                YUI.log("handleApiResponse: jresponse content: " + JSON.stringify(jresponse));
             } else if (Array.isArray(response) && response.length === 0) {
                 YUI.setText("previewLabel", "✅ 消息已发送，但没有收到UI更新\n\n消息: " + messageText);
             } else {
