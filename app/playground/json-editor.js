@@ -149,6 +149,12 @@ function validateJsonInternal(jsonText) {
     }
 }
 
+// renderFromJson 创建的新图层默认隐藏，需显式 show（与 Router 行为一致）
+function showRenderedLayer(json) {
+    YUI.log("showRenderedLayer: Showing rendered layer: " + json.id);
+    YUI.show(json.id);
+}
+
 // 内部刷新预览函数
 function refreshPreviewInternal(json) {
     if (!json) {
@@ -174,6 +180,7 @@ function refreshPreviewInternal(json) {
                     
                     if (result === 0) {
                         YUI.log("refreshPreviewInternal: Successfully rendered first item");
+                        showRenderedLayer(firstItem);
                     } else {
                         YUI.log("refreshPreviewInternal: Failed to render first item, result = " + result);
                     }
@@ -206,6 +213,7 @@ function refreshPreviewInternal(json) {
             
             if (result === 0) {
                 YUI.log("refreshPreviewInternal: Successfully rendered non-array item");
+                showRenderedLayer(json);
             } else {
                 YUI.log("refreshPreviewInternal: Failed to render non-array item, result = " + result);
                 // 如果渲染失败，回退到文本显示
@@ -220,9 +228,9 @@ function refreshPreviewInternal(json) {
         YUI.log("refreshPreviewInternal: JSON Text: " + jsonString);
         
         var result = YUI.renderFromJson("previewLabel", jsonString);
-        
         if (result === 0) {
             YUI.log("refreshPreviewInternal: Successfully rendered full update");
+            showRenderedLayer(json);
         } else {
             YUI.log("refreshPreviewInternal: Failed to render full update, result = " + result);
             // 如果渲染失败，回退到文本显示

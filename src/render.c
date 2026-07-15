@@ -167,6 +167,9 @@ Texture* render_text(Layer* layer,const char* text, Color color) {
         printf("error not found font %s %d\n",layer->id,layer->type);
         return NULL;
     }
+    if (!layer->font->default_font) {
+        load_all_fonts(layer);
+    }
     if (!layer->font->default_font) return NULL;
     
     Texture* texture= backend_render_texture(layer->font->default_font,text,color);

@@ -1151,16 +1151,46 @@ static void text_component_delete_next_char(TextComponent* component) {
     text_component_trigger_on_change(component);
 }
 
+// 规范化插入文本：\r\n / \r -> \n，跳过其它不可见控制字符
+static int text_component_normalize_insert_text(const char* src, char* dst) {
+    int j = 0;
+    for (int i = 0; src[i]; i++) {
+        unsigned char c = (unsigned char)src[i];
+        if (c == '\r') {
+            if (src[i + 1] != '\n') {
+                dst[j++] = '\n';
+            }
+        } else if (c < 32 && c != '\n' && c != '\t') {
+            continue;
+        } else {
+            dst[j++] = (char)c;
+        }
+    }
+    dst[j] = '\0';
+    return j;
+}
+
 // 在光标位置插入文本
 static void text_component_insert_text(TextComponent* component, const char* text) {
     if (!component || !text || !component->editable) {
         return;
     }
-    
-    int text_len = strlen(text);
-    if (text_len == 0) {
-        return; // 空文本，无需插入
+
+    int src_len = (int)strlen(text);
+    if (src_len == 0) {
+        return;
     }
+
+    char* normalized = (char*)malloc((size_t)src_len + 1);
+    if (!normalized) {
+        return;
+    }
+    int text_len = text_component_normalize_insert_text(text, normalized);
+    if (text_len == 0) {
+        free(normalized);
+        return;
+    }
+    const char* insert_text = normalized;
     
     int current_len = strlen(component->layer->text);
     
@@ -1177,7 +1207,7 @@ static void text_component_insert_text(TextComponent* component, const char* tex
     // 检查是否包含换行符，如果包含则设置为多行模式
     int has_newlines = 0;
     for (int i = 0; i < text_len; i++) {
-        if (text[i] == '\n') {
+        if (insert_text[i] == '\n') {
             has_newlines = 1;
             break;
         }
@@ -1210,7 +1240,7 @@ static void text_component_insert_text(TextComponent* component, const char* tex
     // 复制光标位置之前的部分
     memcpy(new_text, component->layer->text, component->cursor_pos);
     // 插入新文本
-    memcpy(new_text + component->cursor_pos, text, text_len);
+    memcpy(new_text + component->cursor_pos, insert_text, text_len);
     // 复制光标位置之后的部分
     memcpy(new_text + component->cursor_pos + text_len, 
            component->layer->text + component->cursor_pos, 
@@ -1219,6 +1249,7 @@ static void text_component_insert_text(TextComponent* component, const char* tex
     // 设置新文本
     layer_set_text(component->layer, new_text);
     free(new_text);
+    free(normalized);
     
     component->cursor_pos += text_len;
     text_component_invalidate_layout(component);

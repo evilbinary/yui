@@ -40,7 +40,7 @@ if sys.platform == "win32":
 sys.stdout = open(sys.stdout.fileno(), 'w', buffering=1)
 sys.stderr = open(sys.stderr.fileno(), 'w', buffering=1)
 
-model= 'Pro/zai-org/GLM-4.7' #'Qwen/Qwen3-VL-235B-A22B-Instruct' #'deepseek-ai/DeepSeek-V3.2' #'Qwen/Qwen2.5-7B-Instruct' #glm-4.7-free #Qwen/Qwen2.5-7B-Instruct #gpt-5-nano
+model= 'deepseek-v4-flash' #'Pro/zai-org/GLM-4.7' #'Qwen/Qwen3-VL-235B-A22B-Instruct' #'deepseek-ai/DeepSeek-V3.2' #'Qwen/Qwen2.5-7B-Instruct' #glm-4.7-free #Qwen/Qwen2.5-7B-Instruct #gpt-5-nano
 
 # 尝试使用 httpx 客户端初始化 OpenAI
 import httpx
@@ -68,7 +68,7 @@ else:
 try:
     # 使用自定义 httpx 客户端初始化 OpenAI
     client = OpenAI(
-        base_url="https://api.siliconflow.cn/v1", #"https://opencode.ai/zen/v1",
+        base_url= "https://api.deepseek.com", # "https://api.siliconflow.cn/v1" "https://opencode.ai/zen/v1"
         api_key=os.getenv("OPENAI_API_KEY", ""), # export OPENAI_API_KEY=
         http_client=http_client
     )
@@ -81,7 +81,7 @@ except Exception as e:
         api_key=os.getenv("OPENAI_API_KEY", ""),
     )
     # 手动设置 base_url
-    client.base_url = "https://api.siliconflow.cn/v1"
+    client.base_url = "https://api.deepseek.com"
 
 app = Flask(__name__)
 CORS(app)  # 启用CORS支持

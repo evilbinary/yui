@@ -107,10 +107,10 @@
                             "scrollable": 1,
                             "showLineNumbers":true,
                             "lineNumberWidth": 40,
-                            "selectionColor": "#6BAF52CC",
                             "style": {
                                 "bgColor": "#2b2b2b",
                                 "color": "#f8f8f2",
+                                "selectionColor": "#6BAF52CC",
                                 "fontSize": 14,
                                 "padding": [10, 10, 10, 10],
                                 "fontFamily": "monospace",
