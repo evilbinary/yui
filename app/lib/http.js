@@ -1,4 +1,23 @@
 // HTTP 客户端实现，基于 Socket API
+
+function utf8_byte_length(str) {
+    var len = 0;
+    for (var i = 0; i < str.length; i++) {
+        var c = str.charCodeAt(i);
+        if (c < 0x80) {
+            len += 1;
+        } else if (c < 0x800) {
+            len += 2;
+        } else if (c >= 0xD800 && c < 0xDC00) {
+            len += 4;
+            i++;
+        } else {
+            len += 3;
+        }
+    }
+    return len;
+}
+
 /**
  * HTTP GET 请求
  * @param {string} url - URL地址，例如 "http://example.com:8080/path"
@@ -131,7 +150,7 @@ function http_post(url, data, options) {
         requestLines.push("Host: " + host);
         requestLines.push("User-Agent: YUI-HTTP-Client/1.0");
         requestLines.push("Content-Type: " + contentType);
-        requestLines.push("Content-Length: " + data.length);
+        requestLines.push("Content-Length: " + utf8_byte_length(data));
         requestLines.push("Connection: close");
         
         // 添加自定义headers
@@ -291,7 +310,7 @@ function http_post_sse(url, data, handlers, options) {
     requestLines.push("User-Agent: YUI-HTTP-Client/1.0");
     requestLines.push("Content-Type: " + contentType);
     requestLines.push("Accept: text/event-stream");
-    requestLines.push("Content-Length: " + data.length);
+    requestLines.push("Content-Length: " + utf8_byte_length(data));
     requestLines.push("Connection: close");
 
     for (var key in headers) {
@@ -488,7 +507,7 @@ function http_post_sse_async(url, data, handlers, options) {
     requestLines.push("User-Agent: YUI-HTTP-Client/1.0");
     requestLines.push("Content-Type: " + contentType);
     requestLines.push("Accept: text/event-stream");
-    requestLines.push("Content-Length: " + data.length);
+    requestLines.push("Content-Length: " + utf8_byte_length(data));
     requestLines.push("Connection: close");
     for (var key in headers) {
         requestLines.push(key + ": " + headers[key]);
