@@ -376,14 +376,13 @@ int handle_mouse_event(Layer* layer, MouseEvent* event) {
     }
 
     // 让各组件自己处理鼠标事件（包括点击）
-    if (layer->handle_mouse_event) {
-        int consumed = layer->handle_mouse_event(layer, event);
+    if (layer->sub && layer->sub->visible == VISIBLE) {
+        int consumed = handle_mouse_event(layer->sub, event);
         if (consumed) return 1;
     }
 
-    // 递归处理子图层的事件
-    if (layer->sub) {
-        int consumed = handle_mouse_event(layer->sub, event);
+    if (layer->handle_mouse_event) {
+        int consumed = layer->handle_mouse_event(layer, event);
         if (consumed) return 1;
     }
 
