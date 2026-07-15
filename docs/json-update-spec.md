@@ -75,6 +75,9 @@
 | `borderRadius` | number | `8` | 圆角半径 |
 | `size` | array | `[200, 50]` | 宽度和高度 |
 | `position` | array | `[100, 100]` | X 和 Y 坐标 |
+| `layout` | object | `{"type":"vertical","spacing":8}` | 容器布局（type/spacing/align/justify/padding/columns） |
+| `flex` | number | `1` | 子项在 flex 布局中的比例 |
+| `padding` | array | `[8]` 或 `[8,12]` | 内边距 |
 | `visible` | boolean | `true` | 是否可见 |
 | `enabled` | boolean | `true` | 是否启用 |
 

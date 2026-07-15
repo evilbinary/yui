@@ -54,6 +54,85 @@ int layer_padding_get(const Layer* layer, int index)
     return layer->padding[index];
 }
 
+int layer_apply_layout_from_json(Layer* layer, cJSON* layout)
+{
+    if (!layer || !layout || !cJSON_IsObject(layout)) {
+        return 0;
+    }
+
+    if (!layer->layout_manager) {
+        layer->layout_manager = (LayoutManager*)calloc(1, sizeof(LayoutManager));
+        if (!layer->layout_manager) {
+            return 0;
+        }
+        layer->layout_manager->type = LAYOUT_VERTICAL;
+    }
+
+    cJSON* layout_type = cJSON_GetObjectItem(layout, "type");
+    if (layout_type && cJSON_IsString(layout_type)) {
+        if (strcmp(layout_type->valuestring, "horizontal") == 0) {
+            layer->layout_manager->type = LAYOUT_HORIZONTAL;
+        } else if (strcmp(layout_type->valuestring, "vertical") == 0) {
+            layer->layout_manager->type = LAYOUT_VERTICAL;
+        } else if (strcmp(layout_type->valuestring, "center") == 0) {
+            layer->layout_manager->type = LAYOUT_CENTER;
+        } else if (strcmp(layout_type->valuestring, "left") == 0) {
+            layer->layout_manager->type = LAYOUT_LEFT;
+        } else if (strcmp(layout_type->valuestring, "right") == 0) {
+            layer->layout_manager->type = LAYOUT_RIGHT;
+        } else {
+            layer->layout_manager->type = LAYOUT_ABSOLUTE;
+        }
+    }
+
+    cJSON* layout_align = cJSON_GetObjectItem(layout, "align");
+    if (layout_align && cJSON_IsString(layout_align)) {
+        if (strcmp(layout_align->valuestring, "left") == 0) {
+            layer->layout_manager->align = LAYOUT_ALIGN_LEFT;
+        } else if (strcmp(layout_align->valuestring, "right") == 0) {
+            layer->layout_manager->align = LAYOUT_ALIGN_RIGHT;
+        } else if (strcmp(layout_align->valuestring, "center") == 0) {
+            layer->layout_manager->align = LAYOUT_ALIGN_CENTER;
+        }
+    }
+
+    cJSON* layout_justify = cJSON_GetObjectItem(layout, "justifyContent");
+    if (!layout_justify) {
+        layout_justify = cJSON_GetObjectItem(layout, "justify");
+    }
+    if (layout_justify && cJSON_IsString(layout_justify)) {
+        const char* justify_str = layout_justify->valuestring;
+        if (strcmp(justify_str, "center") == 0) {
+            layer->layout_manager->justify = LAYOUT_ALIGN_CENTER;
+        } else if (strcmp(justify_str, "left") == 0 || strcmp(justify_str, "flex-start") == 0) {
+            layer->layout_manager->justify = LAYOUT_ALIGN_LEFT;
+        } else if (strcmp(justify_str, "right") == 0 || strcmp(justify_str, "flex-end") == 0) {
+            layer->layout_manager->justify = LAYOUT_ALIGN_RIGHT;
+        } else if (strcmp(justify_str, "space-between") == 0) {
+            layer->layout_manager->justify = LAYOUT_ALIGN_SPACE_BETWEEN;
+        } else if (strcmp(justify_str, "space-around") == 0) {
+            layer->layout_manager->justify = LAYOUT_ALIGN_SPACE_AROUND;
+        }
+    }
+
+    cJSON* spacing = cJSON_GetObjectItem(layout, "spacing");
+    if (spacing && cJSON_IsNumber(spacing)) {
+        layer->layout_manager->spacing = spacing->valueint;
+    }
+
+    cJSON* padding = cJSON_GetObjectItem(layout, "padding");
+    if (padding && layer_padding_apply_from_json(layer->layout_manager->padding, padding)) {
+        memcpy(layer->padding, layer->layout_manager->padding, sizeof(layer->padding));
+    }
+
+    cJSON* columns = cJSON_GetObjectItem(layout, "columns");
+    if (columns && cJSON_IsNumber(columns)) {
+        layer->layout_manager->columns = columns->valueint;
+    }
+
+    return 1;
+}
+
 // 移除JSON字符串中的注释
 static char* remove_json_comments(char* json_str) {
   if (!json_str) return NULL;
@@ -612,84 +691,9 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
   // 解析布局管理器
   cJSON* layout = cJSON_GetObjectItem(json_obj, "layout");
   if (layout) {
-    layer->layout_manager = malloc(sizeof(LayoutManager));
-    memset(layer->layout_manager, 0, sizeof(LayoutManager));
-
-    cJSON* layout_type = cJSON_GetObjectItem(layout, "type");
-    if (layout_type) {
-      if (strcmp(layout_type->valuestring, "horizontal") == 0) {
-        layer->layout_manager->type = LAYOUT_HORIZONTAL;
-      } else if (strcmp(layout_type->valuestring, "vertical") == 0) {
-        layer->layout_manager->type = LAYOUT_VERTICAL;
-      } else if (strcmp(layout_type->valuestring, "center") == 0) {
-        layer->layout_manager->type = LAYOUT_CENTER;
-      } else if (strcmp(layout_type->valuestring, "left") == 0) {
-        layer->layout_manager->type = LAYOUT_LEFT;
-      } else if (strcmp(layout_type->valuestring, "right") == 0) {
-        layer->layout_manager->type = LAYOUT_RIGHT;
-      } else {
-        layer->layout_manager->type = LAYOUT_ABSOLUTE;
-      }
-    } else {
-      // 默认使用垂直布局
-      layer->layout_manager->type = LAYOUT_VERTICAL;
-    }
-    cJSON* layout_align = cJSON_GetObjectItem(layout, "align");
-    if (layout_align) {
-      // 交叉轴对齐方式
-      if (strcmp(layout_align->valuestring, "left") == 0) {
-        layer->layout_manager->align = LAYOUT_ALIGN_LEFT;
-      } else if (strcmp(layout_align->valuestring, "right") == 0) {
-        layer->layout_manager->align = LAYOUT_ALIGN_RIGHT;
-      } else if (strcmp(layout_align->valuestring, "center") == 0) {
-        layer->layout_manager->align = LAYOUT_ALIGN_CENTER;
-      } else {
-        layer->layout_manager->align = LAYOUT_ALIGN_LEFT;
-      }
-    }
-
-    cJSON* layout_justify = cJSON_GetObjectItem(layout, "justifyContent");
-    if (!layout_justify) {
-      layout_justify = cJSON_GetObjectItem(layout, "justify");
-    }
-    if (layout_justify) {
-      // 主轴对齐方式
-      const char* justify_str = layout_justify->valuestring;
-      if (strcmp(justify_str, "center") == 0) {
-        layer->layout_manager->justify = LAYOUT_ALIGN_CENTER;
-      } else if (strcmp(justify_str, "left") == 0 || strcmp(justify_str, "flex-start") == 0) {
-        layer->layout_manager->justify = LAYOUT_ALIGN_LEFT;
-      } else if (strcmp(justify_str, "right") == 0 || strcmp(justify_str, "flex-end") == 0) {
-        layer->layout_manager->justify = LAYOUT_ALIGN_RIGHT;
-      } else if (strcmp(justify_str, "space-between") == 0) {
-        layer->layout_manager->justify = LAYOUT_ALIGN_SPACE_BETWEEN;
-      } else if (strcmp(justify_str, "space-around") == 0) {
-        layer->layout_manager->justify = LAYOUT_ALIGN_SPACE_AROUND;
-      } else {
-        layer->layout_manager->justify = LAYOUT_ALIGN_LEFT;  // 默认左对齐
-      }
-    } else {
-      // 默认左对齐
-      layer->layout_manager->justify = LAYOUT_ALIGN_LEFT;
-    }
-
-    if (cJSON_HasObjectItem(layout, "spacing")) {
-      layer->layout_manager->spacing =
-          cJSON_GetObjectItem(layout, "spacing")->valueint;
-    }
-
-    cJSON* padding = cJSON_GetObjectItem(layout, "padding");
-    if (padding) {
-        layout_padding_set = layer_padding_apply_from_json(layer->layout_manager->padding, padding);
-        if (layout_padding_set) {
-            memcpy(layer->padding, layer->layout_manager->padding, sizeof(layer->padding));
-        }
-    }
-
-    // 解析Grid布局的列数
-    cJSON* columns = cJSON_GetObjectItem(layout, "columns");
-    if (columns) {
-      layer->layout_manager->columns = columns->valueint;
+    layer_apply_layout_from_json(layer, layout);
+    if (cJSON_GetObjectItem(layout, "padding")) {
+      layout_padding_set = 1;
     }
   } else {
     // 如果没有布局配置，创建默认的垂直布局

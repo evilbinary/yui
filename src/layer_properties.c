@@ -352,6 +352,16 @@ static int handle_height(Layer* layer, cJSON* value, int is_creating) {
     return 1;
 }
 
+static int handle_layout(Layer* layer, cJSON* value, int is_creating) {
+    if (!layer_apply_layout_from_json(layer, value)) {
+        return 0;
+    }
+    if (!is_creating) {
+        mark_layer_dirty(layer, DIRTY_LAYOUT);
+    }
+    return 1;
+}
+
 static int handle_flex(Layer* layer, cJSON* value, int is_creating) {
     if (!cJSON_IsNumber(value)) return 0;
     layer->flex_ratio = (float)value->valuedouble;
@@ -448,6 +458,7 @@ static const PropertyHandlerEntry property_handlers[] = {
     {"padding", handle_padding},
     
     // 布局属性
+    {"layout", handle_layout},
     {"flex", handle_flex},
     {"rotation", handle_rotation},
     

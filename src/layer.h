@@ -34,4 +34,7 @@ int layer_padding_apply_from_json(int padding[4], cJSON* value);
 /** Effective padding: layout.padding wins when non-zero, else style.padding. */
 int layer_padding_get(const Layer* layer, int index);
 
+/** Apply or merge layout fields from JSON object. Returns 1 on success. */
+int layer_apply_layout_from_json(Layer* layer, cJSON* layout);
+
 #endif
