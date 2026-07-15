@@ -213,36 +213,52 @@ function guardBusy(fn) {
     g_busy = false;
 }
 
-function stressSequential50() {
+function stressSequential(count) {
     guardBusy(function() {
-        setStatus("顺序 update ×50 …", "#89b4fa");
-        runSequentialUpdates(50, true);
-        setStatus("顺序 ×50 完成，请看任务管理器内存", "#a6e3a1");
+        setStatus("顺序 update ×" + count + " …（界面可能短暂无响应）", "#89b4fa");
+        runSequentialUpdates(count, true);
+        setStatus("顺序 ×" + count + " 完成，请看任务管理器内存", "#a6e3a1");
     });
+}
+
+function stressBatch(count) {
+    guardBusy(function() {
+        setStatus("批量 update ×" + count + " …", "#a6e3a1");
+        runBatchUpdates(count, true);
+        setStatus("批量 ×" + count + " 完成", "#a6e3a1");
+    });
+}
+
+function stressSequential50() {
+    stressSequential(50);
 }
 
 function stressSequential200() {
-    guardBusy(function() {
-        setStatus("顺序 update ×200 …", "#89b4fa");
-        runSequentialUpdates(200, true);
-        setStatus("顺序 ×200 完成，请看任务管理器内存", "#a6e3a1");
-    });
+    stressSequential(200);
+}
+
+function stressSequential5000() {
+    stressSequential(5000);
+}
+
+function stressSequential50000() {
+    stressSequential(50000);
 }
 
 function stressBatch50() {
-    guardBusy(function() {
-        setStatus("批量 update ×50 …", "#a6e3a1");
-        runBatchUpdates(50, true);
-        setStatus("批量 ×50 完成", "#a6e3a1");
-    });
+    stressBatch(50);
 }
 
 function stressBatch200() {
-    guardBusy(function() {
-        setStatus("批量 update ×200 …", "#a6e3a1");
-        runBatchUpdates(200, true);
-        setStatus("批量 ×200 完成", "#a6e3a1");
-    });
+    stressBatch(200);
+}
+
+function stressBatch5000() {
+    stressBatch(5000);
+}
+
+function stressBatch50000() {
+    stressBatch(50000);
 }
 
 function stressRounds5() {

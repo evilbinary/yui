@@ -107,6 +107,69 @@
             ]
         },
         {
+            "id": "btnRow3",
+            "type": "View",
+            "size": [0, 36],
+            "layout": {
+                "type": "horizontal",
+                "spacing": 8
+            },
+            "children": [
+                {
+                    "id": "seq5000Btn",
+                    "type": "Button",
+                    "text": "顺序×5000",
+                    "size": [110, 32],
+                    "style": {
+                        "bgColor": "#74c7ec",
+                        "color": "#1e1e2e",
+                        "fontSize": 12,
+                        "borderRadius": 4
+                    },
+                    "events": { "onClick": "@stressSequential5000" }
+                },
+                {
+                    "id": "seq50000Btn",
+                    "type": "Button",
+                    "text": "顺序×5万",
+                    "size": [110, 32],
+                    "style": {
+                        "bgColor": "#74c7ec",
+                        "color": "#1e1e2e",
+                        "fontSize": 12,
+                        "borderRadius": 4
+                    },
+                    "events": { "onClick": "@stressSequential50000" }
+                },
+                {
+                    "id": "batch5000Btn",
+                    "type": "Button",
+                    "text": "批量×5000",
+                    "size": [110, 32],
+                    "style": {
+                        "bgColor": "#94e2d5",
+                        "color": "#1e1e2e",
+                        "fontSize": 12,
+                        "borderRadius": 4
+                    },
+                    "events": { "onClick": "@stressBatch5000" }
+                },
+                {
+                    "id": "batch50000Btn",
+                    "type": "Button",
+                    "text": "批量×5万",
+                    "size": [110, 32],
+                    "style": {
+                        "bgColor": "#94e2d5",
+                        "color": "#1e1e2e",
+                        "fontSize": 12,
+                        "borderRadius": 4
+                    },
+                    "events": { "onClick": "@stressBatch50000" }
+                }
+            ]
+        },
+        {
             "id": "btnRow2",
             "type": "View",
             "size": [0, 36],
