@@ -180,6 +180,31 @@
                             }
                         },
                         {
+                            "id": "aiLoadingMask",
+                            "type": "View",
+                            "visible": false,
+                            "size": [0, 0],
+                            "flex": 1,
+                            "layout": {
+                                "type": "center"
+                            },
+                            "style": {
+                                "bgColor": "#000000"
+                            },
+                            "children": [
+                                {
+                                    "id": "aiLoading",
+                                    "type": "Loading",
+                                    "size": [72, 72],
+                                    "variant": "spinner",
+                                    "text": "AI 生成中...",
+                                    "color": "#2196f3",
+                                    "trackColor": "#333333",
+                                    "strokeWidth": 4
+                                }
+                            ]
+                        },
+                        {
                             "id": "inputLabel",
                             "type": "Label",
                             "text": "",
@@ -202,16 +227,16 @@
         {
             "id": "inputContainer",
             "type": "View",
-            "size": [0, 50],
+            "size": [0, 100],
             "layout": {
                 "type": "horizontal",
                 "spacing": 10,
                 "padding": [10, 10, 10, 10],
-                "justifyContent": "center",
-                "alignItems": "center"
+                "justifyContent": "left",
+                "align": "right"
             },
             "style": {
-                "bgColor": "#2b2b2b",
+                "bgColor": "#1e1e1e",
                 "borderTopWidth": 1,
                 "borderTopColor": "#333333"
             },
@@ -221,18 +246,20 @@
                     "type": "Text",
                     "text": "",
                     "placeholder": "输入需要生成的UI内容...",
-                    "size": [400, 35],
+                    "size": [0, 0],
+                    "flex": 1,
+                    "scrollable": 1,
                     "style": {
-                        "bgColor": "#ffffff",
-                        "color": "#495057",
+                        "bgColor": "#2b2b2b",
+                        "color": "#f8f8f2",
                         "fontSize": 13,
                         "padding": [10, 10, 10, 10],
                         "borderWidth": 1,
-                        "borderColor": "#ced4da",
+                        "borderColor": "#444444",
                         "borderRadius": 4
                     },
                     "editable": true,
-                    "multiline": false
+                    "multiline": true
                 },
                 {
                     "id": "updateModeSelect",
@@ -240,11 +267,11 @@
                     "text": "增量更新",
                     "size": [100, 35],
                     "style": {
-                        "bgColor": "#ffffff",
-                        "color": "#495057",
+                        "bgColor": "#2b2b2b",
+                        "color": "#f8f8f2",
                         "fontSize": 13,
                         "borderWidth": 1,
-                        "borderColor": "#ced4da",
+                        "borderColor": "#444444",
                         "borderRadius": 4
                     },
                     "items": [

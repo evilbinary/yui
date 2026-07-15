@@ -21,6 +21,57 @@ var streamState = {
     typewriterText: ""
 };
 
+// AI 生成 loading 状态
+var generatingState = {
+    active: false
+};
+
+function showAiLoading() {
+    generatingState.active = true;
+    YUI.update({
+        target: "aiLoadingMask",
+        change: { visible: true }
+    });
+    YUI.update({
+        target: "previewLabel",
+        change: { visible: false }
+    });
+    YUI.update({
+        target: "sendBtn",
+        change: { text: "生成中..." }
+    });
+}
+
+function hideAiLoading() {
+    generatingState.active = false;
+    YUI.update({
+        target: "aiLoadingMask",
+        change: { visible: false }
+    });
+    YUI.update({
+        target: "previewLabel",
+        change: { visible: true }
+    });
+    YUI.update({
+        target: "sendBtn",
+        change: { text: "生成" }
+    });
+}
+
+function revealPreviewDuringStream() {
+    if (!generatingState.active) {
+        return;
+    }
+    YUI.update({
+        target: "aiLoadingMask",
+        change: { visible: false }
+    });
+    YUI.update({
+        target: "previewLabel",
+        change: { visible: true }
+    });
+}
+
 // 判断是否为可渲染的 UI 组件 JSON（而非增量更新指令）
 function isUiComponentJson(json) {
     return json && typeof json === 'object' && json.type;
@@ -119,12 +170,14 @@ function normalizeStreamUpdate(raw) {
 function appendStreamToken(delta) {
     streamState.typewriterText += delta;
     if (streamState.appliedCount === 0) {
+        revealPreviewDuringStream();
         YUI.setText("inputLabel", streamState.typewriterText);
     }
 }
 
 function finishIncrementalStream(info, messageText) {
     streamState.active = false;
+    hideAiLoading();
     var count = info && info.count ? info.count : streamState.appliedCount;
     var lines = streamState.statusLines.join("\n");
     var tail = "\n── 完成 ──\n共 " + count + " 条更新: " + messageText;
@@ -155,6 +208,7 @@ function applySingleIncrementalUpdate(rawUpdate) {
     showLayersFromUpdate(update);
 
     if (streamState.active) {
+        revealPreviewDuringStream();
         appendOneItemToEditorArray(update);
         showStreamUpdateLine(update, meta);
     } else {
@@ -493,6 +547,11 @@ function jsonToPreviewText(json, indent) {
 // 发送消息函数 - 发送按钮 onClick 事件
 function sendMessage() {
     YUI.log("sendMessage: Sending message...");
+
+    if (generatingState.active) {
+        YUI.log("sendMessage: Already generating, ignored");
+        return;
+    }
     
     var messageText = YUI.getText("messageInput");
     
@@ -511,6 +570,7 @@ function sendMessage() {
     
     // 显示发送中状态
     YUI.setText("inputLabel", "生成中: " + messageText + " | 模式: " + updateMode);
+    showAiLoading();
     
     // 根据更新模式调用相应的API
     if (updateMode === 'incremental') {
@@ -528,6 +588,7 @@ function sendMessage() {
             },
             onError: function(err) {
                 streamState.active = false;
+                hideAiLoading();
                 YUI.setText("inputLabel", "生成失败: " + err);
                 YUI.setText("previewLabel", "❌ 增量流式更新失败\n\n" + err);
             }
@@ -539,6 +600,7 @@ function sendMessage() {
         });
     }else{
         YUI.log("sendMessage: Unknown update mode: " + updateMode);
+        hideAiLoading();
     }
     
     // 清空输入框
@@ -621,6 +683,8 @@ function handleApiResponse(response, messageText, updateMode) {
         YUI.setText("previewLabel", errorMsg);
         YUI.log("handleApiResponse: API request failed - " + (response.error || 'Unknown error'));
     }
+
+    hideAiLoading();
 }
 
 // Toggle Inspect 模式 - inspectBtn.onClick 事件
