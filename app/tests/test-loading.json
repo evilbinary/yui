@@ -1,0 +1,156 @@
+{
+  "id": "loadingTestApp",
+  "type": "View",
+  "size": [520, 480],
+  "js": "test-loading.js",
+  "style": {
+    "bgColor": "#1e1e2e"
+  },
+  "layout": {
+    "type": "vertical",
+    "spacing": 16,
+    "padding": [20, 20, 20, 20]
+  },
+  "children": [
+    {
+      "id": "title",
+      "type": "Label",
+      "text": "Loading 组件测试",
+      "size": [480, 36],
+      "style": {
+        "color": "#cdd6f4",
+        "fontSize": 22
+      }
+    },
+    {
+      "id": "statusLabel",
+      "type": "Label",
+      "text": "状态：就绪",
+      "size": [480, 24],
+      "style": {
+        "color": "#a6adc8",
+        "fontSize": 13
+      }
+    },
+    {
+      "id": "demoRow",
+      "type": "View",
+      "size": [480, 100],
+      "layout": {
+        "type": "horizontal",
+        "spacing": 24,
+        "align": "center",
+        "justifyContent": "center"
+      },
+      "children": [
+        {
+          "id": "spinnerDemo",
+          "type": "Loading",
+          "size": [48, 48],
+          "variant": "spinner",
+          "color": "#89b4fa",
+          "trackColor": "#313244",
+          "strokeWidth": 4
+        },
+        {
+          "id": "dotsDemo",
+          "type": "Loading",
+          "size": [72, 40],
+          "variant": "dots",
+          "color": "#a6e3a1",
+          "speed": 1.2
+        },
+        {
+          "id": "textDemo",
+          "type": "Loading",
+          "size": [100, 72],
+          "variant": "spinner",
+          "text": "加载中",
+          "color": "#f9e2af",
+          "trackColor": "#45475a",
+          "strokeWidth": 3
+        }
+      ]
+    },
+    {
+      "id": "loadPanel",
+      "type": "View",
+      "size": [480, 160],
+      "layout": {
+        "type": "center"
+      },
+      "style": {
+        "bgColor": "#313244",
+        "borderRadius": 8
+      },
+      "children": [
+        {
+          "id": "panelHint",
+          "type": "Label",
+          "text": "点击下方按钮在此区域显示 Loading",
+          "size": [400, 28],
+          "style": {
+            "color": "#6c7086",
+            "fontSize": 13
+          }
+        }
+      ]
+    },
+    {
+      "id": "btnRow",
+      "type": "View",
+      "size": [480, 44],
+      "layout": {
+        "type": "horizontal",
+        "spacing": 12
+      },
+      "children": [
+        {
+          "id": "showBtn",
+          "type": "Button",
+          "text": "显示 Loading",
+          "size": [120, 40],
+          "style": {
+            "bgColor": "#89b4fa",
+            "color": "#1e1e2e",
+            "fontSize": 13,
+            "borderRadius": 6
+          },
+          "events": {
+            "onClick": "@showLoader"
+          }
+        },
+        {
+          "id": "hideBtn",
+          "type": "Button",
+          "text": "隐藏 Loading",
+          "size": [120, 40],
+          "style": {
+            "bgColor": "#45475a",
+            "color": "#cdd6f4",
+            "fontSize": 13,
+            "borderRadius": 6
+          },
+          "events": {
+            "onClick": "@hideLoader"
+          }
+        },
+        {
+          "id": "simulateBtn",
+          "type": "Button",
+          "text": "模拟请求 2s",
+          "size": [130, 40],
+          "style": {
+            "bgColor": "#a6e3a1",
+            "color": "#1e1e2e",
+            "fontSize": 13,
+            "borderRadius": 6
+          },
+          "events": {
+            "onClick": "@simulateRequest"
+          }
+        }
+      ]
+    }
+  ]
+}
