@@ -11,6 +11,24 @@
 #include <string.h>
 #include "util.h"
 
+static int s_batch_depth = 0;
+static int s_batch_size = 0;
+static Layer* s_batch_prealloc_parent = NULL;
+static Layer* s_batch_dirty = NULL;
+
+static void batch_prealloc_children(Layer* parent) {
+    if (!s_batch_depth || s_batch_size <= 0 || parent == s_batch_prealloc_parent) {
+        return;
+    }
+    s_batch_prealloc_parent = parent;
+    int cap = parent->child_count + s_batch_size;
+    Layer** new_children = (Layer**)realloc(
+        parent->children, (size_t)cap * sizeof(Layer*));
+    if (new_children) {
+        parent->children = new_children;
+    }
+}
+
 
 // ====================== 辅助函数 ======================
 
@@ -248,8 +266,16 @@ static int yui_append_child_from_json(Layer* parent, cJSON* child_json) {
         layer_set_visible(new_child, VISIBLE);
     }
 
-    load_all_fonts(new_child);
-    theme_manager_apply_to_tree(new_child);
+    if (!s_batch_depth) {
+        load_all_fonts(new_child);
+        theme_manager_apply_to_tree(new_child);
+    }
+
+    batch_prealloc_children(parent);
+    if (s_batch_depth && parent == s_batch_prealloc_parent) {
+        parent->children[parent->child_count++] = new_child;
+        return 0;
+    }
 
     Layer** new_children = (Layer**)realloc(
         parent->children, (size_t)(parent->child_count + 1) * sizeof(Layer*));
@@ -295,6 +321,82 @@ static int yui_apply_children_array(Layer* parent, cJSON* children_array) {
         mark_layer_dirty(parent, DIRTY_CHILDREN | DIRTY_LAYOUT);
     }
     return changed;
+}
+
+static int change_is_only_single_child(cJSON* change) {
+    if (!cJSON_IsObject(change)) {
+        return 0;
+    }
+    cJSON* children = cJSON_GetObjectItem(change, "children");
+    if (!children || !cJSON_IsArray(children) || cJSON_GetArraySize(children) != 1) {
+        return 0;
+    }
+    cJSON* field = change->child;
+    while (field) {
+        if (strcmp(field->string, "children") != 0) {
+            return 0;
+        }
+        field = field->next;
+    }
+    return 1;
+}
+
+static int try_batch_child_appends(Layer* root, cJSON* json) {
+    int n = cJSON_GetArraySize(json);
+    if (n <= 1) {
+        return 0;
+    }
+
+    const char* target = NULL;
+    Layer* target_layer = NULL;
+    int index = 0;
+    cJSON* item = NULL;
+
+    cJSON_ArrayForEach(item, json) {
+        cJSON* target_json = cJSON_GetObjectItem(item, "target");
+        cJSON* change_json = cJSON_GetObjectItem(item, "change");
+        if (!target_json || !cJSON_IsString(target_json) ||
+            !change_is_only_single_child(change_json)) {
+            return 0;
+        }
+        if (index == 0) {
+            target = target_json->valuestring;
+            target_layer = resolve_path(root, target);
+            if (!target_layer) {
+                return 0;
+            }
+        } else if (strcmp(target_json->valuestring, target) != 0) {
+            return 0;
+        }
+        index++;
+    }
+
+    s_batch_depth = 1;
+    s_batch_size = n;
+    s_batch_prealloc_parent = NULL;
+    batch_prealloc_children(target_layer);
+
+    index = 0;
+    cJSON_ArrayForEach(item, json) {
+        cJSON* change_json = cJSON_GetObjectItem(item, "change");
+        cJSON* children = cJSON_GetObjectItem(change_json, "children");
+        cJSON* child_json = cJSON_GetArrayItem(children, 0);
+        if (!child_json || yui_append_child_from_json(target_layer, child_json) != 0) {
+            LOGW("update", "fast batch append %d failed", index);
+        }
+        index++;
+    }
+
+    mark_layer_dirty(target_layer, DIRTY_CHILDREN | DIRTY_LAYOUT);
+    s_batch_depth = 0;
+    s_batch_size = 0;
+    s_batch_prealloc_parent = NULL;
+    load_all_fonts(root);
+    layout_layer(target_layer);
+    if (target_layer->parent) {
+        layout_layer(target_layer->parent);
+    }
+    return 1;
 }
 
 static int yui_apply_child_path(Layer* parent, const char* child_spec, cJSON* value) {
@@ -456,9 +558,12 @@ int yui_update_from_json(Layer* root, cJSON* update_obj) {
     
     // 应用更新
     int updated = yui_update_properties(target_layer, change_json);
-    
-    // 如果有布局变化，重新计算布局
-    if (target_layer->dirty_flags & (DIRTY_RECT | DIRTY_LAYOUT | DIRTY_CHILDREN)) {
+
+    if (s_batch_depth) {
+        if (target_layer->dirty_flags & (DIRTY_RECT | DIRTY_LAYOUT | DIRTY_CHILDREN) || updated > 0) {
+            s_batch_dirty = target_layer;
+        }
+    } else if (target_layer->dirty_flags & (DIRTY_RECT | DIRTY_LAYOUT | DIRTY_CHILDREN)) {
         layout_layer(target_layer);
         if (target_layer->parent) {
             layout_layer(target_layer->parent);
@@ -489,15 +594,33 @@ int yui_update(Layer* root, const char* update_json) {
     int result = 0;
     
     if (cJSON_IsArray(json)) {
-        // 批量更新
-        cJSON* item = NULL;
-        int index = 0;
-        cJSON_ArrayForEach(item, json) {
-            int ret = yui_update_from_json(root, item);
-            if (ret != 0) {
-                LOGW("update", "batch item %d failed", index);
+        if (!try_batch_child_appends(root, json)) {
+            s_batch_depth = 1;
+            s_batch_size = cJSON_GetArraySize(json);
+            s_batch_prealloc_parent = NULL;
+            s_batch_dirty = NULL;
+            cJSON* item = NULL;
+            int index = 0;
+            cJSON_ArrayForEach(item, json) {
+                int ret = yui_update_from_json(root, item);
+                if (ret != 0) {
+                    LOGW("update", "batch item %d failed", index);
+                }
+                index++;
             }
-            index++;
+            s_batch_depth = 0;
+            s_batch_size = 0;
+            s_batch_prealloc_parent = NULL;
+            load_all_fonts(root);
+            if (s_batch_dirty) {
+                layout_layer(s_batch_dirty);
+                if (s_batch_dirty->parent) {
+                    layout_layer(s_batch_dirty->parent);
+                }
+                s_batch_dirty = NULL;
+            } else {
+                layout_layer(root);
+            }
         }
     } else if (cJSON_IsObject(json)) {
         // 单个更新

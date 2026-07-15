@@ -152,26 +152,78 @@ function runSequentialUpdates(count, resetFirst, round) {
     YUI.log("runSequentialUpdates: count=" + count + " reset=" + resetFirst + " ms=" + g_stats.lastMs);
 }
 
-function runBatchUpdates(count, resetFirst, round) {
-    var batch = [];
-    var i;
+function runSequentialUpdatesChunked(count, resetFirst, round) {
+    var i = 0;
     var t0 = Date.now();
+    var chunk = 500;
 
     if (resetFirst) {
         resetPreviewOnly();
         g_stats.rounds--;
     }
 
-    for (i = 0; i < count; i++) {
-        batch.push(makeButtonUpdate(i, round));
+    function step() {
+        var end = Math.min(i + chunk, count);
+        for (; i < end; i++) {
+            YUI.update(JSON.stringify(makeButtonUpdate(i, round)));
+            g_stats.updates++;
+        }
+        if (i < count) {
+            refreshStats("顺序 " + count + " … " + i + "/" + count);
+            setTimeout(step, 0);
+        } else {
+            g_stats.lastMs = Date.now() - t0;
+            refreshStats("顺序 " + count + " 条");
+            g_busy = false;
+            setStatus("顺序 ×" + count + " 完成", "#a6e3a1");
+            YUI.log("runSequentialUpdatesChunked: count=" + count + " ms=" + g_stats.lastMs);
+        }
     }
 
-    YUI.update(JSON.stringify(batch));
-    g_stats.updates += count;
+    step();
+}
 
-    g_stats.lastMs = Date.now() - t0;
-    refreshStats("批量 " + count + " 条");
-    YUI.log("runBatchUpdates: count=" + count + " reset=" + resetFirst + " ms=" + g_stats.lastMs);
+function runBatchUpdates(count, resetFirst, round, onDone) {
+    var batch = [];
+    var i = 0;
+    var t0 = Date.now();
+    var chunk = 2000;
+
+    if (resetFirst) {
+        resetPreviewOnly();
+        g_stats.rounds--;
+    }
+
+    function buildStep() {
+        var end = Math.min(i + chunk, count);
+        for (; i < end; i++) {
+            batch.push(makeButtonUpdate(i, round));
+        }
+        if (i < count) {
+            refreshStats("构建批量 " + i + "/" + count);
+            setTimeout(buildStep, 0);
+            return;
+        }
+        setStatus("批量 update ×" + count + " …", "#a6e3a1");
+        var t1 = Date.now();
+        var jsonStr = JSON.stringify(batch);
+        var t2 = Date.now();
+        YUI.update(jsonStr);
+        var t3 = Date.now();
+        g_stats.updates += count;
+        g_stats.lastMs = t3 - t0;
+        refreshStats("批量 " + count + " 条");
+        YUI.log("runBatchUpdates: count=" + count +
+            " build=" + (t1 - t0) + "ms" +
+            " stringify=" + (t2 - t1) + "ms" +
+            " update=" + (t3 - t2) + "ms" +
+            " total=" + g_stats.lastMs + "ms");
+        if (onDone) {
+            onDone();
+        }
+    }
+
+    buildStep();
 }
 
 function runRounds(rounds, perRound, resetEachRound) {
@@ -213,36 +265,51 @@ function guardBusy(fn) {
     g_busy = false;
 }
 
-function stressSequential(count) {
-    guardBusy(function() {
-        setStatus("顺序 update ×" + count + " …（界面可能短暂无响应）", "#89b4fa");
-        runSequentialUpdates(count, true);
-        setStatus("顺序 ×" + count + " 完成，请看任务管理器内存", "#a6e3a1");
-    });
+function stressSequentialLarge(count) {
+    if (g_busy) {
+        setStatus("测试进行中，请稍候…", "#fab387");
+        return;
+    }
+    g_busy = true;
+    setStatus("顺序 update ×" + count + " …", "#89b4fa");
+    runSequentialUpdatesChunked(count, true);
 }
 
 function stressBatch(count) {
-    guardBusy(function() {
-        setStatus("批量 update ×" + count + " …", "#a6e3a1");
-        runBatchUpdates(count, true);
+    if (g_busy) {
+        setStatus("测试进行中，请稍候…", "#fab387");
+        return;
+    }
+    g_busy = true;
+    setStatus("批量 update ×" + count + " …", "#a6e3a1");
+    runBatchUpdates(count, true, null, function() {
+        g_busy = false;
         setStatus("批量 ×" + count + " 完成", "#a6e3a1");
     });
 }
 
 function stressSequential50() {
-    stressSequential(50);
+    guardBusy(function() {
+        setStatus("顺序 update ×50 …", "#89b4fa");
+        runSequentialUpdates(50, true);
+        setStatus("顺序 ×50 完成", "#a6e3a1");
+    });
 }
 
 function stressSequential200() {
-    stressSequential(200);
+    guardBusy(function() {
+        setStatus("顺序 update ×200 …", "#89b4fa");
+        runSequentialUpdates(200, true);
+        setStatus("顺序 ×200 完成", "#a6e3a1");
+    });
 }
 
 function stressSequential5000() {
-    stressSequential(5000);
+    stressSequentialLarge(5000);
 }
 
 function stressSequential50000() {
-    stressSequential(50000);
+    stressSequentialLarge(50000);
 }
 
 function stressBatch50() {
