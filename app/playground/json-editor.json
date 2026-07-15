@@ -1,7 +1,7 @@
 {
     "id": "jsonEditorApp",
     "type": "View",
-    "size": [1800, 900],
+    "size": [1200, 900],
     "style": {
         "bgColor": "#ffffff"
     },
@@ -14,7 +14,8 @@
         {
             "id": "contentPanel",
             "type": "View",
-            "size": [1200, 750],
+            "size": [0, 0],
+            "flex": 1,
             "layout": {
                 "type": "horizontal",
                 "spacing": 0
@@ -23,7 +24,7 @@
                 {
                     "id": "editorPanel",
                     "type": "View",
-                    "size": [600, 750],
+                    "size": [600, 0],
                     "style": {
                         "bgColor": "#2b2b2b",
                         "borderWidth": 1,
@@ -130,24 +131,23 @@
                     "target": "editorPanel",
                     "orientation": "horizontal",
                     "minSize": 280,
-                    "size": [6, 750],
+                    "size": [6, 0],
                     "style": {
-                        "bgColor": "#e0e0e0",
-                        "hoverBgColor": "#bdbdbd",
-                        "borderColor": "#cccccc",
-                        "dotColor": "#9e9e9e",
-                        "hoverDotColor": "#616161",
+                        "bgColor": "#333333",
+                        "hoverBgColor": "#4a4a4a",
+                        "borderColor": "#1e1e1e",
+                        "dotColor": "#666666",
+                        "hoverDotColor": "#aaaaaa",
                         "accentColor": "#2196f3b3"
                     }
                 },
                 {
                     "id": "previewPanel",
                     "type": "View",
-                    "size": [594, 750],
                     "style": {
-                        "bgColor": "#ffffff",
+                        "bgColor": "#000000",
                         "borderWidth": 1,
-                        "borderColor": "#cccccc"
+                        "borderColor": "#333333"
                     },
                     "layout": {
                         "type": "vertical",
@@ -169,8 +169,8 @@
                             },
                             "scrollable": 2,
                             "style": {
-                                "bgColor": "#ffffff",
-                                "color": "#333333",
+                                "bgColor": "#000000",
+                                "color": "#f8f8f2",
                                 "fontSize": 13,
                                 "fontFamily": "monospace",
                                 "textAlign": "left",
@@ -185,8 +185,8 @@
                             "text": "",
                             "size": [0, 40],
                             "style": {
-                                "bgColor": "#ffffff",
-                                "color": "#333333",
+                                "bgColor": "#000000",
+                                "color": "#f8f8f2",
                                 "fontSize": 13,
                                 "fontFamily": "monospace",
                                 "textAlign": "left",
@@ -202,7 +202,7 @@
         {
             "id": "inputContainer",
             "type": "View",
-            "size": [1200, 50],
+            "size": [0, 50],
             "layout": {
                 "type": "horizontal",
                 "spacing": 10,
