@@ -2649,6 +2649,12 @@ void backend_render_arc(int center_x, int center_y, int radius, float start_angl
     while (end_rad < start_rad) {
         end_rad += 2.0f * M_PI;
     }
+
+    float sweep_deg = end_angle - start_angle;
+    while (sweep_deg <= 0.0f) {
+        sweep_deg += 360.0f;
+    }
+    int is_full_circle = (sweep_deg >= 359.0f);
     
     // 遍历圆弧的边界框
     int extent = (int)(r_outer + 2);
@@ -2675,19 +2681,23 @@ void backend_render_arc(int center_x, int center_y, int radius, float start_angl
             while (angle < start_rad) angle += 2.0f * M_PI;
             while (angle > start_rad + 2.0f * M_PI) angle -= 2.0f * M_PI;
             
-            // 角度边缘的抗锯齿（约1像素的平滑过渡）
+            // 角度边缘的抗锯齿（约1像素的平滑过渡）；整圆不淡化端点，避免顶部接缝缺口
             float angle_aa = 1.0f;
-            float pixel_angle = 1.0f / (dist > 0 ? dist : 1.0f); // 1像素对应的角度
-            
-            if (angle < start_rad + pixel_angle) {
-                angle_aa = (angle - start_rad) / pixel_angle;
-            } else if (angle > end_rad - pixel_angle) {
-                angle_aa = (end_rad - angle) / pixel_angle;
+            if (!is_full_circle) {
+                float pixel_angle = 1.0f / (dist > 0 ? dist : 1.0f); // 1像素对应的角度
+
+                if (angle < start_rad + pixel_angle) {
+                    angle_aa = (angle - start_rad) / pixel_angle;
+                } else if (angle > end_rad - pixel_angle) {
+                    angle_aa = (end_rad - angle) / pixel_angle;
+                } else if (angle > end_rad) {
+                    continue; // 完全超出角度范围
+                }
+                if (angle_aa <= 0.0f) continue;
+                if (angle_aa > 1.0f) angle_aa = 1.0f;
             } else if (angle > end_rad) {
-                continue; // 完全超出角度范围
+                continue;
             }
-            if (angle_aa <= 0.0f) continue;
-            if (angle_aa > 1.0f) angle_aa = 1.0f;
             
             // 径向抗锯齿：根据像素到弧线内外边缘的距离计算alpha
             float radial_aa = 1.0f;

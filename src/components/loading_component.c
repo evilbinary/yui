@@ -94,8 +94,6 @@ LoadingComponent* loading_component_create_from_json(Layer* layer, cJSON* json_o
     }
     if (track_item && cJSON_IsString(track_item)) {
         loading_parse_color(track_item->valuestring, &component->track_color);
-    } else if (layer->bg_color.a > 0) {
-        component->track_color = layer->bg_color;
     }
 
     cJSON* stroke_item = json_obj ? cJSON_GetObjectItem(json_obj, "strokeWidth") : NULL;
@@ -139,7 +137,7 @@ static void loading_render_spinner(LoadingComponent* component, Layer* layer, in
 
     float angle = (float)(backend_get_ticks() % 36000) / 10.0f * component->speed;
     backend_render_arc(cx, cy, radius, 0.0f, 360.0f, component->track_color, component->stroke_width);
-    backend_render_arc(cx, cy, radius, angle - 90.0f, angle + 180.0f,
+    backend_render_arc(cx, cy, radius, angle - 45.0f, angle + 45.0f,
                        component->color, component->stroke_width);
 }
 

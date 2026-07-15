@@ -161,6 +161,7 @@ int yui_remove_child(Layer* parent, const char* child_id) {
     }
     
     parent->child_count--;
+    parent->children[parent->child_count] = NULL;
     mark_layer_dirty(parent, DIRTY_CHILDREN | DIRTY_LAYOUT);
     
     return 0;
@@ -339,9 +340,11 @@ static int update_single_property(Layer* layer, const char* key, cJSON* value) {
     
     // 处理 null 值（删除操作）
     if (cJSON_IsNull(value)) {
-        // 特殊处理：删除整个图层
-        if (strcmp(key, layer->id) == 0) {
-            // 这个需要从父容器删除，这里只标记
+        // 删除自身（target 指向该图层时 key 与 id 相同）
+        if (layer->id[0] != '\0' && strcmp(key, layer->id) == 0) {
+            if (layer->parent) {
+                yui_remove_child(layer->parent, layer->id);
+            }
             return 1;
         }
         
@@ -373,8 +376,7 @@ static int update_single_property(Layer* layer, const char* key, cJSON* value) {
         
         // 其他属性设置为默认值
         if (strcmp(key, "visible") == 0) {
-            layer->visible = 0;
-            mark_layer_dirty(layer, DIRTY_VISIBLE);
+            yui_set_visible(layer, 0);
         } else if (strcmp(key, "text") == 0) {
             layer_set_text(layer, "");
             mark_layer_dirty(layer, DIRTY_TEXT);

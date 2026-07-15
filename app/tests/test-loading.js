@@ -12,6 +12,7 @@ function showLoader() {
             children: [{
                 id: "overlayLoader",
                 type: "Loading",
+                visible: true,
                 size: [56, 56],
                 variant: "spinner",
                 text: "加载中...",

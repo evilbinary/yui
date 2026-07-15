@@ -444,6 +444,21 @@ void layout_layer(Layer* layer){
                 }
                 current_y += child->rect.h + spacing;
             }
+        } else if (layer->layout_manager->type == LAYOUT_CENTER) {
+            for (int i = 0; i < layer->child_count; i++) {
+                Layer* child = layer->children[i];
+                if (!child || child->visible == IN_VISIBLE) {
+                    continue;
+                }
+                if (child->fixed_width > 0) {
+                    child->rect.w = child->fixed_width;
+                }
+                if (child->fixed_height > 0) {
+                    child->rect.h = child->fixed_height;
+                }
+                child->rect.x = layer->rect.x + padding_left + (content_width - child->rect.w) / 2;
+                child->rect.y = layer->rect.y + padding_top + (content_height - child->rect.h) / 2;
+            }
         } else if (layer->layout_manager->type == LAYOUT_ABSOLUTE) {
             float sx = 1.0f;
             float sy = 1.0f;
