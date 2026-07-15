@@ -213,6 +213,30 @@ static void menu_calculate_auto_width(MenuComponent* component) {
     layer->fixed_width = max_width;
 }
 
+// 折叠时只保留标题栏命中区域，避免未显示的子菜单区域挡住下层滚轮/点击
+static void menu_update_hit_rect(MenuComponent* component) {
+    Layer* layer;
+    int title_h;
+    int visible_h;
+
+    if (!component || !(layer = component->layer)) {
+        return;
+    }
+    if (component->is_popup && component->popup_layer) {
+        return;
+    }
+
+    title_h = (layer->text && layer->text[0]) ? component->item_height : 0;
+    if (component->expanded) {
+        visible_h = title_h + component->item_count * component->item_height;
+    } else {
+        visible_h = title_h > 0 ? title_h : component->item_height;
+    }
+
+    layer->rect.h = visible_h;
+    layer->fixed_height = visible_h;
+}
+
 // 从JSON创建菜单组件
 MenuComponent* menu_component_create_from_json(Layer* layer, cJSON* json) {
     if (!layer || !json) {
@@ -230,6 +254,7 @@ MenuComponent* menu_component_create_from_json(Layer* layer, cJSON* json) {
 
     // 根据内容自动计算菜单宽度
     menu_calculate_auto_width(component);
+    menu_update_hit_rect(component);
     
     // 解析样式
     cJSON* style = cJSON_GetObjectItem(json, "style");
@@ -641,6 +666,7 @@ static void menu_inline_close_callback(PopupLayer* popup) {
     if (component) {
         component->expanded = 0;
         component->hovered_item = -1;
+        menu_update_hit_rect(component);
     }
 }
 
@@ -652,10 +678,21 @@ void menu_component_collapse(MenuComponent* component) {
     component->expanded = 0;
     component->hovered_item = -1;
 
+    if (component->opened_item >= 0 && component->items &&
+        component->opened_item < component->item_count) {
+        MenuItem* item = &component->items[component->opened_item];
+        if (item->submenu && item->submenu->is_popup) {
+            menu_component_hide_popup(item->submenu);
+        }
+        component->opened_item = -1;
+    }
+
     // 从弹出层管理器移除（如果已注册）
     if (component->layer) {
         popup_manager_remove(component->layer);
     }
+
+    menu_update_hit_rect(component);
 }
 
 // 处理鼠标事件
@@ -731,6 +768,7 @@ int menu_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
                 event->y >= rect->y) {
                 component->expanded = 1;
                 component->hovered_item = -1;
+                menu_update_hit_rect(component);
 
                 PopupLayer* popup = popup_layer_create(layer, POPUP_TYPE_MENU, 100);
                 if (popup) {
