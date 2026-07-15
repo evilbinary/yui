@@ -107,7 +107,7 @@ var APIClient = {
                 YUI.log("APIClient: Full update failed - Invalid response format");
                 YUI.log("APIClient: Response: " + JSON.stringify(uiJson));
             }
-        });
+        }, { timeout: 120000 });
     },
     
     // 获取消息历史
@@ -165,21 +165,47 @@ var APIClient = {
     },
     
     // 内部辅助函数：POST请求
-    _postJSON: function(url, data, callback) {
+    _postJSON: function(url, data, callback, options) {
         YUI.log("APIClient: POST " + url);
-        
+        options = options || {};
+        var reqOptions = {
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            contentType: 'application/json',
+            timeout: options.timeout || 5000
+        };
+
+        if (typeof http_post_async !== 'undefined') {
+            http_post_async(url, JSON.stringify(data), function(err, response) {
+                if (err) {
+                    YUI.log("APIClient: Request failed - " + err);
+                    var mockResponse = APIClient._getMockResponse(url, data);
+                    if (callback && typeof callback === 'function') {
+                        callback(mockResponse);
+                    }
+                    return;
+                }
+                YUI.log("APIClient: Response status: " + response.status);
+                if (response.status >= 200 && response.status < 300) {
+                    var parsedResponse = JSON.parse(response.body);
+                    if (callback && typeof callback === 'function') {
+                        callback(parsedResponse);
+                    }
+                } else {
+                    YUI.log("APIClient: HTTP error - " + response.status);
+                    if (callback && typeof callback === 'function') {
+                        callback({status: 'error', error: 'HTTP ' + response.status});
+                    }
+                }
+            }, reqOptions);
+            return;
+        }
+
         // 使用 http.js 模块的 http_post 函数
         if (typeof http_post !== 'undefined') {
             try {
-                var options = {
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    contentType: 'application/json',
-                    timeout: 5000
-                };
-                
-                var response = http_post(url, JSON.stringify(data), options);
+                var response = http_post(url, JSON.stringify(data), reqOptions);
                 YUI.log("APIClient: Response status: " + response.status);
                 
                 if (response.status >= 200 && response.status < 300) {

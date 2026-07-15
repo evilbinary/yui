@@ -194,6 +194,110 @@ function http_post(url, data, options) {
 }
 
 /**
+ * HTTP POST 请求（非阻塞，不卡 UI）
+ * @param {function} callback - function(err, response)
+ * @returns {number} 0 已启动，-1 启动失败
+ */
+function http_post_async(url, data, callback, options) {
+    callback = callback || function() {};
+    options = options || {};
+    var timeout = options.timeout || 5000;
+    var headers = options.headers || {};
+    var contentType = options.contentType || "application/x-www-form-urlencoded";
+
+    var urlParts = parse_url(url);
+    if (!urlParts) {
+        callback("Invalid URL: " + url, null);
+        return -1;
+    }
+
+    var host = urlParts.host;
+    var port = urlParts.port || 80;
+    var path = urlParts.path || "/";
+    var sock = Socket.socket(Socket.TCP);
+    if (sock < 0) {
+        callback("Failed to create socket", null);
+        return -1;
+    }
+
+    if (typeof data !== 'string') {
+        data = JSON.stringify(data);
+    }
+
+    var requestLines = [];
+    requestLines.push("POST " + path + " HTTP/1.1");
+    requestLines.push("Host: " + host);
+    requestLines.push("User-Agent: YUI-HTTP-Client/1.0");
+    requestLines.push("Content-Type: " + contentType);
+    requestLines.push("Content-Length: " + utf8_byte_length(data));
+    requestLines.push("Connection: close");
+    for (var key in headers) {
+        requestLines.push(key + ": " + headers[key]);
+    }
+    requestLines.push("");
+    requestLines.push(data);
+    var request = requestLines.join("\r\n");
+
+    var raw = "";
+    var startTime = Date.now();
+    var finished = false;
+
+    function finish(err, response) {
+        if (finished) {
+            return;
+        }
+        finished = true;
+        Socket.close(sock);
+        callback(err, response);
+    }
+
+    function poll() {
+        if (finished) {
+            return;
+        }
+        if (Date.now() - startTime > timeout) {
+            finish("HTTP timeout", null);
+            return;
+        }
+        var buffer = Socket.recv(sock, 0, 4096);
+        if (typeof buffer === 'number') {
+            if (buffer < 0) {
+                setTimeout(poll, 16);
+                return;
+            }
+            finish(null, parse_http_response(raw));
+            return;
+        }
+        if (buffer.length === 0) {
+            finish(null, parse_http_response(raw));
+            return;
+        }
+        raw += buffer;
+        setTimeout(poll, 0);
+    }
+
+    try {
+        if (Socket.connect(sock, host, port, timeout) !== 0) {
+            finish("Failed to connect to " + host + ":" + port, null);
+            return -1;
+        }
+        if (Socket.send(sock, request, 0) < 0) {
+            finish("Failed to send request", null);
+            return -1;
+        }
+        if (Socket.setNonBlocking(sock, 1) !== 0) {
+            finish("Failed to set non-blocking", null);
+            return -1;
+        }
+        setTimeout(poll, 0);
+        return 0;
+    } catch (e) {
+        finish(e.message || String(e), null);
+        return -1;
+    }
+}
+
+/**
  * 解析URL
  */
 function parse_url(url) {
