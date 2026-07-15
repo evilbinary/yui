@@ -75,6 +75,7 @@ YUI框架支持以下核心组件类型：
 | LIST | 列表组件 | `"type": "List"` |
 | GRID | 网格布局组件 | `"type": "Grid"` |
 | PROGRESS | 进度条组件 | `"type": "Progress"` |
+| LOADING | 加载指示组件 | `"type": "Loading"` |
 | CHECKBOX | 复选框组件 | `"type": "Checkbox"` |
 | RADIOBOX | 单选框组件 | `"type": "Radiobox"` |
 | TEXT | 文本组件 | `"type": "Text"` |
@@ -370,6 +371,33 @@ Progress 组件支持的属性（除通用属性外）：
   }
 }
 ```
+
+### Loading 组件特有属性
+
+```json
+{
+  "id": "loader",
+  "type": "Loading",
+  "size": [48, 48],
+  "variant": "spinner",
+  "text": "加载中...",
+  "color": "#2196f3",
+  "trackColor": "#e0e0e0",
+  "strokeWidth": 4,
+  "speed": 1.0
+}
+```
+
+Loading 组件支持的属性（除通用属性外）：
+
+- `variant`: `"spinner"`（旋转环，默认）或 `"dots"`（三点跳动）
+- `text`: 底部提示文字
+- `color` / `style.color`: 指示器主色
+- `trackColor` / `style.trackColor`: spinner 环底色
+- `strokeWidth` / `style.strokeWidth`: 环粗细（仅 spinner）
+- `speed` / `animationSpeed`: 动画速度倍率
+
+详见 [Loading 组件文档](components/loading-component.md)。
 
 ### 7. CheckBox组件特有属性
 

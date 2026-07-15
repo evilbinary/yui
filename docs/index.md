@@ -38,6 +38,7 @@
 | Text | [text-component.md](components/text-component.md) | ✅ 完整 | 文本编辑与语法高亮 |
 | Table | [table-component.md](components/table-component.md) | ✅ 完整 | 多列数据表格 |
 | Pagination | [pagination-component.md](components/pagination-component.md) | ✅ 完整 | 分页导航（mini/simple） |
+| Loading | [loading-component.md](components/loading-component.md) | ✅ 完整 | 加载指示（spinner/dots） |
 | Button | [button-component.md](components/button-component.md) | ✅ 完整 | 按钮组件 |
 | Input | [待补充]() | ⏳ 计划中 | 输入框组件 |
 | List | [待补充]() | ⏳ 计划中 | 列表组件 |

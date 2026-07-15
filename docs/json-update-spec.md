@@ -81,6 +81,34 @@
 | `visible` | boolean | `true` | 是否可见 |
 | `enabled` | boolean | `true` | 是否启用 |
 
+### Loading 组件增量字段
+
+| 属性 | 类型 | 示例 | 说明 |
+|-----|------|------|------|
+| `variant` | string | `"spinner"` | `spinner` / `dots` |
+| `strokeWidth` | number | `4` | 旋转环线宽 |
+| `trackColor` | string | `"#e0e0e0"` | 旋转环底色 |
+| `speed` | number | `1.2` | 动画速度（同 `animationSpeed`） |
+
+添加 Loading 子组件示例：
+
+```json
+{
+  "target": "root",
+  "change": {
+    "children": [{
+      "id": "loader",
+      "type": "Loading",
+      "size": [48, 48],
+      "variant": "spinner",
+      "text": "加载中"
+    }]
+  }
+}
+```
+
+请求结束后：`{"target": "loader", "change": {"visible": false}}`
+
 ## 多属性更新
 
 一次更新多个属性：
