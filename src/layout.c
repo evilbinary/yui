@@ -1,11 +1,21 @@
 #include "layout.h"
-#include "components/grid_component.h"
 #include "util.h"
 #include "layer_update.h"
 
 #define printf
 
 static int layout_scale_value(int value, float scale);
+
+static int layout_layer_is_grid(const Layer* layer)
+{
+    if (!layer) {
+        return 0;
+    }
+    if (layer->type == GRID) {
+        return 1;
+    }
+    return layer->layout_manager && layer->layout_manager->type == LAYOUT_GRID;
+}
 
 static void layout_apply_grid(Layer* layer)
 {
@@ -68,6 +78,98 @@ static void layout_apply_grid(Layer* layer)
         layer->children[i]->rect.w = cell_width;
         layer->children[i]->rect.h = cell_height;
     }
+}
+
+static int layout_grid_place_last_child(Layer* layer)
+{
+    if (!layer || layer->child_count <= 0 || !layer->children ||
+        !layout_layer_is_grid(layer)) {
+        return 0;
+    }
+
+    int index = layer->child_count - 1;
+    Layer* child = layer->children[index];
+    if (!child || child->visible == IN_VISIBLE) {
+        return 0;
+    }
+
+    int columns = layer->layout_manager ? layer->layout_manager->columns : 1;
+    if (columns <= 0) {
+        columns = 1;
+    }
+
+    int prev_count = layer->child_count - 1;
+    int old_rows = prev_count > 0 ? (prev_count + columns - 1) / columns : 0;
+    int new_rows = (layer->child_count + columns - 1) / columns;
+    if (prev_count > 0 && new_rows != old_rows) {
+        layout_apply_grid(layer);
+        return 2;
+    }
+
+    int spacing = layer->layout_manager ? layer->layout_manager->spacing : 0;
+    int padding_top = layer_padding_get(layer, 0);
+    int padding_right = layer_padding_get(layer, 1);
+    int padding_bottom = layer_padding_get(layer, 2);
+    int padding_left = layer_padding_get(layer, 3);
+
+    int available_width = layer->rect.w - padding_left - padding_right;
+    int available_height = layer->rect.h - padding_top - padding_bottom;
+
+    int cell_width = (available_width - (columns - 1) * spacing) / columns;
+    int cell_height = (new_rows > 0)
+        ? (available_height - (new_rows - 1) * spacing) / new_rows
+        : 0;
+    if (cell_width < 0) {
+        cell_width = 0;
+    }
+    if (cell_height < 0) {
+        cell_height = 0;
+    }
+
+    int row = index / columns;
+    int col = index % columns;
+    child->rect.x = layer->rect.x + padding_left + col * (cell_width + spacing);
+    child->rect.y = layer->rect.y + padding_top + row * (cell_height + spacing);
+    child->rect.w = cell_width;
+    child->rect.h = cell_height;
+
+    int max_col_width = 0;
+    int max_row_height = 0;
+    for (int i = 0; i < layer->child_count; i++) {
+        Layer* item = layer->children[i];
+        if (!item || item->visible == IN_VISIBLE) {
+            continue;
+        }
+        if (item->rect.w > max_col_width) {
+            max_col_width = item->rect.w;
+        }
+        if (item->rect.h > max_row_height) {
+            max_row_height = item->rect.h;
+        }
+    }
+
+    layer->content_width = padding_left + padding_right +
+                           columns * max_col_width + (columns - 1) * spacing;
+    layer->content_height = padding_top + padding_bottom +
+                            new_rows * max_row_height + (new_rows - 1) * spacing;
+    return 1;
+}
+
+int layout_after_append_child(Layer* layer)
+{
+    if (!layer) {
+        return 0;
+    }
+    if (layout_layer_is_grid(layer)) {
+        int placed = layout_grid_place_last_child(layer);
+        if (placed > 0) {
+            if (placed == 2 && layer->parent) {
+                layout_layer(layer->parent);
+            }
+            return 1;
+        }
+    }
+    return 0;
 }
 
 static int layout_horizontal_child_width(Layer* child, int available_width, float total_flex, int no_width_count) {
@@ -174,7 +276,7 @@ void layout_layer(Layer* layer){
         printf("layout_layer: content_size: %d x %d\n", content_width, content_height);
         fflush(stdout);
         
-        if (grid_layer_uses_grid_layout(layer)) {
+        if (layout_layer_is_grid(layer)) {
             layout_apply_grid(layer);
         } else if (layer->layout_manager->type == LAYOUT_HORIZONTAL) {
             printf("layout_layer: applying HORIZONTAL layout\n");

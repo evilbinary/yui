@@ -563,6 +563,13 @@ int yui_update_from_json(Layer* root, cJSON* update_obj) {
         if (target_layer->dirty_flags & (DIRTY_RECT | DIRTY_LAYOUT | DIRTY_CHILDREN) || updated > 0) {
             s_batch_dirty = target_layer;
         }
+    } else if (change_is_only_single_child(change_json)) {
+        if (!layout_after_append_child(target_layer)) {
+            layout_layer(target_layer);
+            if (target_layer->parent) {
+                layout_layer(target_layer->parent);
+            }
+        }
     } else if (target_layer->dirty_flags & (DIRTY_RECT | DIRTY_LAYOUT | DIRTY_CHILDREN)) {
         layout_layer(target_layer);
         if (target_layer->parent) {
