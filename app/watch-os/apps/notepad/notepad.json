@@ -1,0 +1,91 @@
+{
+    "id": "page_notepad",
+    "title": "记事本",
+    "icon": "📝",
+    "watchApp": { "id": "notepad", "order": 46 },
+    "js": ["notepad.js"],
+    "type": "View",
+    "variant": "surface",
+    "flex": 1,
+    "scrollable": 0,
+    "layout": { "type": "vertical", "spacing": 6, "padding": [4, 14, 10, 14] },
+    "events": { "onLoad": "@onNotepadLoad", "onShow": "@onNotepadShow" },
+    "children": [
+        { "id": "np_brand", "type": "Label", "variant": "overline", "text": "NOTES" },
+        { "id": "np_title", "type": "Label", "variant": "title", "text": "记事本" },
+        { "id": "np_status", "type": "Label", "variant": "caption", "text": "" },
+        {
+            "id": "np_list_panel",
+            "type": "View",
+            "flex": 1,
+            "layout": { "type": "vertical", "spacing": 6 },
+            "children": [
+                {
+                    "id": "np_list",
+                    "type": "List",
+                    "flex": 1,
+                    "scrollable": 1,
+                    "data": [],
+                    "events": { "onSelect": "@onNotepadItemClick" },
+                    "itemTemplate": {
+                        "type": "Button",
+                        "variant": "ghost",
+                        "icon": "${icon}",
+                        "text": "${name}",
+                        "iconSize": 14,
+                        "fontSize": 12,
+                        "style": { "color": "#E5E5EA", "bgColor": "transparent" },
+                        "size": [362, 36]
+                    },
+                    "layout": { "type": "vertical", "spacing": 2 }
+                },
+                {
+                    "id": "btn_np_new",
+                    "type": "Button",
+                    "variant": "primary",
+                    "text": "新建备忘",
+                    "size": [362, 40],
+                    "events": { "onClick": "@newNotepadNote" }
+                }
+            ]
+        },
+        {
+            "id": "np_edit_panel",
+            "type": "View",
+            "flex": 1,
+            "visible": false,
+            "layout": { "type": "vertical", "spacing": 6 },
+            "children": [
+                { "id": "np_edit_title", "type": "Label", "variant": "heading", "text": "编辑" },
+                {
+                    "id": "np_body",
+                    "type": "Text",
+                    "flex": 1,
+                    "size": [362, 200],
+                    "multiline": true,
+                    "editable": true,
+                    "scrollable": 1,
+                    "placeholder": "输入备忘内容…",
+                    "style": {
+                        "bgColor": "#121212",
+                        "color": "#FFFFFF",
+                        "fontSize": 12,
+                        "borderRadius": 12,
+                        "padding": [8, 10, 8, 10]
+                    }
+                },
+                {
+                    "id": "np_edit_actions",
+                    "type": "View",
+                    "size": [362, 40],
+                    "layout": { "type": "horizontal", "spacing": 6 },
+                    "children": [
+                        { "id": "btn_np_save", "type": "Button", "variant": "primary", "text": "保存", "flex": 1, "events": { "onClick": "@saveNotepadNote" } },
+                        { "id": "btn_np_back", "type": "Button", "variant": "secondary", "text": "返回", "flex": 1, "events": { "onClick": "@backNotepadList" } },
+                        { "id": "btn_np_clear", "type": "Button", "variant": "tertiary", "text": "清空", "size": [56, 40], "events": { "onClick": "@clearNotepadBody" } }
+                    ]
+                }
+            ]
+        }
+    ]
+}
