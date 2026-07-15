@@ -309,6 +309,7 @@ int sash_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
             int delta = comp->horizontal ? (event->x - comp->drag_start_y) : (event->y - comp->drag_start_y);
             int new_size = comp->initial_height + delta;
             sash_apply_split(comp, new_size);
+            return 1;
         }
         return 0;
     }
@@ -320,15 +321,16 @@ int sash_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
         if (comp->target) {
             comp->initial_height = comp->horizontal ? comp->target->rect.w : comp->target->rect.h;
         }
-        return 0;
+        return 1;
     }
 
     if (event->state == SDL_RELEASED && event->button == SDL_BUTTON_LEFT) {
         if (comp->dragging) {
             sash_update_layout_base(comp);
             sash_dispatch_change(comp);
+            comp->dragging = 0;
+            return 1;
         }
-        comp->dragging = 0;
         return 0;
     }
     return 0;

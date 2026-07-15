@@ -17,7 +17,7 @@
             "size": [1200, 750],
             "layout": {
                 "type": "horizontal",
-                "spacing": 5
+                "spacing": 0
             },
             "children": [
                 {
@@ -37,7 +37,7 @@
                         {
                             "id": "editorHeader",
                             "type": "View",
-                            "size": [600, 40],
+                            "size": [0, 40],
                             "style": {
                                 "bgColor": "#1e1e1e",
                                 "borderRadius": [8, 8, 0, 0],
@@ -103,7 +103,8 @@
                             "id": "jsonEditor",
                             "type": "Text",
                             "text": "",
-                            "size": [600, 710],
+                            "size": [0, 0],
+                            "flex": 1,
                             "scrollable": 1,
                             "showLineNumbers":true,
                             "lineNumberWidth": 40,
@@ -124,9 +125,25 @@
                     ]
                 },
                 {
+                    "id": "editorSash",
+                    "type": "Sash",
+                    "target": "editorPanel",
+                    "orientation": "horizontal",
+                    "minSize": 280,
+                    "size": [6, 750],
+                    "style": {
+                        "bgColor": "#e0e0e0",
+                        "hoverBgColor": "#bdbdbd",
+                        "borderColor": "#cccccc",
+                        "dotColor": "#9e9e9e",
+                        "hoverDotColor": "#616161",
+                        "accentColor": "#2196f3b3"
+                    }
+                },
+                {
                     "id": "previewPanel",
                     "type": "View",
-                    "size": [590, 750],
+                    "size": [594, 750],
                     "style": {
                         "bgColor": "#ffffff",
                         "borderWidth": 1,
@@ -142,7 +159,8 @@
                             "id": "previewLabel",
                             "type": "Label",
                             "text": "",
-                            "size": [590, 670],
+                            "size": [0, 0],
+                            "flex": 1,
                             "layout":{
                                 "type": "vertical",
                                 "align": "center",
@@ -165,7 +183,7 @@
                             "id": "inputLabel",
                             "type": "Label",
                             "text": "",
-                            "size": [590, 40],
+                            "size": [0, 40],
                             "style": {
                                 "bgColor": "#ffffff",
                                 "color": "#333333",
