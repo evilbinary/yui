@@ -14,12 +14,35 @@
 #else
 #include "socket.h"
 #include <unistd.h>
+#include <fcntl.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/ioctl.h>
 #include <netdb.h>
 #endif
+
+int js_socket_set_nonblocking(int fd, int nonblocking)
+{
+    if (fd < 0) {
+        return -1;
+    }
+#ifdef WIN32
+    u_long mode = nonblocking ? 1UL : 0UL;
+    return ioctlsocket((SOCKET)fd, FIONBIO, &mode);
+#else
+    int flags = fcntl(fd, F_GETFL, 0);
+    if (flags < 0) {
+        return -1;
+    }
+    if (nonblocking) {
+        flags |= O_NONBLOCK;
+    } else {
+        flags &= ~O_NONBLOCK;
+    }
+    return fcntl(fd, F_SETFL, flags);
+#endif
+}
 
 // 引入下划线版本的socket API以实现跨平台兼容
 extern int _socket(int domain, int type, int protocol);
@@ -372,6 +395,18 @@ static JSValue js_socket_getsockopt(JSContext *ctx, JSValueConst this_val, int a
     return JS_NewInt32(ctx, result);
 }
 
+// setNonBlocking
+static JSValue js_socket_set_nonblocking_js(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    if (argc < 2) return JS_UNDEFINED;
+
+    int fd, nonblocking;
+    JS_ToInt32(ctx, &fd, argv[0]);
+    JS_ToInt32(ctx, &nonblocking, argv[1]);
+
+    return JS_NewInt32(ctx, js_socket_set_nonblocking(fd, nonblocking));
+}
+
 // send
 static JSValue js_socket_send(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
@@ -572,6 +607,7 @@ void js_module_register_socket_api(JSContext* ctx)
     JS_SetPropertyStr(ctx, socket_obj, "socketpair", JS_NewCFunction(ctx, js_socket_socketpair, "socketpair", 3));
     JS_SetPropertyStr(ctx, socket_obj, "setsockopt", JS_NewCFunction(ctx, js_socket_setsockopt, "setsockopt", 5));
     JS_SetPropertyStr(ctx, socket_obj, "getsockopt", JS_NewCFunction(ctx, js_socket_getsockopt, "getsockopt", 4));
+    JS_SetPropertyStr(ctx, socket_obj, "setNonBlocking", JS_NewCFunction(ctx, js_socket_set_nonblocking_js, "setNonBlocking", 2));
     JS_SetPropertyStr(ctx, socket_obj, "send", JS_NewCFunction(ctx, js_socket_send, "send", 3));
     JS_SetPropertyStr(ctx, socket_obj, "recv", JS_NewCFunction(ctx, js_socket_recv, "recv", 3));
     JS_SetPropertyStr(ctx, socket_obj, "sendto", JS_NewCFunction(ctx, js_socket_sendto, "sendto", 5));

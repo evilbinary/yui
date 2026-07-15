@@ -447,6 +447,211 @@ function http_post_sse(url, data, handlers, options) {
     }
 }
 
+/**
+ * HTTP POST SSE 流式请求（非阻塞，不卡 UI）
+ * @returns {number} 0 已启动，-1 启动失败
+ */
+function http_post_sse_async(url, data, handlers, options) {
+    handlers = handlers || {};
+    options = options || {};
+    var timeout = options.timeout || 120000;
+    var headers = options.headers || {};
+    var contentType = options.contentType || "application/json";
+
+    var urlParts = parse_url(url);
+    if (!urlParts) {
+        if (handlers.onError) {
+            handlers.onError("Invalid URL: " + url);
+        }
+        return -1;
+    }
+
+    var host = urlParts.host;
+    var port = urlParts.port || 80;
+    var path = urlParts.path || "/";
+
+    var sock = Socket.socket(Socket.TCP);
+    if (sock < 0) {
+        if (handlers.onError) {
+            handlers.onError("Failed to create socket");
+        }
+        return -1;
+    }
+
+    if (typeof data !== 'string') {
+        data = JSON.stringify(data);
+    }
+
+    var requestLines = [];
+    requestLines.push("POST " + path + " HTTP/1.1");
+    requestLines.push("Host: " + host);
+    requestLines.push("User-Agent: YUI-HTTP-Client/1.0");
+    requestLines.push("Content-Type: " + contentType);
+    requestLines.push("Accept: text/event-stream");
+    requestLines.push("Content-Length: " + data.length);
+    requestLines.push("Connection: close");
+    for (var key in headers) {
+        requestLines.push(key + ": " + headers[key]);
+    }
+    requestLines.push("");
+    requestLines.push(data);
+    var request = requestLines.join("\r\n");
+
+    var raw = "";
+    var headersParsed = false;
+    var status = 0;
+    var eventType = "message";
+    var dataLines = [];
+    var startTime = Date.now();
+    var finished = false;
+
+    function finish(err) {
+        if (finished) {
+            return;
+        }
+        finished = true;
+        Socket.close(sock);
+        if (err && handlers.onError) {
+            handlers.onError(err);
+        }
+    }
+
+    function dispatchEvent() {
+        if (dataLines.length === 0) {
+            return;
+        }
+        var payloadText = dataLines.join("\n");
+        var payload = payloadText;
+        try {
+            payload = JSON.parse(payloadText);
+        } catch (e) {
+            payload = payloadText;
+        }
+        if (handlers.onEvent) {
+            handlers.onEvent(eventType, payload);
+        }
+        if (eventType === "token" && handlers.onToken) {
+            handlers.onToken(payload);
+        } else if (eventType === "update" && handlers.onUpdate) {
+            handlers.onUpdate(payload);
+        } else if (eventType === "done" && handlers.onDone) {
+            handlers.onDone(payload);
+        } else if (eventType === "error" && handlers.onError) {
+            if (typeof payload === "object" && payload.error) {
+                handlers.onError(payload.error);
+            } else {
+                handlers.onError(String(payload));
+            }
+        }
+        eventType = "message";
+        dataLines = [];
+    }
+
+    function processSseBuffer() {
+        while (true) {
+            var newlineIdx = raw.indexOf("\n");
+            if (newlineIdx < 0) {
+                break;
+            }
+            var line = raw.substring(0, newlineIdx);
+            raw = raw.substring(newlineIdx + 1);
+            if (line.length > 0 && line.charAt(line.length - 1) === '\r') {
+                line = line.substring(0, line.length - 1);
+            }
+            if (line === "") {
+                dispatchEvent();
+                continue;
+            }
+            if (line.indexOf("event:") === 0) {
+                eventType = line.substring(6);
+                if (eventType.charAt(0) === ' ') {
+                    eventType = eventType.substring(1);
+                }
+            } else if (line.indexOf("data:") === 0) {
+                var dataPart = line.substring(5);
+                if (dataPart.charAt(0) === ' ') {
+                    dataPart = dataPart.substring(1);
+                }
+                dataLines.push(dataPart);
+            }
+        }
+    }
+
+    function onData(buffer) {
+        if (!headersParsed) {
+            raw += buffer;
+            var sep = raw.indexOf("\r\n\r\n");
+            if (sep < 0) {
+                return;
+            }
+            var headerBlock = raw.substring(0, sep);
+            raw = raw.substring(sep + 4);
+            var parsed = parse_http_response(headerBlock + "\r\n\r\n");
+            status = parsed.status;
+            headersParsed = true;
+            if (status < 200 || status >= 300) {
+                finish("HTTP " + status);
+                return;
+            }
+            processSseBuffer();
+        } else {
+            raw += buffer;
+            processSseBuffer();
+        }
+    }
+
+    function poll() {
+        if (finished) {
+            return;
+        }
+        if (Date.now() - startTime > timeout) {
+            finish("SSE timeout");
+            return;
+        }
+        var buffer = Socket.recv(sock, 0, 4096);
+        if (typeof buffer === 'number') {
+            if (buffer < 0) {
+                setTimeout(poll, 16);
+                return;
+            }
+            if (dataLines.length > 0) {
+                dispatchEvent();
+            }
+            finish(null);
+            return;
+        }
+        if (buffer.length === 0) {
+            if (dataLines.length > 0) {
+                dispatchEvent();
+            }
+            finish(null);
+            return;
+        }
+        onData(buffer);
+        setTimeout(poll, 0);
+    }
+
+    try {
+        if (Socket.connect(sock, host, port, timeout) !== 0) {
+            finish("Failed to connect to " + host + ":" + port);
+            return -1;
+        }
+        if (Socket.send(sock, request, 0) < 0) {
+            finish("Failed to send request");
+            return -1;
+        }
+        if (Socket.setNonBlocking(sock, 1) !== 0) {
+            finish("Failed to set non-blocking");
+            return -1;
+        }
+        setTimeout(poll, 0);
+        return 0;
+    } catch (e) {
+        finish(e.message || String(e));
+        return -1;
+    }
+}
+
 // 导出函数（在YUI环境中，这些函数会自动成为全局函数）
 YUI.log("HTTP module loaded");
 
