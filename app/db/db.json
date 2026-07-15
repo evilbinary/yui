@@ -335,8 +335,9 @@
                       {
                         "id": "resultTab",
                         "type": "Label",
-                        "size": [80, 24],
+                        "size": [86, 24],
                         "text": "查询结果",
+                        "textAlign": "left",
                         "style": {
                           "color": "#CDD6F4",
                           "fontSize": 12
@@ -345,11 +346,19 @@
                       {
                         "id": "resultInfo",
                         "type": "Label",
+                        "size": [96, 24],
                         "text": "(0 行)",
+                        "textAlign": "left",
                         "style": {
                           "color": "#6C7086",
                           "fontSize": 11
                         }
+                      },
+                      {
+                        "id": "resultTabBarSpacer",
+                        "type": "View",
+                        "size": [0, 1],
+                        "flex": 1
                       },
                       {
                         "id": "btnExportCsv",
