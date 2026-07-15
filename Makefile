@@ -24,7 +24,7 @@ build-lvgl:
 	ya -b lvgl-sdl -p lvgl
 
 lvgl-sdl: build-lvgl
-	yb -r lvgl-sdl -- app/lvgl/calc.json
+	ya -r lvgl-sdl -- app/lvgl/calc.json
 db:  
 	ya -r db -- app/db/db.json
 
