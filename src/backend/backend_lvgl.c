@@ -667,6 +667,18 @@ void backend_set_titlebar_color(Color bg, Color text) { (void)bg; (void)text; }
 void backend_set_window_icon(const char* path) { (void)path; }
 void backend_set_font_fallback_path(const char* path) { (void)path; }
 int backend_has_font_fallback(void) { return 0; }
+void backend_texture_cache_invalidate(void) {}
+void backend_texture_cache_pin(DFont* font, const char* text, Color color) {
+    (void)font;
+    (void)text;
+    (void)color;
+}
+void backend_texture_cache_warmup(DFont* font, const char** texts, int count, Color color) {
+    (void)font;
+    (void)texts;
+    (void)count;
+    (void)color;
+}
 int backend_screenshot(const char* path) { (void)path; return -1; }
 
 int backend_query_texture(Texture* texture, Uint32* format, int* access, int* w, int* h)

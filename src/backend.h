@@ -82,6 +82,11 @@ void backend_set_window_icon(const char* path);
 void backend_set_font_fallback_path(const char* path);
 int backend_has_font_fallback(void);
 
+// 文本纹理缓存：预热 / 固定 / 失效（SDL 后端）
+void backend_texture_cache_invalidate(void);
+void backend_texture_cache_pin(DFont* font, const char* text, Color color);
+void backend_texture_cache_warmup(DFont* font, const char** texts, int count, Color color);
+
 // 截取当前 UI 为 PNG（桌面 SDL；失败返回负值）
 int backend_screenshot(const char* path);
 

@@ -57,17 +57,169 @@ int font_cache_initialized = 0;
 
 // 纹理缓存结构
 typedef struct {
+    uint64_t key_hash;
     DFont* font;
+    int font_size;
+    int scale_milli;
     char text[256];
     Color color;
     SDL_Texture* texture;
     int width;
     int height;
     Uint32 last_used;
+    uint8_t pinned;
 } TextureCacheEntry;
 
 TextureCacheEntry texture_cache[MAX_TEXTURE_CACHE_ENTRIES] = {0};
 int texture_cache_initialized = 0;
+static int texture_cache_scale_milli = -1;
+
+static uint64_t backend_texture_cache_fnv1a_u64(uint64_t h, uint64_t v) {
+    h ^= v;
+    h *= 1099511628211ULL;
+    return h;
+}
+
+static uint64_t backend_texture_cache_fnv1a_bytes(uint64_t h, const unsigned char* data, size_t len) {
+    size_t i;
+    for (i = 0; i < len; i++) {
+        h = backend_texture_cache_fnv1a_u64(h, data[i]);
+    }
+    return h;
+}
+
+static int backend_texture_cache_scale_key(void) {
+    return (int)(scale * 1000.0f + 0.5f);
+}
+
+static uint64_t backend_texture_cache_make_hash(DFont* font, int font_size, Color color, const char* text) {
+    uint64_t h = 14695981039346656037ULL;
+    uintptr_t font_addr = (uintptr_t)font;
+
+    h = backend_texture_cache_fnv1a_u64(h, (uint64_t)font_addr);
+    h = backend_texture_cache_fnv1a_u64(h, (uint64_t)(uint32_t)font_size);
+    h = backend_texture_cache_fnv1a_u64(h, (uint64_t)(uint32_t)backend_texture_cache_scale_key());
+    h = backend_texture_cache_fnv1a_u64(h, color.r);
+    h = backend_texture_cache_fnv1a_u64(h, color.g);
+    h = backend_texture_cache_fnv1a_u64(h, color.b);
+    h = backend_texture_cache_fnv1a_u64(h, color.a);
+    if (text) {
+        h = backend_texture_cache_fnv1a_bytes(h, (const unsigned char*)text, strlen(text));
+    }
+    return h;
+}
+
+static int backend_texture_cache_entry_matches(const TextureCacheEntry* entry, uint64_t key_hash,
+                                               DFont* font, int font_size, Color color, const char* text) {
+    if (!entry->texture || entry->key_hash != key_hash || entry->font != font || entry->font_size != font_size) {
+        return 0;
+    }
+    if (entry->scale_milli != backend_texture_cache_scale_key()) {
+        return 0;
+    }
+    if (entry->color.r != color.r || entry->color.g != color.g ||
+        entry->color.b != color.b || entry->color.a != color.a) {
+        return 0;
+    }
+    return strcmp(entry->text, text) == 0;
+}
+
+static int backend_text_cache_volatile(const char* text) {
+    int len;
+    int volatile_chars = 0;
+    int i;
+
+    if (!text) {
+        return 0;
+    }
+    len = (int)strlen(text);
+    if (len < 4) {
+        return 0;
+    }
+    for (i = 0; text[i]; i++) {
+        char c = text[i];
+        if ((c >= '0' && c <= '9') || c == ':' || c == '.' || c == ',' || c == '-' || c == '%') {
+            volatile_chars++;
+        }
+    }
+    return volatile_chars * 2 >= len;
+}
+
+static void backend_texture_cache_sync_scale(void) {
+    int now = backend_texture_cache_scale_key();
+
+    if (!texture_cache_initialized) {
+        texture_cache_scale_milli = now;
+        return;
+    }
+    if (texture_cache_scale_milli == now) {
+        return;
+    }
+    texture_cache_scale_milli = now;
+    backend_texture_cache_invalidate();
+}
+
+static int backend_texture_cache_find_index(uint64_t key_hash, DFont* font, int font_size,
+                                            Color color, const char* text) {
+    int i;
+
+    for (i = 0; i < MAX_TEXTURE_CACHE_ENTRIES; i++) {
+        if (!texture_cache[i].texture || texture_cache[i].key_hash != key_hash) {
+            continue;
+        }
+        if (backend_texture_cache_entry_matches(&texture_cache[i], key_hash, font, font_size, color, text)) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+static int backend_texture_cache_pick_evict_index(void) {
+    int i;
+    int cache_index = -1;
+    Uint32 oldest_time = SDL_GetTicks();
+
+    for (i = 0; i < MAX_TEXTURE_CACHE_ENTRIES; i++) {
+        if (!texture_cache[i].texture) {
+            return i;
+        }
+    }
+
+    for (i = 0; i < MAX_TEXTURE_CACHE_ENTRIES; i++) {
+        if (texture_cache[i].pinned) {
+            continue;
+        }
+        if (texture_cache[i].last_used <= oldest_time) {
+            oldest_time = texture_cache[i].last_used;
+            cache_index = i;
+        }
+    }
+    return cache_index;
+}
+
+static void backend_texture_cache_store_entry(int cache_index, uint64_t key_hash, DFont* font,
+                                              int font_size, const char* text, Color color,
+                                              SDL_Texture* texture, int width, int height, int pinned) {
+    if (cache_index < 0 || cache_index >= MAX_TEXTURE_CACHE_ENTRIES) {
+        return;
+    }
+    if (texture_cache[cache_index].texture && texture_cache[cache_index].texture != texture) {
+        SDL_DestroyTexture(texture_cache[cache_index].texture);
+    }
+
+    texture_cache[cache_index].key_hash = key_hash;
+    texture_cache[cache_index].font = font;
+    texture_cache[cache_index].font_size = font_size;
+    texture_cache[cache_index].scale_milli = backend_texture_cache_scale_key();
+    strncpy(texture_cache[cache_index].text, text, sizeof(texture_cache[cache_index].text) - 1);
+    texture_cache[cache_index].text[sizeof(texture_cache[cache_index].text) - 1] = '\0';
+    texture_cache[cache_index].color = color;
+    texture_cache[cache_index].texture = texture;
+    texture_cache[cache_index].width = width;
+    texture_cache[cache_index].height = height;
+    texture_cache[cache_index].last_used = SDL_GetTicks();
+    texture_cache[cache_index].pinned = pinned ? 1 : 0;
+}
 
 static char g_font_fallback_path[MAX_PATH] = "";
 
@@ -259,9 +411,13 @@ EM_JS(int, emscripten_render_emoji_rgba, (const char* utf8, int font_px, int* ou
     if (!text) {
         return 0;
     }
+    if (!window.__yuiEmojiCanvas) {
+        window.__yuiEmojiCanvas = document.createElement('canvas');
+        window.__yuiEmojiCtx = window.__yuiEmojiCanvas.getContext('2d', { willReadFrequently: true });
+    }
+    var canvas = window.__yuiEmojiCanvas;
+    var ctx = window.__yuiEmojiCtx;
     var px = Math.max(12, font_px | 0);
-    var canvas = document.createElement('canvas');
-    var ctx = canvas.getContext('2d', { willReadFrequently: true });
     var family = '"Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif';
     ctx.font = px + 'px ' + family;
     var metrics = ctx.measureText(text);
@@ -517,26 +673,59 @@ void backend_main_loop(void) {
 
 // ====================== 纹理缓存管理 ======================
 void init_texture_cache() {
-    if (texture_cache_initialized) return;
-    
-    for (int i = 0; i < MAX_TEXTURE_CACHE_ENTRIES; i++) {
+    int i;
+
+    if (texture_cache_initialized) {
+        return;
+    }
+
+    for (i = 0; i < MAX_TEXTURE_CACHE_ENTRIES; i++) {
+        texture_cache[i].key_hash = 0;
         texture_cache[i].font = NULL;
+        texture_cache[i].font_size = 0;
+        texture_cache[i].scale_milli = 0;
         texture_cache[i].text[0] = '\0';
         texture_cache[i].texture = NULL;
         texture_cache[i].width = 0;
         texture_cache[i].height = 0;
         texture_cache[i].last_used = 0;
+        texture_cache[i].pinned = 0;
     }
-    
+
+    texture_cache_scale_milli = backend_texture_cache_scale_key();
     texture_cache_initialized = 1;
 }
 
 void cleanup_texture_cache() {
-    for (int i = 0; i < MAX_TEXTURE_CACHE_ENTRIES; i++) {
+    int i;
+
+    for (i = 0; i < MAX_TEXTURE_CACHE_ENTRIES; i++) {
         if (texture_cache[i].texture) {
             SDL_DestroyTexture(texture_cache[i].texture);
             texture_cache[i].texture = NULL;
         }
+        texture_cache[i].key_hash = 0;
+        texture_cache[i].font = NULL;
+        texture_cache[i].font_size = 0;
+        texture_cache[i].scale_milli = 0;
+        texture_cache[i].text[0] = '\0';
+        texture_cache[i].width = 0;
+        texture_cache[i].height = 0;
+        texture_cache[i].pinned = 0;
+    }
+    texture_cache_scale_milli = -1;
+}
+
+void backend_texture_cache_invalidate(void) {
+    int i;
+
+    for (i = 0; i < MAX_TEXTURE_CACHE_ENTRIES; i++) {
+        if (!texture_cache[i].texture || texture_cache[i].pinned) {
+            continue;
+        }
+        SDL_DestroyTexture(texture_cache[i].texture);
+        texture_cache[i].texture = NULL;
+        texture_cache[i].key_hash = 0;
         texture_cache[i].font = NULL;
         texture_cache[i].text[0] = '\0';
         texture_cache[i].width = 0;
@@ -544,68 +733,103 @@ void cleanup_texture_cache() {
     }
 }
 
-SDL_Texture* find_texture_in_cache(DFont* font, const char* text, Color color, int* width, int* height) {
-    if (!font || !text) return NULL;
-    
-    Uint32 current_time = SDL_GetTicks();
-    
-    for (int i = 0; i < MAX_TEXTURE_CACHE_ENTRIES; i++) {
-        if (texture_cache[i].texture &&
-            texture_cache[i].font == font &&
-            texture_cache[i].color.r == color.r &&
-            texture_cache[i].color.g == color.g &&
-            texture_cache[i].color.b == color.b &&
-            texture_cache[i].color.a == color.a &&
-            strcmp(texture_cache[i].text, text) == 0) {
-            texture_cache[i].last_used = current_time;
-            if (width) *width = texture_cache[i].width;
-            if (height) *height = texture_cache[i].height;
-            return texture_cache[i].texture;
-        }
+void backend_texture_cache_pin(DFont* font, const char* text, Color color) {
+    int font_size;
+    uint64_t key_hash;
+    int index;
+
+    if (!font || !text || !text[0]) {
+        return;
     }
-    return NULL;
+
+    backend_texture_cache_sync_scale();
+    font_size = backend_get_font_size(font);
+    key_hash = backend_texture_cache_make_hash(font, font_size, color, text);
+    index = backend_texture_cache_find_index(key_hash, font, font_size, color, text);
+    if (index >= 0) {
+        texture_cache[index].pinned = 1;
+    }
 }
 
-void add_texture_to_cache(DFont* font, const char* text, Color color, SDL_Texture* texture, int width, int height) {
-    if (!font || !text || !texture) return;
-    
-    Uint32 current_time = SDL_GetTicks();
-    int cache_index = -1;
-    Uint32 oldest_time = current_time;
-    
-    // 首先查找空闲位置
-    for (int i = 0; i < MAX_TEXTURE_CACHE_ENTRIES; i++) {
-        if (!texture_cache[i].texture) {
-            cache_index = i;
-            break;
-        }
+void backend_texture_cache_warmup(DFont* font, const char** texts, int count, Color color) {
+    int i;
+
+    if (!font || !texts || count <= 0) {
+        return;
     }
-    
-    // 如果没有空闲位置，查找最久未使用的位置
-    if (cache_index == -1) {
-        for (int i = 0; i < MAX_TEXTURE_CACHE_ENTRIES; i++) {
-            if (texture_cache[i].last_used < oldest_time) {
-                oldest_time = texture_cache[i].last_used;
-                cache_index = i;
-            }
+
+    for (i = 0; i < count; i++) {
+        if (!texts[i] || !texts[i][0]) {
+            continue;
         }
+        backend_render_texture(font, texts[i], color);
+        backend_texture_cache_pin(font, texts[i], color);
     }
-    
-    // 替换缓存项
-    if (cache_index != -1) {
-        if (texture_cache[cache_index].texture) {
-            SDL_DestroyTexture(texture_cache[cache_index].texture);
-        }
-        
-        texture_cache[cache_index].font = font;
-        strncpy(texture_cache[cache_index].text, text, sizeof(texture_cache[cache_index].text) - 1);
-        texture_cache[cache_index].text[sizeof(texture_cache[cache_index].text) - 1] = '\0';
-        texture_cache[cache_index].color = color;
-        texture_cache[cache_index].texture = texture;
-        texture_cache[cache_index].width = width;
-        texture_cache[cache_index].height = height;
-        texture_cache[cache_index].last_used = current_time;
+}
+
+SDL_Texture* find_texture_in_cache(DFont* font, const char* text, Color color, int font_size,
+                                     int* width, int* height) {
+    uint64_t key_hash;
+    int index;
+
+    if (!font || !text) {
+        return NULL;
     }
+
+    backend_texture_cache_sync_scale();
+    if (font_size <= 0) {
+        font_size = backend_get_font_size(font);
+    }
+
+    key_hash = backend_texture_cache_make_hash(font, font_size, color, text);
+    index = backend_texture_cache_find_index(key_hash, font, font_size, color, text);
+    if (index < 0) {
+        return NULL;
+    }
+
+    texture_cache[index].last_used = SDL_GetTicks();
+    if (width) {
+        *width = texture_cache[index].width;
+    }
+    if (height) {
+        *height = texture_cache[index].height;
+    }
+    return texture_cache[index].texture;
+}
+
+void add_texture_to_cache(DFont* font, const char* text, Color color, int font_size,
+                          SDL_Texture* texture, int width, int height, int pinned) {
+    uint64_t key_hash;
+    int cache_index;
+
+    if (!font || !text || !texture) {
+        return;
+    }
+
+    backend_texture_cache_sync_scale();
+    if (font_size <= 0) {
+        font_size = backend_get_font_size(font);
+    }
+    if (!pinned && backend_text_cache_volatile(text)) {
+        return;
+    }
+
+    key_hash = backend_texture_cache_make_hash(font, font_size, color, text);
+    cache_index = backend_texture_cache_find_index(key_hash, font, font_size, color, text);
+    if (cache_index >= 0) {
+        backend_texture_cache_store_entry(cache_index, key_hash, font, font_size, text, color,
+                                        texture, width, height, pinned || texture_cache[cache_index].pinned);
+        return;
+    }
+
+    cache_index = backend_texture_cache_pick_evict_index();
+    if (cache_index < 0) {
+        SDL_DestroyTexture(texture);
+        return;
+    }
+
+    backend_texture_cache_store_entry(cache_index, key_hash, font, font_size, text, color,
+                                      texture, width, height, pinned);
 }
 
 // ====================== 字体缓存管理 ======================
@@ -1827,8 +2051,10 @@ Texture* backend_render_texture(DFont* font,const char* text,Color color){
     DFont* render_font = backend_resolve_render_font(font, text, &fallback);
 
     // 尝试从缓存中查找（统一按主字体 key，混合纹理也缓存于此）
+    int font_size_px = backend_get_font_size(font);
     int cached_width, cached_height;
-    SDL_Texture* cached_texture = find_texture_in_cache(font, text, color, &cached_width, &cached_height);
+    SDL_Texture* cached_texture = find_texture_in_cache(font, text, color, font_size_px,
+                                                        &cached_width, &cached_height);
     if (cached_texture) {
         return cached_texture;
     }
@@ -1838,7 +2064,7 @@ Texture* backend_render_texture(DFont* font,const char* text,Color color){
         SDL_Surface* em_surface = backend_render_emscripten_text_surface(
             font, text,
             (SDL_Color){color.r, color.g, color.b, color.a},
-            backend_get_font_size(font));
+            font_size_px);
         SDL_Texture* em_texture;
 
         if (em_surface) {
@@ -1850,7 +2076,7 @@ Texture* backend_render_texture(DFont* font,const char* text,Color color){
                 int width = 0;
                 int height = 0;
                 SDL_QueryTexture(em_texture, NULL, NULL, &width, &height);
-                add_texture_to_cache(font, text, color, em_texture, width, height);
+                add_texture_to_cache(font, text, color, font_size_px, em_texture, width, height, 0);
                 return em_texture;
             }
         }
@@ -1942,7 +2168,7 @@ Texture* backend_render_texture(DFont* font,const char* text,Color color){
                     SDL_SetTextureScaleMode(mixed_texture, SDL_ScaleModeBest);
                     int mw = 0, mh = 0;
                     SDL_QueryTexture(mixed_texture, NULL, NULL, &mw, &mh);
-                    add_texture_to_cache(font, text, color, mixed_texture, mw, mh);
+                    add_texture_to_cache(font, text, color, font_size_px, mixed_texture, mw, mh, 0);
                     return mixed_texture;
                 }
             }
@@ -1975,7 +2201,7 @@ Texture* backend_render_texture(DFont* font,const char* text,Color color){
     if (texture) {
         int width, height;
         SDL_QueryTexture(texture, NULL, NULL, &width, &height);
-        add_texture_to_cache(font, text, color, texture, width, height);
+        add_texture_to_cache(font, text, color, font_size_px, texture, width, height, 0);
     }
 
     return texture;
