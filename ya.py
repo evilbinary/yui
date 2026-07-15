@@ -90,11 +90,6 @@ def add_flags():
             '--preload-file app/assets/',
             '--preload-file app/lib/',
             '--preload-file app',
-            '-L'+mingw64+'\\lib',
-            '-lSDL2main',
-            '-lSDL2',
-            '-lSDL2_ttf',
-            '-lSDL2_image',
             '-lm'
             )
         else:
@@ -143,12 +138,6 @@ def add_flags():
                 # '-s MIN_WEBGL_VERSION=2',  # 要求 WebGL 最低版本为 2
                 '-s ASSERTIONS=2',          # 启用运行时断言，便于调试
                 # '-s GL_ASSERTIONS=1',       # 启用 GL 断言，捕捉 WebGL 错误
-
-                '-L'+mingw64+'\\lib',
-               
-                '-lSDL2',
-                '-lSDL2_ttf',
-                '-lSDL2_image',
                 '-lm'
                 )
     elif is_plat("stm32"):

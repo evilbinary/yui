@@ -9,6 +9,8 @@
 #include "log.h"
 #include <stdbool.h>  // 添加支持bool类型
 #include <math.h>     // 添加数学函数支持
+#include <stdlib.h>
+#include <stdint.h>
 
 #if defined(_WIN32) && !defined(__EMSCRIPTEN__)
 #define YUI_WIN32_NATIVE 1
@@ -104,6 +106,15 @@ static DFont* backend_get_fallback_font_for(DFont* primary) {
     if (!backend_has_font_fallback() || !primary) {
         return NULL;
     }
+
+#ifdef __EMSCRIPTEN__
+    /* wasm: CBDT 彩色 emoji 字体无法用 SDL_ttf 可靠渲染，改由浏览器 Canvas 处理 */
+    if (g_font_fallback_path[0] &&
+        (strstr(g_font_fallback_path, "ColorEmoji") != NULL ||
+         strstr(g_font_fallback_path, "NotoEmoji") != NULL)) {
+        return NULL;
+    }
+#endif
 
 #ifdef __EMSCRIPTEN__
     if (g_font_fallback_path[0]) {
@@ -207,6 +218,221 @@ static SDL_Surface* backend_render_blended_utf8(DFont* font, const char* text, S
     }
     return TTF_RenderUTF8_Blended(font, text, color);
 }
+
+#ifdef __EMSCRIPTEN__
+
+static int backend_is_emoji_codepoint(Uint32 codepoint) {
+    return (codepoint >= 0x1F300 && codepoint <= 0x1FAFF)
+        || (codepoint >= 0x2600 && codepoint <= 0x27BF)
+        || (codepoint >= 0x2300 && codepoint <= 0x23FF)
+        || (codepoint >= 0x2B50 && codepoint <= 0x2B55)
+        || codepoint == 0x2764;
+}
+
+static int backend_is_emoji_run_codepoint(Uint32 codepoint) {
+    return codepoint == 0x200D || codepoint == 0xFE0F || backend_is_emoji_codepoint(codepoint);
+}
+
+static int backend_text_contains_emoji(const char* text) {
+    const char* cursor = text;
+
+    if (!text) {
+        return 0;
+    }
+
+    while (*cursor) {
+        Uint32 codepoint = 0;
+
+        if (!utf8_decode_codepoint(&cursor, &codepoint)) {
+            break;
+        }
+        if (backend_is_emoji_codepoint(codepoint)) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+/* 用浏览器系统 emoji 字体渲染，返回 malloc 的 RGBA 像素（调用方 free） */
+EM_JS(int, emscripten_render_emoji_rgba, (const char* utf8, int font_px, int* out_w, int* out_h), {
+    var text = UTF8ToString(utf8);
+    if (!text) {
+        return 0;
+    }
+    var px = Math.max(12, font_px | 0);
+    var canvas = document.createElement('canvas');
+    var ctx = canvas.getContext('2d', { willReadFrequently: true });
+    var family = '"Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif';
+    ctx.font = px + 'px ' + family;
+    var metrics = ctx.measureText(text);
+    var w = Math.max(1, Math.ceil(metrics.width) + 8);
+    var h = Math.max(1, px + 8);
+    canvas.width = w;
+    canvas.height = h;
+    ctx.clearRect(0, 0, w, h);
+    ctx.font = px + 'px ' + family;
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'center';
+    ctx.fillText(text, w / 2, h / 2);
+    var img = ctx.getImageData(0, 0, w, h);
+    var size = w * h * 4;
+    var ptr = _malloc(size);
+    if (!ptr) {
+        return 0;
+    }
+    HEAPU8.set(img.data, ptr);
+    setValue(out_w, w, 'i32');
+    setValue(out_h, h, 'i32');
+    return ptr;
+});
+
+static SDL_Surface* backend_render_emscripten_emoji_surface(const char* text, int target_px) {
+    int out_w = 0;
+    int out_h = 0;
+    int px;
+    int ptr;
+    SDL_Surface* wrapped;
+    SDL_Surface* owned;
+
+    if (!text || !text[0]) {
+        return NULL;
+    }
+
+    px = (int)(target_px * scale + 0.5f);
+    if (px < 12) {
+        px = 12;
+    }
+
+    ptr = emscripten_render_emoji_rgba(text, px, &out_w, &out_h);
+    if (!ptr || out_w <= 0 || out_h <= 0) {
+        if (ptr) {
+            free((void*)(intptr_t)ptr);
+        }
+        return NULL;
+    }
+
+    wrapped = SDL_CreateRGBSurfaceWithFormatFrom(
+        (void*)(intptr_t)ptr, out_w, out_h, 32, out_w * 4, SDL_PIXELFORMAT_RGBA32);
+    if (!wrapped) {
+        free((void*)(intptr_t)ptr);
+        return NULL;
+    }
+
+    owned = SDL_ConvertSurfaceFormat(wrapped, SDL_PIXELFORMAT_RGBA32, 0);
+    SDL_FreeSurface(wrapped);
+    free((void*)(intptr_t)ptr);
+    if (!owned) {
+        return NULL;
+    }
+
+    SDL_SetSurfaceBlendMode(owned, SDL_BLENDMODE_BLEND);
+    return owned;
+}
+
+static SDL_Surface* backend_render_emscripten_text_surface(DFont* font, const char* text, SDL_Color color, int target_px) {
+    const char* cursor = text;
+    const char* run_starts[128];
+    const char* run_ends[128];
+    int run_is_emoji[128];
+    SDL_Surface* surfaces[128];
+    int run_count = 0;
+    int total_w = 0;
+    int max_h = 0;
+    int x = 0;
+    char run_buf[256];
+    SDL_Surface* final_surface = NULL;
+
+    if (!text || !text[0]) {
+        return NULL;
+    }
+
+    for (int i = 0; i < 128; i++) {
+        surfaces[i] = NULL;
+    }
+
+    while (*cursor && run_count < 128) {
+        const char* run_start = cursor;
+        Uint32 codepoint = 0;
+        int is_emoji;
+
+        if (!utf8_decode_codepoint(&cursor, &codepoint)) {
+            break;
+        }
+        is_emoji = backend_is_emoji_run_codepoint(codepoint);
+        if (run_count > 0 && run_is_emoji[run_count - 1] == is_emoji) {
+            run_ends[run_count - 1] = cursor;
+        } else {
+            run_starts[run_count] = run_start;
+            run_ends[run_count] = cursor;
+            run_is_emoji[run_count] = is_emoji;
+            run_count++;
+        }
+    }
+
+    for (int i = 0; i < run_count; i++) {
+        int len = (int)(run_ends[i] - run_starts[i]);
+        SDL_Surface* surf;
+
+        if (len <= 0 || len >= (int)sizeof(run_buf)) {
+            continue;
+        }
+        memcpy(run_buf, run_starts[i], (size_t)len);
+        run_buf[len] = '\0';
+
+        if (run_is_emoji[i]) {
+            surf = backend_render_emscripten_emoji_surface(run_buf, target_px);
+        } else {
+            surf = backend_render_blended_utf8(font, run_buf, color);
+        }
+        if (!surf) {
+            continue;
+        }
+        surfaces[i] = surf;
+        total_w += surf->w;
+        if (surf->h > max_h) {
+            max_h = surf->h;
+        }
+    }
+
+    if (total_w <= 0 || max_h <= 0) {
+        for (int i = 0; i < run_count; i++) {
+            if (surfaces[i]) {
+                SDL_FreeSurface(surfaces[i]);
+            }
+        }
+        return NULL;
+    }
+
+    final_surface = SDL_CreateRGBSurfaceWithFormat(0, total_w, max_h, 32, SDL_PIXELFORMAT_RGBA32);
+    if (!final_surface) {
+        for (int i = 0; i < run_count; i++) {
+            if (surfaces[i]) {
+                SDL_FreeSurface(surfaces[i]);
+            }
+        }
+        return NULL;
+    }
+
+    SDL_FillRect(final_surface, NULL, SDL_MapRGBA(final_surface->format, 0, 0, 0, 0));
+    for (int i = 0; i < run_count; i++) {
+        SDL_Surface* surf = surfaces[i];
+        SDL_Rect dst;
+
+        if (!surf) {
+            continue;
+        }
+        dst.x = x;
+        dst.y = (max_h - surf->h) / 2;
+        dst.w = surf->w;
+        dst.h = surf->h;
+        SDL_BlitSurface(surf, NULL, final_surface, &dst);
+        x += surf->w;
+        SDL_FreeSurface(surf);
+    }
+    return final_surface;
+}
+
+#endif /* __EMSCRIPTEN__ */
 
 void handle_event(Layer* root, SDL_Event* event);
 
@@ -1572,6 +1798,29 @@ Texture* backend_render_texture(DFont* font,const char* text,Color color){
     if (cached_texture) {
         return cached_texture;
     }
+
+#ifdef __EMSCRIPTEN__
+    if (backend_text_contains_emoji(text)) {
+        SDL_Surface* em_surface = backend_render_emscripten_text_surface(
+            font, text,
+            (SDL_Color){color.r, color.g, color.b, color.a},
+            backend_get_font_size(font));
+        SDL_Texture* em_texture;
+
+        if (em_surface) {
+            em_texture = SDL_CreateTextureFromSurface(renderer, em_surface);
+            SDL_FreeSurface(em_surface);
+            if (em_texture) {
+                SDL_SetTextureScaleMode(em_texture, SDL_ScaleModeBest);
+                int width = 0;
+                int height = 0;
+                SDL_QueryTexture(em_texture, NULL, NULL, &width, &height);
+                add_texture_to_cache(font, text, color, em_texture, width, height);
+                return em_texture;
+            }
+        }
+    }
+#endif
 
     // 混合排版：主字体与 fallback 各自覆盖部分字形，分段渲染后横向拼接
     if (render_font == NULL && fallback && fallback != font) {
