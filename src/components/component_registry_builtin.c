@@ -20,6 +20,7 @@
 #include "table_component.h"
 #include "pagination_component.h"
 #include "loading_component.h"
+#include "grid_component.h"
 
 static void scrollbar_after_create(Layer* layer, cJSON* json);
 static void table_after_create(Layer* layer, cJSON* json);
@@ -41,7 +42,8 @@ static const struct {
     { IMAGE,       "Image",      image_component_create_from_json, YUI_COMP_NATIVE_RENDER, NULL },
     { LAYER_LIST,  "List",       (YuiComponentCreateFn)list_component_create_from_json,
       YUI_COMP_NATIVE_RENDER | YUI_COMP_FOCUSABLE | YUI_COMP_CUSTOM_CHILDREN, NULL },
-    { GRID,        "Grid",       NULL, YUI_COMP_NATIVE_RENDER, NULL },
+    { GRID,        "Grid",       (YuiComponentCreateFn)grid_component_create_from_json,
+      YUI_COMP_NATIVE_RENDER, NULL },
     { PROGRESS,    "Progress",   (YuiComponentCreateFn)progress_component_create_from_json,
       YUI_COMP_NATIVE_RENDER, NULL },
     { CHECKBOX,    "Checkbox",   (YuiComponentCreateFn)checkbox_component_create_from_json,

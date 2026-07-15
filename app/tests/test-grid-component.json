@@ -1,0 +1,279 @@
+{
+  "id": "gridTestApp",
+  "type": "View",
+  "size": [560, 560],
+  "js": "test-grid-component.js",
+  "style": {
+    "bgColor": "#1e1e2e"
+  },
+  "layout": {
+    "type": "vertical",
+    "spacing": 12,
+    "padding": [16, 16, 16, 16]
+  },
+  "children": [
+    {
+      "id": "title",
+      "type": "Label",
+      "text": "Grid 组件 / layout.grid 测试",
+      "size": [528, 32],
+      "style": {
+        "color": "#cdd6f4",
+        "fontSize": 20
+      }
+    },
+    {
+      "id": "statusLabel",
+      "type": "Label",
+      "text": "状态：就绪（点击格子或下方按钮）",
+      "size": [528, 22],
+      "style": {
+        "color": "#a6adc8",
+        "fontSize": 13
+      }
+    },
+    {
+      "id": "sectionA",
+      "type": "Label",
+      "text": "A. type=Grid，顶层 columns: 3",
+      "size": [528, 20],
+      "style": {
+        "color": "#89b4fa",
+        "fontSize": 13
+      }
+    },
+    {
+      "id": "gridComponent",
+      "type": "Grid",
+      "columns": 3,
+      "gap": 6,
+      "size": [528, 132],
+      "style": {
+        "bgColor": "#313244",
+        "borderRadius": 6
+      },
+      "children": [
+        {
+          "id": "g1",
+          "type": "Button",
+          "text": "1",
+          "style": { "bgColor": "#45475a", "color": "#cdd6f4", "fontSize": 14, "borderRadius": 4 },
+          "events": { "onClick": "@onCellClick" }
+        },
+        {
+          "id": "g2",
+          "type": "Button",
+          "text": "2",
+          "style": { "bgColor": "#45475a", "color": "#cdd6f4", "fontSize": 14, "borderRadius": 4 },
+          "events": { "onClick": "@onCellClick" }
+        },
+        {
+          "id": "g3",
+          "type": "Button",
+          "text": "3",
+          "style": { "bgColor": "#45475a", "color": "#cdd6f4", "fontSize": 14, "borderRadius": 4 },
+          "events": { "onClick": "@onCellClick" }
+        },
+        {
+          "id": "g4",
+          "type": "Button",
+          "text": "4",
+          "style": { "bgColor": "#585b70", "color": "#cdd6f4", "fontSize": 14, "borderRadius": 4 },
+          "events": { "onClick": "@onCellClick" }
+        },
+        {
+          "id": "g5",
+          "type": "Button",
+          "text": "5",
+          "style": { "bgColor": "#585b70", "color": "#cdd6f4", "fontSize": 14, "borderRadius": 4 },
+          "events": { "onClick": "@onCellClick" }
+        },
+        {
+          "id": "g6",
+          "type": "Button",
+          "text": "6",
+          "style": { "bgColor": "#585b70", "color": "#cdd6f4", "fontSize": 14, "borderRadius": 4 },
+          "events": { "onClick": "@onCellClick" }
+        }
+      ]
+    },
+    {
+      "id": "sectionB",
+      "type": "Label",
+      "text": "B. type=View + layout.type=grid，columns: 4",
+      "size": [528, 20],
+      "style": {
+        "color": "#a6e3a1",
+        "fontSize": 13
+      }
+    },
+    {
+      "id": "layoutGrid",
+      "type": "View",
+      "size": [528, 108],
+      "layout": {
+        "type": "grid",
+        "columns": 4,
+        "spacing": 8
+      },
+      "style": {
+        "bgColor": "#313244",
+        "borderRadius": 6
+      },
+      "children": [
+        {
+          "id": "l1",
+          "type": "Button",
+          "text": "A",
+          "style": { "bgColor": "#74c7ec", "color": "#1e1e2e", "fontSize": 14, "borderRadius": 4 },
+          "events": { "onClick": "@onCellClick" }
+        },
+        {
+          "id": "l2",
+          "type": "Button",
+          "text": "B",
+          "style": { "bgColor": "#74c7ec", "color": "#1e1e2e", "fontSize": 14, "borderRadius": 4 },
+          "events": { "onClick": "@onCellClick" }
+        },
+        {
+          "id": "l3",
+          "type": "Button",
+          "text": "C",
+          "style": { "bgColor": "#74c7ec", "color": "#1e1e2e", "fontSize": 14, "borderRadius": 4 },
+          "events": { "onClick": "@onCellClick" }
+        },
+        {
+          "id": "l4",
+          "type": "Button",
+          "text": "D",
+          "style": { "bgColor": "#74c7ec", "color": "#1e1e2e", "fontSize": 14, "borderRadius": 4 },
+          "events": { "onClick": "@onCellClick" }
+        },
+        {
+          "id": "l5",
+          "type": "Button",
+          "text": "E",
+          "style": { "bgColor": "#89dceb", "color": "#1e1e2e", "fontSize": 14, "borderRadius": 4 },
+          "events": { "onClick": "@onCellClick" }
+        },
+        {
+          "id": "l6",
+          "type": "Button",
+          "text": "F",
+          "style": { "bgColor": "#89dceb", "color": "#1e1e2e", "fontSize": 14, "borderRadius": 4 },
+          "events": { "onClick": "@onCellClick" }
+        },
+        {
+          "id": "l7",
+          "type": "Button",
+          "text": "G",
+          "style": { "bgColor": "#89dceb", "color": "#1e1e2e", "fontSize": 14, "borderRadius": 4 },
+          "events": { "onClick": "@onCellClick" }
+        },
+        {
+          "id": "l8",
+          "type": "Button",
+          "text": "H",
+          "style": { "bgColor": "#89dceb", "color": "#1e1e2e", "fontSize": 14, "borderRadius": 4 },
+          "events": { "onClick": "@onCellClick" }
+        }
+      ]
+    },
+    {
+      "id": "sectionC",
+      "type": "Label",
+      "text": "C. 增量更新（layout.columns / children）",
+      "size": [528, 20],
+      "style": {
+        "color": "#f9e2af",
+        "fontSize": 13
+      }
+    },
+    {
+      "id": "ctrlRow1",
+      "type": "View",
+      "size": [528, 40],
+      "layout": {
+        "type": "horizontal",
+        "spacing": 8
+      },
+      "children": [
+        {
+          "id": "gridCol2Btn",
+          "type": "Button",
+          "text": "Grid 2列",
+          "size": [100, 36],
+          "style": { "bgColor": "#89b4fa", "color": "#1e1e2e", "fontSize": 12, "borderRadius": 4 },
+          "events": { "onClick": "@setGridColumns2" }
+        },
+        {
+          "id": "gridCol3Btn",
+          "type": "Button",
+          "text": "Grid 3列",
+          "size": [100, 36],
+          "style": { "bgColor": "#89b4fa", "color": "#1e1e2e", "fontSize": 12, "borderRadius": 4 },
+          "events": { "onClick": "@setGridColumns3" }
+        },
+        {
+          "id": "gridCol4Btn",
+          "type": "Button",
+          "text": "Grid 4列",
+          "size": [100, 36],
+          "style": { "bgColor": "#89b4fa", "color": "#1e1e2e", "fontSize": 12, "borderRadius": 4 },
+          "events": { "onClick": "@setGridColumns4" }
+        },
+        {
+          "id": "addCellBtn",
+          "type": "Button",
+          "text": "添加格子",
+          "size": [100, 36],
+          "style": { "bgColor": "#a6e3a1", "color": "#1e1e2e", "fontSize": 12, "borderRadius": 4 },
+          "events": { "onClick": "@addGridCell" }
+        },
+        {
+          "id": "removeCellBtn",
+          "type": "Button",
+          "text": "移除末格",
+          "size": [100, 36],
+          "style": { "bgColor": "#f38ba8", "color": "#1e1e2e", "fontSize": 12, "borderRadius": 4 },
+          "events": { "onClick": "@removeGridCell" }
+        }
+      ]
+    },
+    {
+      "id": "ctrlRow2",
+      "type": "View",
+      "size": [528, 40],
+      "layout": {
+        "type": "horizontal",
+        "spacing": 8
+      },
+      "children": [
+        {
+          "id": "layoutCol2Btn",
+          "type": "Button",
+          "text": "Layout 2列",
+          "size": [100, 36],
+          "style": { "bgColor": "#74c7ec", "color": "#1e1e2e", "fontSize": 12, "borderRadius": 4 },
+          "events": { "onClick": "@setLayoutColumns2" }
+        },
+        {
+          "id": "layoutCol4Btn",
+          "type": "Button",
+          "text": "Layout 4列",
+          "size": [100, 36],
+          "style": { "bgColor": "#74c7ec", "color": "#1e1e2e", "fontSize": 12, "borderRadius": 4 },
+          "events": { "onClick": "@setLayoutColumns4" }
+        },
+        {
+          "id": "layoutCol6Btn",
+          "type": "Button",
+          "text": "Layout 6列",
+          "size": [100, 36],
+          "style": { "bgColor": "#74c7ec", "color": "#1e1e2e", "fontSize": 12, "borderRadius": 4 },
+          "events": { "onClick": "@setLayoutColumns6" }
+        }
+      ]
+    }
+  ]
+}

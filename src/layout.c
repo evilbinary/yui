@@ -1,10 +1,74 @@
 #include "layout.h"
+#include "components/grid_component.h"
 #include "util.h"
 #include "layer_update.h"
 
 #define printf
 
 static int layout_scale_value(int value, float scale);
+
+static void layout_apply_grid(Layer* layer)
+{
+    if (!layer || layer->child_count <= 0 || !layer->children) {
+        return;
+    }
+
+    int columns = layer->layout_manager ? layer->layout_manager->columns : 1;
+    if (columns <= 0) {
+        columns = 1;
+    }
+
+    int spacing = layer->layout_manager ? layer->layout_manager->spacing : 0;
+    int padding_top = layer_padding_get(layer, 0);
+    int padding_right = layer_padding_get(layer, 1);
+    int padding_bottom = layer_padding_get(layer, 2);
+    int padding_left = layer_padding_get(layer, 3);
+
+    int available_width = layer->rect.w - padding_left - padding_right;
+    int available_height = layer->rect.h - padding_top - padding_bottom;
+
+    int rows = (layer->child_count + columns - 1) / columns;
+    int cell_width = (available_width - (columns - 1) * spacing) / columns;
+    int cell_height = (rows > 0) ? (available_height - (rows - 1) * spacing) / rows : 0;
+    if (cell_width < 0) {
+        cell_width = 0;
+    }
+    if (cell_height < 0) {
+        cell_height = 0;
+    }
+
+    int max_col_width = 0;
+    int max_row_height = 0;
+    for (int i = 0; i < layer->child_count; i++) {
+        Layer* child = layer->children[i];
+        if (!child || child->visible == IN_VISIBLE) {
+            continue;
+        }
+        if (child->rect.w > max_col_width) {
+            max_col_width = child->rect.w;
+        }
+        if (child->rect.h > max_row_height) {
+            max_row_height = child->rect.h;
+        }
+    }
+
+    layer->content_width = padding_left + padding_right +
+                           columns * max_col_width + (columns - 1) * spacing;
+    layer->content_height = padding_top + padding_bottom +
+                            rows * max_row_height + (rows - 1) * spacing;
+
+    for (int i = 0; i < layer->child_count; i++) {
+        if (!layer->children[i] || layer->children[i]->visible == IN_VISIBLE) {
+            continue;
+        }
+        int row = i / columns;
+        int col = i % columns;
+        layer->children[i]->rect.x = layer->rect.x + padding_left + col * (cell_width + spacing);
+        layer->children[i]->rect.y = layer->rect.y + padding_top + row * (cell_height + spacing);
+        layer->children[i]->rect.w = cell_width;
+        layer->children[i]->rect.h = cell_height;
+    }
+}
 
 static int layout_horizontal_child_width(Layer* child, int available_width, float total_flex, int no_width_count) {
     if (!child) {
@@ -110,7 +174,9 @@ void layout_layer(Layer* layer){
         printf("layout_layer: content_size: %d x %d\n", content_width, content_height);
         fflush(stdout);
         
-        if (layer->layout_manager->type == LAYOUT_HORIZONTAL) {
+        if (grid_layer_uses_grid_layout(layer)) {
+            layout_apply_grid(layer);
+        } else if (layer->layout_manager->type == LAYOUT_HORIZONTAL) {
             printf("layout_layer: applying HORIZONTAL layout\n");
             fflush(stdout);
             // 计算总权重
@@ -506,65 +572,6 @@ void layout_layer(Layer* layer){
 
     if (layer->type == LAYER_LIST) {
         // List 由 list_component 自行渲染与布局，不在 layout 阶段生成子 Layer
-    } else if(layer->type == GRID){
-        // 获取Grid布局参数
-        int columns = layer->layout_manager ? layer->layout_manager->columns : 1;
-        if (columns <= 0) columns = 1;
-        
-        int spacing = layer->layout_manager ? layer->layout_manager->spacing : 0;
-        int padding_top = layer_padding_get(layer, 0);
-        int padding_right = layer_padding_get(layer, 1);
-        int padding_bottom = layer_padding_get(layer, 2);
-        int padding_left = layer_padding_get(layer, 3);
-        
-        // 计算可用空间
-        int available_width = layer->rect.w - padding_left - padding_right;
-        int available_height = layer->rect.h - padding_top - padding_bottom;
-        
-        printf("grid %d,%d\n",available_width, available_height);
-        // 计算每个网格单元的尺寸
-        int rows = (layer->child_count + columns - 1) / columns; // 向上取整计算行数
-        int cell_width = (available_width - (columns - 1) * spacing) / columns;
-        int cell_height = (rows > 0) ? (available_height - (rows - 1) * spacing) / rows : 0;
-        
-        // 计算最大列宽和行高
-        int max_col_width = 0, max_row_height = 0;
-        for (int i = 0; i < layer->child_count; i++) {
-            Layer* child = layer->children[i];
-            if (child->visible == IN_VISIBLE) {
-                printf("layout_layer: skipping invisible child[%d] of %s\n", i, layer->id ? layer->id : "(null)");
-                fflush(stdout);
-                continue;
-            }
-            if (!child) continue;
-            
-            if (child->rect.w > max_col_width) max_col_width = child->rect.w;
-            if (child->rect.h > max_row_height) max_row_height = child->rect.h;
-        }
-        
-        // 计算内容尺寸
-        layer->content_width = padding_left + padding_right + 
-                              columns * max_col_width + (columns - 1) * spacing;
-        layer->content_height = padding_top + padding_bottom + 
-                               rows * max_row_height + (rows - 1) * spacing;
-        
-        // 渲染子元素
-        for (int i = 0; i < layer->child_count; i++) {
-            if (!layer->children[i]) {
-                printf("layout_layer: WARNING: skipping NULL child[%d] in GRID layout\n", i);
-                fflush(stdout);
-                continue;
-            }
-            int row = i / columns;
-            int col = i % columns;
-            
-            // 设置子元素位置和尺寸
-            layer->children[i]->rect.x = layer->rect.x + padding_left + col * (cell_width + spacing);
-            layer->children[i]->rect.y = layer->rect.y + padding_top + row * (cell_height + spacing);
-            layer->children[i]->rect.w = cell_width;
-            layer->children[i]->rect.h = cell_height;
-            
-        }
     }
 
     // 其他情况：如果没有计算过content尺寸，使用layer自身的尺寸

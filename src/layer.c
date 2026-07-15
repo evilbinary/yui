@@ -80,6 +80,8 @@ int layer_apply_layout_from_json(Layer* layer, cJSON* layout)
             layer->layout_manager->type = LAYOUT_LEFT;
         } else if (strcmp(layout_type->valuestring, "right") == 0) {
             layer->layout_manager->type = LAYOUT_RIGHT;
+        } else if (strcmp(layout_type->valuestring, "grid") == 0) {
+            layer->layout_manager->type = LAYOUT_GRID;
         } else {
             layer->layout_manager->type = LAYOUT_ABSOLUTE;
         }
@@ -118,6 +120,11 @@ int layer_apply_layout_from_json(Layer* layer, cJSON* layout)
     cJSON* spacing = cJSON_GetObjectItem(layout, "spacing");
     if (spacing && cJSON_IsNumber(spacing)) {
         layer->layout_manager->spacing = spacing->valueint;
+    }
+
+    cJSON* gap = cJSON_GetObjectItem(layout, "gap");
+    if (gap && cJSON_IsNumber(gap)) {
+        layer->layout_manager->spacing = gap->valueint;
     }
 
     cJSON* padding = cJSON_GetObjectItem(layout, "padding");
