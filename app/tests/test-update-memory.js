@@ -308,6 +308,10 @@ function stressSequential5000() {
     stressSequentialLarge(5000);
 }
 
+function stressSequential10000() {
+    stressSequentialLarge(10000);
+}
+
 function stressSequential50000() {
     stressSequentialLarge(50000);
 }
@@ -322,6 +326,10 @@ function stressBatch200() {
 
 function stressBatch5000() {
     stressBatch(5000);
+}
+
+function stressBatch10000() {
+    stressBatch(10000);
 }
 
 function stressBatch50000() {
