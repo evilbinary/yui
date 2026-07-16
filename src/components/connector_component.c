@@ -1,4 +1,5 @@
 #include "connector_component.h"
+#include "draggable_component.h"
 #include "../backend.h"
 #include "../layer.h"
 #include "../util.h"
@@ -133,6 +134,43 @@ static void connector_auto_control_points(int x0, int y0, int x1, int y1,
     *cy2 = y1;
 }
 
+static void connector_render_dot(int cx, int cy, int radius, Color color)
+{
+    Rect rect;
+
+    if (radius < 1) {
+        radius = 1;
+    }
+
+    rect.x = cx - radius;
+    rect.y = cy - radius;
+    rect.w = radius * 2;
+    rect.h = radius * 2;
+    backend_render_rounded_rect(&rect, color, radius);
+}
+
+static void connector_resolve_endpoint_dot(ConnectorComponent* component, Layer* endpoint,
+                                           int* show_dots, int* dot_size, Color* dot_color)
+{
+    int drag_show = 1;
+    int drag_size = 4;
+    Color drag_color = {137, 180, 250, 255};
+
+    if (draggable_component_get_dot_style(endpoint, &drag_show, &drag_size, &drag_color)) {
+        /* use draggable defaults as fallback */
+    }
+
+    if (show_dots) {
+        *show_dots = component->has_show_dots ? component->show_dots : drag_show;
+    }
+    if (dot_size) {
+        *dot_size = component->has_dot_size ? component->dot_size : drag_size;
+    }
+    if (dot_color) {
+        *dot_color = component->has_dot_color ? component->dot_color : drag_color;
+    }
+}
+
 ConnectorComponent* connector_component_create(Layer* layer)
 {
     ConnectorComponent* component;
@@ -217,6 +255,31 @@ ConnectorComponent* connector_component_create_from_json(Layer* layer, cJSON* js
         if (cJSON_HasObjectItem(style, "strokeWidth")) {
             component->stroke_width = cJSON_GetObjectItem(style, "strokeWidth")->valueint;
         }
+
+        {
+            cJSON* dots_item = cJSON_GetObjectItem(style, "dots");
+            if (dots_item) {
+                component->has_show_dots = 1;
+                if (cJSON_IsBool(dots_item)) {
+                    component->show_dots = cJSON_IsTrue(dots_item);
+                } else if (cJSON_IsNumber(dots_item)) {
+                    component->show_dots = dots_item->valueint != 0;
+                }
+            }
+
+            if (cJSON_HasObjectItem(style, "dotSize")) {
+                component->has_dot_size = 1;
+                component->dot_size = cJSON_GetObjectItem(style, "dotSize")->valueint;
+            }
+
+            if (cJSON_HasObjectItem(style, "dotColor")) {
+                cJSON* dot_color_item = cJSON_GetObjectItem(style, "dotColor");
+                if (dot_color_item && cJSON_IsString(dot_color_item)) {
+                    component->has_dot_color = 1;
+                    parse_color(dot_color_item->valuestring, &component->dot_color);
+                }
+            }
+        }
     }
 
     return component;
@@ -242,6 +305,12 @@ void connector_component_render(Layer* layer)
     int cy1;
     int cx2;
     int cy2;
+    int from_show_dots;
+    int to_show_dots;
+    int from_dot_size;
+    int to_dot_size;
+    Color from_dot_color;
+    Color to_dot_color;
 
     if (!layer || !layer->component || !g_ui_root) {
         return;
@@ -275,4 +344,50 @@ void connector_component_render(Layer* layer)
     backend_render_bezier_cubic(x0, y0, cx1, cy1, cx2, cy2, x1, y1,
                                 component->stroke_color,
                                 component->stroke_width);
+
+    connector_resolve_endpoint_dot(component, from_layer,
+                                   &from_show_dots, &from_dot_size, &from_dot_color);
+    connector_resolve_endpoint_dot(component, to_layer,
+                                   &to_show_dots, &to_dot_size, &to_dot_color);
+
+    if (from_show_dots && from_dot_size > 0) {
+        connector_render_dot(x0, y0, from_dot_size, from_dot_color);
+    }
+    if (to_show_dots && to_dot_size > 0) {
+        connector_render_dot(x1, y1, to_dot_size, to_dot_color);
+    }
+}
+
+void connector_collect_anchors_for_layer(Layer* root, const char* layer_id,
+                                         unsigned int* anchor_mask)
+{
+    ConnectorComponent* component;
+    int i;
+
+    if (!root || !layer_id || !layer_id[0] || !anchor_mask) {
+        return;
+    }
+
+    if (root->type == CONNECTOR && root->component) {
+        component = (ConnectorComponent*)root->component;
+        if (strcmp(component->from_id, layer_id) == 0) {
+            *anchor_mask |= (1u << component->from_anchor);
+        }
+        if (strcmp(component->to_id, layer_id) == 0) {
+            *anchor_mask |= (1u << component->to_anchor);
+        }
+    }
+
+    if (root->children) {
+        for (i = 0; i < root->child_count; i++) {
+            if (root->children[i]) {
+                connector_collect_anchors_for_layer(root->children[i], layer_id,
+                                                    anchor_mask);
+            }
+        }
+    }
+
+    if (root->sub) {
+        connector_collect_anchors_for_layer(root->sub, layer_id, anchor_mask);
+    }
 }

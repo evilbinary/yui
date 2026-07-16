@@ -1,9 +1,14 @@
 #include "draggable_component.h"
+#include "connector_component.h"
 #include "../backend.h"
 #include "../layout.h"
+#include "../layer.h"
 #include "../util.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+extern Layer* g_ui_root;
 
 static void draggable_ensure_absolute_layout(Layer* layer)
 {
@@ -63,6 +68,177 @@ static int draggable_is_drag_handle(DraggableComponent* component, Layer* layer,
     return is_point_in_rect(x, y, handle_rect);
 }
 
+static int draggable_dot_handle_mouse_event(Layer* layer, MouseEvent* event)
+{
+    (void)layer;
+    (void)event;
+    return 0;
+}
+
+static int draggable_append_child(Layer* parent, Layer* child)
+{
+    Layer** children;
+
+    if (!parent || !child) {
+        return -1;
+    }
+
+    child->parent = parent;
+    children = (Layer**)realloc(parent->children,
+                              (size_t)(parent->child_count + 1) * sizeof(Layer*));
+    if (!children) {
+        return -1;
+    }
+
+    parent->children = children;
+    parent->children[parent->child_count++] = child;
+    return 0;
+}
+
+static Layer* draggable_create_dot_layer(DraggableComponent* component, ConnectorAnchor anchor)
+{
+    Layer* parent = component->layer;
+    int radius = component->dot_size;
+    int size = radius * 2;
+    Layer* dot;
+    static const char suffixes[] = "CTBLR";
+
+    dot = layer_create(parent, 0, 0, size, size);
+    if (!dot) {
+        return NULL;
+    }
+
+    dot->type = VIEW;
+    snprintf(dot->id, sizeof(dot->id), "%s_dot%c", parent->id, suffixes[anchor]);
+    dot->bg_color = component->dot_color;
+    dot->radius = radius;
+    dot->focusable = 0;
+    dot->handle_mouse_event = draggable_dot_handle_mouse_event;
+    dot->fixed_width = size;
+    dot->fixed_height = size;
+    return dot;
+}
+
+static void draggable_anchor_offset(DraggableComponent* component, ConnectorAnchor anchor,
+                                    int* rel_x, int* rel_y)
+{
+    Layer* parent = component->layer;
+    int radius = component->dot_size;
+    int center_x = parent->rect.w / 2;
+    int center_y = parent->rect.h / 2;
+
+    switch (anchor) {
+        case CONNECTOR_ANCHOR_TOP:
+            *rel_x = center_x - radius;
+            *rel_y = -radius;
+            break;
+        case CONNECTOR_ANCHOR_BOTTOM:
+            *rel_x = center_x - radius;
+            *rel_y = parent->rect.h - radius;
+            break;
+        case CONNECTOR_ANCHOR_LEFT:
+            *rel_x = -radius;
+            *rel_y = center_y - radius;
+            break;
+        case CONNECTOR_ANCHOR_RIGHT:
+            *rel_x = parent->rect.w - radius;
+            *rel_y = center_y - radius;
+            break;
+        case CONNECTOR_ANCHOR_CENTER:
+        default:
+            *rel_x = center_x - radius;
+            *rel_y = center_y - radius;
+            break;
+    }
+}
+
+static void draggable_update_dot_layer(DraggableComponent* component, Layer* dot,
+                                       int rel_x, int rel_y)
+{
+    Layer* parent = component->layer;
+    int size = component->dot_size * 2;
+
+    if (!dot || !parent) {
+        return;
+    }
+
+    dot->layout_base_rect.x = rel_x;
+    dot->layout_base_rect.y = rel_y;
+    dot->layout_base_rect.w = size;
+    dot->layout_base_rect.h = size;
+    dot->layout_base_valid = 1;
+    dot->rect.x = parent->rect.x + rel_x;
+    dot->rect.y = parent->rect.y + rel_y;
+    dot->rect.w = size;
+    dot->rect.h = size;
+    dot->bg_color = component->dot_color;
+    dot->radius = component->dot_size;
+}
+
+static void draggable_sync_dots(DraggableComponent* component)
+{
+    Layer* parent;
+    unsigned int anchor_mask = 0;
+    int anchor;
+
+    if (!component || !component->layer) {
+        return;
+    }
+
+    parent = component->layer;
+
+    if (component->show_dots && parent->id[0] && g_ui_root) {
+        connector_collect_anchors_for_layer(g_ui_root, parent->id, &anchor_mask);
+    }
+
+    if (!anchor_mask || component->dot_size <= 0) {
+        for (anchor = CONNECTOR_ANCHOR_CENTER; anchor <= CONNECTOR_ANCHOR_RIGHT; anchor++) {
+            if (component->anchor_dots[anchor]) {
+                layer_hide(component->anchor_dots[anchor]);
+            }
+        }
+        return;
+    }
+
+    for (anchor = CONNECTOR_ANCHOR_CENTER; anchor <= CONNECTOR_ANCHOR_RIGHT; anchor++) {
+        int rel_x;
+        int rel_y;
+        Layer* dot = component->anchor_dots[anchor];
+
+        if (!(anchor_mask & (1u << anchor))) {
+            if (dot) {
+                layer_hide(dot);
+            }
+            continue;
+        }
+
+        if (!dot) {
+            dot = draggable_create_dot_layer(component, (ConnectorAnchor)anchor);
+            if (!dot || draggable_append_child(parent, dot) != 0) {
+                return;
+            }
+            component->anchor_dots[anchor] = dot;
+        } else {
+            layer_set_visible(dot, VISIBLE);
+        }
+
+        draggable_anchor_offset(component, (ConnectorAnchor)anchor, &rel_x, &rel_y);
+        draggable_update_dot_layer(component, dot, rel_x, rel_y);
+    }
+}
+
+static void draggable_component_layout(Layer* layer)
+{
+    DraggableComponent* component;
+
+    if (!layer || !layer->component) {
+        return;
+    }
+
+    component = (DraggableComponent*)layer->component;
+    draggable_sync_dots(component);
+}
+
 static void draggable_layer_destroy(Layer* layer)
 {
     if (!layer || !layer->component) {
@@ -87,9 +263,13 @@ DraggableComponent* draggable_component_create(Layer* layer)
 
     component->layer = layer;
     component->drag_handle_height = 36;
+    component->show_dots = 1;
+    component->dot_size = 4;
+    component->dot_color = (Color){137, 180, 250, 255};
     draggable_ensure_absolute_layout(layer);
     layer->component = component;
     layer->render = draggable_component_render;
+    layer->layout = draggable_component_layout;
     layer->handle_mouse_event = draggable_component_handle_mouse_event;
     layer->on_destroy = draggable_layer_destroy;
 
@@ -112,6 +292,26 @@ DraggableComponent* draggable_component_create_from_json(Layer* layer, cJSON* js
     }
 
     style = json_obj ? cJSON_GetObjectItem(json_obj, "style") : NULL;
+    if (style) {
+        cJSON* dots_item = cJSON_GetObjectItem(style, "dots");
+        if (dots_item) {
+            if (cJSON_IsBool(dots_item)) {
+                component->show_dots = cJSON_IsTrue(dots_item);
+            } else if (cJSON_IsNumber(dots_item)) {
+                component->show_dots = dots_item->valueint != 0;
+            }
+        }
+
+        if (cJSON_HasObjectItem(style, "dotSize")) {
+            component->dot_size = cJSON_GetObjectItem(style, "dotSize")->valueint;
+        }
+
+        if (cJSON_HasObjectItem(style, "dotColor")) {
+            parse_color(cJSON_GetObjectItem(style, "dotColor")->valuestring,
+                        &component->dot_color);
+        }
+    }
+
     if (style && layer->set_style) {
         layer->set_style(layer, style);
     } else if (style) {
@@ -132,6 +332,28 @@ void draggable_component_destroy(DraggableComponent* component)
     if (component) {
         free(component);
     }
+}
+
+int draggable_component_get_dot_style(Layer* layer, int* show_dots, int* dot_size,
+                                      Color* dot_color)
+{
+    DraggableComponent* component;
+
+    if (!layer || layer->type != DRAGGABLE || !layer->component) {
+        return 0;
+    }
+
+    component = (DraggableComponent*)layer->component;
+    if (show_dots) {
+        *show_dots = component->show_dots;
+    }
+    if (dot_size) {
+        *dot_size = component->dot_size;
+    }
+    if (dot_color) {
+        *dot_color = component->dot_color;
+    }
+    return 1;
 }
 
 void draggable_component_render(Layer* layer)
@@ -167,7 +389,25 @@ void draggable_component_render(Layer* layer)
     handle_color.r = (uint8_t)(handle_color.r * 85 / 100);
     handle_color.g = (uint8_t)(handle_color.g * 85 / 100);
     handle_color.b = (uint8_t)(handle_color.b * 85 / 100);
-    backend_render_fill_rect(&handle_rect, handle_color);
+
+    if (layer->radius > 0) {
+        int radius = layer->radius;
+        if (radius > handle_rect.h / 2) {
+            radius = handle_rect.h / 2;
+        }
+        backend_render_rounded_rect(&handle_rect, handle_color, radius);
+        if (handle_rect.h > radius) {
+            Rect flat_bottom = {
+                handle_rect.x,
+                handle_rect.y + handle_rect.h - radius,
+                handle_rect.w,
+                radius
+            };
+            backend_render_fill_rect(&flat_bottom, handle_color);
+        }
+    } else {
+        backend_render_fill_rect(&handle_rect, handle_color);
+    }
 }
 
 int draggable_component_handle_mouse_event(Layer* layer, MouseEvent* event)
