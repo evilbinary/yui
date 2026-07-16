@@ -13,8 +13,70 @@
 #include "render.h"
 #include "yaml_cjson.h"
 
+#ifdef HAS_JS_MODULE
+#include "js_module.h"
+#endif
+
 static Layer* g_root = NULL;
-static char assets_dir_from_init[MAX_PATH];
+static char g_json_path[MAX_PATH];
+static char g_assets_override[MAX_PATH];
+
+static const char* yui_default_assets_dir(const char* json_path, const char* assets_override) {
+    if (assets_override && assets_override[0]) {
+        return assets_override;
+    }
+    if (json_path && (strncmp(json_path, "app/", 4) == 0 || strncmp(json_path, "app\\", 4) == 0)) {
+        return "app/assets";
+    }
+    return "assets";
+}
+
+static void yui_ensure_root_assets(Layer* root, const char* json_path, const char* assets_override) {
+    const char* assets_dir;
+
+    if (!root) {
+        return;
+    }
+    if (root->assets != NULL && root->assets->path[0] != '\0') {
+        return;
+    }
+    assets_dir = yui_default_assets_dir(json_path, assets_override);
+    if (root->assets == NULL) {
+        root->assets = malloc(sizeof(Assets));
+    }
+    if (root->assets) {
+        snprintf(root->assets->path, sizeof(root->assets->path), "%s", assets_dir);
+    }
+}
+
+static void yui_propagate_assets(Layer* layer) {
+    int i;
+
+    if (!layer || !layer->assets) {
+        return;
+    }
+    if (layer->children) {
+        for (i = 0; i < layer->child_count; i++) {
+            Layer* child = layer->children[i];
+            if (child && child->assets == NULL) {
+                child->assets = layer->assets;
+            }
+            yui_propagate_assets(child);
+        }
+    }
+    if (layer->sub) {
+        if (layer->sub->assets == NULL) {
+            layer->sub->assets = layer->assets;
+        }
+        yui_propagate_assets(layer->sub);
+    }
+    if (layer->item_template) {
+        if (layer->item_template->assets == NULL) {
+            layer->item_template->assets = layer->assets;
+        }
+        yui_propagate_assets(layer->item_template);
+    }
+}
 
 static bool yui_is_yaml_file(const char* filename) {
     const char* ext;
@@ -48,7 +110,52 @@ static cJSON* yui_parse_ui_file(const char* file_path) {
     return parse_json((char*)file_path);
 }
 
-static void yui_apply_root_layout(Layer* root, const char* assets_dir) {
+#ifdef HAS_JS_MODULE
+static void yui_load_js_scripts(cJSON* root_json, const char* json_path) {
+    int count = 0;
+    cJSON* source;
+
+    if (!root_json || !json_path) {
+        return;
+    }
+
+    source = cJSON_GetObjectItem(root_json, "source");
+    if (source && cJSON_IsString(source)) {
+        const char* source_path = source->valuestring;
+        cJSON* source_json = yui_parse_ui_file(source_path);
+        if (source_json) {
+            count = js_module_load_from_json(source_json, source_path, 0);
+            cJSON_Delete(source_json);
+        } else {
+            fprintf(stderr, "yui_boot: failed to load source JSON: %s\n", source_path);
+        }
+    }
+    if (count <= 0) {
+        js_module_load_from_json(root_json, json_path, 0);
+    } else {
+        js_module_load_from_json(root_json, json_path, 1);
+    }
+}
+#endif
+
+static void yui_prepare_root_resources(Layer* root, const char* assets_override) {
+    if (!root) {
+        return;
+    }
+    if (root->font == NULL) {
+        root->font = malloc(sizeof(Font));
+        if (root->font) {
+            snprintf(root->font->path, sizeof(root->font->path), "%s", "Roboto-Regular.ttf");
+            root->font->size = 16;
+            snprintf(root->font->weight, sizeof(root->font->weight), "%s", "normal");
+        }
+    }
+    yui_ensure_root_assets(root, g_json_path, assets_override);
+    yui_propagate_assets(root);
+    load_all_fonts(root);
+}
+
+static void yui_apply_root_layout(Layer* root) {
     int window_width = 0;
     int window_height = 0;
 
@@ -72,24 +179,6 @@ static void yui_apply_root_layout(Layer* root, const char* assets_dir) {
         backend_set_window_size(root->text);
     }
 
-    if (root->font == NULL) {
-        root->font = malloc(sizeof(Font));
-        if (root->font) {
-            snprintf(root->font->path, sizeof(root->font->path), "%s", "Roboto-Regular.ttf");
-        }
-    }
-    if (root->assets == NULL) {
-        root->assets = malloc(sizeof(Assets));
-        if (root->assets) {
-            snprintf(root->assets->path, sizeof(root->assets->path), "%s", "assets");
-        }
-    }
-
-    if (root->assets && assets_dir && assets_dir[0]) {
-        snprintf(root->assets->path, sizeof(root->assets->path), "%s", assets_dir);
-    }
-
-    load_all_fonts(root);
     load_textures(root);
     layout_layer(root);
     backend_set_ui_root(root);
@@ -111,11 +200,11 @@ int yui_init(const char* json_path, const char* assets_dir) {
         return -1;
     }
 
+    snprintf(g_json_path, sizeof(g_json_path), "%s", json_path);
     if (assets_dir && assets_dir[0]) {
-        snprintf(assets_dir_from_init, sizeof(assets_dir_from_init), "%s", assets_dir);
+        snprintf(g_assets_override, sizeof(g_assets_override), "%s", assets_dir);
     } else {
-        assets_dir_from_init[0] = '\0';
-        assets_dir = "assets";
+        g_assets_override[0] = '\0';
     }
 
     if (backend_init() != 0) {
@@ -123,18 +212,37 @@ int yui_init(const char* json_path, const char* assets_dir) {
     }
     popup_manager_init();
 
+#ifdef HAS_JS_MODULE
+    if (js_module_init() != 0) {
+        fprintf(stderr, "yui_boot: failed to initialize JavaScript engine\n");
+        return -1;
+    }
+#endif
+
     root_json = yui_parse_ui_file(json_path);
     if (!root_json) {
         return -1;
     }
 
     g_root = layer_create_from_json(root_json, NULL);
-    cJSON_Delete(root_json);
     if (!g_root) {
+        cJSON_Delete(root_json);
         return -1;
     }
 
-    yui_apply_root_layout(g_root, assets_dir);
+#ifdef HAS_JS_MODULE
+    js_module_init_layer(g_root);
+#endif
+
+    yui_prepare_root_resources(g_root, g_assets_override[0] ? g_assets_override : NULL);
+
+#ifdef HAS_JS_MODULE
+    yui_load_js_scripts(root_json, json_path);
+#endif
+
+    cJSON_Delete(root_json);
+
+    yui_apply_root_layout(g_root);
     return 0;
 }
 
@@ -164,10 +272,14 @@ void yui_on_touch(int pointer_id, int x, int y, int phase) {
 }
 
 void yui_shutdown(void) {
+#ifdef HAS_JS_MODULE
+    js_module_cleanup();
+#endif
     popup_manager_cleanup();
     backend_quit();
     g_root = NULL;
-    assets_dir_from_init[0] = '\0';
+    g_json_path[0] = '\0';
+    g_assets_override[0] = '\0';
 }
 
 Layer* yui_get_root(void) {

@@ -14,7 +14,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 
 int main(int argc, char* argv[]) {
     const char* json_path = "app/app.json";
-    const char* assets_dir = "app/assets";
+    const char* assets_dir = NULL;
 
     if (argc > 1) {
         json_path = argv[1];
