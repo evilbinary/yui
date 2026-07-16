@@ -54,9 +54,7 @@
                     "to": { "id": "nodeB", "anchor": "left" },
                     "style": {
                         "color": "#89b4fa",
-                        "strokeWidth": 2,
-                        "dot": true,
-                        "dotSize": 4
+                        "strokeWidth": 2
                     }
                 },
                 {
@@ -68,9 +66,7 @@
                     "to": { "id": "nodeC", "anchor": "left" },
                     "style": {
                         "color": "#a6e3a1",
-                        "strokeWidth": 2,
-                        "dot": true,
-                        "dotSize": 4
+                        "strokeWidth": 2
                     }
                 },
                 {
@@ -78,6 +74,7 @@
                     "type": "Draggable",
                     "position": [40, 50],
                     "size": [280, 248],
+                    "dragHandleHeight": 40,
                     "style": {
                         "bgColor": "#313244",
                         "borderRadius": 10
@@ -97,7 +94,7 @@
                                 {
                                     "id": "nodeATitle",
                                     "type": "Label",
-                                    "text": "A · 数据源",
+                                    "text": "A · 数据源  (按住标题栏拖动)",
                                     "size": [0, 20],
                                     "style": {
                                         "color": "#89b4fa",

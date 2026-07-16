@@ -13,6 +13,7 @@ typedef struct DraggableComponent {
     int dragging;
     int drag_offset_x;
     int drag_offset_y;
+    int drag_handle_height;
 } DraggableComponent;
 
 DraggableComponent* draggable_component_create(Layer* layer);

@@ -45,6 +45,24 @@ static void draggable_sync_layout_base(Layer* layer)
     layer->layout_base_valid = 1;
 }
 
+static int draggable_is_drag_handle(DraggableComponent* component, Layer* layer,
+                                    int x, int y)
+{
+    Rect handle_rect;
+
+    if (!component || !layer) {
+        return 0;
+    }
+
+    if (!is_point_in_rect(x, y, layer->rect)) {
+        return 0;
+    }
+
+    handle_rect = layer->rect;
+    handle_rect.h = component->drag_handle_height;
+    return is_point_in_rect(x, y, handle_rect);
+}
+
 static void draggable_layer_destroy(Layer* layer)
 {
     if (!layer || !layer->component) {
@@ -68,6 +86,7 @@ DraggableComponent* draggable_component_create(Layer* layer)
     }
 
     component->layer = layer;
+    component->drag_handle_height = 36;
     draggable_ensure_absolute_layout(layer);
     layer->component = component;
     layer->render = draggable_component_render;
@@ -81,9 +100,15 @@ DraggableComponent* draggable_component_create_from_json(Layer* layer, cJSON* js
 {
     DraggableComponent* component = draggable_component_create(layer);
     cJSON* style;
+    cJSON* handle_item;
 
     if (!component) {
         return NULL;
+    }
+
+    handle_item = json_obj ? cJSON_GetObjectItem(json_obj, "dragHandleHeight") : NULL;
+    if (handle_item && cJSON_IsNumber(handle_item)) {
+        component->drag_handle_height = handle_item->valueint;
     }
 
     style = json_obj ? cJSON_GetObjectItem(json_obj, "style") : NULL;
@@ -111,15 +136,38 @@ void draggable_component_destroy(DraggableComponent* component)
 
 void draggable_component_render(Layer* layer)
 {
-    if (!layer || layer->bg_color.a <= 0) {
+    DraggableComponent* component;
+    Rect handle_rect;
+    Color handle_color;
+
+    if (!layer || !layer->component) {
         return;
     }
 
-    if (layer->radius > 0) {
-        backend_render_rounded_rect(&layer->rect, layer->bg_color, layer->radius);
-    } else {
-        backend_render_fill_rect(&layer->rect, layer->bg_color);
+    component = (DraggableComponent*)layer->component;
+
+    if (layer->bg_color.a > 0) {
+        if (layer->radius > 0) {
+            backend_render_rounded_rect(&layer->rect, layer->bg_color, layer->radius);
+        } else {
+            backend_render_fill_rect(&layer->rect, layer->bg_color);
+        }
     }
+
+    if (component->drag_handle_height <= 0) {
+        return;
+    }
+
+    handle_rect = layer->rect;
+    handle_rect.h = component->drag_handle_height;
+    if (handle_rect.h > layer->rect.h) {
+        handle_rect.h = layer->rect.h;
+    }
+    handle_color = layer->bg_color;
+    handle_color.r = (uint8_t)(handle_color.r * 85 / 100);
+    handle_color.g = (uint8_t)(handle_color.g * 85 / 100);
+    handle_color.b = (uint8_t)(handle_color.b * 85 / 100);
+    backend_render_fill_rect(&handle_rect, handle_color);
 }
 
 int draggable_component_handle_mouse_event(Layer* layer, MouseEvent* event)
@@ -140,17 +188,17 @@ int draggable_component_handle_mouse_event(Layer* layer, MouseEvent* event)
         layer->rect.y = event->y - component->drag_offset_y;
         draggable_sync_layout_base(layer);
         layout_layer(layer);
-        return 0;
+        return 1;
     }
 
     if (event->state == SDL_PRESSED && event->button == SDL_BUTTON_LEFT) {
-        if (!is_point_in_rect(event->x, event->y, layer->rect)) {
+        if (!draggable_is_drag_handle(component, layer, event->x, event->y)) {
             return 0;
         }
         component->dragging = 1;
         component->drag_offset_x = event->x - layer->rect.x;
         component->drag_offset_y = event->y - layer->rect.y;
-        return 0;
+        return 1;
     }
 
     if (event->state == SDL_RELEASED && event->button == SDL_BUTTON_LEFT) {
@@ -160,7 +208,7 @@ int draggable_component_handle_mouse_event(Layer* layer, MouseEvent* event)
         component->dragging = 0;
         draggable_sync_layout_base(layer);
         layout_layer(layer);
-        return 0;
+        return 1;
     }
 
     return 0;

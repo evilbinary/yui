@@ -92,9 +92,7 @@ function addEdgeAC() {
                 curve: "auto-vertical",
                 style: {
                     color: "#f9e2af",
-                    strokeWidth: 2,
-                    dot: true,
-                    dotSize: 4
+                    strokeWidth: 2
                 }
             }]
         }
