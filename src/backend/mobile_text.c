@@ -5,9 +5,16 @@
 #include "util.h"
 
 #include <GLES2/gl2.h>
+/* #include <android/log.h> */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+/* #define MOBILE_FONT_TAG "YuiFont" */
+/* #define MOBILE_FONT_LOG(...) __android_log_print(ANDROID_LOG_INFO, MOBILE_FONT_TAG, __VA_ARGS__) */
+/* #define MOBILE_FONT_WARN(...) __android_log_print(ANDROID_LOG_WARN, MOBILE_FONT_TAG, __VA_ARGS__) */
+#define MOBILE_FONT_LOG(...) ((void)0)
+#define MOBILE_FONT_WARN(...) ((void)0)
 
 #define STB_TRUETYPE_IMPLEMENTATION
 #define STBTT_STATIC
@@ -25,6 +32,7 @@ DFont* mobile_load_font(const char* font_path, int size, const char* weight);
 static unsigned char* mobile_read_file(const char* path, size_t* out_size);
 
 static char g_font_fallback_path[MAX_PATH] = "";
+static char g_fallback_loaded_path[MAX_PATH] = "";
 static DFont* g_fallback_font = NULL;
 static int g_fallback_font_size = 0;
 
@@ -35,6 +43,7 @@ void mobile_set_font_fallback_path(const char* path) {
     }
     strncpy(g_font_fallback_path, path, sizeof(g_font_fallback_path) - 1);
     g_font_fallback_path[sizeof(g_font_fallback_path) - 1] = '\0';
+    MOBILE_FONT_LOG("fontFallback path set: %s", g_font_fallback_path);
 }
 
 int mobile_has_font_fallback(void) {
@@ -64,10 +73,55 @@ static int mobile_get_font_size(DFont* font) {
 }
 
 static int mobile_glyph_is_provided(MobileFont* mobile_font, int cp) {
+    int glyph;
+    int notdef;
     if (!mobile_font || cp <= 0) {
         return 0;
     }
-    return stbtt_FindGlyphIndex(&mobile_font->info, cp) != 0;
+    glyph = stbtt_FindGlyphIndex(&mobile_font->info, cp);
+    if (glyph == 0) {
+        return 0;
+    }
+    /* Roboto 等主字体会把 emoji 映射到 .notdef，stb 仍返回非 0 字形 id */
+    notdef = stbtt_FindGlyphIndex(&mobile_font->info, 0x10FFFF);
+    if (notdef != 0 && glyph == notdef) {
+        return 0;
+    }
+    notdef = stbtt_FindGlyphIndex(&mobile_font->info, 0);
+    if (notdef != 0 && glyph == notdef) {
+        return 0;
+    }
+    return 1;
+}
+
+static int mobile_font_has_cbdt(const unsigned char* data, size_t size) {
+    int offset;
+    const unsigned char* base;
+    uint16_t num_tables;
+    int i;
+
+    if (!data || size < 16) {
+        return 0;
+    }
+
+    offset = stbtt_GetFontOffsetForIndex(data, 0);
+    if (offset < 0 || (size_t)offset + 12 > size) {
+        return 0;
+    }
+
+    base = data + offset;
+    num_tables = (uint16_t)((base[4] << 8) | base[5]);
+    if ((size_t)offset + 12u + (size_t)num_tables * 16u > size) {
+        return 0;
+    }
+
+    for (i = 0; i < num_tables; i++) {
+        const unsigned char* entry = base + 12 + i * 16;
+        if (entry[0] == 'C' && entry[1] == 'B' && entry[2] == 'D' && entry[3] == 'T') {
+            return 1;
+        }
+    }
+    return 0;
 }
 
 static DFont* mobile_load_font_strict(const char* font_path, int size, const char* weight) {
@@ -82,7 +136,13 @@ static DFont* mobile_load_font_strict(const char* font_path, int size, const cha
 
     data = mobile_read_file(font_path, &data_size);
     if (!data) {
-        fprintf(stderr, "mobile_text: failed to load font: %s\n", font_path);
+        MOBILE_FONT_WARN("read failed: %s", font_path);
+        return NULL;
+    }
+
+    if (mobile_font_has_cbdt(data, data_size)) {
+        MOBILE_FONT_LOG("skip CBDT font: %s (size=%zu)", font_path, data_size);
+        free(data);
         return NULL;
     }
 
@@ -93,7 +153,7 @@ static DFont* mobile_load_font_strict(const char* font_path, int size, const cha
     }
 
     if (!stbtt_InitFont(&mobile_font->info, data, stbtt_GetFontOffsetForIndex(data, 0))) {
-        fprintf(stderr, "mobile_text: stbtt_InitFont failed for %s\n", font_path);
+        MOBILE_FONT_WARN("stbtt_InitFont failed: %s", font_path);
         free(data);
         free(mobile_font);
         return NULL;
@@ -114,11 +174,22 @@ static DFont* mobile_load_font_strict(const char* font_path, int size, const cha
     font->size = mobile_font->size;
     font->priv = mobile_font;
     (void)weight;
+    MOBILE_FONT_LOG("loaded font: %s size=%d", font_path, mobile_font->size);
     return font;
 }
 
 static DFont* mobile_get_fallback_font_for(DFont* primary) {
+    static const char* k_system_fallbacks[] = {
+        "/system/fonts/NotoSansSymbols-Regular-Subsetted2.ttf",
+        "/system/fonts/NotoSansSymbols-Regular-Subsetted.ttf",
+        "/product/fonts/NotoSansSymbols-Regular-Subsetted2.ttf",
+        NULL,
+    };
+    char sibling_path[MAX_PATH];
+    const char* loaded_from = NULL;
+    const char* slash;
     int size;
+    int i;
 
     if (!mobile_has_font_fallback() || !primary) {
         return NULL;
@@ -134,13 +205,51 @@ static DFont* mobile_get_fallback_font_for(DFont* primary) {
         g_fallback_font_size = 0;
     }
 
+    g_fallback_loaded_path[0] = '\0';
     g_fallback_font = mobile_load_font_strict(g_font_fallback_path, size, "normal");
-    /* NotoColorEmoji 是 CBDT 位图字体，stb 无法解析 */
-    if (!g_fallback_font) {
-        g_fallback_font = mobile_load_font_strict("/system/fonts/NotoEmoji-Regular.ttf", size, "normal");
-    }
     if (g_fallback_font) {
+        loaded_from = g_font_fallback_path;
+    }
+
+    if (!g_fallback_font) {
+        snprintf(sibling_path, sizeof(sibling_path), "%s", g_font_fallback_path);
+        slash = strrchr(sibling_path, '/');
+        if (!slash) {
+            slash = strrchr(sibling_path, '\\');
+        }
+        if (slash) {
+            strcpy(slash + 1, "NotoEmoji-Regular.ttf");
+            g_fallback_font = mobile_load_font_strict(sibling_path, size, "normal");
+            if (g_fallback_font) {
+                loaded_from = sibling_path;
+            }
+        }
+    }
+
+    if (!g_fallback_font) {
+        g_fallback_font = mobile_load_font_strict("app/assets/NotoEmoji-Regular.ttf", size, "normal");
+        if (g_fallback_font) {
+            loaded_from = "app/assets/NotoEmoji-Regular.ttf";
+        }
+    }
+
+    if (!g_fallback_font) {
+        for (i = 0; k_system_fallbacks[i]; i++) {
+            g_fallback_font = mobile_load_font_strict(k_system_fallbacks[i], size, "normal");
+            if (g_fallback_font) {
+                loaded_from = k_system_fallbacks[i];
+                break;
+            }
+        }
+    }
+
+    if (g_fallback_font && loaded_from) {
+        strncpy(g_fallback_loaded_path, loaded_from, sizeof(g_fallback_loaded_path) - 1);
+        g_fallback_loaded_path[sizeof(g_fallback_loaded_path) - 1] = '\0';
         g_fallback_font_size = size;
+        MOBILE_FONT_LOG("fallback ready: %s (px=%d)", g_fallback_loaded_path, size);
+    } else {
+        MOBILE_FONT_WARN("fallback load failed, configured=%s", g_font_fallback_path);
     }
     return g_fallback_font;
 }
@@ -167,6 +276,9 @@ static DFont* mobile_resolve_render_font(DFont* primary, const char* text, DFont
         *out_fallback = fallback;
     }
     if (!fallback || fallback == primary || !fallback->priv || !primary->priv) {
+        if (mobile_has_font_fallback()) {
+            MOBILE_FONT_WARN("render '%.32s' -> no fallback font (fb=%p)", text, (void*)fallback);
+        }
         return primary;
     }
 
@@ -175,26 +287,42 @@ static DFont* mobile_resolve_render_font(DFont* primary, const char* text, DFont
     cursor = text;
     while (*cursor) {
         uint32_t codepoint = 0;
+        int pri_g;
+        int fb_g;
+        int pri_ok;
+        int fb_ok;
 
         if (!utf8_decode_codepoint(&cursor, &codepoint)) {
             break;
         }
-        if (mobile_glyph_is_provided(primary_font, (int)codepoint)) {
+        pri_g = stbtt_FindGlyphIndex(&primary_font->info, (int)codepoint);
+        fb_g = stbtt_FindGlyphIndex(&fallback_font->info, (int)codepoint);
+        pri_ok = mobile_glyph_is_provided(primary_font, (int)codepoint);
+        fb_ok = mobile_glyph_is_provided(fallback_font, (int)codepoint);
+        if (codepoint >= 0x1F300u || codepoint == 0x26A1 || codepoint == 0x1F514) {
+            MOBILE_FONT_LOG("cp U+%X pri_g=%d fb_g=%d pri_ok=%d fb_ok=%d",
+                            (unsigned)codepoint, pri_g, fb_g, pri_ok, fb_ok);
+        }
+        if (pri_ok) {
             any_in_primary = 1;
         } else {
             all_in_primary = 0;
         }
-        if (!mobile_glyph_is_provided(fallback_font, (int)codepoint)) {
+        if (!fb_ok) {
             all_in_fallback = 0;
         }
     }
 
     if (all_in_primary) {
+        MOBILE_FONT_LOG("render '%.32s' -> primary only", text);
         return primary;
     }
     if (all_in_fallback && !any_in_primary) {
+        MOBILE_FONT_LOG("render '%.32s' -> fallback only", text);
         return fallback;
     }
+    MOBILE_FONT_LOG("render '%.32s' -> mixed (pri=%d fb=%d any_pri=%d)",
+                    text, all_in_primary, all_in_fallback, any_in_primary);
     return NULL;
 }
 
@@ -722,8 +850,10 @@ Texture* mobile_render_text_texture(DFont* font, const char* text, Color color) 
     if (render_font == NULL && fallback && fallback != font) {
         Texture* mixed = mobile_render_mixed_texture(font, fallback, text, color);
         if (mixed) {
+            MOBILE_FONT_LOG("texture mixed ok for '%.32s'", text);
             return mixed;
         }
+        MOBILE_FONT_WARN("mixed render failed for '%.32s'", text);
         render_font = font;
     }
 
@@ -744,9 +874,11 @@ Texture* mobile_render_text_texture(DFont* font, const char* text, Color color) 
         bitmap = mobile_rasterize_font_text(mobile_font, NULL, text, color, &width, &height);
     }
     if (!bitmap) {
+        MOBILE_FONT_WARN("rasterize failed for '%.32s'", text);
         return NULL;
     }
 
+    MOBILE_FONT_LOG("texture ok '%.32s' %dx%d", text, width, height);
     return mobile_upload_text_bitmap(bitmap, width, height);
 }
 
