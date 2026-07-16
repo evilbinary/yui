@@ -2,6 +2,7 @@ package com.yui
 
 import android.content.Context
 import android.view.Choreographer
+import android.view.MotionEvent
 import android.view.SurfaceHolder
 import android.view.SurfaceView
 import java.io.File
@@ -14,7 +15,46 @@ class YuiView(context: Context) : SurfaceView(context), SurfaceHolder.Callback, 
     private var assetsRoot: String = File(dataDir, "app/assets").absolutePath
 
     init {
+        isClickable = true
         holder.addCallback(this)
+    }
+
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        if (!running) {
+            return super.onTouchEvent(event)
+        }
+
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN -> {
+                val index = event.actionIndex
+                nativeOnTouch(
+                    event.getPointerId(index),
+                    event.getX(index),
+                    event.getY(index),
+                    0
+                )
+            }
+            MotionEvent.ACTION_MOVE -> {
+                for (i in 0 until event.pointerCount) {
+                    nativeOnTouch(
+                        event.getPointerId(i),
+                        event.getX(i),
+                        event.getY(i),
+                        1
+                    )
+                }
+            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP, MotionEvent.ACTION_CANCEL -> {
+                val index = event.actionIndex
+                nativeOnTouch(
+                    event.getPointerId(index),
+                    event.getX(index),
+                    event.getY(index),
+                    2
+                )
+            }
+        }
+        return true
     }
 
     override fun surfaceCreated(holder: SurfaceHolder) {
@@ -82,6 +122,7 @@ class YuiView(context: Context) : SurfaceView(context), SurfaceHolder.Callback, 
         density: Float
     )
     private external fun nativeResize(width: Int, height: Int)
+    private external fun nativeOnTouch(pointerId: Int, x: Float, y: Float, phase: Int)
     private external fun nativeTick()
     private external fun nativeShutdown()
 

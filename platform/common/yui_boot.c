@@ -260,13 +260,13 @@ void yui_resize(int width, int height) {
     float d = scale > 0.0f ? scale : 1.0f;
 
     backend_set_windowsize(width, height);
-    if (g_root) {
-        g_root->rect.x = 0;
-        g_root->rect.y = 0;
-        g_root->rect.w = (int)(width / d);
-        g_root->rect.h = (int)(height / d);
-        layout_layer(g_root);
-    }
+    // if (g_root) {
+    //     g_root->rect.x = 0;
+    //     g_root->rect.y = 0;
+    //     g_root->rect.w = (int)(width / d);
+    //     g_root->rect.h = (int)(height / d);
+    //     layout_layer(g_root);
+    // }
 }
 
 void yui_tick(void) {

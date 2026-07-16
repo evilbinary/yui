@@ -78,6 +78,16 @@ Java_com_yui_YuiView_nativeResize(JNIEnv* env, jobject thiz, jint width, jint he
 }
 
 extern "C" JNIEXPORT void JNICALL
+Java_com_yui_YuiView_nativeOnTouch(JNIEnv* env, jobject thiz, jint pointerId,
+                                   jfloat x, jfloat y, jint phase) {
+    (void)env;
+    (void)thiz;
+    if (g_initialized) {
+        yui_on_touch((int)pointerId, (int)x, (int)y, (int)phase);
+    }
+}
+
+extern "C" JNIEXPORT void JNICALL
 Java_com_yui_YuiView_nativeTick(JNIEnv* env, jobject thiz) {
     (void)env;
     (void)thiz;
