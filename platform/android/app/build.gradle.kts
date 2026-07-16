@@ -37,7 +37,8 @@ android {
                 val yuiRepoRoot = rootProject.projectDir.resolve("../..").normalize().toString().replace('\\', '/')
                 arguments += listOf(
                     "-DYUI_REPO_ROOT=$yuiRepoRoot",
-                    "-DANDROID_STL=c++_shared"
+                    "-DANDROID_STL=c++_shared",
+                    "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"
                 )
             }
         }

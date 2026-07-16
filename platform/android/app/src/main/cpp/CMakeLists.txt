@@ -1,4 +1,8 @@
 cmake_minimum_required(VERSION 3.22)
+
+# Required for Android 15+ devices/emulators with 16KB page size.
+set(ANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES ON)
+
 project(yui_android)
 
 if(NOT DEFINED YUI_REPO_ROOT)
@@ -43,6 +47,10 @@ find_library(log-lib log)
 find_library(android-lib android)
 find_library(egl-lib EGL)
 find_library(gles-lib GLESv2)
+
+target_link_options(yui_android_jni PRIVATE
+    "-Wl,-z,max-page-size=16384"
+)
 
 target_link_libraries(yui_android_jni
     yui
