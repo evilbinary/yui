@@ -9,6 +9,29 @@
 
 extern Layer* g_ui_root;
 
+typedef enum {
+    CONNECTOR_DRAG_CREATE = 0,
+    CONNECTOR_DRAG_MODIFY = 1,
+} ConnectorDragMode;
+
+typedef struct ConnectorDragState {
+    int active;
+    ConnectorDragMode mode;
+    Layer* canvas;
+    Layer* capture_layer;
+    Layer* modify_layer;
+    int modify_from_end;
+    Layer* from_layer;
+    ConnectorAnchor from_anchor;
+    int dot_size;
+    int mouse_x;
+    int mouse_y;
+    Layer* hover_layer;
+    ConnectorAnchor hover_anchor;
+} ConnectorDragState;
+
+static ConnectorDragState g_connector_drag;
+
 static void connector_merge_anchor_entry(ConnectorAnchorEntry* entries,
                                          int* entry_count, int max_entries,
                                          Layer* layer, ConnectorAnchor anchor)
@@ -466,6 +489,11 @@ void connector_component_render(Layer* layer)
         return;
     }
 
+    if (g_connector_drag.active && g_connector_drag.mode == CONNECTOR_DRAG_MODIFY &&
+        g_connector_drag.modify_layer == layer) {
+        return;
+    }
+
     component = (ConnectorComponent*)layer->component;
     if (!component->from_id[0] || !component->to_id[0]) {
         return;
@@ -887,29 +915,6 @@ int connector_try_remove_at(Layer* canvas, int x, int y, int dot_size)
 
     return 0;
 }
-
-typedef enum {
-    CONNECTOR_DRAG_CREATE = 0,
-    CONNECTOR_DRAG_MODIFY = 1,
-} ConnectorDragMode;
-
-typedef struct ConnectorDragState {
-    int active;
-    ConnectorDragMode mode;
-    Layer* canvas;
-    Layer* capture_layer;
-    Layer* modify_layer;
-    int modify_from_end;
-    Layer* from_layer;
-    ConnectorAnchor from_anchor;
-    int dot_size;
-    int mouse_x;
-    int mouse_y;
-    Layer* hover_layer;
-    ConnectorAnchor hover_anchor;
-} ConnectorDragState;
-
-static ConnectorDragState g_connector_drag;
 
 static void connector_render_drag_preview(void);
 static void connector_destroy_capture_layer(void);
@@ -1378,8 +1383,15 @@ static void connector_render_drag_preview(void)
         return;
     }
 
+    Color dot_color;
+    int fx;
+    int fy;
+    int dx;
+    int dy;
+
     preview_color = (Color){137, 180, 250, 180};
     hover_color = (Color){166, 227, 161, 255};
+    dot_color = (Color){180, 180, 180, 255};
 
     if (g_connector_drag.mode == CONNECTOR_DRAG_MODIFY &&
         g_connector_drag.modify_layer && g_connector_drag.modify_layer->component) {
@@ -1390,6 +1402,8 @@ static void connector_render_drag_preview(void)
         }
 
         if (g_connector_drag.modify_from_end) {
+            fx = x1;
+            fy = y1;
             if (g_connector_drag.hover_layer) {
                 connector_get_layer_anchor_point(g_connector_drag.hover_layer,
                                                  g_connector_drag.hover_anchor,
@@ -1398,7 +1412,11 @@ static void connector_render_drag_preview(void)
                 x0 = g_connector_drag.mouse_x;
                 y0 = g_connector_drag.mouse_y;
             }
+            dx = x0;
+            dy = y0;
         } else {
+            fx = x0;
+            fy = y0;
             if (g_connector_drag.hover_layer) {
                 connector_get_layer_anchor_point(g_connector_drag.hover_layer,
                                                  g_connector_drag.hover_anchor,
@@ -1407,12 +1425,16 @@ static void connector_render_drag_preview(void)
                 x1 = g_connector_drag.mouse_x;
                 y1 = g_connector_drag.mouse_y;
             }
+            dx = x1;
+            dy = y1;
         }
 
         connector_auto_control_points(x0, y0, x1, y1, CONNECTOR_CURVE_AUTO,
                                       &cx1, &cy1, &cx2, &cy2);
         backend_render_bezier_cubic(x0, y0, cx1, cy1, cx2, cy2, x1, y1,
                                     preview_color, 2);
+        connector_render_dot(fx, fy, g_connector_drag.dot_size, dot_color);
+        connector_render_dot(dx, dy, g_connector_drag.dot_size, dot_color);
 
         if (g_connector_drag.hover_layer) {
             connector_get_layer_anchor_point(g_connector_drag.hover_layer,
