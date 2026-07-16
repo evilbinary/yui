@@ -566,18 +566,52 @@ static Rect g_clip_rect;
 static int g_clip_active = 0;
 
 static void mobile_apply_clip_rect(const Rect* clip) {
+    Rect physical;
+    int sx;
+    int sy;
+    int sw;
+    int sh;
+
     if (!g_egl_ready) {
         return;
     }
-    if (clip && clip->w > 0 && clip->h > 0) {
-        Rect physical;
-        mobile_scale_rect(clip, &physical);
-        glEnable(GL_SCISSOR_TEST);
-        glScissor(physical.x, g_window_h - physical.y - physical.h,
-                  physical.w, physical.h);
-    } else {
+    if (!clip) {
         glDisable(GL_SCISSOR_TEST);
+        return;
     }
+    if (clip->w <= 0 || clip->h <= 0) {
+        glEnable(GL_SCISSOR_TEST);
+        glScissor(0, 0, 0, 0);
+        return;
+    }
+
+    mobile_scale_rect(clip, &physical);
+    sx = physical.x;
+    sy = g_window_h - physical.y - physical.h;
+    sw = physical.w;
+    sh = physical.h;
+    if (sx < 0) {
+        sw += sx;
+        sx = 0;
+    }
+    if (sy < 0) {
+        sh += sy;
+        sy = 0;
+    }
+    if (sx + sw > g_window_w) {
+        sw = g_window_w - sx;
+    }
+    if (sy + sh > g_window_h) {
+        sh = g_window_h - sy;
+    }
+    if (sw <= 0 || sh <= 0) {
+        glEnable(GL_SCISSOR_TEST);
+        glScissor(0, 0, 0, 0);
+        return;
+    }
+
+    glEnable(GL_SCISSOR_TEST);
+    glScissor(sx, sy, sw, sh);
 }
 #endif
 
@@ -944,6 +978,7 @@ void backend_render_clear_color(unsigned char r, unsigned char g, unsigned char 
                                 unsigned char a) {
 #ifdef __ANDROID__
     if (g_egl_ready) {
+        glDisable(GL_SCISSOR_TEST);
         glClearColor(r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f);
         glClear(GL_COLOR_BUFFER_BIT);
     }
@@ -1008,13 +1043,9 @@ void backend_render_get_clip_rect(Rect* prev_clip) {
         return;
     }
 #endif
-    {
-        float d = mobile_density();
-        prev_clip->x = 0;
-        prev_clip->y = 0;
-        prev_clip->w = (int)(g_window_w / d);
-        prev_clip->h = (int)(g_window_h / d);
-    }
+    prev_clip->x = 0;
+    prev_clip->y = 0;
+    backend_get_windowsize(&prev_clip->w, &prev_clip->h);
 }
 
 void backend_render_set_clip_rect(Rect* clip) {
