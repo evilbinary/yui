@@ -226,6 +226,18 @@
                     }
                 },
                 {
+                    "id": "exportBtn",
+                    "type": "Button",
+                    "text": "导出 JSON",
+                    "size": [88, 32],
+                    "style": {
+                        "bgColor": "#cba6f7",
+                        "color": "#1e1e2e",
+                        "fontSize": 12,
+                        "borderRadius": 4
+                    }
+                },
+                {
                     "id": "disablePerfBtn",
                     "type": "Button",
                     "text": "关闭 perf",
@@ -246,6 +258,7 @@
         "refreshStatsBtn.onClick": "@refreshPerfStats",
         "autoTestBtn.onClick": "@runPerfAutoTest",
         "stressBtn.onClick": "@togglePerfStress",
+        "exportBtn.onClick": "@exportPerfStats",
         "pulseBtn.onClick": "@pulseLightLabel",
         "disablePerfBtn.onClick": "@disablePerf"
     }

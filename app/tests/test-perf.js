@@ -52,6 +52,63 @@ function findLayerStat(arr, id) {
     return null;
 }
 
+function layerStatsToArray(arr) {
+    var out = [];
+    var i;
+    var n = layerStatsLength(arr);
+    for (i = 0; i < n; i++) {
+        out.push(arr[String(i)]);
+    }
+    return out;
+}
+
+function buildPerfExportPayload() {
+    var payload = {
+        frame: YUI.perf.getFrameStats(),
+        layersByTime: layerStatsToArray(YUI.perf.getLayerStats("time")),
+        layersByCount: layerStatsToArray(YUI.perf.getLayerStats("count")),
+        layersByName: layerStatsToArray(YUI.perf.getLayerStats("name")),
+        stressOn: g_stressOn,
+        overlayOn: g_overlayOn,
+        pulseCount: g_pulseCount
+    };
+    if (typeof Date !== "undefined") {
+        payload.exportedAt = new Date().toISOString();
+    }
+    return payload;
+}
+
+function exportPerfToFile(filePath) {
+    if (!hasPerfApi()) {
+        setStatus("YUI.perf API 不可用", "#f38ba8");
+        return false;
+    }
+    if (typeof YUI.writeFile !== "function") {
+        setStatus("YUI.writeFile 不可用", "#f38ba8");
+        return false;
+    }
+
+    var path = filePath || "perf-report.json";
+    var payload = buildPerfExportPayload();
+    var json = JSON.stringify(payload, null, 2);
+    var ok = YUI.writeFile(path, json);
+
+    if (ok) {
+        setStatus("已导出：" + path, "#a6e3a1");
+        YUI.log("perf export: " + path);
+    } else {
+        setStatus("导出失败：" + path, "#f38ba8");
+        YUI.log("perf export failed: " + path);
+    }
+    return ok;
+}
+
+function exportPerfStats() {
+    var frame = YUI.perf.getFrameStats();
+    var suffix = frame && frame.frameIndex ? ("-f" + frame.frameIndex) : "";
+    exportPerfToFile("perf-report" + suffix + ".json");
+}
+
 function formatFrameStats(frame) {
     if (!frame) {
         return "frame: (null)";

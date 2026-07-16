@@ -55,6 +55,21 @@ YUI.perf.setLogInterval(120);  // 每 120 帧打印 Top 层
 | `YUI.perf.getFrameStats()` | 返回 `{ fps, frameMs, renderMs, layerCount, frameIndex }` |
 | `YUI.perf.getLayerStats(sortBy?)` | 返回数组，`sortBy`: `"time"` / `"count"` / `"name"` |
 
+### 导出到文件（test-perf 页）
+
+点击 **「导出 JSON」**，或 JS 中：
+
+```js
+var payload = {
+    frame: YUI.perf.getFrameStats(),
+    layersByTime: YUI.perf.getLayerStats("time"),
+    layersByCount: YUI.perf.getLayerStats("count")
+};
+YUI.writeFile("perf-report.json", JSON.stringify(payload, null, 2));
+```
+
+默认写入项目运行目录下的 `perf-report-f<frameIndex>.json`（含帧号，便于多次导出对比）。
+
 ### getLayerStats 单项字段
 
 - `id` — layer id
