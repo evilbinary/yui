@@ -13,6 +13,27 @@ project("yui",
     ]
 )
 
+def apply_cli_arch():
+    import sys
+
+    argv = sys.argv[1:]
+    if '--' in argv:
+        argv = argv[:argv.index('--')]
+    i = 0
+    while i < len(argv):
+        arg = argv[i]
+        if arg in ('-a', '--a', '-arch', '--arch') and i + 1 < len(argv):
+            set_arch(argv[i + 1])
+            return
+        i += 1
+
+    if get_plat() in ('android', 'ios'):
+        env_abi = os.environ.get('ANDROID_ABI') or os.environ.get('YMAKE_ARCH') or os.environ.get('ARCH')
+        if env_abi:
+            set_arch(env_abi)
+
+apply_cli_arch()
+
 # 判断是否为指定平台
 def is_plat(plat_name):
     plat = get_plat()
