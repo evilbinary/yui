@@ -40,6 +40,7 @@ function runConnectorTest() {
         assertLayerExists("nodeB");
         assertLayerExists("nodeC");
         assertLayerExists("edgeAB");
+        assertLayerExists("edgeAC");
         assertLayerExists("edgeBC");
         assertLayerExists("edgeInputToB");
         assertLayerExists("edgeInputToPort");
@@ -50,7 +51,7 @@ function runConnectorTest() {
             throw new Error("nodeA 尺寸异常");
         }
 
-        setStatus("检查通过：节点/子端口/连线均存在", "#a6e3a1");
+        setStatus("检查通过：节点/子端口/连线均存在（nodeA 一对多）", "#a6e3a1");
         YUI.log("runConnectorTest: passed");
     } catch (err) {
         var message = err && err.message ? err.message : String(err);
@@ -236,7 +237,7 @@ function onLoad() {
     YUI.log("Connector 测试页加载完成");
     YUI.log("手动：拖拽 A/B/C 节点观察贝塞尔连线");
     YUI.log("手动：在节点圆点上按下并拖到另一节点圆点创建连线");
-    YUI.log("手动：左键拖圆点新建连线（可多条）；左键拖线条可移动该线端点");
+    YUI.log("手动：左键拖圆点新建连线（同一端口可连多个不同目标）");
     YUI.log("手动：右键圆点/连线可删除");
     YUI.log("自动：运行检查 / 移动 nodeA / 添加 A→C / 添加节点 / 重置");
     setTimeout(runConnectorTest, 200);

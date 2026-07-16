@@ -286,6 +286,230 @@ int connector_try_remove_at(Layer* canvas, int x, int y, int dot_size);
 
 - 支持。左键从端口拖出每次新建一条；右键端口会删除该端口上的全部连线。
 
+## 事件
+
+> 设计稿，待评审后实现。沿用 YUI `events` + `@handler` 机制，详见 [event.md](../event.md)。
+
+### 设计目标
+
+**连接状态（`onConnectChange`）** — `Draggable`、`Connector`、`connectable: true` 子图层统一使用；payload 中 `action` 区分语义：
+
+| 场景 | 示例 |
+|------|------|
+| 端口开关 | `connectable: true` ↔ `false`（`YUI.update`） |
+| 新建连线 | 拖放端口、增量添加 `Connector` 子节点 |
+| 删除连线 | 右键线/端口、`children.edgeX: null` |
+| 修改端点 | 拖线改落点、`YUI.update` 改 `from`/`to` |
+
+**节点拖动（`onDragChange`）** — 仅 `Draggable`；`phase` 区分 `start` / `move` / `end`；程序改 `position` 为 `phase: end` + `source: program`。
+
+### 事件注册
+
+```json
+{
+  "id": "nodeA",
+  "type": "Draggable",
+  "events": {
+    "onConnectChange": "@onNodeAConnectChange",
+    "onDragChange": "@onNodeADragChange"
+  },
+  "children": [
+    {
+      "id": "nameInput",
+      "type": "Input",
+      "connectable": true,
+      "events": {
+        "onConnectChange": "@onNameInputConnectChange"
+      }
+    }
+  ]
+},
+{
+  "id": "edgeAB",
+  "type": "Connector",
+  "from": { "id": "nodeA", "anchor": "right" },
+  "to": { "id": "nodeB", "anchor": "left" },
+  "events": {
+    "onConnectChange": "@onEdgeABChange"
+  }
+}
+```
+
+画布级可选聚合：
+
+```json
+{
+  "id": "graphCanvas",
+  "events": {
+    "onGraphChange": "@persistGraph",
+    "onNodeMove": "@onCanvasNodeMove"
+  }
+}
+```
+
+`onNodeMove`：任意 `Draggable` 位置变更时触发（含拖放与 `YUI.update`），payload 与 `onDragChange` 相同并带 `nodeId`。
+
+### 连接事件派发
+
+| 层级 | 绑定对象 | 何时触发 |
+|------|----------|----------|
+| **连线层** | `Connector` | 本边创建 / 销毁 / `from`·`to` 变更 |
+| **端口层** | 端点图层（`Draggable` 或 `connectable` 子组件） | 端口连上、断开、`connectable` 开关 |
+| **节点层** | 所属 `Draggable` | 子树内任意端口变更（冒泡，`port` 标明具体端口） |
+
+`nodeA.nameInput` 新建出边时触发顺序：`nameInput` → `nodeA`（冒泡）→ `edge_drag_N` → 对端 `nodeB` →（可选）`graphCanvas.onGraphChange`。
+
+`Connector` 视角：`attach`（新建）、`detach`（删除）、`rebind`（改端点 / `YUI.update` 改 `from`·`to`）；仅改样式**不触发**。
+
+### `action` 枚举（`onConnectChange`）
+
+| action | 含义 |
+|--------|------|
+| `enable` / `disable` | `connectable` 开关 |
+| `attach` | 新连线连到本端口 / Connector 创建 |
+| `detach` | 连线移除 / Connector 销毁 |
+| `rebind` | 端点从 A 改到 B（单次事件，不拆 detach+attach） |
+
+### Payload（`YUI.getEventDetail()`）
+
+连接变更：
+
+```typescript
+interface ConnectChangeDetail {
+  action: "enable" | "disable" | "attach" | "detach" | "rebind";
+  source: "user" | "program";
+  canvasId: string;
+  targetId: string;
+  targetType: string;
+  port?: { id: string; path?: string; anchor: string };
+  connector?: { id: string; from: Endpoint; to: Endpoint };
+  previous?: { connector?: { from: Endpoint; to: Endpoint } };
+  connectable?: boolean;
+}
+```
+
+拖动变更：
+
+```typescript
+interface DragChangeDetail {
+  phase: "start" | "move" | "end";
+  source: "user" | "program";
+  targetId: string;
+  canvasId?: string;
+  nodeId?: string;           // 画布 onNodeMove 时
+  position: [number, number];
+  previous?: [number, number];
+  delta?: [number, number];  // phase=move
+}
+```
+
+**attach 示例**（`nodeA.onConnectChange`）：
+
+```json
+{
+  "action": "attach",
+  "source": "user",
+  "canvasId": "graphCanvas",
+  "targetId": "nodeA",
+  "port": { "id": "nodeA", "anchor": "right" },
+  "connector": {
+    "id": "edge_drag_1",
+    "from": { "id": "nodeA", "anchor": "right" },
+    "to": { "id": "nodeB", "anchor": "left" }
+  }
+}
+```
+
+**rebind 示例**（`edgeAB.onConnectChange`）：
+
+```json
+{
+  "action": "rebind",
+  "source": "user",
+  "targetId": "edgeAB",
+  "connector": {
+    "id": "edgeAB",
+    "from": { "id": "nodeA", "anchor": "right" },
+    "to": { "id": "nodeC", "anchor": "left" }
+  },
+  "previous": {
+    "connector": {
+      "from": { "id": "nodeA", "anchor": "right" },
+      "to": { "id": "nodeB", "anchor": "left" }
+    }
+  }
+}
+```
+
+### `onDragChange`
+
+| phase | 触发时机 |
+|-------|----------|
+| `start` | 标题栏按下 |
+| `move` | 拖动中（P1 节流） |
+| `end` | 松手，或 `YUI.update` 改 `position` |
+
+- 仅 `dragHandleHeight` 区域算拖动；拖线/点端口不触发。
+- 拖动中刷新连线几何，**不**触发 `onConnectChange`。
+- `phase: end` 在 `layout_layer` 之后触发。
+
+```javascript
+function onNodeADragChange(layer) {
+  var d = JSON.parse(YUI.getEventDetail());
+  if (d.phase === "start") {
+    bringToFront(d.targetId);
+    return;
+  }
+  if (d.phase === "end" && d.source === "user") {
+    graphModel.setNodePosition(d.targetId, d.position);
+  }
+}
+
+function onNodeAConnectChange(layer) {
+  var d = JSON.parse(YUI.getEventDetail());
+  if (d.action === "attach") graphModel.addEdge(d.connector);
+  if (d.action === "detach") graphModel.removeEdge(d.connector.id);
+  if (d.action === "rebind") graphModel.updateEdge(d.connector.id, d.connector, d.previous.connector);
+}
+```
+
+### C 层触发点
+
+| 代码路径 | 事件 |
+|----------|------|
+| `connector_create_link()` | `onConnectChange` attach |
+| 删除 CONNECTOR | detach |
+| MODIFY 松手 / `on_data_update` 改 `from`·`to` | rebind |
+| `connectable` 属性更新 | enable / disable |
+| `draggable` PRESSED / RELEASED（手柄） | `onDragChange` start / end |
+| `draggable` MOTION | `onDragChange` move（节流） |
+| `yui_update` 改 `position` | `onDragChange` end（`source: program`） |
+
+**静默更新**（防循环）：
+
+```json
+{ "target": "nodeA", "change": { "position": [40, 50] }, "options": { "silent": true } }
+```
+
+### 实现结构（计划）
+
+```
+graph_event.c
+  graph_emit_connect_change / link_attach / detach / rebind
+  graph_emit_drag_change          // phase: start | move | end
+```
+
+`connectable: false` 默认只隐藏端口、**保留**已有连线；级联删边由业务在 handler 中处理。
+
+### 实施阶段
+
+| 阶段 | 内容 |
+|------|------|
+| **P0** | `graph_event`；attach/detach；`onDragChange` start/end；`YUI.getEventDetail()` |
+| **P1** | rebind；`onDragChange` move；Draggable 冒泡；`onNodeMove` |
+| **P2** | enable/disable；silent；`onGraphChange` |
+| **P3** | `test-connector` 示例 |
+
 ---
 
 *示例与自动化检查：`app/tests/test-connector.json`、`app/tests/test-connector.js`*

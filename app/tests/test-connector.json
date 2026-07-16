@@ -58,6 +58,18 @@
                     }
                 },
                 {
+                    "id": "edgeAC",
+                    "type": "Connector",
+                    "position": [0, 0],
+                    "size": [0, 0],
+                    "from": { "id": "nodeA", "anchor": "right" },
+                    "to": { "id": "nodeC", "anchor": "left" },
+                    "style": {
+                        "color": "#f9e2af",
+                        "strokeWidth": 2
+                    }
+                },
+                {
                     "id": "edgeBC",
                     "type": "Connector",
                     "position": [0, 0],
