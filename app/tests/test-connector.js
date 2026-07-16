@@ -25,6 +25,67 @@ function setStatus(text, color) {
     });
 }
 
+function setEventStatus(text, color) {
+    YUI.update({
+        target: "eventLabel",
+        change: {
+            text: "事件：" + text,
+            color: color || "#a6e3a1"
+        }
+    });
+}
+
+function parseLayerEventText(layerId) {
+    var text = YUI.getText(layerId);
+    if (!text) {
+        return null;
+    }
+    try {
+        return JSON.parse(text);
+    } catch (err) {
+        return null;
+    }
+}
+
+function formatConnectEvent(layerId, detail) {
+    if (!detail || !detail.action) {
+        return layerId + "（无详情）";
+    }
+    var from = detail.from ? (detail.from.id + "." + detail.from.anchor) : "?";
+    var to = detail.to ? (detail.to.id + "." + detail.to.anchor) : "?";
+    return layerId + " " + detail.action + "  " + from + " → " + to;
+}
+
+function formatDragEvent(layerId, detail) {
+    if (!detail || !detail.phase) {
+        return layerId + "（无详情）";
+    }
+    var pos = detail.position ? ("[" + detail.position[0] + "," + detail.position[1] + "]") : "?";
+    var prev = detail.previous ? ("  前[" + detail.previous[0] + "," + detail.previous[1] + "]") : "";
+    return layerId + " " + detail.phase + "  位置" + pos + prev;
+}
+
+function showConnectEvent(layerId, color) {
+    var detail = parseLayerEventText(layerId);
+    var msg = formatConnectEvent(layerId, detail);
+    setEventStatus(msg, color || "#89b4fa");
+    YUI.log("connect: " + msg);
+}
+
+function showDragEvent(layerId, color) {
+    var detail = parseLayerEventText(layerId);
+    var msg = formatDragEvent(layerId, detail);
+    setEventStatus(msg, color || "#cba6f7");
+    YUI.log("drag: " + msg);
+}
+
+function onEdgeABEvent() { showConnectEvent("edgeAB"); }
+function onEdgeACEvent() { showConnectEvent("edgeAC"); }
+function onEdgeBCEvent() { showConnectEvent("edgeBC"); }
+function onNodeADrag() { showDragEvent("nodeA"); }
+function onNodeBDrag() { showDragEvent("nodeB"); }
+function onNodeCDrag() { showDragEvent("nodeC"); }
+
 function assertLayerExists(layerId) {
     var layer = findLayer(layerId);
     if (!layer) {
@@ -98,6 +159,9 @@ function addEdgeAC() {
                 style: {
                     color: "#f9e2af",
                     strokeWidth: 2
+                },
+                events: {
+                    onConnectChange: "@onEdgeACEvent"
                 }
             }]
         }
@@ -113,8 +177,14 @@ function addDynamicNode() {
     var inputId = nodeId + "Input";
     var selectId = nodeId + "Select";
     var offset = g_dynamicNodeSeq * 28;
+    var dragHandlerName = "onDynNode" + g_dynamicNodeSeq + "Drag";
 
     g_dynamicNodeIds.push(nodeId);
+    (function(id, handlerName) {
+        globalThis[handlerName] = function() {
+            showDragEvent(id, "#94e2d5");
+        };
+    })(nodeId, dragHandlerName);
     YUI.log("addDynamicNode: " + nodeId);
 
     YUI.update({
@@ -129,6 +199,9 @@ function addDynamicNode() {
                 style: {
                     bgColor: "#313244",
                     borderRadius: 10
+                },
+                events: {
+                    onDragChange: "@" + dragHandlerName
                 },
                 children: [{
                     id: nodeId + "Body",
@@ -235,10 +308,11 @@ function resetNodes() {
 
 function onLoad() {
     YUI.log("Connector 测试页加载完成");
-    YUI.log("手动：拖拽 A/B/C 节点观察贝塞尔连线");
+    YUI.log("手动：拖拽 A/B/C 节点观察贝塞尔连线与 onDragChange");
     YUI.log("手动：在节点圆点上按下并拖到另一节点圆点创建连线");
     YUI.log("手动：左键拖圆点新建连线（同一端口可连多个不同目标）");
-    YUI.log("手动：右键圆点/连线可删除");
+    YUI.log("手动：右键圆点/连线删除；左键拖线改端点 → onConnectChange");
     YUI.log("自动：运行检查 / 移动 nodeA / 添加 A→C / 添加节点 / 重置");
+    setEventStatus("等待交互…", "#6c7086");
     setTimeout(runConnectorTest, 200);
 }

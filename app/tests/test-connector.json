@@ -33,6 +33,16 @@
             }
         },
         {
+            "id": "eventLabel",
+            "type": "Label",
+            "text": "事件：拖动节点标题栏，或右键删除 / 拖线改端点 / 拖圆点新建连线",
+            "size": [776, 22],
+            "style": {
+                "color": "#a6e3a1",
+                "fontSize": 13
+            }
+        },
+        {
             "id": "graphCanvas",
             "type": "View",
             "size": [776, 0],
@@ -55,6 +65,9 @@
                     "style": {
                         "color": "#89b4fa",
                         "strokeWidth": 2
+                    },
+                    "events": {
+                        "onConnectChange": "@onEdgeABEvent"
                     }
                 },
                 {
@@ -67,6 +80,9 @@
                     "style": {
                         "color": "#f9e2af",
                         "strokeWidth": 2
+                    },
+                    "events": {
+                        "onConnectChange": "@onEdgeACEvent"
                     }
                 },
                 {
@@ -79,6 +95,9 @@
                     "style": {
                         "color": "#a6e3a1",
                         "strokeWidth": 2
+                    },
+                    "events": {
+                        "onConnectChange": "@onEdgeBCEvent"
                     }
                 },
                 {
@@ -114,6 +133,9 @@
                     "style": {
                         "bgColor": "#313244",
                         "borderRadius": 10
+                    },
+                    "events": {
+                        "onDragChange": "@onNodeADrag"
                     },
                     "children": [
                         {
@@ -269,6 +291,9 @@
                         "bgColor": "#313244",
                         "borderRadius": 8
                     },
+                    "events": {
+                        "onDragChange": "@onNodeBDrag"
+                    },
                     "children": [
                         {
                             "type": "Text",
@@ -289,6 +314,9 @@
                     "style": {
                         "bgColor": "#313244",
                         "borderRadius": 8
+                    },
+                    "events": {
+                        "onDragChange": "@onNodeCDrag"
                     },
                     "children": [
                         {

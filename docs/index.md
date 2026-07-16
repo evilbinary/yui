@@ -59,7 +59,7 @@
 |------|--------|------|------|
 | 图层系统 | [layer.h](../src/layer.h) | ✅ 完整 | 核心图层管理 |
 | 渲染系统 | [render.h](../src/render.h) | ✅ 完整 | 图形渲染接口 |
-| 事件系统 | [event.h](../src/event.h) | ✅ 完整 | 事件处理机制 |
+| 事件系统 | [event.md](event.md) · [event.h](../src/event.h) | ✅ 完整 | 组件自定义事件标准流程 |
 | 布局系统 | [layout.h](../src/layout.h) | ✅ 完整 | 自动布局计算 |
 | 动画系统 | [animate.h](../src/animate.h) | ✅ 完整 | 动画效果实现 |
 | 主题系统 | [theme.h](../src/theme.h) | ✅ 完整 | 主题管理接口 |
