@@ -346,12 +346,22 @@ void backend_render_rounded_rect(Rect* rect, Color color, int radius) {
 
 void backend_render_rounded_rect_color(Rect* rect, unsigned char r, unsigned char g,
                                        unsigned char b, unsigned char a, int radius) {
+#ifdef __ANDROID__
+    (void)radius;
+    if (rect) {
+        Rect physical;
+        mobile_scale_rect(rect, &physical);
+        mobile_draw_rect_norm((float)physical.x, (float)physical.y,
+                              (float)physical.w, (float)physical.h, r, g, b, a);
+    }
+#else
     (void)rect;
     (void)r;
     (void)g;
     (void)b;
     (void)a;
     (void)radius;
+#endif
 }
 
 void backend_render_rounded_rect_with_border(Rect* rect, Color bg_color, int radius,

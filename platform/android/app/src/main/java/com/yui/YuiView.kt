@@ -20,7 +20,7 @@ class YuiView(context: Context) : SurfaceView(context), SurfaceHolder.Callback, 
     override fun surfaceCreated(holder: SurfaceHolder) {
         prepareAssets()
         val density = resources.displayMetrics.density
-        nativeInit(holder.surface, jsonPath, assetsRoot, density)
+        nativeInit(holder.surface, jsonPath, assetsRoot, dataDir.absolutePath, density)
         val frame = holder.surfaceFrame
         nativeResize(frame.width(), frame.height())
         running = true
@@ -78,6 +78,7 @@ class YuiView(context: Context) : SurfaceView(context), SurfaceHolder.Callback, 
         surface: android.view.Surface,
         jsonPath: String,
         assetsPath: String,
+        dataRoot: String,
         density: Float
     )
     private external fun nativeResize(width: Int, height: Int)

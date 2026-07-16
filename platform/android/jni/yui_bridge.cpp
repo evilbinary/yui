@@ -1,4 +1,5 @@
 #include <jni.h>
+#include <unistd.h>
 #include <android/native_window_jni.h>
 #include <android/log.h>
 
@@ -11,10 +12,12 @@ static int g_initialized = 0;
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_yui_YuiView_nativeInit(JNIEnv* env, jobject thiz, jobject surface,
-                                jstring jsonPath, jstring assetsPath, jfloat density) {
+                                jstring jsonPath, jstring assetsPath,
+                                jstring dataRoot, jfloat density) {
     ANativeWindow* window = nullptr;
     const char* json_c = nullptr;
     const char* assets_c = nullptr;
+    const char* data_root_c = nullptr;
 
     (void)thiz;
 
@@ -38,6 +41,15 @@ Java_com_yui_YuiView_nativeInit(JNIEnv* env, jobject thiz, jobject surface,
     if (assetsPath) {
         assets_c = env->GetStringUTFChars(assetsPath, nullptr);
     }
+    if (dataRoot) {
+        data_root_c = env->GetStringUTFChars(dataRoot, nullptr);
+    }
+
+    if (data_root_c && data_root_c[0]) {
+        if (chdir(data_root_c) != 0) {
+            YUI_LOGE("chdir to %s failed", data_root_c);
+        }
+    }
 
     if (!json_c || yui_init(json_c, assets_c) != 0) {
         YUI_LOGE("yui_init failed for %s", json_c ? json_c : "(null)");
@@ -50,6 +62,9 @@ Java_com_yui_YuiView_nativeInit(JNIEnv* env, jobject thiz, jobject surface,
     }
     if (assets_c) {
         env->ReleaseStringUTFChars(assetsPath, assets_c);
+    }
+    if (data_root_c) {
+        env->ReleaseStringUTFChars(dataRoot, data_root_c);
     }
 }
 
