@@ -6,10 +6,6 @@
         "color": "#FFFFFF",
         "bgColor": "#FFFFFF"
     },
-    "size": [
-        500,
-        400
-    ],
     "layout": {
         "type": "vertical",
         "spacing": 20,

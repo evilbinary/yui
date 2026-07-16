@@ -6,6 +6,10 @@
 #include "perf/perf.h"
 #include "ytype.h"
 
+#ifdef __ANDROID__
+#include "mobile_text.h"
+#endif
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -119,6 +123,7 @@ static int mobile_egl_init(ANativeWindow* window) {
         return 0;
     }
     glViewport(0, 0, g_window_w, g_window_h);
+    mobile_init_text_gl();
     g_egl_ready = 1;
     return 1;
 }
@@ -142,6 +147,7 @@ static void mobile_egl_shutdown(void) {
         g_egl_window = NULL;
     }
     g_color_program = 0;
+    mobile_shutdown_text_gl();
     g_egl_ready = 0;
 }
 
@@ -277,10 +283,14 @@ Texture* backend_load_texture_from_base64(const char* base64_data, size_t data_l
 }
 
 Texture* backend_render_texture(DFont* font, const char* text, Color color) {
+#ifdef __ANDROID__
+    return mobile_render_text_texture(font, text, color);
+#else
     (void)font;
     (void)text;
     (void)color;
     return NULL;
+#endif
 }
 
 void backend_render_fill_rect(Rect* rect, Color color) {
@@ -396,6 +406,11 @@ void backend_set_windowsize(int width, int height) {
     if (height > 0) {
         g_window_h = height;
     }
+#ifdef __ANDROID__
+    if (g_egl_ready) {
+        glViewport(0, 0, g_window_w, g_window_h);
+    }
+#endif
     if (g_ui_root && g_resize_callback) {
         g_resize_callback(g_ui_root, g_window_w, g_window_h);
     }
@@ -459,6 +474,9 @@ DFont* backend_load_font(char* font_path, int size) {
 }
 
 DFont* backend_load_font_with_weight(char* font_path, int size, const char* weight) {
+#ifdef __ANDROID__
+    return mobile_load_font(font_path, size, weight);
+#else
     DFont* font;
     (void)font_path;
     (void)weight;
@@ -467,18 +485,27 @@ DFont* backend_load_font_with_weight(char* font_path, int size, const char* weig
         font->size = size;
     }
     return font;
+#endif
 }
 
 void backend_render_text_destroy(Texture* texture) {
+#ifdef __ANDROID__
+    mobile_destroy_text_texture(texture);
+#else
     if (texture) {
         free(texture);
     }
+#endif
 }
 
 void backend_render_text_copy(Texture* texture, const Rect* srcrect, const Rect* dstrect) {
+#ifdef __ANDROID__
+    mobile_draw_text_texture(texture, srcrect, dstrect);
+#else
     (void)texture;
     (void)srcrect;
     (void)dstrect;
+#endif
 }
 
 void backend_render_get_clip_rect(Rect* prev_clip) {
