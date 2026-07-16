@@ -1,5 +1,4 @@
 #include "connector_component.h"
-#include "draggable_component.h"
 #include "../backend.h"
 #include "../layer.h"
 #include "../util.h"
@@ -70,8 +69,8 @@ static void connector_parse_endpoint(cJSON* endpoint, char* id_out,
     }
 }
 
-static void connector_get_anchor_point(Layer* layer, ConnectorAnchor anchor,
-                                       int* out_x, int* out_y)
+void connector_get_layer_anchor_point(Layer* layer, ConnectorAnchor anchor,
+                                      int* out_x, int* out_y)
 {
     Rect rect = layer->rect;
 
@@ -134,7 +133,7 @@ static void connector_auto_control_points(int x0, int y0, int x1, int y1,
     *cy2 = y1;
 }
 
-static void connector_render_dot(int cx, int cy, int radius, Color color)
+void connector_render_dot(int cx, int cy, int radius, Color color)
 {
     Rect rect;
 
@@ -149,25 +148,23 @@ static void connector_render_dot(int cx, int cy, int radius, Color color)
     backend_render_rounded_rect(&rect, color, radius);
 }
 
-static void connector_resolve_endpoint_dot(ConnectorComponent* component, Layer* endpoint,
-                                           int* show_dots, int* dot_size, Color* dot_color)
+void connector_render_dots_for_layer(Layer* layer, unsigned int anchor_mask,
+                                     int dot_size, Color dot_color)
 {
-    int drag_show = 1;
-    int drag_size = 4;
-    Color drag_color = {137, 180, 250, 255};
+    int anchor;
+    int x;
+    int y;
 
-    if (draggable_component_get_dot_style(endpoint, &drag_show, &drag_size, &drag_color)) {
-        /* use draggable defaults as fallback */
+    if (!layer || !anchor_mask || dot_size <= 0) {
+        return;
     }
 
-    if (show_dots) {
-        *show_dots = component->has_show_dots ? component->show_dots : drag_show;
-    }
-    if (dot_size) {
-        *dot_size = component->has_dot_size ? component->dot_size : drag_size;
-    }
-    if (dot_color) {
-        *dot_color = component->has_dot_color ? component->dot_color : drag_color;
+    for (anchor = CONNECTOR_ANCHOR_CENTER; anchor <= CONNECTOR_ANCHOR_RIGHT; anchor++) {
+        if (!(anchor_mask & (1u << anchor))) {
+            continue;
+        }
+        connector_get_layer_anchor_point(layer, (ConnectorAnchor)anchor, &x, &y);
+        connector_render_dot(x, y, dot_size, dot_color);
     }
 }
 
@@ -255,31 +252,6 @@ ConnectorComponent* connector_component_create_from_json(Layer* layer, cJSON* js
         if (cJSON_HasObjectItem(style, "strokeWidth")) {
             component->stroke_width = cJSON_GetObjectItem(style, "strokeWidth")->valueint;
         }
-
-        {
-            cJSON* dots_item = cJSON_GetObjectItem(style, "dots");
-            if (dots_item) {
-                component->has_show_dots = 1;
-                if (cJSON_IsBool(dots_item)) {
-                    component->show_dots = cJSON_IsTrue(dots_item);
-                } else if (cJSON_IsNumber(dots_item)) {
-                    component->show_dots = dots_item->valueint != 0;
-                }
-            }
-
-            if (cJSON_HasObjectItem(style, "dotSize")) {
-                component->has_dot_size = 1;
-                component->dot_size = cJSON_GetObjectItem(style, "dotSize")->valueint;
-            }
-
-            if (cJSON_HasObjectItem(style, "dotColor")) {
-                cJSON* dot_color_item = cJSON_GetObjectItem(style, "dotColor");
-                if (dot_color_item && cJSON_IsString(dot_color_item)) {
-                    component->has_dot_color = 1;
-                    parse_color(dot_color_item->valuestring, &component->dot_color);
-                }
-            }
-        }
     }
 
     return component;
@@ -305,12 +277,6 @@ void connector_component_render(Layer* layer)
     int cy1;
     int cx2;
     int cy2;
-    int from_show_dots;
-    int to_show_dots;
-    int from_dot_size;
-    int to_dot_size;
-    Color from_dot_color;
-    Color to_dot_color;
 
     if (!layer || !layer->component || !g_ui_root) {
         return;
@@ -327,8 +293,8 @@ void connector_component_render(Layer* layer)
         return;
     }
 
-    connector_get_anchor_point(from_layer, component->from_anchor, &x0, &y0);
-    connector_get_anchor_point(to_layer, component->to_anchor, &x1, &y1);
+    connector_get_layer_anchor_point(from_layer, component->from_anchor, &x0, &y0);
+    connector_get_layer_anchor_point(to_layer, component->to_anchor, &x1, &y1);
 
     if (component->curve_mode == CONNECTOR_CURVE_MANUAL &&
         component->has_ctrl1 && component->has_ctrl2) {
@@ -344,18 +310,6 @@ void connector_component_render(Layer* layer)
     backend_render_bezier_cubic(x0, y0, cx1, cy1, cx2, cy2, x1, y1,
                                 component->stroke_color,
                                 component->stroke_width);
-
-    connector_resolve_endpoint_dot(component, from_layer,
-                                   &from_show_dots, &from_dot_size, &from_dot_color);
-    connector_resolve_endpoint_dot(component, to_layer,
-                                   &to_show_dots, &to_dot_size, &to_dot_color);
-
-    if (from_show_dots && from_dot_size > 0) {
-        connector_render_dot(x0, y0, from_dot_size, from_dot_color);
-    }
-    if (to_show_dots && to_dot_size > 0) {
-        connector_render_dot(x1, y1, to_dot_size, to_dot_color);
-    }
 }
 
 void connector_collect_anchors_for_layer(Layer* root, const char* layer_id,

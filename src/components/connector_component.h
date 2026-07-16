@@ -37,18 +37,17 @@ typedef struct ConnectorComponent {
     int has_ctrl2;
     Color stroke_color;
     int stroke_width;
-    int show_dots;
-    int has_show_dots;
-    int dot_size;
-    int has_dot_size;
-    Color dot_color;
-    int has_dot_color;
 } ConnectorComponent;
 
 ConnectorComponent* connector_component_create(Layer* layer);
 ConnectorComponent* connector_component_create_from_json(Layer* layer, cJSON* json_obj);
 void connector_component_destroy(ConnectorComponent* component);
 void connector_component_render(Layer* layer);
+void connector_get_layer_anchor_point(Layer* layer, ConnectorAnchor anchor,
+                                      int* out_x, int* out_y);
+void connector_render_dot(int cx, int cy, int radius, Color color);
+void connector_render_dots_for_layer(Layer* layer, unsigned int anchor_mask,
+                                     int dot_size, Color dot_color);
 void connector_collect_anchors_for_layer(Layer* root, const char* layer_id,
                                          unsigned int* anchor_mask);
 

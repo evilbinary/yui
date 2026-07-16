@@ -4,7 +4,6 @@
 #include "../layout.h"
 #include "../layer.h"
 #include "../util.h"
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -68,118 +67,46 @@ static int draggable_is_drag_handle(DraggableComponent* component, Layer* layer,
     return is_point_in_rect(x, y, handle_rect);
 }
 
-static int draggable_dot_handle_mouse_event(Layer* layer, MouseEvent* event)
+static int draggable_dot_overlay_handle_mouse(Layer* layer, MouseEvent* event)
 {
     (void)layer;
     (void)event;
     return 0;
 }
 
-static int draggable_append_child(Layer* parent, Layer* child)
+static void draggable_dot_overlay_render(Layer* overlay)
 {
-    Layer** children;
+    Layer* parent;
+    DraggableComponent* component;
+    unsigned int anchor_mask = 0;
+    Rect prev_clip;
 
-    if (!parent || !child) {
-        return -1;
-    }
-
-    child->parent = parent;
-    children = (Layer**)realloc(parent->children,
-                              (size_t)(parent->child_count + 1) * sizeof(Layer*));
-    if (!children) {
-        return -1;
-    }
-
-    parent->children = children;
-    parent->children[parent->child_count++] = child;
-    return 0;
-}
-
-static Layer* draggable_create_dot_layer(DraggableComponent* component, ConnectorAnchor anchor)
-{
-    Layer* parent = component->layer;
-    int radius = component->dot_size;
-    int size = radius * 2;
-    Layer* dot;
-    static const char suffixes[] = "CTBLR";
-
-    dot = layer_create(parent, 0, 0, size, size);
-    if (!dot) {
-        return NULL;
-    }
-
-    dot->type = VIEW;
-    snprintf(dot->id, sizeof(dot->id), "%s_dot%c", parent->id, suffixes[anchor]);
-    dot->bg_color = component->dot_color;
-    dot->radius = radius;
-    dot->focusable = 0;
-    dot->handle_mouse_event = draggable_dot_handle_mouse_event;
-    dot->fixed_width = size;
-    dot->fixed_height = size;
-    return dot;
-}
-
-static void draggable_anchor_offset(DraggableComponent* component, ConnectorAnchor anchor,
-                                    int* rel_x, int* rel_y)
-{
-    Layer* parent = component->layer;
-    int radius = component->dot_size;
-    int center_x = parent->rect.w / 2;
-    int center_y = parent->rect.h / 2;
-
-    switch (anchor) {
-        case CONNECTOR_ANCHOR_TOP:
-            *rel_x = center_x - radius;
-            *rel_y = -radius;
-            break;
-        case CONNECTOR_ANCHOR_BOTTOM:
-            *rel_x = center_x - radius;
-            *rel_y = parent->rect.h - radius;
-            break;
-        case CONNECTOR_ANCHOR_LEFT:
-            *rel_x = -radius;
-            *rel_y = center_y - radius;
-            break;
-        case CONNECTOR_ANCHOR_RIGHT:
-            *rel_x = parent->rect.w - radius;
-            *rel_y = center_y - radius;
-            break;
-        case CONNECTOR_ANCHOR_CENTER:
-        default:
-            *rel_x = center_x - radius;
-            *rel_y = center_y - radius;
-            break;
-    }
-}
-
-static void draggable_update_dot_layer(DraggableComponent* component, Layer* dot,
-                                       int rel_x, int rel_y)
-{
-    Layer* parent = component->layer;
-    int size = component->dot_size * 2;
-
-    if (!dot || !parent) {
+    if (!overlay) {
         return;
     }
 
-    dot->layout_base_rect.x = rel_x;
-    dot->layout_base_rect.y = rel_y;
-    dot->layout_base_rect.w = size;
-    dot->layout_base_rect.h = size;
-    dot->layout_base_valid = 1;
-    dot->rect.x = parent->rect.x + rel_x;
-    dot->rect.y = parent->rect.y + rel_y;
-    dot->rect.w = size;
-    dot->rect.h = size;
-    dot->bg_color = component->dot_color;
-    dot->radius = component->dot_size;
+    parent = overlay->parent;
+    if (!parent || parent->type != DRAGGABLE || !parent->component) {
+        return;
+    }
+
+    component = (DraggableComponent*)parent->component;
+    if (!component->show_dots || component->dot_size <= 0 || !parent->id[0] || !g_ui_root) {
+        return;
+    }
+
+    connector_collect_anchors_for_layer(g_ui_root, parent->id, &anchor_mask);
+    backend_render_get_clip_rect(&prev_clip);
+    backend_render_set_clip_rect(NULL);
+    connector_render_dots_for_layer(parent, anchor_mask,
+                                      component->dot_size, component->dot_color);
+    backend_render_set_clip_rect(&prev_clip);
 }
 
-static void draggable_sync_dots(DraggableComponent* component)
+static void draggable_sync_dot_overlay(DraggableComponent* component)
 {
     Layer* parent;
     unsigned int anchor_mask = 0;
-    int anchor;
 
     if (!component || !component->layer) {
         return;
@@ -192,39 +119,49 @@ static void draggable_sync_dots(DraggableComponent* component)
     }
 
     if (!anchor_mask || component->dot_size <= 0) {
-        for (anchor = CONNECTOR_ANCHOR_CENTER; anchor <= CONNECTOR_ANCHOR_RIGHT; anchor++) {
-            if (component->anchor_dots[anchor]) {
-                layer_hide(component->anchor_dots[anchor]);
-            }
+        if (component->dot_overlay) {
+            layer_hide(component->dot_overlay);
         }
         return;
     }
 
-    for (anchor = CONNECTOR_ANCHOR_CENTER; anchor <= CONNECTOR_ANCHOR_RIGHT; anchor++) {
-        int rel_x;
-        int rel_y;
-        Layer* dot = component->anchor_dots[anchor];
+    if (!component->dot_overlay) {
+        Layer* overlay = layer_create(parent, 0, 0, parent->rect.w, parent->rect.h);
+        Layer** children;
 
-        if (!(anchor_mask & (1u << anchor))) {
-            if (dot) {
-                layer_hide(dot);
-            }
-            continue;
+        if (!overlay) {
+            return;
         }
 
-        if (!dot) {
-            dot = draggable_create_dot_layer(component, (ConnectorAnchor)anchor);
-            if (!dot || draggable_append_child(parent, dot) != 0) {
-                return;
-            }
-            component->anchor_dots[anchor] = dot;
-        } else {
-            layer_set_visible(dot, VISIBLE);
-        }
+        overlay->type = VIEW;
+        snprintf(overlay->id, sizeof(overlay->id), "%s_dots", parent->id);
+        overlay->bg_color.a = 0;
+        overlay->focusable = 0;
+        overlay->render = draggable_dot_overlay_render;
+        overlay->handle_mouse_event = draggable_dot_overlay_handle_mouse;
 
-        draggable_anchor_offset(component, (ConnectorAnchor)anchor, &rel_x, &rel_y);
-        draggable_update_dot_layer(component, dot, rel_x, rel_y);
+        overlay->parent = parent;
+        children = (Layer**)realloc(parent->children,
+                                  (size_t)(parent->child_count + 1) * sizeof(Layer*));
+        if (!children) {
+            return;
+        }
+        parent->children = children;
+        parent->children[parent->child_count++] = overlay;
+        component->dot_overlay = overlay;
+    } else {
+        layer_set_visible(component->dot_overlay, VISIBLE);
     }
+
+    component->dot_overlay->layout_base_rect.x = 0;
+    component->dot_overlay->layout_base_rect.y = 0;
+    component->dot_overlay->layout_base_rect.w = parent->rect.w;
+    component->dot_overlay->layout_base_rect.h = parent->rect.h;
+    component->dot_overlay->layout_base_valid = 1;
+    component->dot_overlay->rect.x = parent->rect.x;
+    component->dot_overlay->rect.y = parent->rect.y;
+    component->dot_overlay->rect.w = parent->rect.w;
+    component->dot_overlay->rect.h = parent->rect.h;
 }
 
 static void draggable_component_layout(Layer* layer)
@@ -236,7 +173,7 @@ static void draggable_component_layout(Layer* layer)
     }
 
     component = (DraggableComponent*)layer->component;
-    draggable_sync_dots(component);
+    draggable_sync_dot_overlay(component);
 }
 
 static void draggable_layer_destroy(Layer* layer)
@@ -332,28 +269,6 @@ void draggable_component_destroy(DraggableComponent* component)
     if (component) {
         free(component);
     }
-}
-
-int draggable_component_get_dot_style(Layer* layer, int* show_dots, int* dot_size,
-                                      Color* dot_color)
-{
-    DraggableComponent* component;
-
-    if (!layer || layer->type != DRAGGABLE || !layer->component) {
-        return 0;
-    }
-
-    component = (DraggableComponent*)layer->component;
-    if (show_dots) {
-        *show_dots = component->show_dots;
-    }
-    if (dot_size) {
-        *dot_size = component->dot_size;
-    }
-    if (dot_color) {
-        *dot_color = component->dot_color;
-    }
-    return 1;
 }
 
 void draggable_component_render(Layer* layer)
