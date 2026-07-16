@@ -7,6 +7,7 @@
 
 target('yui')
 add_deps("cjson")
+add_includedirs('.', 'components', public=True)
 add_flags()
 set_kind('static')
 add_files("*.c")

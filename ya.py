@@ -103,18 +103,22 @@ def _add_android_compile_flags():
         return
     host, _, _ = _ndk_host_dirs()
     sysroot = os.path.join(ndk, "toolchains", "llvm", "prebuilt", host, "sysroot")
+
     add_cflags(
         "-g",
         "-fPIC",
         "-D__ANDROID__",
         "-DYUI_BACKEND_MOBILE",
-        "--sysroot=" + sysroot,
+        "--sysroot",
+        sysroot,
+        "-I.",
         "-Isrc",
         "-Ilib",
     )
     add_ldflags(
         "-fPIC",
-        "--sysroot=" + sysroot,
+        "--sysroot",
+        sysroot,
         "-landroid",
         "-llog",
         "-lEGL",
@@ -145,7 +149,7 @@ def add_flags():
         tool['ld']='emcc'
         tool['ar']='emar'
         if platform.system()=='Windows':
-            mingw64='E:\\soft\\msys2\\mingw64'
+            mingw64='D:\\app\\msys2\\mingw64'
             add_cflags(
             # '--use-port=sdl2 ',
             '-g',
@@ -320,7 +324,7 @@ def add_flags():
             '-F../libs/'
             )
     elif platform.system()=='Windows':
-        mingw64='E:\\soft\\msys2\\mingw64'
+        mingw64='D:\\app\\msys2\\mingw64'
         if get_plat() in['emscripten','em']:
             tool=get_toolchain_node()
             tool['cc']='emcc'
