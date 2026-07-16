@@ -1,5 +1,136 @@
 #include "backend_common.h"
+#include "../backend.h"
+#include <math.h>
 #include <string.h>
+
+typedef struct {
+    float x;
+    float y;
+} BezierPoint;
+
+static BezierPoint bezier_cubic_eval(float t, BezierPoint p0, BezierPoint p1,
+                                     BezierPoint p2, BezierPoint p3)
+{
+    float u = 1.0f - t;
+    float uu = u * u;
+    float uuu = uu * u;
+    float tt = t * t;
+    float ttt = tt * t;
+    BezierPoint result;
+
+    result.x = uuu * p0.x + 3.0f * uu * t * p1.x + 3.0f * u * tt * p2.x + ttt * p3.x;
+    result.y = uuu * p0.y + 3.0f * uu * t * p1.y + 3.0f * u * tt * p2.y + ttt * p3.y;
+    return result;
+}
+
+static BezierPoint bezier_cubic_tangent(float t, BezierPoint p0, BezierPoint p1,
+                                        BezierPoint p2, BezierPoint p3)
+{
+    float u = 1.0f - t;
+    BezierPoint result;
+
+    result.x = 3.0f * u * u * (p1.x - p0.x) + 6.0f * u * t * (p2.x - p1.x) +
+               3.0f * t * t * (p3.x - p2.x);
+    result.y = 3.0f * u * u * (p1.y - p0.y) + 6.0f * u * t * (p2.y - p1.y) +
+               3.0f * t * t * (p3.y - p2.y);
+    return result;
+}
+
+static int bezier_segment_count(int x0, int y0, int x1, int y1)
+{
+    int dx = x1 - x0;
+    int dy = y1 - y0;
+    int length = (int)sqrtf((float)(dx * dx + dy * dy));
+    int segments = length / 8;
+
+    if (segments < 12) {
+        segments = 12;
+    }
+    if (segments > 64) {
+        segments = 64;
+    }
+    return segments;
+}
+
+static void backend_render_arrow_head(int tip_x, int tip_y, float dx, float dy,
+                                      Color color, int size)
+{
+    float length = sqrtf(dx * dx + dy * dy);
+    float px;
+    float py;
+    int wing;
+    int x1;
+    int y1;
+    int x2;
+    int y2;
+
+    if (length < 0.001f || size <= 0) {
+        return;
+    }
+
+    dx /= length;
+    dy /= length;
+    px = -dy;
+    py = dx;
+    wing = size / 2;
+    if (wing < 3) {
+        wing = 3;
+    }
+
+    x1 = tip_x - (int)(dx * size + px * wing);
+    y1 = tip_y - (int)(dy * size + py * wing);
+    x2 = tip_x - (int)(dx * size - px * wing);
+    y2 = tip_y - (int)(dy * size - py * wing);
+    backend_render_line(tip_x, tip_y, x1, y1, color);
+    backend_render_line(tip_x, tip_y, x2, y2, color);
+}
+
+void backend_render_bezier_cubic(int x0, int y0,
+                                 int cx1, int cy1, int cx2, int cy2,
+                                 int x1, int y1, Color color, int width)
+{
+    BezierPoint p0 = {(float)x0, (float)y0};
+    BezierPoint p1 = {(float)cx1, (float)cy1};
+    BezierPoint p2 = {(float)cx2, (float)cy2};
+    BezierPoint p3 = {(float)x1, (float)y1};
+    int segments = bezier_segment_count(x0, y0, x1, y1);
+    int prev_x = x0;
+    int prev_y = y0;
+    int i;
+
+    (void)width;
+
+    for (i = 1; i <= segments; i++) {
+        float t = (float)i / (float)segments;
+        BezierPoint point = bezier_cubic_eval(t, p0, p1, p2, p3);
+        int ix = (int)(point.x + 0.5f);
+        int iy = (int)(point.y + 0.5f);
+
+        backend_render_line(prev_x, prev_y, ix, iy, color);
+        prev_x = ix;
+        prev_y = iy;
+    }
+}
+
+void backend_render_bezier_cubic_arrow(int x0, int y0,
+                                       int cx1, int cy1, int cx2, int cy2,
+                                       int x1, int y1, Color color, int width,
+                                       int arrow_size)
+{
+    BezierPoint p0 = {(float)x0, (float)y0};
+    BezierPoint p1 = {(float)cx1, (float)cy1};
+    BezierPoint p2 = {(float)cx2, (float)cy2};
+    BezierPoint p3 = {(float)x1, (float)y1};
+    BezierPoint tangent;
+
+    backend_render_bezier_cubic(x0, y0, cx1, cy1, cx2, cy2, x1, y1, color, width);
+    if (arrow_size <= 0) {
+        return;
+    }
+
+    tangent = bezier_cubic_tangent(1.0f, p0, p1, p2, p3);
+    backend_render_arrow_head(x1, y1, tangent.x, tangent.y, color, arrow_size);
+}
 
 #define BACKEND_CLIP_STACK_MAX 32
 

@@ -20,6 +20,8 @@
 #include "table_component.h"
 #include "pagination_component.h"
 #include "loading_component.h"
+#include "connector_component.h"
+#include "draggable_component.h"
 #include "grid_component.h"
 
 static void scrollbar_after_create(Layer* layer, cJSON* json);
@@ -75,6 +77,10 @@ static const struct {
     { PAGINATION,  "Pagination", (YuiComponentCreateFn)pagination_component_create_from_json,
       YUI_COMP_NATIVE_RENDER | YUI_COMP_CUSTOM_CHILDREN, NULL },
     { LOADING,     "Loading",    (YuiComponentCreateFn)loading_component_create_from_json,
+      YUI_COMP_NATIVE_RENDER, NULL },
+    { CONNECTOR,   "Connector",  (YuiComponentCreateFn)connector_component_create_from_json,
+      YUI_COMP_NATIVE_RENDER | YUI_COMP_SKIP_CHILDREN, NULL },
+    { DRAGGABLE,   "Draggable",  (YuiComponentCreateFn)draggable_component_create_from_json,
       YUI_COMP_NATIVE_RENDER, NULL },
 };
 
