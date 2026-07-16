@@ -176,7 +176,9 @@ static void yui_apply_root_layout(Layer* root) {
             root->rect.h = window_height > 0 ? window_height : 640;
         }
     } else {
+#ifndef YUI_BACKEND_MOBILE
         backend_set_windowsize(root->rect.w, root->rect.h);
+#endif
     }
 
     if (root->text != NULL) {
