@@ -43,6 +43,7 @@
 | Input | [待补充]() | ⏳ 计划中 | 输入框组件 |
 | List | [待补充]() | ⏳ 计划中 | 列表组件 |
 | Grid | [grid-component.md](components/grid-component.md) | ✅ 可用 | 网格布局容器 |
+| Connector / Draggable | [connector-draggable-component.md](components/connector-draggable-component.md) | ✅ 完整 | 节点图、贝塞尔连线、拖放连接 |
 
 ### 🎬 动画文档
 
@@ -182,6 +183,7 @@
 - [x] dialog-component.md
 - [x] select-component.md
 - [x] text-component.md
+- [x] connector-draggable-component.md
 
 ### ⏳ 待完善文档
 - [ ] 组件详细文档 (Button, Input, List 等)
