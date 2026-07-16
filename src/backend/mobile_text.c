@@ -957,6 +957,61 @@ void mobile_draw_text_texture(Texture* texture, const Rect* srcrect, const Rect*
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
+void mobile_blit_rgba_rect(const unsigned char* rgba, int tex_w, int tex_h,
+                           float x, float y, float w, float h,
+                           int window_w, int window_h) {
+    GLuint tex = 0;
+    float verts[16];
+    GLint offset_loc;
+    GLint scale_loc;
+    GLint tex_loc;
+    GLint pos_loc;
+    GLint uv_loc;
+
+    if (!rgba || tex_w <= 0 || tex_h <= 0 || g_tex_program == 0 ||
+        window_w <= 0 || window_h <= 0 || w <= 0.0f || h <= 0.0f) {
+        return;
+    }
+
+    glGenTextures(1, &tex);
+    glBindTexture(GL_TEXTURE_2D, tex);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex_w, tex_h, 0, GL_RGBA, GL_UNSIGNED_BYTE, rgba);
+
+    verts[0] = 0.0f; verts[1] = 0.0f; verts[2] = 0.0f; verts[3] = 1.0f;
+    verts[4] = 1.0f; verts[5] = 0.0f; verts[6] = 1.0f; verts[7] = 1.0f;
+    verts[8] = 0.0f; verts[9] = 1.0f; verts[10] = 0.0f; verts[11] = 0.0f;
+    verts[12] = 1.0f; verts[13] = 1.0f; verts[14] = 1.0f; verts[15] = 0.0f;
+
+    offset_loc = glGetUniformLocation(g_tex_program, "uOffset");
+    scale_loc = glGetUniformLocation(g_tex_program, "uScale");
+    tex_loc = glGetUniformLocation(g_tex_program, "uTex");
+    pos_loc = glGetAttribLocation(g_tex_program, "aPos");
+    uv_loc = glGetAttribLocation(g_tex_program, "aUV");
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glUseProgram(g_tex_program);
+    glUniform2f(offset_loc, -1.0f + (2.0f * x / (float)window_w),
+                1.0f - (2.0f * (y + h) / (float)window_h));
+    glUniform2f(scale_loc, 2.0f * w / (float)window_w, 2.0f * h / (float)window_h);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, tex);
+    glUniform1i(tex_loc, 0);
+    glEnableVertexAttribArray((GLuint)pos_loc);
+    glEnableVertexAttribArray((GLuint)uv_loc);
+    glVertexAttribPointer((GLuint)pos_loc, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), verts);
+    glVertexAttribPointer((GLuint)uv_loc, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), verts + 2);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glDisableVertexAttribArray((GLuint)pos_loc);
+    glDisableVertexAttribArray((GLuint)uv_loc);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glDeleteTextures(1, &tex);
+}
+
 void mobile_destroy_text_texture(Texture* texture) {
     MobileGlTexture* gl_tex;
     if (!texture) {

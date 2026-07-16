@@ -203,6 +203,11 @@ function onPageTouch(type, deltaX, deltaY) {
     var path = route ? route.path : "/";
     var direction = deltaX < 0 ? "left" : "right";
 
+    if (direction === "left" && path !== "/" && path !== "/launcher" && path !== "/notifications") {
+        goWatchBack();
+        return;
+    }
+
     if (path === "/") {
         if (direction === "left") swipeNavigate("/launcher", "left");
         else if (direction === "right") swipeNavigate("/notifications", "right");

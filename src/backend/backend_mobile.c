@@ -4,14 +4,19 @@
 #include "popup_manager.h"
 #include "render.h"
 #include "perf/perf.h"
+#include "screenshot.h"
 #include "ytype.h"
 
 #ifdef __ANDROID__
 #include "mobile_text.h"
+
+extern char* android_clipboard_get_text(void);
+extern void android_clipboard_set_text(const char* text);
 #endif
 
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 #define MOBILE_DEFAULT_W 360
 #define MOBILE_DEFAULT_H 640
@@ -184,10 +189,264 @@ static void mobile_draw_rect_norm(float x, float y, float w, float h,
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     glDisableVertexAttribArray((GLuint)pos_loc);
 }
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
+static void mobile_draw_pixel_phys(int px, int py,
+                                   unsigned char r, unsigned char g,
+                                   unsigned char b, unsigned char a) {
+    mobile_draw_rect_norm((float)px, (float)py, 1.0f, 1.0f, r, g, b, a);
+}
+
+static void mobile_draw_line_phys(int x1, int y1, int x2, int y2,
+                                  unsigned char r, unsigned char g,
+                                  unsigned char b, unsigned char a) {
+    int dx = x2 - x1;
+    int dy = y2 - y1;
+    int steps = dx < 0 ? -dx : dx;
+    int ady = dy < 0 ? -dy : dy;
+    int i;
+
+    if (ady > steps) {
+        steps = ady;
+    }
+    if (steps <= 0) {
+        mobile_draw_pixel_phys(x1, y1, r, g, b, a);
+        return;
+    }
+    for (i = 0; i <= steps; i++) {
+        float t = (float)i / (float)steps;
+        int x = x1 + (int)(dx * t + 0.5f);
+        int y = y1 + (int)(dy * t + 0.5f);
+        mobile_draw_pixel_phys(x, y, r, g, b, a);
+    }
+}
+
+static void mobile_draw_arc_phys(int center_x, int center_y, int radius,
+                                 float start_angle, float end_angle,
+                                 Color color, int line_width) {
+    float half_w = (float)line_width * 0.5f;
+    float r_inner = (float)radius - half_w;
+    float r_outer = (float)radius + half_w;
+    float start_rad = (start_angle - 90.0f) * (float)M_PI / 180.0f;
+    float end_rad = (end_angle - 90.0f) * (float)M_PI / 180.0f;
+    float sweep_deg = end_angle - start_angle;
+    int extent;
+    int min_x;
+    int min_y;
+    int max_x;
+    int max_y;
+    int py;
+    int is_full_circle;
+
+    if (radius <= 0 || line_width <= 0) {
+        return;
+    }
+    if (r_inner < 0.0f) {
+        r_inner = 0.0f;
+    }
+
+    while (end_rad < start_rad) {
+        end_rad += 2.0f * (float)M_PI;
+    }
+    while (sweep_deg <= 0.0f) {
+        sweep_deg += 360.0f;
+    }
+    is_full_circle = sweep_deg >= 359.0f;
+
+    extent = (int)(r_outer + 2.0f);
+    min_x = center_x - extent;
+    min_y = center_y - extent;
+    max_x = center_x + extent;
+    max_y = center_y + extent;
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    for (py = min_y; py <= max_y; py++) {
+        int px;
+        for (px = min_x; px <= max_x; px++) {
+            float dx = (float)px - (float)center_x + 0.5f;
+            float dy = (float)py - (float)center_y + 0.5f;
+            float dist = sqrtf(dx * dx + dy * dy);
+            float angle;
+            float angle_aa = 1.0f;
+            float radial_aa = 1.0f;
+            float final_alpha;
+            unsigned char a;
+
+            if (dist < r_inner - 1.0f || dist > r_outer + 1.0f) {
+                continue;
+            }
+
+            angle = atan2f(dy, dx);
+            while (angle < start_rad) {
+                angle += 2.0f * (float)M_PI;
+            }
+            while (angle > start_rad + 2.0f * (float)M_PI) {
+                angle -= 2.0f * (float)M_PI;
+            }
+
+            if (!is_full_circle) {
+                float pixel_angle = 1.0f / (dist > 0.0f ? dist : 1.0f);
+                if (angle < start_rad + pixel_angle) {
+                    angle_aa = (angle - start_rad) / pixel_angle;
+                } else if (angle > end_rad - pixel_angle) {
+                    angle_aa = (end_rad - angle) / pixel_angle;
+                } else if (angle > end_rad) {
+                    continue;
+                }
+                if (angle_aa <= 0.0f) {
+                    continue;
+                }
+                if (angle_aa > 1.0f) {
+                    angle_aa = 1.0f;
+                }
+            } else if (angle > end_rad) {
+                continue;
+            }
+
+            if (dist < r_inner) {
+                radial_aa = 1.0f - (r_inner - dist);
+            } else if (dist > r_outer) {
+                radial_aa = 1.0f - (dist - r_outer);
+            }
+            if (radial_aa <= 0.0f) {
+                continue;
+            }
+            if (radial_aa > 1.0f) {
+                radial_aa = 1.0f;
+            }
+
+            final_alpha = angle_aa * radial_aa;
+            a = (unsigned char)(final_alpha * (float)color.a);
+            if (a == 0) {
+                continue;
+            }
+            mobile_draw_pixel_phys(px, py, color.r, color.g, color.b, a);
+        }
+    }
+}
+
+static void mobile_flip_rows(unsigned char* pixels, int w, int h, int stride) {
+    unsigned char* row = (unsigned char*)malloc((size_t)stride);
+    int y;
+    if (!row) {
+        return;
+    }
+    for (y = 0; y < h / 2; y++) {
+        unsigned char* top = pixels + y * stride;
+        unsigned char* bottom = pixels + (h - 1 - y) * stride;
+        memcpy(row, top, (size_t)stride);
+        memcpy(top, bottom, (size_t)stride);
+        memcpy(bottom, row, (size_t)stride);
+    }
+    free(row);
+}
+
+static void mobile_box_blur(unsigned char* data, int w, int h, int stride, int radius) {
+    unsigned char* tmp;
+    int x;
+    int y;
+    int c;
+    int k;
+
+    if (radius <= 0) {
+        return;
+    }
+    tmp = (unsigned char*)malloc((size_t)stride * (size_t)h);
+    if (!tmp) {
+        return;
+    }
+
+    for (y = 0; y < h; y++) {
+        unsigned char* row = data + y * stride;
+        unsigned char* trow = tmp + y * stride;
+        for (x = 0; x < w; x++) {
+            int sum[4] = {0, 0, 0, 0};
+            int count = 0;
+            for (k = -radius; k <= radius; k++) {
+                int sx = x + k;
+                if (sx < 0 || sx >= w) {
+                    continue;
+                }
+                sum[0] += row[sx * 4 + 0];
+                sum[1] += row[sx * 4 + 1];
+                sum[2] += row[sx * 4 + 2];
+                sum[3] += row[sx * 4 + 3];
+                count++;
+            }
+            if (count > 0) {
+                for (c = 0; c < 4; c++) {
+                    trow[x * 4 + c] = (unsigned char)(sum[c] / count);
+                }
+            }
+        }
+    }
+    memcpy(data, tmp, (size_t)stride * (size_t)h);
+
+    for (y = 0; y < h; y++) {
+        for (x = 0; x < w; x++) {
+            int sum[4] = {0, 0, 0, 0};
+            int count = 0;
+            for (k = -radius; k <= radius; k++) {
+                int sy = y + k;
+                if (sy < 0 || sy >= h) {
+                    continue;
+                }
+                unsigned char* src = data + sy * stride + x * 4;
+                sum[0] += src[0];
+                sum[1] += src[1];
+                sum[2] += src[2];
+                sum[3] += src[3];
+                count++;
+            }
+            if (count > 0) {
+                unsigned char* dst = tmp + y * stride + x * 4;
+                for (c = 0; c < 4; c++) {
+                    dst[c] = (unsigned char)(sum[c] / count);
+                }
+            }
+        }
+    }
+    memcpy(data, tmp, (size_t)stride * (size_t)h);
+    free(tmp);
+}
+
+static void mobile_apply_backdrop_tone(unsigned char* data, int count,
+                                       float saturation, float brightness) {
+    int i;
+    float sat = saturation < 0.0f ? 0.0f : saturation;
+    float bright = brightness < 0.0f ? 0.0f : brightness;
+
+    for (i = 0; i < count; i++) {
+        unsigned char* px = data + i * 4;
+        float r = px[0] * bright;
+        float g = px[1] * bright;
+        float b = px[2] * bright;
+        float gray = 0.299f * r + 0.587f * g + 0.114f * b;
+
+        r = gray + (r - gray) * sat;
+        g = gray + (g - gray) * sat;
+        b = gray + (b - gray) * sat;
+        if (r < 0.0f) r = 0.0f;
+        if (g < 0.0f) g = 0.0f;
+        if (b < 0.0f) b = 0.0f;
+        if (r > 255.0f) r = 255.0f;
+        if (g > 255.0f) g = 255.0f;
+        if (b > 255.0f) b = 255.0f;
+        px[0] = (unsigned char)r;
+        px[1] = (unsigned char)g;
+        px[2] = (unsigned char)b;
+    }
+}
 #endif
 
 #define MAX_UPDATE_CALLBACKS 16
 #define MAX_TOUCHES 10
+#define SWIPE_THRESHOLD_PX 32
 
 float scale = 1.0f;
 
@@ -218,6 +477,26 @@ static void mobile_scale_rect(const Rect* src, Rect* dst) {
     dst->h = (int)(src->h * d);
 }
 
+#ifdef __ANDROID__
+static Rect g_clip_rect;
+static int g_clip_active = 0;
+
+static void mobile_apply_clip_rect(const Rect* clip) {
+    if (!g_egl_ready) {
+        return;
+    }
+    if (clip && clip->w > 0 && clip->h > 0) {
+        Rect physical;
+        mobile_scale_rect(clip, &physical);
+        glEnable(GL_SCISSOR_TEST);
+        glScissor(physical.x, g_window_h - physical.y - physical.h,
+                  physical.w, physical.h);
+    } else {
+        glDisable(GL_SCISSOR_TEST);
+    }
+}
+#endif
+
 extern Layer* g_ui_root;
 static void* g_native_surface = NULL;
 static UpdateCallback g_update_callbacks[MAX_UPDATE_CALLBACKS];
@@ -228,9 +507,30 @@ typedef struct {
     int active;
     int x;
     int y;
+    int start_x;
+    int start_y;
 } MobileTouchState;
 
 static MobileTouchState g_touches[MAX_TOUCHES];
+
+static void mobile_emit_swipe_event(int x, int y, int dx, int dy) {
+    TouchEvent swipe;
+    int adx = dx < 0 ? -dx : dx;
+    int ady = dy < 0 ? -dy : dy;
+
+    if (!g_ui_root || adx < SWIPE_THRESHOLD_PX || adx < ady) {
+        return;
+    }
+
+    memset(&swipe, 0, sizeof(swipe));
+    swipe.type = TOUCH_TYPE_SWIPE;
+    swipe.x = (int)(x / mobile_density());
+    swipe.y = (int)(y / mobile_density());
+    swipe.deltaX = (int)(dx / mobile_density());
+    swipe.deltaY = (int)(dy / mobile_density());
+    swipe.fingerCount = 1;
+    handle_touch_event(g_ui_root, &swipe);
+}
 
 void backend_mobile_set_native_surface(void* native_surface) {
     g_native_surface = native_surface;
@@ -258,6 +558,8 @@ void backend_mobile_on_touch(int pointer_id, int x, int y, int phase) {
     if (phase == 0) {
         event.type = TOUCH_TYPE_START;
         touch->active = 1;
+        touch->start_x = x;
+        touch->start_y = y;
         touch->x = x;
         touch->y = y;
     } else if (phase == 1) {
@@ -274,6 +576,7 @@ void backend_mobile_on_touch(int pointer_id, int x, int y, int phase) {
             return;
         }
         event.type = TOUCH_TYPE_END;
+        mobile_emit_swipe_event(x, y, x - touch->start_x, y - touch->start_y);
         touch->active = 0;
     }
 
@@ -381,37 +684,55 @@ void backend_render_rounded_rect_color(Rect* rect, unsigned char r, unsigned cha
 
 void backend_render_rounded_rect_with_border(Rect* rect, Color bg_color, int radius,
                                              int border_width, Color border_color) {
-    (void)rect;
-    (void)bg_color;
-    (void)radius;
-    (void)border_width;
-    (void)border_color;
+    Rect inner;
+
+    if (!rect) {
+        return;
+    }
+    if (border_width <= 0) {
+        backend_render_rounded_rect(rect, bg_color, radius);
+        return;
+    }
+
+    backend_render_rounded_rect(rect, border_color, radius);
+    inner.x = rect->x + border_width;
+    inner.y = rect->y + border_width;
+    inner.w = rect->w - 2 * border_width;
+    inner.h = rect->h - 2 * border_width;
+    if (inner.w > 0 && inner.h > 0) {
+        int inner_r = radius - border_width;
+        if (inner_r < 0) {
+            inner_r = 0;
+        }
+        backend_render_rounded_rect(&inner, bg_color, inner_r);
+    }
 }
 
 void backend_render_line(int x1, int y1, int x2, int y2, Color color) {
+#ifdef __ANDROID__
+    float d = mobile_density();
+    mobile_draw_line_phys((int)(x1 * d), (int)(y1 * d), (int)(x2 * d), (int)(y2 * d),
+                          color.r, color.g, color.b, color.a);
+#else
     (void)x1;
     (void)y1;
     (void)x2;
     (void)y2;
     (void)color;
-}
-
-void backend_render_bezier_cubic(int x0, int y0, int cx1, int cy1, int cx2, int cy2,
-                                 int x1, int y1, Color color, int width) {
-    (void)x0;
-    (void)y0;
-    (void)cx1;
-    (void)cy1;
-    (void)cx2;
-    (void)cy2;
-    (void)x1;
-    (void)y1;
-    (void)color;
-    (void)width;
+#endif
 }
 
 void backend_render_arc(int center_x, int center_y, int radius, float start_angle,
                         float end_angle, Color color, int line_width) {
+#ifdef __ANDROID__
+    float d = mobile_density();
+    int lw = (int)(line_width * d);
+    if (lw < 1) {
+        lw = 1;
+    }
+    mobile_draw_arc_phys((int)(center_x * d), (int)(center_y * d), (int)(radius * d),
+                         start_angle, end_angle, color, lw);
+#else
     (void)center_x;
     (void)center_y;
     (void)radius;
@@ -419,14 +740,53 @@ void backend_render_arc(int center_x, int center_y, int radius, float start_angl
     (void)end_angle;
     (void)color;
     (void)line_width;
+#endif
 }
 
 void backend_render_backdrop_filter(Rect* rect, int blur_radius, float saturation,
                                     float brightness) {
+#ifdef __ANDROID__
+    Rect physical;
+    unsigned char* pixels;
+    int stride;
+    int radius = blur_radius;
+    size_t bytes;
+
+    if (!rect || blur_radius <= 0 || !g_egl_ready) {
+        return;
+    }
+    if (radius > 12) {
+        radius = 12;
+    }
+
+    mobile_scale_rect(rect, &physical);
+    if (physical.w <= 0 || physical.h <= 0) {
+        return;
+    }
+
+    stride = physical.w * 4;
+    bytes = (size_t)stride * (size_t)physical.h;
+    pixels = (unsigned char*)malloc(bytes);
+    if (!pixels) {
+        return;
+    }
+
+    glReadPixels(physical.x, g_window_h - physical.y - physical.h,
+                 physical.w, physical.h, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+    mobile_flip_rows(pixels, physical.w, physical.h, stride);
+    mobile_box_blur(pixels, physical.w, physical.h, stride, radius);
+    mobile_apply_backdrop_tone(pixels, physical.w * physical.h, saturation, brightness);
+    mobile_blit_rgba_rect(pixels, physical.w, physical.h,
+                          (float)physical.x, (float)physical.y,
+                          (float)physical.w, (float)physical.h,
+                          g_window_w, g_window_h);
+    free(pixels);
+#else
     (void)rect;
     (void)blur_radius;
     (void)saturation;
     (void)brightness;
+#endif
 }
 
 void backend_get_windowsize(int* width, int* height) {
@@ -553,7 +913,16 @@ void backend_render_text_copy(Texture* texture, const Rect* srcrect, const Rect*
 }
 
 void backend_render_get_clip_rect(Rect* prev_clip) {
-    if (prev_clip) {
+    if (!prev_clip) {
+        return;
+    }
+#ifdef __ANDROID__
+    if (g_clip_active) {
+        *prev_clip = g_clip_rect;
+        return;
+    }
+#endif
+    {
         float d = mobile_density();
         prev_clip->x = 0;
         prev_clip->y = 0;
@@ -563,7 +932,17 @@ void backend_render_get_clip_rect(Rect* prev_clip) {
 }
 
 void backend_render_set_clip_rect(Rect* clip) {
+#ifdef __ANDROID__
+    if (clip) {
+        g_clip_active = 1;
+        g_clip_rect = *clip;
+    } else {
+        g_clip_active = 0;
+    }
+    mobile_apply_clip_rect(clip);
+#else
     (void)clip;
+#endif
 }
 
 void backend_register_update_callback(UpdateCallback callback) {
@@ -634,11 +1013,23 @@ int backend_query_texture(Texture* texture, Uint32* format, int* access, int* w,
 }
 
 char* backend_get_clipboard_text(void) {
+#ifdef __ANDROID__
+    char* text = android_clipboard_get_text();
+    if (text) {
+        return text;
+    }
+#endif
     return strdup("");
 }
 
 void backend_set_clipboard_text(const char* text) {
+#ifdef __ANDROID__
+    if (text) {
+        android_clipboard_set_text(text);
+    }
+#else
     (void)text;
+#endif
 }
 
 void backend_start_text_input(void) {}
@@ -668,8 +1059,60 @@ void backend_texture_cache_warmup(DFont* font, const char** texts, int count, Co
 }
 
 int backend_screenshot(const char* path) {
+#ifdef __ANDROID__
+    unsigned char* pixels = NULL;
+    unsigned char* row = NULL;
+    int w;
+    int h;
+    int y;
+    int row_bytes;
+
+    if (!g_egl_ready || !g_ui_root || !path || !path[0]) {
+        return -1;
+    }
+
+    w = g_window_w;
+    h = g_window_h;
+    if (w <= 0 || h <= 0) {
+        return -2;
+    }
+
+    backend_render_clear_color(30, 30, 30, 255);
+    render_layer(g_ui_root);
+    render_inspect_overlay(g_ui_root);
+    popup_manager_render();
+
+    row_bytes = w * 4;
+    pixels = (unsigned char*)malloc((size_t)row_bytes * (size_t)h);
+    if (!pixels) {
+        return -3;
+    }
+
+    glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+
+    row = (unsigned char*)malloc((size_t)row_bytes);
+    if (!row) {
+        free(pixels);
+        return -3;
+    }
+    for (y = 0; y < h / 2; y++) {
+        unsigned char* top = pixels + y * row_bytes;
+        unsigned char* bottom = pixels + (h - 1 - y) * row_bytes;
+        memcpy(row, top, (size_t)row_bytes);
+        memcpy(top, bottom, (size_t)row_bytes);
+        memcpy(bottom, row, (size_t)row_bytes);
+    }
+    free(row);
+
+    {
+        int rc = screenshot_save_png(path, pixels, w, h, row_bytes);
+        free(pixels);
+        return rc;
+    }
+#else
     (void)path;
     return -1;
+#endif
 }
 
 void backend_set_ui_root(Layer* root) {
