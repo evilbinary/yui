@@ -440,6 +440,43 @@ def _android_static_lib_path(target):
         return None
     return os.path.join("build", plat, arch, mode, "lib" + name + ".a")
 
+def copy_android_prebuilt_libs(target):
+    import shutil
+
+    bundles = {
+        "yui-android-prebuilt": [
+            "yui", "cjson", "yaml2json", "quickjs", "jsmodule-quickjs", "socket",
+        ],
+        "yui-android-prebuilt-mqjs": [
+            "yui", "cjson", "yaml2json", "mquickjs", "jsmodule", "socket",
+        ],
+    }
+    libs = bundles.get(target.get("name"))
+    if not libs:
+        return
+
+    plat = target.plat() if hasattr(target, "plat") else get_plat()
+    if plat != "android":
+        return
+
+    arch = target.get_arch() if hasattr(target, "get_arch") else get_arch()
+    if not arch:
+        arch = get_arch()
+    mode = target.get_config("mode") if hasattr(target, "get_config") else get_config("mode")
+    if not arch or arch == "None" or not mode:
+        return
+
+    dest_dir = os.path.join("third_party", "yui-prebuilt", "android", arch)
+    os.makedirs(dest_dir, exist_ok=True)
+    for lib in libs:
+        src = os.path.join("build", plat, arch, mode, "lib" + lib + ".a")
+        if not os.path.isfile(src):
+            print("[android-prebuilt] skip missing %s" % src)
+            continue
+        dest = os.path.join(dest_dir, os.path.basename(src))
+        shutil.copy2(src, dest)
+        print("[android-prebuilt] %s -> %s" % (src, dest))
+
 def after_build_android_prebuilt(target):
     import shutil
 
@@ -469,6 +506,7 @@ def add_run():
 add_buildin('add_flags',add_flags)
 add_buildin('add_run',add_run)
 add_buildin('get_prefix',get_prefix)
+add_buildin('copy_android_prebuilt_libs', copy_android_prebuilt_libs)
 
 includes("./src/ya.py")
 includes("./lib/ya.py")

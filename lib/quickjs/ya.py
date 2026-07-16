@@ -6,6 +6,7 @@
 # ********************************************************************
 target("quickjs")
 set_kind("static")
+add_flags()
 
 add_files(
     'quickjs.c',

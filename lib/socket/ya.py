@@ -6,6 +6,7 @@
 # ********************************************************************
 target("socket")
 set_kind("static")
+add_flags()
 add_files(
     'socket.c',
 ) 
