@@ -4,6 +4,7 @@
 #include "animate.h"
 #include "perf/perf.h"
 #include <limits.h>
+#include <math.h>
 
 extern int yui_inspect_mode_enabled;
 extern int yui_inspect_show_bounds;

@@ -1,9 +1,7 @@
 #ifndef YUI_TEXT_SYNTAX_H
 #define YUI_TEXT_SYNTAX_H
 
-#if defined(YUI_BACKEND_MOBILE)
-#include "../ytype.h"
-#elif !defined(YUI_TYPE_H)
+#if !defined(YUI_TYPE_H) && !defined(YUI_BACKEND_MOBILE)
 #ifdef D_SDL
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>

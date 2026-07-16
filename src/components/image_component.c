@@ -2,6 +2,7 @@
 #include "../render.h"
 #include "../backend.h"
 #include "cJSON.h"
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 

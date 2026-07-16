@@ -15,7 +15,7 @@ int is_cjson_float(const cJSON *item);
 
 // 检查点是否在矩形内
 int is_point_in_rect(int x, int y, Rect rect);
-
+int point_in_rect(Point pt, Rect rect);
 
 
 void parse_color(char* valuestring, Color* color);

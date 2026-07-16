@@ -76,7 +76,7 @@ SelectComponent* select_component_create(Layer* layer) {
         layer->event = malloc(sizeof(Event));
         memset(layer->event, 0, sizeof(Event));
     }
-    layer->event->scroll = (void(*)(void*))select_component_scroll_callback;
+    layer->event->scroll = (EventHandler)(void*)select_component_scroll_callback;
     
     return component;
 }
