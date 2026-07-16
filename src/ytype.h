@@ -35,6 +35,87 @@ typedef int SDL_EventType;
 #define SDL_MOUSEMOTION 3
 #endif
 
+/* SDL2 key/mod stubs — compile shared component code without linking SDL */
+#ifndef SDLK_UNKNOWN
+#define SDLK_UNKNOWN 0
+#endif
+#ifndef SDLK_RETURN
+#define SDLK_RETURN '\r'
+#endif
+#ifndef SDLK_ESCAPE
+#define SDLK_ESCAPE '\033'
+#endif
+#ifndef SDLK_BACKSPACE
+#define SDLK_BACKSPACE '\b'
+#endif
+#ifndef SDLK_TAB
+#define SDLK_TAB '\t'
+#endif
+#ifndef SDLK_SPACE
+#define SDLK_SPACE ' '
+#endif
+#ifndef SDLK_DELETE
+#define SDLK_DELETE 127
+#endif
+#ifndef SDLK_a
+#define SDLK_a 'a'
+#endif
+#ifndef SDLK_c
+#define SDLK_c 'c'
+#endif
+#ifndef SDLK_v
+#define SDLK_v 'v'
+#endif
+#ifndef SDLK_x
+#define SDLK_x 'x'
+#endif
+#ifndef SDLK_UP
+#define SDLK_UP 1073741906
+#endif
+#ifndef SDLK_DOWN
+#define SDLK_DOWN 1073741905
+#endif
+#ifndef SDLK_RIGHT
+#define SDLK_RIGHT 1073741903
+#endif
+#ifndef SDLK_LEFT
+#define SDLK_LEFT 1073741904
+#endif
+#ifndef SDLK_HOME
+#define SDLK_HOME 1073741898
+#endif
+#ifndef SDLK_END
+#define SDLK_END 1073741901
+#endif
+#ifndef SDLK_KP_ENTER
+#define SDLK_KP_ENTER 1073741912
+#endif
+#ifndef SDLK_F2
+#define SDLK_F2 1073741911
+#endif
+
+#ifndef KMOD_NONE
+#define KMOD_NONE 0x0000
+#endif
+#ifndef KMOD_LSHIFT
+#define KMOD_LSHIFT 0x0001
+#endif
+#ifndef KMOD_RSHIFT
+#define KMOD_RSHIFT 0x0002
+#endif
+#ifndef KMOD_LCTRL
+#define KMOD_LCTRL 0x0040
+#endif
+#ifndef KMOD_RCTRL
+#define KMOD_RCTRL 0x0080
+#endif
+#ifndef KMOD_SHIFT
+#define KMOD_SHIFT (KMOD_LSHIFT | KMOD_RSHIFT)
+#endif
+#ifndef KMOD_CTRL
+#define KMOD_CTRL (KMOD_LCTRL | KMOD_RCTRL)
+#endif
+
 typedef struct Rect {
     int x, y;
     int w, h;

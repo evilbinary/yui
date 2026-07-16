@@ -9,6 +9,12 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define MOBILE_DEFAULT_W 360
+#define MOBILE_DEFAULT_H 640
+
+static int g_window_w = MOBILE_DEFAULT_W;
+static int g_window_h = MOBILE_DEFAULT_H;
+
 #ifdef __ANDROID__
 #include <android/native_window.h>
 #include <EGL/egl.h>
@@ -174,8 +180,6 @@ static void mobile_draw_rect_norm(float x, float y, float w, float h,
 }
 #endif
 
-#define MOBILE_DEFAULT_W 360
-#define MOBILE_DEFAULT_H 640
 #define MAX_UPDATE_CALLBACKS 16
 #define MAX_TOUCHES 10
 
@@ -183,8 +187,6 @@ float scale = 1.0f;
 
 static Layer* g_ui_root = NULL;
 static void* g_native_surface = NULL;
-static int g_window_w = MOBILE_DEFAULT_W;
-static int g_window_h = MOBILE_DEFAULT_H;
 static UpdateCallback g_update_callbacks[MAX_UPDATE_CALLBACKS];
 static int g_update_callback_count = 0;
 static ResizeCallback g_resize_callback = NULL;

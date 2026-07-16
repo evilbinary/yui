@@ -1,6 +1,9 @@
 #ifndef YUI_TEXT_SYNTAX_H
 #define YUI_TEXT_SYNTAX_H
 
+#if defined(YUI_BACKEND_MOBILE)
+#include "../ytype.h"
+#elif !defined(YUI_TYPE_H)
 #ifdef D_SDL
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
@@ -9,7 +12,6 @@
 #include <SDL_ttf.h>
 #endif
 
-#ifndef YUI_TYPE_H
 #ifndef SDL2
 #define SDL2 1
 #endif
@@ -24,7 +26,7 @@ typedef struct Color {
 } Color;
 #endif
 #define DFont TTF_Font
-#endif
+#endif /* !YUI_TYPE_H */
 
 typedef enum {
     TEXT_SYNTAX_NONE = 0,

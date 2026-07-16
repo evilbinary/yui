@@ -3,7 +3,6 @@
 
 #include "../ytype.h"
 #include "../render.h"
-#include <SDL.h>
 
 // 前向声明
 typedef struct PopupLayer PopupLayer;

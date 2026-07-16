@@ -3,7 +3,6 @@
 
 #include "../ytype.h"
 #include "../render.h"
-#include <SDL.h>
 
 typedef enum {
     PAGINATION_MODE_MINI = 0,

@@ -47,7 +47,7 @@ def _android_triple(arch):
         return "armv7a-linux-androideabi21"
     return "aarch64-linux-android21"
 
-def configure_android_toolchain():
+def configure_android_toolchain(target=None):
     if get_plat() != "android":
         return
     ndk = os.environ.get("ANDROID_NDK_HOME") or os.environ.get("ANDROID_NDK_ROOT") or ""
@@ -56,6 +56,10 @@ def configure_android_toolchain():
         return
     host, clang_ext, bin_ext = _ndk_host_dirs()
     arch = get_arch()
+    if (not arch or arch == "None") and target is not None:
+        arch = target.get_arch()
+    if not arch or arch == "None":
+        arch = os.environ.get("ANDROID_ABI") or os.environ.get("YMAKE_ARCH")
     bin_dir = os.path.join(ndk, "toolchains", "llvm", "prebuilt", host, "bin")
     triple = _android_triple(arch)
     clang = os.path.join(bin_dir, triple + "-clang" + clang_ext)
@@ -64,12 +68,38 @@ def configure_android_toolchain():
     if bin_ext and not os.path.isfile(ar):
         ar = os.path.join(bin_dir, "llvm-ar")
     tool = get_toolchain_node()
+    if not tool:
+        print("warning: gcc toolchain not found for android build")
+        return
     tool["cc"] = clang
     tool["cxx"] = clangxx
     tool["ld"] = clang
     tool["ar"] = ar
 
-on_config(configure_android_toolchain)
+def _add_android_compile_flags():
+    ndk = os.environ.get("ANDROID_NDK_HOME") or os.environ.get("ANDROID_NDK_ROOT") or ""
+    if not ndk:
+        return
+    host, _, _ = _ndk_host_dirs()
+    sysroot = os.path.join(ndk, "toolchains", "llvm", "prebuilt", host, "sysroot")
+    add_cflags(
+        "-g",
+        "-fPIC",
+        "-D__ANDROID__",
+        "-DYUI_BACKEND_MOBILE",
+        "--sysroot=" + sysroot,
+        "-Isrc",
+        "-Ilib",
+    )
+    add_ldflags(
+        "-fPIC",
+        "--sysroot=" + sysroot,
+        "-landroid",
+        "-llog",
+        "-lEGL",
+        "-lGLESv2",
+        "-lm",
+    )
 
 def add_flags():
     checkmem=True
@@ -219,29 +249,10 @@ def add_flags():
             '-Wl,--end-group'
             ),
     elif is_plat("android"):
-        ndk = os.environ.get("ANDROID_NDK_HOME") or os.environ.get("ANDROID_NDK_ROOT") or ""
-        if ndk:
-            host, _, _ = _ndk_host_dirs()
-            sysroot = os.path.join(ndk, "toolchains", "llvm", "prebuilt", host, "sysroot")
-            add_cflags(
-                "-g",
-                "-fPIC",
-                "-D__ANDROID__",
-                "-DYUI_BACKEND_MOBILE",
-                "--sysroot=" + sysroot,
-                "-Isrc",
-                "-Ilib",
-            )
-            add_ldflags(
-                "-fPIC",
-                "--sysroot=" + sysroot,
-                "-landroid",
-                "-llog",
-                "-lEGL",
-                "-lGLESv2",
-                "-lm",
-            )
-        else:
+        configure_android_toolchain()
+        _add_android_compile_flags()
+        before_build(configure_android_toolchain)
+        if not (os.environ.get("ANDROID_NDK_HOME") or os.environ.get("ANDROID_NDK_ROOT")):
             print("warning: ANDROID_NDK_HOME not set, android cross-build may fail")
     elif is_plat("ios"):
         add_cflags(
