@@ -16,14 +16,12 @@ if get_plat() == "android":
     (
         add_deps("yui", "cjson", "yaml2json", "quickjs", "jsmodule-quickjs", "socket"),
         add_rules("mode.debug", "mode.release"),
-        before_build(copy_android_prebuilt_libs),
     )
 
     target("yui-android-prebuilt-mqjs")
     (
         add_deps("yui", "cjson", "yaml2json", "mquickjs", "jsmodule", "socket"),
         add_rules("mode.debug", "mode.release"),
-        before_build(copy_android_prebuilt_libs),
     )
 
     target("yui-android-jni-quickjs")
