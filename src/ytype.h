@@ -468,6 +468,8 @@ typedef struct Layer {
     int layout_base_fixed_h;
     unsigned char layout_base_valid;
 
+    int connectable;
+
 } Layer;
 // 全局变量：当前拥有焦点的图层
 extern Layer* focused_layer;

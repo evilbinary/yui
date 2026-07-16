@@ -78,7 +78,9 @@ static void draggable_dot_overlay_render(Layer* overlay)
 {
     Layer* parent;
     DraggableComponent* component;
-    unsigned int anchor_mask = 0;
+    ConnectorAnchorEntry entries[CONNECTOR_MAX_ANCHOR_ENTRIES];
+    int entry_count = 0;
+    int i;
     Rect prev_clip;
 
     if (!overlay) {
@@ -91,22 +93,45 @@ static void draggable_dot_overlay_render(Layer* overlay)
     }
 
     component = (DraggableComponent*)parent->component;
-    if (!component->show_dots || component->dot_size <= 0 || !parent->id[0] || !g_ui_root) {
+    if (!component->show_dots || component->dot_size <= 0 || !g_ui_root) {
         return;
     }
 
-    connector_collect_anchors_for_layer(g_ui_root, parent->id, &anchor_mask);
+    connector_collect_anchors_for_draggable_tree(g_ui_root, parent, entries,
+                                                 &entry_count,
+                                                 CONNECTOR_MAX_ANCHOR_ENTRIES);
+    if (entry_count <= 0) {
+        return;
+    }
+
     backend_render_get_clip_rect(&prev_clip);
     backend_render_set_clip_rect(NULL);
-    connector_render_dots_for_layer(parent, anchor_mask,
-                                      component->dot_size, component->dot_color);
+    for (i = 0; i < entry_count; i++) {
+        connector_render_dots_for_layer(entries[i].layer, entries[i].anchor_mask,
+                                        component->dot_size, component->dot_color);
+    }
     backend_render_set_clip_rect(&prev_clip);
+}
+
+static int draggable_has_visible_dots(DraggableComponent* component)
+{
+    ConnectorAnchorEntry entries[CONNECTOR_MAX_ANCHOR_ENTRIES];
+    int entry_count = 0;
+
+    if (!component || !component->layer || !component->show_dots ||
+        component->dot_size <= 0 || !g_ui_root) {
+        return 0;
+    }
+
+    connector_collect_anchors_for_draggable_tree(g_ui_root, component->layer, entries,
+                                                 &entry_count,
+                                                 CONNECTOR_MAX_ANCHOR_ENTRIES);
+    return entry_count > 0;
 }
 
 static void draggable_sync_dot_overlay(DraggableComponent* component)
 {
     Layer* parent;
-    unsigned int anchor_mask = 0;
 
     if (!component || !component->layer) {
         return;
@@ -114,11 +139,7 @@ static void draggable_sync_dot_overlay(DraggableComponent* component)
 
     parent = component->layer;
 
-    if (component->show_dots && parent->id[0] && g_ui_root) {
-        connector_collect_anchors_for_layer(g_ui_root, parent->id, &anchor_mask);
-    }
-
-    if (!anchor_mask || component->dot_size <= 0) {
+    if (!draggable_has_visible_dots(component)) {
         if (component->dot_overlay) {
             layer_hide(component->dot_overlay);
         }

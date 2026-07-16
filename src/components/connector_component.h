@@ -8,6 +8,8 @@
 extern "C" {
 #endif
 
+#define CONNECTOR_MAX_ANCHOR_ENTRIES 32
+
 typedef enum {
     CONNECTOR_ANCHOR_CENTER = 0,
     CONNECTOR_ANCHOR_TOP,
@@ -39,10 +41,18 @@ typedef struct ConnectorComponent {
     int stroke_width;
 } ConnectorComponent;
 
+typedef struct ConnectorAnchorEntry {
+    Layer* layer;
+    unsigned int anchor_mask;
+} ConnectorAnchorEntry;
+
 ConnectorComponent* connector_component_create(Layer* layer);
 ConnectorComponent* connector_component_create_from_json(Layer* layer, cJSON* json_obj);
 void connector_component_destroy(ConnectorComponent* component);
 void connector_component_render(Layer* layer);
+Layer* connector_resolve_endpoint(const char* id_or_path);
+int connector_layer_is_connectable(Layer* layer);
+Layer* connector_find_draggable_host(Layer* layer);
 void connector_get_layer_anchor_point(Layer* layer, ConnectorAnchor anchor,
                                       int* out_x, int* out_y);
 void connector_render_dot(int cx, int cy, int radius, Color color);
@@ -50,6 +60,10 @@ void connector_render_dots_for_layer(Layer* layer, unsigned int anchor_mask,
                                      int dot_size, Color dot_color);
 void connector_collect_anchors_for_layer(Layer* root, const char* layer_id,
                                          unsigned int* anchor_mask);
+void connector_collect_anchors_for_draggable_tree(Layer* root, Layer* draggable,
+                                                  ConnectorAnchorEntry* entries,
+                                                  int* entry_count,
+                                                  int max_entries);
 
 #ifdef __cplusplus
 }

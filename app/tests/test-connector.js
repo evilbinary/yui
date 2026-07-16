@@ -39,6 +39,8 @@ function runConnectorTest() {
         assertLayerExists("nodeC");
         assertLayerExists("edgeAB");
         assertLayerExists("edgeBC");
+        assertLayerExists("edgeInputToB");
+        assertLayerExists("edgeInputToPort");
         assertLayerExists("graphCanvas");
 
         var nodeA = findLayer("nodeA");
@@ -46,7 +48,7 @@ function runConnectorTest() {
             throw new Error("nodeA 尺寸异常");
         }
 
-        setStatus("检查通过：3 节点 + 2 连线均存在", "#a6e3a1");
+        setStatus("检查通过：节点/子端口/连线均存在", "#a6e3a1");
         YUI.log("runConnectorTest: passed");
     } catch (err) {
         var message = err && err.message ? err.message : String(err);

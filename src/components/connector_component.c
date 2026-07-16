@@ -8,6 +8,149 @@
 
 extern Layer* g_ui_root;
 
+static void connector_merge_anchor_entry(ConnectorAnchorEntry* entries,
+                                         int* entry_count, int max_entries,
+                                         Layer* layer, ConnectorAnchor anchor)
+{
+    int i;
+
+    if (!entries || !entry_count || !layer || anchor < CONNECTOR_ANCHOR_CENTER ||
+        anchor > CONNECTOR_ANCHOR_RIGHT) {
+        return;
+    }
+
+    for (i = 0; i < *entry_count; i++) {
+        if (entries[i].layer == layer) {
+            entries[i].anchor_mask |= (1u << anchor);
+            return;
+        }
+    }
+
+    if (*entry_count < max_entries) {
+        entries[*entry_count].layer = layer;
+        entries[*entry_count].anchor_mask = (1u << anchor);
+        (*entry_count)++;
+    }
+}
+
+Layer* connector_resolve_endpoint(const char* id_or_path)
+{
+    if (!id_or_path || !id_or_path[0] || !g_ui_root) {
+        return NULL;
+    }
+
+    if (strchr(id_or_path, '.')) {
+        return layer_resolve_path(g_ui_root, id_or_path);
+    }
+
+    return find_layer_by_id(g_ui_root, id_or_path);
+}
+
+int connector_layer_is_connectable(Layer* layer)
+{
+    if (!layer) {
+        return 0;
+    }
+
+    if (layer->type == DRAGGABLE) {
+        return 1;
+    }
+
+    return layer->connectable != 0;
+}
+
+Layer* connector_find_draggable_host(Layer* layer)
+{
+    Layer* current = layer;
+
+    while (current) {
+        if (current->type == DRAGGABLE) {
+            return current;
+        }
+        current = current->parent;
+    }
+
+    return NULL;
+}
+
+static void connector_collect_endpoint_for_draggable(Layer* root, Layer* draggable,
+                                                     ConnectorAnchorEntry* entries,
+                                                     int* entry_count, int max_entries,
+                                                     const char* endpoint_id,
+                                                     ConnectorAnchor anchor)
+{
+    Layer* endpoint;
+
+    if (!endpoint_id || !endpoint_id[0]) {
+        return;
+    }
+
+    endpoint = connector_resolve_endpoint(endpoint_id);
+    if (!endpoint || !connector_layer_is_connectable(endpoint)) {
+        return;
+    }
+
+    if (connector_find_draggable_host(endpoint) != draggable) {
+        return;
+    }
+
+    connector_merge_anchor_entry(entries, entry_count, max_entries, endpoint, anchor);
+}
+
+static void connector_walk_connectors_for_draggable(Layer* root, Layer* draggable,
+                                                    ConnectorAnchorEntry* entries,
+                                                    int* entry_count, int max_entries)
+{
+    ConnectorComponent* component;
+    int i;
+
+    if (!root) {
+        return;
+    }
+
+    if (root->type == CONNECTOR && root->component) {
+        component = (ConnectorComponent*)root->component;
+        connector_collect_endpoint_for_draggable(root, draggable, entries, entry_count,
+                                               max_entries, component->from_id,
+                                               component->from_anchor);
+        connector_collect_endpoint_for_draggable(root, draggable, entries, entry_count,
+                                               max_entries, component->to_id,
+                                               component->to_anchor);
+    }
+
+    if (root->children) {
+        for (i = 0; i < root->child_count; i++) {
+            if (root->children[i]) {
+                connector_walk_connectors_for_draggable(root->children[i], draggable,
+                                                        entries, entry_count, max_entries);
+            }
+        }
+    }
+
+    if (root->sub) {
+        connector_walk_connectors_for_draggable(root->sub, draggable, entries,
+                                                entry_count, max_entries);
+    }
+}
+
+void connector_collect_anchors_for_draggable_tree(Layer* root, Layer* draggable,
+                                                  ConnectorAnchorEntry* entries,
+                                                  int* entry_count,
+                                                  int max_entries)
+{
+    if (!draggable || !entries || !entry_count || max_entries <= 0) {
+        return;
+    }
+
+    *entry_count = 0;
+    if (!root) {
+        return;
+    }
+
+    connector_walk_connectors_for_draggable(root, draggable, entries, entry_count,
+                                            max_entries);
+}
+
 static void connector_layer_destroy(Layer* layer)
 {
     if (!layer || !layer->component) {
@@ -287,9 +430,11 @@ void connector_component_render(Layer* layer)
         return;
     }
 
-    from_layer = find_layer_by_id(g_ui_root, component->from_id);
-    to_layer = find_layer_by_id(g_ui_root, component->to_id);
-    if (!from_layer || !to_layer) {
+    from_layer = connector_resolve_endpoint(component->from_id);
+    to_layer = connector_resolve_endpoint(component->to_id);
+    if (!from_layer || !to_layer ||
+        !connector_layer_is_connectable(from_layer) ||
+        !connector_layer_is_connectable(to_layer)) {
         return;
     }
 
@@ -316,18 +461,28 @@ void connector_collect_anchors_for_layer(Layer* root, const char* layer_id,
                                          unsigned int* anchor_mask)
 {
     ConnectorComponent* component;
+    Layer* target_layer;
+    Layer* from_layer;
+    Layer* to_layer;
     int i;
 
     if (!root || !layer_id || !layer_id[0] || !anchor_mask) {
         return;
     }
 
+    target_layer = connector_resolve_endpoint(layer_id);
+    if (!target_layer) {
+        return;
+    }
+
     if (root->type == CONNECTOR && root->component) {
         component = (ConnectorComponent*)root->component;
-        if (strcmp(component->from_id, layer_id) == 0) {
+        from_layer = connector_resolve_endpoint(component->from_id);
+        to_layer = connector_resolve_endpoint(component->to_id);
+        if (from_layer == target_layer) {
             *anchor_mask |= (1u << component->from_anchor);
         }
-        if (strcmp(component->to_id, layer_id) == 0) {
+        if (to_layer == target_layer) {
             *anchor_mask |= (1u << component->to_anchor);
         }
     }

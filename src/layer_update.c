@@ -33,58 +33,6 @@ static void batch_prealloc_children(Layer* parent) {
 // ====================== 辅助函数 ======================
 
 /**
- * 解析路径：支持 "id"、"children.0"、"children.id"、"a.b.c" 等格式
- * @return 目标图层，失败返回 NULL
- */
-static Layer* resolve_path(Layer* root, const char* path) {
-    if (!root || !path || path[0] == '\0') {
-        return NULL;
-    }
-    
-    // 复制路径字符串用于分割
-    char path_copy[256];
-    strncpy(path_copy, path, sizeof(path_copy) - 1);
-    path_copy[sizeof(path_copy) - 1] = '\0';
-    
-    Layer* current = root;
-    char* token = strtok(path_copy, ".");
-    
-    while (token != NULL && current != NULL) {
-        // 检查是否是 children 关键字
-        if (strcmp(token, "children") == 0) {
-            token = strtok(NULL, ".");
-            if (!token) break;
-            
-            // 检查是否是数字索引
-            char* endptr;
-            long index = strtol(token, &endptr, 10);
-            
-            if (*endptr == '\0' && index >= 0 && index < current->child_count) {
-                // 数字索引：children.0
-                current = current->children[index];
-            } else {
-                // ID 查找：children.id
-                Layer* found = NULL;
-                for (int i = 0; i < current->child_count; i++) {
-                    if (strcmp(current->children[i]->id, token) == 0) {
-                        found = current->children[i];
-                        break;
-                    }
-                }
-                current = found;
-            }
-        } else {
-            // 普通 ID 查找
-            current = find_layer_by_id(current, token);
-        }
-        
-        token = strtok(NULL, ".");
-    }
-    
-    return current;
-}
-
-/**
  * 解析整数数组 [a, b]
  */
 int parse_int_array(cJSON* array, int* a, int* b) {
@@ -361,7 +309,7 @@ static int try_batch_child_appends(Layer* root, cJSON* json) {
         }
         if (index == 0) {
             target = target_json->valuestring;
-            target_layer = resolve_path(root, target);
+            target_layer = layer_resolve_path(root, target);
             if (!target_layer) {
                 return 0;
             }
@@ -541,7 +489,7 @@ int yui_update_from_json(Layer* root, cJSON* update_obj) {
     const char* target_path = target_json->valuestring;
     
     // 解析路径获取目标图层
-    Layer* target_layer = resolve_path(root, target_path);
+    Layer* target_layer = layer_resolve_path(root, target_path);
     if (!target_layer) {
         printf("yui_update_from_json: 未找到目标图层 '%s'\n", target_path);
         return -1;
