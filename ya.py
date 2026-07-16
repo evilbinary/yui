@@ -273,6 +273,7 @@ def add_flags():
         configure_android_toolchain()
         _add_android_compile_flags()
         before_build(configure_android_toolchain)
+        after_build(after_build_android_prebuilt)
         if not (os.environ.get("ANDROID_NDK_HOME") or os.environ.get("ANDROID_NDK_ROOT")):
             print("warning: ANDROID_NDK_HOME not set, android cross-build may fail")
     elif is_plat("ios"):
@@ -428,18 +429,31 @@ def run(target):
 def get_prefix():
     return prefix_env
 
+def _android_static_lib_path(target):
+    if target.get("kind") != "static":
+        return None
+    name = target.get("filename") or target.get("name")
+    plat = target.plat() if hasattr(target, "plat") else get_plat()
+    arch = target.get_arch() or get_arch()
+    mode = target.get_config("mode") if hasattr(target, "get_config") else get_config("mode")
+    if not name or not plat or not arch or not mode or arch == "None":
+        return None
+    return os.path.join("build", plat, arch, mode, "lib" + name + ".a")
+
 def after_build_android_prebuilt(target):
-    import os
     import shutil
 
-    if get_plat() != "android":
+    plat = target.plat() if hasattr(target, "plat") else get_plat()
+    if plat != "android":
         return
 
-    src = target.targetfile()
-    if not src or not os.path.isfile(src) or not src.endswith(".a"):
+    src = _android_static_lib_path(target)
+    if not src or not os.path.isfile(src):
         return
 
-    arch = target.get_arch() or get_arch()
+    arch = target.get_arch() if hasattr(target, "get_arch") else get_arch()
+    if not arch:
+        arch = get_arch()
     if not arch or arch == "None":
         return
 
@@ -455,9 +469,6 @@ def add_run():
 add_buildin('add_flags',add_flags)
 add_buildin('add_run',add_run)
 add_buildin('get_prefix',get_prefix)
-
-after_build(after_build_android_prebuilt)
-
 
 includes("./src/ya.py")
 includes("./lib/ya.py")
