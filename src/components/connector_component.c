@@ -259,6 +259,66 @@ static void connector_auto_control_points(int x0, int y0, int x1, int y1,
     *cy2 = y1;
 }
 
+static int connector_get_component_geometry(ConnectorComponent* component,
+                                            int* x0, int* y0, int* x1, int* y1,
+                                            int* cx1, int* cy1, int* cx2, int* cy2)
+{
+    Layer* from_layer;
+    Layer* to_layer;
+
+    if (!component || !g_ui_root) {
+        return 0;
+    }
+
+    from_layer = connector_resolve_endpoint(component->from_id);
+    to_layer = connector_resolve_endpoint(component->to_id);
+    if (!from_layer || !to_layer ||
+        !connector_layer_is_connectable(from_layer) ||
+        !connector_layer_is_connectable(to_layer)) {
+        return 0;
+    }
+
+    connector_get_layer_anchor_point(from_layer, component->from_anchor, x0, y0);
+    connector_get_layer_anchor_point(to_layer, component->to_anchor, x1, y1);
+
+    if (component->curve_mode == CONNECTOR_CURVE_MANUAL &&
+        component->has_ctrl1 && component->has_ctrl2) {
+        *cx1 = component->ctrl1_x;
+        *cy1 = component->ctrl1_y;
+        *cx2 = component->ctrl2_x;
+        *cy2 = component->ctrl2_y;
+    } else {
+        connector_auto_control_points(*x0, *y0, *x1, *y1, component->curve_mode,
+                                      cx1, cy1, cx2, cy2);
+    }
+
+    return 1;
+}
+
+static int connector_dist_sq(int ax, int ay, int bx, int by)
+{
+    int dx = ax - bx;
+    int dy = ay - by;
+    return dx * dx + dy * dy;
+}
+
+static void connector_bezier_point(int x0, int y0, int cx1, int cy1,
+                                   int cx2, int cy2, int x1, int y1,
+                                   float t, int* out_x, int* out_y)
+{
+    float u = 1.0f - t;
+    float tt = t * t;
+    float uu = u * u;
+    float uuu = uu * u;
+    float ttt = tt * t;
+
+    *out_x = (int)(uuu * x0 + 3.0f * uu * t * cx1 + 3.0f * u * tt * cx2 + ttt * x1);
+    *out_y = (int)(uuu * y0 + 3.0f * uu * t * cy1 + 3.0f * u * tt * cy2 + ttt * y1);
+}
+
+static void connector_remove_child_layer(Layer* parent, Layer* child);
+static void connector_refresh_canvas_draggbles(Layer* canvas);
+
 void connector_render_dot(int cx, int cy, int radius, Color color)
 {
     Rect rect;
@@ -393,8 +453,6 @@ void connector_component_destroy(ConnectorComponent* component)
 void connector_component_render(Layer* layer)
 {
     ConnectorComponent* component;
-    Layer* from_layer;
-    Layer* to_layer;
     int x0;
     int y0;
     int x1;
@@ -413,26 +471,9 @@ void connector_component_render(Layer* layer)
         return;
     }
 
-    from_layer = connector_resolve_endpoint(component->from_id);
-    to_layer = connector_resolve_endpoint(component->to_id);
-    if (!from_layer || !to_layer ||
-        !connector_layer_is_connectable(from_layer) ||
-        !connector_layer_is_connectable(to_layer)) {
+    if (!connector_get_component_geometry(component, &x0, &y0, &x1, &y1,
+                                          &cx1, &cy1, &cx2, &cy2)) {
         return;
-    }
-
-    connector_get_layer_anchor_point(from_layer, component->from_anchor, &x0, &y0);
-    connector_get_layer_anchor_point(to_layer, component->to_anchor, &x1, &y1);
-
-    if (component->curve_mode == CONNECTOR_CURVE_MANUAL &&
-        component->has_ctrl1 && component->has_ctrl2) {
-        cx1 = component->ctrl1_x;
-        cy1 = component->ctrl1_y;
-        cx2 = component->ctrl2_x;
-        cy2 = component->ctrl2_y;
-    } else {
-        connector_auto_control_points(x0, y0, x1, y1, component->curve_mode,
-                                      &cx1, &cy1, &cx2, &cy2);
     }
 
     backend_render_bezier_cubic(x0, y0, cx1, cy1, cx2, cy2, x1, y1,
@@ -709,10 +750,156 @@ int connector_hit_test_canvas_ports(Layer* canvas, int x, int y, int dot_size,
                                       out_layer, out_anchor);
 }
 
+static int connector_hit_test_curve(Layer* canvas, int x, int y, int threshold,
+                                    Layer** out_connector)
+{
+    int i;
+    int best_dist = -1;
+    Layer* best_layer = NULL;
+    int x0;
+    int y0;
+    int x1;
+    int y1;
+    int cx1;
+    int cy1;
+    int cx2;
+    int cy2;
+    int j;
+    int px;
+    int py;
+    int dist;
+    int limit;
+
+    if (!canvas || threshold < 1) {
+        return 0;
+    }
+
+    limit = threshold * threshold;
+
+    for (i = 0; i < canvas->child_count; i++) {
+        Layer* child = canvas->children[i];
+        ConnectorComponent* component;
+
+        if (!child || child->type != CONNECTOR || !child->component) {
+            continue;
+        }
+
+        component = (ConnectorComponent*)child->component;
+        if (!connector_get_component_geometry(component, &x0, &y0, &x1, &y1,
+                                              &cx1, &cy1, &cx2, &cy2)) {
+            continue;
+        }
+
+        for (j = 0; j <= 24; j++) {
+            connector_bezier_point(x0, y0, cx1, cy1, cx2, cy2, x1, y1,
+                                   j / 24.0f, &px, &py);
+            dist = connector_dist_sq(x, y, px, py);
+            if (dist <= limit && (best_dist < 0 || dist < best_dist)) {
+                best_dist = dist;
+                best_layer = child;
+            }
+        }
+    }
+
+    if (!best_layer) {
+        return 0;
+    }
+
+    if (out_connector) {
+        *out_connector = best_layer;
+    }
+
+    return 1;
+}
+
+static int connector_endpoint_matches(ConnectorComponent* component,
+                                      Layer* endpoint, ConnectorAnchor anchor)
+{
+    Layer* from_layer;
+    Layer* to_layer;
+
+    if (!component || !endpoint) {
+        return 0;
+    }
+
+    from_layer = connector_resolve_endpoint(component->from_id);
+    to_layer = connector_resolve_endpoint(component->to_id);
+    return (from_layer == endpoint && component->from_anchor == anchor) ||
+           (to_layer == endpoint && component->to_anchor == anchor);
+}
+
+static int connector_remove_at_endpoint(Layer* canvas, Layer* endpoint,
+                                        ConnectorAnchor anchor)
+{
+    int i;
+    int removed = 0;
+
+    if (!canvas || !endpoint) {
+        return 0;
+    }
+
+    for (i = canvas->child_count - 1; i >= 0; i--) {
+        Layer* child = canvas->children[i];
+        ConnectorComponent* component;
+
+        if (!child || child->type != CONNECTOR || !child->component) {
+            continue;
+        }
+
+        component = (ConnectorComponent*)child->component;
+        if (!connector_endpoint_matches(component, endpoint, anchor)) {
+            continue;
+        }
+
+        connector_remove_child_layer(canvas, child);
+        removed = 1;
+    }
+
+    if (removed) {
+        layout_layer(canvas);
+        connector_refresh_canvas_draggbles(canvas);
+    }
+
+    return removed;
+}
+
+int connector_try_remove_at(Layer* canvas, int x, int y, int dot_size)
+{
+    Layer* hit_layer;
+    ConnectorAnchor hit_anchor;
+    Layer* connector_layer;
+
+    if (!canvas) {
+        return 0;
+    }
+
+    if (connector_hit_test_canvas_ports(canvas, x, y, dot_size,
+                                        &hit_layer, &hit_anchor)) {
+        return connector_remove_at_endpoint(canvas, hit_layer, hit_anchor);
+    }
+
+    if (connector_hit_test_curve(canvas, x, y, 8, &connector_layer)) {
+        connector_remove_child_layer(canvas, connector_layer);
+        layout_layer(canvas);
+        connector_refresh_canvas_draggbles(canvas);
+        return 1;
+    }
+
+    return 0;
+}
+
+typedef enum {
+    CONNECTOR_DRAG_CREATE = 0,
+    CONNECTOR_DRAG_MODIFY = 1,
+} ConnectorDragMode;
+
 typedef struct ConnectorDragState {
     int active;
+    ConnectorDragMode mode;
     Layer* canvas;
     Layer* capture_layer;
+    Layer* modify_layer;
+    int modify_from_end;
     Layer* from_layer;
     ConnectorAnchor from_anchor;
     int dot_size;
@@ -729,6 +916,10 @@ static void connector_destroy_capture_layer(void);
 static int connector_create_capture_layer(void);
 static int connector_capture_handle_mouse(Layer* layer, MouseEvent* event);
 static void connector_capture_render(Layer* layer);
+static void connector_sync_pick_layer(Layer* canvas);
+static int connector_pick_handle_mouse(Layer* layer, MouseEvent* event);
+static int connector_interaction_start_modify(Layer* connector_layer, int x, int y,
+                                              int dot_size);
 
 static void connector_refresh_canvas_draggbles(Layer* canvas)
 {
@@ -744,6 +935,111 @@ static void connector_refresh_canvas_draggbles(Layer* canvas)
             child->layout(child);
         }
     }
+
+    connector_sync_pick_layer(canvas);
+}
+
+static void connector_move_child_to_end(Layer* parent, Layer* child)
+{
+    int i;
+    int from_index = -1;
+    Layer* moved;
+
+    if (!parent || !child || !parent->children) {
+        return;
+    }
+
+    for (i = 0; i < parent->child_count; i++) {
+        if (parent->children[i] == child) {
+            from_index = i;
+            break;
+        }
+    }
+
+    if (from_index < 0 || from_index == parent->child_count - 1) {
+        return;
+    }
+
+    moved = parent->children[from_index];
+    for (i = from_index; i < parent->child_count - 1; i++) {
+        parent->children[i] = parent->children[i + 1];
+    }
+    parent->children[parent->child_count - 1] = moved;
+}
+
+static void connector_sync_pick_layer(Layer* canvas)
+{
+    Layer* pick = NULL;
+    int i;
+    Layer** children;
+
+    if (!canvas) {
+        return;
+    }
+
+    for (i = 0; i < canvas->child_count; i++) {
+        if (canvas->children[i] &&
+            strcmp(canvas->children[i]->id, "_connector_pick") == 0) {
+            pick = canvas->children[i];
+            break;
+        }
+    }
+
+    if (!pick) {
+        pick = layer_create(canvas, 0, 0, canvas->rect.w, canvas->rect.h);
+        if (!pick) {
+            return;
+        }
+
+        pick->type = VIEW;
+        strncpy(pick->id, "_connector_pick", sizeof(pick->id) - 1);
+        pick->id[sizeof(pick->id) - 1] = '\0';
+        pick->bg_color.a = 0;
+        pick->focusable = 0;
+        pick->handle_mouse_event = connector_pick_handle_mouse;
+        pick->parent = canvas;
+
+        children = (Layer**)realloc(canvas->children,
+                                    (size_t)(canvas->child_count + 1) * sizeof(Layer*));
+        if (!children) {
+            destroy_layer(pick);
+            return;
+        }
+
+        canvas->children = children;
+        canvas->children[canvas->child_count++] = pick;
+    }
+
+    connector_move_child_to_end(canvas, pick);
+    pick->rect.x = canvas->rect.x;
+    pick->rect.y = canvas->rect.y;
+    pick->rect.w = canvas->rect.w;
+    pick->rect.h = canvas->rect.h;
+}
+
+static int connector_pick_handle_mouse(Layer* layer, MouseEvent* event)
+{
+    Layer* canvas;
+    Layer* connector_layer;
+
+    if (!layer || !event || g_connector_drag.active) {
+        return 0;
+    }
+
+    if (event->state != SDL_PRESSED || event->button != SDL_BUTTON_LEFT) {
+        return 0;
+    }
+
+    canvas = layer->parent;
+    if (!canvas) {
+        return 0;
+    }
+
+    if (!connector_hit_test_curve(canvas, event->x, event->y, 8, &connector_layer)) {
+        return 0;
+    }
+
+    return connector_interaction_start_modify(connector_layer, event->x, event->y, 4);
 }
 
 static int connector_canvas_insert_layer(Layer* canvas, Layer* connector_layer)
@@ -886,13 +1182,53 @@ static int connector_capture_handle_mouse(Layer* layer, MouseEvent* event)
     }
 
     if (event->state == SDL_RELEASED && event->button == SDL_BUTTON_LEFT) {
-        if (connector_hit_test_canvas_ports(g_connector_drag.canvas, event->x, event->y,
-                                            g_connector_drag.dot_size, &to_layer,
-                                            &to_anchor) &&
-            to_layer && (to_layer != g_connector_drag.from_layer ||
-                         to_anchor != g_connector_drag.from_anchor)) {
+        if (g_connector_drag.mode == CONNECTOR_DRAG_MODIFY &&
+            g_connector_drag.modify_layer && g_connector_drag.modify_layer->component) {
+            if (connector_hit_test_canvas_ports(g_connector_drag.canvas, event->x, event->y,
+                                                g_connector_drag.dot_size, &to_layer,
+                                                &to_anchor)) {
+                ConnectorComponent* component =
+                    (ConnectorComponent*)g_connector_drag.modify_layer->component;
+                Layer* fixed_layer;
+                ConnectorAnchor fixed_anchor;
+                int valid = 1;
+
+                if (g_connector_drag.modify_from_end) {
+                    fixed_layer = connector_resolve_endpoint(component->to_id);
+                    fixed_anchor = component->to_anchor;
+                    if (fixed_layer && to_layer == fixed_layer &&
+                        to_anchor == fixed_anchor) {
+                        valid = 0;
+                    } else {
+                        connector_layer_endpoint_id(to_layer, component->from_id,
+                                                    sizeof(component->from_id));
+                        component->from_anchor = to_anchor;
+                    }
+                } else {
+                    fixed_layer = connector_resolve_endpoint(component->from_id);
+                    fixed_anchor = component->from_anchor;
+                    if (fixed_layer && to_layer == fixed_layer &&
+                        to_anchor == fixed_anchor) {
+                        valid = 0;
+                    } else {
+                        connector_layer_endpoint_id(to_layer, component->to_id,
+                                                    sizeof(component->to_id));
+                        component->to_anchor = to_anchor;
+                    }
+                }
+
+                if (valid) {
+                    layout_layer(g_connector_drag.canvas);
+                    connector_refresh_canvas_draggbles(g_connector_drag.canvas);
+                }
+            }
+        } else if (connector_hit_test_canvas_ports(g_connector_drag.canvas, event->x, event->y,
+                                                   g_connector_drag.dot_size, &to_layer,
+                                                   &to_anchor) &&
+                   to_layer && (to_layer != g_connector_drag.from_layer ||
+                                to_anchor != g_connector_drag.from_anchor)) {
             connector_create_link(g_connector_drag.canvas, g_connector_drag.from_layer,
-                                  g_connector_drag.from_anchor, to_layer, to_anchor);
+                                g_connector_drag.from_anchor, to_layer, to_anchor);
         }
 
         connector_destroy_capture_layer();
@@ -954,12 +1290,61 @@ int connector_interaction_start(Layer* from_layer, ConnectorAnchor from_anchor,
 
     memset(&g_connector_drag, 0, sizeof(g_connector_drag));
     g_connector_drag.active = 1;
+    g_connector_drag.mode = CONNECTOR_DRAG_CREATE;
     g_connector_drag.from_layer = from_layer;
     g_connector_drag.from_anchor = from_anchor;
     g_connector_drag.canvas = connector_find_canvas(from_layer);
     g_connector_drag.dot_size = dot_size > 0 ? dot_size : 4;
     g_connector_drag.mouse_x = mouse_x;
     g_connector_drag.mouse_y = mouse_y;
+    if (!g_connector_drag.canvas) {
+        g_connector_drag.active = 0;
+        return 0;
+    }
+
+    if (!connector_create_capture_layer()) {
+        memset(&g_connector_drag, 0, sizeof(g_connector_drag));
+        return 0;
+    }
+
+    return 1;
+}
+
+static int connector_interaction_start_modify(Layer* connector_layer, int x, int y,
+                                              int dot_size)
+{
+    ConnectorComponent* component;
+    int x0;
+    int y0;
+    int x1;
+    int y1;
+    int cx1;
+    int cy1;
+    int cx2;
+    int cy2;
+
+    if (g_connector_drag.active || !connector_layer || connector_layer->type != CONNECTOR ||
+        !connector_layer->component) {
+        return 0;
+    }
+
+    component = (ConnectorComponent*)connector_layer->component;
+    if (!component->from_id[0] || !component->to_id[0] ||
+        !connector_get_component_geometry(component, &x0, &y0, &x1, &y1,
+                                          &cx1, &cy1, &cx2, &cy2)) {
+        return 0;
+    }
+
+    memset(&g_connector_drag, 0, sizeof(g_connector_drag));
+    g_connector_drag.active = 1;
+    g_connector_drag.mode = CONNECTOR_DRAG_MODIFY;
+    g_connector_drag.modify_layer = connector_layer;
+    g_connector_drag.modify_from_end =
+        connector_dist_sq(x, y, x0, y0) <= connector_dist_sq(x, y, x1, y1);
+    g_connector_drag.canvas = connector_layer->parent;
+    g_connector_drag.dot_size = dot_size > 0 ? dot_size : 4;
+    g_connector_drag.mouse_x = x;
+    g_connector_drag.mouse_y = y;
     if (!g_connector_drag.canvas) {
         g_connector_drag.active = 0;
         return 0;
@@ -987,8 +1372,57 @@ static void connector_render_drag_preview(void)
     Color hover_color;
     int ax;
     int ay;
+    ConnectorComponent* component;
 
-    if (!g_connector_drag.active || !g_connector_drag.from_layer) {
+    if (!g_connector_drag.active) {
+        return;
+    }
+
+    preview_color = (Color){137, 180, 250, 180};
+    hover_color = (Color){166, 227, 161, 255};
+
+    if (g_connector_drag.mode == CONNECTOR_DRAG_MODIFY &&
+        g_connector_drag.modify_layer && g_connector_drag.modify_layer->component) {
+        component = (ConnectorComponent*)g_connector_drag.modify_layer->component;
+        if (!connector_get_component_geometry(component, &x0, &y0, &x1, &y1,
+                                              &cx1, &cy1, &cx2, &cy2)) {
+            return;
+        }
+
+        if (g_connector_drag.modify_from_end) {
+            if (g_connector_drag.hover_layer) {
+                connector_get_layer_anchor_point(g_connector_drag.hover_layer,
+                                                 g_connector_drag.hover_anchor,
+                                                 &x0, &y0);
+            } else {
+                x0 = g_connector_drag.mouse_x;
+                y0 = g_connector_drag.mouse_y;
+            }
+        } else {
+            if (g_connector_drag.hover_layer) {
+                connector_get_layer_anchor_point(g_connector_drag.hover_layer,
+                                                 g_connector_drag.hover_anchor,
+                                                 &x1, &y1);
+            } else {
+                x1 = g_connector_drag.mouse_x;
+                y1 = g_connector_drag.mouse_y;
+            }
+        }
+
+        connector_auto_control_points(x0, y0, x1, y1, CONNECTOR_CURVE_AUTO,
+                                      &cx1, &cy1, &cx2, &cy2);
+        backend_render_bezier_cubic(x0, y0, cx1, cy1, cx2, cy2, x1, y1,
+                                    preview_color, 2);
+
+        if (g_connector_drag.hover_layer) {
+            connector_get_layer_anchor_point(g_connector_drag.hover_layer,
+                                             g_connector_drag.hover_anchor, &ax, &ay);
+            connector_render_dot(ax, ay, g_connector_drag.dot_size + 2, hover_color);
+        }
+        return;
+    }
+
+    if (!g_connector_drag.from_layer) {
         return;
     }
 
@@ -999,12 +1433,10 @@ static void connector_render_drag_preview(void)
     connector_auto_control_points(x0, y0, x1, y1, CONNECTOR_CURVE_AUTO,
                                   &cx1, &cy1, &cx2, &cy2);
 
-    preview_color = (Color){137, 180, 250, 180};
     backend_render_bezier_cubic(x0, y0, cx1, cy1, cx2, cy2, x1, y1,
                                 preview_color, 2);
 
     if (g_connector_drag.hover_layer) {
-        hover_color = (Color){166, 227, 161, 255};
         connector_get_layer_anchor_point(g_connector_drag.hover_layer,
                                          g_connector_drag.hover_anchor, &ax, &ay);
         connector_render_dot(ax, ay, g_connector_drag.dot_size + 2, hover_color);

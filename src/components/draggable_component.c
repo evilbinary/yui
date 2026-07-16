@@ -98,6 +98,14 @@ static int draggable_dot_overlay_handle_mouse(Layer* layer, MouseEvent* event)
         }
     }
 
+    if (event->state == SDL_PRESSED && event->button == SDL_BUTTON_RIGHT) {
+        Layer* canvas = connector_find_canvas(parent);
+        if (canvas) {
+            return connector_try_remove_at(canvas, event->x, event->y,
+                                           component->dot_size);
+        }
+    }
+
     return 0;
 }
 

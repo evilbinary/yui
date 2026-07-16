@@ -236,7 +236,8 @@ function onLoad() {
     YUI.log("Connector 测试页加载完成");
     YUI.log("手动：拖拽 A/B/C 节点观察贝塞尔连线");
     YUI.log("手动：在节点圆点上按下并拖到另一节点圆点创建连线");
-    YUI.log("手动：右键圆点/连线可移除；左键从圆点拖到新目标可修改连线");
+    YUI.log("手动：左键拖圆点新建连线（可多条）；左键拖线条可移动该线端点");
+    YUI.log("手动：右键圆点/连线可删除");
     YUI.log("自动：运行检查 / 移动 nodeA / 添加 A→C / 添加节点 / 重置");
     setTimeout(runConnectorTest, 200);
 }
