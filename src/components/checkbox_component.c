@@ -87,8 +87,8 @@ CheckboxComponent* checkbox_component_create(Layer* layer, int default_checked) 
     
     // 保留 JSON/style 已设置的颜色，否则使用默认值
     layer->bg_color = saved_bg.a > 0 ? saved_bg : (Color){255, 255, 255, 255};
-    component->border_color = (Color){100, 149, 237, 255};
-    component->check_color = (Color){25, 25, 112, 255};
+    component->border_color = (Color){148, 163, 184, 255};
+    component->check_color = (Color){59, 130, 246, 255};
     layer->color = saved_fg.a > 0 ? saved_fg : (Color){0, 0, 0, 255};
         
     // 设置组件指针和自定义渲染函数
@@ -267,6 +267,23 @@ int checkbox_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     return 0;
 }
 
+// 绘制勾选标记（单线，避免双线加粗导致弯曲/十字）
+static void checkbox_draw_tick(const Layer* layer, Color tick) {
+    int ox = layer->rect.x;
+    int oy = layer->rect.y;
+    int w = layer->rect.w;
+    int h = layer->rect.h;
+    int x1 = ox + (w * 5 + 9) / 20;
+    int y1 = oy + (h * 10 + 9) / 20;
+    int x2 = ox + (w * 8 + 9) / 20;
+    int y2 = oy + (h * 14 + 9) / 20;
+    int x3 = ox + (w * 16 + 9) / 20;
+    int y3 = oy + (h * 6 + 9) / 20;
+
+    backend_render_line(x1, y1, x2, y2, tick);
+    backend_render_line(x2, y2, x3, y3, tick);
+}
+
 // 渲染复选框
 void checkbox_component_render(Layer* layer) {
     if (!layer || !layer->component) {
@@ -278,69 +295,35 @@ void checkbox_component_render(Layer* layer) {
     // 检查是否被禁用
     int is_disabled = HAS_STATE(layer, LAYER_STATE_DISABLED);
     
-    // 绘制复选框背景，使用layer->bg_color
-    // 禁用时降低透明度
-    Color bg_color = layer->bg_color;
-    if (is_disabled) {
-        bg_color.a = bg_color.a * 0.6;
-    }
-    
-    backend_render_fill_rect_color(
-        &layer->rect,
-        bg_color.r,
-        bg_color.g,
-        bg_color.b,
-        bg_color.a
-    );
-    
-    // 绘制复选框边框
-    Color border_color = component->border_color;
-    // 选中状态下使用不同的边框颜色
     if (component->checked) {
-        border_color = component->check_color;
-    }
-    // 禁用时降低颜色饱和度
-    if (is_disabled) {
-        // 计算灰度值
-        int gray = (border_color.r * 30 + border_color.g * 59 + border_color.b * 11) / 100;
-        border_color.r = gray;
-        border_color.g = gray;
-        border_color.b = gray;
-        border_color.a = border_color.a * 0.6;
-    }
-    
-    backend_render_rect_color(
-        &layer->rect,
-        border_color.r,
-        border_color.g,
-        border_color.b,
-        border_color.a
-    );
-    
-    // 如果选中，绘制勾选标记
-    if (component->checked) {
-        // 计算勾选标记的位置和大小
-        int padding = layer->rect.w / 4;
-        int x1 = layer->rect.x + padding;
-        int y1 = layer->rect.y + layer->rect.h / 2;
-        int x2 = layer->rect.x + layer->rect.w / 2;
-        int y2 = layer->rect.y + layer->rect.h - padding;
-        int x3 = layer->rect.x + layer->rect.w - padding;
-        int y3 = layer->rect.y + padding;
-        
-        Color check_color = component->check_color;
-        // 禁用时降低颜色饱和度和透明度
+        Color fill = component->check_color;
         if (is_disabled) {
-            int gray = (check_color.r * 30 + check_color.g * 59 + check_color.b * 11) / 100;
-            check_color.r = gray;
-            check_color.g = gray;
-            check_color.b = gray;
-            check_color.a = check_color.a * 0.6;
+            int gray = (fill.r * 30 + fill.g * 59 + fill.b * 11) / 100;
+            fill.r = gray;
+            fill.g = gray;
+            fill.b = gray;
+            fill.a = (uint8_t)(fill.a * 0.6);
         }
-        
-        // 绘制勾选标记（两条线）
-        backend_render_line(x1, y1, x2, y2, check_color);
-        backend_render_line(x2, y2, x3, y3, check_color);
+        backend_render_fill_rect_color(
+            &layer->rect, fill.r, fill.g, fill.b, fill.a);
+
+        Color tick = {255, 255, 255, is_disabled ? 200 : 255};
+        checkbox_draw_tick(layer, tick);
+    } else {
+        Color bg_color = layer->bg_color;
+        Color border_color = component->border_color;
+        if (is_disabled) {
+            bg_color.a = (uint8_t)(bg_color.a * 0.6);
+            int gray = (border_color.r * 30 + border_color.g * 59 + border_color.b * 11) / 100;
+            border_color.r = gray;
+            border_color.g = gray;
+            border_color.b = gray;
+            border_color.a = (uint8_t)(border_color.a * 0.6);
+        }
+        backend_render_fill_rect_color(
+            &layer->rect, bg_color.r, bg_color.g, bg_color.b, bg_color.a);
+        backend_render_rect_color(
+            &layer->rect, border_color.r, border_color.g, border_color.b, border_color.a);
     }
     
     // 绘制标签文本，使用layer->label和layer->color

@@ -8,44 +8,45 @@ main:
 	ya -r main
 
 playground:
-	ya -b playground
 	ya -r playground
 
-build-playground:
-	ya -b playground
 build-db:
 	ya -b db
-	
-gdb: build-db
-	gdb -x  gdb.gdb ./build/None/None/None/db.exe  app/db/db.json
 
+build-watch-os:
+	ya -b watch-os
 
-gdb-watch: build-db
-	gdb -x  gdb.gdb ./build/None/None/None/db.exe  app/watch-os/app.json
-
-
-watch-os: build-db
-	./build/None/None/None/db.exe  app/watch-os/app.json
+watch-os: build-watch-os
+	ya -r watch-os --  app/watch-os/app.json
 
 
 build-lvgl:
 	ya -b lvgl-sdl -p lvgl
 
+lvgl-sdl: build-lvgl
+	ya -p lvgl  -r lvgl-sdl -- app/lvgl/calc.json
+db:  
+	ya -r db -- app/db/db.json
+
+menu: build-playground
+	ya -r playground -- app/tests/test-menu.json
+
+
+
+gdb: build-db
+	gdb -x  gdb.gdb ./build/None/None/None/db.exe  app/db/db.json
+
+gdb-watch: build-db
+	gdb -x  gdb.gdb ./build/None/None/None/db.exe  app/watch-os/app.json
 
 gdb-lvgl: build-lvgl
 	gdb -x  gdb.gdb  ./build/lvgl/None/None/lvgl-sdl.exe app/lvgl/calc.json
 
-lvgl-sdl: build-lvgl
-	./build/lvgl/None/None/lvgl-sdl.exe app/lvgl/calc.json
-db:  
-	ya -b db
-	./build/None/None/None/db.exe  app/db/db.json
-
-menu: build-playground
-	./build/None/None/None/playground.exe  app/tests/test-menu.json
-
 gdb-menu: build-playground
 	gdb -x  gdb.gdb ./build/None/None/None/playground.exe  app/tests/test-menu.json
+
+
+
 
 run: main
 	ya -r main
