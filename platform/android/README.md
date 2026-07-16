@@ -12,12 +12,15 @@ ya -p android -a arm64-v8a -m release -b yui-android-prebuilt
 ya -p android -a armeabi-v7a -m release -b yui-android-prebuilt
 ```
 
-或 PowerShell 薄包装（内部仍是 `ya`）：
+或 Makefile：
 
-```powershell
-$env:ANDROID_NDK_HOME = "C:\Android\ndk\26.x.x"
-.\scripts\build-android-libs.ps1
+```bash
+make android-arm64
+make android-armv7
+make android          # 两个 ABI 都打
 ```
+
+需先设置 `ANDROID_NDK_HOME`。
 
 ## 2. 打 APK
 

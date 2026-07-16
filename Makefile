@@ -47,6 +47,14 @@ gdb-menu: build-playground
 
 
 
+android-arm64:
+	ya -p android -a arm64-v8a -m release -b yui-android-prebuilt
+
+android-armv7:
+	ya -p android -a armeabi-v7a -m release -b yui-android-prebuilt
+
+android: android-arm64 android-armv7
+
 
 run: main
 	ya -r main

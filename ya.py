@@ -101,24 +101,17 @@ def _add_android_compile_flags():
     ndk = os.environ.get("ANDROID_NDK_HOME") or os.environ.get("ANDROID_NDK_ROOT") or ""
     if not ndk:
         return
-    host, _, _ = _ndk_host_dirs()
-    sysroot = os.path.join(ndk, "toolchains", "llvm", "prebuilt", host, "sysroot")
-
     add_cflags(
         "-g",
         "-fPIC",
         "-D__ANDROID__",
         "-DYUI_BACKEND_MOBILE",
-        "--sysroot",
-        sysroot,
         "-I.",
         "-Isrc",
         "-Ilib",
     )
     add_ldflags(
         "-fPIC",
-        "--sysroot",
-        sysroot,
         "-landroid",
         "-llog",
         "-lEGL",

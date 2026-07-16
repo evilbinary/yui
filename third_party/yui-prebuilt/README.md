@@ -34,5 +34,5 @@ third_party/yui-prebuilt/android/
 ## 说明
 
 - 需设置 `ANDROID_NDK_HOME`
-- hook 定义在根目录 `ya.py`：`after_build_android_prebuilt`
-- `scripts/build-android-libs.ps1` 仅为上述 `ya` 命令的薄包装（可选）
+- hook 定义在根目录 `ya.py`：`mobile.prebuilt` 规则
+- 也可用 `make android` / `make android-arm64`
