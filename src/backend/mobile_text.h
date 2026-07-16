@@ -11,6 +11,8 @@ void mobile_draw_text_texture(Texture* texture, const Rect* srcrect, const Rect*
 void mobile_destroy_text_texture(Texture* texture);
 void mobile_init_text_gl(void);
 void mobile_shutdown_text_gl(void);
+void mobile_set_font_fallback_path(const char* path);
+int mobile_has_font_fallback(void);
 
 #endif
 

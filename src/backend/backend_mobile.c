@@ -191,6 +191,21 @@ static void mobile_draw_rect_norm(float x, float y, float w, float h,
 
 float scale = 1.0f;
 
+void backend_set_font_fallback_path(const char* path) {
+#ifdef __ANDROID__
+    mobile_set_font_fallback_path(path);
+#endif
+    (void)path;
+}
+
+int backend_has_font_fallback(void) {
+#ifdef __ANDROID__
+    return mobile_has_font_fallback();
+#else
+    return 0;
+#endif
+}
+
 static float mobile_density(void) {
     return scale > 0.0f ? scale : 1.0f;
 }
@@ -637,14 +652,6 @@ void backend_set_titlebar_color(Color bg, Color text) {
 
 void backend_set_window_icon(const char* path) {
     (void)path;
-}
-
-void backend_set_font_fallback_path(const char* path) {
-    (void)path;
-}
-
-int backend_has_font_fallback(void) {
-    return 0;
 }
 
 void backend_texture_cache_invalidate(void) {}

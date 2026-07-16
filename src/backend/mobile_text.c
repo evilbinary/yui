@@ -2,6 +2,7 @@
 
 #include "mobile_text.h"
 #include "backend.h"
+#include "util.h"
 
 #include <GLES2/gl2.h>
 #include <stdio.h>
@@ -18,6 +19,194 @@ typedef struct {
     float scale;
     int size;
 } MobileFont;
+
+DFont* mobile_load_font(const char* font_path, int size, const char* weight);
+
+static unsigned char* mobile_read_file(const char* path, size_t* out_size);
+
+static char g_font_fallback_path[MAX_PATH] = "";
+static DFont* g_fallback_font = NULL;
+static int g_fallback_font_size = 0;
+
+void mobile_set_font_fallback_path(const char* path) {
+    if (!path) {
+        g_font_fallback_path[0] = '\0';
+        return;
+    }
+    strncpy(g_font_fallback_path, path, sizeof(g_font_fallback_path) - 1);
+    g_font_fallback_path[sizeof(g_font_fallback_path) - 1] = '\0';
+}
+
+int mobile_has_font_fallback(void) {
+    return g_font_fallback_path[0] != '\0';
+}
+
+static void mobile_free_dfont(DFont* font) {
+    MobileFont* mobile_font;
+    if (!font) {
+        return;
+    }
+    mobile_font = (MobileFont*)font->priv;
+    if (mobile_font) {
+        free(mobile_font->data);
+        free(mobile_font);
+    }
+    free(font);
+}
+
+static int mobile_get_font_size(DFont* font) {
+    MobileFont* mobile_font;
+    if (!font || !font->priv) {
+        return 16;
+    }
+    mobile_font = (MobileFont*)font->priv;
+    return mobile_font->size > 0 ? mobile_font->size : 16;
+}
+
+static int mobile_glyph_is_provided(MobileFont* mobile_font, int cp) {
+    if (!mobile_font || cp <= 0) {
+        return 0;
+    }
+    return stbtt_FindGlyphIndex(&mobile_font->info, cp) != 0;
+}
+
+static DFont* mobile_load_font_strict(const char* font_path, int size, const char* weight) {
+    size_t data_size = 0;
+    unsigned char* data = NULL;
+    MobileFont* mobile_font;
+    DFont* font;
+
+    if (!font_path || !font_path[0]) {
+        return NULL;
+    }
+
+    data = mobile_read_file(font_path, &data_size);
+    if (!data) {
+        fprintf(stderr, "mobile_text: failed to load font: %s\n", font_path);
+        return NULL;
+    }
+
+    mobile_font = (MobileFont*)calloc(1, sizeof(MobileFont));
+    if (!mobile_font) {
+        free(data);
+        return NULL;
+    }
+
+    if (!stbtt_InitFont(&mobile_font->info, data, stbtt_GetFontOffsetForIndex(data, 0))) {
+        fprintf(stderr, "mobile_text: stbtt_InitFont failed for %s\n", font_path);
+        free(data);
+        free(mobile_font);
+        return NULL;
+    }
+
+    mobile_font->data = data;
+    mobile_font->size = size > 0 ? size : 16;
+    mobile_font->scale = stbtt_ScaleForPixelHeight(
+        &mobile_font->info, (float)mobile_font->size * (scale > 0.0f ? scale : 1.0f));
+
+    font = (DFont*)calloc(1, sizeof(DFont));
+    if (!font) {
+        free(data);
+        free(mobile_font);
+        return NULL;
+    }
+
+    font->size = mobile_font->size;
+    font->priv = mobile_font;
+    (void)weight;
+    return font;
+}
+
+static DFont* mobile_get_fallback_font_for(DFont* primary) {
+    int size;
+
+    if (!mobile_has_font_fallback() || !primary) {
+        return NULL;
+    }
+
+    size = mobile_get_font_size(primary);
+    if (g_fallback_font && g_fallback_font_size == size) {
+        return g_fallback_font;
+    }
+    if (g_fallback_font) {
+        mobile_free_dfont(g_fallback_font);
+        g_fallback_font = NULL;
+        g_fallback_font_size = 0;
+    }
+
+    g_fallback_font = mobile_load_font_strict(g_font_fallback_path, size, "normal");
+    /* NotoColorEmoji 是 CBDT 位图字体，stb 无法解析 */
+    if (!g_fallback_font) {
+        g_fallback_font = mobile_load_font_strict("/system/fonts/NotoEmoji-Regular.ttf", size, "normal");
+    }
+    if (g_fallback_font) {
+        g_fallback_font_size = size;
+    }
+    return g_fallback_font;
+}
+
+static DFont* mobile_resolve_render_font(DFont* primary, const char* text, DFont** out_fallback) {
+    DFont* fallback;
+    const char* cursor;
+    int all_in_primary = 1;
+    int all_in_fallback = 1;
+    int any_in_primary = 0;
+    MobileFont* primary_font;
+    MobileFont* fallback_font;
+
+    if (out_fallback) {
+        *out_fallback = NULL;
+    }
+
+    if (!primary || !text || !mobile_has_font_fallback()) {
+        return primary;
+    }
+
+    fallback = mobile_get_fallback_font_for(primary);
+    if (out_fallback) {
+        *out_fallback = fallback;
+    }
+    if (!fallback || fallback == primary || !fallback->priv || !primary->priv) {
+        return primary;
+    }
+
+    primary_font = (MobileFont*)primary->priv;
+    fallback_font = (MobileFont*)fallback->priv;
+    cursor = text;
+    while (*cursor) {
+        uint32_t codepoint = 0;
+
+        if (!utf8_decode_codepoint(&cursor, &codepoint)) {
+            break;
+        }
+        if (mobile_glyph_is_provided(primary_font, (int)codepoint)) {
+            any_in_primary = 1;
+        } else {
+            all_in_primary = 0;
+        }
+        if (!mobile_glyph_is_provided(fallback_font, (int)codepoint)) {
+            all_in_fallback = 0;
+        }
+    }
+
+    if (all_in_primary) {
+        return primary;
+    }
+    if (all_in_fallback && !any_in_primary) {
+        return fallback;
+    }
+    return NULL;
+}
+
+static MobileFont* mobile_pick_font_for_codepoint(MobileFont* primary, MobileFont* fallback, int cp) {
+    if (primary && mobile_glyph_is_provided(primary, cp)) {
+        return primary;
+    }
+    if (fallback && mobile_glyph_is_provided(fallback, cp)) {
+        return fallback;
+    }
+    return primary;
+}
 
 typedef struct {
     GLuint id;
@@ -225,8 +414,40 @@ DFont* mobile_load_font(const char* font_path, int size, const char* weight) {
     return font;
 }
 
-Texture* mobile_render_text_texture(DFont* font, const char* text, Color color) {
-    MobileFont* mobile_font;
+static Texture* mobile_upload_text_bitmap(unsigned char* bitmap, int width, int height) {
+    Texture* texture;
+    MobileGlTexture* gl_tex;
+
+    if (!bitmap || width <= 0 || height <= 0) {
+        free(bitmap);
+        return NULL;
+    }
+
+    gl_tex = (MobileGlTexture*)calloc(1, sizeof(MobileGlTexture));
+    texture = (Texture*)calloc(1, sizeof(Texture));
+    if (!gl_tex || !texture) {
+        free(bitmap);
+        free(gl_tex);
+        free(texture);
+        return NULL;
+    }
+
+    glGenTextures(1, &gl_tex->id);
+    glBindTexture(GL_TEXTURE_2D, gl_tex->id);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, bitmap);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    texture->w = width;
+    texture->h = height;
+    texture->priv = gl_tex;
+    free(bitmap);
+    return texture;
+}
+
+static unsigned char* mobile_rasterize_font_text(MobileFont* mobile_font, MobileFont* fallback_font,
+                                                 const char* text, Color color, int* out_w, int* out_h) {
     const char* cursor;
     int width = 0;
     int height = 0;
@@ -240,16 +461,14 @@ Texture* mobile_render_text_texture(DFont* font, const char* text, Color color) 
     int max_y = 0;
     int has_glyph = 0;
     unsigned char* bitmap = NULL;
-    Texture* texture = NULL;
-    MobileGlTexture* gl_tex = NULL;
     int pen_x = 0;
     int cp = 0;
+    MobileFont* active_font;
 
-    if (!font || !font->priv || !text || !text[0]) {
+    if (!mobile_font || !text || !text[0] || !out_w || !out_h) {
         return NULL;
     }
 
-    mobile_font = (MobileFont*)font->priv;
     stbtt_GetFontVMetrics(&mobile_font->info, &ascent, &descent, &line_gap);
     baseline = (int)(ascent * mobile_font->scale);
 
@@ -270,9 +489,10 @@ Texture* mobile_render_text_texture(DFont* font, const char* text, Color color) 
             continue;
         }
 
-        stbtt_GetCodepointHMetrics(&mobile_font->info, cp, &advance, &lsb);
-        stbtt_GetCodepointBitmapBox(&mobile_font->info, cp, mobile_font->scale,
-                                    mobile_font->scale, &x0, &y0, &x1, &y1);
+        active_font = mobile_pick_font_for_codepoint(mobile_font, fallback_font, cp);
+        stbtt_GetCodepointHMetrics(&active_font->info, cp, &advance, &lsb);
+        stbtt_GetCodepointBitmapBox(&active_font->info, cp, active_font->scale,
+                                    active_font->scale, &x0, &y0, &x1, &y1);
         gx0 = pen_x + x0;
         gx1 = pen_x + x1;
         gy0 = baseline + y0;
@@ -284,20 +504,12 @@ Texture* mobile_render_text_texture(DFont* font, const char* text, Color color) 
             max_y = gy1;
             has_glyph = 1;
         } else {
-            if (gx0 < min_x) {
-                min_x = gx0;
-            }
-            if (gx1 > max_x) {
-                max_x = gx1;
-            }
-            if (gy0 < min_y) {
-                min_y = gy0;
-            }
-            if (gy1 > max_y) {
-                max_y = gy1;
-            }
+            if (gx0 < min_x) min_x = gx0;
+            if (gx1 > max_x) max_x = gx1;
+            if (gy0 < min_y) min_y = gy0;
+            if (gy1 > max_y) max_y = gy1;
         }
-        pen_x += (int)(advance * mobile_font->scale);
+        pen_x += (int)(advance * active_font->scale);
     }
 
     if (!has_glyph) {
@@ -332,12 +544,13 @@ Texture* mobile_render_text_texture(DFont* font, const char* text, Color color) 
             continue;
         }
 
-        stbtt_GetCodepointHMetrics(&mobile_font->info, cp, &advance, &lsb);
-        stbtt_GetCodepointBitmapBox(&mobile_font->info, cp, mobile_font->scale,
-                                    mobile_font->scale, &x0, &y0, &x1, &y1);
+        active_font = mobile_pick_font_for_codepoint(mobile_font, fallback_font, cp);
+        stbtt_GetCodepointHMetrics(&active_font->info, cp, &advance, &lsb);
+        stbtt_GetCodepointBitmapBox(&active_font->info, cp, active_font->scale,
+                                    active_font->scale, &x0, &y0, &x1, &y1);
         gw = x1 - x0;
         gh = y1 - y0;
-        glyph_bitmap = stbtt_GetCodepointBitmap(&mobile_font->info, 0, mobile_font->scale,
+        glyph_bitmap = stbtt_GetCodepointBitmap(&active_font->info, 0, active_font->scale,
                                                 cp, &gw, &gh, 0, 0);
         if (glyph_bitmap) {
             int dst_x = pen_x + x0 - min_x;
@@ -366,30 +579,175 @@ Texture* mobile_render_text_texture(DFont* font, const char* text, Color color) 
             }
             stbtt_FreeBitmap(glyph_bitmap, NULL);
         }
-        pen_x += (int)(advance * mobile_font->scale);
+        pen_x += (int)(advance * active_font->scale);
     }
 
-    gl_tex = (MobileGlTexture*)calloc(1, sizeof(MobileGlTexture));
-    texture = (Texture*)calloc(1, sizeof(Texture));
-    if (!gl_tex || !texture) {
-        free(bitmap);
-        free(gl_tex);
-        free(texture);
+    *out_w = width;
+    *out_h = height;
+    return bitmap;
+}
+
+static Texture* mobile_render_mixed_texture(DFont* primary, DFont* fallback, const char* text, Color color) {
+    const char* cursor = text;
+    const char* run_starts[128];
+    const char* run_ends[128];
+    MobileFont* run_fonts[128];
+    unsigned char* run_bitmaps[128];
+    int run_widths[128];
+    int run_heights[128];
+    int run_count = 0;
+    int total_w = 0;
+    int max_h = 0;
+    int i;
+    int x = 0;
+    char run_buf[256];
+    unsigned char* final_bitmap = NULL;
+    MobileFont* primary_font = (MobileFont*)primary->priv;
+    MobileFont* fallback_font = fallback ? (MobileFont*)fallback->priv : NULL;
+
+    for (i = 0; i < 128; i++) {
+        run_bitmaps[i] = NULL;
+    }
+
+    while (*cursor && run_count < 128) {
+        const char* run_start = cursor;
+        uint32_t codepoint = 0;
+        MobileFont* chosen;
+
+        if (!utf8_decode_codepoint(&cursor, &codepoint)) {
+            break;
+        }
+        chosen = mobile_pick_font_for_codepoint(primary_font, fallback_font, (int)codepoint);
+        if (!chosen) {
+            continue;
+        }
+
+        if (run_count > 0 && run_fonts[run_count - 1] == chosen) {
+            run_ends[run_count - 1] = cursor;
+        } else {
+            run_starts[run_count] = run_start;
+            run_ends[run_count] = cursor;
+            run_fonts[run_count] = chosen;
+            run_count++;
+        }
+    }
+
+    for (i = 0; i < run_count; i++) {
+        int len = (int)(run_ends[i] - run_starts[i]);
+        int rw = 0;
+        int rh = 0;
+        MobileFont* other = (run_fonts[i] == primary_font) ? fallback_font : primary_font;
+
+        if (len <= 0 || len >= (int)sizeof(run_buf)) {
+            continue;
+        }
+        memcpy(run_buf, run_starts[i], (size_t)len);
+        run_buf[len] = '\0';
+        run_bitmaps[i] = mobile_rasterize_font_text(run_fonts[i], other, run_buf, color, &rw, &rh);
+        if (!run_bitmaps[i]) {
+            continue;
+        }
+        run_widths[i] = rw;
+        run_heights[i] = rh;
+        total_w += rw;
+        if (rh > max_h) {
+            max_h = rh;
+        }
+    }
+
+    if (total_w <= 0 || max_h <= 0) {
+        for (i = 0; i < run_count; i++) {
+            free(run_bitmaps[i]);
+        }
         return NULL;
     }
 
-    glGenTextures(1, &gl_tex->id);
-    glBindTexture(GL_TEXTURE_2D, gl_tex->id);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, bitmap);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    final_bitmap = (unsigned char*)calloc((size_t)total_w * (size_t)max_h, 4);
+    if (!final_bitmap) {
+        for (i = 0; i < run_count; i++) {
+            free(run_bitmaps[i]);
+        }
+        return NULL;
+    }
 
-    texture->w = width;
-    texture->h = height;
-    texture->priv = gl_tex;
-    free(bitmap);
-    return texture;
+    for (i = 0; i < run_count; i++) {
+        unsigned char* src = run_bitmaps[i];
+        int rw = run_widths[i];
+        int rh = run_heights[i];
+        int dy;
+        int dx;
+        if (!src || rw <= 0 || rh <= 0) {
+            continue;
+        }
+        for (dy = 0; dy < rh; dy++) {
+            for (dx = 0; dx < rw; dx++) {
+                int src_idx = (dy * rw + dx) * 4;
+                int dst_x = x + dx;
+                int dst_y = dy + (max_h - rh) / 2;
+                size_t dst_idx;
+                if (dst_x < 0 || dst_y < 0 || dst_x >= total_w || dst_y >= max_h) {
+                    continue;
+                }
+                if (src[src_idx + 3] == 0) {
+                    continue;
+                }
+                dst_idx = ((size_t)dst_y * (size_t)total_w + (size_t)dst_x) * 4;
+                final_bitmap[dst_idx + 0] = src[src_idx + 0];
+                final_bitmap[dst_idx + 1] = src[src_idx + 1];
+                final_bitmap[dst_idx + 2] = src[src_idx + 2];
+                final_bitmap[dst_idx + 3] = src[src_idx + 3];
+            }
+        }
+        x += rw;
+        free(src);
+    }
+
+    return mobile_upload_text_bitmap(final_bitmap, total_w, max_h);
+}
+
+Texture* mobile_render_text_texture(DFont* font, const char* text, Color color) {
+    DFont* fallback = NULL;
+    DFont* render_font;
+    MobileFont* mobile_font;
+    MobileFont* fallback_font = NULL;
+    unsigned char* bitmap = NULL;
+    int width = 0;
+    int height = 0;
+
+    if (!font || !font->priv || !text || !text[0]) {
+        return NULL;
+    }
+
+    render_font = mobile_resolve_render_font(font, text, &fallback);
+    if (render_font == NULL && fallback && fallback != font) {
+        Texture* mixed = mobile_render_mixed_texture(font, fallback, text, color);
+        if (mixed) {
+            return mixed;
+        }
+        render_font = font;
+    }
+
+    if (!render_font) {
+        render_font = font;
+    }
+
+    mobile_font = (MobileFont*)render_font->priv;
+    if (render_font == fallback && fallback && fallback->priv) {
+        fallback_font = NULL;
+    } else if (fallback && fallback->priv) {
+        fallback_font = (MobileFont*)fallback->priv;
+    }
+
+    bitmap = mobile_rasterize_font_text(mobile_font, fallback_font, text, color, &width, &height);
+    if (!bitmap && fallback && fallback != render_font) {
+        mobile_font = (MobileFont*)fallback->priv;
+        bitmap = mobile_rasterize_font_text(mobile_font, NULL, text, color, &width, &height);
+    }
+    if (!bitmap) {
+        return NULL;
+    }
+
+    return mobile_upload_text_bitmap(bitmap, width, height);
 }
 
 void mobile_draw_text_texture(Texture* texture, const Rect* srcrect, const Rect* dstrect) {
