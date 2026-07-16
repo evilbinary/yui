@@ -9,6 +9,171 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef __ANDROID__
+#include <android/native_window.h>
+#include <EGL/egl.h>
+#include <GLES2/gl2.h>
+
+static EGLDisplay g_egl_display = EGL_NO_DISPLAY;
+static EGLSurface g_egl_surface = EGL_NO_SURFACE;
+static EGLContext g_egl_context = EGL_NO_CONTEXT;
+static ANativeWindow* g_egl_window = NULL;
+static GLuint g_color_program = 0;
+static int g_egl_ready = 0;
+
+static GLuint mobile_compile_shader(GLenum type, const char* source) {
+    GLuint shader = glCreateShader(type);
+    GLint status = 0;
+    glShaderSource(shader, 1, &source, NULL);
+    glCompileShader(shader);
+    glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
+    if (!status) {
+        glDeleteShader(shader);
+        return 0;
+    }
+    return shader;
+}
+
+static int mobile_init_gl(void) {
+    const char* vs =
+        "attribute vec2 aPos;\n"
+        "uniform vec2 uOffset;\n"
+        "uniform vec2 uScale;\n"
+        "void main() {\n"
+        "  vec2 p = aPos * uScale + uOffset;\n"
+        "  gl_Position = vec4(p, 0.0, 1.0);\n"
+        "}\n";
+    const char* fs =
+        "precision mediump float;\n"
+        "uniform vec4 uColor;\n"
+        "void main() { gl_FragColor = uColor; }\n";
+    GLuint vsh = mobile_compile_shader(GL_VERTEX_SHADER, vs);
+    GLuint fsh = mobile_compile_shader(GL_FRAGMENT_SHADER, fs);
+    GLint linked = 0;
+    if (!vsh || !fsh) {
+        return 0;
+    }
+    g_color_program = glCreateProgram();
+    glAttachShader(g_color_program, vsh);
+    glAttachShader(g_color_program, fsh);
+    glLinkProgram(g_color_program);
+    glGetProgramiv(g_color_program, GL_LINK_STATUS, &linked);
+    glDeleteShader(vsh);
+    glDeleteShader(fsh);
+    return linked ? 1 : 0;
+}
+
+static int mobile_egl_init(ANativeWindow* window) {
+    const EGLint cfg_attribs[] = {
+        EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
+        EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
+        EGL_BLUE_SIZE, 8,
+        EGL_GREEN_SIZE, 8,
+        EGL_RED_SIZE, 8,
+        EGL_ALPHA_SIZE, 8,
+        EGL_NONE
+    };
+    const EGLint ctx_attribs[] = { EGL_CONTEXT_CLIENT_VERSION, 2, EGL_NONE };
+    EGLConfig config;
+    EGLint num_config = 0;
+
+    if (!window) {
+        return 0;
+    }
+    if (g_egl_ready) {
+        return 1;
+    }
+
+    g_egl_display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+    if (g_egl_display == EGL_NO_DISPLAY) {
+        return 0;
+    }
+    if (!eglInitialize(g_egl_display, NULL, NULL)) {
+        return 0;
+    }
+    if (!eglChooseConfig(g_egl_display, cfg_attribs, &config, 1, &num_config) || num_config == 0) {
+        return 0;
+    }
+    g_egl_surface = eglCreateWindowSurface(g_egl_display, config, window, NULL);
+    if (g_egl_surface == EGL_NO_SURFACE) {
+        return 0;
+    }
+    g_egl_context = eglCreateContext(g_egl_display, config, EGL_NO_CONTEXT, ctx_attribs);
+    if (g_egl_context == EGL_NO_CONTEXT) {
+        return 0;
+    }
+    if (!eglMakeCurrent(g_egl_display, g_egl_surface, g_egl_surface, g_egl_context)) {
+        return 0;
+    }
+
+    g_egl_window = window;
+    g_window_w = ANativeWindow_getWidth(window);
+    g_window_h = ANativeWindow_getHeight(window);
+    if (!mobile_init_gl()) {
+        return 0;
+    }
+    glViewport(0, 0, g_window_w, g_window_h);
+    g_egl_ready = 1;
+    return 1;
+}
+
+static void mobile_egl_shutdown(void) {
+    if (g_egl_display != EGL_NO_DISPLAY) {
+        eglMakeCurrent(g_egl_display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+        if (g_egl_context != EGL_NO_CONTEXT) {
+            eglDestroyContext(g_egl_display, g_egl_context);
+            g_egl_context = EGL_NO_CONTEXT;
+        }
+        if (g_egl_surface != EGL_NO_SURFACE) {
+            eglDestroySurface(g_egl_display, g_egl_surface);
+            g_egl_surface = EGL_NO_SURFACE;
+        }
+        eglTerminate(g_egl_display);
+        g_egl_display = EGL_NO_DISPLAY;
+    }
+    if (g_egl_window) {
+        ANativeWindow_release(g_egl_window);
+        g_egl_window = NULL;
+    }
+    g_color_program = 0;
+    g_egl_ready = 0;
+}
+
+static void mobile_draw_rect_norm(float x, float y, float w, float h,
+                                unsigned char r, unsigned char g,
+                                unsigned char b, unsigned char a) {
+    const float verts[] = {
+        0.0f, 0.0f,
+        1.0f, 0.0f,
+        0.0f, 1.0f,
+        1.0f, 1.0f,
+    };
+    GLint offset_loc;
+    GLint scale_loc;
+    GLint color_loc;
+    GLint pos_loc;
+
+    if (!g_egl_ready || g_color_program == 0 || w <= 0.0f || h <= 0.0f) {
+        return;
+    }
+
+    offset_loc = glGetUniformLocation(g_color_program, "uOffset");
+    scale_loc = glGetUniformLocation(g_color_program, "uScale");
+    color_loc = glGetUniformLocation(g_color_program, "uColor");
+    pos_loc = glGetAttribLocation(g_color_program, "aPos");
+
+    glUseProgram(g_color_program);
+    glUniform2f(offset_loc, -1.0f + (2.0f * x / (float)g_window_w),
+                1.0f - (2.0f * (y + h) / (float)g_window_h));
+    glUniform2f(scale_loc, 2.0f * w / (float)g_window_w, 2.0f * h / (float)g_window_h);
+    glUniform4f(color_loc, r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f);
+    glEnableVertexAttribArray((GLuint)pos_loc);
+    glVertexAttribPointer((GLuint)pos_loc, 2, GL_FLOAT, GL_FALSE, 0, verts);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glDisableVertexAttribArray((GLuint)pos_loc);
+}
+#endif
+
 #define MOBILE_DEFAULT_W 360
 #define MOBILE_DEFAULT_H 640
 #define MAX_UPDATE_CALLBACKS 16
@@ -34,6 +199,11 @@ static MobileTouchState g_touches[MAX_TOUCHES];
 
 void backend_mobile_set_native_surface(void* native_surface) {
     g_native_surface = native_surface;
+#ifdef __ANDROID__
+    if (native_surface) {
+        mobile_egl_init((ANativeWindow*)native_surface);
+    }
+#endif
 }
 
 void backend_mobile_on_touch(int pointer_id, int x, int y, int phase) {
@@ -83,6 +253,9 @@ int backend_init(void) {
 }
 
 void backend_quit(void) {
+#ifdef __ANDROID__
+    mobile_egl_shutdown();
+#endif
     g_ui_root = NULL;
     g_native_surface = NULL;
     g_update_callback_count = 0;
@@ -114,12 +287,18 @@ void backend_render_fill_rect(Rect* rect, Color color) {
 
 void backend_render_fill_rect_color(Rect* rect, unsigned char r, unsigned char g,
                                     unsigned char b, unsigned char a) {
+#ifdef __ANDROID__
+    if (rect) {
+        mobile_draw_rect_norm((float)rect->x, (float)rect->y,
+                              (float)rect->w, (float)rect->h, r, g, b, a);
+    }
+#else
     (void)rect;
     (void)r;
     (void)g;
     (void)b;
     (void)a;
-    /* TODO: Skia fillRect */
+#endif
 }
 
 void backend_render_rect(Rect* rect, Color color) {
@@ -234,7 +413,11 @@ void backend_set_minimum_windowsize(int width, int height) {
 }
 
 void backend_render_present(void) {
-    /* TODO: Skia flush + swap / Metal present */
+#ifdef __ANDROID__
+    if (g_egl_ready && g_egl_display != EGL_NO_DISPLAY) {
+        eglSwapBuffers(g_egl_display, g_egl_surface);
+    }
+#endif
 }
 
 void backend_delay(int delay) {
@@ -256,10 +439,17 @@ void backend_get_mouse_state(int* x, int* y) {
 
 void backend_render_clear_color(unsigned char r, unsigned char g, unsigned char b,
                                 unsigned char a) {
+#ifdef __ANDROID__
+    if (g_egl_ready) {
+        glClearColor(r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+    }
+#else
     (void)r;
     (void)g;
     (void)b;
     (void)a;
+#endif
 }
 
 DFont* backend_load_font(char* font_path, int size) {
@@ -320,6 +510,12 @@ void backend_tick(Layer* ui_root) {
     }
 
     g_ui_root = ui_root;
+
+#ifdef __ANDROID__
+    if (g_egl_ready && g_egl_display != EGL_NO_DISPLAY) {
+        eglMakeCurrent(g_egl_display, g_egl_surface, g_egl_surface, g_egl_context);
+    }
+#endif
 
     for (i = 0; i < g_update_callback_count; i++) {
         if (g_update_callbacks[i]) {

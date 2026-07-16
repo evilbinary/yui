@@ -30,3 +30,5 @@ router-debug.txt
 router-debug-err.txt
 app/shopping/capture/*.png
 .claude/settings.local.json
+platform/android/.gradle/*
+

@@ -591,16 +591,16 @@ platform/web/react/
 
 **Android**
 
-- [x] 单文件 `backend_mobile.c` 桩实现（Skia TODO）
-- [ ] `ya -p android` 交叉编译 `libyui.a`（`arm64-v8a` + `armeabi-v7a`）
-- [ ] QuickJS / mquickjs 两套 target 可链
-- [x] `platform/android/jni/yui_bridge.cpp` 桩
-- [ ] `platform/android` Gradle：显示 `login.json` 一屏
+- [x] 单文件 `backend_mobile.c`（Android EGL/GLES POC；Skia 待接）
+- [x] `ya -p android` NDK 工具链 + `scripts/build-android-libs.ps1`
+- [x] QuickJS JNI 目标 `yui-android-jni-quickjs`；mquickjs 目标 `yui-android-jni-mqjs`
+- [x] `platform/android` Gradle 壳（Universal APK、`login.json`）
+- [ ] 真机跑通验证（需本机 NDK + 预编译 `.a`）
 
 **PC（并行）**
 
-- [x] `platform/common/yui_boot.c` 从 `main.c` 抽取首版
-- [x] `platform/pc/main.c` + `ya -b yui-pc` target
+- [x] `platform/common/yui_boot.c` + JS 事件
+- [x] `platform/pc/main.c` + `ya -b yui-pc`
 
 ### P2 — iOS + 输入
 

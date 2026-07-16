@@ -1,13 +1,51 @@
 # Android platform
 
 - **minSdk** 21，**ABI** `arm64-v8a` + `armeabi-v7a`（Universal APK）
-- **Skia**：`third_party/skia-pack/android/<abi>/`
-- **JS**：构建时选 `yui-mobile-quickjs` 或 `yui-mobile-mqjs`（待加 target）
+- **绘制**：`backend_mobile.c` + EGL/GLES2（POC；文字/图片待 Skia）
+- **JS**：QuickJS（`jsmodule-quickjs`），与 `yui-pc` 一致
 
-## 下一步
+## 1. 编译 native 静态库
 
-1. 拉取 [skia-pack](https://github.com/JetBrains/skia-pack) 到 `third_party/skia-pack/`
-2. 完善 `app/build.gradle` + `jni/CMakeLists.txt` 链 `libyui.a`
-3. `YuiView.kt` → JNI `nativeInit` / `nativeTick`
+```bash
+# 构建 + after_build 自动拷贝到 third_party/yui-prebuilt/android/<abi>/
+ya -p android -a arm64-v8a -m release -b yui-android-prebuilt
+ya -p android -a armeabi-v7a -m release -b yui-android-prebuilt
+```
 
-见 `jni/yui_bridge.cpp` 桩文件。
+或 PowerShell 薄包装（内部仍是 `ya`）：
+
+```powershell
+$env:ANDROID_NDK_HOME = "C:\Android\ndk\26.x.x"
+.\scripts\build-android-libs.ps1
+```
+
+## 2. 打 APK
+
+```bash
+cd platform/android
+# 创建 local.properties: sdk.dir=C\:\\Android\\sdk
+./gradlew :app:assembleDebug
+```
+
+`app/build.gradle.kts` 会在构建前把 `app/tests/login.json` 和 `app/assets/` 拷入 `assets/`。
+
+## 3. 目录
+
+```text
+platform/android/
+  app/src/main/java/com/yui/   YuiActivity, YuiView
+  app/src/main/cpp/CMakeLists.txt
+  jni/yui_bridge.cpp
+```
+
+## 4. Skia（后续）
+
+POC 使用 GLES 画纯色矩形。接入 [skia-pack](https://github.com/JetBrains/skia-pack) 后定义 `YUI_HAS_SKIA` 替换绘制路径。
+
+## 5. mquickjs 变体
+
+```bash
+ya -p android -a arm64-v8a -b yui cjson yaml2json mquickjs jsmodule socket
+```
+
+CMake 链 `libjsmodule.a` + `libmquickjs.a`（需改 `CMakeLists.txt` 或增加 flavor）。

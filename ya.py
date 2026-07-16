@@ -32,6 +32,45 @@ elif is_plat("stm32"):
     # STM32平台不需要设置环境变量
     prefix_env=''
 
+def _ndk_host_dirs():
+    if platform.system() == "Windows":
+        return "windows-x86_64", ".cmd", ".exe"
+    elif platform.system() == "Darwin":
+        return "darwin-x86_64", "", ""
+    else:
+        return "linux-x86_64", "", ""
+
+def _android_triple(arch):
+    if arch in ("arm64-v8a", "arm64"):
+        return "aarch64-linux-android21"
+    if arch in ("armeabi-v7a", "arm"):
+        return "armv7a-linux-androideabi21"
+    return "aarch64-linux-android21"
+
+def configure_android_toolchain():
+    if get_plat() != "android":
+        return
+    ndk = os.environ.get("ANDROID_NDK_HOME") or os.environ.get("ANDROID_NDK_ROOT") or ""
+    if not ndk:
+        print("warning: ANDROID_NDK_HOME not set, android cross-build may fail")
+        return
+    host, clang_ext, bin_ext = _ndk_host_dirs()
+    arch = get_arch()
+    bin_dir = os.path.join(ndk, "toolchains", "llvm", "prebuilt", host, "bin")
+    triple = _android_triple(arch)
+    clang = os.path.join(bin_dir, triple + "-clang" + clang_ext)
+    clangxx = os.path.join(bin_dir, triple + "-clang++" + clang_ext)
+    ar = os.path.join(bin_dir, "llvm-ar" + bin_ext)
+    if bin_ext and not os.path.isfile(ar):
+        ar = os.path.join(bin_dir, "llvm-ar")
+    tool = get_toolchain_node()
+    tool["cc"] = clang
+    tool["cxx"] = clangxx
+    tool["ld"] = clang
+    tool["ar"] = ar
+
+on_config(configure_android_toolchain)
+
 def add_flags():
     checkmem=True
     if platform.system()=='Windows':
@@ -179,13 +218,39 @@ def add_flags():
             '-lsupc++',
             '-Wl,--end-group'
             ),
-    elif is_plat("android") or is_plat("ios"):
-        add_cflags(
-            '-g',
-            '-DYUI_BACKEND_MOBILE',
-            '-Isrc',
-            '-Ilib',
+    elif is_plat("android"):
+        ndk = os.environ.get("ANDROID_NDK_HOME") or os.environ.get("ANDROID_NDK_ROOT") or ""
+        if ndk:
+            host, _, _ = _ndk_host_dirs()
+            sysroot = os.path.join(ndk, "toolchains", "llvm", "prebuilt", host, "sysroot")
+            add_cflags(
+                "-g",
+                "-fPIC",
+                "-D__ANDROID__",
+                "-DYUI_BACKEND_MOBILE",
+                "--sysroot=" + sysroot,
+                "-Isrc",
+                "-Ilib",
             )
+            add_ldflags(
+                "-fPIC",
+                "--sysroot=" + sysroot,
+                "-landroid",
+                "-llog",
+                "-lEGL",
+                "-lGLESv2",
+                "-lm",
+            )
+        else:
+            print("warning: ANDROID_NDK_HOME not set, android cross-build may fail")
+    elif is_plat("ios"):
+        add_cflags(
+            "-g",
+            "-fPIC",
+            "-DYUI_BACKEND_MOBILE",
+            "-Isrc",
+            "-Ilib",
+        )
     elif platform.system()=='Darwin':
         add_cflags(
             '-g',
@@ -328,15 +393,38 @@ def run(target):
         print('run', ' '.join(cmd))
         subprocess.run(cmd, env=env)
 
-def add_run():
-    on_run(run)
-
 def get_prefix():
     return prefix_env
+
+def after_build_android_prebuilt(target):
+    import os
+    import shutil
+
+    if get_plat() != "android":
+        return
+
+    src = target.targetfile()
+    if not src or not os.path.isfile(src) or not src.endswith(".a"):
+        return
+
+    arch = target.get_arch() or get_arch()
+    if not arch or arch == "None":
+        return
+
+    dest_dir = os.path.join("third_party", "yui-prebuilt", "android", arch)
+    os.makedirs(dest_dir, exist_ok=True)
+    dest = os.path.join(dest_dir, os.path.basename(src))
+    shutil.copy2(src, dest)
+    print("[android-prebuilt] %s -> %s" % (src, dest))
+
+def add_run():
+    on_run(run)
 
 add_buildin('add_flags',add_flags)
 add_buildin('add_run',add_run)
 add_buildin('get_prefix',get_prefix)
+
+after_build(after_build_android_prebuilt)
 
 
 includes("./src/ya.py")
