@@ -152,8 +152,8 @@ ConnectorComponent* connector_component_create(Layer* layer)
     component->curve_mode = CONNECTOR_CURVE_AUTO;
     component->stroke_color = (Color){136, 136, 136, 255};
     component->stroke_width = 2;
-    component->show_arrow = 1;
-    component->arrow_size = 8;
+    component->show_dot = 1;
+    component->dot_size = 4;
 
     layer->component = component;
     layer->render = connector_component_render;
@@ -168,7 +168,7 @@ ConnectorComponent* connector_component_create_from_json(Layer* layer, cJSON* js
     cJSON* style;
     cJSON* curve_item;
     cJSON* control_points;
-    cJSON* arrow_item;
+    cJSON* dot_item;
 
     if (!component) {
         return NULL;
@@ -221,17 +221,22 @@ ConnectorComponent* connector_component_create_from_json(Layer* layer, cJSON* js
             component->stroke_width = cJSON_GetObjectItem(style, "strokeWidth")->valueint;
         }
 
-        arrow_item = cJSON_GetObjectItem(style, "arrow");
-        if (arrow_item) {
-            if (cJSON_IsBool(arrow_item)) {
-                component->show_arrow = cJSON_IsTrue(arrow_item);
-            } else if (cJSON_IsNumber(arrow_item)) {
-                component->show_arrow = arrow_item->valueint != 0;
+        dot_item = cJSON_GetObjectItem(style, "dot");
+        if (!dot_item) {
+            dot_item = cJSON_GetObjectItem(style, "arrow");
+        }
+        if (dot_item) {
+            if (cJSON_IsBool(dot_item)) {
+                component->show_dot = cJSON_IsTrue(dot_item);
+            } else if (cJSON_IsNumber(dot_item)) {
+                component->show_dot = dot_item->valueint != 0;
             }
         }
 
-        if (cJSON_HasObjectItem(style, "arrowSize")) {
-            component->arrow_size = cJSON_GetObjectItem(style, "arrowSize")->valueint;
+        if (cJSON_HasObjectItem(style, "dotSize")) {
+            component->dot_size = cJSON_GetObjectItem(style, "dotSize")->valueint;
+        } else if (cJSON_HasObjectItem(style, "arrowSize")) {
+            component->dot_size = cJSON_GetObjectItem(style, "arrowSize")->valueint;
         }
     }
 
@@ -288,11 +293,11 @@ void connector_component_render(Layer* layer)
                                       &cx1, &cy1, &cx2, &cy2);
     }
 
-    if (component->show_arrow) {
-        backend_render_bezier_cubic_arrow(x0, y0, cx1, cy1, cx2, cy2, x1, y1,
-                                          component->stroke_color,
-                                          component->stroke_width,
-                                          component->arrow_size);
+    if (component->show_dot) {
+        backend_render_bezier_cubic_dot(x0, y0, cx1, cy1, cx2, cy2, x1, y1,
+                                        component->stroke_color,
+                                        component->stroke_width,
+                                        component->dot_size);
     } else {
         backend_render_bezier_cubic(x0, y0, cx1, cy1, cx2, cy2, x1, y1,
                                     component->stroke_color,

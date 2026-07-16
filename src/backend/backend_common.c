@@ -23,19 +23,6 @@ static BezierPoint bezier_cubic_eval(float t, BezierPoint p0, BezierPoint p1,
     return result;
 }
 
-static BezierPoint bezier_cubic_tangent(float t, BezierPoint p0, BezierPoint p1,
-                                        BezierPoint p2, BezierPoint p3)
-{
-    float u = 1.0f - t;
-    BezierPoint result;
-
-    result.x = 3.0f * u * u * (p1.x - p0.x) + 6.0f * u * t * (p2.x - p1.x) +
-               3.0f * t * t * (p3.x - p2.x);
-    result.y = 3.0f * u * u * (p1.y - p0.y) + 6.0f * u * t * (p2.y - p1.y) +
-               3.0f * t * t * (p3.y - p2.y);
-    return result;
-}
-
 static int bezier_segment_count(int x0, int y0, int x1, int y1)
 {
     int dx = x1 - x0;
@@ -52,37 +39,19 @@ static int bezier_segment_count(int x0, int y0, int x1, int y1)
     return segments;
 }
 
-static void backend_render_arrow_head(int tip_x, int tip_y, float dx, float dy,
-                                      Color color, int size)
+static void backend_render_dot(int cx, int cy, int radius, Color color)
 {
-    float length = sqrtf(dx * dx + dy * dy);
-    float px;
-    float py;
-    int wing;
-    int x1;
-    int y1;
-    int x2;
-    int y2;
+    Rect rect;
 
-    if (length < 0.001f || size <= 0) {
-        return;
+    if (radius < 1) {
+        radius = 1;
     }
 
-    dx /= length;
-    dy /= length;
-    px = -dy;
-    py = dx;
-    wing = size / 2;
-    if (wing < 3) {
-        wing = 3;
-    }
-
-    x1 = tip_x - (int)(dx * size + px * wing);
-    y1 = tip_y - (int)(dy * size + py * wing);
-    x2 = tip_x - (int)(dx * size - px * wing);
-    y2 = tip_y - (int)(dy * size - py * wing);
-    backend_render_line(tip_x, tip_y, x1, y1, color);
-    backend_render_line(tip_x, tip_y, x2, y2, color);
+    rect.x = cx - radius;
+    rect.y = cy - radius;
+    rect.w = radius * 2;
+    rect.h = radius * 2;
+    backend_render_rounded_rect(&rect, color, radius);
 }
 
 void backend_render_bezier_cubic(int x0, int y0,
@@ -112,24 +81,17 @@ void backend_render_bezier_cubic(int x0, int y0,
     }
 }
 
-void backend_render_bezier_cubic_arrow(int x0, int y0,
-                                       int cx1, int cy1, int cx2, int cy2,
-                                       int x1, int y1, Color color, int width,
-                                       int arrow_size)
+void backend_render_bezier_cubic_dot(int x0, int y0,
+                                     int cx1, int cy1, int cx2, int cy2,
+                                     int x1, int y1, Color color, int width,
+                                     int dot_radius)
 {
-    BezierPoint p0 = {(float)x0, (float)y0};
-    BezierPoint p1 = {(float)cx1, (float)cy1};
-    BezierPoint p2 = {(float)cx2, (float)cy2};
-    BezierPoint p3 = {(float)x1, (float)y1};
-    BezierPoint tangent;
-
     backend_render_bezier_cubic(x0, y0, cx1, cy1, cx2, cy2, x1, y1, color, width);
-    if (arrow_size <= 0) {
+    if (dot_radius <= 0) {
         return;
     }
 
-    tangent = bezier_cubic_tangent(1.0f, p0, p1, p2, p3);
-    backend_render_arrow_head(x1, y1, tangent.x, tangent.y, color, arrow_size);
+    backend_render_dot(x1, y1, dot_radius, color);
 }
 
 #define BACKEND_CLIP_STACK_MAX 32

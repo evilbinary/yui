@@ -55,7 +55,8 @@
                     "style": {
                         "color": "#89b4fa",
                         "strokeWidth": 2,
-                        "arrow": true
+                        "dot": true,
+                        "dotSize": 4
                     }
                 },
                 {
@@ -68,27 +69,160 @@
                     "style": {
                         "color": "#a6e3a1",
                         "strokeWidth": 2,
-                        "arrow": true
+                        "dot": true,
+                        "dotSize": 4
                     }
                 },
                 {
                     "id": "nodeA",
                     "type": "Draggable",
-                    "position": [40, 120],
-                    "size": [120, 56],
+                    "position": [40, 50],
+                    "size": [280, 248],
                     "style": {
                         "bgColor": "#313244",
-                        "borderRadius": 8
+                        "borderRadius": 10
                     },
                     "children": [
                         {
-                            "type": "Text",
-                            "text": "A 输入",
-                            "position": [12, 18],
-                            "style": {
-                                "color": "#cdd6f4",
-                                "fontSize": 13
-                            }
+                            "id": "nodeABody",
+                            "type": "View",
+                            "position": [0, 0],
+                            "size": [280, 248],
+                            "layout": {
+                                "type": "vertical",
+                                "spacing": 8,
+                                "padding": [12, 12, 12, 12]
+                            },
+                            "children": [
+                                {
+                                    "id": "nodeATitle",
+                                    "type": "Label",
+                                    "text": "A · 数据源",
+                                    "size": [0, 20],
+                                    "style": {
+                                        "color": "#89b4fa",
+                                        "fontSize": 14
+                                    }
+                                },
+                                {
+                                    "id": "nameLabel",
+                                    "type": "Label",
+                                    "text": "名称",
+                                    "size": [0, 16],
+                                    "style": {
+                                        "color": "#a6adc8",
+                                        "fontSize": 12
+                                    }
+                                },
+                                {
+                                    "id": "nameInput",
+                                    "type": "Input",
+                                    "size": [0, 32],
+                                    "placeholder": "输入数据源名称",
+                                    "style": {
+                                        "bgColor": "#1e1e2e",
+                                        "textColor": "#f8f8f2",
+                                        "borderColor": "#45475a",
+                                        "borderRadius": 4,
+                                        "fontSize": 13
+                                    }
+                                },
+                                {
+                                    "id": "urlLabel",
+                                    "type": "Label",
+                                    "text": "URL",
+                                    "size": [0, 16],
+                                    "style": {
+                                        "color": "#a6adc8",
+                                        "fontSize": 12
+                                    }
+                                },
+                                {
+                                    "id": "urlInput",
+                                    "type": "Input",
+                                    "size": [0, 32],
+                                    "placeholder": "https://api.example.com",
+                                    "style": {
+                                        "bgColor": "#1e1e2e",
+                                        "textColor": "#f8f8f2",
+                                        "borderColor": "#45475a",
+                                        "borderRadius": 4,
+                                        "fontSize": 13
+                                    }
+                                },
+                                {
+                                    "id": "typeRow",
+                                    "type": "View",
+                                    "size": [0, 32],
+                                    "layout": {
+                                        "type": "horizontal",
+                                        "spacing": 8
+                                    },
+                                    "children": [
+                                        {
+                                            "id": "typeSelect",
+                                            "type": "Select",
+                                            "text": "HTTP",
+                                            "size": [0, 32],
+                                            "flex": 1,
+                                            "style": {
+                                                "bgColor": "#1e1e2e",
+                                                "color": "#f8f8f2",
+                                                "fontSize": 13,
+                                                "borderWidth": 1,
+                                                "borderColor": "#45475a",
+                                                "dividerColor": "#45475a",
+                                                "borderRadius": 4
+                                            },
+                                            "items": [
+                                                {"label": "HTTP", "value": "http"},
+                                                {"label": "WebSocket", "value": "ws"},
+                                                {"label": "文件", "value": "file"}
+                                            ]
+                                        },
+                                        {
+                                            "id": "methodSelect",
+                                            "type": "Select",
+                                            "text": "GET",
+                                            "size": [88, 32],
+                                            "style": {
+                                                "bgColor": "#1e1e2e",
+                                                "color": "#f8f8f2",
+                                                "fontSize": 13,
+                                                "borderWidth": 1,
+                                                "borderColor": "#45475a",
+                                                "dividerColor": "#45475a",
+                                                "borderRadius": 4
+                                            },
+                                            "items": [
+                                                {"label": "GET", "value": "get"},
+                                                {"label": "POST", "value": "post"},
+                                                {"label": "PUT", "value": "put"}
+                                            ]
+                                        }
+                                    ]
+                                },
+                                {
+                                    "id": "authSelect",
+                                    "type": "Select",
+                                    "text": "无认证",
+                                    "size": [0, 32],
+                                    "style": {
+                                        "bgColor": "#1e1e2e",
+                                        "color": "#f8f8f2",
+                                        "fontSize": 13,
+                                        "borderWidth": 1,
+                                        "borderColor": "#45475a",
+                                        "dividerColor": "#45475a",
+                                        "borderRadius": 4
+                                    },
+                                    "items": [
+                                        {"label": "无认证", "value": "none"},
+                                        {"label": "Bearer Token", "value": "bearer"},
+                                        {"label": "API Key", "value": "apikey"}
+                                    ]
+                                }
+                            ]
                         }
                     ]
                 },

@@ -65,7 +65,7 @@ function moveNodeA() {
     YUI.update({
         target: "nodeA",
         change: {
-            position: [40 + g_nodeAOffset, 120 + g_nodeAOffset]
+            position: [40 + g_nodeAOffset, 50 + g_nodeAOffset]
         }
     });
     setStatus("已移动 nodeA，连线应自动跟随", "#89b4fa");
@@ -93,7 +93,8 @@ function addEdgeAC() {
                 style: {
                     color: "#f9e2af",
                     strokeWidth: 2,
-                    arrow: true
+                    dot: true,
+                    dotSize: 4
                 }
             }]
         }
@@ -110,7 +111,7 @@ function resetNodes() {
     YUI.log("resetNodes");
     YUI.update({
         target: "nodeA",
-        change: { position: [40, 120] }
+        change: { position: [40, 50] }
     });
     YUI.update({
         target: "nodeB",
