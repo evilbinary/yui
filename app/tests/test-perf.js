@@ -6,6 +6,7 @@ var g_stressOn = false;
 var g_stressTimer = 0;
 var g_pulseCount = 0;
 var g_autoTestDone = false;
+var g_lastStatsText = "";
 
 function setStatus(text, color) {
     var change = { text: text };
@@ -16,10 +17,23 @@ function setStatus(text, color) {
 }
 
 function setStats(text) {
+    if (text === g_lastStatsText) {
+        return;
+    }
+    g_lastStatsText = text;
     YUI.update({
         target: "statsLabel",
         change: { text: text }
     });
+}
+
+function formatCompactStats(frame, byTime) {
+    var top = "";
+    var item = byTime && byTime["0"];
+    if (item && item.id) {
+        top = " slowest=" + item.id + "(" + item.renderMs + "ms)";
+    }
+    return formatFrameStats(frame) + top;
 }
 
 function hasPerfApi() {
@@ -152,11 +166,11 @@ function refreshPerfStats() {
     var byTime = YUI.perf.getLayerStats("time");
     var byCount = YUI.perf.getLayerStats("count");
 
-    var text = formatFrameStats(frame) + "\n── by time ──\n" + formatTopLayers(byTime, 6);
-    text += "\n── by count ──\n" + formatTopLayers(byCount, 4);
-    setStats(text);
+    setStats(formatCompactStats(frame, byTime));
 
-    YUI.log("perf frame: " + formatFrameStats(frame));
+    var detail = formatFrameStats(frame) + "\n── by time ──\n" + formatTopLayers(byTime, 6);
+    detail += "\n── by count ──\n" + formatTopLayers(byCount, 4);
+    YUI.log("perf detail:\n" + detail);
     return { frame: frame, byTime: byTime, byCount: byCount };
 }
 

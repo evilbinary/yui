@@ -40,7 +40,6 @@
             "style": {
                 "color": "#a6e3a1",
                 "fontSize": 12,
-                "fontFamily": "monospace",
                 "lineHeight": 1.4
             }
         },
