@@ -39,21 +39,6 @@ static int bezier_segment_count(int x0, int y0, int x1, int y1)
     return segments;
 }
 
-static void backend_render_dot(int cx, int cy, int radius, Color color)
-{
-    Rect rect;
-
-    if (radius < 1) {
-        radius = 1;
-    }
-
-    rect.x = cx - radius;
-    rect.y = cy - radius;
-    rect.w = radius * 2;
-    rect.h = radius * 2;
-    backend_render_rounded_rect(&rect, color, radius);
-}
-
 void backend_render_bezier_cubic(int x0, int y0,
                                  int cx1, int cy1, int cx2, int cy2,
                                  int x1, int y1, Color color, int width)
@@ -79,19 +64,6 @@ void backend_render_bezier_cubic(int x0, int y0,
         prev_x = ix;
         prev_y = iy;
     }
-}
-
-void backend_render_bezier_cubic_dot(int x0, int y0,
-                                     int cx1, int cy1, int cx2, int cy2,
-                                     int x1, int y1, Color color, int width,
-                                     int dot_radius)
-{
-    backend_render_bezier_cubic(x0, y0, cx1, cy1, cx2, cy2, x1, y1, color, width);
-    if (dot_radius <= 0) {
-        return;
-    }
-
-    backend_render_dot(x1, y1, dot_radius, color);
 }
 
 #define BACKEND_CLIP_STACK_MAX 32

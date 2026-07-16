@@ -37,8 +37,6 @@ typedef struct ConnectorComponent {
     int has_ctrl2;
     Color stroke_color;
     int stroke_width;
-    int show_dot;
-    int dot_size;
 } ConnectorComponent;
 
 ConnectorComponent* connector_component_create(Layer* layer);
