@@ -284,6 +284,110 @@ static void connector_auto_control_points(int x0, int y0, int x1, int y1,
 
 static int connector_get_component_geometry(ConnectorComponent* component,
                                             int* x0, int* y0, int* x1, int* y1,
+                                            int* cx1, int* cy1, int* cx2, int* cy2);
+static void connector_apply_endpoint_fanout(Layer* canvas, Layer* ep_layer,
+                                            ConnectorAnchor ep_anchor,
+                                            int at_from_end, ConnectorComponent* self,
+                                            int pending_extra, int* x, int* y);
+
+static int connector_same_endpoint(Layer* layer_a, ConnectorAnchor anchor_a,
+                                   Layer* layer_b, ConnectorAnchor anchor_b)
+{
+    return layer_a && layer_b && layer_a == layer_b && anchor_a == anchor_b;
+}
+
+static int connector_count_endpoint_usage(Layer* canvas, Layer* ep_layer,
+                                          ConnectorAnchor ep_anchor,
+                                          int at_from_end, ConnectorComponent* self,
+                                          int* out_index, int* out_total)
+{
+    int i;
+    int total = 0;
+    int index = 0;
+
+    if (!canvas || !ep_layer || !out_index || !out_total) {
+        return 0;
+    }
+
+    *out_index = 0;
+    *out_total = 0;
+
+    for (i = 0; i < canvas->child_count; i++) {
+        Layer* child = canvas->children[i];
+        ConnectorComponent* other;
+        Layer* from_layer;
+        Layer* to_layer;
+
+        if (!child || child->type != CONNECTOR || !child->component) {
+            continue;
+        }
+
+        other = (ConnectorComponent*)child->component;
+        from_layer = connector_resolve_endpoint(other->from_id);
+        to_layer = connector_resolve_endpoint(other->to_id);
+        if (at_from_end) {
+            if (!connector_same_endpoint(from_layer, other->from_anchor, ep_layer,
+                                         ep_anchor)) {
+                continue;
+            }
+        } else if (!connector_same_endpoint(to_layer, other->to_anchor, ep_layer,
+                                             ep_anchor)) {
+            continue;
+        }
+
+        if (self && other == self) {
+            index = total;
+        }
+        total++;
+    }
+
+    *out_index = index;
+    *out_total = total;
+    return total;
+}
+
+static void connector_apply_endpoint_fanout(Layer* canvas, Layer* ep_layer,
+                                            ConnectorAnchor ep_anchor,
+                                            int at_from_end, ConnectorComponent* self,
+                                            int pending_extra, int* x, int* y)
+{
+    int total;
+    int index;
+    int spacing;
+    int off;
+
+    if (!canvas || !ep_layer || !x || !y) {
+        return;
+    }
+
+    connector_count_endpoint_usage(canvas, ep_layer, ep_anchor, at_from_end, self,
+                                   &index, &total);
+    if (pending_extra) {
+        index = total;
+        total++;
+    }
+    if (total <= 1) {
+        return;
+    }
+
+    spacing = 12;
+    off = index * spacing - (total - 1) * spacing / 2;
+    switch (ep_anchor) {
+        case CONNECTOR_ANCHOR_LEFT:
+        case CONNECTOR_ANCHOR_RIGHT:
+            *y += off;
+            break;
+        case CONNECTOR_ANCHOR_TOP:
+        case CONNECTOR_ANCHOR_BOTTOM:
+            *x += off;
+            break;
+        default:
+            break;
+    }
+}
+
+static int connector_get_component_geometry(ConnectorComponent* component,
+                                            int* x0, int* y0, int* x1, int* y1,
                                             int* cx1, int* cy1, int* cx2, int* cy2)
 {
     Layer* from_layer;
@@ -303,6 +407,15 @@ static int connector_get_component_geometry(ConnectorComponent* component,
 
     connector_get_layer_anchor_point(from_layer, component->from_anchor, x0, y0);
     connector_get_layer_anchor_point(to_layer, component->to_anchor, x1, y1);
+
+    if (component->layer && component->layer->parent) {
+        connector_apply_endpoint_fanout(component->layer->parent, from_layer,
+                                        component->from_anchor, 1, component, 0,
+                                        x0, y0);
+        connector_apply_endpoint_fanout(component->layer->parent, to_layer,
+                                        component->to_anchor, 0, component, 0,
+                                        x1, y1);
+    }
 
     if (component->curve_mode == CONNECTOR_CURVE_MANUAL &&
         component->has_ctrl1 && component->has_ctrl2) {
@@ -1040,6 +1153,10 @@ static int connector_pick_handle_mouse(Layer* layer, MouseEvent* event)
         return 0;
     }
 
+    if (connector_hit_test_canvas_ports(canvas, event->x, event->y, 4, NULL, NULL)) {
+        return 0;
+    }
+
     if (!connector_hit_test_curve(canvas, event->x, event->y, 8, &connector_layer)) {
         return 0;
     }
@@ -1408,6 +1525,10 @@ static void connector_render_drag_preview(void)
                 connector_get_layer_anchor_point(g_connector_drag.hover_layer,
                                                  g_connector_drag.hover_anchor,
                                                  &x0, &y0);
+                connector_apply_endpoint_fanout(g_connector_drag.canvas,
+                                                g_connector_drag.hover_layer,
+                                                g_connector_drag.hover_anchor,
+                                                1, component, 0, &x0, &y0);
             } else {
                 x0 = g_connector_drag.mouse_x;
                 y0 = g_connector_drag.mouse_y;
@@ -1421,6 +1542,10 @@ static void connector_render_drag_preview(void)
                 connector_get_layer_anchor_point(g_connector_drag.hover_layer,
                                                  g_connector_drag.hover_anchor,
                                                  &x1, &y1);
+                connector_apply_endpoint_fanout(g_connector_drag.canvas,
+                                                g_connector_drag.hover_layer,
+                                                g_connector_drag.hover_anchor,
+                                                0, component, 0, &x1, &y1);
             } else {
                 x1 = g_connector_drag.mouse_x;
                 y1 = g_connector_drag.mouse_y;
@@ -1450,8 +1575,26 @@ static void connector_render_drag_preview(void)
 
     connector_get_layer_anchor_point(g_connector_drag.from_layer,
                                      g_connector_drag.from_anchor, &x0, &y0);
-    x1 = g_connector_drag.mouse_x;
-    y1 = g_connector_drag.mouse_y;
+    if (g_connector_drag.canvas) {
+        connector_apply_endpoint_fanout(g_connector_drag.canvas,
+                                        g_connector_drag.from_layer,
+                                        g_connector_drag.from_anchor, 1, NULL, 1,
+                                        &x0, &y0);
+    }
+
+    if (g_connector_drag.hover_layer) {
+        connector_get_layer_anchor_point(g_connector_drag.hover_layer,
+                                         g_connector_drag.hover_anchor, &x1, &y1);
+        if (g_connector_drag.canvas) {
+            connector_apply_endpoint_fanout(g_connector_drag.canvas,
+                                            g_connector_drag.hover_layer,
+                                            g_connector_drag.hover_anchor, 0, NULL, 1,
+                                            &x1, &y1);
+        }
+    } else {
+        x1 = g_connector_drag.mouse_x;
+        y1 = g_connector_drag.mouse_y;
+    }
     connector_auto_control_points(x0, y0, x1, y1, CONNECTOR_CURVE_AUTO,
                                   &cx1, &cy1, &cx2, &cy2);
 
