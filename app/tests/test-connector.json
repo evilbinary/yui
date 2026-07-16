@@ -358,6 +358,21 @@
                     }
                 },
                 {
+                    "id": "addNodeBtn",
+                    "type": "Button",
+                    "text": "添加节点",
+                    "size": [100, 36],
+                    "style": {
+                        "bgColor": "#94e2d5",
+                        "color": "#1e1e2e",
+                        "fontSize": 13,
+                        "borderRadius": 6
+                    },
+                    "events": {
+                        "onClick": "@addDynamicNode"
+                    }
+                },
+                {
                     "id": "resetBtn",
                     "type": "Button",
                     "text": "重置位置",
