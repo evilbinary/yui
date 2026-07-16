@@ -32,3 +32,4 @@ app/shopping/capture/*.png
 .claude/settings.local.json
 platform/android/.gradle/*
 
+third_party/yui-prebuilt/*
