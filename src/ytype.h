@@ -6,6 +6,66 @@
 #include <string.h>
 #include "cJSON.h"
 
+#if defined(YUI_BACKEND_MOBILE)
+
+#include <stdint.h>
+
+typedef uint32_t Uint32;
+typedef int SDL_EventType;
+
+#ifndef SDL_PRESSED
+#define SDL_PRESSED 1
+#endif
+#ifndef SDL_RELEASED
+#define SDL_RELEASED 0
+#endif
+#ifndef SDL_BUTTON_LEFT
+#define SDL_BUTTON_LEFT 1
+#endif
+#ifndef SDL_BUTTON_RIGHT
+#define SDL_BUTTON_RIGHT 3
+#endif
+#ifndef SDL_MOUSEBUTTONDOWN
+#define SDL_MOUSEBUTTONDOWN 1
+#endif
+#ifndef SDL_MOUSEBUTTONUP
+#define SDL_MOUSEBUTTONUP 2
+#endif
+#ifndef SDL_MOUSEMOTION
+#define SDL_MOUSEMOTION 3
+#endif
+
+typedef struct Rect {
+    int x, y;
+    int w, h;
+} Rect;
+
+typedef struct Color {
+    unsigned char r;
+    unsigned char g;
+    unsigned char b;
+    unsigned char a;
+} Color;
+
+typedef struct YuiTexture {
+    int w;
+    int h;
+    void* priv;
+} YuiTexture;
+
+typedef struct YuiFont {
+    int size;
+    void* priv;
+} YuiFont;
+
+typedef YuiTexture Texture;
+typedef YuiFont DFont;
+
+#define BUTTON_LEFT SDL_BUTTON_LEFT
+#define BUTTON_PRESSED SDL_PRESSED
+#define BUTTON_RIGHT SDL_BUTTON_RIGHT
+
+#else /* !YUI_BACKEND_MOBILE */
 
 #ifdef D_SDL
 #include <SDL2/SDL.h>
@@ -15,10 +75,9 @@
 #include <SDL.h>
 #include <SDL_ttf.h>
 #include <SDL_image.h>
-
-
-
 #endif
+
+#endif /* YUI_BACKEND_MOBILE */
 
 // 功能定义区域
 #define SDL2 1
@@ -61,7 +120,9 @@ typedef struct Point {
 } Point;
 
 
-#if SDL2
+#if defined(YUI_BACKEND_MOBILE)
+/* Rect / Color / Texture / DFont defined above */
+#elif SDL2
 
 #define Texture SDL_Texture
 #define Color SDL_Color
@@ -89,11 +150,11 @@ typedef struct Rect {
 
 #endif
 
-#define point_in_rect(pt, rect) \
-    ((pt.x) >= (rect).x && (pt.x) <= (rect).x + (rect).w) && \
-    ((pt.y) >= (rect).y && (pt.y) <= (rect).y + (rect).h)
-        
+#if !defined(YUI_BACKEND_MOBILE)
+
 #define DFont TTF_Font
+
+#endif
 
 
 

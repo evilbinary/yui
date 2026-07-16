@@ -21,9 +21,9 @@ static int g_next_dynamic_id = LAYER_TYPE_USER_BASE;
 
 uint32_t yui_get_current_backend_mask(void)
 {
-#if defined(YUI_BACKEND_LVGL)
+#if defined(YUI_USE_LVGL_BACKEND)
     return YUI_BACKEND_LVGL;
-#elif defined(YUI_BACKEND_SDL)
+#elif defined(YUI_USE_SDL_BACKEND)
     return YUI_BACKEND_SDL;
 #else
     return YUI_BACKEND_ALL;

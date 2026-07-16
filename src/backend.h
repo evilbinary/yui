@@ -42,6 +42,10 @@ void backend_render_get_clip_rect(Rect* prev_clip);
 void backend_render_set_clip_rect(Rect* clip);
 
 void backend_run(Layer* ui_root);
+
+/* 单帧更新（移动端 / platform 宿主驱动；桌面 SDL 可用 backend_run） */
+void backend_tick(Layer* ui_root);
+
 int backend_query_texture(Texture * texture,
                      Uint32 * format, int *access,
                      int *w, int *h);

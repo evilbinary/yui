@@ -7,7 +7,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#if defined(YUI_BACKEND_SDL) || defined(__EMSCRIPTEN__)
+#if defined(YUI_USE_SDL_BACKEND) || defined(__EMSCRIPTEN__)
 #include <SDL.h>
 #endif
 
@@ -44,7 +44,7 @@ static double g_fps_ema = 0.0;
 
 uint64_t perf_now_ns(void)
 {
-#if defined(YUI_BACKEND_SDL) || defined(__EMSCRIPTEN__)
+#if defined(YUI_USE_SDL_BACKEND) || defined(__EMSCRIPTEN__)
     static uint64_t freq = 0;
     if (!freq) {
         freq = (uint64_t)SDL_GetPerformanceFrequency();

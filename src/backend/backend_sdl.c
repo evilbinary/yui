@@ -636,7 +636,6 @@ static void backend_handle_window_resize(Layer* root) {
 }
 
 #ifdef __EMSCRIPTEN__
-// Emscripten 主循环回调函数
 void backend_main_loop(void) {
     if (!g_ui_root || !g_running) {
         return;
@@ -1726,6 +1725,41 @@ void backend_run(Layer* ui_root){
     }
 #endif
 
+}
+
+void backend_tick(Layer* ui_root) {
+    SDL_Event event;
+
+    if (!ui_root || !renderer) {
+        return;
+    }
+
+    while (SDL_PollEvent(&event)) {
+        if (event.type == SDL_QUIT) {
+            return;
+        }
+        handle_event(ui_root, &event);
+    }
+
+    for (int i = 0; i < update_callback_count; i++) {
+        if (update_callbacks[i]) {
+            update_callbacks[i]();
+        }
+    }
+
+    SDL_SetRenderDrawColor(renderer, 30, 30, 30, 255);
+    SDL_RenderClear(renderer);
+
+    perf_frame_begin();
+    perf_render_tree_begin();
+    render_layer(ui_root);
+    perf_render_tree_end();
+    render_inspect_overlay(ui_root);
+    perf_draw_overlay(ui_root);
+    popup_manager_render();
+    perf_frame_end();
+
+    SDL_RenderPresent(renderer);
 }
 
 DFont* backend_load_font(char* font_path,int size){

@@ -73,7 +73,7 @@ static int g_clip_depth = 0;
 
 uint32_t backend_get_caps(void)
 {
-#if defined(YUI_BACKEND_LVGL)
+#if defined(YUI_USE_LVGL_BACKEND)
     return BACKEND_CAP_CLIP | BACKEND_CAP_ROUND_RECT;
 #else
     return BACKEND_CAP_CLIP | BACKEND_CAP_ROUND_RECT | BACKEND_CAP_BACKDROP |

@@ -37,7 +37,7 @@ def add_flags():
     if platform.system()=='Windows':
         checkmem=False
         
-    if checkmem and not is_plat("stm32"):
+    if checkmem and not is_plat("stm32") and get_plat() not in ("android", "ios"):
         tool=get_toolchain_node()
         tool['ld']='gcc'
         add_cflags(
@@ -179,6 +179,13 @@ def add_flags():
             '-lsupc++',
             '-Wl,--end-group'
             ),
+    elif is_plat("android") or is_plat("ios"):
+        add_cflags(
+            '-g',
+            '-DYUI_BACKEND_MOBILE',
+            '-Isrc',
+            '-Ilib',
+            )
     elif platform.system()=='Darwin':
         add_cflags(
             '-g',
@@ -336,5 +343,7 @@ includes("./src/ya.py")
 includes("./lib/ya.py")
 
 includes("./app/ya.py")
+
+includes("./platform/ya.py")
 
 includes("./tests/ya.py")

@@ -582,23 +582,25 @@ platform/web/react/
 
 - [x] 本文档评审
 - [x] 关键决策确认（见 [已确认决策](#已确认决策)）
-- [ ] 创建 `platform/common/yui_boot.h`（头文件 + 空实现桩）
-- [ ] 创建 `platform/` 目录 README 占位
-- [ ] 拉取 skia-pack 预编译至 `third_party/skia-pack/`
+- [x] 创建 `platform/common/yui_boot.h` + `yui_boot.c`
+- [x] 创建 `platform/` 目录 README
+- [x] `third_party/skia-pack/README.md` 占位说明
+- [ ] 拉取 skia-pack 预编译至 `third_party/skia-pack/`（需手动下载）
 
 ### P1 — 移动端 + PC 并行 POC
 
 **Android**
 
-- [ ] 单文件 `backend_mobile.c` 最小实现（fill_rect、text、present）
+- [x] 单文件 `backend_mobile.c` 桩实现（Skia TODO）
 - [ ] `ya -p android` 交叉编译 `libyui.a`（`arm64-v8a` + `armeabi-v7a`）
 - [ ] QuickJS / mquickjs 两套 target 可链
-- [ ] `platform/android`：显示纯色或 `login.json` 一屏
+- [x] `platform/android/jni/yui_bridge.cpp` 桩
+- [ ] `platform/android` Gradle：显示 `login.json` 一屏
 
 **PC（并行）**
 
-- [ ] `platform/common/yui_boot.c` 从 `main.c` 抽取首版
-- [ ] `platform/pc` 最小 Win/Linux 入口调用 `yui_boot`
+- [x] `platform/common/yui_boot.c` 从 `main.c` 抽取首版
+- [x] `platform/pc/main.c` + `ya -b yui-pc` target
 
 ### P2 — iOS + 输入
 
