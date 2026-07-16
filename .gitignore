@@ -33,3 +33,5 @@ app/shopping/capture/*.png
 platform/android/.gradle/*
 
 third_party/yui-prebuilt/*
+platform/android/app/.cxx/*
+platform/android/.idea/*

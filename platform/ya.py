@@ -14,19 +14,19 @@ target("yui-pc")
 if get_plat() == "android":
     target("yui-android-prebuilt")
     (
-        add_deps("yui", "cjson", "yaml2json", "quickjs", "jsmodule-quickjs", "socket"),
+        add_deps("yui", "cjson", "yaml", "yaml2json", "quickjs", "jsmodule-quickjs", "socket"),
         add_rules("mode.debug", "mode.release"),
     )
 
     target("yui-android-prebuilt-mqjs")
     (
-        add_deps("yui", "cjson", "yaml2json", "mquickjs", "jsmodule", "socket"),
+        add_deps("yui", "cjson", "yaml", "yaml2json", "mquickjs", "jsmodule", "socket"),
         add_rules("mode.debug", "mode.release"),
     )
 
     target("yui-android-jni-quickjs")
     (
-        add_deps("yui", "cjson", "yaml2json", "quickjs", "jsmodule-quickjs", "socket"),
+        add_deps("yui", "cjson", "yaml", "yaml2json", "quickjs", "jsmodule-quickjs", "socket"),
         add_rules("mode.debug", "mode.release"),
         set_kind("shared"),
         add_flags(),
@@ -36,7 +36,7 @@ if get_plat() == "android":
 
     target("yui-android-jni-mqjs")
     (
-        add_deps("yui", "cjson", "yaml2json", "mquickjs", "jsmodule", "socket"),
+        add_deps("yui", "cjson", "yaml", "yaml2json", "mquickjs", "jsmodule", "socket"),
         add_rules("mode.debug", "mode.release"),
         set_kind("shared"),
         add_flags(),

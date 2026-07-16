@@ -2,8 +2,10 @@ cmake_minimum_required(VERSION 3.22)
 project(yui_android)
 
 if(NOT DEFINED YUI_REPO_ROOT)
-    set(YUI_REPO_ROOT "${CMAKE_CURRENT_LIST_DIR}/../../../../..")
+    set(YUI_REPO_ROOT "${CMAKE_CURRENT_LIST_DIR}/../../../../../..")
 endif()
+get_filename_component(YUI_REPO_ROOT "${YUI_REPO_ROOT}" ABSOLUTE)
+string(REPLACE "\\" "/" YUI_REPO_ROOT "${YUI_REPO_ROOT}")
 
 set(YUI_PREBUILT "${YUI_REPO_ROOT}/third_party/yui-prebuilt/android/${ANDROID_ABI}")
 
@@ -15,6 +17,7 @@ endfunction()
 
 import_yui_static(yui "libyui.a")
 import_yui_static(cjson "libcjson.a")
+import_yui_static(yaml "libyaml.a")
 import_yui_static(yaml2json "libyaml2json.a")
 import_yui_static(quickjs "libquickjs.a")
 import_yui_static(jsmodule "libjsmodule-quickjs.a")
@@ -47,6 +50,7 @@ target_link_libraries(yui_android_jni
     quickjs
     socket
     yaml2json
+    yaml
     cjson
     ${log-lib}
     ${android-lib}

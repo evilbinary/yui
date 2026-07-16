@@ -54,7 +54,7 @@ android-armv7:
 	ya -p android -a armeabi-v7a -m release -b yui-android-prebuilt
 
 android: android-arm64 android-armv7
-
+	cd platform/android && ./gradlew :app:assembleDebug
 
 run: main
 	ya -r main

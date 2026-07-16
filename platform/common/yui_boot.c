@@ -17,6 +17,7 @@
 #include "js_module.h"
 #endif
 
+Layer* g_ui_root = NULL;
 static Layer* g_root = NULL;
 static char g_json_path[MAX_PATH];
 static char g_assets_override[MAX_PATH];

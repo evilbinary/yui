@@ -185,7 +185,7 @@ static void mobile_draw_rect_norm(float x, float y, float w, float h,
 
 float scale = 1.0f;
 
-static Layer* g_ui_root = NULL;
+extern Layer* g_ui_root;
 static void* g_native_surface = NULL;
 static UpdateCallback g_update_callbacks[MAX_UPDATE_CALLBACKS];
 static int g_update_callback_count = 0;

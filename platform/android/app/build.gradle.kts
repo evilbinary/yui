@@ -34,8 +34,9 @@ android {
         externalNativeBuild {
             cmake {
                 cppFlags += listOf("-std=c++17", "-DHAS_JS_MODULE")
+                val yuiRepoRoot = rootProject.projectDir.resolve("../..").normalize().toString().replace('\\', '/')
                 arguments += listOf(
-                    "-DYUI_REPO_ROOT=${rootProject.projectDir}/../..",
+                    "-DYUI_REPO_ROOT=$yuiRepoRoot",
                     "-DANDROID_STL=c++_shared"
                 )
             }
@@ -59,6 +60,7 @@ android {
 
     externalNativeBuild {
         cmake {
+            version = "3.22.1"
             path = file("src/main/cpp/CMakeLists.txt")
         }
     }
