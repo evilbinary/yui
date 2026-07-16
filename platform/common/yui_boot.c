@@ -38,10 +38,13 @@ static void yui_ensure_root_assets(Layer* root, const char* json_path, const cha
     if (!root) {
         return;
     }
-    if (root->assets != NULL && root->assets->path[0] != '\0') {
+    if (assets_override && assets_override[0]) {
+        assets_dir = assets_override;
+    } else if (root->assets != NULL && root->assets->path[0] != '\0') {
         return;
+    } else {
+        assets_dir = yui_default_assets_dir(json_path, NULL);
     }
-    assets_dir = yui_default_assets_dir(json_path, assets_override);
     if (root->assets == NULL) {
         root->assets = malloc(sizeof(Assets));
     }

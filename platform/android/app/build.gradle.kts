@@ -7,11 +7,17 @@ val yuiRepoRoot = rootProject.projectDir.resolve("../..").normalize()
 val yuiAssetsDir = layout.buildDirectory.dir("generated/yuiAssets")
 
 val copyYuiAssets = tasks.register<Copy>("copyYuiAssets") {
-    from(yuiRepoRoot.resolve("app/tests/login.json")) {
-        into("tests")
-    }
     from(yuiRepoRoot.resolve("app/assets")) {
-        into("assets")
+        into("app/assets")
+    }
+    from(yuiRepoRoot.resolve("app/watch-os")) {
+        into("app/watch-os")
+    }
+    from(yuiRepoRoot.resolve("app/lib")) {
+        into("app/lib")
+    }
+    from(yuiRepoRoot.resolve("app/tests/login.json")) {
+        into("app/tests")
     }
     into(yuiAssetsDir)
 }

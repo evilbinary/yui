@@ -10,8 +10,8 @@ import java.io.FileOutputStream
 class YuiView(context: Context) : SurfaceView(context), SurfaceHolder.Callback, Choreographer.FrameCallback {
     private var running = false
     private var dataDir: File = File(context.filesDir, "yui")
-    private var jsonPath: String = File(dataDir, "tests/login.json").absolutePath
-    private var assetsRoot: String = File(dataDir, "assets").absolutePath
+    private var jsonPath: String = File(dataDir, "app/watch-os/app.json").absolutePath
+    private var assetsRoot: String = File(dataDir, "app/assets").absolutePath
 
     init {
         holder.addCallback(this)
