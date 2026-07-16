@@ -39,6 +39,7 @@ typedef struct ConnectorComponent {
     int has_ctrl2;
     Color stroke_color;
     int stroke_width;
+    char on_connect_change_name[MAX_PATH];
 } ConnectorComponent;
 
 typedef struct ConnectorAnchorEntry {
@@ -52,6 +53,7 @@ void connector_component_destroy(ConnectorComponent* component);
 void connector_component_render(Layer* layer);
 Layer* connector_resolve_endpoint(const char* id_or_path);
 Layer* connector_find_canvas(Layer* layer);
+Layer* connector_find_draggable_host(Layer* layer);
 int connector_layer_is_connectable(Layer* layer);
 void connector_get_layer_anchor_point(Layer* layer, ConnectorAnchor anchor,
                                       int* out_x, int* out_y);

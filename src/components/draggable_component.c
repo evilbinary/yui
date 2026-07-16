@@ -1,9 +1,11 @@
 #include "draggable_component.h"
 #include "connector_component.h"
 #include "../backend.h"
+#include "../event.h"
 #include "../layout.h"
 #include "../layer.h"
 #include "../util.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -47,6 +49,63 @@ static void draggable_sync_layout_base(Layer* layer)
     layer->layout_base_rect.x = layer->rect.x - parent->rect.x + scroll_x;
     layer->layout_base_rect.y = layer->rect.y - parent->rect.y + scroll_y;
     layer->layout_base_valid = 1;
+}
+
+static void draggable_emit_drag_change(Layer* layer, DraggableComponent* component,
+                                       const char* phase, int prev_x, int prev_y)
+{
+    char detail[256];
+    EventHandler handler;
+
+    if (!layer || !component || !phase || !component->on_drag_change_name[0]) {
+        return;
+    }
+
+    handler = find_event_by_name(component->on_drag_change_name);
+    if (!handler) {
+        return;
+    }
+
+    snprintf(detail, sizeof(detail),
+             "{\"phase\":\"%s\",\"position\":[%d,%d],\"previous\":[%d,%d]}",
+             phase, layer->rect.x, layer->rect.y, prev_x, prev_y);
+
+    if (!layer->event) {
+        layer->event = (Event*)calloc(1, sizeof(Event));
+    }
+    if (layer->event) {
+        strncpy(layer->event->click_name, component->on_drag_change_name,
+                sizeof(layer->event->click_name) - 1);
+        layer->event->click_name[sizeof(layer->event->click_name) - 1] = '\0';
+    }
+
+    layer_set_text(layer, detail);
+    EVENT_INVOKE(handler, layer);
+}
+
+static int draggable_component_register_event(Layer* layer, const char* event_name,
+                                              const char* event_func_name,
+                                              EventHandler event_handler)
+{
+    DraggableComponent* component;
+
+    (void)event_handler;
+    if (!layer || !layer->component || !event_func_name) {
+        return -1;
+    }
+    if (strcmp(event_name, "onDragChange") != 0 &&
+        strcmp(event_name, "dragChange") != 0) {
+        return -1;
+    }
+
+    component = (DraggableComponent*)layer->component;
+    if (event_func_name[0] == '@') {
+        event_func_name++;
+    }
+    strncpy(component->on_drag_change_name, event_func_name,
+            sizeof(component->on_drag_change_name) - 1);
+    component->on_drag_change_name[sizeof(component->on_drag_change_name) - 1] = '\0';
+    return 0;
 }
 
 static int draggable_is_drag_handle(DraggableComponent* component, Layer* layer,
@@ -264,6 +323,7 @@ DraggableComponent* draggable_component_create(Layer* layer)
     layer->render = draggable_component_render;
     layer->layout = draggable_component_layout;
     layer->handle_mouse_event = draggable_component_handle_mouse_event;
+    layer->register_event = draggable_component_register_event;
     layer->on_destroy = draggable_layer_destroy;
 
     return component;
@@ -302,6 +362,20 @@ DraggableComponent* draggable_component_create_from_json(Layer* layer, cJSON* js
         if (cJSON_HasObjectItem(style, "dotColor")) {
             parse_color(cJSON_GetObjectItem(style, "dotColor")->valuestring,
                         &component->dot_color);
+        }
+    }
+
+    {
+        cJSON* events = json_obj ? cJSON_GetObjectItem(json_obj, "events") : NULL;
+        cJSON* on_drag = events ? cJSON_GetObjectItem(events, "onDragChange") : NULL;
+        if (on_drag && cJSON_IsString(on_drag) && on_drag->valuestring[0]) {
+            const char* name = on_drag->valuestring;
+            if (name[0] == '@') {
+                name++;
+            }
+            strncpy(component->on_drag_change_name, name,
+                    sizeof(component->on_drag_change_name) - 1);
+            component->on_drag_change_name[sizeof(component->on_drag_change_name) - 1] = '\0';
         }
     }
 
@@ -409,6 +483,10 @@ int draggable_component_handle_mouse_event(Layer* layer, MouseEvent* event)
         component->dragging = 1;
         component->drag_offset_x = event->x - layer->rect.x;
         component->drag_offset_y = event->y - layer->rect.y;
+        component->drag_start_x = layer->rect.x;
+        component->drag_start_y = layer->rect.y;
+        draggable_emit_drag_change(layer, component, "start",
+                                   component->drag_start_x, component->drag_start_y);
         return 1;
     }
 
@@ -419,6 +497,8 @@ int draggable_component_handle_mouse_event(Layer* layer, MouseEvent* event)
         component->dragging = 0;
         draggable_sync_layout_base(layer);
         layout_layer(layer);
+        draggable_emit_drag_change(layer, component, "end",
+                                   component->drag_start_x, component->drag_start_y);
         return 1;
     }
 

@@ -13,7 +13,10 @@ typedef struct DraggableComponent {
     int dragging;
     int drag_offset_x;
     int drag_offset_y;
+    int drag_start_x;
+    int drag_start_y;
     int drag_handle_height;
+    char on_drag_change_name[MAX_PATH];
     int show_dots;
     int dot_size;
     Color dot_color;

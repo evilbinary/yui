@@ -1,9 +1,11 @@
 #include "connector_component.h"
 #include "../backend.h"
+#include "../event.h"
 #include "../layout.h"
 #include "../layer.h"
 #include "../util.h"
 #include <math.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -95,6 +97,84 @@ Layer* connector_find_draggable_host(Layer* layer)
     }
 
     return NULL;
+}
+
+static const char* connector_anchor_name(ConnectorAnchor anchor)
+{
+    switch (anchor) {
+        case CONNECTOR_ANCHOR_TOP:
+            return "top";
+        case CONNECTOR_ANCHOR_BOTTOM:
+            return "bottom";
+        case CONNECTOR_ANCHOR_LEFT:
+            return "left";
+        case CONNECTOR_ANCHOR_RIGHT:
+            return "right";
+        default:
+            return "center";
+    }
+}
+
+static void connector_emit_connect_change(Layer* layer, ConnectorComponent* component,
+                                          const char* action)
+{
+    char detail[512];
+    EventHandler handler;
+
+    if (!layer || !component || !action || !component->on_connect_change_name[0]) {
+        return;
+    }
+
+    handler = find_event_by_name(component->on_connect_change_name);
+    if (!handler) {
+        return;
+    }
+
+    snprintf(detail, sizeof(detail),
+             "{\"action\":\"%s\",\"from\":{\"id\":\"%s\",\"anchor\":\"%s\"},"
+             "\"to\":{\"id\":\"%s\",\"anchor\":\"%s\"}}",
+             action,
+             component->from_id,
+             connector_anchor_name(component->from_anchor),
+             component->to_id,
+             connector_anchor_name(component->to_anchor));
+
+    if (!layer->event) {
+        layer->event = (Event*)calloc(1, sizeof(Event));
+    }
+    if (layer->event) {
+        strncpy(layer->event->click_name, component->on_connect_change_name,
+                sizeof(layer->event->click_name) - 1);
+        layer->event->click_name[sizeof(layer->event->click_name) - 1] = '\0';
+    }
+
+    layer_set_text(layer, detail);
+    EVENT_INVOKE(handler, layer);
+}
+
+static int connector_component_register_event(Layer* layer, const char* event_name,
+                                              const char* event_func_name,
+                                              EventHandler event_handler)
+{
+    ConnectorComponent* component;
+
+    (void)event_handler;
+    if (!layer || !layer->component || !event_func_name) {
+        return -1;
+    }
+    if (strcmp(event_name, "onConnectChange") != 0 &&
+        strcmp(event_name, "connectChange") != 0) {
+        return -1;
+    }
+
+    component = (ConnectorComponent*)layer->component;
+    if (event_func_name[0] == '@') {
+        event_func_name++;
+    }
+    strncpy(component->on_connect_change_name, event_func_name,
+            sizeof(component->on_connect_change_name) - 1);
+    component->on_connect_change_name[sizeof(component->on_connect_change_name) - 1] = '\0';
+    return 0;
 }
 
 static void connector_collect_endpoint_for_draggable(Layer* root, Layer* draggable,
@@ -512,6 +592,7 @@ ConnectorComponent* connector_component_create(Layer* layer)
 
     layer->component = component;
     layer->render = connector_component_render;
+    layer->register_event = connector_component_register_event;
     layer->on_destroy = connector_layer_destroy;
 
     return component;
@@ -573,6 +654,21 @@ ConnectorComponent* connector_component_create_from_json(Layer* layer, cJSON* js
 
         if (cJSON_HasObjectItem(style, "strokeWidth")) {
             component->stroke_width = cJSON_GetObjectItem(style, "strokeWidth")->valueint;
+        }
+    }
+
+    {
+        cJSON* events = cJSON_GetObjectItem(json_obj, "events");
+        cJSON* on_connect = events ? cJSON_GetObjectItem(events, "onConnectChange") : NULL;
+        if (on_connect && cJSON_IsString(on_connect) && on_connect->valuestring[0]) {
+            const char* name = on_connect->valuestring;
+            if (name[0] == '@') {
+                name++;
+            }
+            strncpy(component->on_connect_change_name, name,
+                    sizeof(component->on_connect_change_name) - 1);
+            component->on_connect_change_name[sizeof(component->on_connect_change_name) - 1] =
+                '\0';
         }
     }
 
@@ -1236,6 +1332,7 @@ Layer* connector_create_link(Layer* canvas, Layer* from_layer, ConnectorAnchor f
 
     layout_layer(canvas);
     connector_refresh_canvas_draggbles(canvas);
+    connector_emit_connect_change(layer, component, "attach");
     return layer;
 }
 
@@ -1251,6 +1348,11 @@ static void connector_remove_child_layer(Layer* parent, Layer* child)
     for (i = 0; i < parent->child_count; i++) {
         if (parent->children[i] != child) {
             continue;
+        }
+        if (child->type == CONNECTOR && child->component) {
+            connector_emit_connect_change(child,
+                                          (ConnectorComponent*)child->component,
+                                          "detach");
         }
         for (j = i; j < parent->child_count - 1; j++) {
             parent->children[j] = parent->children[j + 1];
@@ -1342,6 +1444,8 @@ static int connector_capture_handle_mouse(Layer* layer, MouseEvent* event)
                 if (valid) {
                     layout_layer(g_connector_drag.canvas);
                     connector_refresh_canvas_draggbles(g_connector_drag.canvas);
+                    connector_emit_connect_change(g_connector_drag.modify_layer,
+                                                  component, "rebind");
                 }
             }
         } else if (connector_hit_test_canvas_ports(g_connector_drag.canvas, event->x, event->y,
