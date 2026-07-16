@@ -2,6 +2,7 @@
 #include "component_registry.h"
 #include "event.h"
 #include "render.h"
+#include "perf/perf.h"
 #include "ytype.h"
 #include "util.h"
 #include "popup_manager.h"
@@ -661,11 +662,16 @@ void backend_main_loop(void) {
     SDL_SetRenderDrawColor(renderer, 30, 30, 30, 255);
     SDL_RenderClear(renderer);
 
-    render_layer(g_ui_root);  // 执行渲染管线
+    perf_frame_begin();
+    perf_render_tree_begin();
+    render_layer(g_ui_root);
+    perf_render_tree_end();
     render_inspect_overlay(g_ui_root);
+    perf_draw_overlay(g_ui_root);
 
     // 渲染弹出层
     popup_manager_render();
+    perf_frame_end();
 
     SDL_RenderPresent(renderer);
 }
@@ -1690,11 +1696,16 @@ void backend_run(Layer* ui_root){
         SDL_SetRenderDrawColor(renderer, 30, 30, 30, 255);
         SDL_RenderClear(renderer);
 
-        render_layer(ui_root);  // 执行渲染管线
+        perf_frame_begin();
+        perf_render_tree_begin();
+        render_layer(ui_root);
+        perf_render_tree_end();
         render_inspect_overlay(ui_root);
+        perf_draw_overlay(ui_root);
 
         // 渲染弹出层
         popup_manager_render();
+        perf_frame_end();
 
         SDL_RenderPresent(renderer);
 

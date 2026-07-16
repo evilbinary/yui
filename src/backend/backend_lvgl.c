@@ -3,6 +3,7 @@
 #include "component_registry.h"
 #include "event.h"
 #include "render.h"
+#include "perf/perf.h"
 #include "popup_manager.h"
 #include "log.h"
 #include "../../lib/lvgl/lv_port.h"
@@ -723,9 +724,14 @@ void backend_run(Layer* ui_root)
 
         backend_render_clear_color(30, 30, 30, 255);
         if (g_ui_root) {
+            perf_frame_begin();
+            perf_render_tree_begin();
             render_layer(g_ui_root);
+            perf_render_tree_end();
             render_inspect_overlay(g_ui_root);
+            perf_draw_overlay(g_ui_root);
             popup_manager_render();
+            perf_frame_end();
         }
 
 #if LV_USE_PERF_MONITOR || LV_USE_MEM_MONITOR

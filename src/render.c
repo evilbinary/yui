@@ -2,6 +2,7 @@
 #include "render.h"
 #include "component_registry.h"
 #include "animate.h"
+#include "perf/perf.h"
 #include <limits.h>
 
 extern int yui_inspect_mode_enabled;
@@ -179,19 +180,22 @@ Texture* render_text(Layer* layer,const char* text, Color color) {
 
 // ====================== 渲染管线 ======================
 void render_layer(Layer* layer) {
-    // 添加调试信息，检查layer指针是否为NULL
     if (!layer) {
         printf("render_layer: layer is NULL\n");
         return;
     }
-    if(layer->visible==IN_VISIBLE){
+    if (layer->visible == IN_VISIBLE) {
         return;
     }
-    
-    // 在渲染图层之前更新动画状态
+
+    int perf_on = perf_is_enabled();
+    perf_layer_tree_enter(layer);
+
+    uint64_t self_ns = 0;
+    uint64_t t0 = perf_on ? perf_now_ns() : 0;
+
     layer_update_animation(layer);
-    
-    // 根据图层类型进行不同的渲染处理
+
     const YuiComponentOps* ops = yui_type_get_ops(layer->type);
     if (ops && (ops->flags & YUI_COMP_LVGL_WIDGET)) {
         if (layer->layout) {
@@ -200,41 +204,37 @@ void render_layer(Layer* layer) {
     } else if (layer->render != NULL) {
         layer->render(layer);
     } else if (layer->type == VIEW) {
-        //printf("layer->%s %dn",layer->id,layer->type);
-    // 绘制背景
-        if(layer->bg_color.a > 0) {
-            // 如果启用了毛玻璃效果，先渲染毛玻璃效果
+        if (layer->bg_color.a > 0) {
             if (layer->backdrop_filter) {
                 backend_render_backdrop_filter(&layer->rect, layer->blur_radius, layer->saturation, layer->brightness);
-            }
-            
-            if (layer->radius > 0) {
-                backend_render_rounded_rect(&layer->rect, layer->bg_color, layer->radius);
-            } else {
-                backend_render_fill_rect(&layer->rect, layer->bg_color);
             }
 
-        }else{
-            // 默认渲染方式
-            // 如果启用了毛玻璃效果，先渲染毛玻璃效果
-            if (layer->backdrop_filter) {
-                backend_render_backdrop_filter(&layer->rect, layer->blur_radius, layer->saturation, layer->brightness);
-            }
-            
             if (layer->radius > 0) {
                 backend_render_rounded_rect(&layer->rect, layer->bg_color, layer->radius);
             } else {
                 backend_render_fill_rect(&layer->rect, layer->bg_color);
             }
-            
+        } else {
+            if (layer->backdrop_filter) {
+                backend_render_backdrop_filter(&layer->rect, layer->blur_radius, layer->saturation, layer->brightness);
+            }
+
+            if (layer->radius > 0) {
+                backend_render_rounded_rect(&layer->rect, layer->bg_color, layer->radius);
+            } else {
+                backend_render_fill_rect(&layer->rect, layer->bg_color);
+            }
         }
     }
-    // 保存当前渲染目标的裁剪区域
+
+    if (perf_on) {
+        self_ns += perf_now_ns() - t0;
+    }
+
     Rect prev_clip;
-    render_clip_start(layer,&prev_clip);
-    // 递归渲染子图层
+    render_clip_start(layer, &prev_clip);
+
     for (int i = 0; i < layer->child_count; i++) {
-        // 添加调试信息，检查children指针是否为NULL
         if (!layer->children) {
             printf("render_layer: layer->children is NULL for layer %s\n", layer->id);
             break;
@@ -243,44 +243,45 @@ void render_layer(Layer* layer) {
             printf("render_layer: layer->children[%d] is NULL for layer %s\n", i, layer->id);
             continue;
         }
-        if(layer->children[i]->visible==IN_VISIBLE){
+        if (layer->children[i]->visible == IN_VISIBLE) {
             continue;
         }
         render_layer(layer->children[i]);
     }
 
-       // 递归渲染子图层
-    if(layer->sub!=NULL){
+    if (layer->sub != NULL) {
         render_layer(layer->sub);
     }
 
-        // 渲染滚动条
-    // 渲染垂直滚动条
+    if (perf_on) {
+        t0 = perf_now_ns();
+    }
+
     if ((layer->scrollable == 1 || layer->scrollable == 3) && layer->scrollbar_v && layer->scrollbar_v->visible) {
-       render_vertical_scrollbar(layer);
+        render_vertical_scrollbar(layer);
     }
-    
-    // 渲染水平滚动条
-    // printf("DEBUG: Check horizontal scrollbar for layer '%s' - scrollable=%d, scrollbar_h=%p, visible=%d\n", 
-    //        layer->id, layer->scrollable, (void*)layer->scrollbar_h, layer->scrollbar_h ? layer->scrollbar_h->visible : -1);
+
     if ((layer->scrollable == 2 || layer->scrollable == 3) && layer->scrollbar_h && layer->scrollbar_h->visible) {
-    //    printf("DEBUG: Rendering horizontal scrollbar for layer '%s'\n", layer->id);
-       render_horizontal_scrollbar(layer);
+        render_horizontal_scrollbar(layer);
     }
-    
-    // 兼容性处理：旧的滚动条（向后兼容）
+
     if (layer->scrollable && layer->scrollbar && layer->scrollbar->visible) {
-       render_scrollbar(layer);
+        render_scrollbar(layer);
     }
-    
-    render_clip_end(layer,&prev_clip);
+
+    if (perf_on) {
+        self_ns += perf_now_ns() - t0;
+        perf_layer_add_self_ns(layer, self_ns);
+    }
+
+    render_clip_end(layer, &prev_clip);
 
 #if DEBUG_VIEW
-    Texture* text_texture = render_text(layer,layer->id, (Color){strlen(layer->id)*40%255, 0, 0, 255});
-    Rect r={layer->rect.x+2,layer->rect.y,strlen(layer->id)*6,12};
-    backend_render_text_copy(text_texture,NULL,&r);
+    Texture* text_texture = render_text(layer, layer->id, (Color){strlen(layer->id) * 40 % 255, 0, 0, 255});
+    Rect r = {layer->rect.x + 2, layer->rect.y, (int)strlen(layer->id) * 6, 12};
+    backend_render_text_copy(text_texture, NULL, &r);
     backend_render_text_destroy(text_texture);
-    backend_render_rect(&layer->rect,(Color){strlen(layer->id)*40%255, 0, 0, 255});
+    backend_render_rect(&layer->rect, (Color){strlen(layer->id) * 40 % 255, 0, 0, 255});
 #endif
 }
 

@@ -11,6 +11,7 @@ add_flags()
 set_kind('static')
 add_files("*.c")
 add_files("components/*.c")
+add_files("perf/*.c")
 add_files("backend/backend_common.c")
 
 if get_plat() == "lvgl":
