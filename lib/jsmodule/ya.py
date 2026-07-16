@@ -12,7 +12,7 @@ add_files('yui_stdlib_stubs.c',
           'yui_stdlib_build.c',
           '../mquickjs/mquickjs_build.c'
           )
-add_cflags(' -Isrc/ -DCONFIG_CLASS_SOCKET -DCONFIG_CLASS_YUI ')
+add_cflags(' -Isrc/ -DCONFIG_CLASS_SOCKET -DCONFIG_CLASS_YUI -DSTDLIB_BUILD ')
 def after_build_host(target):
     # target.on_run(target)
     import subprocess

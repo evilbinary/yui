@@ -11,17 +11,21 @@ add_flags()
 set_kind('static')
 add_files("*.c")
 add_files("components/*.c")
+add_files("perf/*.c")
 add_files("backend/backend_common.c")
 
 if get_plat() == "lvgl":
     add_files("backend/backend_lvgl.c")
-    add_cflags("-DYUI_BACKEND_LVGL")
+    add_cflags("-DYUI_USE_LVGL_BACKEND")
     add_cflags("-DYUI_HAS_LVGLMODULE")
     add_cflags("-DYUI_LVGL_PORT_SDL")
     add_deps("lvgl", "lvgl_extra", "lvglmodule")
 elif get_plat() == "stm32":
     add_files("backend/backend_stm32.c")
     add_cflags("-DSTM32_PLATFORM")
+elif get_plat() in ("android", "ios"):
+    add_files("backend/backend_mobile.c")
+    add_cflags("-DYUI_BACKEND_MOBILE")
 else:
     add_files("backend/backend_sdl.c")
-    add_cflags("-DYUI_BACKEND_SDL")
+    add_cflags("-DYUI_USE_SDL_BACKEND")

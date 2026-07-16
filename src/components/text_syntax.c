@@ -1,3 +1,4 @@
+#include "../ytype.h"
 #include "text_syntax.h"
 #include "../backend.h"
 #include "../util.h"

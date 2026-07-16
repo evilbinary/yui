@@ -25,6 +25,10 @@
 #include "layer_lifecycle.h"
 #include "cJSON.h"
 
+#ifndef STDLIB_BUILD
+#include "../../src/perf/perf.h"
+#endif
+
 
 #define MAX_TEXT 256
 #define MAX_PATH 1024
@@ -503,6 +507,17 @@ static const JSPropDef js_yui[] = {
     JS_CFUNC_DEF("inspect.setLayer", 2, js_yui_inspect_setLayer ),
     JS_CFUNC_DEF("inspect.setShowBounds", 1, js_yui_inspect_setShowBounds ),
     JS_CFUNC_DEF("inspect.setShowInfo", 1, js_yui_inspect_setShowInfo ),
+    JS_CFUNC_DEF("perf.enable", 0, js_yui_perf_enable ),
+    JS_CFUNC_DEF("perf.disable", 0, js_yui_perf_disable ),
+    JS_CFUNC_DEF("perf.reset", 0, js_yui_perf_reset ),
+    JS_CFUNC_DEF("perf.setOverlay", 1, js_yui_perf_setOverlay ),
+    JS_CFUNC_DEF("perf.setTopN", 1, js_yui_perf_setTopN ),
+    JS_CFUNC_DEF("perf.setLogInterval", 1, js_yui_perf_setLogInterval ),
+    JS_CFUNC_DEF("perf.watch", 1, js_yui_perf_watch ),
+    JS_CFUNC_DEF("perf.unwatch", 1, js_yui_perf_unwatch ),
+    JS_CFUNC_DEF("perf.clearWatch", 0, js_yui_perf_clearWatch ),
+    JS_CFUNC_DEF("perf.getFrameStats", 0, js_yui_perf_getFrameStats ),
+    JS_CFUNC_DEF("perf.getLayerStats", 1, js_yui_perf_getLayerStats ),
     JS_CFUNC_DEF("setEvent", 3, js_yui_set_event ),
     JS_PROP_END,
 };
@@ -823,6 +838,166 @@ static JSValue js_yui_inspect_setShowInfo(JSContext *ctx, JSValue *this_val, int
     printf("YUI Inspect: Set show info = %d\n", show_info);
     return JS_NewBool( 1);
 }
+
+#ifndef STDLIB_BUILD
+static int js_yui_parse_bool_arg(JSContext* ctx, JSValue val)
+{
+    if (JS_IsBool(val)) {
+        return JS_VALUE_GET_SPECIAL_VALUE(val) != 0;
+    }
+    if (JS_IsInt(val)) {
+        return JS_VALUE_GET_INT(val) != 0;
+    }
+    return !JS_IsNull(val) && !JS_IsUndefined(val);
+}
+
+static JSValue js_yui_perf_enable(JSContext* ctx, JSValue* this_val, int argc, JSValue* argv)
+{
+    perf_enable(1);
+    printf("YUI Perf: enabled\n");
+    return JS_NewBool(1);
+}
+
+static JSValue js_yui_perf_disable(JSContext* ctx, JSValue* this_val, int argc, JSValue* argv)
+{
+    perf_enable(0);
+    printf("YUI Perf: disabled\n");
+    return JS_NewBool(1);
+}
+
+static JSValue js_yui_perf_reset(JSContext* ctx, JSValue* this_val, int argc, JSValue* argv)
+{
+    perf_reset();
+    return JS_NewBool(1);
+}
+
+static JSValue js_yui_perf_setOverlay(JSContext* ctx, JSValue* this_val, int argc, JSValue* argv)
+{
+    if (argc < 1) {
+        return JS_ThrowTypeError(ctx, "perf.setOverlay requires 1 argument");
+    }
+    perf_set_overlay(js_yui_parse_bool_arg(ctx, argv[0]));
+    return JS_NewBool(1);
+}
+
+static JSValue js_yui_perf_setTopN(JSContext* ctx, JSValue* this_val, int argc, JSValue* argv)
+{
+    if (argc < 1 || !JS_IsInt(argv[0])) {
+        return JS_ThrowTypeError(ctx, "perf.setTopN requires an integer");
+    }
+    perf_set_top_n(JS_VALUE_GET_INT(argv[0]));
+    return JS_NewBool(1);
+}
+
+static JSValue js_yui_perf_setLogInterval(JSContext* ctx, JSValue* this_val, int argc, JSValue* argv)
+{
+    if (argc < 1 || !JS_IsInt(argv[0])) {
+        return JS_ThrowTypeError(ctx, "perf.setLogInterval requires an integer");
+    }
+    perf_set_log_interval(JS_VALUE_GET_INT(argv[0]));
+    return JS_NewBool(1);
+}
+
+static JSValue js_yui_perf_watch(JSContext* ctx, JSValue* this_val, int argc, JSValue* argv)
+{
+    if (argc < 1) {
+        return JS_ThrowTypeError(ctx, "perf.watch requires layer id");
+    }
+    JSCStringBuf buf;
+    const char* layer_id = JS_ToCString(ctx, argv[0], &buf);
+    int ok = layer_id ? perf_watch(layer_id) : 0;
+    return JS_NewBool(ok);
+}
+
+static JSValue js_yui_perf_unwatch(JSContext* ctx, JSValue* this_val, int argc, JSValue* argv)
+{
+    if (argc < 1) {
+        return JS_ThrowTypeError(ctx, "perf.unwatch requires layer id");
+    }
+    JSCStringBuf buf;
+    const char* layer_id = JS_ToCString(ctx, argv[0], &buf);
+    int ok = layer_id ? perf_unwatch(layer_id) : 0;
+    return JS_NewBool(ok);
+}
+
+static JSValue js_yui_perf_clearWatch(JSContext* ctx, JSValue* this_val, int argc, JSValue* argv)
+{
+    perf_clear_watch();
+    return JS_NewBool(1);
+}
+
+static JSValue js_yui_perf_getFrameStats(JSContext* ctx, JSValue* this_val, int argc, JSValue* argv)
+{
+    const PerfFrameStats* stats = perf_get_frame_stats();
+    JSValue obj = JS_NewObject(ctx);
+    JS_SetPropertyStr(ctx, obj, "fps", JS_NewFloat64(ctx, stats ? stats->fps : 0.0));
+    JS_SetPropertyStr(ctx, obj, "frameIndex", JS_NewInt64(ctx, stats ? (int64_t)stats->frame_index : 0));
+    JS_SetPropertyStr(ctx, obj, "frameMs", JS_NewFloat64(ctx, stats ? (double)stats->frame_ns / 1000000.0 : 0.0));
+    JS_SetPropertyStr(ctx, obj, "renderMs", JS_NewFloat64(ctx, stats ? (double)stats->render_tree_ns / 1000000.0 : 0.0));
+    JS_SetPropertyStr(ctx, obj, "layerCount", JS_NewInt32(ctx, stats ? (int)stats->layers_rendered : 0));
+    return obj;
+}
+
+static PerfSortBy js_yui_perf_parse_sort(JSContext* ctx, JSValue val)
+{
+    if (!JS_IsString(ctx, val)) {
+        return PERF_SORT_TIME;
+    }
+    JSCStringBuf buf;
+    const char* sort = JS_ToCString(ctx, val, &buf);
+    if (!sort) {
+        return PERF_SORT_TIME;
+    }
+    if (strcmp(sort, "count") == 0) {
+        return PERF_SORT_COUNT;
+    }
+    if (strcmp(sort, "name") == 0) {
+        return PERF_SORT_NAME;
+    }
+    return PERF_SORT_TIME;
+}
+
+static JSValue js_yui_perf_getLayerStats(JSContext* ctx, JSValue* this_val, int argc, JSValue* argv)
+{
+    PerfSortBy sort_by = PERF_SORT_TIME;
+    if (argc >= 1) {
+        sort_by = js_yui_perf_parse_sort(ctx, argv[0]);
+    }
+
+    PerfLayerStats stats[32];
+    int count = perf_get_layer_stats(stats, 32, sort_by);
+    JSValue arr = JS_NewArray(ctx, count);
+
+    for (int i = 0; i < count; i++) {
+        JSValue item = JS_NewObject(ctx);
+        JS_SetPropertyStr(ctx, item, "id", JS_NewString(ctx, stats[i].id ? stats[i].id : ""));
+        JS_SetPropertyStr(ctx, item, "type", JS_NewInt32(ctx, stats[i].type));
+        JS_SetPropertyStr(ctx, item, "renderCount", JS_NewInt32(ctx, (int)stats[i].render_count));
+        JS_SetPropertyStr(ctx, item, "renderMs", JS_NewFloat64(ctx, (double)stats[i].render_ns / 1000000.0));
+        JS_SetPropertyStr(ctx, item, "totalRenderMs", JS_NewFloat64(ctx, (double)stats[i].total_render_ns / 1000000.0));
+        JS_SetPropertyStr(ctx, item, "maxRenderCount", JS_NewInt32(ctx, (int)stats[i].max_render_count));
+        JS_SetPropertyStr(ctx, item, "framesSeen", JS_NewInt64(ctx, (int64_t)stats[i].total_frames_seen));
+
+        char key[16];
+        snprintf(key, sizeof(key), "%d", i);
+        JS_SetPropertyStr(ctx, arr, key, item);
+    }
+
+    return arr;
+}
+#else
+static JSValue js_yui_perf_enable(JSContext* ctx, JSValue* this_val, int argc, JSValue* argv) { return JS_UNDEFINED; }
+static JSValue js_yui_perf_disable(JSContext* ctx, JSValue* this_val, int argc, JSValue* argv) { return JS_UNDEFINED; }
+static JSValue js_yui_perf_reset(JSContext* ctx, JSValue* this_val, int argc, JSValue* argv) { return JS_UNDEFINED; }
+static JSValue js_yui_perf_setOverlay(JSContext* ctx, JSValue* this_val, int argc, JSValue* argv) { return JS_UNDEFINED; }
+static JSValue js_yui_perf_setTopN(JSContext* ctx, JSValue* this_val, int argc, JSValue* argv) { return JS_UNDEFINED; }
+static JSValue js_yui_perf_setLogInterval(JSContext* ctx, JSValue* this_val, int argc, JSValue* argv) { return JS_UNDEFINED; }
+static JSValue js_yui_perf_watch(JSContext* ctx, JSValue* this_val, int argc, JSValue* argv) { return JS_UNDEFINED; }
+static JSValue js_yui_perf_unwatch(JSContext* ctx, JSValue* this_val, int argc, JSValue* argv) { return JS_UNDEFINED; }
+static JSValue js_yui_perf_clearWatch(JSContext* ctx, JSValue* this_val, int argc, JSValue* argv) { return JS_UNDEFINED; }
+static JSValue js_yui_perf_getFrameStats(JSContext* ctx, JSValue* this_val, int argc, JSValue* argv) { return JS_UNDEFINED; }
+static JSValue js_yui_perf_getLayerStats(JSContext* ctx, JSValue* this_val, int argc, JSValue* argv) { return JS_UNDEFINED; }
+#endif
 
 extern int js_module_set_event(const char* layer_id, const char* event_name, const char* event_func_name);
 // YUI.setEvent() - 设置图层事件回调

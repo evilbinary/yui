@@ -46,6 +46,7 @@ SelectComponent* select_component_create(Layer* layer) {
     component->scrollbar_bg_color = (Color){240, 240, 240, 255};
     component->focus_border_color = (Color){0, 123, 255, 255};  // 焦点边框蓝色
     component->hover_border_color = (Color){0, 123, 255, 255};  // 悬停边框蓝色
+    component->divider_color = (Color){220, 220, 220, 255};
     
     // 默认样式
     component->border_width = 1;
@@ -75,9 +76,132 @@ SelectComponent* select_component_create(Layer* layer) {
         layer->event = malloc(sizeof(Event));
         memset(layer->event, 0, sizeof(Event));
     }
-    layer->event->scroll = (void(*)(void*))select_component_scroll_callback;
+    layer->event->scroll = (EventHandler)(void*)select_component_scroll_callback;
     
     return component;
+}
+
+static int select_color_key_set(cJSON* style, cJSON* colors, const char* key) {
+    if (colors && cJSON_HasObjectItem(colors, key)) {
+        return 1;
+    }
+    if (style && cJSON_HasObjectItem(style, key)) {
+        return 1;
+    }
+    if (strcmp(key, "textColor") == 0 && style && cJSON_HasObjectItem(style, "color")) {
+        return 1;
+    }
+    return 0;
+}
+
+static void select_parse_style_color(cJSON* obj, const char* key, Color* out) {
+    cJSON* item;
+    if (!obj || !key || !out) {
+        return;
+    }
+    item = cJSON_GetObjectItem(obj, key);
+    if (item && cJSON_IsString(item)) {
+        parse_color(item->valuestring, out);
+    }
+}
+
+static void select_apply_color_config(SelectComponent* component, cJSON* config) {
+    if (!component || !config) {
+        return;
+    }
+    select_parse_style_color(config, "bgColor", &component->bg_color);
+    select_parse_style_color(config, "color", &component->text_color);
+    select_parse_style_color(config, "textColor", &component->text_color);
+    select_parse_style_color(config, "borderColor", &component->border_color);
+    select_parse_style_color(config, "arrowColor", &component->arrow_color);
+    select_parse_style_color(config, "dropdownBgColor", &component->dropdown_bg_color);
+    select_parse_style_color(config, "hoverBgColor", &component->hover_bg_color);
+    select_parse_style_color(config, "selectedBgColor", &component->selected_bg_color);
+    select_parse_style_color(config, "selectedTextColor", &component->selected_text_color);
+    select_parse_style_color(config, "disabledTextColor", &component->disabled_text_color);
+    select_parse_style_color(config, "scrollbarColor", &component->scrollbar_color);
+    select_parse_style_color(config, "scrollbarBgColor", &component->scrollbar_bg_color);
+    select_parse_style_color(config, "focusBorderColor", &component->focus_border_color);
+    select_parse_style_color(config, "hoverBorderColor", &component->hover_border_color);
+    select_parse_style_color(config, "dividerColor", &component->divider_color);
+}
+
+static void select_apply_style_layout(SelectComponent* component, cJSON* style) {
+    cJSON* item;
+    if (!component || !style) {
+        return;
+    }
+    item = cJSON_GetObjectItem(style, "borderRadius");
+    if (item && cJSON_IsNumber(item)) {
+        component->border_radius = item->valueint;
+    }
+    item = cJSON_GetObjectItem(style, "borderWidth");
+    if (item && cJSON_IsNumber(item)) {
+        component->border_width = item->valueint;
+    }
+    item = cJSON_GetObjectItem(style, "fontSize");
+    if (item && cJSON_IsNumber(item)) {
+        component->font_size = item->valueint;
+    }
+}
+
+static Color select_brighten_color(Color color, int delta) {
+    Color out = color;
+    int r = (int)out.r + delta;
+    int g = (int)out.g + delta;
+    int b = (int)out.b + delta;
+    out.r = (uint8_t)(r > 255 ? 255 : r);
+    out.g = (uint8_t)(g > 255 ? 255 : g);
+    out.b = (uint8_t)(b > 255 ? 255 : b);
+    return out;
+}
+
+static void select_sync_dropdown_colors_from_style(SelectComponent* component,
+                                                   cJSON* style,
+                                                   cJSON* colors) {
+    if (!select_color_key_set(style, colors, "dropdownBgColor")) {
+        component->dropdown_bg_color = component->bg_color;
+    }
+    if (!select_color_key_set(style, colors, "hoverBgColor")) {
+        component->hover_bg_color = select_brighten_color(component->bg_color, 20);
+    }
+    if (!select_color_key_set(style, colors, "arrowColor")) {
+        component->arrow_color = component->text_color;
+    }
+    if (!select_color_key_set(style, colors, "selectedTextColor")) {
+        component->selected_text_color = component->text_color;
+    }
+    if (!select_color_key_set(style, colors, "scrollbarBgColor")) {
+        component->scrollbar_bg_color = component->bg_color;
+    }
+    if (!select_color_key_set(style, colors, "disabledTextColor")) {
+        component->disabled_text_color = component->text_color;
+        component->disabled_text_color.a =
+            (uint8_t)(component->disabled_text_color.a * 3 / 5);
+    }
+    if (!select_color_key_set(style, colors, "dividerColor")) {
+        component->divider_color = component->border_color;
+    }
+}
+
+static void select_apply_colors_from_json(SelectComponent* component,
+                                          Layer* layer,
+                                          cJSON* json_obj,
+                                          cJSON* colors) {
+    cJSON* style = cJSON_GetObjectItem(json_obj, "style");
+
+    select_apply_color_config(component, style);
+    select_apply_style_layout(component, style);
+    select_apply_color_config(component, colors);
+
+    if (!select_color_key_set(style, colors, "bgColor") && layer->bg_color.a > 0) {
+        component->bg_color = layer->bg_color;
+    }
+    if (!select_color_key_set(style, colors, "textColor") && layer->color.a > 0) {
+        component->text_color = layer->color;
+    }
+
+    select_sync_dropdown_colors_from_style(component, style, colors);
 }
 
 // 从 JSON 创建 Select 组件
@@ -181,68 +305,9 @@ SelectComponent* select_component_create_from_json(Layer* layer, cJSON* json_obj
         select_component_add_placeholder(component, cJSON_GetObjectItem(config_source, "placeholder")->valuestring);
     }
     
-    // 解析颜色配置
+    // 颜色：优先 style，colors 块可覆盖，未配置项从 style 派生
     cJSON* colors = cJSON_GetObjectItem(config_source, "colors");
-    if (colors) {
-        if (cJSON_HasObjectItem(colors, "bgColor")) {
-            parse_color((char*)cJSON_GetObjectItem(colors, "bgColor")->valuestring, &component->bg_color);
-        }
-        if (cJSON_HasObjectItem(colors, "textColor")) {
-            parse_color((char*)cJSON_GetObjectItem(colors, "textColor")->valuestring, &component->text_color);
-
-        }
-        if (cJSON_HasObjectItem(colors, "borderColor")) {
-            parse_color((char*)cJSON_GetObjectItem(colors, "borderColor")->valuestring, &component->border_color);
-        }
-        if (cJSON_HasObjectItem(colors, "arrowColor")) {
-            parse_color((char*)cJSON_GetObjectItem(colors, "arrowColor")->valuestring, &component->arrow_color);
-        }
-        if (cJSON_HasObjectItem(colors, "dropdownBgColor")) {
-            char* color_str = (char*)cJSON_GetObjectItem(colors, "dropdownBgColor")->valuestring;
-            parse_color(color_str, &component->dropdown_bg_color);
-            printf("DEBUG: dropdownBgColor parsed: %s -> (%d,%d,%d,%d)\n", 
-                   color_str, component->dropdown_bg_color.r, component->dropdown_bg_color.g, 
-                   component->dropdown_bg_color.b, component->dropdown_bg_color.a);
-        }
-        if (cJSON_HasObjectItem(colors, "hoverBgColor")) {
-            parse_color((char*)cJSON_GetObjectItem(colors, "hoverBgColor")->valuestring, &component->hover_bg_color);
-        }
-        if (cJSON_HasObjectItem(colors, "selectedBgColor")) {
-            parse_color((char*)cJSON_GetObjectItem(colors, "selectedBgColor")->valuestring, &component->selected_bg_color);
-        }
-        if (cJSON_HasObjectItem(colors, "selectedTextColor")) {
-            parse_color((char*)cJSON_GetObjectItem(colors, "selectedTextColor")->valuestring, &component->selected_text_color);
-        }
-        if (cJSON_HasObjectItem(colors, "disabledTextColor")) {
-            parse_color((char*)cJSON_GetObjectItem(colors, "disabledTextColor")->valuestring, &component->disabled_text_color);
-
-        }
-        if (cJSON_HasObjectItem(colors, "scrollbarColor")) {
-            parse_color((char*)cJSON_GetObjectItem(colors, "scrollbarColor")->valuestring, &component->scrollbar_color);
-        }
-        if (cJSON_HasObjectItem(colors, "scrollbarBgColor")) {
-            parse_color((char*)cJSON_GetObjectItem(colors, "scrollbarBgColor")->valuestring, &component->scrollbar_bg_color);
-        }
-        if (cJSON_HasObjectItem(colors, "focusBorderColor")) {
-            parse_color((char*)cJSON_GetObjectItem(colors, "focusBorderColor")->valuestring, &component->focus_border_color);
-        }
-        if (cJSON_HasObjectItem(colors, "hoverBorderColor")) {
-            parse_color((char*)cJSON_GetObjectItem(colors, "hoverBorderColor")->valuestring, &component->hover_border_color);
-        }
-    }
-    
-    // 从 layer 的样式中获取基础样式
-    if (layer->bg_color.a > 0) {
-        component->bg_color = layer->bg_color;
-    }
-    if (layer->color.a > 0) {
-        component->border_color = layer->color;
-    }
-    
-    // 如果没有设置文字颜色，使用 layer 的文字颜色
-    if (component->text_color.a == 0 && layer->color.a > 0) {
-        component->text_color = layer->color;
-    }
+    select_apply_colors_from_json(component, layer, json_obj, colors);
     
     // 加载组件专用字体（如果还没有加载的话）
     if (!component->font && layer->font && strlen(layer->font->path) > 0) {
@@ -1289,9 +1354,8 @@ void select_component_render_dropdown_only(Layer* layer) {
             }
             
             // 绘制选项分割线
-            Color line_color = {220, 220, 220, 255};
             Rect line_rect = {dropdown_x + 1, item_y + component->item_height - 1, content_width - 2, 1};
-            backend_render_rect(&line_rect, line_color);
+            backend_render_rect(&line_rect, component->divider_color);
         }
     }
     

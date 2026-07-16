@@ -1661,6 +1661,39 @@ static void text_component_get_line_range_at_pos(TextComponent* component, Layer
     *out_end = get_line_end(component, pos);
 }
 
+static void text_component_focus(TextComponent* component) {
+    if (!component || !component->layer) return;
+    Layer* layer = component->layer;
+
+    if (focused_layer && focused_layer != layer) {
+        CLEAR_STATE(focused_layer, LAYER_STATE_FOCUSED);
+    }
+    focused_layer = layer;
+    SET_STATE(layer, LAYER_STATE_FOCUSED);
+
+    if (component->editable) {
+        backend_start_text_input();
+        Rect rect = {
+            layer->rect.x,
+            layer->rect.y + layer->rect.h,
+            layer->rect.w,
+            0
+        };
+        backend_set_text_input_rect(&rect);
+    }
+}
+
+static void text_component_blur(TextComponent* component) {
+    if (!component || !component->layer) return;
+    Layer* layer = component->layer;
+
+    CLEAR_STATE(layer, LAYER_STATE_FOCUSED);
+    if (focused_layer == layer) {
+        focused_layer = NULL;
+    }
+    backend_stop_text_input();
+}
+
 // 处理鼠标事件
 int text_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     if (!layer || !event || !layer->component) {
@@ -1689,24 +1722,11 @@ int text_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     
     // 鼠标左键按下 - 设置光标位置并开始选择
     if (event->state == SDL_PRESSED && event->button == SDL_BUTTON_LEFT) {
-        // 检查组件是否可获得焦点
-        if (layer->focusable && point_in_rect(pt, content_rect)) {
-            // 设置焦点状态
-            SET_STATE(layer, LAYER_STATE_FOCUSED);
-
-            // 启用 IME 文本输入
-            if (component->editable) {
-                backend_start_text_input();
-                // 设置输入区域，让输入法候选框出现在文本框下方
-                Rect rect;
-                rect.x = layer->rect.x;
-                rect.y = layer->rect.y + layer->rect.h;
-                rect.w = layer->rect.w;
-                rect.h = 0;
-                backend_set_text_input_rect(&rect);
-            }
-        }
         if (point_in_rect(pt, content_rect)) {
+            if (layer->focusable) {
+                text_component_focus(component);
+            }
+
             int click_pos = text_component_get_position_from_point(component, pt, layer);
 
             if (event->clicks >= 2) {
@@ -1726,19 +1746,18 @@ int text_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
                 component->is_selecting = 1;
                 text_component_update_scroll_for_cursor(component);
             }
-        } else if (point_in_rect(pt, layer->rect)) {
+            return 1;
+        }
+
+        if (point_in_rect(pt, layer->rect)) {
             component->selection_start = -1;
             component->selection_end = -1;
             component->is_selecting = 0;
-        } else {
-            // 点击文本区域外，清除选择并移除焦点
+        } else if (focused_layer == layer) {
             component->selection_start = -1;
             component->selection_end = -1;
             component->is_selecting = 0;
-            // 移除焦点状态
-            CLEAR_STATE(layer, LAYER_STATE_FOCUSED);
-            // 停止 IME 文本输入
-            backend_stop_text_input();
+            text_component_blur(component);
         }
     }
     // 鼠标拖动 - 更新选择范围

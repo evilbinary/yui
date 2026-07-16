@@ -1,4 +1,5 @@
 #include "util.h"
+#include <ctype.h>
 #include <float.h> // 添加这个头文件以定义 DBL_EPSILON
 #include "ytype.h"
 
@@ -154,8 +155,12 @@ Color color_from_hex(const char* hex) {
 
 // 检查点是否在矩形内
 int is_point_in_rect(int x, int y, Rect rect) {
-    return (x >= rect.x && x <= rect.x + rect.w) && 
-           (y >= rect.y && y <= rect.y + rect.h);
+    return x >= rect.x && x < rect.x + rect.w &&
+           y >= rect.y && y < rect.y + rect.h;
+}
+
+int point_in_rect(Point pt, Rect rect) {
+    return is_point_in_rect(pt.x, pt.y, rect);
 }
 
 void parse_color(char* valuestring, Color* color) {

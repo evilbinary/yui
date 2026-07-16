@@ -6,6 +6,7 @@
 # ********************************************************************
 target("cjson")
 set_kind("static")
+add_flags()
 add_files(
     'cJSON_Utils.c',
     'cJSON.h.c',

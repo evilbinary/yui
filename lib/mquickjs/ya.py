@@ -7,6 +7,7 @@
 
 target("mquickjs")
 set_kind("static")
+add_flags()
 add_files(
     'readline_tty.c',
     'readline.c',

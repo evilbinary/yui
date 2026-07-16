@@ -6,6 +6,147 @@
 #include <string.h>
 #include "cJSON.h"
 
+#if defined(YUI_BACKEND_MOBILE)
+
+#include <stdint.h>
+
+typedef uint32_t Uint32;
+typedef int SDL_EventType;
+
+#ifndef SDL_PRESSED
+#define SDL_PRESSED 1
+#endif
+#ifndef SDL_RELEASED
+#define SDL_RELEASED 0
+#endif
+#ifndef SDL_BUTTON_LEFT
+#define SDL_BUTTON_LEFT 1
+#endif
+#ifndef SDL_BUTTON_RIGHT
+#define SDL_BUTTON_RIGHT 3
+#endif
+#ifndef SDL_MOUSEBUTTONDOWN
+#define SDL_MOUSEBUTTONDOWN 1
+#endif
+#ifndef SDL_MOUSEBUTTONUP
+#define SDL_MOUSEBUTTONUP 2
+#endif
+#ifndef SDL_MOUSEMOTION
+#define SDL_MOUSEMOTION 3
+#endif
+
+/* SDL2 key/mod stubs — compile shared component code without linking SDL */
+#ifndef SDLK_UNKNOWN
+#define SDLK_UNKNOWN 0
+#endif
+#ifndef SDLK_RETURN
+#define SDLK_RETURN '\r'
+#endif
+#ifndef SDLK_ESCAPE
+#define SDLK_ESCAPE '\033'
+#endif
+#ifndef SDLK_BACKSPACE
+#define SDLK_BACKSPACE '\b'
+#endif
+#ifndef SDLK_TAB
+#define SDLK_TAB '\t'
+#endif
+#ifndef SDLK_SPACE
+#define SDLK_SPACE ' '
+#endif
+#ifndef SDLK_DELETE
+#define SDLK_DELETE 127
+#endif
+#ifndef SDLK_a
+#define SDLK_a 'a'
+#endif
+#ifndef SDLK_c
+#define SDLK_c 'c'
+#endif
+#ifndef SDLK_v
+#define SDLK_v 'v'
+#endif
+#ifndef SDLK_x
+#define SDLK_x 'x'
+#endif
+#ifndef SDLK_UP
+#define SDLK_UP 1073741906
+#endif
+#ifndef SDLK_DOWN
+#define SDLK_DOWN 1073741905
+#endif
+#ifndef SDLK_RIGHT
+#define SDLK_RIGHT 1073741903
+#endif
+#ifndef SDLK_LEFT
+#define SDLK_LEFT 1073741904
+#endif
+#ifndef SDLK_HOME
+#define SDLK_HOME 1073741898
+#endif
+#ifndef SDLK_END
+#define SDLK_END 1073741901
+#endif
+#ifndef SDLK_KP_ENTER
+#define SDLK_KP_ENTER 1073741912
+#endif
+#ifndef SDLK_F2
+#define SDLK_F2 1073741911
+#endif
+
+#ifndef KMOD_NONE
+#define KMOD_NONE 0x0000
+#endif
+#ifndef KMOD_LSHIFT
+#define KMOD_LSHIFT 0x0001
+#endif
+#ifndef KMOD_RSHIFT
+#define KMOD_RSHIFT 0x0002
+#endif
+#ifndef KMOD_LCTRL
+#define KMOD_LCTRL 0x0040
+#endif
+#ifndef KMOD_RCTRL
+#define KMOD_RCTRL 0x0080
+#endif
+#ifndef KMOD_SHIFT
+#define KMOD_SHIFT (KMOD_LSHIFT | KMOD_RSHIFT)
+#endif
+#ifndef KMOD_CTRL
+#define KMOD_CTRL (KMOD_LCTRL | KMOD_RCTRL)
+#endif
+
+typedef struct Rect {
+    int x, y;
+    int w, h;
+} Rect;
+
+typedef struct Color {
+    unsigned char r;
+    unsigned char g;
+    unsigned char b;
+    unsigned char a;
+} Color;
+
+typedef struct YuiTexture {
+    int w;
+    int h;
+    void* priv;
+} YuiTexture;
+
+typedef struct YuiFont {
+    int size;
+    void* priv;
+} YuiFont;
+
+typedef YuiTexture Texture;
+typedef YuiFont DFont;
+
+#define BUTTON_LEFT SDL_BUTTON_LEFT
+#define BUTTON_PRESSED SDL_PRESSED
+#define BUTTON_RIGHT SDL_BUTTON_RIGHT
+
+#else /* !YUI_BACKEND_MOBILE */
 
 #ifdef D_SDL
 #include <SDL2/SDL.h>
@@ -15,10 +156,9 @@
 #include <SDL.h>
 #include <SDL_ttf.h>
 #include <SDL_image.h>
-
-
-
 #endif
+
+#endif /* YUI_BACKEND_MOBILE */
 
 // 功能定义区域
 #define SDL2 1
@@ -61,7 +201,9 @@ typedef struct Point {
 } Point;
 
 
-#if SDL2
+#if defined(YUI_BACKEND_MOBILE)
+/* Rect / Color / Texture / DFont defined above */
+#elif SDL2
 
 #define Texture SDL_Texture
 #define Color SDL_Color
@@ -89,11 +231,11 @@ typedef struct Rect {
 
 #endif
 
-#define point_in_rect(pt, rect) \
-    ((pt.x) >= (rect).x && (pt.x) <= (rect).x + (rect).w) && \
-    ((pt.y) >= (rect).y && (pt.y) <= (rect).y + (rect).h)
-        
+#if !defined(YUI_BACKEND_MOBILE)
+
 #define DFont TTF_Font
+
+#endif
 
 
 
@@ -156,6 +298,8 @@ typedef enum {
     TABLE,
     PAGINATION,
     LOADING,
+    CONNECTOR,
+    DRAGGABLE,
 
     LAYER_TYPE_BUILTIN_MAX,
     LAYER_TYPE_USER_BASE = 256,
@@ -465,6 +609,8 @@ typedef struct Layer {
     int layout_base_fixed_w;
     int layout_base_fixed_h;
     unsigned char layout_base_valid;
+
+    int connectable;
 
 } Layer;
 // 全局变量：当前拥有焦点的图层

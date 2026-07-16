@@ -89,6 +89,8 @@ YUI框架支持以下核心组件类型：
 | MENU | 菜单组件 | `"type": "Menu"` |
 | DIALOG | 对话框组件 | `"type": "Dialog"` |
 | CLOCK | 时钟组件 | `"type": "Clock"` |
+| CONNECTOR | 贝塞尔连线 | `"type": "Connector"` |
+| DRAGGABLE | 可拖拽节点（流程图） | `"type": "Draggable"` |
 
 ## 六、通用属性
 
@@ -739,6 +741,45 @@ Text 组件用于文本显示与编辑，支持多行、滚动、行号与语法
   }
 }
 ```
+
+### 18. Connector / Draggable 组件
+
+用于节点图、流程图：`Draggable` 为可移动节点，`Connector` 绘制贝塞尔连线。画布容器需 `layout.type: "absolute"`。子图层设置 `connectable: true` 可作为连线端口。
+
+详见 [Connector / Draggable 组件文档](components/connector-draggable-component.md)。
+
+```json
+{
+  "id": "edgeAB",
+  "type": "Connector",
+  "position": [0, 0],
+  "size": [0, 0],
+  "from": { "id": "nodeA", "anchor": "right" },
+  "to": { "id": "nodeB", "anchor": "left" },
+  "curve": "auto",
+  "style": { "color": "#89b4fa", "strokeWidth": 2 }
+}
+```
+
+```json
+{
+  "id": "nodeA",
+  "type": "Draggable",
+  "position": [40, 50],
+  "size": [200, 80],
+  "dragHandleHeight": 36,
+  "style": { "bgColor": "#313244", "dots": true, "dotSize": 4 }
+}
+```
+
+| 属性 | 组件 | 说明 |
+|------|------|------|
+| `from` / `to` | Connector | 端点 id 或 `{ id, anchor }`；支持点分路径如 `nodeA.nameInput` |
+| `curve` | Connector | `auto` / `auto-vertical` / `manual` |
+| `controlPoints` | Connector | 手动模式控制点 `[[x1,y1],[x2,y2]]` |
+| `dragHandleHeight` | Draggable | 顶部拖动手柄高度 |
+| `style.dots` | Draggable | 是否显示连接圆点 |
+| `connectable` | 任意图层 | `true` 时该层可作为连线端点（Draggable 默认可连） |
 
 
 ## 十、事件绑定

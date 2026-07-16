@@ -1,0 +1,439 @@
+{
+    "id": "connectorTestApp",
+    "type": "View",
+    "size": [800, 600],
+    "js": "test-connector.js",
+    "style": {
+        "bgColor": "#1e1e2e"
+    },
+    "layout": {
+        "type": "vertical",
+        "spacing": 8,
+        "padding": [12, 12, 12, 12]
+    },
+    "children": [
+        {
+            "id": "title",
+            "type": "Label",
+            "text": "Connector / Draggable 测试",
+            "size": [776, 28],
+            "style": {
+                "color": "#cdd6f4",
+                "fontSize": 18
+            }
+        },
+        {
+            "id": "statusLabel",
+            "type": "Label",
+            "text": "状态：就绪（可拖拽节点，或点击下方按钮）",
+            "size": [776, 22],
+            "style": {
+                "color": "#a6adc8",
+                "fontSize": 13
+            }
+        },
+        {
+            "id": "eventLabel",
+            "type": "Label",
+            "text": "事件：拖动节点标题栏，或右键删除 / 拖线改端点 / 拖圆点新建连线",
+            "size": [776, 22],
+            "style": {
+                "color": "#a6e3a1",
+                "fontSize": 13
+            }
+        },
+        {
+            "id": "graphCanvas",
+            "type": "View",
+            "size": [776, 0],
+            "flex": 1,
+            "layout": {
+                "type": "absolute"
+            },
+            "style": {
+                "bgColor": "#181825",
+                "borderRadius": 8
+            },
+            "children": [
+                {
+                    "id": "edgeAB",
+                    "type": "Connector",
+                    "position": [0, 0],
+                    "size": [0, 0],
+                    "from": { "id": "nodeA", "anchor": "right" },
+                    "to": { "id": "nodeB", "anchor": "left" },
+                    "style": {
+                        "color": "#89b4fa",
+                        "strokeWidth": 2
+                    },
+                    "events": {
+                        "onConnectChange": "@onEdgeABEvent"
+                    }
+                },
+                {
+                    "id": "edgeAC",
+                    "type": "Connector",
+                    "position": [0, 0],
+                    "size": [0, 0],
+                    "from": { "id": "nodeA", "anchor": "right" },
+                    "to": { "id": "nodeC", "anchor": "left" },
+                    "style": {
+                        "color": "#f9e2af",
+                        "strokeWidth": 2
+                    },
+                    "events": {
+                        "onConnectChange": "@onEdgeACEvent"
+                    }
+                },
+                {
+                    "id": "edgeBC",
+                    "type": "Connector",
+                    "position": [0, 0],
+                    "size": [0, 0],
+                    "from": { "id": "nodeB", "anchor": "right" },
+                    "to": { "id": "nodeC", "anchor": "left" },
+                    "style": {
+                        "color": "#a6e3a1",
+                        "strokeWidth": 2
+                    },
+                    "events": {
+                        "onConnectChange": "@onEdgeBCEvent"
+                    }
+                },
+                {
+                    "id": "edgeInputToB",
+                    "type": "Connector",
+                    "position": [0, 0],
+                    "size": [0, 0],
+                    "from": { "id": "nameInput", "anchor": "right" },
+                    "to": { "id": "nodeB", "anchor": "left" },
+                    "style": {
+                        "color": "#cba6f7",
+                        "strokeWidth": 2
+                    }
+                },
+                {
+                    "id": "edgeInputToPort",
+                    "type": "Connector",
+                    "position": [0, 0],
+                    "size": [0, 0],
+                    "from": { "id": "nodeA.nameInput", "anchor": "right" },
+                    "to": { "id": "outputPort", "anchor": "left" },
+                    "style": {
+                        "color": "#fab387",
+                        "strokeWidth": 2
+                    }
+                },
+                {
+                    "id": "nodeA",
+                    "type": "Draggable",
+                    "position": [40, 50],
+                    "size": [280, 248],
+                    "dragHandleHeight": 40,
+                    "style": {
+                        "bgColor": "#313244",
+                        "borderRadius": 10
+                    },
+                    "events": {
+                        "onDragChange": "@onNodeADrag",
+                        "onConnectChange": "@onNodeAConnect"
+                    },
+                    "children": [
+                        {
+                            "id": "nodeABody",
+                            "type": "View",
+                            "position": [0, 0],
+                            "size": [280, 248],
+                            "layout": {
+                                "type": "vertical",
+                                "spacing": 8,
+                                "padding": [12, 12, 12, 12]
+                            },
+                            "children": [
+                                {
+                                    "id": "nodeATitle",
+                                    "type": "Label",
+                                    "text": "A · 数据源  (按住标题栏拖动)",
+                                    "size": [0, 20],
+                                    "style": {
+                                        "color": "#89b4fa",
+                                        "fontSize": 14
+                                    }
+                                },
+                                {
+                                    "id": "nameLabel",
+                                    "type": "Label",
+                                    "text": "名称",
+                                    "size": [0, 16],
+                                    "style": {
+                                        "color": "#a6adc8",
+                                        "fontSize": 12
+                                    }
+                                },
+                                {
+                                    "id": "nameInput",
+                                    "type": "Input",
+                                    "connectable": true,
+                                    "size": [0, 32],
+                                    "placeholder": "输入数据源名称",
+                                    "style": {
+                                        "bgColor": "#1e1e2e",
+                                        "textColor": "#f8f8f2",
+                                        "borderColor": "#45475a",
+                                        "borderRadius": 4,
+                                        "fontSize": 13
+                                    }
+                                },
+                                {
+                                    "id": "urlLabel",
+                                    "type": "Label",
+                                    "text": "URL",
+                                    "size": [0, 16],
+                                    "style": {
+                                        "color": "#a6adc8",
+                                        "fontSize": 12
+                                    }
+                                },
+                                {
+                                    "id": "urlInput",
+                                    "type": "Input",
+                                    "size": [0, 32],
+                                    "placeholder": "https://api.example.com",
+                                    "style": {
+                                        "bgColor": "#1e1e2e",
+                                        "textColor": "#f8f8f2",
+                                        "borderColor": "#45475a",
+                                        "borderRadius": 4,
+                                        "fontSize": 13
+                                    }
+                                },
+                                {
+                                    "id": "typeRow",
+                                    "type": "View",
+                                    "size": [0, 32],
+                                    "layout": {
+                                        "type": "horizontal",
+                                        "spacing": 8
+                                    },
+                                    "children": [
+                                        {
+                                            "id": "typeSelect",
+                                            "type": "Select",
+                                            "text": "HTTP",
+                                            "size": [0, 32],
+                                            "flex": 1,
+                                            "style": {
+                                                "bgColor": "#1e1e2e",
+                                                "color": "#f8f8f2",
+                                                "fontSize": 13,
+                                                "borderWidth": 1,
+                                                "borderColor": "#45475a",
+                                                "dividerColor": "#45475a",
+                                                "borderRadius": 4
+                                            },
+                                            "items": [
+                                                {"label": "HTTP", "value": "http"},
+                                                {"label": "WebSocket", "value": "ws"},
+                                                {"label": "文件", "value": "file"}
+                                            ]
+                                        },
+                                        {
+                                            "id": "methodSelect",
+                                            "type": "Select",
+                                            "text": "GET",
+                                            "size": [88, 32],
+                                            "style": {
+                                                "bgColor": "#1e1e2e",
+                                                "color": "#f8f8f2",
+                                                "fontSize": 13,
+                                                "borderWidth": 1,
+                                                "borderColor": "#45475a",
+                                                "dividerColor": "#45475a",
+                                                "borderRadius": 4
+                                            },
+                                            "items": [
+                                                {"label": "GET", "value": "get"},
+                                                {"label": "POST", "value": "post"},
+                                                {"label": "PUT", "value": "put"}
+                                            ]
+                                        }
+                                    ]
+                                },
+                                {
+                                    "id": "authSelect",
+                                    "type": "Select",
+                                    "text": "无认证",
+                                    "size": [0, 32],
+                                    "style": {
+                                        "bgColor": "#1e1e2e",
+                                        "color": "#f8f8f2",
+                                        "fontSize": 13,
+                                        "borderWidth": 1,
+                                        "borderColor": "#45475a",
+                                        "dividerColor": "#45475a",
+                                        "borderRadius": 4
+                                    },
+                                    "items": [
+                                        {"label": "无认证", "value": "none"},
+                                        {"label": "Bearer Token", "value": "bearer"},
+                                        {"label": "API Key", "value": "apikey"}
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "nodeB",
+                    "type": "Draggable",
+                    "position": [280, 200],
+                    "size": [120, 56],
+                    "style": {
+                        "bgColor": "#313244",
+                        "borderRadius": 8
+                    },
+                    "events": {
+                        "onDragChange": "@onNodeBDrag",
+                        "onConnectChange": "@onNodeBConnect"
+                    },
+                    "children": [
+                        {
+                            "type": "Text",
+                            "text": "B 处理",
+                            "position": [12, 18],
+                            "style": {
+                                "color": "#cdd6f4",
+                                "fontSize": 13
+                            }
+                        }
+                    ]
+                },
+                {
+                    "id": "nodeC",
+                    "type": "Draggable",
+                    "position": [520, 120],
+                    "size": [120, 56],
+                    "style": {
+                        "bgColor": "#313244",
+                        "borderRadius": 8
+                    },
+                    "events": {
+                        "onDragChange": "@onNodeCDrag",
+                        "onConnectChange": "@onNodeCConnect"
+                    },
+                    "children": [
+                        {
+                            "type": "Text",
+                            "text": "C 输出",
+                            "position": [12, 18],
+                            "style": {
+                                "color": "#cdd6f4",
+                                "fontSize": 13
+                            }
+                        },
+                        {
+                            "id": "outputPort",
+                            "type": "View",
+                            "connectable": true,
+                            "position": [96, 20],
+                            "size": [16, 16],
+                            "style": {
+                                "bgColor": "#45475a",
+                                "borderRadius": 8
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "btnRow",
+            "type": "View",
+            "size": [776, 40],
+            "layout": {
+                "type": "horizontal",
+                "spacing": 8
+            },
+            "children": [
+                {
+                    "id": "runTestBtn",
+                    "type": "Button",
+                    "text": "运行检查",
+                    "size": [100, 36],
+                    "style": {
+                        "bgColor": "#89b4fa",
+                        "color": "#1e1e2e",
+                        "fontSize": 13,
+                        "borderRadius": 6
+                    },
+                    "events": {
+                        "onClick": "@runConnectorTest"
+                    }
+                },
+                {
+                    "id": "moveNodeBtn",
+                    "type": "Button",
+                    "text": "移动 nodeA",
+                    "size": [110, 36],
+                    "style": {
+                        "bgColor": "#45475a",
+                        "color": "#cdd6f4",
+                        "fontSize": 13,
+                        "borderRadius": 6
+                    },
+                    "events": {
+                        "onClick": "@moveNodeA"
+                    }
+                },
+                {
+                    "id": "addEdgeBtn",
+                    "type": "Button",
+                    "text": "添加 A→C 连线",
+                    "size": [120, 36],
+                    "style": {
+                        "bgColor": "#a6e3a1",
+                        "color": "#1e1e2e",
+                        "fontSize": 13,
+                        "borderRadius": 6
+                    },
+                    "events": {
+                        "onClick": "@addEdgeAC"
+                    }
+                },
+                {
+                    "id": "addNodeBtn",
+                    "type": "Button",
+                    "text": "添加节点",
+                    "size": [100, 36],
+                    "style": {
+                        "bgColor": "#94e2d5",
+                        "color": "#1e1e2e",
+                        "fontSize": 13,
+                        "borderRadius": 6
+                    },
+                    "events": {
+                        "onClick": "@addDynamicNode"
+                    }
+                },
+                {
+                    "id": "resetBtn",
+                    "type": "Button",
+                    "text": "重置位置",
+                    "size": [100, 36],
+                    "style": {
+                        "bgColor": "#f38ba8",
+                        "color": "#1e1e2e",
+                        "fontSize": 13,
+                        "borderRadius": 6
+                    },
+                    "events": {
+                        "onClick": "@resetNodes"
+                    }
+                }
+            ]
+        }
+    ],
+    "events": {
+        "onLoad": "@onLoad"
+    }
+}

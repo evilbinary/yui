@@ -6,6 +6,7 @@
 # ********************************************************************
 target("yaml2json")
 set_kind("static")
+add_flags()
 add_deps("yaml","cjson")
 add_files(
     '*.c',

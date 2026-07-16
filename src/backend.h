@@ -42,6 +42,10 @@ void backend_render_get_clip_rect(Rect* prev_clip);
 void backend_render_set_clip_rect(Rect* clip);
 
 void backend_run(Layer* ui_root);
+
+/* 单帧更新（移动端 / platform 宿主驱动；桌面 SDL 可用 backend_run） */
+void backend_tick(Layer* ui_root);
+
 int backend_query_texture(Texture * texture,
                      Uint32 * format, int *access,
                      int *w, int *h);
@@ -59,6 +63,9 @@ void backend_render_rounded_rect_color(Rect* rect, unsigned char r, unsigned cha
 void backend_render_rounded_rect_with_border(Rect* rect, Color bg_color, int radius, int border_width, Color border_color);
 // Add this declaration in backend.h with the other function declarations
 void backend_render_line(int x1, int y1, int x2, int y2, Color color);
+void backend_render_bezier_cubic(int x0, int y0,
+                                 int cx1, int cy1, int cx2, int cy2,
+                                 int x1, int y1, Color color, int width);
 // 抗锯齿圆弧渲染函数
 void backend_render_arc(int center_x, int center_y, int radius, float start_angle, float end_angle, Color color, int line_width);
 // 毛玻璃效果渲染函数

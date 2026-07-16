@@ -397,6 +397,14 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
   if (cJSON_HasObjectItem(json_obj, "id")) {
     strcpy(layer->id, cJSON_GetObjectItem(json_obj, "id")->valuestring);
   }
+  if (cJSON_HasObjectItem(json_obj, "connectable")) {
+    cJSON* connectable_item = cJSON_GetObjectItem(json_obj, "connectable");
+    if (cJSON_IsBool(connectable_item)) {
+      layer->connectable = cJSON_IsTrue(connectable_item) ? 1 : 0;
+    } else if (cJSON_IsNumber(connectable_item)) {
+      layer->connectable = connectable_item->valueint != 0;
+    }
+  }
   layer->variant[0] = '\0';
   {
     cJSON* variants = cJSON_GetObjectItem(json_obj, "variants");
@@ -1164,6 +1172,56 @@ Layer* find_layer_by_id(Layer* root, const char* id) {
     }
 
     return NULL;
+}
+
+Layer* layer_resolve_path(Layer* root, const char* path)
+{
+    char path_copy[256];
+    char* token;
+
+    if (!root || !path || path[0] == '\0') {
+        return NULL;
+    }
+
+    strncpy(path_copy, path, sizeof(path_copy) - 1);
+    path_copy[sizeof(path_copy) - 1] = '\0';
+
+    token = strtok(path_copy, ".");
+    while (token != NULL && root != NULL) {
+        if (strcmp(token, "children") == 0) {
+            token = strtok(NULL, ".");
+            if (!token) {
+                break;
+            }
+
+            {
+                char* endptr;
+                long index = strtol(token, &endptr, 10);
+
+                if (*endptr == '\0' && index >= 0 && index < root->child_count) {
+                    root = root->children[index];
+                } else {
+                    Layer* found = NULL;
+                    int i;
+
+                    for (i = 0; i < root->child_count; i++) {
+                        if (root->children[i] &&
+                            strcmp(root->children[i]->id, token) == 0) {
+                            found = root->children[i];
+                            break;
+                        }
+                    }
+                    root = found;
+                }
+            }
+        } else {
+            root = find_layer_by_id(root, token);
+        }
+
+        token = strtok(NULL, ".");
+    }
+
+    return root;
 }
 
 int layer_show(Layer* layer) {

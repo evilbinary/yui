@@ -10,6 +10,7 @@
 
 ### 🏗️ 架构设计
 - [架构设计文档](architecture.md) - 系统架构、模块关系和设计原理
+- [Platform 层设计](platform-design.md) - PC / Android / iOS / Web 宿主层、libyui 集成、Skia 移动端方案（草案）
 - [LVGL Backend 与组件注册设计](lvgl-backend-design.md) - LVGL 后端、component_registry、lvglmodule 方案（草案）
 - [功能特性说明](feature.md) - 框架核心功能详细介绍
 
@@ -43,6 +44,7 @@
 | Input | [待补充]() | ⏳ 计划中 | 输入框组件 |
 | List | [待补充]() | ⏳ 计划中 | 列表组件 |
 | Grid | [grid-component.md](components/grid-component.md) | ✅ 可用 | 网格布局容器 |
+| Connector / Draggable | [connector-draggable-component.md](components/connector-draggable-component.md) | ✅ 完整 | 节点图、贝塞尔连线、拖放连接 |
 
 ### 🎬 动画文档
 
@@ -58,7 +60,7 @@
 |------|--------|------|------|
 | 图层系统 | [layer.h](../src/layer.h) | ✅ 完整 | 核心图层管理 |
 | 渲染系统 | [render.h](../src/render.h) | ✅ 完整 | 图形渲染接口 |
-| 事件系统 | [event.h](../src/event.h) | ✅ 完整 | 事件处理机制 |
+| 事件系统 | [event.md](event.md) · [event.h](../src/event.h) | ✅ 完整 | 组件自定义事件标准流程 |
 | 布局系统 | [layout.h](../src/layout.h) | ✅ 完整 | 自动布局计算 |
 | 动画系统 | [animate.h](../src/animate.h) | ✅ 完整 | 动画效果实现 |
 | 主题系统 | [theme.h](../src/theme.h) | ✅ 完整 | 主题管理接口 |
@@ -182,6 +184,7 @@
 - [x] dialog-component.md
 - [x] select-component.md
 - [x] text-component.md
+- [x] connector-draggable-component.md
 
 ### ⏳ 待完善文档
 - [ ] 组件详细文档 (Button, Input, List 等)

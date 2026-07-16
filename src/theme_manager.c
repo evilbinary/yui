@@ -302,7 +302,6 @@ void theme_manager_apply_to_tree(Layer* root) {
     
     Theme* current_theme = manager->current_theme;
     if (!current_theme) {
-        printf("No current theme set\n");
         return;
     }
     

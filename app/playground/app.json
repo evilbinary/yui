@@ -7,6 +7,7 @@
     "size": [1200, 800],
 
     "source":"app/playground/json-editor.json",
+    // "source":"app/tests/test-connector.json",
     // "source":"app/reader/reader.json",
     // "source":"app/tests/test-animation.json",
     // "source":"app/js/memory-game.json",

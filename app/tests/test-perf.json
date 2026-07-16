@@ -1,0 +1,264 @@
+{
+    "id": "perfTestApp",
+    "type": "View",
+    "size": [900, 640],
+    "js": "test-perf.js",
+    "style": {
+        "bgColor": "#1e1e2e"
+    },
+    "layout": {
+        "type": "vertical",
+        "spacing": 8,
+        "padding": [12, 12, 12, 12]
+    },
+    "children": [
+        {
+            "id": "title",
+            "type": "Label",
+            "text": "YUI.perf 渲染性能测试",
+            "size": [876, 28],
+            "style": {
+                "color": "#cdd6f4",
+                "fontSize": 20
+            }
+        },
+        {
+            "id": "statusLabel",
+            "type": "Label",
+            "text": "状态：等待 onLoad…",
+            "size": [876, 22],
+            "style": {
+                "color": "#a6adc8",
+                "fontSize": 13
+            }
+        },
+        {
+            "id": "statsLabel",
+            "type": "Label",
+            "text": "统计：（点击「刷新统计」或等待自动检测）",
+            "size": [876, 72],
+            "style": {
+                "color": "#a6e3a1",
+                "fontSize": 12,
+                "lineHeight": 1.4
+            }
+        },
+        {
+            "id": "contentRow",
+            "type": "View",
+            "size": [876, 0],
+            "flex": 1,
+            "layout": {
+                "type": "horizontal",
+                "spacing": 10
+            },
+            "children": [
+                {
+                    "id": "heavyPanel",
+                    "type": "View",
+                    "size": [0, 0],
+                    "flex": 2,
+                    "layout": {
+                        "type": "vertical",
+                        "spacing": 6,
+                        "padding": [8, 8, 8, 8]
+                    },
+                    "style": {
+                        "bgColor": "#181825",
+                        "borderRadius": 6,
+                        "borderWidth": 1,
+                        "borderColor": "#313244"
+                    },
+                    "children": [
+                        {
+                            "id": "heavyTitle",
+                            "type": "Label",
+                            "text": "重绘区 heavyEditor（watch 目标）",
+                            "size": [0, 20],
+                            "style": {
+                                "color": "#89b4fa",
+                                "fontSize": 13
+                            }
+                        },
+                        {
+                            "id": "heavyEditor",
+                            "type": "Text",
+                            "text": "",
+                            "size": [0, 0],
+                            "flex": 1,
+                            "scrollable": 1,
+                            "editable": true,
+                            "multiline": true,
+                            "syntaxHighlight": "json",
+                            "style": {
+                                "bgColor": "#11111b",
+                                "color": "#f8f8f2",
+                                "fontSize": 12,
+                                "fontFamily": "monospace",
+                                "padding": [8, 8, 8, 8],
+                                "borderWidth": 1,
+                                "borderColor": "#45475a",
+                                "borderRadius": 4
+                            }
+                        }
+                    ]
+                },
+                {
+                    "id": "lightPanel",
+                    "type": "View",
+                    "size": [0, 0],
+                    "flex": 1,
+                    "layout": {
+                        "type": "vertical",
+                        "spacing": 8,
+                        "padding": [8, 8, 8, 8]
+                    },
+                    "style": {
+                        "bgColor": "#181825",
+                        "borderRadius": 6,
+                        "borderWidth": 1,
+                        "borderColor": "#313244"
+                    },
+                    "children": [
+                        {
+                            "id": "lightTitle",
+                            "type": "Label",
+                            "text": "轻量区 lightLabel",
+                            "size": [0, 20],
+                            "style": {
+                                "color": "#94e2d5",
+                                "fontSize": 13
+                            }
+                        },
+                        {
+                            "id": "lightLabel",
+                            "type": "Label",
+                            "text": "静态标签，用于对比 renderMs",
+                            "size": [0, 40],
+                            "style": {
+                                "color": "#bac2de",
+                                "fontSize": 13
+                            }
+                        },
+                        {
+                            "id": "counterLabel",
+                            "type": "Label",
+                            "text": "计数：0",
+                            "size": [0, 24],
+                            "style": {
+                                "color": "#f9e2af",
+                                "fontSize": 14
+                            }
+                        },
+                        {
+                            "id": "pulseBtn",
+                            "type": "Button",
+                            "text": "脉冲更新",
+                            "size": [0, 32],
+                            "style": {
+                                "bgColor": "#45475a",
+                                "color": "#cdd6f4",
+                                "fontSize": 13,
+                                "borderRadius": 4
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "toolbar",
+            "type": "View",
+            "size": [876, 40],
+            "layout": {
+                "type": "horizontal",
+                "spacing": 8,
+                "align": "center"
+            },
+            "children": [
+                {
+                    "id": "toggleOverlayBtn",
+                    "type": "Button",
+                    "text": "HUD 开",
+                    "size": [88, 32],
+                    "style": {
+                        "bgColor": "#89b4fa",
+                        "color": "#1e1e2e",
+                        "fontSize": 12,
+                        "borderRadius": 4
+                    }
+                },
+                {
+                    "id": "refreshStatsBtn",
+                    "type": "Button",
+                    "text": "刷新统计",
+                    "size": [88, 32],
+                    "style": {
+                        "bgColor": "#45475a",
+                        "color": "#cdd6f4",
+                        "fontSize": 12,
+                        "borderRadius": 4
+                    }
+                },
+                {
+                    "id": "autoTestBtn",
+                    "type": "Button",
+                    "text": "自动检测",
+                    "size": [88, 32],
+                    "style": {
+                        "bgColor": "#a6e3a1",
+                        "color": "#1e1e2e",
+                        "fontSize": 12,
+                        "borderRadius": 4
+                    }
+                },
+                {
+                    "id": "stressBtn",
+                    "type": "Button",
+                    "text": "开始压测",
+                    "size": [88, 32],
+                    "style": {
+                        "bgColor": "#f38ba8",
+                        "color": "#1e1e2e",
+                        "fontSize": 12,
+                        "borderRadius": 4
+                    }
+                },
+                {
+                    "id": "exportBtn",
+                    "type": "Button",
+                    "text": "导出 JSON",
+                    "size": [88, 32],
+                    "style": {
+                        "bgColor": "#cba6f7",
+                        "color": "#1e1e2e",
+                        "fontSize": 12,
+                        "borderRadius": 4
+                    }
+                },
+                {
+                    "id": "disablePerfBtn",
+                    "type": "Button",
+                    "text": "关闭 perf",
+                    "size": [88, 32],
+                    "style": {
+                        "bgColor": "#313244",
+                        "color": "#a6adc8",
+                        "fontSize": 12,
+                        "borderRadius": 4
+                    }
+                }
+            ]
+        }
+    ],
+    "events": {
+        "onLoad": "@onLoadPerf",
+        "toggleOverlayBtn.onClick": "@togglePerfOverlay",
+        "refreshStatsBtn.onClick": "@refreshPerfStats",
+        "autoTestBtn.onClick": "@runPerfAutoTest",
+        "stressBtn.onClick": "@togglePerfStress",
+        "exportBtn.onClick": "@exportPerfStats",
+        "pulseBtn.onClick": "@pulseLightLabel",
+        "disablePerfBtn.onClick": "@disablePerf"
+    }
+}

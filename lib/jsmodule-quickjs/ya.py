@@ -15,6 +15,7 @@ add_files(
     'js_module.c',
     'js_socket.c',
     'js_timer.c',
+    'js_perf.c',
     '../jsmodule/js_common.c'
 ) 
 add_includedirs('.', public=true)
