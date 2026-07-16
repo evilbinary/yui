@@ -19,7 +19,10 @@ class YuiView(context: Context) : SurfaceView(context), SurfaceHolder.Callback, 
 
     override fun surfaceCreated(holder: SurfaceHolder) {
         prepareAssets()
-        nativeInit(holder.surface, jsonPath, assetsRoot)
+        val density = resources.displayMetrics.density
+        nativeInit(holder.surface, jsonPath, assetsRoot, density)
+        val frame = holder.surfaceFrame
+        nativeResize(frame.width(), frame.height())
         running = true
         Choreographer.getInstance().postFrameCallback(this)
     }
@@ -74,7 +77,8 @@ class YuiView(context: Context) : SurfaceView(context), SurfaceHolder.Callback, 
     private external fun nativeInit(
         surface: android.view.Surface,
         jsonPath: String,
-        assetsPath: String
+        assetsPath: String,
+        density: Float
     )
     private external fun nativeResize(width: Int, height: Int)
     private external fun nativeTick()

@@ -210,7 +210,8 @@ DFont* mobile_load_font(const char* font_path, int size, const char* weight) {
 
     mobile_font->data = data;
     mobile_font->size = size > 0 ? size : 16;
-    mobile_font->scale = stbtt_ScaleForPixelHeight(&mobile_font->info, (float)mobile_font->size);
+    mobile_font->scale = stbtt_ScaleForPixelHeight(
+        &mobile_font->info, (float)mobile_font->size * (scale > 0.0f ? scale : 1.0f));
 
     font = (DFont*)calloc(1, sizeof(DFont));
     if (!font) {
@@ -233,10 +234,15 @@ Texture* mobile_render_text_texture(DFont* font, const char* text, Color color) 
     int descent = 0;
     int line_gap = 0;
     int baseline = 0;
+    int min_x = 0;
+    int min_y = 0;
+    int max_x = 0;
+    int max_y = 0;
+    int has_glyph = 0;
     unsigned char* bitmap = NULL;
     Texture* texture = NULL;
     MobileGlTexture* gl_tex = NULL;
-    int xpos = 0;
+    int pen_x = 0;
     int cp = 0;
 
     if (!font || !font->priv || !text || !text[0]) {
@@ -244,6 +250,9 @@ Texture* mobile_render_text_texture(DFont* font, const char* text, Color color) 
     }
 
     mobile_font = (MobileFont*)font->priv;
+    stbtt_GetFontVMetrics(&mobile_font->info, &ascent, &descent, &line_gap);
+    baseline = (int)(ascent * mobile_font->scale);
+
     cursor = text;
     while (mobile_utf8_next(&cursor, &cp)) {
         int advance = 0;
@@ -252,31 +261,61 @@ Texture* mobile_render_text_texture(DFont* font, const char* text, Color color) 
         int y0 = 0;
         int x1 = 0;
         int y1 = 0;
+        int gx0 = 0;
+        int gx1 = 0;
+        int gy0 = 0;
+        int gy1 = 0;
+
         if (cp == '\n') {
             continue;
         }
+
         stbtt_GetCodepointHMetrics(&mobile_font->info, cp, &advance, &lsb);
         stbtt_GetCodepointBitmapBox(&mobile_font->info, cp, mobile_font->scale,
                                     mobile_font->scale, &x0, &y0, &x1, &y1);
-        xpos += (int)(advance * mobile_font->scale);
-        if (y1 - y0 > height) {
-            height = y1 - y0;
+        gx0 = pen_x + x0;
+        gx1 = pen_x + x1;
+        gy0 = baseline + y0;
+        gy1 = baseline + y1;
+        if (!has_glyph) {
+            min_x = gx0;
+            max_x = gx1;
+            min_y = gy0;
+            max_y = gy1;
+            has_glyph = 1;
+        } else {
+            if (gx0 < min_x) {
+                min_x = gx0;
+            }
+            if (gx1 > max_x) {
+                max_x = gx1;
+            }
+            if (gy0 < min_y) {
+                min_y = gy0;
+            }
+            if (gy1 > max_y) {
+                max_y = gy1;
+            }
         }
+        pen_x += (int)(advance * mobile_font->scale);
     }
-    width = xpos;
-    if (width <= 0 || height <= 0) {
+
+    if (!has_glyph) {
         return NULL;
     }
 
-    stbtt_GetFontVMetrics(&mobile_font->info, &ascent, &descent, &line_gap);
-    baseline = (int)(ascent * mobile_font->scale);
+    width = max_x - min_x;
+    height = max_y - min_y;
+    if (width <= 0 || height <= 0) {
+        return NULL;
+    }
 
     bitmap = (unsigned char*)calloc((size_t)width * (size_t)height, 4);
     if (!bitmap) {
         return NULL;
     }
 
-    xpos = 0;
+    pen_x = 0;
     cursor = text;
     while (mobile_utf8_next(&cursor, &cp)) {
         int advance = 0;
@@ -301,8 +340,8 @@ Texture* mobile_render_text_texture(DFont* font, const char* text, Color color) 
         glyph_bitmap = stbtt_GetCodepointBitmap(&mobile_font->info, 0, mobile_font->scale,
                                                 cp, &gw, &gh, 0, 0);
         if (glyph_bitmap) {
-            int dst_x = xpos + x0;
-            int dst_y = baseline + y0;
+            int dst_x = pen_x + x0 - min_x;
+            int dst_y = baseline + y0 - min_y;
             int gy;
             for (gy = 0; gy < gh; gy++) {
                 int gx;
@@ -327,7 +366,7 @@ Texture* mobile_render_text_texture(DFont* font, const char* text, Color color) 
             }
             stbtt_FreeBitmap(glyph_bitmap, NULL);
         }
-        xpos += (int)(advance * mobile_font->scale);
+        pen_x += (int)(advance * mobile_font->scale);
     }
 
     gl_tex = (MobileGlTexture*)calloc(1, sizeof(MobileGlTexture));
@@ -360,9 +399,9 @@ void mobile_draw_text_texture(Texture* texture, const Rect* srcrect, const Rect*
     float w;
     float h;
     float u0 = 0.0f;
-    float v0 = 0.0f;
     float u1 = 1.0f;
-    float v1 = 1.0f;
+    float v_top = 0.0f;
+    float v_bottom = 1.0f;
     float verts[16];
     GLint offset_loc;
     GLint scale_loc;
@@ -377,6 +416,11 @@ void mobile_draw_text_texture(Texture* texture, const Rect* srcrect, const Rect*
     }
 
     backend_get_windowsize(&window_w, &window_h);
+    {
+        float d = scale > 0.0f ? scale : 1.0f;
+        window_w = (int)((float)window_w * d);
+        window_h = (int)((float)window_h * d);
+    }
     if (window_w <= 0 || window_h <= 0) {
         return;
     }
@@ -389,15 +433,16 @@ void mobile_draw_text_texture(Texture* texture, const Rect* srcrect, const Rect*
 
     if (srcrect && srcrect->w > 0 && srcrect->h > 0 && texture->w > 0 && texture->h > 0) {
         u0 = (float)srcrect->x / (float)texture->w;
-        v0 = (float)srcrect->y / (float)texture->h;
         u1 = (float)(srcrect->x + srcrect->w) / (float)texture->w;
-        v1 = (float)(srcrect->y + srcrect->h) / (float)texture->h;
+        v_top = 1.0f - (float)(srcrect->y + srcrect->h) / (float)texture->h;
+        v_bottom = 1.0f - (float)srcrect->y / (float)texture->h;
     }
 
-    verts[0] = 0.0f; verts[1] = 0.0f; verts[2] = u0; verts[3] = v0;
-    verts[4] = 1.0f; verts[5] = 0.0f; verts[6] = u1; verts[7] = v0;
-    verts[8] = 0.0f; verts[9] = 1.0f; verts[10] = u0; verts[11] = v1;
-    verts[12] = 1.0f; verts[13] = 1.0f; verts[14] = u1; verts[15] = v1;
+    /* aPos y=0 is the bottom of dstrect; y=1 is the top. */
+    verts[0] = 0.0f; verts[1] = 0.0f; verts[2] = u0; verts[3] = v_bottom;
+    verts[4] = 1.0f; verts[5] = 0.0f; verts[6] = u1; verts[7] = v_bottom;
+    verts[8] = 0.0f; verts[9] = 1.0f; verts[10] = u0; verts[11] = v_top;
+    verts[12] = 1.0f; verts[13] = 1.0f; verts[14] = u1; verts[15] = v_top;
 
     offset_loc = glGetUniformLocation(g_tex_program, "uOffset");
     scale_loc = glGetUniformLocation(g_tex_program, "uScale");

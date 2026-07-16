@@ -191,6 +191,18 @@ static void mobile_draw_rect_norm(float x, float y, float w, float h,
 
 float scale = 1.0f;
 
+static float mobile_density(void) {
+    return scale > 0.0f ? scale : 1.0f;
+}
+
+static void mobile_scale_rect(const Rect* src, Rect* dst) {
+    float d = mobile_density();
+    dst->x = (int)(src->x * d);
+    dst->y = (int)(src->y * d);
+    dst->w = (int)(src->w * d);
+    dst->h = (int)(src->h * d);
+}
+
 extern Layer* g_ui_root;
 static void* g_native_surface = NULL;
 static UpdateCallback g_update_callbacks[MAX_UPDATE_CALLBACKS];
@@ -225,8 +237,8 @@ void backend_mobile_on_touch(int pointer_id, int x, int y, int phase) {
 
     touch = &g_touches[id];
     memset(&event, 0, sizeof(event));
-    event.x = x;
-    event.y = y;
+    event.x = (int)(x / mobile_density());
+    event.y = (int)(y / mobile_density());
 
     if (phase == 0) {
         event.type = TOUCH_TYPE_START;
@@ -238,8 +250,8 @@ void backend_mobile_on_touch(int pointer_id, int x, int y, int phase) {
             return;
         }
         event.type = TOUCH_TYPE_MOVE;
-        event.deltaX = x - touch->x;
-        event.deltaY = y - touch->y;
+        event.deltaX = (int)((x - touch->x) / mobile_density());
+        event.deltaY = (int)((y - touch->y) / mobile_density());
         touch->x = x;
         touch->y = y;
     } else {
@@ -301,8 +313,10 @@ void backend_render_fill_rect_color(Rect* rect, unsigned char r, unsigned char g
                                     unsigned char b, unsigned char a) {
 #ifdef __ANDROID__
     if (rect) {
-        mobile_draw_rect_norm((float)rect->x, (float)rect->y,
-                              (float)rect->w, (float)rect->h, r, g, b, a);
+        Rect physical;
+        mobile_scale_rect(rect, &physical);
+        mobile_draw_rect_norm((float)physical.x, (float)physical.y,
+                              (float)physical.w, (float)physical.h, r, g, b, a);
     }
 #else
     (void)rect;
@@ -391,11 +405,12 @@ void backend_render_backdrop_filter(Rect* rect, int blur_radius, float saturatio
 }
 
 void backend_get_windowsize(int* width, int* height) {
+    float d = mobile_density();
     if (width) {
-        *width = g_window_w;
+        *width = (int)(g_window_w / d);
     }
     if (height) {
-        *height = g_window_h;
+        *height = (int)(g_window_h / d);
     }
 }
 
@@ -500,7 +515,11 @@ void backend_render_text_destroy(Texture* texture) {
 
 void backend_render_text_copy(Texture* texture, const Rect* srcrect, const Rect* dstrect) {
 #ifdef __ANDROID__
-    mobile_draw_text_texture(texture, srcrect, dstrect);
+    if (dstrect) {
+        Rect physical;
+        mobile_scale_rect(dstrect, &physical);
+        mobile_draw_text_texture(texture, srcrect, &physical);
+    }
 #else
     (void)texture;
     (void)srcrect;
@@ -510,10 +529,11 @@ void backend_render_text_copy(Texture* texture, const Rect* srcrect, const Rect*
 
 void backend_render_get_clip_rect(Rect* prev_clip) {
     if (prev_clip) {
+        float d = mobile_density();
         prev_clip->x = 0;
         prev_clip->y = 0;
-        prev_clip->w = g_window_w;
-        prev_clip->h = g_window_h;
+        prev_clip->w = (int)(g_window_w / d);
+        prev_clip->h = (int)(g_window_h / d);
     }
 }
 

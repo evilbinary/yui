@@ -17,6 +17,9 @@ struct Layer* yui_get_root(void);
 /* platform 在 yui_init 前传入原生绘图表面（Android: ANativeWindow*, iOS: CAMetalLayer*） */
 void yui_set_native_surface(void* surface);
 
+/* 逻辑像素缩放因子（Android: displayMetrics.density，即 densityDpi / 160） */
+void yui_set_density(float density);
+
 #ifdef __cplusplus
 }
 #endif

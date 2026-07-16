@@ -194,6 +194,12 @@ void yui_set_native_surface(void* surface) {
 #endif
 }
 
+void yui_set_density(float density) {
+    if (density > 0.0f) {
+        scale = density;
+    }
+}
+
 int yui_init(const char* json_path, const char* assets_dir) {
     cJSON* root_json = NULL;
 
@@ -248,8 +254,14 @@ int yui_init(const char* json_path, const char* assets_dir) {
 }
 
 void yui_resize(int width, int height) {
+    float d = scale > 0.0f ? scale : 1.0f;
+
     backend_set_windowsize(width, height);
     if (g_root) {
+        g_root->rect.x = 0;
+        g_root->rect.y = 0;
+        g_root->rect.w = (int)(width / d);
+        g_root->rect.h = (int)(height / d);
         layout_layer(g_root);
     }
 }

@@ -11,7 +11,7 @@ static int g_initialized = 0;
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_yui_YuiView_nativeInit(JNIEnv* env, jobject thiz, jobject surface,
-                                jstring jsonPath, jstring assetsPath) {
+                                jstring jsonPath, jstring assetsPath, jfloat density) {
     ANativeWindow* window = nullptr;
     const char* json_c = nullptr;
     const char* assets_c = nullptr;
@@ -30,6 +30,7 @@ Java_com_yui_YuiView_nativeInit(JNIEnv* env, jobject thiz, jobject surface,
     }
 
     yui_set_native_surface(window);
+    yui_set_density(density);
 
     if (jsonPath) {
         json_c = env->GetStringUTFChars(jsonPath, nullptr);

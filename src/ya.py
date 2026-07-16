@@ -26,6 +26,8 @@ elif get_plat() == "stm32":
     add_cflags("-DSTM32_PLATFORM")
 elif get_plat() in ("android", "ios"):
     add_files("backend/backend_mobile.c")
+    add_files("backend/mobile_text.c")
+    add_includedirs('../lib/stb')
     add_cflags("-DYUI_BACKEND_MOBILE")
 else:
     add_files("backend/backend_sdl.c")

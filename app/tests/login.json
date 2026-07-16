@@ -9,6 +9,8 @@
     "layout": {
         "type": "vertical",
         "spacing": 20,
+        "justifyContent": "center",
+        "align": "center",
         "padding": [
             40,
             40,
@@ -21,6 +23,7 @@
             "id": "logo",
             "type": "Image",
             "source": "duck.png",
+            "size": [120, 120],
             "style": {
                 "mode": "fit"
             }
@@ -29,6 +32,7 @@
             "id": "loginTitle",
             "type": "Label",
             "text": "Welcom,欢迎用户登录",
+            "size": [280, 40],
             "style": {
                 "type":"center",
                 "color": "#1976D2"
