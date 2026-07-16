@@ -51,6 +51,7 @@ typedef struct {
     Color scrollbar_bg_color;        // 滚动条背景颜色
     Color focus_border_color;         // 焦点边框颜色
     Color hover_border_color;         // 悬停边框颜色
+    Color divider_color;              // 下拉选项分割线颜色
     
     // 样式配置
     int border_width;                 // 边框宽度
