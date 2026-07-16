@@ -69,8 +69,35 @@ static int draggable_is_drag_handle(DraggableComponent* component, Layer* layer,
 
 static int draggable_dot_overlay_handle_mouse(Layer* layer, MouseEvent* event)
 {
-    (void)layer;
-    (void)event;
+    Layer* parent;
+    DraggableComponent* component;
+    Layer* hit_layer;
+    ConnectorAnchor hit_anchor;
+
+    if (!layer || !event) {
+        return 0;
+    }
+
+    parent = layer->parent;
+    if (!parent || parent->type != DRAGGABLE || !parent->component) {
+        return 0;
+    }
+
+    component = (DraggableComponent*)parent->component;
+    if (!component->show_dots || component->dot_size <= 0) {
+        return 0;
+    }
+
+    if (event->state == SDL_PRESSED && event->button == SDL_BUTTON_LEFT) {
+        if (connector_hit_test_draggable_ports(parent, event->x, event->y,
+                                               component->dot_size, &hit_layer,
+                                               &hit_anchor)) {
+            return connector_interaction_start(hit_layer, hit_anchor,
+                                               component->dot_size,
+                                               event->x, event->y);
+        }
+    }
+
     return 0;
 }
 
@@ -97,7 +124,7 @@ static void draggable_dot_overlay_render(Layer* overlay)
         return;
     }
 
-    connector_collect_anchors_for_draggable_tree(g_ui_root, parent, entries,
+    connector_collect_port_anchors_for_draggable_tree(g_ui_root, parent, entries,
                                                  &entry_count,
                                                  CONNECTOR_MAX_ANCHOR_ENTRIES);
     if (entry_count <= 0) {
@@ -123,7 +150,7 @@ static int draggable_has_visible_dots(DraggableComponent* component)
         return 0;
     }
 
-    connector_collect_anchors_for_draggable_tree(g_ui_root, component->layer, entries,
+    connector_collect_port_anchors_for_draggable_tree(g_ui_root, component->layer, entries,
                                                  &entry_count,
                                                  CONNECTOR_MAX_ANCHOR_ENTRIES);
     return entry_count > 0;

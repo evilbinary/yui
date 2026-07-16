@@ -1,5 +1,6 @@
 #include "connector_component.h"
 #include "../backend.h"
+#include "../layout.h"
 #include "../layer.h"
 #include "../util.h"
 #include <math.h>
@@ -131,24 +132,6 @@ static void connector_walk_connectors_for_draggable(Layer* root, Layer* draggabl
         connector_walk_connectors_for_draggable(root->sub, draggable, entries,
                                                 entry_count, max_entries);
     }
-}
-
-void connector_collect_anchors_for_draggable_tree(Layer* root, Layer* draggable,
-                                                  ConnectorAnchorEntry* entries,
-                                                  int* entry_count,
-                                                  int max_entries)
-{
-    if (!draggable || !entries || !entry_count || max_entries <= 0) {
-        return;
-    }
-
-    *entry_count = 0;
-    if (!root) {
-        return;
-    }
-
-    connector_walk_connectors_for_draggable(root, draggable, entries, entry_count,
-                                            max_entries);
 }
 
 static void connector_layer_destroy(Layer* layer)
@@ -457,46 +440,573 @@ void connector_component_render(Layer* layer)
                                 component->stroke_width);
 }
 
-void connector_collect_anchors_for_layer(Layer* root, const char* layer_id,
-                                         unsigned int* anchor_mask)
+static int connector_is_dot_overlay_layer(const Layer* layer)
 {
-    ConnectorComponent* component;
-    Layer* target_layer;
-    Layer* from_layer;
-    Layer* to_layer;
-    int i;
+    size_t len;
 
-    if (!root || !layer_id || !layer_id[0] || !anchor_mask) {
+    if (!layer || !layer->id[0]) {
+        return 0;
+    }
+
+    len = strlen(layer->id);
+    if (len >= 5 && strcmp(layer->id + len - 5, "_dots") == 0) {
+        return 1;
+    }
+
+    return 0;
+}
+
+static void connector_add_default_ports(Layer* layer, ConnectorAnchorEntry* entries,
+                                        int* entry_count, int max_entries)
+{
+    if (!layer || !connector_layer_is_connectable(layer)) {
         return;
     }
 
-    target_layer = connector_resolve_endpoint(layer_id);
-    if (!target_layer) {
+    if (layer->type == DRAGGABLE || layer->connectable) {
+        connector_merge_anchor_entry(entries, entry_count, max_entries, layer,
+                                     CONNECTOR_ANCHOR_LEFT);
+        connector_merge_anchor_entry(entries, entry_count, max_entries, layer,
+                                     CONNECTOR_ANCHOR_RIGHT);
+    }
+}
+
+static void connector_walk_connectable_ports_in_subtree(Layer* layer,
+                                                        ConnectorAnchorEntry* entries,
+                                                        int* entry_count,
+                                                        int max_entries)
+{
+    int i;
+
+    if (!layer || layer->visible == IN_VISIBLE || connector_is_dot_overlay_layer(layer)) {
+        return;
+    }
+
+    connector_add_default_ports(layer, entries, entry_count, max_entries);
+
+    if (layer->children) {
+        for (i = 0; i < layer->child_count; i++) {
+            if (layer->children[i]) {
+                connector_walk_connectable_ports_in_subtree(layer->children[i], entries,
+                                                            entry_count, max_entries);
+            }
+        }
+    }
+
+    if (layer->sub) {
+        connector_walk_connectable_ports_in_subtree(layer->sub, entries, entry_count,
+                                                    max_entries);
+    }
+}
+
+static void connector_merge_anchors_for_draggable_tree(Layer* root, Layer* draggable,
+                                                       ConnectorAnchorEntry* entries,
+                                                       int* entry_count, int max_entries)
+{
+    ConnectorComponent* component;
+    int i;
+
+    if (!root || !draggable) {
         return;
     }
 
     if (root->type == CONNECTOR && root->component) {
         component = (ConnectorComponent*)root->component;
-        from_layer = connector_resolve_endpoint(component->from_id);
-        to_layer = connector_resolve_endpoint(component->to_id);
-        if (from_layer == target_layer) {
-            *anchor_mask |= (1u << component->from_anchor);
-        }
-        if (to_layer == target_layer) {
-            *anchor_mask |= (1u << component->to_anchor);
-        }
+        connector_collect_endpoint_for_draggable(root, draggable, entries, entry_count,
+                                               max_entries, component->from_id,
+                                               component->from_anchor);
+        connector_collect_endpoint_for_draggable(root, draggable, entries, entry_count,
+                                               max_entries, component->to_id,
+                                               component->to_anchor);
     }
 
     if (root->children) {
         for (i = 0; i < root->child_count; i++) {
             if (root->children[i]) {
-                connector_collect_anchors_for_layer(root->children[i], layer_id,
-                                                    anchor_mask);
+                connector_merge_anchors_for_draggable_tree(root->children[i], draggable,
+                                                             entries, entry_count,
+                                                             max_entries);
             }
         }
     }
 
     if (root->sub) {
-        connector_collect_anchors_for_layer(root->sub, layer_id, anchor_mask);
+        connector_merge_anchors_for_draggable_tree(root->sub, draggable, entries,
+                                                   entry_count, max_entries);
+    }
+}
+
+static void connector_merge_port_anchors_for_draggable_tree(Layer* root, Layer* draggable,
+                                                            ConnectorAnchorEntry* entries,
+                                                            int* entry_count,
+                                                            int max_entries)
+{
+    if (!draggable || !entries || !entry_count || max_entries <= 0) {
+        return;
+    }
+
+    connector_walk_connectable_ports_in_subtree(draggable, entries, entry_count, max_entries);
+    if (root) {
+        connector_merge_anchors_for_draggable_tree(root, draggable, entries, entry_count,
+                                                   max_entries);
+    }
+}
+
+void connector_collect_port_anchors_for_draggable_tree(Layer* root, Layer* draggable,
+                                                       ConnectorAnchorEntry* entries,
+                                                       int* entry_count,
+                                                       int max_entries)
+{
+    if (!entries || !entry_count || max_entries <= 0) {
+        return;
+    }
+
+    *entry_count = 0;
+    connector_merge_port_anchors_for_draggable_tree(root, draggable, entries, entry_count,
+                                                    max_entries);
+}
+
+void connector_layer_endpoint_id(Layer* layer, char* id_out, size_t id_size)
+{
+    if (!id_out || id_size == 0) {
+        return;
+    }
+
+    id_out[0] = '\0';
+    if (!layer || !layer->id[0]) {
+        return;
+    }
+
+    strncpy(id_out, layer->id, id_size - 1);
+    id_out[id_size - 1] = '\0';
+}
+
+Layer* connector_find_canvas(Layer* layer)
+{
+    Layer* current = layer;
+
+    while (current) {
+        Layer* parent = current->parent;
+        int i;
+
+        if (parent) {
+            for (i = 0; i < parent->child_count; i++) {
+                if (parent->children[i] && parent->children[i]->type == DRAGGABLE) {
+                    return parent;
+                }
+            }
+        }
+
+        current = parent;
+    }
+
+    return NULL;
+}
+
+static int connector_hit_test_entries(int x, int y, int dot_size,
+                                      const ConnectorAnchorEntry* entries, int entry_count,
+                                      Layer** out_layer, ConnectorAnchor* out_anchor)
+{
+    int hit_radius;
+    int best_dist = -1;
+    int i;
+    int anchor;
+    int ax;
+    int ay;
+    int dx;
+    int dy;
+    int dist;
+
+    if (!entries || entry_count <= 0) {
+        return 0;
+    }
+
+    hit_radius = dot_size + 6;
+    if (hit_radius < 8) {
+        hit_radius = 8;
+    }
+
+    for (i = 0; i < entry_count; i++) {
+        for (anchor = CONNECTOR_ANCHOR_CENTER; anchor <= CONNECTOR_ANCHOR_RIGHT; anchor++) {
+            if (!(entries[i].anchor_mask & (1u << anchor))) {
+                continue;
+            }
+
+            connector_get_layer_anchor_point(entries[i].layer, (ConnectorAnchor)anchor,
+                                             &ax, &ay);
+            dx = x - ax;
+            dy = y - ay;
+            dist = dx * dx + dy * dy;
+            if (dist > hit_radius * hit_radius) {
+                continue;
+            }
+
+            if (best_dist < 0 || dist < best_dist) {
+                best_dist = dist;
+                if (out_layer) {
+                    *out_layer = entries[i].layer;
+                }
+                if (out_anchor) {
+                    *out_anchor = (ConnectorAnchor)anchor;
+                }
+            }
+        }
+    }
+
+    return best_dist >= 0;
+}
+
+int connector_hit_test_draggable_ports(Layer* draggable, int x, int y, int dot_size,
+                                       Layer** out_layer, ConnectorAnchor* out_anchor)
+{
+    ConnectorAnchorEntry entries[CONNECTOR_MAX_ANCHOR_ENTRIES];
+    int entry_count = 0;
+
+    if (!draggable || draggable->type != DRAGGABLE) {
+        return 0;
+    }
+
+    connector_collect_port_anchors_for_draggable_tree(g_ui_root, draggable, entries,
+                                                      &entry_count,
+                                                      CONNECTOR_MAX_ANCHOR_ENTRIES);
+    return connector_hit_test_entries(x, y, dot_size, entries, entry_count,
+                                      out_layer, out_anchor);
+}
+
+static void connector_collect_canvas_port_entries(Layer* canvas,
+                                                  ConnectorAnchorEntry* entries,
+                                                  int* entry_count, int max_entries)
+{
+    int i;
+
+    if (!canvas || !entries || !entry_count) {
+        return;
+    }
+
+    *entry_count = 0;
+    for (i = 0; i < canvas->child_count; i++) {
+        Layer* child = canvas->children[i];
+        if (child && child->type == DRAGGABLE) {
+            connector_merge_port_anchors_for_draggable_tree(g_ui_root, child, entries,
+                                                            entry_count, max_entries);
+        }
+    }
+}
+
+int connector_hit_test_canvas_ports(Layer* canvas, int x, int y, int dot_size,
+                                    Layer** out_layer, ConnectorAnchor* out_anchor)
+{
+    ConnectorAnchorEntry entries[CONNECTOR_MAX_ANCHOR_ENTRIES];
+    int entry_count = 0;
+
+    if (!canvas) {
+        return 0;
+    }
+
+    connector_collect_canvas_port_entries(canvas, entries, &entry_count,
+                                          CONNECTOR_MAX_ANCHOR_ENTRIES);
+    return connector_hit_test_entries(x, y, dot_size, entries, entry_count,
+                                      out_layer, out_anchor);
+}
+
+typedef struct ConnectorDragState {
+    int active;
+    Layer* canvas;
+    Layer* capture_layer;
+    Layer* from_layer;
+    ConnectorAnchor from_anchor;
+    int dot_size;
+    int mouse_x;
+    int mouse_y;
+    Layer* hover_layer;
+    ConnectorAnchor hover_anchor;
+} ConnectorDragState;
+
+static ConnectorDragState g_connector_drag;
+
+static void connector_render_drag_preview(void);
+static void connector_destroy_capture_layer(void);
+static int connector_create_capture_layer(void);
+static int connector_capture_handle_mouse(Layer* layer, MouseEvent* event);
+static void connector_capture_render(Layer* layer);
+
+static void connector_refresh_canvas_draggbles(Layer* canvas)
+{
+    int i;
+
+    if (!canvas) {
+        return;
+    }
+
+    for (i = 0; i < canvas->child_count; i++) {
+        Layer* child = canvas->children[i];
+        if (child && child->type == DRAGGABLE && child->layout) {
+            child->layout(child);
+        }
+    }
+}
+
+static int connector_canvas_insert_layer(Layer* canvas, Layer* connector_layer)
+{
+    Layer** children;
+    int count;
+
+    if (!canvas || !connector_layer) {
+        return -1;
+    }
+
+    count = canvas->child_count;
+    children = (Layer**)realloc(canvas->children, (size_t)(count + 1) * sizeof(Layer*));
+    if (!children) {
+        return -1;
+    }
+
+    if (count > 0) {
+        memmove(&children[1], &children[0], (size_t)count * sizeof(Layer*));
+    }
+
+    children[0] = connector_layer;
+    canvas->children = children;
+    canvas->child_count = count + 1;
+    connector_layer->parent = canvas;
+    return 0;
+}
+
+Layer* connector_create_link(Layer* canvas, Layer* from_layer, ConnectorAnchor from_anchor,
+                             Layer* to_layer, ConnectorAnchor to_anchor)
+{
+    static int s_edge_counter = 0;
+    ConnectorComponent* component;
+    char edge_id[64];
+    Layer* layer;
+
+    if (!canvas || !from_layer || !to_layer ||
+        !connector_layer_is_connectable(from_layer) ||
+        !connector_layer_is_connectable(to_layer)) {
+        return NULL;
+    }
+
+    layer = layer_create(canvas, 0, 0, 0, 0);
+    if (!layer) {
+        return NULL;
+    }
+
+    snprintf(edge_id, sizeof(edge_id), "edge_drag_%d", ++s_edge_counter);
+    strncpy(layer->id, edge_id, sizeof(layer->id) - 1);
+    layer->id[sizeof(layer->id) - 1] = '\0';
+    layer->type = CONNECTOR;
+    layer->visible = VISIBLE;
+    layer->focusable = 0;
+
+    component = connector_component_create(layer);
+    if (!component) {
+        destroy_layer(layer);
+        return NULL;
+    }
+
+    connector_layer_endpoint_id(from_layer, component->from_id, sizeof(component->from_id));
+    connector_layer_endpoint_id(to_layer, component->to_id, sizeof(component->to_id));
+    component->from_anchor = from_anchor;
+    component->to_anchor = to_anchor;
+    component->stroke_color = (Color){137, 180, 250, 255};
+    component->stroke_width = 2;
+
+    if (connector_canvas_insert_layer(canvas, layer) != 0) {
+        destroy_layer(layer);
+        return NULL;
+    }
+
+    layout_layer(canvas);
+    connector_refresh_canvas_draggbles(canvas);
+    return layer;
+}
+
+static void connector_remove_child_layer(Layer* parent, Layer* child)
+{
+    int i;
+    int j;
+
+    if (!parent || !child || !parent->children) {
+        return;
+    }
+
+    for (i = 0; i < parent->child_count; i++) {
+        if (parent->children[i] != child) {
+            continue;
+        }
+        for (j = i; j < parent->child_count - 1; j++) {
+            parent->children[j] = parent->children[j + 1];
+        }
+        parent->child_count--;
+        destroy_layer(child);
+        return;
+    }
+}
+
+static void connector_destroy_capture_layer(void)
+{
+    if (!g_connector_drag.capture_layer || !g_connector_drag.canvas) {
+        g_connector_drag.capture_layer = NULL;
+        return;
+    }
+
+    connector_remove_child_layer(g_connector_drag.canvas, g_connector_drag.capture_layer);
+    g_connector_drag.capture_layer = NULL;
+}
+
+static void connector_capture_render(Layer* layer)
+{
+    (void)layer;
+    connector_render_drag_preview();
+}
+
+static int connector_capture_handle_mouse(Layer* layer, MouseEvent* event)
+{
+    Layer* to_layer;
+    ConnectorAnchor to_anchor;
+
+    (void)layer;
+
+    if (!g_connector_drag.active || !event) {
+        return 0;
+    }
+
+    g_connector_drag.mouse_x = event->x;
+    g_connector_drag.mouse_y = event->y;
+    g_connector_drag.hover_layer = NULL;
+
+    if (event->state == SDL_MOUSEMOTION) {
+        if (connector_hit_test_canvas_ports(g_connector_drag.canvas, event->x, event->y,
+                                            g_connector_drag.dot_size, &to_layer,
+                                            &to_anchor)) {
+            g_connector_drag.hover_layer = to_layer;
+            g_connector_drag.hover_anchor = to_anchor;
+        }
+        return 1;
+    }
+
+    if (event->state == SDL_RELEASED && event->button == SDL_BUTTON_LEFT) {
+        if (connector_hit_test_canvas_ports(g_connector_drag.canvas, event->x, event->y,
+                                            g_connector_drag.dot_size, &to_layer,
+                                            &to_anchor) &&
+            to_layer && (to_layer != g_connector_drag.from_layer ||
+                         to_anchor != g_connector_drag.from_anchor)) {
+            connector_create_link(g_connector_drag.canvas, g_connector_drag.from_layer,
+                                  g_connector_drag.from_anchor, to_layer, to_anchor);
+        }
+
+        connector_destroy_capture_layer();
+        memset(&g_connector_drag, 0, sizeof(g_connector_drag));
+        return 1;
+    }
+
+    return 1;
+}
+
+static int connector_create_capture_layer(void)
+{
+    Layer* canvas;
+    Layer* capture;
+    Layer** children;
+
+    canvas = g_connector_drag.canvas;
+    if (!canvas) {
+        return 0;
+    }
+
+    capture = layer_create(canvas, 0, 0, canvas->rect.w, canvas->rect.h);
+    if (!capture) {
+        return 0;
+    }
+
+    capture->type = VIEW;
+    strncpy(capture->id, "_connector_capture", sizeof(capture->id) - 1);
+    capture->id[sizeof(capture->id) - 1] = '\0';
+    capture->bg_color.a = 0;
+    capture->focusable = 0;
+    capture->render = connector_capture_render;
+    capture->handle_mouse_event = connector_capture_handle_mouse;
+    capture->parent = canvas;
+    capture->rect.x = canvas->rect.x;
+    capture->rect.y = canvas->rect.y;
+    capture->rect.w = canvas->rect.w;
+    capture->rect.h = canvas->rect.h;
+
+    children = (Layer**)realloc(canvas->children,
+                                (size_t)(canvas->child_count + 1) * sizeof(Layer*));
+    if (!children) {
+        destroy_layer(capture);
+        return 0;
+    }
+
+    canvas->children = children;
+    canvas->children[canvas->child_count++] = capture;
+    g_connector_drag.capture_layer = capture;
+    return 1;
+}
+
+int connector_interaction_start(Layer* from_layer, ConnectorAnchor from_anchor,
+                                int dot_size, int mouse_x, int mouse_y)
+{
+    if (g_connector_drag.active || !from_layer || !connector_layer_is_connectable(from_layer)) {
+        return 0;
+    }
+
+    memset(&g_connector_drag, 0, sizeof(g_connector_drag));
+    g_connector_drag.active = 1;
+    g_connector_drag.from_layer = from_layer;
+    g_connector_drag.from_anchor = from_anchor;
+    g_connector_drag.canvas = connector_find_canvas(from_layer);
+    g_connector_drag.dot_size = dot_size > 0 ? dot_size : 4;
+    g_connector_drag.mouse_x = mouse_x;
+    g_connector_drag.mouse_y = mouse_y;
+    if (!g_connector_drag.canvas) {
+        g_connector_drag.active = 0;
+        return 0;
+    }
+
+    if (!connector_create_capture_layer()) {
+        memset(&g_connector_drag, 0, sizeof(g_connector_drag));
+        return 0;
+    }
+
+    return 1;
+}
+
+static void connector_render_drag_preview(void)
+{
+    int x0;
+    int y0;
+    int x1;
+    int y1;
+    int cx1;
+    int cy1;
+    int cx2;
+    int cy2;
+    Color preview_color;
+    Color hover_color;
+    int ax;
+    int ay;
+
+    if (!g_connector_drag.active || !g_connector_drag.from_layer) {
+        return;
+    }
+
+    connector_get_layer_anchor_point(g_connector_drag.from_layer,
+                                     g_connector_drag.from_anchor, &x0, &y0);
+    x1 = g_connector_drag.mouse_x;
+    y1 = g_connector_drag.mouse_y;
+    connector_auto_control_points(x0, y0, x1, y1, CONNECTOR_CURVE_AUTO,
+                                  &cx1, &cy1, &cx2, &cy2);
+
+    preview_color = (Color){137, 180, 250, 180};
+    backend_render_bezier_cubic(x0, y0, cx1, cy1, cx2, cy2, x1, y1,
+                                preview_color, 2);
+
+    if (g_connector_drag.hover_layer) {
+        hover_color = (Color){166, 227, 161, 255};
+        connector_get_layer_anchor_point(g_connector_drag.hover_layer,
+                                         g_connector_drag.hover_anchor, &ax, &ay);
+        connector_render_dot(ax, ay, g_connector_drag.dot_size + 2, hover_color);
     }
 }
