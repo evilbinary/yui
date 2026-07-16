@@ -135,7 +135,8 @@
                         "borderRadius": 10
                     },
                     "events": {
-                        "onDragChange": "@onNodeADrag"
+                        "onDragChange": "@onNodeADrag",
+                        "onConnectChange": "@onNodeAConnect"
                     },
                     "children": [
                         {
@@ -292,7 +293,8 @@
                         "borderRadius": 8
                     },
                     "events": {
-                        "onDragChange": "@onNodeBDrag"
+                        "onDragChange": "@onNodeBDrag",
+                        "onConnectChange": "@onNodeBConnect"
                     },
                     "children": [
                         {
@@ -316,7 +318,8 @@
                         "borderRadius": 8
                     },
                     "events": {
-                        "onDragChange": "@onNodeCDrag"
+                        "onDragChange": "@onNodeCDrag",
+                        "onConnectChange": "@onNodeCConnect"
                     },
                     "children": [
                         {

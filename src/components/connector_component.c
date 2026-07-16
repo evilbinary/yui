@@ -1,4 +1,5 @@
 #include "connector_component.h"
+#include "draggable_component.h"
 #include "../backend.h"
 #include "../event.h"
 #include "../layout.h"
@@ -115,18 +116,71 @@ static const char* connector_anchor_name(ConnectorAnchor anchor)
     }
 }
 
+static void connector_dispatch_connect_change(Layer* layer, const char* detail,
+                                              const char* handler_name)
+{
+    EventHandler handler;
+
+    if (!layer || !detail || !handler_name || !handler_name[0]) {
+        return;
+    }
+
+    handler = find_event_by_name(handler_name);
+    if (!handler) {
+        return;
+    }
+
+    if (!layer->event) {
+        layer->event = (Event*)calloc(1, sizeof(Event));
+    }
+    if (layer->event) {
+        strncpy(layer->event->click_name, handler_name,
+                sizeof(layer->event->click_name) - 1);
+        layer->event->click_name[sizeof(layer->event->click_name) - 1] = '\0';
+    }
+
+    layer_set_text(layer, detail);
+    EVENT_INVOKE(handler, layer);
+}
+
+static void connector_emit_node_connect_change(Layer* draggable_host,
+                                               ConnectorComponent* component,
+                                               const char* action,
+                                               Layer* port_layer,
+                                               ConnectorAnchor port_anchor)
+{
+    char detail[640];
+    const char* port_id;
+
+    if (!draggable_host || draggable_host->type != DRAGGABLE || !component || !action) {
+        return;
+    }
+
+    port_id = port_layer && port_layer->id[0] ? port_layer->id : "";
+    snprintf(detail, sizeof(detail),
+             "{\"action\":\"%s\",\"from\":{\"id\":\"%s\",\"anchor\":\"%s\"},"
+             "\"to\":{\"id\":\"%s\",\"anchor\":\"%s\"},"
+             "\"port\":{\"id\":\"%s\",\"anchor\":\"%s\"}}",
+             action,
+             component->from_id,
+             connector_anchor_name(component->from_anchor),
+             component->to_id,
+             connector_anchor_name(component->to_anchor),
+             port_id,
+             connector_anchor_name(port_anchor));
+    draggable_component_emit_connect_change(draggable_host, detail);
+}
+
 static void connector_emit_connect_change(Layer* layer, ConnectorComponent* component,
                                           const char* action)
 {
     char detail[512];
-    EventHandler handler;
+    Layer* from_layer;
+    Layer* to_layer;
+    Layer* from_host;
+    Layer* to_host;
 
-    if (!layer || !component || !action || !component->on_connect_change_name[0]) {
-        return;
-    }
-
-    handler = find_event_by_name(component->on_connect_change_name);
-    if (!handler) {
+    if (!layer || !component || !action) {
         return;
     }
 
@@ -139,17 +193,21 @@ static void connector_emit_connect_change(Layer* layer, ConnectorComponent* comp
              component->to_id,
              connector_anchor_name(component->to_anchor));
 
-    if (!layer->event) {
-        layer->event = (Event*)calloc(1, sizeof(Event));
-    }
-    if (layer->event) {
-        strncpy(layer->event->click_name, component->on_connect_change_name,
-                sizeof(layer->event->click_name) - 1);
-        layer->event->click_name[sizeof(layer->event->click_name) - 1] = '\0';
-    }
+    connector_dispatch_connect_change(layer, detail, component->on_connect_change_name);
 
-    layer_set_text(layer, detail);
-    EVENT_INVOKE(handler, layer);
+    from_layer = connector_resolve_endpoint(component->from_id);
+    to_layer = connector_resolve_endpoint(component->to_id);
+    from_host = from_layer ? connector_find_draggable_host(from_layer) : NULL;
+    to_host = to_layer ? connector_find_draggable_host(to_layer) : NULL;
+
+    if (from_host) {
+        connector_emit_node_connect_change(from_host, component, action,
+                                           from_layer, component->from_anchor);
+    }
+    if (to_host && to_host != from_host) {
+        connector_emit_node_connect_change(to_host, component, action,
+                                           to_layer, component->to_anchor);
+    }
 }
 
 static int connector_component_register_event(Layer* layer, const char* event_name,

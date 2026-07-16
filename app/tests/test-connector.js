@@ -53,7 +53,8 @@ function formatConnectEvent(layerId, detail) {
     }
     var from = detail.from ? (detail.from.id + "." + detail.from.anchor) : "?";
     var to = detail.to ? (detail.to.id + "." + detail.to.anchor) : "?";
-    return layerId + " " + detail.action + "  " + from + " → " + to;
+    var port = detail.port ? ("  端口:" + detail.port.id + "." + detail.port.anchor) : "";
+    return layerId + " " + detail.action + "  " + from + " → " + to + port;
 }
 
 function formatDragEvent(layerId, detail) {
@@ -85,6 +86,9 @@ function onEdgeBCEvent() { showConnectEvent("edgeBC"); }
 function onNodeADrag() { showDragEvent("nodeA"); }
 function onNodeBDrag() { showDragEvent("nodeB"); }
 function onNodeCDrag() { showDragEvent("nodeC"); }
+function onNodeAConnect() { showConnectEvent("nodeA", "#a6e3a1"); }
+function onNodeBConnect() { showConnectEvent("nodeB", "#a6e3a1"); }
+function onNodeCConnect() { showConnectEvent("nodeC", "#a6e3a1"); }
 
 function assertLayerExists(layerId) {
     var layer = findLayer(layerId);

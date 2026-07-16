@@ -83,6 +83,39 @@ static void draggable_emit_drag_change(Layer* layer, DraggableComponent* compone
     EVENT_INVOKE(handler, layer);
 }
 
+void draggable_component_emit_connect_change(Layer* layer, const char* detail_json)
+{
+    DraggableComponent* component;
+    EventHandler handler;
+
+    if (!layer || layer->type != DRAGGABLE || !layer->component ||
+        !detail_json || !detail_json[0]) {
+        return;
+    }
+
+    component = (DraggableComponent*)layer->component;
+    if (!component->on_connect_change_name[0]) {
+        return;
+    }
+
+    handler = find_event_by_name(component->on_connect_change_name);
+    if (!handler) {
+        return;
+    }
+
+    if (!layer->event) {
+        layer->event = (Event*)calloc(1, sizeof(Event));
+    }
+    if (layer->event) {
+        strncpy(layer->event->click_name, component->on_connect_change_name,
+                sizeof(layer->event->click_name) - 1);
+        layer->event->click_name[sizeof(layer->event->click_name) - 1] = '\0';
+    }
+
+    layer_set_text(layer, detail_json);
+    EVENT_INVOKE(handler, layer);
+}
+
 static int draggable_component_register_event(Layer* layer, const char* event_name,
                                               const char* event_func_name,
                                               EventHandler event_handler)
@@ -94,7 +127,9 @@ static int draggable_component_register_event(Layer* layer, const char* event_na
         return -1;
     }
     if (strcmp(event_name, "onDragChange") != 0 &&
-        strcmp(event_name, "dragChange") != 0) {
+        strcmp(event_name, "dragChange") != 0 &&
+        strcmp(event_name, "onConnectChange") != 0 &&
+        strcmp(event_name, "connectChange") != 0) {
         return -1;
     }
 
@@ -102,9 +137,17 @@ static int draggable_component_register_event(Layer* layer, const char* event_na
     if (event_func_name[0] == '@') {
         event_func_name++;
     }
-    strncpy(component->on_drag_change_name, event_func_name,
-            sizeof(component->on_drag_change_name) - 1);
-    component->on_drag_change_name[sizeof(component->on_drag_change_name) - 1] = '\0';
+    if (strcmp(event_name, "onConnectChange") == 0 ||
+        strcmp(event_name, "connectChange") == 0) {
+        strncpy(component->on_connect_change_name, event_func_name,
+                sizeof(component->on_connect_change_name) - 1);
+        component->on_connect_change_name[sizeof(component->on_connect_change_name) - 1] =
+            '\0';
+    } else {
+        strncpy(component->on_drag_change_name, event_func_name,
+                sizeof(component->on_drag_change_name) - 1);
+        component->on_drag_change_name[sizeof(component->on_drag_change_name) - 1] = '\0';
+    }
     return 0;
 }
 
@@ -368,6 +411,8 @@ DraggableComponent* draggable_component_create_from_json(Layer* layer, cJSON* js
     {
         cJSON* events = json_obj ? cJSON_GetObjectItem(json_obj, "events") : NULL;
         cJSON* on_drag = events ? cJSON_GetObjectItem(events, "onDragChange") : NULL;
+        cJSON* on_connect = events ? cJSON_GetObjectItem(events, "onConnectChange") : NULL;
+
         if (on_drag && cJSON_IsString(on_drag) && on_drag->valuestring[0]) {
             const char* name = on_drag->valuestring;
             if (name[0] == '@') {
@@ -376,6 +421,16 @@ DraggableComponent* draggable_component_create_from_json(Layer* layer, cJSON* js
             strncpy(component->on_drag_change_name, name,
                     sizeof(component->on_drag_change_name) - 1);
             component->on_drag_change_name[sizeof(component->on_drag_change_name) - 1] = '\0';
+        }
+        if (on_connect && cJSON_IsString(on_connect) && on_connect->valuestring[0]) {
+            const char* name = on_connect->valuestring;
+            if (name[0] == '@') {
+                name++;
+            }
+            strncpy(component->on_connect_change_name, name,
+                    sizeof(component->on_connect_change_name) - 1);
+            component->on_connect_change_name[sizeof(component->on_connect_change_name) - 1] =
+                '\0';
         }
     }
 

@@ -17,6 +17,7 @@ typedef struct DraggableComponent {
     int drag_start_y;
     int drag_handle_height;
     char on_drag_change_name[MAX_PATH];
+    char on_connect_change_name[MAX_PATH];
     int show_dots;
     int dot_size;
     Color dot_color;
@@ -28,6 +29,7 @@ DraggableComponent* draggable_component_create_from_json(Layer* layer, cJSON* js
 void draggable_component_destroy(DraggableComponent* component);
 void draggable_component_render(Layer* layer);
 int draggable_component_handle_mouse_event(Layer* layer, MouseEvent* event);
+void draggable_component_emit_connect_change(Layer* layer, const char* detail_json);
 
 #ifdef __cplusplus
 }
