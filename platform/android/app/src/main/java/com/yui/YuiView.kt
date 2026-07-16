@@ -71,7 +71,11 @@ class YuiView(context: Context) : SurfaceView(context), SurfaceHolder.Callback, 
         }
     }
 
-    private external fun nativeInit(surface: android.view.Surface, jsonPath: String, assetsPath: String)
+    private external fun nativeInit(
+        surface: android.view.Surface,
+        jsonPath: String,
+        assetsPath: String
+    )
     private external fun nativeResize(width: Int, height: Int)
     private external fun nativeTick()
     private external fun nativeShutdown()

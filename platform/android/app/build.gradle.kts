@@ -3,24 +3,29 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+val yuiRepoRoot = rootProject.projectDir.resolve("../..").normalize()
+val yuiAssetsDir = layout.buildDirectory.dir("generated/yuiAssets")
+
 val copyYuiAssets = tasks.register<Copy>("copyYuiAssets") {
-    from("../../../../app/tests/login.json") {
+    from(yuiRepoRoot.resolve("app/tests/login.json")) {
         into("tests")
     }
-    from("../../../../app/assets") {
+    from(yuiRepoRoot.resolve("app/assets")) {
         into("assets")
     }
-    into("src/main/assets")
-}
-
-tasks.named("preBuild") {
-    dependsOn(copyYuiAssets)
+    into(yuiAssetsDir)
 }
 
 android {
     namespace = "com.yui"
     compileSdk = 34
     ndkVersion = "27.3.13750724"
+
+    sourceSets {
+        getByName("main") {
+            assets.srcDir(yuiAssetsDir)
+        }
+    }
 
     defaultConfig {
         applicationId = "com.yui"
@@ -34,9 +39,9 @@ android {
         externalNativeBuild {
             cmake {
                 cppFlags += listOf("-std=c++17", "-DHAS_JS_MODULE")
-                val yuiRepoRoot = rootProject.projectDir.resolve("../..").normalize().toString().replace('\\', '/')
+                val yuiRepoRootPath = yuiRepoRoot.toString().replace('\\', '/')
                 arguments += listOf(
-                    "-DYUI_REPO_ROOT=$yuiRepoRoot",
+                    "-DYUI_REPO_ROOT=$yuiRepoRootPath",
                     "-DANDROID_STL=c++_shared",
                     "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"
                 )
@@ -70,6 +75,16 @@ android {
         jniLibs {
             useLegacyPackaging = true
         }
+    }
+}
+
+tasks.named("preBuild") {
+    dependsOn(copyYuiAssets)
+}
+
+tasks.configureEach {
+    if (name.startsWith("merge") && name.endsWith("Assets")) {
+        dependsOn(copyYuiAssets)
     }
 }
 
