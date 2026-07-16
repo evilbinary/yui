@@ -190,6 +190,90 @@ static void mobile_draw_rect_norm(float x, float y, float w, float h,
     glDisableVertexAttribArray((GLuint)pos_loc);
 }
 
+static void mobile_fill_corner_phys(int cx, int cy, int radius, int quadrant,
+                                    unsigned char r, unsigned char g,
+                                    unsigned char b, unsigned char a) {
+    int dy;
+
+    for (dy = 0; dy <= radius; dy++) {
+        int dx = 0;
+        if (radius > 0) {
+            dx = (int)(sqrtf((float)radius * (float)radius - (float)dy * (float)dy) + 0.999f);
+        }
+        switch (quadrant) {
+        case 0:
+            mobile_draw_rect_norm((float)(cx - dx), (float)(cy - dy),
+                                  (float)(dx + 1), 1.0f, r, g, b, a);
+            break;
+        case 1:
+            mobile_draw_rect_norm((float)cx, (float)(cy - dy),
+                                  (float)(dx + 1), 1.0f, r, g, b, a);
+            break;
+        case 2:
+            mobile_draw_rect_norm((float)(cx - dx), (float)(cy + dy),
+                                  (float)(dx + 1), 1.0f, r, g, b, a);
+            break;
+        default:
+            mobile_draw_rect_norm((float)cx, (float)(cy + dy),
+                                  (float)(dx + 1), 1.0f, r, g, b, a);
+            break;
+        }
+    }
+}
+
+static void mobile_draw_rounded_rect_phys(float x, float y, float w, float h,
+                                          int radius,
+                                          unsigned char r, unsigned char g,
+                                          unsigned char b, unsigned char a) {
+    int ix;
+    int iy;
+    int iw;
+    int ih;
+    int rad;
+
+    if (!g_egl_ready || w <= 0.0f || h <= 0.0f) {
+        return;
+    }
+
+    ix = (int)(x + 0.5f);
+    iy = (int)(y + 0.5f);
+    iw = (int)(w + 0.5f);
+    ih = (int)(h + 0.5f);
+    rad = radius;
+
+    if (rad <= 2) {
+        mobile_draw_rect_norm(x, y, w, h, r, g, b, a);
+        return;
+    }
+    if (rad > iw / 2) {
+        rad = iw / 2;
+    }
+    if (rad > ih / 2) {
+        rad = ih / 2;
+    }
+    if (rad <= 0) {
+        mobile_draw_rect_norm(x, y, w, h, r, g, b, a);
+        return;
+    }
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    if (iw > 2 * rad) {
+        mobile_draw_rect_norm(x + (float)rad, y, w - 2.0f * (float)rad, h, r, g, b, a);
+    }
+    if (ih > 2 * rad) {
+        mobile_draw_rect_norm(x, y + (float)rad, (float)rad, h - 2.0f * (float)rad, r, g, b, a);
+        mobile_draw_rect_norm(x + w - (float)rad, y + (float)rad,
+                              (float)rad, h - 2.0f * (float)rad, r, g, b, a);
+    }
+
+    mobile_fill_corner_phys(ix + rad, iy + rad, rad, 0, r, g, b, a);
+    mobile_fill_corner_phys(ix + iw - rad, iy + rad, rad, 1, r, g, b, a);
+    mobile_fill_corner_phys(ix + rad, iy + ih - rad, rad, 2, r, g, b, a);
+    mobile_fill_corner_phys(ix + iw - rad, iy + ih - rad, rad, 3, r, g, b, a);
+}
+
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
@@ -665,12 +749,14 @@ void backend_render_rounded_rect(Rect* rect, Color color, int radius) {
 void backend_render_rounded_rect_color(Rect* rect, unsigned char r, unsigned char g,
                                        unsigned char b, unsigned char a, int radius) {
 #ifdef __ANDROID__
-    (void)radius;
     if (rect) {
         Rect physical;
+        int phys_radius;
         mobile_scale_rect(rect, &physical);
-        mobile_draw_rect_norm((float)physical.x, (float)physical.y,
-                              (float)physical.w, (float)physical.h, r, g, b, a);
+        phys_radius = (int)(radius * mobile_density() + 0.5f);
+        mobile_draw_rounded_rect_phys((float)physical.x, (float)physical.y,
+                                      (float)physical.w, (float)physical.h,
+                                      phys_radius, r, g, b, a);
     }
 #else
     (void)rect;

@@ -203,7 +203,7 @@ function onPageTouch(type, deltaX, deltaY) {
     var path = route ? route.path : "/";
     var direction = deltaX < 0 ? "left" : "right";
 
-    if (direction === "left" && path !== "/" && path !== "/launcher" && path !== "/notifications") {
+    if (direction === "right" && path !== "/" && path !== "/launcher" && path !== "/notifications") {
         goWatchBack();
         return;
     }

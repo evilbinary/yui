@@ -5,7 +5,7 @@
     "assets": "app/assets",
     "font": "Roboto-Regular.ttf",
     "fontFallback": "NotoColorEmoji.ttf",
-    "size": [390, 390],
+    "size": [420, 420],
     "text": "YUI Watch",
     "js": [
         "../lib/router.js",
