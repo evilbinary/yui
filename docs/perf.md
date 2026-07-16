@@ -16,6 +16,23 @@ YUI.perf.watch("jsonEditor");
 YUI.perf.watch("messageInput");
 ```
 
+**交互测试页**：`app/tests/test-perf.json`（配套 `test-perf.js`）
+
+```bash
+ya -r playground -- app/tests/test-perf.json
+```
+
+加载后自动跑一轮检测；也可手动点「刷新统计」「开始压测」「HUD 开/关」。
+
+`YUI.perf` 绑定方式：
+
+- **QuickJS**（`jsmodule-quickjs`）：`lib/jsmodule-quickjs/js_perf.c` 运行时注册
+- **mquickjs**（`jsmodule`）：`lib/jsmodule/yui_stdlib.c` 中 `perf.*` 条目，需重新生成 ROM 表：
+
+```bash
+ya -c yui-stdlib-host && ya -b yui-stdlib-host
+```
+
 控制台周期性输出（可选）：
 
 ```js
@@ -64,7 +81,8 @@ HUD 中橙色行表示：`renderCount > 1` 或 `renderMs > 2ms`。
 - `src/perf/perf.c` — 统计与 overlay
 - `src/render.c` — `render_layer` 埋点
 - `src/backend/backend_sdl.c` — 帧级计时
-- `lib/jsmodule/yui_stdlib.c` — `YUI.perf.*` 绑定
+- `lib/jsmodule/yui_stdlib.c` — mquickjs `YUI.perf.*` 绑定
+- `lib/jsmodule-quickjs/js_perf.c` — QuickJS `YUI.perf.*` 绑定
 
 ## 与 Inspect 配合
 

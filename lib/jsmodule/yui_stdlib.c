@@ -940,7 +940,7 @@ static JSValue js_yui_perf_getFrameStats(JSContext* ctx, JSValue* this_val, int 
 
 static PerfSortBy js_yui_perf_parse_sort(JSContext* ctx, JSValue val)
 {
-    if (!JS_IsString(val)) {
+    if (!JS_IsString(ctx, val)) {
         return PERF_SORT_TIME;
     }
     JSCStringBuf buf;
