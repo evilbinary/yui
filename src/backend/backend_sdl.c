@@ -12,6 +12,7 @@
 #include <math.h>     // 添加数学函数支持
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
 
 #if defined(_WIN32) && !defined(__EMSCRIPTEN__)
 #define YUI_WIN32_NATIVE 1
@@ -1077,7 +1078,7 @@ void draw_rounded_rect_with_border(SDL_Renderer* renderer, int x, int y, int w, 
 
 void draw_rounded_rect(SDL_Renderer* renderer, int x, int y, int w, int h, int radius, SDL_Color color);
 
-void cleanup_corner_texture_cache();
+static void yui_aa_circle_cache_free(void);
 
 int backend_init(){
     yui_component_registry_init();
@@ -1692,11 +1693,8 @@ int find_available_cache_entry();
 void backend_quit(){
       // 清理毛玻璃缓存
       cleanup_blur_cache();
-      
-      // 清理圆角纹理缓存
-      cleanup_corner_texture_cache();
-      
-      // 清理字体缓存
+      yui_aa_circle_cache_free();
+      cleanup_font_cache();
       cleanup_font_cache();
       
       // 清理纹理缓存
@@ -2488,194 +2486,307 @@ void draw_circle(SDL_Renderer* renderer, int center_x, int center_y, int radius,
 //     }
 // }
 
-// 绘制带透明度的圆角矩形
-// 改进的圆角纹理缓存结构
+/* LVGL-style 4x supersampled quarter-circle AA (see lv_draw_mask.c circ_calc_aa4) */
 typedef struct {
-    SDL_Texture* texture;
     int radius;
-    Uint32 color_key; // RGBA的组合作为缓存键
-} CornerCacheEntry;
+    uint8_t *buf;
+    uint8_t *cir_opa;
+    uint16_t *opa_start_on_y;
+    uint16_t *x_start_on_y;
+} YuiRadiusAA;
 
-static CornerCacheEntry corner_texture_cache[64] = {0};
+#define YUI_AA_CIRCLE_CACHE_SIZE 16
+static YuiRadiusAA yui_aa_circle_cache[YUI_AA_CIRCLE_CACHE_SIZE];
 
-// 生成颜色缓存键
-static Uint32 generate_color_key(SDL_Color color) {
-    return ((Uint32)color.r << 24) | ((Uint32)color.g << 16) | ((Uint32)color.b << 8) | color.a;
+static void yui_aa_circ_init(int *cx, int *cy, int *tmp, int radius)
+{
+    *cx = radius;
+    *cy = 0;
+    *tmp = 1 - radius;
 }
 
-// 获取或创建圆角纹理
-static SDL_Texture* get_corner_texture(SDL_Renderer* renderer, int radius, SDL_Color color) {
-    if (radius <= 0 || radius >= 64) return NULL;
-    
-    Uint32 color_key = generate_color_key(color);
-    
-    // 遍历所有缓存条目，查找匹配的半径和颜色
-    for (int i = 0; i < 64; i++) {
-        if (corner_texture_cache[i].texture && 
-            corner_texture_cache[i].radius == radius && 
-            corner_texture_cache[i].color_key == color_key) {
-            return corner_texture_cache[i].texture;
-        }
-    }
-    
-    // 获取渲染器信息以确定像素格式
-    Uint32 pixel_format = SDL_PIXELFORMAT_RGBA8888;
-    SDL_RendererInfo renderer_info;
-    if (SDL_GetRendererInfo(renderer, &renderer_info) == 0 && renderer_info.num_texture_formats > 0) {
-        pixel_format = renderer_info.texture_formats[0];
-    }
-    
-    // printf("DEBUG: Creating corner texture with format %s\n", SDL_GetPixelFormatName(pixel_format));
-    
-    // 创建新的圆角纹理 - 使用渲染器支持的格式
-    int size = radius + 2;
-    SDL_Surface* surface = SDL_CreateRGBSurfaceWithFormat(0, size, size, 32, pixel_format);
-    if (!surface) return NULL;
-    
-    // 获取表面格式信息
-    Uint32 rmask, gmask, bmask, amask;
-    int bpp;
-    SDL_PixelFormatEnumToMasks(pixel_format, &bpp, &rmask, &gmask, &bmask, &amask);
-    
-    // 绘制抗锯齿圆角到surface
-    for (int y = 0; y < size; y++) {
-        Uint32* row = (Uint32*)((Uint8*)surface->pixels + y * surface->pitch);
-        for (int x = 0; x < size; x++) {
-            // 计算到圆心的距离（这是左上角，圆心在radius, radius）
-            float dx = x - radius;
-            float dy = y - radius;
-            float distance = sqrt(dx * dx + dy * dy);
+static bool yui_aa_circ_cont(int cx, int cy)
+{
+    return cy <= cx;
+}
 
-            float alpha = 0.0f;
-            if (distance <= radius) {
-                alpha = 1.0f; // 完全在圆内
-            } else if (distance <= radius + 1.0f) {
-                // 边缘抗锯齿，1像素的渐变区域
-                float t = distance - radius;
-                alpha = 1.0f - t; // 线性衰减
+static void yui_aa_circ_next(int *cx, int *cy, int *tmp)
+{
+    if (*tmp <= 0) {
+        *tmp += 2 * (*cy) + 3;
+    } else {
+        *tmp += 2 * ((*cy) - (*cx)) + 5;
+        (*cx)--;
+    }
+    (*cy)++;
+}
+
+static void yui_aa_circle_build(YuiRadiusAA *c, int radius)
+{
+    int *cir_x;
+    int *cir_y;
+    int cir_size = 0;
+    int cp_x;
+    int cp_y;
+    int tmp;
+    int i;
+
+    if (c->buf) {
+        free(c->buf);
+        c->buf = NULL;
+    }
+    if (radius <= 0) {
+        c->radius = 0;
+        return;
+    }
+
+    c->radius = radius;
+    c->buf = (uint8_t *)malloc((size_t)radius * 6 + 6);
+    if (!c->buf) {
+        c->radius = 0;
+        return;
+    }
+    c->cir_opa = c->buf;
+    c->opa_start_on_y = (uint16_t *)(c->buf + 2 * radius + 2);
+    c->x_start_on_y = (uint16_t *)(c->buf + 4 * radius + 4);
+
+    if (radius == 1) {
+        c->cir_opa[0] = 180;
+        c->opa_start_on_y[0] = 0;
+        c->opa_start_on_y[1] = 1;
+        c->x_start_on_y[0] = 0;
+        return;
+    }
+
+    cir_x = (int *)malloc((size_t)(radius + 1) * 4 * sizeof(int));
+    if (!cir_x) {
+        free(c->buf);
+        c->buf = NULL;
+        c->radius = 0;
+        return;
+    }
+    cir_y = cir_x + (radius + 1) * 2;
+
+    {
+        const int cir_opa_max = radius * 2 + 2;
+        int y_8th_cnt = 0;
+        int x_int[4];
+        int x_fract[4];
+
+        yui_aa_circ_init(&cp_x, &cp_y, &tmp, radius * 4);
+        x_int[0] = cp_x >> 2;
+        x_fract[0] = 0;
+
+        while (yui_aa_circ_cont(cp_x, cp_y)) {
+            for (i = 0; i < 4; i++) {
+                yui_aa_circ_next(&cp_x, &cp_y, &tmp);
+                if (!yui_aa_circ_cont(cp_x, cp_y)) {
+                    break;
+                }
+                x_int[i] = cp_x >> 2;
+                x_fract[i] = cp_x & 0x3;
+            }
+            if (i != 4) {
+                break;
             }
 
-            if (alpha > 0.01f) {
-                Uint8 a = (Uint8)(alpha * color.a);
-                row[x] = SDL_MapRGBA(surface->format, color.r, color.g, color.b, a);
+#define YUI_AA_PUSH_CIR(px, py, opa) do { \
+                if (cir_size >= cir_opa_max) { goto yui_aa_build_done; } \
+                cir_x[cir_size] = (px); \
+                cir_y[cir_size] = (py); \
+                c->cir_opa[cir_size] = (uint8_t)(opa); \
+                cir_size++; \
+            } while (0)
+
+            if (x_int[0] == x_int[3]) {
+                YUI_AA_PUSH_CIR(x_int[0], y_8th_cnt, (x_fract[0] + x_fract[1] + x_fract[2] + x_fract[3]) * 16);
+            } else if (x_int[0] != x_int[1]) {
+                YUI_AA_PUSH_CIR(x_int[0], y_8th_cnt, x_fract[0] * 16);
+                YUI_AA_PUSH_CIR(x_int[0] - 1, y_8th_cnt, (4 + x_fract[1] + x_fract[2] + x_fract[3]) * 16);
+            } else if (x_int[0] != x_int[2]) {
+                YUI_AA_PUSH_CIR(x_int[0], y_8th_cnt, (x_fract[0] + x_fract[1]) * 16);
+                YUI_AA_PUSH_CIR(x_int[0] - 1, y_8th_cnt, (8 + x_fract[2] + x_fract[3]) * 16);
             } else {
-                row[x] = SDL_MapRGBA(surface->format, 0, 0, 0, 0);
+                YUI_AA_PUSH_CIR(x_int[0], y_8th_cnt, (x_fract[0] + x_fract[1] + x_fract[2]) * 16);
+                YUI_AA_PUSH_CIR(x_int[0] - 1, y_8th_cnt, (12 + x_fract[3]) * 16);
+            }
+            y_8th_cnt++;
+        }
+
+        {
+            int mid = radius * 723;
+            int mid_int = mid >> 10;
+            if (cir_size == 0 || cir_x[cir_size - 1] != mid_int || cir_y[cir_size - 1] != mid_int) {
+                int tmp_val = mid - (mid_int << 10);
+                if (tmp_val <= 512) {
+                    tmp_val = (tmp_val * tmp_val * 2) >> (10 + 6);
+                } else {
+                    tmp_val = 1024 - tmp_val;
+                    tmp_val = (tmp_val * tmp_val * 2) >> (10 + 6);
+                    tmp_val = 15 - tmp_val;
+                }
+                YUI_AA_PUSH_CIR(mid_int, mid_int, tmp_val * 16);
+            }
+        }
+
+        for (i = cir_size - 2; i >= 0; i--, cir_size++) {
+            if (cir_size >= cir_opa_max) {
+                break;
+            }
+            cir_x[cir_size] = cir_y[i];
+            cir_y[cir_size] = cir_x[i];
+            c->cir_opa[cir_size] = c->cir_opa[i];
+        }
+
+yui_aa_build_done:
+#undef YUI_AA_PUSH_CIR
+
+        {
+            int y = 0;
+            i = 0;
+            c->opa_start_on_y[0] = 0;
+            while (i < cir_size && y <= radius) {
+                c->opa_start_on_y[y] = (uint16_t)i;
+                c->x_start_on_y[y] = (uint16_t)cir_x[i];
+                for (; i < cir_size && cir_y[i] == y; i++) {
+                    if (cir_x[i] < (int)c->x_start_on_y[y]) {
+                        c->x_start_on_y[y] = (uint16_t)cir_x[i];
+                    }
+                }
+                y++;
+            }
+            if (y <= radius) {
+                c->opa_start_on_y[y] = (uint16_t)cir_size;
             }
         }
     }
-    
-    // 创建纹理
-    SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
-    SDL_FreeSurface(surface);
-    
-    if (!texture) return NULL;
-    
-    // 查找空闲位置或最久未使用的位置
-    int cache_index = -1;
-    int duplicate_found = 0;
-    
-    // 首先检查是否有重复的条目
-    for (int i = 0; i < 64; i++) {
-        if (corner_texture_cache[i].texture && 
-            corner_texture_cache[i].radius == radius && 
-            corner_texture_cache[i].color_key == color_key) {
-            // 发现重复，使用这个条目
-            SDL_DestroyTexture(texture); // 销毁新创建的纹理
-            return corner_texture_cache[i].texture;
-        }
-    }
-    
-    // 查找空闲位置
-    for (int i = 0; i < 64; i++) {
-        if (!corner_texture_cache[i].texture) {
-            cache_index = i;
-            break;
-        }
-    }
-    
-    // 如果没有空闲位置，使用轮转方式覆盖
-    if (cache_index == -1) {
-        static int round_robin = 0;
-        cache_index = round_robin;
-        round_robin = (round_robin + 1) % 64;
-        if (corner_texture_cache[cache_index].texture) {
-            SDL_DestroyTexture(corner_texture_cache[cache_index].texture);
-        }
-    }
-    
-    corner_texture_cache[cache_index].texture = texture;
-    corner_texture_cache[cache_index].radius = radius;
-    corner_texture_cache[cache_index].color_key = color_key;
-    
-    return texture;
+
+    free(cir_x);
 }
 
-// 清理圆角纹理缓存
-void cleanup_corner_texture_cache() {
-    for (int i = 0; i < 64; i++) {
-        if (corner_texture_cache[i].texture) {
-            SDL_DestroyTexture(corner_texture_cache[i].texture);
-            corner_texture_cache[i].texture = NULL;
+static YuiRadiusAA *yui_aa_circle_get(int radius)
+{
+    int i;
+    int slot = -1;
+
+    if (radius <= 0) {
+        return NULL;
+    }
+
+    for (i = 0; i < YUI_AA_CIRCLE_CACHE_SIZE; i++) {
+        if (yui_aa_circle_cache[i].radius == radius && yui_aa_circle_cache[i].buf) {
+            return &yui_aa_circle_cache[i];
         }
-        corner_texture_cache[i].radius = 0;
-        corner_texture_cache[i].color_key = 0;
+        if (slot < 0 && yui_aa_circle_cache[i].radius == 0) {
+            slot = i;
+        }
+    }
+    if (slot < 0) {
+        slot = 0;
+    }
+
+    yui_aa_circle_build(&yui_aa_circle_cache[slot], radius);
+    return yui_aa_circle_cache[slot].buf ? &yui_aa_circle_cache[slot] : NULL;
+}
+
+static void yui_aa_circle_cache_free(void)
+{
+    int i;
+    for (i = 0; i < YUI_AA_CIRCLE_CACHE_SIZE; i++) {
+        free(yui_aa_circle_cache[i].buf);
+        memset(&yui_aa_circle_cache[i], 0, sizeof(yui_aa_circle_cache[i]));
+    }
+}
+
+static void yui_aa_circle_get_line(const YuiRadiusAA *c, int cir_y, int *aa_len, int *x_start, uint8_t **aa_opa)
+{
+    int r = c->radius;
+    if (cir_y < 0) {
+        cir_y = 0;
+    }
+    if (cir_y >= r) {
+        cir_y = r - 1;
+    }
+    *aa_len = (int)(c->opa_start_on_y[cir_y + 1] - c->opa_start_on_y[cir_y]);
+    *x_start = (int)c->x_start_on_y[cir_y];
+    *aa_opa = &c->cir_opa[c->opa_start_on_y[cir_y]];
+    if (*aa_len < 0) {
+        *aa_len = 0;
+    }
+}
+
+static void yui_draw_rounded_row_aa(SDL_Renderer *renderer, int x, int py, int w, int r, int cir_y,
+                                    const YuiRadiusAA *aa, SDL_Color color)
+{
+    int aa_len;
+    int x_start;
+    uint8_t *aa_opa;
+    int cir_x_left;
+    int cir_x_right;
+    int i;
+
+    yui_aa_circle_get_line(aa, cir_y, &aa_len, &x_start, &aa_opa);
+    cir_x_left = x + r - x_start - 1;
+    cir_x_right = x + w - r + x_start;
+
+    if (cir_x_right > cir_x_left + 1) {
+        SDL_Rect solid = {cir_x_left + 1, py, cir_x_right - cir_x_left - 1, 1};
+        SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
+        SDL_RenderFillRect(renderer, &solid);
+    }
+
+    for (i = 0; i < aa_len; i++) {
+        Uint8 a = (Uint8)((color.a * aa_opa[aa_len - 1 - i]) / 255);
+        if (a == 0) {
+            continue;
+        }
+        SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, a);
+        SDL_RenderDrawPoint(renderer, cir_x_left - i, py);
+        SDL_RenderDrawPoint(renderer, cir_x_right + i, py);
     }
 }
 
 void draw_rounded_rect(SDL_Renderer* renderer, int x, int y, int w, int h, int radius, SDL_Color color) {
-    SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
-    
-    // 限制圆角半径不超过宽高的一半
     int r = radius;
+    YuiRadiusAA *aa;
+
     if (r > w / 2) r = w / 2;
     if (r > h / 2) r = h / 2;
-    
-    // 如果半径很小，直接绘制矩形
-    if (r <= 2) {
+
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+
+    if (r <= 0) {
+        SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
         SDL_Rect rect = {x, y, w, h};
         SDL_RenderFillRect(renderer, &rect);
         return;
     }
-    
-    // 绘制中间矩形部分（不包括圆角区域）
-    if (w > 2 * r && h > 0) {
-        SDL_Rect middle_rect = {x + r, y, w - 2 * r, h};
-        SDL_RenderFillRect(renderer, &middle_rect);
+
+    aa = yui_aa_circle_get(r);
+    if (!aa) {
+        SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
+        SDL_Rect rect = {x, y, w, h};
+        SDL_RenderFillRect(renderer, &rect);
+        return;
     }
-    
-    // 绘制左右两个矩形部分（避开圆角区域）
-    if (h > 2 * r) {
-        SDL_Rect left_rect = {x, y + r, r, h - 2 * r};
-        SDL_Rect right_rect = {x + w - r, y + r, r, h - 2 * r};
-        SDL_RenderFillRect(renderer, &left_rect);
-        SDL_RenderFillRect(renderer, &right_rect);
-    }
-    
-    // 使用缓存的抗锯齿纹理绘制圆角
-    SDL_Texture* corner_texture = get_corner_texture(renderer, r, color);
-    if (corner_texture) {
-        // 设置纹理混合模式
-        SDL_SetTextureBlendMode(corner_texture, SDL_BLENDMODE_BLEND);
-        
-        // 圆角纹理大小
-        int corner_size = r + 2;
-        SDL_Rect src_rect = {0, 0, corner_size, corner_size};
-        
-        // 左上角 - 只绘制圆角扇形区域
-        SDL_Rect dst_tl = {x, y, corner_size, corner_size};
-        SDL_RenderCopy(renderer, corner_texture, &src_rect, &dst_tl);
-        
-        // 右上角 - 水平翻转
-        SDL_Rect dst_tr = {x + w - corner_size, y, corner_size, corner_size};
-        SDL_RenderCopyEx(renderer, corner_texture, &src_rect, &dst_tr, 0, NULL, SDL_FLIP_HORIZONTAL);
-        
-        // 左下角 - 垂直翻转
-        SDL_Rect dst_bl = {x, y + h - corner_size, corner_size, corner_size};
-        SDL_RenderCopyEx(renderer, corner_texture, &src_rect, &dst_bl, 0, NULL, SDL_FLIP_VERTICAL);
-        
-        // 右下角 - 水平和垂直翻转
-        SDL_Rect dst_br = {x + w - corner_size, y + h - corner_size, corner_size, corner_size};
-        SDL_RenderCopyEx(renderer, corner_texture, &src_rect, &dst_br, 0, NULL, SDL_FLIP_HORIZONTAL | SDL_FLIP_VERTICAL);
+
+    for (int py = y; py < y + h; py++) {
+        int local_y = py - y;
+        int cir_y = -1;
+
+        if (local_y < r) {
+            cir_y = r - local_y - 1;
+        } else if (local_y >= h - r) {
+            cir_y = local_y - (h - r);
+        }
+
+        if (cir_y < 0) {
+            SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
+            SDL_Rect row = {x, py, w, 1};
+            SDL_RenderFillRect(renderer, &row);
+        } else {
+            yui_draw_rounded_row_aa(renderer, x, py, w, r, cir_y, aa, color);
+        }
     }
 }
 
