@@ -26,11 +26,11 @@
   }
 
   function tryLoadWasm() {
-    return loadScript(wasmBase + "playground.js").then(function () {
+    return loadScript(wasmBase + "yui-web.js").then(function () {
       return wasmBase;
     }).catch(function () {
       return Promise.reject(new Error(
-        "playground.js not found in yui/. Run: ya -p em -m release -b yui-web.js"
+        "yui-web.js not found in yui/. Run: ya -p em -m release -b yui-web.js"
       ));
     });
   }
@@ -50,10 +50,10 @@
         arguments: [jsonPath, assetsDir],
         locateFile: function (path) {
           if (path.endsWith(".wasm")) {
-            return wasmBase + "playground.wasm";
+            return wasmBase + "yui-web.wasm";
           }
           if (path.endsWith(".data")) {
-            return wasmBase + "playground.data";
+            return wasmBase + "yui-web.data";
           }
           return wasmBase + path;
         }

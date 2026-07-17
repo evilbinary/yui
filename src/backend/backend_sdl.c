@@ -1119,13 +1119,9 @@ int backend_init(){
     SDL_RenderSetScale(renderer, scale, scale);
     
     // 初始化SDL_image库，支持多种图片格式
-#ifdef __EMSCRIPTEN__
-    // Emscripten 的 SDL2_image 通常只编译了 PNG/JPEG
-    int imgFlags = IMG_INIT_PNG | IMG_INIT_JPG;
-#else
-    int imgFlags = IMG_INIT_PNG | IMG_INIT_JPG | IMG_INIT_TIF | IMG_INIT_WEBP;
-#endif
+#ifndef __EMSCRIPTEN__
     {
+        int imgFlags = IMG_INIT_PNG | IMG_INIT_JPG | IMG_INIT_TIF | IMG_INIT_WEBP;
         int imgReady = IMG_Init(imgFlags);
         int imgRequired = IMG_INIT_PNG | IMG_INIT_JPG;
         if ((imgReady & imgRequired) != imgRequired) {
@@ -1133,10 +1129,14 @@ int backend_init(){
             return -1;
         }
     }
-
-    // 检查SDL_image版本是否支持SVG（SDL_image 2.6.0及以上版本支持SVG）
-    const char* imgVersion = IMG_Linked_Version() ? SDL_GetRevision() : "Unknown";
-    printf("SDL_image version: %s\n", imgVersion);
+    {
+        const char* imgVersion = IMG_Linked_Version() ? SDL_GetRevision() : "Unknown";
+        printf("SDL_image version: %s\n", imgVersion);
+    }
+#else
+    // Emscripten: IMG_Init 在无格式库时会误报失败，IMG_Load 仍可工作（见 emscripten-ports/SDL2_image#3）
+    printf("SDL_image: skipped IMG_Init on Emscripten\n");
+#endif
     
     // 初始化TTF
     if (TTF_Init() == -1) {
@@ -1618,7 +1618,9 @@ void backend_quit(){
       cleanup_texture_cache();
       
       // 清理资源
+#ifndef __EMSCRIPTEN__
     IMG_Quit();
+#endif
     if (default_font) {
         TTF_CloseFont(default_font);
     }

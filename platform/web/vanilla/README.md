@@ -18,9 +18,9 @@ make web
 
 ```text
 platform/web/vanilla/yui/
-  playground.js
-  playground.wasm
-  playground.data    # Emscripten preload（若启用）
+  yui-web.js
+  yui-web.wasm
+  yui-web.data    # Emscripten preload（若启用）
 ```
 
 ## 2. 本地预览

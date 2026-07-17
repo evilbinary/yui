@@ -76,9 +76,9 @@ ios-app:
 
 web:
 	ya -p em -m release -b yui-web.js
-	@echo "WASM: platform/web/vanilla/yui/playground.js"
+	@echo "WASM: platform/web/vanilla/yui/yui-web.js"
 
-web-serve:
+web-serve: web
 	cd platform/web/vanilla && python -m http.server 8080
 
 run: main

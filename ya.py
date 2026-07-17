@@ -113,6 +113,7 @@ def _emscripten_link_flags():
     return [
         "-sUSE_SDL=2",
         "-sUSE_SDL_IMAGE=2",
+        "-sSDL2_IMAGE_FORMATS=[\"png\",\"jpg\"]",
         "-sUSE_SDL_TTF=2",
         "-sALLOW_MEMORY_GROWTH=1",
         "-sASSERTIONS=2",
@@ -519,9 +520,9 @@ def after_build_web_artifacts(target):
     dest_dir = os.path.join("platform", "web", "vanilla", "yui")
     os.makedirs(dest_dir, exist_ok=True)
     mapping = {
-        ".js": "playground.js",
-        ".wasm": "playground.wasm",
-        ".data": "playground.data",
+        ".js": "yui-web.js",
+        ".wasm": "yui-web.wasm",
+        ".data": "yui-web.data",
     }
     build_dirs = []
     seen = set()
