@@ -159,15 +159,10 @@ static SDL_Surface* lvgl_emscripten_text_surface(const char* text, Color color, 
 
 static void lvgl_pointer_to_logical(int* x, int* y)
 {
-#ifdef __EMSCRIPTEN__
     if (yui_density > 1.0f) {
         *x = (int)((float)(*x) / yui_density);
         *y = (int)((float)(*y) / yui_density);
     }
-#else
-    (void)x;
-    (void)y;
-#endif
 }
 
 static void lvgl_finger_to_logical(const SDL_TouchFingerEvent* finger, int* x, int* y)
@@ -181,6 +176,40 @@ static void lvgl_finger_to_logical(const SDL_TouchFingerEvent* finger, int* x, i
     }
     *x = (int)(finger->x * win_w);
     *y = (int)(finger->y * win_h);
+}
+
+static int lvgl_layer_scrollbar_dragging(const Layer* layer)
+{
+    if (!layer) {
+        return 0;
+    }
+    if ((layer->scrollbar_v && layer->scrollbar_v->is_dragging) ||
+        (layer->scrollbar_h && layer->scrollbar_h->is_dragging) ||
+        (layer->scrollbar && layer->scrollbar->is_dragging)) {
+        return 1;
+    }
+    return 0;
+}
+
+static int lvgl_any_scrollbar_dragging(const Layer* root)
+{
+    int i;
+
+    if (!root) {
+        return 0;
+    }
+    if (lvgl_layer_scrollbar_dragging(root)) {
+        return 1;
+    }
+    for (i = 0; i < root->child_count; i++) {
+        if (root->children[i] && lvgl_any_scrollbar_dragging(root->children[i])) {
+            return 1;
+        }
+    }
+    if (root->sub && lvgl_any_scrollbar_dragging(root->sub)) {
+        return 1;
+    }
+    return 0;
 }
 
 static void lvgl_deliver_mouse_event(Layer* root, int mouse_x, int mouse_y,
@@ -347,12 +376,12 @@ static void lvgl_yui_sdl_event_hook(const SDL_Event* event, void* user_data)
         touchEvent.y = y;
         touchEvent.fingerCount = g_touch_state.fingerCount;
         touchEvent.timestamp = SDL_GetTicks();
-        handle_touch_event(root, &touchEvent);
 
         if (g_touch_state.fingerCount == 1) {
             lvgl_deliver_mouse_event(root, x, y, SDL_PRESSED, SDL_BUTTON_LEFT,
                                      SDL_FINGERDOWN, 0);
         }
+        handle_touch_event(root, &touchEvent);
     } else if (event->type == SDL_FINGERMOTION) {
         int x;
         int y;
@@ -376,11 +405,13 @@ static void lvgl_yui_sdl_event_hook(const SDL_Event* event, void* user_data)
         touchEvent.deltaY = deltaY;
         touchEvent.fingerCount = g_touch_state.fingerCount;
         touchEvent.timestamp = SDL_GetTicks();
-        handle_touch_event(root, &touchEvent);
 
         if (g_touch_state.fingerCount > 0) {
             lvgl_deliver_mouse_event(root, x, y, SDL_MOUSEMOTION, SDL_BUTTON_LEFT,
                                      SDL_FINGERMOTION, 0);
+        }
+        if (!lvgl_any_scrollbar_dragging(root)) {
+            handle_touch_event(root, &touchEvent);
         }
     } else if (event->type == SDL_FINGERUP) {
         int x;
@@ -665,7 +696,7 @@ int backend_init(void)
         return -1;
     }
 
-#if defined(YUI_LVGL_PORT_SDL) && defined(__EMSCRIPTEN__)
+#if defined(YUI_LVGL_PORT_SDL)
     {
         SDL_Renderer* renderer = lv_port_get_renderer();
         int render_w = 0;

@@ -251,6 +251,9 @@ static void disp_init(void)
     SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "0");
     SDL_SetHint(SDL_HINT_EMSCRIPTEN_ASYNCIFY, "0");
     SDL_SetHint(SDL_HINT_RENDER_VSYNC, "0");
+#else
+    SDL_SetHint(SDL_HINT_MOUSE_TOUCH_EVENTS, "1");
+    SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "0");
 #endif
 
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
