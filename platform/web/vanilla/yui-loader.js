@@ -17,6 +17,8 @@
     var h = Math.floor(canvas.height * scale);
     canvas.style.width = w + "px";
     canvas.style.height = h + "px";
+    canvas.style.left = Math.floor((window.innerWidth - w) / 2) + "px";
+    canvas.style.top = Math.floor((window.innerHeight - h) / 2) + "px";
   }
 
   function setStatus(text) {

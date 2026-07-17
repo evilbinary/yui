@@ -7,17 +7,18 @@ html, body {
 }
 
 #app {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 100%;
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
 }
 
 #canvas {
   display: block;
+  position: fixed;
   outline: none;
   touch-action: none;
-  /* display size set in yui-loader.js to keep aspect ratio */
+  pointer-events: auto;
+  /* left/top/width/height set in yui-loader.js */
 }
 
 #status {

@@ -713,11 +713,14 @@ static SDL_Surface* backend_render_emscripten_text_surface(DFont* font, const ch
 
 void handle_event(Layer* root, SDL_Event* event);
 
+static void backend_apply_display_scale(void);
+
 static void backend_handle_window_resize(Layer* root) {
     if (!root || !window || !resize_callback) return;
     int w = 0, h = 0;
     SDL_GetWindowSize(window, &w, &h);
     if (w <= 0 || h <= 0) return;
+    backend_apply_display_scale();
     resize_callback(root, w, h);
 }
 
@@ -1065,13 +1068,28 @@ void backend_main_loop();
 
 // 检查是否Retina显示屏并获取缩放因子
 float getDisplayScale(SDL_Window* window) {
+#ifdef __EMSCRIPTEN__
+    (void)window;
+    return 1.0f;
+#else
     int renderW, renderH;
     int windowW, windowH;
-    
+
     SDL_GetWindowSize(window, &windowW, &windowH);
+    if (windowW <= 0 || windowH <= 0) {
+        return 1.0f;
+    }
     SDL_GL_GetDrawableSize(window, &renderW, &renderH);
-    
-    return (renderW) / windowW;
+    return (float)renderW / (float)windowW;
+#endif
+}
+
+static void backend_apply_display_scale(void) {
+    if (!renderer) {
+        return;
+    }
+    scale = window ? getDisplayScale(window) : 1.0f;
+    SDL_RenderSetScale(renderer, scale, scale);
 }
 
 void draw_rounded_rect_with_border(SDL_Renderer* renderer, int x, int y, int w, int h, int radius, int border_width, SDL_Color bg_color, SDL_Color border_color);
@@ -1091,8 +1109,14 @@ int backend_init(){
 
     // 桌面开发：鼠标合成触摸事件（须在 SDL_Init 之前）
     // MOUSE_TOUCH_EVENTS = 鼠标 → 触摸；TOUCH_MOUSE_EVENTS = 触摸 → 鼠标（勿搞反）
+#ifdef __EMSCRIPTEN__
+    // Web：分别处理 MOUSE / FINGER，勿双向合成；坐标由 Emscripten 按 canvas 映射
+    SDL_SetHint(SDL_HINT_MOUSE_TOUCH_EVENTS, "0");
+    SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "0");
+#else
     SDL_SetHint(SDL_HINT_MOUSE_TOUCH_EVENTS, "1");
     SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "0");
+#endif
 
     // 初始化SDL
     SDL_Init(SDL_INIT_VIDEO);
@@ -1119,10 +1143,10 @@ int backend_init(){
     SDL_SetHint(SDL_HINT_RENDER_VSYNC, "0");
 #endif
 
-    // Emscripten 环境下，不需要 SDL_WINDOW_OPENGL 标志
-    Uint32 window_flags = SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_SHOWN;
+    // Emscripten 不需要 OPENGL / HIGH DPI（避免 drawable 与命中坐标不一致）
+    Uint32 window_flags = SDL_WINDOW_SHOWN;
 #ifndef __EMSCRIPTEN__
-    window_flags |= SDL_WINDOW_OPENGL;
+    window_flags |= SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_OPENGL;
 #endif
     
     window = SDL_CreateWindow("YUI",
@@ -1200,9 +1224,7 @@ int backend_init(){
     // 启用透明度混合
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 
-    scale = getDisplayScale(window);
-
-    SDL_RenderSetScale(renderer, scale, scale);
+    backend_apply_display_scale();
     
     // 初始化SDL_image库，支持多种图片格式
 #ifndef __EMSCRIPTEN__
@@ -2095,6 +2117,7 @@ void backend_get_windowsize(int* width,int * height){
 
 void backend_set_windowsize(int width,int  height){
     SDL_SetWindowSize(window, width, height);
+    backend_apply_display_scale();
 }
 
 void backend_set_window_size(char* title){
