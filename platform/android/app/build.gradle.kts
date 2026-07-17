@@ -6,6 +6,11 @@ plugins {
 val yuiRepoRoot = rootProject.projectDir.resolve("../..").normalize()
 val yuiAssetsDir = layout.buildDirectory.dir("generated/yuiAssets")
 
+fun resolveNdkPath(): String? = sequenceOf(
+    System.getenv("ANDROID_NDK_HOME"),
+    System.getenv("ANDROID_NDK_ROOT"),
+).firstOrNull { !it.isNullOrBlank() }
+
 val copyYuiAssets = tasks.register<Copy>("copyYuiAssets") {
     from(yuiRepoRoot.resolve("app/assets")) {
         into("app/assets")
@@ -26,6 +31,7 @@ android {
     namespace = "com.yui"
     compileSdk = 34
     ndkVersion = "27.3.13750724"
+    resolveNdkPath()?.let { ndkPath = it }
 
     sourceSets {
         getByName("main") {

@@ -20,7 +20,9 @@ make android-armv7
 make android          # 两个 ABI 都打
 ```
 
-需先设置 `ANDROID_NDK_HOME`。
+需先设置 `ANDROID_NDK_HOME`（或 `ANDROID_NDK_ROOT`）。`ya` 与 Gradle 共用该变量，无需在 `local.properties` 写 `ndk.dir`。
+
+`ANDROID_HOME` / `ANDROID_SDK_ROOT` 用于定位 Android SDK；`local.properties` 会在路径无效时自动同步，无需手写 `cmake.dir`（由 `app/build.gradle.kts` 的 `cmake { version = "3.22.1" }` 解析）。
 
 ## 2. 打 APK
 
@@ -29,11 +31,19 @@ cd platform/android
 # local.properties: sdk.dir=...（Android SDK，由 Android Studio 自动生成，勿提交 git）
 ```
 
-设置 `JAVA_HOME` 指向 Android Studio 的 `jbr` 目录，然后：
+设置 `JAVA_HOME` 指向 Android Studio 的 `jbr` 目录，并确保 `ANDROID_NDK_HOME` 已设置，然后：
 
 ```bash
 ./gradlew :app:assembleDebug
 ```
+
+成功后在（`build/` 被 gitignore，IDE 里可能不显示）：
+
+```text
+platform/android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+安装到已连接设备：`./gradlew :app:installDebug`
 
 `app/build.gradle.kts` 会在构建前把 `app/tests/login.json` 和 `app/assets/` 拷入 `assets/`。
 

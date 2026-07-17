@@ -69,8 +69,14 @@ goto fail
 
 :execute
 @rem Prefer Android SDK CMake over MSYS2 (NDK paths with spaces break under MSYS cmake)
-if exist "D:\Program Files\Android\Sdk\cmake\3.22.1\bin\cmake.exe" (
-  set "PATH=D:\Program Files\Android\Sdk\cmake\3.22.1\bin;%PATH%"
+if defined ANDROID_HOME (
+  if exist "%ANDROID_HOME%\cmake\3.22.1\bin\cmake.exe" (
+    set "PATH=%ANDROID_HOME%\cmake\3.22.1\bin;%PATH%"
+  )
+) else if defined ANDROID_SDK_ROOT (
+  if exist "%ANDROID_SDK_ROOT%\cmake\3.22.1\bin\cmake.exe" (
+    set "PATH=%ANDROID_SDK_ROOT%\cmake\3.22.1\bin;%PATH%"
+  )
 )
 
 @rem Setup the command line
