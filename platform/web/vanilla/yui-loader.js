@@ -4,6 +4,21 @@
   var assetsDir = params.get("assets") || "app/assets";
   var wasmBase = "yui/";
 
+  function fitCanvas(canvas) {
+    if (!canvas || !(canvas.width > 0) || !(canvas.height > 0)) {
+      return;
+    }
+    var scale = Math.min(
+      window.innerWidth / canvas.width,
+      window.innerHeight / canvas.height,
+      1
+    );
+    var w = Math.floor(canvas.width * scale);
+    var h = Math.floor(canvas.height * scale);
+    canvas.style.width = w + "px";
+    canvas.style.height = h + "px";
+  }
+
   function setStatus(text) {
     var el = document.getElementById("status");
     if (!el) {
@@ -64,6 +79,11 @@
       if (module.callMain) {
         module.callMain(module.arguments || []);
       }
+      var canvas = document.getElementById("canvas");
+      fitCanvas(canvas);
+      window.addEventListener("resize", function () {
+        fitCanvas(canvas);
+      });
     })
     .catch(function (err) {
       console.error(err);
