@@ -30,7 +30,7 @@
     function next() {
       if (index >= wasmBases.length) {
         return Promise.reject(new Error(
-          "playground.js not found. Run: ya -p em -m release -b yui-web.html"
+          "playground.js not found. Run: ya -p em -m release -b yui-web.js"
         ));
       }
       var base = wasmBases[index++];

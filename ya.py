@@ -53,6 +53,81 @@ elif is_plat("stm32"):
     # STM32平台不需要设置环境变量
     prefix_env=''
 
+def _resolve_emscripten_tool(name):
+    import shutil
+
+    def _pick_emscripten_dir():
+        emscripten = os.environ.get("EMSCRIPTEN")
+        if emscripten and os.path.isdir(emscripten):
+            return emscripten
+        emsdk = os.environ.get("EMSDK")
+        if emsdk:
+            candidate = os.path.join(emsdk, "upstream", "emscripten")
+            if os.path.isdir(candidate):
+                return candidate
+        for root in (
+            r"E:\workspace\emsdk",
+            r"E:\soft\emsdk",
+            os.path.expanduser(r"~\emsdk"),
+        ):
+            candidate = os.path.join(root, "upstream", "emscripten")
+            if os.path.isdir(candidate):
+                return candidate
+        return None
+
+    if platform.system() == "Windows":
+        for candidate in (name + ".bat", name + ".cmd", name):
+            path = shutil.which(candidate)
+            if path:
+                return path
+        emscripten = _pick_emscripten_dir()
+        if emscripten:
+            for ext in (".bat", ".cmd", ""):
+                path = os.path.join(emscripten, name + ext)
+                if os.path.isfile(path):
+                    return path
+    else:
+        path = shutil.which(name)
+        if path:
+            return path
+    return name
+
+def configure_emscripten_toolchain(target=None):
+    if get_plat() not in ("em", "emscripten"):
+        return
+    tool = get_toolchain_node()
+    if not tool:
+        print("warning: emscripten toolchain not found")
+        return
+    cc = _resolve_emscripten_tool("emcc")
+    ar = _resolve_emscripten_tool("emar")
+    if platform.system() == "Windows" and (cc == "emcc" or not os.path.isfile(cc)):
+        print("warning: emcc not found. Activate emsdk or set EMSDK/EMSCRIPTEN.")
+    tool["cc"] = cc
+    tool["cxx"] = cc
+    tool["ld"] = cc
+    tool["ar"] = ar
+
+def _emscripten_link_flags():
+    # ymake ldflags dedup breaks paired "-s", "FOO=1"; use -sFOO=1 single tokens.
+    return [
+        "-sUSE_SDL=2",
+        "-sUSE_SDL_IMAGE=2",
+        "-sUSE_SDL_TTF=2",
+        "-sALLOW_MEMORY_GROWTH=1",
+        "-sASSERTIONS=2",
+        "-sEXPORT_ALL=1",
+        "-sSTACK_OVERFLOW_CHECK=2",
+        "-sERROR_ON_UNDEFINED_SYMBOLS=0",
+        "-sAGGRESSIVE_VARIABLE_ELIMINATION=1",
+        "--preload-file=app/playground/",
+        "--preload-file=app/assets/",
+        "--preload-file=app/lib/",
+        "--preload-file=app",
+        "-O0",
+        "-lm",
+    ]
+
 def _ndk_host_dirs():
     if platform.system() == "Windows":
         return "windows-x86_64", ".cmd", ".exe"
@@ -211,11 +286,8 @@ def add_flags():
 
     if get_plat() in['emscripten','em']:
         set_toolchain('emscripten')
-        tool=get_toolchain_node()
-        tool['cc']='emcc'
-        tool['cxx']='emcc'
-        tool['ld']='emcc'
-        tool['ar']='emar'
+        configure_emscripten_toolchain()
+        before_build(configure_emscripten_toolchain)
         if platform.system()=='Windows':
             mingw64='E:\\soft\\msys2\\mingw64'
             add_cflags(
@@ -229,30 +301,9 @@ def add_flags():
             '-I./src/'
             )
             add_ldflags(
-            
-            '-s USE_SDL=2',
-            '-s USE_SDL_IMAGE=2',
-            '-s USE_SDL_TTF=2',
-            '-s ALLOW_MEMORY_GROWTH=1',
-            '-s ASSERTIONS=1',
-            #'-s EXPORTED_FUNCTIONS=["_main"]',
-            #'-s EXPORTED_RUNTIME_METHODS=["ccall","cwrap","FS","stringToUTF8","UTF8ToString"]',
-            '-s EXPORT_ALL=1 ',
-            '-s ASSERTIONS=2 ',
-            '-s STACK_OVERFLOW_CHECK=2',
-            '-g4',
-            '-O0',
-            '-Wbad-function-cast ',
-            '-Wcast-function-type',
-            '--source-map-base http://localhost:6931/',
-
-            '-s ERROR_ON_UNDEFINED_SYMBOLS=0',
-            '-s AGGRESSIVE_VARIABLE_ELIMINATION=1',
-            '--preload-file app/playground/',
-            '--preload-file app/assets/',
-            '--preload-file app/lib/',
-            '--preload-file app',
-            '-lm'
+            *_emscripten_link_flags(),
+            "-Wbad-function-cast",
+            "-Wcast-function-type",
             )
         else:
             mingw64='../libs/'
@@ -266,41 +317,13 @@ def add_flags():
             '-I'+mingw64+'\\include\\SDL2',
             '-I.',
             '-I./src/components',
-            '-I./src/',
-            '-s USE_SDL=2',
-            '-s USE_SDL_IMAGE=2',
-            '-s USE_SDL_TTF=2',
+            '-I./src/'
             )
         
             add_ldflags(
-                '-gsource-map',
-                '-s USE_SDL=2',
-                '-s USE_SDL_IMAGE=2',
-                '-s USE_SDL_TTF=2',
-                '-s ALLOW_MEMORY_GROWTH=1',
-                '-s ASSERTIONS=1',
-                #'-s EXPORTED_FUNCTIONS=["_main"]',
-                #'-s EXPORTED_RUNTIME_METHODS=["ccall","cwrap","FS","stringToUTF8","UTF8ToString"]',
-                '-s EXPORT_ALL=1 ',
-                '-s ASSERTIONS=2 ',
-                '-s STACK_OVERFLOW_CHECK=2',
-                '-g4',
-                '-O0',
-                '-Wbad-function-cast ',
+                *_emscripten_link_flags(),
+                '-Wbad-function-cast',
                 '-Wcast-function-type',
-                # '--source-map-base http://localhost:6931/',
-                '-s ERROR_ON_UNDEFINED_SYMBOLS=0',
-                '-s AGGRESSIVE_VARIABLE_ELIMINATION=1',
-                '--preload-file app/playground/',
-                '--preload-file app/assets/',
-                '--preload-file app/lib/',
-                '--preload-file app',
-                # '-s USE_WEBGL2=1',          # 启用 WebGL2 支持（现代浏览器兼容性更好）
-                # '-s FULL_ES2=1',           # 启用完整的 OpenGL ES 3 特性
-                # '-s MIN_WEBGL_VERSION=2',  # 要求 WebGL 最低版本为 2
-                '-s ASSERTIONS=2',          # 启用运行时断言，便于调试
-                # '-s GL_ASSERTIONS=1',       # 启用 GL 断言，捕捉 WebGL 错误
-                '-lm'
                 )
     elif is_plat("stm32"):
         # STM32平台特定的编译选项
@@ -389,52 +412,7 @@ def add_flags():
     elif platform.system()=='Windows':
         mingw64='E:\\soft\\msys2\\mingw64'
         if get_plat() in['emscripten','em']:
-            tool=get_toolchain_node()
-            tool['cc']='emcc'
-            tool['cxx']='emcc'
-            tool['ld']='emcc'
-            tool['ar']='emar'
-            add_cflags(
-            # '--use-port=sdl2 ',
-            '-g',
-            '-Wno-incompatible-pointer-types -Wno-implicit-function-declaration',
-            '-F../libs/',
-            '-I'+mingw64+'\\include\\SDL2',
-            '-I.',
-            '-I./src/components',
-            '-I./src/'
-            )
-            add_ldflags(
-                
-                '-s USE_SDL=2',
-                '-s USE_SDL_IMAGE=2',
-                '-s USE_SDL_TTF=2',
-                '-s ALLOW_MEMORY_GROWTH=1',
-                '-s ASSERTIONS=1',
-                #'-s EXPORTED_FUNCTIONS=["_main"]',
-                #'-s EXPORTED_RUNTIME_METHODS=["ccall","cwrap","FS","stringToUTF8","UTF8ToString"]',
-                '-s EXPORT_ALL=1 ',
-                '-s ASSERTIONS=2 ',
-                '-s STACK_OVERFLOW_CHECK=2',
-                '-g4',
-                '-O0',
-                '-Wbad-function-cast ',
-                '-Wcast-function-type',
-                # '--source-map-base http://localhost:6931/',
-
-                '-s ERROR_ON_UNDEFINED_SYMBOLS=0',
-                '-s AGGRESSIVE_VARIABLE_ELIMINATION=1',
-                '--preload-file app/playground/',
-                '--preload-file app/assets/',
-                '--preload-file app/lib/',
-                '--preload-file app',
-                '-L'+mingw64+'\\lib',
-                '-lSDL2main',
-                '-lSDL2',
-                '-lSDL2_ttf',
-                '-lSDL2_image',
-                '-lm'
-                )
+            configure_emscripten_toolchain()
         else:
             tool=get_toolchain_node()
             tool['cc']=mingw64+'\\bin\\gcc.exe'
@@ -537,7 +515,7 @@ def after_build_web_artifacts(target):
     mode = target.get_config("mode")
     if not mode:
         return
-    base = name.replace(".html", "")
+    base = name.replace(".html", "").replace(".js", "")
     dest_dir = os.path.join("platform", "web", "vanilla", "yui")
     os.makedirs(dest_dir, exist_ok=True)
     mapping = {

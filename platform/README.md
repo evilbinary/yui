@@ -25,5 +25,5 @@ IOS_SDK=iphoneos ya -p ios -a arm64 -m release -b yui-ios-prebuilt
 IOS_SDK=iphonesimulator ya -p ios -a arm64 -m release -b yui-ios-prebuilt
 
 # Web WASM（Emscripten）
-ya -p em -m release -b yui-web.html
+ya -p em -m release -b yui-web.js
 ```

@@ -5,7 +5,7 @@
 ## 1. 编译 WASM
 
 ```bash
-ya -p em -m release -b yui-web.html
+ya -p em -m release -b yui-web.js
 ```
 
 或 Makefile：
@@ -50,4 +50,4 @@ platform/web/vanilla/
 ## 4. 与 app/playground.html 的关系
 
 `app/ya.py` 里原有 `playground.html` 等目标保留，用于直接 emcc 调试。  
-`yui-web.html` 走 `platform/common/yui_boot.c`，与 PC / 移动端统一启动流程。
+`yui-web.js` 走 `platform/common/yui_boot.c`，与 PC / 移动端统一启动流程。

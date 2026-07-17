@@ -75,7 +75,7 @@ ios-app:
 	@echo "App: build/ios-xcode/Debug/YuiApp.app"
 
 web:
-	ya -p em -m release -b yui-web.html
+	ya -p em -m release -b yui-web.js
 	@echo "WASM: platform/web/vanilla/yui/playground.js"
 
 web-serve:
