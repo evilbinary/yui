@@ -1108,7 +1108,48 @@ static void backend_pointer_to_logical(int *x, int *y) {
         *y = (int)((float)(*y) / yui_density);
     }
 }
+
+static void backend_finger_to_logical(const SDL_TouchFingerEvent *finger, int *x, int *y) {
+    int win_w = 0, win_h = 0;
+    SDL_GetWindowSize(window, &win_w, &win_h);
+    if (win_w <= 0 || win_h <= 0) {
+        *x = 0;
+        *y = 0;
+        return;
+    }
+    *x = (int)(finger->x * win_w);
+    *y = (int)(finger->y * win_h);
+}
 #endif
+
+static void backend_deliver_mouse_event(Layer* root, int mouse_x, int mouse_y,
+                                        int event_state, Uint8 button,
+                                        SDL_EventType sdl_type, int clicks) {
+    MouseEvent mouse_event;
+    SDL_Point mouse_pos;
+    int deliver;
+
+    if (!root) {
+        return;
+    }
+
+    mouse_pos.x = mouse_x;
+    mouse_pos.y = mouse_y;
+    memset(&mouse_event, 0, sizeof(mouse_event));
+    mouse_event.x = mouse_x;
+    mouse_event.y = mouse_y;
+    mouse_event.button = button;
+    mouse_event.state = event_state;
+    mouse_event.clicks = clicks;
+
+    handle_scrollbar_drag_event(root, mouse_x, mouse_y, sdl_type);
+
+    deliver = (event_state == SDL_MOUSEMOTION || event_state == SDL_RELEASED) ||
+              SDL_PointInRect(&mouse_pos, &root->rect);
+    if (deliver) {
+        handle_mouse_event(root, &mouse_event);
+    }
+}
 
 void draw_rounded_rect_with_border(SDL_Renderer* renderer, int x, int y, int w, int h, int radius, int border_width, SDL_Color bg_color, SDL_Color border_color);
 
@@ -1474,12 +1515,16 @@ void handle_event(Layer* root, SDL_Event* event) {
     // 处理鼠标事件
     if (event->type == SDL_MOUSEBUTTONDOWN || event->type == SDL_MOUSEBUTTONUP || event->type == SDL_MOUSEMOTION) {
         int mouse_x, mouse_y;
+        int event_state;
+        Uint8 button = SDL_BUTTON_LEFT;
+        int clicks = 0;
 
-        // 根据事件类型选择正确的结构体成员
         if (event->type == SDL_MOUSEBUTTONDOWN || event->type == SDL_MOUSEBUTTONUP) {
             mouse_x = event->button.x;
             mouse_y = event->button.y;
-        } else { // SDL_MOUSEMOTION
+            button = event->button.button;
+            clicks = event->button.clicks;
+        } else {
             mouse_x = event->motion.x;
             mouse_y = event->motion.y;
         }
@@ -1487,43 +1532,26 @@ void handle_event(Layer* root, SDL_Event* event) {
         backend_pointer_to_logical(&mouse_x, &mouse_y);
 #endif
 
-        SDL_Point mouse_pos = { mouse_x, mouse_y };
-        int event_state;
         if (event->type == SDL_MOUSEBUTTONDOWN) {
             event_state = SDL_PRESSED;
-            if (event->button.button == SDL_BUTTON_LEFT) {
+            if (button == SDL_BUTTON_LEFT) {
                 pointer_drag_active = 1;
                 pointer_start_x = mouse_x;
                 pointer_start_y = mouse_y;
             }
         } else if (event->type == SDL_MOUSEBUTTONUP) {
             event_state = SDL_RELEASED;
-            if (event->button.button == SDL_BUTTON_LEFT && pointer_drag_active) {
+            if (button == SDL_BUTTON_LEFT && pointer_drag_active) {
                 backend_emit_swipe_event(root, mouse_x, mouse_y,
                     mouse_x - pointer_start_x, mouse_y - pointer_start_y);
                 pointer_drag_active = 0;
             }
-        } else if (event->type == SDL_MOUSEMOTION) {
-            event_state = SDL_MOUSEMOTION;
         } else {
-            event_state = 0;
+            event_state = SDL_MOUSEMOTION;
         }
 
-        MouseEvent mouse_event = {
-            .x = mouse_x,
-            .y = mouse_y,
-            .button = event->button.button,
-            .state = event_state,
-            .clicks = (event->type == SDL_MOUSEBUTTONDOWN || event->type == SDL_MOUSEBUTTONUP)
-                      ? event->button.clicks : 0
-        };
-
-        // 调用事件系统处理滚动条拖动
-        handle_scrollbar_drag_event(root, mouse_x, mouse_y, event->type);
-
-        if (SDL_PointInRect(&mouse_pos, &root->rect)) {
-            handle_mouse_event(root, &mouse_event);
-        }
+        backend_deliver_mouse_event(root, mouse_x, mouse_y, event_state, button,
+                                    event->type, clicks);
     }
     // 添加鼠标滚轮事件处理
     else if (event->type == SDL_MOUSEWHEEL) {
@@ -1593,6 +1621,13 @@ void handle_event(Layer* root, SDL_Event* event) {
             touchState.tapCount = 1;
         }
         touchState.lastTapTime = currentTime;
+
+#ifdef __EMSCRIPTEN__
+        if (touchState.fingerCount == 1) {
+            backend_deliver_mouse_event(root, x, y, SDL_PRESSED, SDL_BUTTON_LEFT,
+                                        SDL_FINGERDOWN, 0);
+        }
+#endif
     }
     // 触摸移动事件
     else if (event->type == SDL_FINGERMOTION) {
@@ -1635,6 +1670,13 @@ void handle_event(Layer* root, SDL_Event* event) {
                 touchState.longPressDetected = 1;
             }
         }
+
+#ifdef __EMSCRIPTEN__
+        if (touchState.fingerCount > 0) {
+            backend_deliver_mouse_event(root, x, y, SDL_MOUSEMOTION, SDL_BUTTON_LEFT,
+                                        SDL_FINGERMOTION, 0);
+        }
+#endif
     }
     // 触摸结束事件
     else if (event->type == SDL_FINGERUP) {
@@ -1669,6 +1711,11 @@ void handle_event(Layer* root, SDL_Event* event) {
             backend_emit_swipe_event(root, x, y,
                 x - touch_swipe_start_x, y - touch_swipe_start_y);
         }
+
+#ifdef __EMSCRIPTEN__
+        backend_deliver_mouse_event(root, x, y, SDL_RELEASED, SDL_BUTTON_LEFT,
+                                    SDL_FINGERUP, 0);
+#endif
         
         // 如果所有手指都离开屏幕，重置状态
         if (touchState.fingerCount == 0) {
