@@ -27,7 +27,7 @@
             "id": "status_bar",
             "type": "View",
             "variant": "toolbar",
-            "size": [390, 24],
+            "size": [0, 24],
             "layout": {
                 "type": "horizontal",
                 "spacing": 0,

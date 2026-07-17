@@ -215,16 +215,8 @@ void render_layer(Layer* layer) {
             } else {
                 backend_render_fill_rect(&layer->rect, layer->bg_color);
             }
-        } else {
-            if (layer->backdrop_filter) {
-                backend_render_backdrop_filter(&layer->rect, layer->blur_radius, layer->saturation, layer->brightness);
-            }
-
-            if (layer->radius > 0) {
-                backend_render_rounded_rect(&layer->rect, layer->bg_color, layer->radius);
-            } else {
-                backend_render_fill_rect(&layer->rect, layer->bg_color);
-            }
+        } else if (layer->backdrop_filter) {
+            backend_render_backdrop_filter(&layer->rect, layer->blur_radius, layer->saturation, layer->brightness);
         }
     }
 
@@ -409,32 +401,35 @@ void render_inspect_overlay(Layer* layer) {
     }
 }
 
+static void render_rect_intersect(Rect* out, const Rect* a, const Rect* b) {
+    int left = (int)fmax((double)a->x, (double)b->x);
+    int top = (int)fmax((double)a->y, (double)b->y);
+    int right = (int)fmin((double)(a->x + a->w), (double)(b->x + b->w));
+    int bottom = (int)fmin((double)(a->y + a->h), (double)(b->y + b->h));
+
+    if (left < right && top < bottom) {
+        out->x = left;
+        out->y = top;
+        out->w = right - left;
+        out->h = bottom - top;
+    } else {
+        out->x = 0;
+        out->y = 0;
+        out->w = 0;
+        out->h = 0;
+    }
+}
+
 void render_clip_start(Layer* layer,Rect* prev_clip){
     backend_render_get_clip_rect(prev_clip);
-    // 设置当前图层的裁剪区域
     Rect clip_rect = layer->rect;
+    Rect intersected;
     
-    // 如果存在父级裁剪区域，则取交集作为最终裁剪区域
     if (prev_clip->w > 0 && prev_clip->h > 0) {
-        // 计算两个矩形的交集
-        int left = fmax(clip_rect.x, prev_clip->x);
-        int top = fmax(clip_rect.y, prev_clip->y);
-        int right = fmin(clip_rect.x + clip_rect.w, prev_clip->x + prev_clip->w);
-        int bottom = fmin(clip_rect.y + clip_rect.h, prev_clip->y + prev_clip->h);
-        
-        if (left < right && top < bottom) {
-            clip_rect.x = left;
-            clip_rect.y = top;
-            clip_rect.w = right - left;
-            clip_rect.h = bottom - top;
-        } else {
-            // 没有交集，设置一个空的裁剪区域
-            clip_rect.w = 0;
-            clip_rect.h = 0;
-        }
+        render_rect_intersect(&intersected, &clip_rect, prev_clip);
+        clip_rect = intersected;
     }
     
-    // 应用裁剪区域
     backend_render_set_clip_rect(&clip_rect);
 }
 
