@@ -6,6 +6,7 @@
  *      INCLUDES
  *********************/
 #include "lv_port_indev.h"
+#include "../lv_port.h"
 
 #ifdef D_SDL
 #include <SDL2/SDL.h>
@@ -124,6 +125,29 @@ void lv_port_indev_poll(void)
         } else if (event.type == SDL_MOUSEBUTTONUP) {
             g_mouse_point.x = event.button.x;
             g_mouse_point.y = event.button.y;
+            g_mouse_pressed = false;
+        } else if (event.type == SDL_FINGERDOWN) {
+            int w = lv_port_get_width();
+            int h = lv_port_get_height();
+            if (w > 0 && h > 0) {
+                g_mouse_point.x = (lv_coord_t)(event.tfinger.x * w);
+                g_mouse_point.y = (lv_coord_t)(event.tfinger.y * h);
+            }
+            g_mouse_pressed = true;
+        } else if (event.type == SDL_FINGERMOTION) {
+            int w = lv_port_get_width();
+            int h = lv_port_get_height();
+            if (w > 0 && h > 0) {
+                g_mouse_point.x = (lv_coord_t)(event.tfinger.x * w);
+                g_mouse_point.y = (lv_coord_t)(event.tfinger.y * h);
+            }
+        } else if (event.type == SDL_FINGERUP) {
+            int w = lv_port_get_width();
+            int h = lv_port_get_height();
+            if (w > 0 && h > 0) {
+                g_mouse_point.x = (lv_coord_t)(event.tfinger.x * w);
+                g_mouse_point.y = (lv_coord_t)(event.tfinger.y * h);
+            }
             g_mouse_pressed = false;
         }
     }

@@ -246,14 +246,19 @@ static void disp_init(void)
 {
     Uint32 window_flags;
 
+#ifdef __EMSCRIPTEN__
+    SDL_SetHint(SDL_HINT_MOUSE_TOUCH_EVENTS, "0");
+    SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "0");
+    SDL_SetHint(SDL_HINT_EMSCRIPTEN_ASYNCIFY, "0");
+    SDL_SetHint(SDL_HINT_RENDER_VSYNC, "0");
+#endif
+
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
         fprintf(stderr, "lv_port_disp_init: SDL_Init failed: %s\n", SDL_GetError());
         return;
     }
 
 #ifdef __EMSCRIPTEN__
-    SDL_SetHint(SDL_HINT_EMSCRIPTEN_ASYNCIFY, "0");
-    SDL_SetHint(SDL_HINT_RENDER_VSYNC, "0");
     window_flags = SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI;
 #else
     window_flags = SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI;

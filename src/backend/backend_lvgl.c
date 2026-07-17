@@ -7,7 +7,6 @@
 #include "popup_manager.h"
 #include "log.h"
 #include "../../lib/lvgl/lv_port.h"
-#include "../../lib/lvgl/lvgl.h"
 
 #ifdef YUI_HAS_LVGLMODULE
 #include "../../lib/lvglmodule/lvgl_component.h"
@@ -54,6 +53,194 @@ static int g_update_callback_count = 0;
 static ResizeCallback g_resize_callback = NULL;
 
 #if defined(YUI_LVGL_PORT_SDL)
+
+#define LVGL_MAX_TOUCHES 10
+#define LVGL_SWIPE_THRESHOLD_PX 32
+
+typedef struct {
+    int fingerCount;
+    int lastX[LVGL_MAX_TOUCHES];
+    int lastY[LVGL_MAX_TOUCHES];
+    Uint32 startTime;
+    Uint32 lastTapTime;
+    int tapCount;
+    int longPressDetected;
+} LvglTouchState;
+
+static LvglTouchState g_touch_state;
+static int g_pointer_drag_active = 0;
+static int g_pointer_start_x = 0;
+static int g_pointer_start_y = 0;
+static int g_touch_swipe_start_x = 0;
+static int g_touch_swipe_start_y = 0;
+
+#ifdef __EMSCRIPTEN__
+EM_JS(int, lvgl_emscripten_render_text_rgba, (const char* utf8, int font_px, int r, int g, int b, int a, int* out_w, int* out_h), {
+    var text = UTF8ToString(utf8);
+    if (!text) {
+        return 0;
+    }
+    var family = 'Roboto, "Segoe UI", Arial, sans-serif';
+    var px = font_px > 0 ? font_px : 16;
+    var canvas = document.createElement('canvas');
+    var ctx = canvas.getContext('2d');
+    ctx.font = px + 'px ' + family;
+    var metrics = ctx.measureText(text);
+    var w = Math.ceil(metrics.width) + 4;
+    var h = Math.ceil(px * 1.4);
+    canvas.width = w;
+    canvas.height = h;
+    ctx.font = px + 'px ' + family;
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = 'rgba(' + r + ',' + g + ',' + b + ',' + (a / 255) + ')';
+    ctx.fillText(text, 2, h / 2);
+    var img = ctx.getImageData(0, 0, w, h);
+    var size = w * h * 4;
+    var ptr = _malloc(size);
+    if (!ptr) {
+        return 0;
+    }
+    HEAPU8.set(img.data, ptr);
+    setValue(out_w, w, 'i32');
+    setValue(out_h, h, 'i32');
+    return ptr;
+});
+
+static SDL_Surface* lvgl_emscripten_text_surface(const char* text, Color color, int target_px)
+{
+    int out_w = 0;
+    int out_h = 0;
+    int px;
+    int ptr;
+    SDL_Surface* wrapped;
+    SDL_Surface* owned;
+
+    if (!text || !text[0]) {
+        return NULL;
+    }
+
+    px = (int)(target_px * yui_density + 0.5f);
+    if (px < 12) {
+        px = 12;
+    }
+
+    ptr = lvgl_emscripten_render_text_rgba(text, px, color.r, color.g, color.b, color.a,
+                                          &out_w, &out_h);
+    if (!ptr || out_w <= 0 || out_h <= 0) {
+        if (ptr) {
+            free((void*)(intptr_t)ptr);
+        }
+        return NULL;
+    }
+
+    wrapped = SDL_CreateRGBSurfaceWithFormatFrom(
+        (void*)(intptr_t)ptr, out_w, out_h, 32, out_w * 4, SDL_PIXELFORMAT_RGBA32);
+    if (!wrapped) {
+        free((void*)(intptr_t)ptr);
+        return NULL;
+    }
+
+    owned = SDL_ConvertSurfaceFormat(wrapped, SDL_PIXELFORMAT_ARGB8888, 0);
+    SDL_FreeSurface(wrapped);
+    free((void*)(intptr_t)ptr);
+    if (!owned) {
+        return NULL;
+    }
+
+    SDL_SetSurfaceBlendMode(owned, SDL_BLENDMODE_BLEND);
+    return owned;
+}
+#endif
+
+static void lvgl_pointer_to_logical(int* x, int* y)
+{
+#ifdef __EMSCRIPTEN__
+    if (yui_density > 1.0f) {
+        *x = (int)((float)(*x) / yui_density);
+        *y = (int)((float)(*y) / yui_density);
+    }
+#else
+    (void)x;
+    (void)y;
+#endif
+}
+
+static void lvgl_finger_to_logical(const SDL_TouchFingerEvent* finger, int* x, int* y)
+{
+    int win_w = lv_port_get_width();
+    int win_h = lv_port_get_height();
+    if (win_w <= 0 || win_h <= 0) {
+        *x = 0;
+        *y = 0;
+        return;
+    }
+    *x = (int)(finger->x * win_w);
+    *y = (int)(finger->y * win_h);
+}
+
+static void lvgl_deliver_mouse_event(Layer* root, int mouse_x, int mouse_y,
+                                     int event_state, Uint8 button,
+                                     SDL_EventType sdl_type, int clicks)
+{
+    MouseEvent mouse_event;
+    SDL_Point mouse_pos;
+    SDL_EventType scrollbar_type;
+    int deliver;
+
+    if (!root) {
+        return;
+    }
+
+    scrollbar_type = sdl_type;
+    if (sdl_type == SDL_FINGERDOWN) {
+        scrollbar_type = SDL_MOUSEBUTTONDOWN;
+    } else if (sdl_type == SDL_FINGERMOTION) {
+        scrollbar_type = SDL_MOUSEMOTION;
+    } else if (sdl_type == SDL_FINGERUP) {
+        scrollbar_type = SDL_MOUSEBUTTONUP;
+    }
+
+    mouse_pos.x = mouse_x;
+    mouse_pos.y = mouse_y;
+    memset(&mouse_event, 0, sizeof(mouse_event));
+    mouse_event.x = mouse_x;
+    mouse_event.y = mouse_y;
+    mouse_event.button = button;
+    mouse_event.state = event_state;
+    mouse_event.clicks = clicks;
+    mouse_event.timestamp = SDL_GetTicks();
+
+    handle_scrollbar_drag_event(root, mouse_x, mouse_y, scrollbar_type);
+
+    deliver = (event_state == SDL_MOUSEMOTION || event_state == SDL_RELEASED) ||
+              SDL_PointInRect(&mouse_pos, &root->rect);
+    if (deliver) {
+        handle_mouse_event(root, &mouse_event);
+    }
+}
+
+static void lvgl_emit_swipe_event(Layer* root, int x, int y, int dx, int dy)
+{
+    int adx = dx < 0 ? -dx : dx;
+    int ady = dy < 0 ? -dy : dy;
+    TouchEvent touchEvent;
+
+    if (adx < LVGL_SWIPE_THRESHOLD_PX || adx < ady) {
+        return;
+    }
+
+    memset(&touchEvent, 0, sizeof(touchEvent));
+    touchEvent.type = TOUCH_TYPE_SWIPE;
+    touchEvent.x = x;
+    touchEvent.y = y;
+    touchEvent.deltaX = dx;
+    touchEvent.deltaY = dy;
+    touchEvent.fingerCount = 1;
+    touchEvent.timestamp = SDL_GetTicks();
+    handle_touch_event(root, &touchEvent);
+}
+
 static void lvgl_yui_sdl_event_hook(const SDL_Event* event, void* user_data)
 {
     Layer* root = (Layer*)user_data;
@@ -83,36 +270,140 @@ static void lvgl_yui_sdl_event_hook(const SDL_Event* event, void* user_data)
         key_event.data.text.text[sizeof(key_event.data.text.text) - 1] = '\0';
         handle_key_event(root, &key_event);
     } else if (event->type == SDL_MOUSEBUTTONDOWN || event->type == SDL_MOUSEBUTTONUP ||
-        event->type == SDL_MOUSEMOTION) {
+               event->type == SDL_MOUSEMOTION) {
         int mouse_x;
         int mouse_y;
+        int event_state;
+        Uint8 button = SDL_BUTTON_LEFT;
+        int clicks = 0;
 
-        if (event->type == SDL_MOUSEMOTION) {
-            mouse_x = event->motion.x;
-            mouse_y = event->motion.y;
-            handle_scrollbar_drag_event(root, mouse_x, mouse_y, event->type);
-        } else {
-            MouseEvent mouse_event;
-            int event_state;
-
+        if (event->type == SDL_MOUSEBUTTONDOWN || event->type == SDL_MOUSEBUTTONUP) {
             mouse_x = event->button.x;
             mouse_y = event->button.y;
-            event_state = (event->type == SDL_MOUSEBUTTONDOWN) ? SDL_PRESSED : SDL_RELEASED;
-            handle_scrollbar_drag_event(root, mouse_x, mouse_y, event->type);
-
-            mouse_event.x = mouse_x;
-            mouse_event.y = mouse_y;
-            mouse_event.button = event->button.button;
-            mouse_event.state = event_state;
-            mouse_event.clicks = event->button.clicks;
-            mouse_event.timestamp = SDL_GetTicks();
-            handle_mouse_event(root, &mouse_event);
+            button = event->button.button;
+            clicks = event->button.clicks;
+        } else {
+            mouse_x = event->motion.x;
+            mouse_y = event->motion.y;
         }
+        lvgl_pointer_to_logical(&mouse_x, &mouse_y);
+
+        if (event->type == SDL_MOUSEBUTTONDOWN) {
+            event_state = SDL_PRESSED;
+            if (button == SDL_BUTTON_LEFT) {
+                g_pointer_drag_active = 1;
+                g_pointer_start_x = mouse_x;
+                g_pointer_start_y = mouse_y;
+            }
+        } else if (event->type == SDL_MOUSEBUTTONUP) {
+            event_state = SDL_RELEASED;
+            if (button == SDL_BUTTON_LEFT && g_pointer_drag_active) {
+                lvgl_emit_swipe_event(root, mouse_x, mouse_y,
+                                      mouse_x - g_pointer_start_x,
+                                      mouse_y - g_pointer_start_y);
+                g_pointer_drag_active = 0;
+            }
+        } else {
+            event_state = SDL_MOUSEMOTION;
+        }
+
+        lvgl_deliver_mouse_event(root, mouse_x, mouse_y, event_state, button,
+                                 event->type, clicks);
     } else if (event->type == SDL_MOUSEWHEEL) {
         int mouse_x = 0;
         int mouse_y = 0;
         SDL_GetMouseState(&mouse_x, &mouse_y);
-        handle_scroll_event(root, mouse_x, mouse_y, event->wheel.x, -event->wheel.y);
+        lvgl_pointer_to_logical(&mouse_x, &mouse_y);
+        if (SDL_PointInRect(&(SDL_Point){mouse_x, mouse_y}, &root->rect)) {
+            handle_scroll_event(root, mouse_x, mouse_y, event->wheel.x, -event->wheel.y);
+        }
+    } else if (event->type == SDL_FINGERDOWN) {
+        int x;
+        int y;
+        TouchEvent touchEvent;
+
+        lvgl_finger_to_logical(&event->tfinger, &x, &y);
+        g_touch_state.fingerCount++;
+        if (g_touch_state.fingerCount == 1) {
+            g_touch_state.startTime = SDL_GetTicks();
+            g_touch_state.longPressDetected = 0;
+            g_touch_swipe_start_x = x;
+            g_touch_swipe_start_y = y;
+        }
+
+        {
+            int touchId = (int)(event->tfinger.fingerId % LVGL_MAX_TOUCHES);
+            g_touch_state.lastX[touchId] = x;
+            g_touch_state.lastY[touchId] = y;
+        }
+
+        memset(&touchEvent, 0, sizeof(touchEvent));
+        touchEvent.type = TOUCH_TYPE_START;
+        touchEvent.x = x;
+        touchEvent.y = y;
+        touchEvent.fingerCount = g_touch_state.fingerCount;
+        touchEvent.timestamp = SDL_GetTicks();
+        handle_touch_event(root, &touchEvent);
+
+        if (g_touch_state.fingerCount == 1) {
+            lvgl_deliver_mouse_event(root, x, y, SDL_PRESSED, SDL_BUTTON_LEFT,
+                                     SDL_FINGERDOWN, 0);
+        }
+    } else if (event->type == SDL_FINGERMOTION) {
+        int x;
+        int y;
+        int touchId;
+        int deltaX;
+        int deltaY;
+        TouchEvent touchEvent;
+
+        lvgl_finger_to_logical(&event->tfinger, &x, &y);
+        touchId = (int)(event->tfinger.fingerId % LVGL_MAX_TOUCHES);
+        deltaX = x - g_touch_state.lastX[touchId];
+        deltaY = y - g_touch_state.lastY[touchId];
+        g_touch_state.lastX[touchId] = x;
+        g_touch_state.lastY[touchId] = y;
+
+        memset(&touchEvent, 0, sizeof(touchEvent));
+        touchEvent.type = TOUCH_TYPE_MOVE;
+        touchEvent.x = x;
+        touchEvent.y = y;
+        touchEvent.deltaX = deltaX;
+        touchEvent.deltaY = deltaY;
+        touchEvent.fingerCount = g_touch_state.fingerCount;
+        touchEvent.timestamp = SDL_GetTicks();
+        handle_touch_event(root, &touchEvent);
+
+        if (g_touch_state.fingerCount > 0) {
+            lvgl_deliver_mouse_event(root, x, y, SDL_MOUSEMOTION, SDL_BUTTON_LEFT,
+                                     SDL_FINGERMOTION, 0);
+        }
+    } else if (event->type == SDL_FINGERUP) {
+        int x;
+        int y;
+        TouchEvent touchEvent;
+
+        if (g_touch_state.fingerCount > 0) {
+            g_touch_state.fingerCount--;
+        }
+
+        lvgl_finger_to_logical(&event->tfinger, &x, &y);
+
+        memset(&touchEvent, 0, sizeof(touchEvent));
+        touchEvent.type = TOUCH_TYPE_END;
+        touchEvent.x = x;
+        touchEvent.y = y;
+        touchEvent.fingerCount = g_touch_state.fingerCount;
+        touchEvent.timestamp = SDL_GetTicks();
+        handle_touch_event(root, &touchEvent);
+
+        if (g_touch_state.fingerCount == 0) {
+            lvgl_emit_swipe_event(root, x, y,
+                                  x - g_touch_swipe_start_x,
+                                  y - g_touch_swipe_start_y);
+            lvgl_deliver_mouse_event(root, x, y, SDL_RELEASED, SDL_BUTTON_LEFT,
+                                     SDL_FINGERUP, 0);
+        }
     }
 }
 #endif
@@ -159,10 +450,57 @@ static int font_file_exists(const char* path)
 
 static TTF_Font* open_font_at(const char* path, int size)
 {
+#ifdef __EMSCRIPTEN__
+    FILE* f;
+    long file_size;
+    unsigned char* font_data;
+    SDL_RWops* rw;
+    TTF_Font* font;
+
+    if (!path || !path[0] || size <= 0) {
+        return NULL;
+    }
+
+    f = fopen(path, "rb");
+    if (!f) {
+        return NULL;
+    }
+
+    fseek(f, 0, SEEK_END);
+    file_size = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    if (file_size <= 0) {
+        fclose(f);
+        return NULL;
+    }
+
+    font_data = (unsigned char*)malloc((size_t)file_size);
+    if (!font_data) {
+        fclose(f);
+        return NULL;
+    }
+
+    if (fread(font_data, 1, (size_t)file_size, f) != (size_t)file_size) {
+        free(font_data);
+        fclose(f);
+        return NULL;
+    }
+    fclose(f);
+
+    rw = SDL_RWFromConstMem(font_data, (int)file_size);
+    if (!rw) {
+        free(font_data);
+        return NULL;
+    }
+
+    font = TTF_OpenFontRW(rw, 1, (int)(size * yui_density));
+    return font;
+#else
     if (!font_file_exists(path)) {
         return NULL;
     }
     return TTF_OpenFont(path, (int)(size * yui_density));
+#endif
 }
 
 static void build_weighted_font_path(const char* font_path, const char* weight,
@@ -253,6 +591,19 @@ int backend_init(void)
         return -1;
     }
 
+#if defined(YUI_LVGL_PORT_SDL) && defined(__EMSCRIPTEN__)
+    {
+        SDL_Renderer* renderer = lv_port_get_renderer();
+        int render_w = 0;
+        int render_h = 0;
+        int logic_w = lv_port_get_width();
+        if (renderer && logic_w > 0 &&
+            SDL_GetRendererOutputSize(renderer, &render_w, &render_h) == 0) {
+            backend_set_density((float)render_w / (float)logic_w);
+        }
+    }
+#endif
+
 #if defined(YUI_LVGL_PORT_SDL)
     if (TTF_Init() == -1) {
         LOGE("backend_lvgl", "TTF_Init failed: %s", TTF_GetError());
@@ -307,6 +658,7 @@ Texture* backend_render_texture(DFont* font, const char* text, Color color)
     SDL_Surface* surface;
     SDL_Surface* converted;
     SDL_Texture* texture;
+    int font_size_px = 16;
 
     if (!font || !text || text[0] == '\0') {
         return NULL;
@@ -317,7 +669,44 @@ Texture* backend_render_texture(DFont* font, const char* text, Color color)
         return NULL;
     }
 
-    surface = TTF_RenderUTF8_Blended(font, text, color);
+    font_size_px = TTF_FontHeight((TTF_Font*)font);
+    if (font_size_px <= 0) {
+        font_size_px = 16;
+    }
+#ifdef __EMSCRIPTEN__
+    {
+        float density = backend_get_density();
+        if (density > 1.0f) {
+            font_size_px = (int)(font_size_px / density + 0.5f);
+        }
+        if (font_size_px <= 0) {
+            font_size_px = 16;
+        }
+    }
+#endif
+
+#ifdef __EMSCRIPTEN__
+    surface = lvgl_emscripten_text_surface(text, color, font_size_px);
+    if (!surface) {
+        return NULL;
+    }
+    texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888,
+                                SDL_TEXTUREACCESS_STREAMING,
+                                surface->w, surface->h);
+    if (!texture) {
+        SDL_FreeSurface(surface);
+        return NULL;
+    }
+    if (SDL_UpdateTexture(texture, NULL, surface->pixels, surface->pitch) != 0) {
+        SDL_DestroyTexture(texture);
+        SDL_FreeSurface(surface);
+        return NULL;
+    }
+    SDL_FreeSurface(surface);
+    SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
+    return texture;
+#else
+    surface = TTF_RenderUTF8_Blended((TTF_Font*)font, text, color);
     if (!surface) {
         LOGE("backend_lvgl", "TTF_RenderUTF8_Blended failed: %s", TTF_GetError());
         return NULL;
@@ -345,6 +734,7 @@ Texture* backend_render_texture(DFont* font, const char* text, Color color)
 
     SDL_FreeSurface(converted);
     return texture;
+#endif
 #else
     (void)font;
     (void)text;
