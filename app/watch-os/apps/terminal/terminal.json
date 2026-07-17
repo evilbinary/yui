@@ -1,0 +1,82 @@
+{
+    "id": "page_terminal",
+    "title": "终端",
+    "icon": "💻",
+    "watchApp": { "id": "terminal", "order": 48 },
+    "js": ["terminal.js"],
+    "type": "View",
+    "variant": "surface",
+    "flex": 1,
+    "scrollable": 0,
+    "layout": { "type": "vertical", "spacing": 4, "padding": [2, 12, 6, 12] },
+    "events": { "onLoad": "@onTerminalLoad", "onShow": "@onTerminalShow" },
+    "children": [
+        { "id": "term_brand", "type": "Label", "variant": "overline", "text": "TERMINAL" },
+        { "id": "term_title", "type": "Label", "variant": "title", "text": "终端" },
+        {
+            "id": "term_output",
+            "type": "Text",
+            "flex": 1,
+            "size": [366, 220],
+            "multiline": true,
+            "editable": false,
+            "scrollable": 1,
+            "style": {
+                "bgColor": "#0c0c0e",
+                "color": "#5af78e",
+                "fontSize": 11,
+                "borderRadius": 10,
+                "padding": [6, 8, 6, 8]
+            }
+        },
+        {
+            "id": "term_input_row",
+            "type": "View",
+            "size": [366, 30],
+            "layout": { "type": "horizontal", "spacing": 4, "align": "center" },
+            "children": [
+                { "id": "term_prompt", "type": "Label", "variant": "caption", "text": "$", "size": [10, 18], "style": { "color": "#5af78e" } },
+                {
+                    "id": "term_input",
+                    "type": "Text",
+                    "flex": 1,
+                    "size": [0, 26],
+                    "multiline": false,
+                    "editable": true,
+                    "placeholder": "命令…",
+                    "style": {
+                        "bgColor": "#1a1a1e",
+                        "color": "#f8f8f2",
+                        "fontSize": 11,
+                        "borderRadius": 8,
+                        "padding": [4, 8, 4, 8]
+                    }
+                }
+            ]
+        },
+        {
+            "id": "term_actions",
+            "type": "View",
+            "size": [366, 32],
+            "layout": { "type": "horizontal", "spacing": 4 },
+            "children": [
+                { "id": "btn_term_run", "type": "Button", "variant": "primary", "text": "运行", "flex": 1, "events": { "onClick": "@runTerminalCommand" } },
+                { "id": "btn_term_hist_up", "type": "Button", "variant": "secondary", "text": "↑", "size": [36, 32], "events": { "onClick": "@terminalHistUp" } },
+                { "id": "btn_term_hist_down", "type": "Button", "variant": "secondary", "text": "↓", "size": [36, 32], "events": { "onClick": "@terminalHistDown" } },
+                { "id": "btn_term_clear", "type": "Button", "variant": "tertiary", "text": "清屏", "size": [48, 32], "events": { "onClick": "@clearTerminal" } }
+            ]
+        },
+        {
+            "id": "term_quick",
+            "type": "View",
+            "size": [366, 30],
+            "layout": { "type": "horizontal", "spacing": 4 },
+            "children": [
+                { "id": "btn_term_q_help", "type": "Button", "variant": "pill", "text": "help", "flex": 1, "size": [0, 28], "events": { "onClick": "@terminalQuickHelp" } },
+                { "id": "btn_term_q_ls", "type": "Button", "variant": "pill", "text": "ls", "flex": 1, "size": [0, 28], "events": { "onClick": "@terminalQuickLs" } },
+                { "id": "btn_term_q_pwd", "type": "Button", "variant": "pill", "text": "pwd", "flex": 1, "size": [0, 28], "events": { "onClick": "@terminalQuickPwd" } },
+                { "id": "btn_term_q_apps", "type": "Button", "variant": "pill", "text": "apps", "flex": 1, "size": [0, 28], "events": { "onClick": "@terminalQuickApps" } }
+            ]
+        }
+    ]
+}
