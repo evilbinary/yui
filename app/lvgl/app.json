@@ -2,12 +2,18 @@
     "id": "lvgl_demo",
     "type": "View",
     "text": "YUI LVGL Demo",
-    "size": [390, 480],
+    "size": [690, 480],
     "bgColor": "#1a1a2e",
     "scrollable": 1,
     "js": ["app.js"],
     "events": {
-        "onLoad": "@onAppLoad"
+        "onLoad": "@onAppLoad",
+        "togglePerfOverlayBtn.onClick": "@togglePerfOverlay",
+        "refreshPerfStatsBtn.onClick": "@refreshPerfStats",
+        "autoTestBtn.onClick": "@runPerfAutoTest",
+        "stressBtn.onClick": "@togglePerfStress",
+        "exportPerfBtn.onClick": "@exportPerfStats",
+        "disablePerfBtn.onClick": "@disablePerf"
     },
     "layout": {
         "type": "vertical",
@@ -15,6 +21,108 @@
         "padding": [12, 12, 12, 12]
     },
     "children": [
+        {
+            "id": "perf_panel",
+            "type": "View",
+            "size": [666, 180],
+            "style": {
+                "bgColor": "#16213e",
+                "borderRadius": 8
+            },
+            "layout": {
+                "type": "vertical",
+                "spacing": 6,
+                "padding": [8, 8, 8, 8]
+            },
+            "children": [
+                {
+                    "id": "perf_title",
+                    "type": "LvLabel",
+                    "text": "性能检测 (YUI.perf)",
+                    "size": [650, 20],
+                    "style": { "color": "#f5a623", "fontSize": 14 }
+                },
+                {
+                    "id": "perf_status_label",
+                    "type": "LvLabel",
+                    "text": "状态：等待 onLoad…",
+                    "size": [650, 18],
+                    "style": { "color": "#a0a0b0", "fontSize": 11 }
+                },
+                {
+                    "id": "perf_stats_label",
+                    "type": "LvLabel",
+                    "text": "统计：（点击「刷新」或「自动检测」）",
+                    "size": [650, 52],
+                    "style": { "color": "#a6e3a1", "fontSize": 10 }
+                },
+                {
+                    "id": "perf_toolbar_row1",
+                    "type": "View",
+                    "size": [650, 30],
+                    "layout": { "type": "horizontal", "spacing": 6 },
+                    "children": [
+                        {
+                            "id": "togglePerfOverlayBtn",
+                            "type": "LvBtn",
+                            "text": "HUD 开",
+                            "size": [172, 28],
+                            "style": { "bgColor": "#4a90d9", "color": "#ffffff", "fontSize": 10 }
+                        },
+                        {
+                            "id": "refreshPerfStatsBtn",
+                            "type": "LvBtn",
+                            "text": "刷新",
+                            "size": [172, 28],
+                            "style": { "bgColor": "#45475a", "color": "#cdd6f4", "fontSize": 10 }
+                        },
+                        {
+                            "id": "autoTestBtn",
+                            "type": "LvBtn",
+                            "text": "自动检测",
+                            "size": [172, 28],
+                            "style": { "bgColor": "#0f9b8e", "color": "#ffffff", "fontSize": 10 }
+                        },
+                        {
+                            "id": "exportPerfBtn",
+                            "type": "LvBtn",
+                            "text": "导出",
+                            "size": [172, 28],
+                            "style": { "bgColor": "#7b68ee", "color": "#ffffff", "fontSize": 10 }
+                        }
+                    ]
+                },
+                {
+                    "id": "perf_toolbar_row2",
+                    "type": "View",
+                    "size": [650, 30],
+                    "layout": { "type": "horizontal", "spacing": 6 },
+                    "children": [
+                        {
+                            "id": "stressBtn",
+                            "type": "LvBtn",
+                            "text": "开始压测",
+                            "size": [100, 28],
+                            "style": { "bgColor": "#e94560", "color": "#ffffff", "fontSize": 10 }
+                        },
+                        {
+                            "id": "disablePerfBtn",
+                            "type": "LvBtn",
+                            "text": "关闭 perf",
+                            "size": [100, 28],
+                            "style": { "bgColor": "#313244", "color": "#a6adc8", "fontSize": 10 }
+                        },
+                        {
+                            "id": "perf_pulse_label",
+                            "type": "LvLabel",
+                            "text": "脉冲：0",
+                            "size": [200, 28],
+                            "style": { "color": "#f9e2af", "fontSize": 11 }
+                        }
+                    ]
+                }
+            ]
+        },
         {
             "id": "lvgl_title",
             "type": "LvLabel",
@@ -25,7 +133,7 @@
         {
             "id": "lvgl_subtitle",
             "type": "LvLabel",
-            "text": "Native YUI layers below LVGL overlay widgets",
+            "text": "LVGL widgets below; perf panel at top",
             "size": [340, 22],
             "color": "#a0a0b0"
         },
