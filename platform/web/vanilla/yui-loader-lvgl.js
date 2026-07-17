@@ -51,7 +51,7 @@
       return wasmBase;
     }).catch(function () {
       return Promise.reject(new Error(
-        wasmJs + " not found in yui/. Run: ya -p em-lvgl -m release -b yui-web-lvgl"
+        wasmJs + " not found in yui/. Run: ya -p em-lvgl -m release -b yui-web-lvgl.js"
       ));
     });
   }

@@ -81,7 +81,7 @@ target("yui-web.js")
     ),
 )
 
-target("yui-web-lvgl")
+target("yui-web-lvgl.js")
 (
     add_deps("socket", "yui", "quickjs", "jsmodule-quickjs", "yaml2json", "lvglmodule", "lvgl", "lvgl_extra"),
     add_rules("mode.debug", "mode.release", "web.artifacts"),

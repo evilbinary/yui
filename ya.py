@@ -599,6 +599,8 @@ def after_build_web_artifacts(target):
                 os.path.join(build_dir, base + ext),
                 os.path.join(build_dir, name + ext),
             ]
+            if ext == ".js":
+                candidates.append(os.path.join(build_dir, base))
             for src in candidates:
                 if os.path.isfile(src):
                     dest = os.path.join(dest_dir, out_name)

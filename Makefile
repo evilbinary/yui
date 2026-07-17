@@ -79,7 +79,7 @@ web:
 	@echo "WASM: platform/web/vanilla/yui/yui-web.js"
 
 web-lvgl:
-	ya -p em -m release -b yui-web-lvgl
+	ya -p em-lvgl -m release -b yui-web-lvgl.js
 	@echo "WASM: platform/web/vanilla/yui/yui-web-lvgl.js"
 
 web-serve: web
