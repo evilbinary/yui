@@ -4,7 +4,7 @@
 
 #define printf
 
-static int layout_scale_value(int value, float scale);
+static int layout_scale_value(int value, float yui_density);
 
 static int layout_layer_is_grid(const Layer* layer)
 {
@@ -732,9 +732,9 @@ void layout_layer(Layer* layer){
     fflush(stdout);
 }
 
-static int layout_scale_value(int value, float scale) {
+static int layout_scale_value(int value, float yui_density) {
     if (value <= 0) return value;
-    int scaled = (int)(value * scale + 0.5f);
+    int scaled = (int)(value * yui_density + 0.5f);
     return scaled > 0 ? scaled : 1;
 }
 

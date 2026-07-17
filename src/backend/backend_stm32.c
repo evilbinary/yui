@@ -39,7 +39,18 @@
 extern LTDC_HandleTypeDef hltdc;
 extern DMA2D_HandleTypeDef hdma2d;
 
-float scale = 1.0;
+float yui_density = 1.0f;
+
+float backend_get_density(void) {
+    return yui_density > 0.0f ? yui_density : 1.0f;
+}
+
+void backend_set_density(float density) {
+    if (density > 0.0f) {
+        yui_density = density;
+    }
+}
+
 DFont* default_font = NULL;
 static uint32_t* framebuffer = NULL;
 

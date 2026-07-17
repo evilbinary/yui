@@ -8,13 +8,16 @@
     if (!canvas || !(canvas.width > 0) || !(canvas.height > 0)) {
       return;
     }
+    var dpr = window.devicePixelRatio || 1;
+    var logicalW = canvas.width / dpr;
+    var logicalH = canvas.height / dpr;
     var scale = Math.min(
-      window.innerWidth / canvas.width,
-      window.innerHeight / canvas.height,
+      window.innerWidth / logicalW,
+      window.innerHeight / logicalH,
       1
     );
-    var w = Math.floor(canvas.width * scale);
-    var h = Math.floor(canvas.height * scale);
+    var w = Math.floor(logicalW * scale);
+    var h = Math.floor(logicalH * scale);
     canvas.style.width = w + "px";
     canvas.style.height = h + "px";
     canvas.style.left = Math.floor((window.innerWidth - w) / 2) + "px";

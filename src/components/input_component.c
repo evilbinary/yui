@@ -58,7 +58,7 @@ static int input_get_label_width(Layer* layer) {
     int label_width = 0;
     backend_query_texture(label_texture, NULL, NULL, &label_width, NULL);
     backend_render_text_destroy(label_texture);
-    return label_width / scale;
+    return label_width / yui_density;
 }
 
 static int input_get_line_height(Layer* layer) {
@@ -70,7 +70,7 @@ static int input_get_line_height(Layer* layer) {
             int tw = 0, th = 0;
             backend_query_texture(tex, NULL, NULL, &tw, &th);
             backend_render_text_destroy(tex);
-            int line_h = th / scale;
+            int line_h = th / yui_density;
             if (line_h < 1) line_h = 1;
             return line_h;
         }
@@ -158,7 +158,7 @@ static int input_text_width(Layer* layer, const char* text, int byte_len) {
     int tw = 0, th = 0;
     backend_query_texture(tex, NULL, NULL, &tw, &th);
     backend_render_text_destroy(tex);
-    return tw / scale;
+    return tw / yui_density;
 }
 
 static int input_has_selection(InputComponent* component) {
@@ -248,8 +248,8 @@ static void input_draw_text_part(Layer* layer, const char* text, Color color,
 
     int tw = 0, th = 0;
     backend_query_texture(tex, NULL, NULL, &tw, &th);
-    int part_w = tw / scale;
-    int part_h = th / scale;
+    int part_w = tw / yui_density;
+    int part_h = th / yui_density;
     if (part_w < 1) part_w = 1;
     if (part_h < 1) part_h = 1;
 
@@ -671,9 +671,9 @@ void input_component_render(Layer* layer) {
             backend_query_texture(text_texture, NULL, NULL, &text_width, &text_height);
             Rect text_rect = {
                 layer->rect.x + pad_left,
-                layer->rect.y + (layer->rect.h - text_height / scale) / 2,
-                text_width / scale,
-                text_height / scale
+                layer->rect.y + (layer->rect.h - text_height / yui_density) / 2,
+                text_width / yui_density,
+                text_height / yui_density
             };
             backend_render_text_copy(text_texture, NULL, &text_rect);
             backend_render_text_destroy(text_texture);

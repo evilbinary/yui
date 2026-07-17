@@ -376,8 +376,8 @@ void button_component_render(Layer* layer) {
         if (text_texture) {
             int text_width, text_height;
             backend_query_texture(text_texture, NULL, NULL, &text_width, &text_height);
-            draw_w = text_width / scale;
-            draw_h = text_height / scale;
+            draw_w = text_width / yui_density;
+            draw_h = text_height / yui_density;
         }
     }
 
@@ -399,8 +399,8 @@ void button_component_render(Layer* layer) {
         int iw, ih;
         backend_query_texture(icon_tex, NULL, NULL, &iw, &ih);
         int icon_max = component->icon_size > 0 ? component->icon_size : layer->rect.h - 8;
-        icon_w = iw / scale;
-        icon_h = ih / scale;
+        icon_w = iw / yui_density;
+        icon_h = ih / yui_density;
 
         if (has_text && draw_w > 0) {
             // 为文字预留空间，剩余宽度才给图标，避免挤压文字字号

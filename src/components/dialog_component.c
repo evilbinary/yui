@@ -9,7 +9,7 @@
 #include "cJSON.h"
 
 // 外部变量
-extern float scale;
+
 
 // 默认颜色定义
 static const Color DEFAULT_TITLE_COLOR = {50, 50, 50, 255};
@@ -451,7 +451,7 @@ static int dialog_measure_text_width(Layer* text_layer, const char* text, Color 
     int w = 0, h = 0;
     backend_query_texture(tex, NULL, NULL, &w, &h);
     backend_render_text_destroy(tex);
-    return w / (int)scale;
+    return w / (int)yui_density;
 }
 
 static int dialog_get_line_height(Layer* text_layer, Color color) {
@@ -462,7 +462,7 @@ static int dialog_get_line_height(Layer* text_layer, Color color) {
     int w = 0, h = 0;
     backend_query_texture(tex, NULL, NULL, &w, &h);
     backend_render_text_destroy(tex);
-    return h / (int)scale + 4;
+    return h / (int)yui_density + 4;
 }
 
 static void dialog_parse_button_style(DialogButton* button, cJSON* style) {
@@ -795,7 +795,7 @@ static int dialog_render_wrapped_message(Layer* text_layer, DialogComponent* com
                 if (line_tex) {
                     int tw = 0, th = 0;
                     backend_query_texture(line_tex, NULL, NULL, &tw, &th);
-                    Rect line_rect = {x, draw_y, tw / (int)scale, th / (int)scale};
+                    Rect line_rect = {x, draw_y, tw / (int)yui_density, th / (int)yui_density};
                     backend_render_text_copy(line_tex, NULL, &line_rect);
                     backend_render_text_destroy(line_tex);
                 }
@@ -1077,10 +1077,10 @@ void dialog_component_render(Layer* layer) {
             int cw = 0, ch = 0;
             backend_query_texture(close_tex, NULL, NULL, &cw, &ch);
             Rect close_text = {
-                close_rect.x + (close_rect.w - cw / scale) / 2,
-                close_rect.y + (close_rect.h - ch / scale) / 2,
-                cw / scale,
-                ch / scale
+                close_rect.x + (close_rect.w - cw / yui_density) / 2,
+                close_rect.y + (close_rect.h - ch / yui_density) / 2,
+                cw / yui_density,
+                ch / yui_density
             };
             backend_render_text_copy(close_tex, NULL, &close_text);
             backend_render_text_destroy(close_tex);
@@ -1095,10 +1095,10 @@ void dialog_component_render(Layer* layer) {
             backend_query_texture(title_texture, NULL, NULL, &title_width, &title_height);
             
             Rect title_rect = {
-                rect->x + (rect->w - title_width / scale) / 2,
+                rect->x + (rect->w - title_width / yui_density) / 2,
                 current_y,
-                title_width / scale,
-                title_height / scale
+                title_width / yui_density,
+                title_height / yui_density
             };
             
             backend_render_text_copy(title_texture, NULL, &title_rect);
@@ -1159,10 +1159,10 @@ void dialog_component_render(Layer* layer) {
                 backend_query_texture(button_texture, NULL, NULL, &text_width, &text_height);
 
                 Rect text_rect = {
-                    button_rect.x + (button_rect.w - text_width / scale) / 2,
-                    button_rect.y + (button_rect.h - text_height / scale) / 2,
-                    text_width / scale,
-                    text_height / scale
+                    button_rect.x + (button_rect.w - text_width / yui_density) / 2,
+                    button_rect.y + (button_rect.h - text_height / yui_density) / 2,
+                    text_width / yui_density,
+                    text_height / yui_density
                 };
 
                 backend_render_text_copy(button_texture, NULL, &text_rect);

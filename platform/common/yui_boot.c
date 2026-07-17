@@ -199,9 +199,7 @@ void yui_set_native_surface(void* surface) {
 }
 
 void yui_set_density(float density) {
-    if (density > 0.0f) {
-        scale = density;
-    }
+    backend_set_density(density);
 }
 
 int yui_init(const char* json_path, const char* assets_dir) {
@@ -258,7 +256,7 @@ int yui_init(const char* json_path, const char* assets_dir) {
 }
 
 void yui_resize(int width, int height) {
-    float d = scale > 0.0f ? scale : 1.0f;
+    float d = yui_density > 0.0f ? yui_density : 1.0f;
 
     backend_set_windowsize(width, height);
     // if (g_root) {

@@ -350,14 +350,14 @@ void checkbox_component_render(Layer* layer) {
             backend_query_texture(text_texture, NULL, NULL, &text_width, &text_height);
             
             // 计算垂直居中的Y坐标
-            int label_y = layer->rect.y + (layer->rect.h - text_height/scale) / 2;
+            int label_y = layer->rect.y + (layer->rect.h - text_height/yui_density) / 2;
             
             // 创建目标矩形
             Rect dst_rect = {
                 .x = label_x,
                 .y = label_y,
-                .w = text_width/ scale,
-                .h = text_height/ scale
+                .w = text_width/ yui_density,
+                .h = text_height/ yui_density
             };
             
             // 渲染文本纹理

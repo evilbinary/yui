@@ -540,7 +540,17 @@ static void mobile_apply_backdrop_tone(unsigned char* data, int count,
 #define MAX_TOUCHES 10
 #define SWIPE_THRESHOLD_PX 32
 
-float scale = 1.0f;
+float yui_density = 1.0f;
+
+float backend_get_density(void) {
+    return yui_density > 0.0f ? yui_density : 1.0f;
+}
+
+void backend_set_density(float density) {
+    if (density > 0.0f) {
+        yui_density = density;
+    }
+}
 
 void backend_set_font_fallback_path(const char* path) {
 #ifdef __ANDROID__
@@ -558,7 +568,7 @@ int backend_has_font_fallback(void) {
 }
 
 static float mobile_density(void) {
-    return scale > 0.0f ? scale : 1.0f;
+    return yui_density > 0.0f ? yui_density : 1.0f;
 }
 
 static void mobile_scale_rect(const Rect* src, Rect* dst) {

@@ -28,8 +28,8 @@ static void tooltip_layer_render(Layer* layer) {
     Rect text_rect = {
         .x = layer->rect.x + 6,
         .y = layer->rect.y + 4,
-        .w = tw / scale,
-        .h = th / scale
+        .w = tw / yui_density,
+        .h = th / yui_density
     };
     backend_render_text_copy(tex, NULL, &text_rect);
     backend_render_text_destroy(tex);
@@ -53,7 +53,7 @@ static void show_tooltip(LabelComponent* comp, int mouse_x, int mouse_y) {
     backend_render_text_destroy(tex);
 
     int tooltip_avail_w = layer->rect.w - (layer->rect.w > 10 ? 10 : 0);
-    if (tw / scale <= tooltip_avail_w) return;
+    if (tw / yui_density <= tooltip_avail_w) return;
 
     // 创建 tooltip layer
     Layer* tl = malloc(sizeof(Layer));
@@ -68,8 +68,8 @@ static void show_tooltip(LabelComponent* comp, int mouse_x, int mouse_y) {
 
     tl->rect.x = mouse_x + 12;
     tl->rect.y = mouse_y + 12;
-    tl->rect.w = tw / scale + pad * 2;
-    tl->rect.h = th / scale + pad * 2;
+    tl->rect.w = tw / yui_density + pad * 2;
+    tl->rect.h = th / yui_density + pad * 2;
 
     if (tl->rect.x + tl->rect.w > sw)
         tl->rect.x = mouse_x - tl->rect.w - 4;
@@ -153,8 +153,8 @@ void label_component_set_text(LabelComponent* component, const char* text) {
         if (text_texture) {
             backend_query_texture(text_texture, NULL, NULL, &text_width, &text_height);
             backend_render_text_destroy(text_texture);
-            component->layer->rect.w = text_width / scale + 10;
-            component->layer->rect.h = text_height / scale + 10;
+            component->layer->rect.w = text_width / yui_density + 10;
+            component->layer->rect.h = text_height / yui_density + 10;
         }
     }
 }
@@ -208,7 +208,7 @@ void label_component_render(Layer* layer) {
             backend_render_text_destroy(tex);
 
             int avail_w = layer->rect.w - (layer->rect.w > 10 ? 10 : 0);
-            if (tw / scale > avail_w) {
+            if (tw / yui_density > avail_w) {
                 component->has_overflow = 1;
                 // 截断文本: 从完整长度逐步缩短直到加上 "..." 能放进（按 UTF-8 字符边界截断，避免切断 emoji）
                 int byte_len = (int)strlen(original_text);
@@ -226,7 +226,7 @@ void label_component_render(Layer* layer) {
                         int stw;
                         backend_query_texture(short_tex, NULL, NULL, &stw, NULL);
                         backend_render_text_destroy(short_tex);
-                        if (stw / scale <= avail_w) break;
+                        if (stw / yui_density <= avail_w) break;
                     }
                     byte_len = utf8_prev_prefix_bytes(original_text, safe_len);
                 }
@@ -237,8 +237,8 @@ void label_component_render(Layer* layer) {
                         int ftw, fth;
                         backend_query_texture(final_tex, NULL, NULL, &ftw, &fth);
                         Rect text_rect;
-                        text_rect.h = fth / scale;
-                        text_rect.w = ftw / scale;
+                        text_rect.h = fth / yui_density;
+                        text_rect.w = ftw / yui_density;
                         text_rect.y = layer->rect.y + (layer->rect.h - text_rect.h) / 2;
 
                         switch (component->text_alignment) {
@@ -276,8 +276,8 @@ void label_component_render(Layer* layer) {
             backend_query_texture(text_texture, NULL, NULL, &text_width, &text_height);
 
             Rect text_rect;
-            text_rect.h = text_height / scale;
-            text_rect.w = text_width / scale;
+            text_rect.h = text_height / yui_density;
+            text_rect.w = text_width / yui_density;
             text_rect.y = layer->rect.y + (layer->rect.h - text_rect.h) / 2;
 
             switch (component->text_alignment) {

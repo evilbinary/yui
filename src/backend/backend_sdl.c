@@ -33,7 +33,7 @@
 
 // ====================== 全局渲染器 ======================
 SDL_Renderer* renderer = NULL;
-float scale=1.0;
+float yui_density=1.0f;
 SDL_Window* window=NULL;
 DFont* default_font=NULL;
 Layer* g_ui_root = NULL;
@@ -91,7 +91,7 @@ static uint64_t backend_texture_cache_fnv1a_bytes(uint64_t h, const unsigned cha
 }
 
 static int backend_texture_cache_scale_key(void) {
-    return (int)(scale * 1000.0f + 0.5f);
+    return (int)(yui_density * 1000.0f + 0.5f);
 }
 
 static uint64_t backend_texture_cache_make_hash(DFont* font, int font_size, Color color, const char* text) {
@@ -527,7 +527,7 @@ static SDL_Surface* backend_render_emscripten_canvas_surface(const char* text, S
         return NULL;
     }
 
-    px = (int)(target_px * scale + 0.5f);
+    px = (int)(target_px * yui_density + 0.5f);
     if (px < 12) {
         px = 12;
     }
@@ -571,7 +571,7 @@ static SDL_Surface* backend_render_emscripten_emoji_surface(const char* text, in
         return NULL;
     }
 
-    px = (int)(target_px * scale + 0.5f);
+    px = (int)(target_px * yui_density + 0.5f);
     if (px < 12) {
         px = 12;
     }
@@ -1068,10 +1068,6 @@ void backend_main_loop();
 
 // 检查是否Retina显示屏并获取缩放因子
 float getDisplayScale(SDL_Window* window) {
-#ifdef __EMSCRIPTEN__
-    (void)window;
-    return 1.0f;
-#else
     int renderW, renderH;
     int windowW, windowH;
 
@@ -1081,16 +1077,38 @@ float getDisplayScale(SDL_Window* window) {
     }
     SDL_GL_GetDrawableSize(window, &renderW, &renderH);
     return (float)renderW / (float)windowW;
-#endif
+}
+
+float backend_get_density(void) {
+    return yui_density > 0.0f ? yui_density : 1.0f;
+}
+
+void backend_set_density(float density) {
+    if (density <= 0.0f) {
+        return;
+    }
+    yui_density = density;
+    if (renderer) {
+        SDL_RenderSetScale(renderer, yui_density, yui_density);
+    }
 }
 
 static void backend_apply_display_scale(void) {
-    if (!renderer) {
+    if (!window) {
         return;
     }
-    scale = window ? getDisplayScale(window) : 1.0f;
-    SDL_RenderSetScale(renderer, scale, scale);
+    backend_set_density(getDisplayScale(window));
 }
+
+#ifdef __EMSCRIPTEN__
+/* Emscripten MOUSE 坐标在 backing-store 空间，需换算到逻辑坐标；FINGER 已是逻辑坐标 */
+static void backend_pointer_to_logical(int *x, int *y) {
+    if (yui_density > 1.0f) {
+        *x = (int)((float)(*x) / yui_density);
+        *y = (int)((float)(*y) / yui_density);
+    }
+}
+#endif
 
 void draw_rounded_rect_with_border(SDL_Renderer* renderer, int x, int y, int w, int h, int radius, int border_width, SDL_Color bg_color, SDL_Color border_color);
 
@@ -1143,10 +1161,10 @@ int backend_init(){
     SDL_SetHint(SDL_HINT_RENDER_VSYNC, "0");
 #endif
 
-    // Emscripten 不需要 OPENGL / HIGH DPI（避免 drawable 与命中坐标不一致）
-    Uint32 window_flags = SDL_WINDOW_SHOWN;
+    // Emscripten 不需要 OPENGL；开启 HIGH DPI 以高清渲染
+    Uint32 window_flags = SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI;
 #ifndef __EMSCRIPTEN__
-    window_flags |= SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_OPENGL;
+    window_flags |= SDL_WINDOW_OPENGL;
 #endif
     
     window = SDL_CreateWindow("YUI",
@@ -1465,6 +1483,9 @@ void handle_event(Layer* root, SDL_Event* event) {
             mouse_x = event->motion.x;
             mouse_y = event->motion.y;
         }
+#ifdef __EMSCRIPTEN__
+        backend_pointer_to_logical(&mouse_x, &mouse_y);
+#endif
 
         SDL_Point mouse_pos = { mouse_x, mouse_y };
         int event_state;
@@ -1510,6 +1531,9 @@ void handle_event(Layer* root, SDL_Event* event) {
         int mouse_x = event->motion.x;
         int mouse_y = event->motion.y;
         SDL_GetMouseState(&mouse_x, &mouse_y);
+#ifdef __EMSCRIPTEN__
+        backend_pointer_to_logical(&mouse_x, &mouse_y);
+#endif
         SDL_Point mouse_pos = { mouse_x, mouse_y };
         if (SDL_PointInRect(&mouse_pos, &root->rect)) {
             // printf("鼠标滚轮事件在图层内: %d %d, %d\n",root->type, event->wheel.x, event->wheel.y);
@@ -1963,7 +1987,7 @@ static TTF_Font* emscripten_open_font_file(const char* path, int size)
         return NULL;
     }
 
-    font = TTF_OpenFontRW(rw, 1, size * scale);
+    font = TTF_OpenFontRW(rw, 1, size * yui_density);
     return font;
 }
 #endif
@@ -2032,18 +2056,18 @@ DFont* backend_load_font_with_weight(char* font_path,int size,const char* weight
                 snprintf(full_path, sizeof(full_path), "%.*s-Bold%s", base_len, font_path, ext);
             }
         }
-        default_font = TTF_OpenFont(full_path, size*scale);
+        default_font = TTF_OpenFont(full_path, size*yui_density);
 
         // 如果粗体字体不存在，尝试其他粗体字体
         if (!default_font) {
-            default_font = TTF_OpenFont("assets/Roboto-Bold.ttf", size*scale);
+            default_font = TTF_OpenFont("assets/Roboto-Bold.ttf", size*yui_density);
         }
         if (!default_font) {
-            default_font = TTF_OpenFont("app/assets/Roboto-Bold.ttf", size*scale);
+            default_font = TTF_OpenFont("app/assets/Roboto-Bold.ttf", size*yui_density);
         }
         if (!default_font) {
             // 如果找不到粗体字体文件，使用normal字体并设置样式
-            default_font = TTF_OpenFont(font_path, size*scale);
+            default_font = TTF_OpenFont(font_path, size*yui_density);
             if (default_font) {
                 TTF_SetFontStyle(default_font, TTF_STYLE_BOLD);
             }
@@ -2058,23 +2082,23 @@ DFont* backend_load_font_with_weight(char* font_path,int size,const char* weight
                 snprintf(full_path, sizeof(full_path), "%.*s-Light%s", base_len, font_path, ext);
             }
         }
-        default_font = TTF_OpenFont(full_path, size*scale);
+        default_font = TTF_OpenFont(full_path, size*yui_density);
 
         if (!default_font) {
-            default_font = TTF_OpenFont("assets/Roboto-Light.ttf", size*scale);
+            default_font = TTF_OpenFont("assets/Roboto-Light.ttf", size*yui_density);
         }
         if (!default_font) {
-            default_font = TTF_OpenFont("app/assets/Roboto-Light.ttf", size*scale);
+            default_font = TTF_OpenFont("app/assets/Roboto-Light.ttf", size*yui_density);
         }
         if (!default_font) {
-            default_font = TTF_OpenFont(font_path, size*scale);
+            default_font = TTF_OpenFont(font_path, size*yui_density);
             if (default_font) {
                 TTF_SetFontStyle(default_font, TTF_STYLE_NORMAL);
             }
         }
     } else {
         // normal或其他情况，使用普通字体
-        default_font = TTF_OpenFont(font_path,size*scale);
+        default_font = TTF_OpenFont(font_path,size*yui_density);
     }
 #endif
 
@@ -2083,15 +2107,15 @@ DFont* backend_load_font_with_weight(char* font_path,int size,const char* weight
 #ifndef __EMSCRIPTEN__
         printf("Warning: Could not load font '%s', trying fallback fonts\n", font_path);
         // 非 Emscripten 环境下的备用字体
-        default_font = TTF_OpenFont("arial.ttf",size*scale);
+        default_font = TTF_OpenFont("arial.ttf",size*yui_density);
         if (!default_font) {
-            default_font = TTF_OpenFont("Arial.ttf",size*scale);
+            default_font = TTF_OpenFont("Arial.ttf",size*yui_density);
         }
         if (!default_font) {
-            default_font = TTF_OpenFont("assets/Roboto-Regular.ttf",size*scale);
+            default_font = TTF_OpenFont("assets/Roboto-Regular.ttf",size*yui_density);
         }
         if (!default_font) {
-            default_font = TTF_OpenFont("app/assets/Roboto-Regular.ttf",size*scale);
+            default_font = TTF_OpenFont("app/assets/Roboto-Regular.ttf",size*yui_density);
         }
 #else
         // Emscripten 环境的备用字体已经在上面的 SDL_RWops 代码中处理了

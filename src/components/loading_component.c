@@ -191,8 +191,8 @@ static void loading_render_text(LoadingComponent* component, Layer* layer)
     int text_height = 0;
     backend_query_texture(text_texture, NULL, NULL, &text_width, &text_height);
 
-    int draw_w = text_width / scale;
-    int draw_h = text_height / scale;
+    int draw_w = text_width / yui_density;
+    int draw_h = text_height / yui_density;
     if (draw_w < 1) draw_w = 1;
     if (draw_h < 1) draw_h = 1;
 

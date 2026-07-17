@@ -394,7 +394,7 @@ static void perf_draw_text_line(Layer* root, int x, int y, const char* text, Col
     }
     int tw = 0, th = 0;
     backend_query_texture(tex, NULL, NULL, &tw, &th);
-    Rect dst = {x, y, tw / (int)scale, th / (int)scale};
+    Rect dst = {x, y, tw / (int)yui_density, th / (int)yui_density};
     backend_render_text_copy(tex, NULL, &dst);
     backend_render_text_destroy(tex);
 }

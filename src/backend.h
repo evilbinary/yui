@@ -3,7 +3,10 @@
 
 #include "layer.h"
 
-extern float scale;
+extern float yui_density;
+
+float backend_get_density(void);
+void backend_set_density(float density);
 
 int backend_init();
 void backend_quit();

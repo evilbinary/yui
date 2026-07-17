@@ -828,9 +828,9 @@ void menu_component_render(Layer* layer) {
             
             Rect title_rect = {
                 rect->x + 12,
-                rect->y + (component->item_height - title_height / scale) / 2,
-                title_width / scale,
-                title_height / scale
+                rect->y + (component->item_height - title_height / yui_density) / 2,
+                title_width / yui_density,
+                title_height / yui_density
             };
             
             backend_render_text_copy(title_texture, NULL, &title_rect);
@@ -845,10 +845,10 @@ void menu_component_render(Layer* layer) {
                 int arrow_width, arrow_height;
                 backend_query_texture(arrow_texture, NULL, NULL, &arrow_width, &arrow_height);
                 Rect arrow_rect = {
-                    rect->x + rect->w - arrow_width / scale - 12,
-                    rect->y + (component->item_height - arrow_height / scale) / 2,
-                    arrow_width / scale,
-                    arrow_height / scale
+                    rect->x + rect->w - arrow_width / yui_density - 12,
+                    rect->y + (component->item_height - arrow_height / yui_density) / 2,
+                    arrow_width / yui_density,
+                    arrow_height / yui_density
                 };
                 backend_render_text_copy(arrow_texture, NULL, &arrow_rect);
                 backend_render_text_destroy(arrow_texture);
@@ -911,9 +911,9 @@ void menu_component_render(Layer* layer) {
                     
                     Rect text_rect = {
                         text_x,
-                        item_y + (component->item_height - text_height / scale) / 2,
-                        text_width / scale,
-                        text_height / scale
+                        item_y + (component->item_height - text_height / yui_density) / 2,
+                        text_width / yui_density,
+                        text_height / yui_density
                     };
                     
                     backend_render_text_copy(text_texture, NULL, &text_rect);
@@ -927,10 +927,10 @@ void menu_component_render(Layer* layer) {
                         int aw, ah;
                         backend_query_texture(sub_arrow, NULL, NULL, &aw, &ah);
                         Rect sa_rect = {
-                            rect->x + rect->w - aw / scale - 8,
-                            item_y + (component->item_height - ah / scale) / 2,
-                            aw / scale,
-                            ah / scale
+                            rect->x + rect->w - aw / yui_density - 8,
+                            item_y + (component->item_height - ah / yui_density) / 2,
+                            aw / yui_density,
+                            ah / yui_density
                         };
                         backend_render_text_copy(sub_arrow, NULL, &sa_rect);
                         backend_render_text_destroy(sub_arrow);
@@ -944,12 +944,12 @@ void menu_component_render(Layer* layer) {
                         int shortcut_width, shortcut_height;
                         backend_query_texture(shortcut_texture, NULL, NULL, &shortcut_width, &shortcut_height);
                         
-                        int shortcut_x = rect->x + rect->w - shortcut_width / scale - right_padding;
+                        int shortcut_x = rect->x + rect->w - shortcut_width / yui_density - right_padding;
                         Rect shortcut_rect = {
                             shortcut_x,
-                            item_y + (component->item_height - shortcut_height / scale) / 2,
-                            shortcut_width / scale,
-                            shortcut_height / scale
+                            item_y + (component->item_height - shortcut_height / yui_density) / 2,
+                            shortcut_width / yui_density,
+                            shortcut_height / yui_density
                         };
                         
                         backend_render_text_copy(shortcut_texture, NULL, &shortcut_rect);

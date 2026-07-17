@@ -27,7 +27,18 @@
 #include <stdlib.h>
 #include <string.h>
 
-float scale = 1.0f;
+float yui_density = 1.0f;
+
+float backend_get_density(void) {
+    return yui_density > 0.0f ? yui_density : 1.0f;
+}
+
+void backend_set_density(float density) {
+    if (density > 0.0f) {
+        yui_density = density;
+    }
+}
+
 Layer* g_ui_root = NULL;
 static int g_running = 0;
 #if defined(YUI_LVGL_PORT_SDL)
@@ -147,7 +158,7 @@ static TTF_Font* open_font_at(const char* path, int size)
     if (!font_file_exists(path)) {
         return NULL;
     }
-    return TTF_OpenFont(path, (int)(size * scale));
+    return TTF_OpenFont(path, (int)(size * yui_density));
 }
 
 static void build_weighted_font_path(const char* font_path, const char* weight,

@@ -380,8 +380,8 @@ static void list_render_item(ListComponent* component, int index, int is_hovered
                 int iw, ih;
                 backend_query_texture(icon_tex, NULL, NULL, &iw, &ih);
                 int icon_max = btn_template->icon_size > 0 ? btn_template->icon_size : 18;
-                int icon_w = iw / (int)scale;
-                int icon_h = ih / (int)scale;
+                int icon_w = iw / (int)yui_density;
+                int icon_h = ih / (int)yui_density;
                 list_fit_texture(&item_rect, &icon_w, &icon_h, icon_max, icon_max);
                 int icon_y = text_y_center - icon_h / 2;
                 Rect icon_dst = {content_x, icon_y, icon_w, icon_h};
@@ -400,8 +400,8 @@ static void list_render_item(ListComponent* component, int index, int is_hovered
         if (text_tex) {
             int tw, th;
             backend_query_texture(text_tex, NULL, NULL, &tw, &th);
-            int draw_w = tw / (int)scale;
-            int draw_h = th / (int)scale;
+            int draw_w = tw / (int)yui_density;
+            int draw_h = th / (int)yui_density;
             int avail_w = item_rect.w - text_x_offset - 14;
             int avail_h = item_rect.h - 8;
             list_fit_texture(&item_rect, &draw_w, &draw_h, avail_w, avail_h);

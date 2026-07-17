@@ -397,8 +397,8 @@ void progress_component_render(Layer* layer) {
             int text_width, text_height;
             backend_query_texture(text_texture, NULL, NULL, &text_width, &text_height);
             
-            int natural_w = text_width / scale;
-            int natural_h = text_height / scale;
+            int natural_w = text_width / yui_density;
+            int natural_h = text_height / yui_density;
             int max_w = layer->rect.w - 10;
             int max_h = layer->rect.h - 10;
             if (max_w < 1) max_w = 1;

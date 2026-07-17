@@ -124,7 +124,7 @@ static void pagination_layout(PaginationComponent* component, PaginationLayout* 
         if (info_tex) {
             int tw, th;
             backend_query_texture(info_tex, NULL, NULL, &tw, &th);
-            label_w = tw / (int)scale + spacing * 2;
+            label_w = tw / (int)yui_density + spacing * 2;
             backend_render_text_destroy(info_tex);
         }
         total_w += label_w;
@@ -289,8 +289,8 @@ static void pagination_draw_button(PaginationComponent* component, const Rect* r
 
     int tw, th;
     backend_query_texture(tex, NULL, NULL, &tw, &th);
-    int draw_w = tw / (int)scale;
-    int draw_h = th / (int)scale;
+    int draw_w = tw / (int)yui_density;
+    int draw_h = th / (int)yui_density;
     Rect dst = {
         rect->x + (rect->w - draw_w) / 2,
         rect->y + (rect->h - draw_h) / 2,
@@ -310,8 +310,8 @@ static void pagination_draw_info(PaginationComponent* component, const Rect* rec
 
     int tw, th;
     backend_query_texture(tex, NULL, NULL, &tw, &th);
-    int draw_w = tw / (int)scale;
-    int draw_h = th / (int)scale;
+    int draw_w = tw / (int)yui_density;
+    int draw_h = th / (int)yui_density;
 
     int draw_x = rect->x;
     if (component->mode == PAGINATION_MODE_MINI) {

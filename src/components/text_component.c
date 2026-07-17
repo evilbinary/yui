@@ -91,7 +91,7 @@ static int text_component_get_line_height(TextComponent* component) {
         if (temp_tex) {
             int temp_width = 0, temp_height = 0;
             backend_query_texture(temp_tex, NULL, NULL, &temp_width, &temp_height);
-            line_height = temp_height / scale;
+            line_height = temp_height / yui_density;
             backend_render_text_destroy(temp_tex);
             component->cached_line_height = line_height;
             component->line_height_valid = 1;
@@ -241,7 +241,7 @@ static void text_component_render_text_segment(TextComponent* component, const c
     if (!tex) return;
     int width = 0, height = 0;
     backend_query_texture(tex, NULL, NULL, &width, &height);
-    Rect rect = {x, y, width / scale, height / scale};
+    Rect rect = {x, y, width / yui_density, height / yui_density};
     backend_render_text_copy(tex, NULL, &rect);
     backend_render_text_destroy(tex);
 }
@@ -926,7 +926,7 @@ void text_component_update_scroll_for_cursor(TextComponent* component) {
         if (full_tex) {
             int full_width, full_height;
             backend_query_texture(full_tex, NULL, NULL, &full_width, &full_height);
-            full_text_width = full_width / scale;
+            full_text_width = full_width / yui_density;
             backend_render_text_destroy(full_tex);
         }
     }
@@ -961,7 +961,7 @@ void text_component_update_scroll_for_cursor(TextComponent* component) {
         if (text_tex) {
             int text_width, text_height;
             backend_query_texture(text_tex, NULL, NULL, &text_width, &text_height);
-            cursor_x = render_rect.x + text_width / scale;
+            cursor_x = render_rect.x + text_width / yui_density;
             backend_render_text_destroy(text_tex);
         }
     }
@@ -1876,7 +1876,7 @@ int text_component_get_position_from_point(TextComponent* component, Point pt, L
         if (temp_tex) {
             int temp_width, temp_height;
             backend_query_texture(temp_tex, NULL, NULL, &temp_width, &temp_height);
-            line_height = temp_height / scale;
+            line_height = temp_height / yui_density;
             backend_render_text_destroy(temp_tex);
         }
     }
@@ -1923,7 +1923,7 @@ int text_component_get_position_from_point(TextComponent* component, Point pt, L
                 if (line_tex) {
                     int line_width, line_height_ignore;
                     backend_query_texture(line_tex, NULL, NULL, &line_width, &line_height_ignore);
-                    current_width = line_width / scale;
+                    current_width = line_width / yui_density;
                     backend_render_text_destroy(line_tex);
                 }
                 
@@ -1952,7 +1952,7 @@ int text_component_get_position_from_point(TextComponent* component, Point pt, L
                         if (test_tex) {
                             int test_width, test_height;
                             backend_query_texture(test_tex, NULL, NULL, &test_width, &test_height);
-                            if (test_width / scale > max_width) {
+                            if (test_width / yui_density > max_width) {
                                 backend_render_text_destroy(test_tex);
                                 free(test_line);
                                 break;
@@ -1996,7 +1996,7 @@ int text_component_get_position_from_point(TextComponent* component, Point pt, L
                             if (temp_tex) {
                                 int temp_w, temp_h;
                                 backend_query_texture(temp_tex, NULL, NULL, &temp_w, &temp_h);
-                                actual_width = temp_w / scale;
+                                actual_width = temp_w / yui_density;
                                 backend_render_text_destroy(temp_tex);
                             }
                         }
@@ -2048,7 +2048,7 @@ int text_component_get_position_from_point(TextComponent* component, Point pt, L
                     if (temp_tex) {
                         int temp_w, temp_h;
                         backend_query_texture(temp_tex, NULL, NULL, &temp_w, &temp_h);
-                        actual_width = temp_w / scale;
+                        actual_width = temp_w / yui_density;
                         backend_render_text_destroy(temp_tex);
                     }
                 }
@@ -2155,7 +2155,7 @@ void text_component_render(Layer* layer) {
                         if (line_tex) {
                             int line_width, line_height_ignore;
                             backend_query_texture(line_tex, NULL, NULL, &line_width, &line_height_ignore);
-                            current_width = line_width / scale;
+                            current_width = line_width / yui_density;
                             backend_render_text_destroy(line_tex);
                         }
                         
@@ -2178,7 +2178,7 @@ void text_component_render(Layer* layer) {
                                 if (test_tex) {
                                     int test_width, test_height;
                                     backend_query_texture(test_tex, NULL, NULL, &test_width, &test_height);
-                                    if (test_width / scale > max_width) {
+                                    if (test_width / yui_density > max_width) {
                                         backend_render_text_destroy(test_tex);
                                         free(test_line);
                                         break;
@@ -2219,10 +2219,10 @@ void text_component_render(Layer* layer) {
                     backend_query_texture(line_num_tex, NULL, NULL, &num_width, &num_height);
                     
                     Rect line_num_rect = {
-                        line_number_bg.x + line_number_bg.w - num_width / scale - 10,
+                        line_number_bg.x + line_number_bg.w - num_width / yui_density - 10,
                         line_y,
-                        num_width / scale,
-                        num_height / scale
+                        num_width / yui_density,
+                        num_height / yui_density
                     };
                     
                     backend_render_text_copy(line_num_tex, NULL, &line_num_rect);
@@ -2263,9 +2263,9 @@ void text_component_render(Layer* layer) {
             Rect text_rect = {
                 render_rect.x,
                 // 多行模式下在顶部对齐，单行模式下垂直居中
-                component->multiline ? render_rect.y : render_rect.y + (render_rect.h - text_height / scale) / 2,
-                text_width / scale,
-                text_height / scale
+                component->multiline ? render_rect.y : render_rect.y + (render_rect.h - text_height / yui_density) / 2,
+                text_width / yui_density,
+                text_height / yui_density
             };
             
             // 确保文本不会超出边界
@@ -2330,7 +2330,7 @@ void text_component_render(Layer* layer) {
                         if (line_tex) {
                             int line_width, line_height_ignore;
                             backend_query_texture(line_tex, NULL, NULL, &line_width, &line_height_ignore);
-                            current_width = line_width / scale;
+                            current_width = line_width / yui_density;
                             backend_render_text_destroy(line_tex);
                         }
                         
@@ -2359,7 +2359,7 @@ void text_component_render(Layer* layer) {
                                 if (test_tex) {
                                     int test_width, test_height;
                                     backend_query_texture(test_tex, NULL, NULL, &test_width, &test_height);
-                                    if (test_width / scale > max_width) {
+                                    if (test_width / yui_density > max_width) {
                                         backend_render_text_destroy(test_tex);
                                         free(test_line);
                                         break;
@@ -2405,7 +2405,7 @@ void text_component_render(Layer* layer) {
                                 if (before_tex) {
                                     int before_width, before_height;
                                     backend_query_texture(before_tex, NULL, NULL, &before_width, &before_height);
-                                    sel_start_x = render_rect.x + before_width / scale;
+                                    sel_start_x = render_rect.x + before_width / yui_density;
                                     backend_render_text_destroy(before_tex);
                                 }
                                 free(before_sel);
@@ -2425,7 +2425,7 @@ void text_component_render(Layer* layer) {
                                 if (sel_tex) {
                                     int sel_tex_width, sel_tex_height;
                                     backend_query_texture(sel_tex, NULL, NULL, &sel_tex_width, &sel_tex_height);
-                                    sel_width = sel_tex_width / scale;
+                                    sel_width = sel_tex_width / yui_density;
                                     backend_render_text_destroy(sel_tex);
                                 }
                                 free(sel_text);
@@ -2473,7 +2473,7 @@ void text_component_render(Layer* layer) {
                         if (before_tex) {
                             int before_width, before_height;
                             backend_query_texture(before_tex, NULL, NULL, &before_width, &before_height);
-                            sel_start_x = render_rect.x + before_width / scale;
+                            sel_start_x = render_rect.x + before_width / yui_density;
                             backend_render_text_destroy(before_tex);
                         }
                         free(before_sel);
@@ -2492,7 +2492,7 @@ void text_component_render(Layer* layer) {
                         if (sel_tex) {
                             int sel_tex_width, sel_tex_height;
                             backend_query_texture(sel_tex, NULL, NULL, &sel_tex_width, &sel_tex_height);
-                            sel_width = sel_tex_width / scale;
+                            sel_width = sel_tex_width / yui_density;
                             backend_render_text_destroy(sel_tex);
                         }
                         free(sel_text);
@@ -2608,7 +2608,7 @@ void text_component_render(Layer* layer) {
                     if (line_tex) {
                         int line_width, line_height_ignore;
                         backend_query_texture(line_tex, NULL, NULL, &line_width, &line_height_ignore);
-                        current_width = line_width / scale;
+                        current_width = line_width / yui_density;
                         backend_render_text_destroy(line_tex);
                     }
                     
@@ -2636,7 +2636,7 @@ void text_component_render(Layer* layer) {
                             if (test_tex) {
                                 int test_width, test_height;
                                 backend_query_texture(test_tex, NULL, NULL, &test_width, &test_height);
-                                if (test_width / scale > max_width) {
+                                if (test_width / yui_density > max_width) {
                                     backend_render_text_destroy(test_tex);
                                     free(test_line);
                                     break;
@@ -2672,7 +2672,7 @@ void text_component_render(Layer* layer) {
                             if (before_tex) {
                                 int before_width, before_height;
                                 backend_query_texture(before_tex, NULL, NULL, &before_width, &before_height);
-                                cursor_x = render_rect.x + before_width / scale;
+                                cursor_x = render_rect.x + before_width / yui_density;
                                 backend_render_text_destroy(before_tex);
                             }
                             free(text_before_cursor);
@@ -2712,7 +2712,7 @@ void text_component_render(Layer* layer) {
                         if (last_tex) {
                             int last_width, last_height;
                             backend_query_texture(last_tex, NULL, NULL, &last_width, &last_height);
-                            cursor_x = render_rect.x + last_width / scale;
+                            cursor_x = render_rect.x + last_width / yui_density;
                             backend_render_text_destroy(last_tex);
                         }
                         free(last_line);
@@ -2744,7 +2744,7 @@ void text_component_render(Layer* layer) {
                     if (cursor_text_texture) {
                         int text_width;
                         backend_query_texture(cursor_text_texture, NULL, NULL, &text_width, NULL);
-                        char_width = text_width / scale;
+                        char_width = text_width / yui_density;
                         backend_render_text_destroy(cursor_text_texture);
                     }
                     free(temp_text);

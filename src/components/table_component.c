@@ -9,7 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-extern float scale;
+
 
 #define TABLE_CELL_PAD_X 8
 #define TABLE_COL_MIN_WIDTH 40
@@ -49,8 +49,8 @@ static void table_tooltip_layer_render(Layer* layer) {
     Rect text_rect = {
         layer->rect.x + 6,
         layer->rect.y + 4,
-        tw / scale,
-        th / scale
+        tw / yui_density,
+        th / yui_density
     };
     backend_render_text_copy(tex, NULL, &text_rect);
     backend_render_text_destroy(tex);
@@ -83,7 +83,7 @@ static int table_measure_text_width(Layer* layer, const char* text) {
     int tw = 0, th = 0;
     backend_query_texture(tex, NULL, NULL, &tw, &th);
     backend_render_text_destroy(tex);
-    return tw / scale;
+    return tw / yui_density;
 }
 
 static int table_text_overflows(Layer* layer, const char* text, int cell_w) {
@@ -341,7 +341,7 @@ static int table_edit_text_width(Layer* layer, const char* text, int char_index)
     int tw = 0, th = 0;
     backend_query_texture(tex, NULL, NULL, &tw, &th);
     backend_render_text_destroy(tex);
-    return (int)(tw / scale);
+    return (int)(tw / yui_density);
 }
 
 static void table_edit_move_cursor(TableComponent* component, int direction, int keep_selection) {
@@ -1140,8 +1140,8 @@ static void table_edit_draw_text_part(Layer* layer, const char* text, Color colo
 
     int tw = 0, th = 0;
     backend_query_texture(tex, NULL, NULL, &tw, &th);
-    int part_w = (int)(tw / scale);
-    int part_h = (int)(th / scale);
+    int part_w = (int)(tw / yui_density);
+    int part_h = (int)(th / yui_density);
     if (part_w < 1) part_w = 1;
     if (part_h < 1) part_h = 1;
     if (part_h > draw_h) {
@@ -1184,8 +1184,8 @@ static void table_render_edit_cell(TableComponent* component, Layer* layer, Rect
         if (tex) {
             int tw = 0, th = 0;
             backend_query_texture(tex, NULL, NULL, &tw, &th);
-            draw_w = (int)(tw / scale);
-            draw_h = (int)(th / scale);
+            draw_w = (int)(tw / yui_density);
+            draw_h = (int)(th / yui_density);
             if (draw_w < 1) draw_w = 1;
             if (draw_h < 1) draw_h = 1;
 
@@ -1528,8 +1528,8 @@ static void table_draw_cell_text(Layer* layer, const char* text, Color color,
 
     int tw = 0, th = 0;
     backend_query_texture(tex, NULL, NULL, &tw, &th);
-    int draw_w = (int)(tw / scale);
-    int draw_h = (int)(th / scale);
+    int draw_w = (int)(tw / yui_density);
+    int draw_h = (int)(th / yui_density);
     if (draw_w < 1) draw_w = 1;
     if (draw_h < 1) draw_h = 1;
 

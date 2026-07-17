@@ -399,7 +399,7 @@ int tab_calculate_tab_width(TabComponent* component, int index) {
       backend_query_texture(temp_texture, NULL, NULL, &text_width,
                             &temp_height);
       backend_render_text_destroy(temp_texture);
-      // text_width /= scale;  // 暂时不考虑缩放因子
+      // text_width /= yui_density;  // 暂时不考虑缩放因子
     }
   }
 
@@ -555,10 +555,10 @@ void tab_component_render(Layer* layer) {
         if (text_width > tab_width - 10) text_width = tab_width - 10;
         
         Rect text_rect = {
-          tab_x + (tab_width - text_width / scale) / 2,
-          layer->rect.y + (component->tab_height - text_height / scale) / 2,  // 使用实际高度居中
-          text_width / scale,
-          text_height / scale
+          tab_x + (tab_width - text_width / yui_density) / 2,
+          layer->rect.y + (component->tab_height - text_height / yui_density) / 2,  // 使用实际高度居中
+          text_width / yui_density,
+          text_height / yui_density
         };
         backend_render_text_copy(text_texture, NULL, &text_rect);
         backend_render_text_destroy(text_texture);

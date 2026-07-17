@@ -8,7 +8,7 @@
 #include <string.h>
 
 // 外部变量声明
-extern float scale;
+
 
 // 创建 Select 组件
 SelectComponent* select_component_create(Layer* layer) {
@@ -1177,14 +1177,14 @@ void select_component_render(Layer* layer) {
             // 文本居中垂直对齐，左对齐
             Rect text_rect = {
                 layer->rect.x + 12,
-                layer->rect.y + (layer->rect.h - text_height / scale) / 2,
-                text_width / scale,
-                text_height / scale
+                layer->rect.y + (layer->rect.h - text_height / yui_density) / 2,
+                text_width / yui_density,
+                text_height / yui_density
             };
             
             // 文本裁剪
             int max_text_width = layer->rect.w - 40; // 为箭头留出空间
-            if (text_width / scale > max_text_width) {
+            if (text_width / yui_density > max_text_width) {
                 text_rect.w = max_text_width;
             }
             
@@ -1335,9 +1335,9 @@ void select_component_render_dropdown_only(Layer* layer) {
                 
                 Rect text_rect = {
                     dropdown_x + 12,
-                    item_y + (component->item_height - text_height / scale) / 2,
-                    text_width / scale,
-                    text_height / scale
+                    item_y + (component->item_height - text_height / yui_density) / 2,
+                    text_width / yui_density,
+                    text_height / yui_density
                 };
                 
                 // 文本裁剪

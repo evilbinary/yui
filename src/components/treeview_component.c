@@ -1250,7 +1250,7 @@ void treeview_component_render(Layer* layer) {
         if (temp_tex) {
             int temp_width, temp_height;
             backend_query_texture(temp_tex, NULL, NULL, &temp_width, &temp_height);
-            text_height = temp_height / scale;
+            text_height = temp_height / yui_density;
             backend_render_text_destroy(temp_tex);
         }
     }
@@ -1327,7 +1327,7 @@ void treeview_component_render(Layer* layer) {
                 if (icon_tex) {
                     int tw, th;
                     backend_query_texture(icon_tex, NULL, NULL, &tw, &th);
-                    Rect dst = {icon_x, icon_y + (10 - th/scale) / 2, tw/scale, th/scale};
+                    Rect dst = {icon_x, icon_y + (10 - th/yui_density) / 2, tw/yui_density, th/yui_density};
                     backend_render_text_copy(icon_tex, NULL, &dst);
                     if (tex_owned) backend_render_text_destroy(icon_tex);
                 } else {
@@ -1376,8 +1376,8 @@ void treeview_component_render(Layer* layer) {
                     int iw, ih;
                     backend_query_texture(node_icon_tex, NULL, NULL, &iw, &ih);
                     int icon_max_size = component->icon_size > 0 ? component->icon_size : component->item_height - 10;
-                    int icon_w = iw / scale;
-                    int icon_h = ih / scale;
+                    int icon_w = iw / yui_density;
+                    int icon_h = ih / yui_density;
                     if (icon_w > icon_max_size || icon_h > icon_max_size) {
                         float ratio = (float)icon_w / icon_h;
                         if (ratio > 1.0f) {
@@ -1401,13 +1401,13 @@ void treeview_component_render(Layer* layer) {
 
                     // 计算文本位置(加上icon偏移)
                     int text_x = base_text_x + text_x_offset;
-                    int text_y = item_y + (component->item_height - actual_text_height / scale) / 2;
+                    int text_y = item_y + (component->item_height - actual_text_height / yui_density) / 2;
 
                     Rect text_rect = {
                         text_x,
                         text_y,
-                        actual_text_width / scale,
-                        actual_text_height / scale
+                        actual_text_width / yui_density,
+                        actual_text_height / yui_density
                     };
 
                     // 确保文本不会超出边界，同时裁剪源纹理防止字体压缩
@@ -1418,7 +1418,7 @@ void treeview_component_render(Layer* layer) {
                         if (clipped_w <= 0) { backend_render_text_destroy(text_texture); continue; }
                         src_clip.x = 0;
                         src_clip.y = 0;
-                        src_clip.w = (int)(clipped_w * scale);
+                        src_clip.w = (int)(clipped_w * yui_density);
                         src_clip.h = actual_text_height;
                         p_src = &src_clip;
                         text_rect.w = clipped_w;
@@ -1496,7 +1496,7 @@ void treeview_component_render(Layer* layer) {
                         if (icon_tex) {
                             int tw, th;
                             backend_query_texture(icon_tex, NULL, NULL, &tw, &th);
-                            Rect dst = {icon_x, icon_y + (10 - th/scale) / 2, tw/scale, th/scale};
+                            Rect dst = {icon_x, icon_y + (10 - th/yui_density) / 2, tw/yui_density, th/yui_density};
                             backend_render_text_copy(icon_tex, NULL, &dst);
                             if (tex_owned) backend_render_text_destroy(icon_tex);
                         } else {
@@ -1543,8 +1543,8 @@ void treeview_component_render(Layer* layer) {
                             int iw, ih;
                             backend_query_texture(child_icon_tex, NULL, NULL, &iw, &ih);
                             int icon_max_size = component->icon_size > 0 ? component->icon_size : component->item_height - 10;
-                            int icon_w = iw / scale;
-                            int icon_h = ih / scale;
+                            int icon_w = iw / yui_density;
+                            int icon_h = ih / yui_density;
                             if (icon_w > icon_max_size || icon_h > icon_max_size) {
                                 float ratio = (float)icon_w / icon_h;
                                 if (ratio > 1.0f) {
@@ -1568,13 +1568,13 @@ void treeview_component_render(Layer* layer) {
 
                             // 计算文本位置
                             int current_text_x = base_text_x + text_x_offset;
-                            int current_text_y = item_y + (component->item_height - actual_text_height / scale) / 2;
+                            int current_text_y = item_y + (component->item_height - actual_text_height / yui_density) / 2;
 
                             Rect text_rect = {
                                 current_text_x,
                                 current_text_y,
-                                actual_text_width / scale,
-                                actual_text_height / scale
+                                actual_text_width / yui_density,
+                                actual_text_height / yui_density
                             };
 
                             // 确保文本不会超出边界，同时裁剪源纹理防止字体压缩
@@ -1585,7 +1585,7 @@ void treeview_component_render(Layer* layer) {
                                 if (clipped_w <= 0) { backend_render_text_destroy(text_texture); continue; }
                                 src_clip.x = 0;
                                 src_clip.y = 0;
-                                src_clip.w = (int)(clipped_w * scale);
+                                src_clip.w = (int)(clipped_w * yui_density);
                                 src_clip.h = actual_text_height;
                                 p_src = &src_clip;
                                 text_rect.w = clipped_w;

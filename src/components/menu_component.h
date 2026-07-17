@@ -3,8 +3,7 @@
 
 #include "../ytype.h"
 
-// 声明外部scale变量（用于DPI缩放）
-extern float scale;
+// DPI 缩放见 backend.h: extern float yui_density;
 
 // 前向声明
 typedef struct PopupLayer PopupLayer;

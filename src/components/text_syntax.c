@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-extern float scale;
+
 
 typedef enum {
     HL_TOKEN_DEFAULT = 0,
@@ -643,7 +643,7 @@ int text_syntax_measure_width(DFont* font, const char* text, int start, int end,
     int width = 0, height = 0;
     backend_query_texture(tex, NULL, NULL, &width, &height);
     backend_render_text_destroy(tex);
-    return width / (int)scale;
+    return width / (int)yui_density;
 }
 
 static void render_plain_segment(DFont* font, const char* text, int start, int end, Color color, int x, int y) {
@@ -658,7 +658,7 @@ static void render_plain_segment(DFont* font, const char* text, int start, int e
     if (!tex) return;
     int width = 0, height = 0;
     backend_query_texture(tex, NULL, NULL, &width, &height);
-    Rect rect = {x, y, width / (int)scale, height / (int)scale};
+    Rect rect = {x, y, width / (int)yui_density, height / (int)yui_density};
     backend_render_text_copy(tex, NULL, &rect);
     backend_render_text_destroy(tex);
 }

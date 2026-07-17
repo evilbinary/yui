@@ -23,7 +23,7 @@
 typedef struct {
     unsigned char* data;
     stbtt_fontinfo info;
-    float scale;
+    float yui_density;
     int size;
 } MobileFont;
 
@@ -162,7 +162,7 @@ static DFont* mobile_load_font_strict(const char* font_path, int size, const cha
     mobile_font->data = data;
     mobile_font->size = size > 0 ? size : 16;
     mobile_font->scale = stbtt_ScaleForPixelHeight(
-        &mobile_font->info, (float)mobile_font->size * (scale > 0.0f ? scale : 1.0f));
+        &mobile_font->info, (float)mobile_font->size * (yui_density > 0.0f ? yui_density : 1.0f));
 
     font = (DFont*)calloc(1, sizeof(DFont));
     if (!font) {
@@ -528,7 +528,7 @@ DFont* mobile_load_font(const char* font_path, int size, const char* weight) {
     mobile_font->data = data;
     mobile_font->size = size > 0 ? size : 16;
     mobile_font->scale = stbtt_ScaleForPixelHeight(
-        &mobile_font->info, (float)mobile_font->size * (scale > 0.0f ? scale : 1.0f));
+        &mobile_font->info, (float)mobile_font->size * (yui_density > 0.0f ? yui_density : 1.0f));
 
     font = (DFont*)calloc(1, sizeof(DFont));
     if (!font) {
@@ -619,8 +619,8 @@ static unsigned char* mobile_rasterize_font_text(MobileFont* mobile_font, Mobile
 
         active_font = mobile_pick_font_for_codepoint(mobile_font, fallback_font, cp);
         stbtt_GetCodepointHMetrics(&active_font->info, cp, &advance, &lsb);
-        stbtt_GetCodepointBitmapBox(&active_font->info, cp, active_font->scale,
-                                    active_font->scale, &x0, &y0, &x1, &y1);
+        stbtt_GetCodepointBitmapBox(&active_font->info, cp, active_font->yui_density,
+                                    active_font->yui_density, &x0, &y0, &x1, &y1);
         gx0 = pen_x + x0;
         gx1 = pen_x + x1;
         gy0 = baseline + y0;
@@ -637,7 +637,7 @@ static unsigned char* mobile_rasterize_font_text(MobileFont* mobile_font, Mobile
             if (gy0 < min_y) min_y = gy0;
             if (gy1 > max_y) max_y = gy1;
         }
-        pen_x += (int)(advance * active_font->scale);
+        pen_x += (int)(advance * active_font->yui_density);
     }
 
     if (!has_glyph) {
@@ -674,11 +674,11 @@ static unsigned char* mobile_rasterize_font_text(MobileFont* mobile_font, Mobile
 
         active_font = mobile_pick_font_for_codepoint(mobile_font, fallback_font, cp);
         stbtt_GetCodepointHMetrics(&active_font->info, cp, &advance, &lsb);
-        stbtt_GetCodepointBitmapBox(&active_font->info, cp, active_font->scale,
-                                    active_font->scale, &x0, &y0, &x1, &y1);
+        stbtt_GetCodepointBitmapBox(&active_font->info, cp, active_font->yui_density,
+                                    active_font->yui_density, &x0, &y0, &x1, &y1);
         gw = x1 - x0;
         gh = y1 - y0;
-        glyph_bitmap = stbtt_GetCodepointBitmap(&active_font->info, 0, active_font->scale,
+        glyph_bitmap = stbtt_GetCodepointBitmap(&active_font->info, 0, active_font->yui_density,
                                                 cp, &gw, &gh, 0, 0);
         if (glyph_bitmap) {
             int dst_x = pen_x + x0 - min_x;
@@ -707,7 +707,7 @@ static unsigned char* mobile_rasterize_font_text(MobileFont* mobile_font, Mobile
             }
             stbtt_FreeBitmap(glyph_bitmap, NULL);
         }
-        pen_x += (int)(advance * active_font->scale);
+        pen_x += (int)(advance * active_font->yui_density);
     }
 
     *out_w = width;
@@ -907,7 +907,7 @@ void mobile_draw_text_texture(Texture* texture, const Rect* srcrect, const Rect*
 
     backend_get_windowsize(&window_w, &window_h);
     {
-        float d = scale > 0.0f ? scale : 1.0f;
+        float d = yui_density > 0.0f ? yui_density : 1.0f;
         window_w = (int)((float)window_w * d);
         window_h = (int)((float)window_h * d);
     }
