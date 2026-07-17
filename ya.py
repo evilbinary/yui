@@ -136,7 +136,7 @@ def _resolve_mingw64():
     for root in (
         r"E:\soft\msys2\mingw64",
         r"C:\msys64\mingw64",
-        r"C:\tools\msys64\mingw64",
+        r"D:\app\msys2\mingw64",
         os.path.expanduser(r"~\scoop\apps\msys2\current\mingw64"),
     ):
         found = _valid_root(root)
