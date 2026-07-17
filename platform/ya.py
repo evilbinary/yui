@@ -80,3 +80,28 @@ target("yui-web.js")
         "-sENVIRONMENT=web",
     ),
 )
+
+target("yui-web-lvgl")
+(
+    add_deps("socket", "yui", "quickjs", "jsmodule-quickjs", "yaml2json", "lvglmodule", "lvgl", "lvgl_extra"),
+    add_rules("mode.debug", "mode.release", "web.artifacts"),
+    set_kind("binary"),
+    add_flags(),
+    add_cflags(
+        "-Iplatform/common",
+        "-Isrc",
+        "-Ilib/cjson",
+        "-Ilib/yaml2json",
+        "-Ilib/jsmodule",
+        "-Ilib/lvglmodule",
+        "-DHAS_JS_MODULE",
+    ),
+    add_files("web/vanilla/main_lvgl.c", "common/yui_boot.c"),
+    add_ldflags(
+        "-sMODULARIZE=1",
+        "-sEXPORT_NAME=YuiModule",
+        "-sINVOKE_RUN=0",
+        "-sEXPORTED_RUNTIME_METHODS=['callMain','FS']",
+        "-sENVIRONMENT=web",
+    ),
+)

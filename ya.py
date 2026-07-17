@@ -149,7 +149,7 @@ def _resolve_mingw64():
     return _mingw64_root_cache
 
 def configure_emscripten_toolchain(target=None):
-    if get_plat() not in ("em", "emscripten"):
+    if get_plat() not in ("em", "emscripten", "em-lvgl"):
         return
     tool = get_toolchain_node()
     if not tool:
@@ -341,7 +341,7 @@ def add_flags():
             '-fsanitize=address',
         )
 
-    if get_plat() in['emscripten','em']:
+    if get_plat() in ['emscripten', 'em', 'em-lvgl']:
         set_toolchain('emscripten')
         configure_emscripten_toolchain()
         before_build(configure_emscripten_toolchain)
@@ -468,7 +468,7 @@ def add_flags():
             )
     elif platform.system()=='Windows':
         mingw64 = _resolve_mingw64()
-        if get_plat() in['emscripten','em']:
+        if get_plat() in ['emscripten', 'em', 'em-lvgl']:
             configure_emscripten_toolchain()
         else:
             tool=get_toolchain_node()
@@ -563,7 +563,7 @@ if get_plat() in ("android", "ios"):
 def after_build_web_artifacts(target):
     import shutil
     plat = target.plat()
-    if plat not in ("em", "emscripten"):
+    if plat not in ("em", "emscripten", "em-lvgl"):
         return
     name = target.get("name") or ""
     if not name.startswith("yui-web"):
@@ -575,14 +575,18 @@ def after_build_web_artifacts(target):
     base = name.replace(".html", "").replace(".js", "")
     dest_dir = os.path.join("platform", "web", "vanilla", "yui")
     os.makedirs(dest_dir, exist_ok=True)
+    if name.startswith("yui-web-lvgl"):
+        out_prefix = "yui-web-lvgl"
+    else:
+        out_prefix = "yui-web"
     mapping = {
-        ".js": "yui-web.js",
-        ".wasm": "yui-web.wasm",
-        ".data": "yui-web.data",
+        ".js": out_prefix + ".js",
+        ".wasm": out_prefix + ".wasm",
+        ".data": out_prefix + ".data",
     }
     build_dirs = []
     seen = set()
-    for plat_name in (plat, "em", "emscripten"):
+    for plat_name in (plat, "em", "em-lvgl", "emscripten"):
         for arch_name in (arch, "None"):
             path = os.path.join("build", str(plat_name), str(arch_name), str(mode))
             if path not in seen:

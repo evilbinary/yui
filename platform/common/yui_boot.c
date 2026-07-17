@@ -17,6 +17,10 @@
 #include "js_module.h"
 #endif
 
+#ifdef YUI_HAS_LVGLMODULE
+#include "lvgl_component.h"
+#endif
+
 static Layer* g_root = NULL;
 static char g_json_path[MAX_PATH];
 static char g_assets_override[MAX_PATH];
@@ -249,9 +253,17 @@ int yui_init(const char* json_path, const char* assets_dir) {
     yui_load_js_scripts(root_json, json_path);
 #endif
 
+#ifdef YUI_HAS_LVGLMODULE
+    lvgl_module_init_layer(g_root);
+#endif
+
     cJSON_Delete(root_json);
 
     yui_apply_root_layout(g_root);
+
+#ifdef YUI_HAS_LVGLMODULE
+    lvgl_apply_layer_rects(g_root);
+#endif
     return 0;
 }
 

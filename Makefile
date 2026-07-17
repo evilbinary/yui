@@ -78,7 +78,14 @@ web:
 	ya -p em -m release -b yui-web.js
 	@echo "WASM: platform/web/vanilla/yui/yui-web.js"
 
+web-lvgl:
+	ya -p em -m release -b yui-web-lvgl
+	@echo "WASM: platform/web/vanilla/yui/yui-web-lvgl.js"
+
 web-serve: web
+	cd platform/web/vanilla && python -m http.server 8080
+
+web-serve-lvgl: web-lvgl
 	cd platform/web/vanilla && python -m http.server 8080
 
 run: main

@@ -15,7 +15,7 @@ add_files("components/*.c")
 add_files("perf/*.c")
 add_files("backend/backend_common.c")
 
-if get_plat() == "lvgl":
+if get_plat() in ("lvgl", "em-lvgl"):
     add_files("backend/backend_lvgl.c")
     add_cflags("-DYUI_USE_LVGL_BACKEND")
     add_cflags("-DYUI_HAS_LVGLMODULE")
