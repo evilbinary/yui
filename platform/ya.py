@@ -75,6 +75,7 @@ target("yui-web.js")
     add_ldflags(
         "-sMODULARIZE=1",
         "-sEXPORT_NAME=YuiModule",
+        "-sINVOKE_RUN=0",
         "-sEXPORTED_RUNTIME_METHODS=['callMain','FS']",
         "-sENVIRONMENT=web",
     ),

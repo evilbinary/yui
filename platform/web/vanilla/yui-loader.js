@@ -2,7 +2,7 @@
   var params = new URLSearchParams(window.location.search);
   var jsonPath = params.get("json") || "app/tests/login.json";
   var assetsDir = params.get("assets") || "app/assets";
-  var wasmBases = ["yui/", "public/yui/"];
+  var wasmBase = "yui/";
 
   function setStatus(text) {
     var el = document.getElementById("status");
@@ -26,21 +26,13 @@
   }
 
   function tryLoadWasm() {
-    var index = 0;
-    function next() {
-      if (index >= wasmBases.length) {
-        return Promise.reject(new Error(
-          "playground.js not found. Run: ya -p em -m release -b yui-web.js"
-        ));
-      }
-      var base = wasmBases[index++];
-      return loadScript(base + "playground.js").then(function () {
-        return base;
-      }).catch(function () {
-        return next();
-      });
-    }
-    return next();
+    return loadScript(wasmBase + "playground.js").then(function () {
+      return wasmBase;
+    }).catch(function () {
+      return Promise.reject(new Error(
+        "playground.js not found in yui/. Run: ya -p em -m release -b yui-web.js"
+      ));
+    });
   }
 
   setStatus("loading wasm…");
@@ -53,6 +45,7 @@
 
       var canvas = document.getElementById("canvas");
       return YuiModule({
+        noInitialRun: true,
         canvas: canvas,
         arguments: [jsonPath, assetsDir],
         locateFile: function (path) {
