@@ -1,6 +1,6 @@
 (function () {
   var params = new URLSearchParams(window.location.search);
-  var jsonPath = params.get("json") || "app/tests/login.json";
+  var jsonPath = params.get("json") || "app/watch-os/app.json";
   var assetsDir = params.get("assets") || "app/assets";
   var wasmBase = "yui/";
 

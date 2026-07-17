@@ -30,11 +30,11 @@ cd platform/web/vanilla
 python -m http.server 8080
 ```
 
-浏览器打开 `http://localhost:8080/`，默认加载 `app/tests/login.json`。
+浏览器打开 `http://localhost:8080/`，默认加载 `app/watch-os/app.json`。
 
 URL 参数：
 
-- `?json=app/watch-os/app.json`
+- `?json=app/tests/login.json`
 - `?assets=app/assets`
 
 ## 3. 目录

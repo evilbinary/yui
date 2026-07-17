@@ -8,7 +8,7 @@
 #endif
 
 int main(int argc, char* argv[]) {
-    const char* json_path = "app/tests/login.json";
+    const char* json_path = "app/watch-os/app.json";
     const char* assets_dir = "app/assets";
 
     if (argc > 1 && argv[1] && argv[1][0]) {

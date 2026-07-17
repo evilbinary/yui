@@ -476,6 +476,88 @@ static void backend_clean_surface_alpha_fringe(SDL_Surface* surface, Uint8 alpha
     }
 }
 
+/* 用浏览器系统字体渲染彩色文字，返回 malloc 的 RGBA 像素（调用方 free） */
+EM_JS(int, emscripten_render_text_rgba, (const char* utf8, int font_px, int r, int g, int b, int a, int* out_w, int* out_h), {
+    var text = UTF8ToString(utf8);
+    if (!text) {
+        return 0;
+    }
+    if (!window.__yuiTextCanvas) {
+        window.__yuiTextCanvas = document.createElement('canvas');
+        window.__yuiTextCtx = window.__yuiTextCanvas.getContext('2d', { willReadFrequently: true });
+    }
+    var canvas = window.__yuiTextCanvas;
+    var ctx = window.__yuiTextCtx;
+    var px = Math.max(12, font_px | 0);
+    var family = 'system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", "PingFang SC", "Noto Sans SC", sans-serif';
+    ctx.font = px + 'px ' + family;
+    var metrics = ctx.measureText(text);
+    var w = Math.max(1, Math.ceil(metrics.width) + 4);
+    var h = Math.max(1, Math.ceil(px * 1.25) + 4);
+    canvas.width = w;
+    canvas.height = h;
+    ctx.clearRect(0, 0, w, h);
+    ctx.font = px + 'px ' + family;
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = 'rgba(' + r + ',' + g + ',' + b + ',' + (a / 255) + ')';
+    ctx.fillText(text, 2, h / 2);
+    var img = ctx.getImageData(0, 0, w, h);
+    var size = w * h * 4;
+    var ptr = _malloc(size);
+    if (!ptr) {
+        return 0;
+    }
+    HEAPU8.set(img.data, ptr);
+    setValue(out_w, w, 'i32');
+    setValue(out_h, h, 'i32');
+    return ptr;
+});
+
+static SDL_Surface* backend_render_emscripten_canvas_surface(const char* text, SDL_Color color, int target_px) {
+    int out_w = 0;
+    int out_h = 0;
+    int px;
+    int ptr;
+    SDL_Surface* wrapped;
+    SDL_Surface* owned;
+
+    if (!text || !text[0]) {
+        return NULL;
+    }
+
+    px = (int)(target_px * scale + 0.5f);
+    if (px < 12) {
+        px = 12;
+    }
+
+    ptr = emscripten_render_text_rgba(text, px, color.r, color.g, color.b, color.a, &out_w, &out_h);
+    if (!ptr || out_w <= 0 || out_h <= 0) {
+        if (ptr) {
+            free((void*)(intptr_t)ptr);
+        }
+        return NULL;
+    }
+
+    wrapped = SDL_CreateRGBSurfaceWithFormatFrom(
+        (void*)(intptr_t)ptr, out_w, out_h, 32, out_w * 4, SDL_PIXELFORMAT_RGBA32);
+    if (!wrapped) {
+        free((void*)(intptr_t)ptr);
+        return NULL;
+    }
+
+    owned = SDL_ConvertSurfaceFormat(wrapped, SDL_PIXELFORMAT_RGBA32, 0);
+    SDL_FreeSurface(wrapped);
+    free((void*)(intptr_t)ptr);
+    if (!owned) {
+        return NULL;
+    }
+
+    backend_clean_surface_alpha_fringe(owned, 24);
+    SDL_SetSurfaceBlendMode(owned, SDL_BLENDMODE_BLEND);
+    return owned;
+}
+
 static SDL_Surface* backend_render_emscripten_emoji_surface(const char* text, int target_px) {
     int out_w = 0;
     int out_h = 0;
@@ -574,6 +656,9 @@ static SDL_Surface* backend_render_emscripten_text_surface(DFont* font, const ch
             surf = backend_render_emscripten_emoji_surface(run_buf, target_px);
         } else {
             surf = backend_render_blended_utf8(font, run_buf, color);
+            if (!surf) {
+                surf = backend_render_emscripten_canvas_surface(run_buf, color, target_px);
+            }
         }
         if (!surf) {
             continue;
@@ -1859,7 +1944,6 @@ static TTF_Font* emscripten_open_font_file(const char* path, int size)
     }
 
     font = TTF_OpenFontRW(rw, 1, size * scale);
-    free(font_data);
     return font;
 }
 #endif
@@ -2117,7 +2201,7 @@ Texture* backend_render_texture(DFont* font,const char* text,Color color){
     }
 
 #ifdef __EMSCRIPTEN__
-    if (backend_text_contains_emoji(text)) {
+    {
         SDL_Surface* em_surface = backend_render_emscripten_text_surface(
             font, text,
             (SDL_Color){color.r, color.g, color.b, color.a},

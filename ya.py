@@ -548,6 +548,11 @@ def after_build_web_artifacts(target):
                     break
             if copied:
                 break
+    for stale in ("playground.js", "playground.wasm", "playground.data"):
+        stale_path = os.path.join(dest_dir, stale)
+        if os.path.isfile(stale_path):
+            os.remove(stale_path)
+            print("[web] removed stale %s" % stale_path)
 
 rule("web.artifacts")
 after_build(after_build_web_artifacts)
