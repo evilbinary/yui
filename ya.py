@@ -92,6 +92,62 @@ def _resolve_emscripten_tool(name):
             return path
     return name
 
+_mingw64_root_cache = None
+
+def _resolve_mingw64():
+    """Locate MSYS2 mingw64 toolchain root on Windows."""
+    global _mingw64_root_cache
+    if _mingw64_root_cache is not None:
+        return _mingw64_root_cache
+
+    import shutil
+
+    def _valid_root(root):
+        if not root:
+            return None
+        root = os.path.normpath(root)
+        gcc = os.path.join(root, "bin", "gcc.exe")
+        sdl_inc = os.path.join(root, "include", "SDL2")
+        if os.path.isfile(gcc) and os.path.isdir(sdl_inc):
+            return root
+        return None
+
+    for key in ("MINGW64", "MINGW64_HOME", "MINGW_PREFIX"):
+        found = _valid_root(os.environ.get(key))
+        if found:
+            _mingw64_root_cache = found
+            return found
+
+    msys2 = os.environ.get("MSYS2_ROOT") or os.environ.get("MSYS2_PREFIX")
+    if msys2:
+        found = _valid_root(os.path.join(msys2, "mingw64"))
+        if found:
+            _mingw64_root_cache = found
+            return found
+
+    gcc_path = shutil.which("gcc")
+    if gcc_path:
+        bin_dir = os.path.dirname(os.path.normpath(gcc_path))
+        found = _valid_root(os.path.dirname(bin_dir))
+        if found:
+            _mingw64_root_cache = found
+            return found
+
+    for root in (
+        r"E:\soft\msys2\mingw64",
+        r"C:\msys64\mingw64",
+        r"C:\tools\msys64\mingw64",
+        os.path.expanduser(r"~\scoop\apps\msys2\current\mingw64"),
+    ):
+        found = _valid_root(root)
+        if found:
+            _mingw64_root_cache = found
+            return found
+
+    print("warning: mingw64 not found; set MINGW64/MSYS2_ROOT or install MSYS2")
+    _mingw64_root_cache = r"C:\msys64\mingw64"
+    return _mingw64_root_cache
+
 def configure_emscripten_toolchain(target=None):
     if get_plat() not in ("em", "emscripten"):
         return
@@ -290,13 +346,13 @@ def add_flags():
         configure_emscripten_toolchain()
         before_build(configure_emscripten_toolchain)
         if platform.system()=='Windows':
-            mingw64='E:\\soft\\msys2\\mingw64'
+            mingw64 = _resolve_mingw64()
             add_cflags(
             # '--use-port=sdl2 ',
             '-g',
             '-Wno-incompatible-pointer-types -Wno-implicit-function-declaration',
             '-F../libs/',
-            '-I'+mingw64+'\\include\\SDL2',
+            '-I'+os.path.join(mingw64, 'include', 'SDL2'),
             '-I.',
             '-I./src/components',
             '-I./src/'
@@ -411,27 +467,27 @@ def add_flags():
             '-F../libs/'
             )
     elif platform.system()=='Windows':
-        mingw64='E:\\soft\\msys2\\mingw64'
+        mingw64 = _resolve_mingw64()
         if get_plat() in['emscripten','em']:
             configure_emscripten_toolchain()
         else:
             tool=get_toolchain_node()
-            tool['cc']=mingw64+'\\bin\\gcc.exe'
-            tool['cxx']=mingw64+'\\bin\\g++.exe'
-            tool['ld']=mingw64+'\\bin\\gcc.exe'
-            tool['ar']=mingw64+'\\bin\\ar.exe'
+            tool['cc']=os.path.join(mingw64, 'bin', 'gcc.exe')
+            tool['cxx']=os.path.join(mingw64, 'bin', 'g++.exe')
+            tool['ld']=os.path.join(mingw64, 'bin', 'gcc.exe')
+            tool['ar']=os.path.join(mingw64, 'bin', 'ar.exe')
 
             add_cflags(
                 '-g',
                 '-Wno-incompatible-pointer-types -Wno-implicit-function-declaration',
                 '-F../libs/',
-                '-I'+mingw64+'\\include\\SDL2',
+                '-I'+os.path.join(mingw64, 'include', 'SDL2'),
                 '-I.',
                 '-I./src/components',
                 '-I./src/'
                 )
             add_ldflags(
-            '-L'+mingw64+'\\lib',
+            '-L'+os.path.join(mingw64, 'lib'),
             '-lSDL2main',
             '-lSDL2',
             '-lSDL2_ttf',
