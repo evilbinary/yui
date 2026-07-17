@@ -26,8 +26,12 @@ make android          # 两个 ABI 都打
 
 ```bash
 cd platform/android
-# local.properties: sdk.dir=...（Android SDK）
-# JDK：gradle.properties 里 org.gradle.java.home 指向本机 JDK（默认 Android Studio jbr）
+# local.properties: sdk.dir=...（Android SDK，由 Android Studio 自动生成，勿提交 git）
+```
+
+设置 `JAVA_HOME` 指向 Android Studio 的 `jbr` 目录，然后：
+
+```bash
 ./gradlew :app:assembleDebug
 ```
 
