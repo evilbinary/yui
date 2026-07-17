@@ -120,6 +120,10 @@ static SDL_Surface* lvgl_emscripten_text_surface(const char* text, Color color, 
         return NULL;
     }
 
+    if (color.a == 0) {
+        color.a = 255;
+    }
+
     px = (int)(target_px * yui_density + 0.5f);
     if (px < 12) {
         px = 12;
@@ -556,6 +560,76 @@ static int fb_stride(void)
     return lv_port_get_stride();
 }
 
+static void lvgl_blit_surface_to_fb(SDL_Surface* surface, const SDL_Rect* srcrect,
+                                      const SDL_Rect* dstrect)
+{
+    uint32_t* fb;
+    SDL_Surface* src_surface = surface;
+    SDL_Surface* converted = NULL;
+    int src_x;
+    int src_y;
+    int src_w;
+    int src_h;
+    int y;
+    int x;
+
+    fb = framebuffer();
+    if (!fb || !surface || !dstrect) {
+        return;
+    }
+
+    if (surface->format->format != SDL_PIXELFORMAT_ARGB8888) {
+        converted = SDL_ConvertSurfaceFormat(surface, SDL_PIXELFORMAT_ARGB8888, 0);
+        if (!converted) {
+            return;
+        }
+        src_surface = converted;
+    }
+
+    src_x = srcrect ? srcrect->x : 0;
+    src_y = srcrect ? srcrect->y : 0;
+    src_w = srcrect ? srcrect->w : src_surface->w;
+    src_h = srcrect ? srcrect->h : src_surface->h;
+
+    {
+        int dst_w = dstrect->w > 0 ? dstrect->w : src_w;
+        int dst_h = dstrect->h > 0 ? dstrect->h : src_h;
+
+        for (y = 0; y < dst_h; y++) {
+            int sy = src_h > 0 ? (y * src_h) / dst_h : 0;
+            int dy = dstrect->y + y;
+            uint8_t* row;
+
+            if (dy < 0 || dy >= fb_height()) {
+                continue;
+            }
+
+            row = (uint8_t*)src_surface->pixels + (src_y + sy) * src_surface->pitch + src_x * 4;
+            for (x = 0; x < dst_w; x++) {
+                int sx = src_w > 0 ? (x * src_w) / dst_w : 0;
+                int dx = dstrect->x + x;
+                uint8_t* px;
+                uint32_t src_pixel;
+                uint32_t* dst_px;
+
+                if (dx < 0 || dx >= fb_width()) {
+                    continue;
+                }
+
+                px = row + sx * 4;
+                src_pixel = ((uint32_t)px[3] << 24) | ((uint32_t)px[2] << 16)
+                          | ((uint32_t)px[1] << 8) | (uint32_t)px[0];
+                dst_px = fb + dy * fb_stride() + dx;
+                *dst_px = fb_blend_pixel(*dst_px, src_pixel);
+            }
+        }
+    }
+
+    if (converted) {
+        SDL_FreeSurface(converted);
+    }
+}
+
 static void fb_fill_rect(const Rect* rect, Color color)
 {
     uint32_t* fb = framebuffer();
@@ -654,18 +728,10 @@ Texture* backend_load_texture_from_base64(const char* base64_data, size_t data_l
 Texture* backend_render_texture(DFont* font, const char* text, Color color)
 {
 #if defined(YUI_LVGL_PORT_SDL)
-    SDL_Renderer* renderer;
     SDL_Surface* surface;
-    SDL_Surface* converted;
-    SDL_Texture* texture;
     int font_size_px = 16;
 
     if (!font || !text || text[0] == '\0') {
-        return NULL;
-    }
-
-    renderer = lv_port_get_renderer();
-    if (!renderer) {
         return NULL;
     }
 
@@ -673,6 +739,7 @@ Texture* backend_render_texture(DFont* font, const char* text, Color color)
     if (font_size_px <= 0) {
         font_size_px = 16;
     }
+
 #ifdef __EMSCRIPTEN__
     {
         float density = backend_get_density();
@@ -683,58 +750,20 @@ Texture* backend_render_texture(DFont* font, const char* text, Color color)
             font_size_px = 16;
         }
     }
-#endif
-
-#ifdef __EMSCRIPTEN__
     surface = lvgl_emscripten_text_surface(text, color, font_size_px);
-    if (!surface) {
-        return NULL;
-    }
-    texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888,
-                                SDL_TEXTUREACCESS_STREAMING,
-                                surface->w, surface->h);
-    if (!texture) {
-        SDL_FreeSurface(surface);
-        return NULL;
-    }
-    if (SDL_UpdateTexture(texture, NULL, surface->pixels, surface->pitch) != 0) {
-        SDL_DestroyTexture(texture);
-        SDL_FreeSurface(surface);
-        return NULL;
-    }
-    SDL_FreeSurface(surface);
-    SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
-    return texture;
 #else
     surface = TTF_RenderUTF8_Blended((TTF_Font*)font, text, color);
     if (!surface) {
         LOGE("backend_lvgl", "TTF_RenderUTF8_Blended failed: %s", TTF_GetError());
         return NULL;
     }
-
-    converted = SDL_ConvertSurfaceFormat(surface, SDL_PIXELFORMAT_ARGB8888, 0);
-    SDL_FreeSurface(surface);
-    if (!converted) {
-        return NULL;
+    {
+        SDL_Surface* converted = SDL_ConvertSurfaceFormat(surface, SDL_PIXELFORMAT_ARGB8888, 0);
+        SDL_FreeSurface(surface);
+        surface = converted;
     }
-
-    texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888,
-                                SDL_TEXTUREACCESS_STREAMING,
-                                converted->w, converted->h);
-    if (!texture) {
-        SDL_FreeSurface(converted);
-        return NULL;
-    }
-
-    if (SDL_UpdateTexture(texture, NULL, converted->pixels, converted->pitch) != 0) {
-        SDL_DestroyTexture(texture);
-        SDL_FreeSurface(converted);
-        return NULL;
-    }
-
-    SDL_FreeSurface(converted);
-    return texture;
 #endif
+    return (Texture*)surface;
 #else
     (void)font;
     (void)text;
@@ -903,7 +932,7 @@ void backend_render_text_destroy(Texture* texture)
 {
 #if defined(YUI_LVGL_PORT_SDL)
     if (texture) {
-        SDL_DestroyTexture(texture);
+        SDL_FreeSurface((SDL_Surface*)texture);
     }
 #else
     (void)texture;
@@ -913,62 +942,23 @@ void backend_render_text_destroy(Texture* texture)
 void backend_render_text_copy(Texture* texture, const Rect* srcrect, const Rect* dstrect)
 {
 #if defined(YUI_LVGL_PORT_SDL)
-    uint32_t* fb;
-    int tex_w = 0;
-    int tex_h = 0;
     SDL_Rect src;
     SDL_Rect dst;
-    void* pixels = NULL;
-    int pitch = 0;
-    int y;
-    int x;
+    SDL_Surface* surface = (SDL_Surface*)texture;
 
-    fb = framebuffer();
-    if (!fb || !texture || !dstrect) {
-        return;
-    }
-
-    if (SDL_QueryTexture(texture, NULL, NULL, &tex_w, &tex_h) != 0) {
+    if (!surface || !dstrect) {
         return;
     }
 
     src.x = 0;
     src.y = 0;
-    src.w = tex_w;
-    src.h = tex_h;
+    src.w = surface->w;
+    src.h = surface->h;
     if (srcrect) {
         src = *srcrect;
     }
     dst = *dstrect;
-
-    if (SDL_LockTexture(texture, &src, &pixels, &pitch) != 0) {
-        return;
-    }
-
-    for (y = 0; y < src.h; y++) {
-        int dy = dst.y + y;
-        if (dy < 0 || dy >= fb_height()) {
-            continue;
-        }
-        for (x = 0; x < src.w; x++) {
-            int dx = dst.x + x;
-            uint8_t* px;
-            uint32_t src_pixel;
-            uint32_t* dst_px;
-
-            if (dx < 0 || dx >= fb_width()) {
-                continue;
-            }
-
-            px = (uint8_t*)pixels + y * pitch + x * 4;
-            src_pixel = ((uint32_t)px[3] << 24) | ((uint32_t)px[2] << 16)
-                      | ((uint32_t)px[1] << 8) | (uint32_t)px[0];
-            dst_px = fb + dy * fb_stride() + dx;
-            *dst_px = fb_blend_pixel(*dst_px, src_pixel);
-        }
-    }
-
-    SDL_UnlockTexture(texture);
+    lvgl_blit_surface_to_fb(surface, &src, &dst);
 #else
     (void)texture;
     (void)srcrect;
@@ -1090,10 +1080,24 @@ int backend_screenshot(const char* path) { (void)path; return -1; }
 int backend_query_texture(Texture* texture, Uint32* format, int* access, int* w, int* h)
 {
 #if defined(YUI_LVGL_PORT_SDL)
-    if (!texture) {
+    SDL_Surface* surface = (SDL_Surface*)texture;
+
+    if (!surface) {
         return -1;
     }
-    return SDL_QueryTexture(texture, format, access, w, h);
+    if (format) {
+        *format = surface->format ? surface->format->format : 0;
+    }
+    if (access) {
+        *access = 0;
+    }
+    if (w) {
+        *w = surface->w;
+    }
+    if (h) {
+        *h = surface->h;
+    }
+    return 0;
 #else
     (void)texture;
     (void)format;

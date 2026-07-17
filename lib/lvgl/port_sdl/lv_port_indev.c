@@ -94,6 +94,17 @@ void lv_port_indev_set_sdl_event_hook(lv_port_sdl_event_fn fn, void* user_data)
     g_sdl_event_hook_ud = user_data;
 }
 
+static void lv_port_finger_to_point(const SDL_TouchFingerEvent* finger,
+                                    lv_coord_t* x, lv_coord_t* y)
+{
+    int w = lv_port_get_width();
+    int h = lv_port_get_height();
+    if (w > 0 && h > 0) {
+        *x = (lv_coord_t)(finger->x * w);
+        *y = (lv_coord_t)(finger->y * h);
+    }
+}
+
 void lv_port_indev_poll(void)
 {
     SDL_Event event;
@@ -127,27 +138,12 @@ void lv_port_indev_poll(void)
             g_mouse_point.y = event.button.y;
             g_mouse_pressed = false;
         } else if (event.type == SDL_FINGERDOWN) {
-            int w = lv_port_get_width();
-            int h = lv_port_get_height();
-            if (w > 0 && h > 0) {
-                g_mouse_point.x = (lv_coord_t)(event.tfinger.x * w);
-                g_mouse_point.y = (lv_coord_t)(event.tfinger.y * h);
-            }
+            lv_port_finger_to_point(&event.tfinger, &g_mouse_point.x, &g_mouse_point.y);
             g_mouse_pressed = true;
         } else if (event.type == SDL_FINGERMOTION) {
-            int w = lv_port_get_width();
-            int h = lv_port_get_height();
-            if (w > 0 && h > 0) {
-                g_mouse_point.x = (lv_coord_t)(event.tfinger.x * w);
-                g_mouse_point.y = (lv_coord_t)(event.tfinger.y * h);
-            }
+            lv_port_finger_to_point(&event.tfinger, &g_mouse_point.x, &g_mouse_point.y);
         } else if (event.type == SDL_FINGERUP) {
-            int w = lv_port_get_width();
-            int h = lv_port_get_height();
-            if (w > 0 && h > 0) {
-                g_mouse_point.x = (lv_coord_t)(event.tfinger.x * w);
-                g_mouse_point.y = (lv_coord_t)(event.tfinger.y * h);
-            }
+            lv_port_finger_to_point(&event.tfinger, &g_mouse_point.x, &g_mouse_point.y);
             g_mouse_pressed = false;
         }
     }
