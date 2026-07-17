@@ -1,0 +1,93 @@
+{
+    "id": "page_game2048",
+    "title": "2048",
+    "icon": "🎮",
+    "watchApp": { "id": "game2048", "order": 35 },
+    "js": ["game2048.js"],
+    "type": "View",
+    "variant": "surface",
+    "flex": 1,
+    "scrollable": 0,
+    "layout": { "type": "vertical", "spacing": 4, "padding": [2, 10, 4, 10] },
+    "events": { "onLoad": "@onGame2048Load", "onShow": "@onGame2048Show" },
+    "children": [
+        {
+            "id": "g2048_header",
+            "type": "View",
+            "size": [366, 22],
+            "layout": { "type": "horizontal", "spacing": 6, "align": "center" },
+            "children": [
+                { "id": "g2048_title", "type": "Label", "variant": "heading", "text": "2048", "size": [56, 22] },
+                {
+                    "id": "g2048_score_box",
+                    "type": "View",
+                    "variant": "card",
+                    "flex": 1,
+                    "size": [0, 22],
+                    "layout": { "type": "horizontal", "spacing": 2, "padding": [2, 6, 2, 6], "align": "center", "justifyContent": "center" },
+                    "children": [
+                        { "id": "g2048_score_lbl", "type": "Label", "variant": "caption", "text": "分", "size": [14, 14] },
+                        { "id": "g2048_score", "type": "Label", "variant": "metric-value", "text": "0", "size": [48, 18], "style": { "fontSize": 14 } }
+                    ]
+                },
+                {
+                    "id": "g2048_best_box",
+                    "type": "View",
+                    "variant": "card",
+                    "flex": 1,
+                    "size": [0, 22],
+                    "layout": { "type": "horizontal", "spacing": 2, "padding": [2, 6, 2, 6], "align": "center", "justifyContent": "center" },
+                    "children": [
+                        { "id": "g2048_best_lbl", "type": "Label", "variant": "caption", "text": "最佳", "size": [22, 14] },
+                        { "id": "g2048_best", "type": "Label", "variant": "metric-value", "text": "0", "size": [48, 18], "style": { "fontSize": 14 } }
+                    ]
+                }
+            ]
+        },
+        { "id": "g2048_status", "type": "Label", "variant": "caption", "text": "滑动方向键合并方块", "size": [366, 12], "textAlign": "center" },
+        {
+            "id": "g2048_board",
+            "type": "Grid",
+            "size": [366, 278],
+            "layout": { "columns": 4, "spacing": 3, "padding": [0, 0, 0, 0] },
+            "children": [
+                { "id": "g2048_c0", "type": "Label", "text": "", "size": [88, 66], "textAlign": "center", "style": { "bgColor": "#2a2a2e", "color": "#636366", "fontSize": 18, "borderRadius": 8 } },
+                { "id": "g2048_c1", "type": "Label", "text": "", "size": [88, 66], "textAlign": "center", "style": { "bgColor": "#2a2a2e", "color": "#636366", "fontSize": 18, "borderRadius": 8 } },
+                { "id": "g2048_c2", "type": "Label", "text": "", "size": [88, 66], "textAlign": "center", "style": { "bgColor": "#2a2a2e", "color": "#636366", "fontSize": 18, "borderRadius": 8 } },
+                { "id": "g2048_c3", "type": "Label", "text": "", "size": [88, 66], "textAlign": "center", "style": { "bgColor": "#2a2a2e", "color": "#636366", "fontSize": 18, "borderRadius": 8 } },
+                { "id": "g2048_c4", "type": "Label", "text": "", "size": [88, 66], "textAlign": "center", "style": { "bgColor": "#2a2a2e", "color": "#636366", "fontSize": 18, "borderRadius": 8 } },
+                { "id": "g2048_c5", "type": "Label", "text": "", "size": [88, 66], "textAlign": "center", "style": { "bgColor": "#2a2a2e", "color": "#636366", "fontSize": 18, "borderRadius": 8 } },
+                { "id": "g2048_c6", "type": "Label", "text": "", "size": [88, 66], "textAlign": "center", "style": { "bgColor": "#2a2a2e", "color": "#636366", "fontSize": 18, "borderRadius": 8 } },
+                { "id": "g2048_c7", "type": "Label", "text": "", "size": [88, 66], "textAlign": "center", "style": { "bgColor": "#2a2a2e", "color": "#636366", "fontSize": 18, "borderRadius": 8 } },
+                { "id": "g2048_c8", "type": "Label", "text": "", "size": [88, 66], "textAlign": "center", "style": { "bgColor": "#2a2a2e", "color": "#636366", "fontSize": 18, "borderRadius": 8 } },
+                { "id": "g2048_c9", "type": "Label", "text": "", "size": [88, 66], "textAlign": "center", "style": { "bgColor": "#2a2a2e", "color": "#636366", "fontSize": 18, "borderRadius": 8 } },
+                { "id": "g2048_c10", "type": "Label", "text": "", "size": [88, 66], "textAlign": "center", "style": { "bgColor": "#2a2a2e", "color": "#636366", "fontSize": 18, "borderRadius": 8 } },
+                { "id": "g2048_c11", "type": "Label", "text": "", "size": [88, 66], "textAlign": "center", "style": { "bgColor": "#2a2a2e", "color": "#636366", "fontSize": 18, "borderRadius": 8 } },
+                { "id": "g2048_c12", "type": "Label", "text": "", "size": [88, 66], "textAlign": "center", "style": { "bgColor": "#2a2a2e", "color": "#636366", "fontSize": 18, "borderRadius": 8 } },
+                { "id": "g2048_c13", "type": "Label", "text": "", "size": [88, 66], "textAlign": "center", "style": { "bgColor": "#2a2a2e", "color": "#636366", "fontSize": 18, "borderRadius": 8 } },
+                { "id": "g2048_c14", "type": "Label", "text": "", "size": [88, 66], "textAlign": "center", "style": { "bgColor": "#2a2a2e", "color": "#636366", "fontSize": 18, "borderRadius": 8 } },
+                { "id": "g2048_c15", "type": "Label", "text": "", "size": [88, 66], "textAlign": "center", "style": { "bgColor": "#2a2a2e", "color": "#636366", "fontSize": 18, "borderRadius": 8 } }
+            ]
+        },
+        {
+            "id": "g2048_controls",
+            "type": "View",
+            "size": [366, 34],
+            "layout": { "type": "horizontal", "spacing": 4, "justifyContent": "center" },
+            "children": [
+                { "id": "btn_g2048_left", "type": "Button", "variant": "secondary", "text": "←", "size": [86, 34], "events": { "onClick": "@g2048MoveLeft" } },
+                { "id": "btn_g2048_up", "type": "Button", "variant": "secondary", "text": "↑", "size": [86, 34], "events": { "onClick": "@g2048MoveUp" } },
+                { "id": "btn_g2048_down", "type": "Button", "variant": "secondary", "text": "↓", "size": [86, 34], "events": { "onClick": "@g2048MoveDown" } },
+                { "id": "btn_g2048_right", "type": "Button", "variant": "secondary", "text": "→", "size": [86, 34], "events": { "onClick": "@g2048MoveRight" } }
+            ]
+        },
+        {
+            "id": "btn_g2048_new",
+            "type": "Button",
+            "variant": "primary",
+            "text": "新游戏",
+            "size": [366, 32],
+            "events": { "onClick": "@g2048NewGame" }
+        }
+    ]
+}
