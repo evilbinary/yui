@@ -20,7 +20,8 @@
     },
     "events": {
         "onLoad": "@onWatchLoad",
-        "onShow": "@onWatchShow"
+        "onShow": "@onWatchShow",
+        "onTouch": "@onPageTouch"
     },
     "children": [
         {
@@ -77,8 +78,7 @@
             "type": "View",
             "variant": "surface",
             "flex": 1,
-            "layout": { "type": "vertical" },
-            "events": { "onTouch": "@onPageTouch" }
+            "layout": { "type": "vertical" }
         },
         {
             "id": "swipe_index",

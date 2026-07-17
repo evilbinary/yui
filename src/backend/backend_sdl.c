@@ -1044,12 +1044,21 @@ static int pointer_start_x = 0;
 static int pointer_start_y = 0;
 static int touch_swipe_start_x = 0;
 static int touch_swipe_start_y = 0;
+static Uint32 last_swipe_emit_ms = 0;
 
 static void backend_emit_swipe_event(Layer* root, int x, int y, int dx, int dy) {
     int adx = dx < 0 ? -dx : dx;
     int ady = dy < 0 ? -dy : dy;
+    Uint32 now;
     if (adx < SWIPE_THRESHOLD_PX) return;
     if (adx < ady) return;
+
+    /* 鼠标/触控板可能对同一次拖动各发一次，短窗口内去重 */
+    now = SDL_GetTicks();
+    if (last_swipe_emit_ms != 0 && (now - last_swipe_emit_ms) < 80) {
+        return;
+    }
+    last_swipe_emit_ms = now;
 
     TouchEvent touchEvent;
     memset(&touchEvent, 0, sizeof(TouchEvent));
@@ -1059,7 +1068,7 @@ static void backend_emit_swipe_event(Layer* root, int x, int y, int dx, int dy) 
     touchEvent.deltaX = dx;
     touchEvent.deltaY = dy;
     touchEvent.fingerCount = 1;
-    touchEvent.timestamp = SDL_GetTicks();
+    touchEvent.timestamp = now;
     handle_touch_event(root, &touchEvent);
 }
 

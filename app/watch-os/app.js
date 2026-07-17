@@ -171,12 +171,99 @@ function refreshHealthData() {
     YUI.setText("health_ring_text", pct + "% · 还需 " + formatWatchNumber(Math.max(0, c.steps.goal - c.steps.value)) + " 步");
 }
 
-function goWatchBack() {
-    if (YUI.canBack()) {
-        YUI.back();
-    } else {
-        YUI.navigate("/");
+function isShellPath(path) {
+    return path === "/" || path === "/launcher" || path === "/notifications";
+}
+
+function lockSwipe(ms) {
+    swipeAnimating = true;
+    setTimeout(function() {
+        swipeAnimating = false;
+    }, ms || 350);
+}
+
+function backToLauncher() {
+    var route = YUI.currentRoute ? YUI.currentRoute() : null;
+    var fromPath = route ? route.path : "?";
+    YUI.log("[backToLauncher] from=" + fromPath);
+
+    if (route && route.path === "/launcher") {
+        updateWatchChrome();
+        Theme.apply();
+        return;
     }
+
+    // 优先静默 pop 到启动器；没有则丢掉应用页再 navigate，避免 YUI.back() 先露出表盘
+    if (typeof Router !== "undefined" && Router.stack) {
+        var idx = -1;
+        var i;
+        for (i = Router.stack.length - 1; i >= 0; i--) {
+            if (Router.stack[i].path === "/launcher") {
+                idx = i;
+                break;
+            }
+        }
+        if (idx >= 0) {
+            while (Router.stack.length > idx + 1) {
+                var leaving = Router.stack.pop();
+                if (leaving && leaving.layerId) {
+                    YUI.hide(leaving.layerId);
+                }
+            }
+            var launcher = Router.current();
+            if (launcher && launcher.layerId) {
+                YUI.hide("page_face");
+                YUI.hide("page_notifications");
+                YUI.show(launcher.layerId);
+            }
+            YUI.log("[backToLauncher] popped to launcher");
+            updateWatchChrome();
+            Theme.apply();
+            return;
+        }
+
+        while (Router.canBack()) {
+            route = Router.current();
+            if (route && route.path === "/") break;
+            var top = Router.stack.pop();
+            if (top && top.layerId) YUI.hide(top.layerId);
+        }
+    }
+
+    YUI.hide("page_face");
+    YUI.hide("page_notifications");
+    YUI.navigate("/launcher");
+    route = YUI.currentRoute ? YUI.currentRoute() : null;
+    YUI.log("[backToLauncher] navigate -> " + (route ? route.path : "?"));
+    updateWatchChrome();
+    Theme.apply();
+}
+
+function goWatchBack() {
+    var route = YUI.currentRoute ? YUI.currentRoute() : null;
+    var path = route ? route.path : "/";
+    var stackPaths = [];
+    if (typeof Router !== "undefined" && Router.stack) {
+        for (var i = 0; i < Router.stack.length; i++) {
+            stackPaths.push(Router.stack[i].path);
+        }
+    }
+    YUI.log("[goWatchBack] path=" + path + " stack=[" + stackPaths.join(" > ") + "]");
+
+    if (!isShellPath(path)) {
+        backToLauncher();
+        return;
+    }
+
+    if (path === "/launcher" || path === "/notifications") {
+        if (YUI.canBack()) {
+            YUI.back();
+        } else {
+            YUI.navigate("/");
+        }
+    }
+    route = YUI.currentRoute ? YUI.currentRoute() : null;
+    YUI.log("[goWatchBack] after -> " + (route ? route.path : "?"));
     updateWatchChrome();
     Theme.apply();
 }
@@ -196,30 +283,58 @@ function openBattery() { WatchAppRegistry.openById("battery"); }
 function openMessages() { WatchAppRegistry.openById("messages"); }
 
 function onPageTouch(type, deltaX, deltaY) {
-    if (type !== "swipe") return;
-    if (swipeAnimating) return;
+    if (type !== "swipe") {
+        return;
+    }
+    if (swipeAnimating) {
+        YUI.log("[swipe] ignored: locked dir=" + (deltaX < 0 ? "left" : "right")
+            + " deltaX=" + deltaX + " path=" + ((YUI.currentRoute && YUI.currentRoute()) ? YUI.currentRoute().path : "?"));
+        return;
+    }
 
     var route = YUI.currentRoute ? YUI.currentRoute() : null;
     var path = route ? route.path : "/";
     var direction = deltaX < 0 ? "left" : "right";
+    var stackPaths = [];
+    if (typeof Router !== "undefined" && Router.stack) {
+        for (var i = 0; i < Router.stack.length; i++) {
+            stackPaths.push(Router.stack[i].path);
+        }
+    }
 
-    if (direction === "right" && path !== "/" && path !== "/launcher" && path !== "/notifications") {
-        goWatchBack();
+    YUI.log("[swipe] dir=" + direction + " deltaX=" + deltaX + " deltaY=" + deltaY
+        + " path=" + path + " stack=[" + stackPaths.join(" > ") + "]");
+
+    // 应用内：右滑（从左到右）返回应用列表；立刻锁手势，防止同一次拖动二次 swipe 把启动器滑回表盘
+    if (!isShellPath(path) && direction === "right") {
+        YUI.log("[swipe] action=backToLauncher");
+        lockSwipe(400);
+        backToLauncher();
         return;
     }
 
     if (path === "/") {
-        if (direction === "left") swipeNavigate("/launcher", "left");
-        else if (direction === "right") swipeNavigate("/notifications", "right");
+        if (direction === "left") {
+            YUI.log("[swipe] action=face->launcher");
+            swipeNavigate("/launcher", "left");
+        } else if (direction === "right") {
+            YUI.log("[swipe] action=face->notifications");
+            swipeNavigate("/notifications", "right");
+        }
         return;
     }
     if (path === "/launcher" && direction === "right") {
+        YUI.log("[swipe] action=launcher->face");
         swipeNavigate("/", "right");
         return;
     }
     if (path === "/notifications" && direction === "left") {
+        YUI.log("[swipe] action=notifications->face");
         swipeNavigate("/", "left");
+        return;
     }
+
+    YUI.log("[swipe] action=none");
 }
 
 function swipeNavigate(path, direction) {
