@@ -58,7 +58,21 @@ android: android-arm64 android-armv7
 	@echo "APK: platform/android/app/build/outputs/apk/debug/app-debug.apk"
 
 android-install: android
-	cd platform/android && ./gradlew :app:installDebug 
+	cd platform/android && ./gradlew :app:installDebug
+
+ios-device:
+	IOS_SDK=iphoneos ya -p ios -a arm64 -m release -b yui-ios-prebuilt
+
+ios-simulator:
+	IOS_SDK=iphonesimulator ya -p ios -a arm64 -m release -b yui-ios-prebuilt
+
+ios-simulator-x64:
+	IOS_SDK=iphonesimulator ya -p ios -a x86_64 -m release -b yui-ios-prebuilt
+
+ios-app:
+	cmake -G Xcode -S platform/ios -B build/ios-xcode -DIOS_SDK=iphoneos -DIOS_ARCH=arm64
+	cmake --build build/ios-xcode --config Debug
+	@echo "App: build/ios-xcode/Debug/YuiApp.app"
 
 run: main
 	ya -r main

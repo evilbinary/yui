@@ -43,3 +43,16 @@ if get_plat() == "android":
         add_cflags("-Iplatform/common", "-Isrc", "-Ilib/cjson", "-Ilib/yaml2json", "-Ilib/jsmodule", "-DHAS_JS_MODULE"),
         add_files("android/jni/yui_bridge.cpp", "common/yui_boot.c"),
     )
+
+if get_plat() == "ios":
+    target("yui-ios-prebuilt")
+    (
+        add_deps("yui", "cjson", "yaml", "yaml2json", "quickjs", "jsmodule-quickjs", "socket"),
+        add_rules("mode.debug", "mode.release"),
+    )
+
+    target("yui-ios-prebuilt-mqjs")
+    (
+        add_deps("yui", "cjson", "yaml", "yaml2json", "mquickjs", "jsmodule", "socket"),
+        add_rules("mode.debug", "mode.release"),
+    )

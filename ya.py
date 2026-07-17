@@ -119,6 +119,81 @@ def _add_android_compile_flags():
         "-lm",
     )
 
+_ios_toolchain_cache = {}
+
+def _ios_sdk_name():
+    sdk = os.environ.get("IOS_SDK", "")
+    if sdk in ("iphoneos", "iphonesimulator"):
+        return sdk
+    arch = get_arch()
+    if arch in ("x86_64", "i386"):
+        return "iphonesimulator"
+    return "iphoneos"
+
+def configure_ios_toolchain(target=None):
+    if get_plat() != "ios":
+        return
+    import subprocess
+    sdk = _ios_sdk_name()
+    try:
+        sdk_path = subprocess.check_output(
+            ["xcrun", "--sdk", sdk, "--show-sdk-path"], text=True
+        ).strip()
+        cc = subprocess.check_output(["xcrun", "--sdk", sdk, "-f", "clang"], text=True).strip()
+        cxx = subprocess.check_output(["xcrun", "--sdk", sdk, "-f", "clang++"], text=True).strip()
+        ar = subprocess.check_output(["xcrun", "--sdk", sdk, "-f", "ar"], text=True).strip()
+    except (OSError, subprocess.CalledProcessError):
+        print("warning: Xcode toolchain not found (need macOS + xcrun)")
+        return
+
+    arch = get_arch()
+    if (not arch or arch == "None") and target is not None:
+        arch = target.get_arch()
+    if not arch or arch == "None":
+        arch = os.environ.get("YMAKE_ARCH") or os.environ.get("ARCH") or "arm64"
+    if sdk == "iphonesimulator" and arch not in ("arm64", "x86_64"):
+        arch = "arm64"
+
+    _ios_toolchain_cache["sdk"] = sdk
+    _ios_toolchain_cache["sdk_path"] = sdk_path
+    _ios_toolchain_cache["arch"] = arch
+
+    tool = get_toolchain_node()
+    if not tool:
+        print("warning: gcc toolchain not found for ios build")
+        return
+    tool["cc"] = cc
+    tool["cxx"] = cxx
+    tool["ld"] = cc
+    tool["ar"] = ar
+
+def _add_ios_compile_flags():
+    if not _ios_toolchain_cache:
+        configure_ios_toolchain()
+    sdk = _ios_toolchain_cache.get("sdk")
+    sdk_path = _ios_toolchain_cache.get("sdk_path")
+    arch = _ios_toolchain_cache.get("arch", "arm64")
+    if not sdk or not sdk_path:
+        return
+    min_ver = os.environ.get("IOS_DEPLOYMENT_TARGET", "15.0")
+    add_cflags(
+        "-g",
+        "-fPIC",
+        "-DYUI_BACKEND_MOBILE",
+        "-I.",
+        "-Isrc",
+        "-Ilib",
+        "-Iplatform/ios",
+        "-arch", arch,
+        "-isysroot", sdk_path,
+        "-m%s-version-min=%s" % ("ios-simulator" if sdk == "iphonesimulator" else "ios", min_ver),
+    )
+    add_ldflags(
+        "-arch", arch,
+        "-isysroot", sdk_path,
+        "-m%s-version-min=%s" % ("ios-simulator" if sdk == "iphonesimulator" else "ios", min_ver),
+    )
+
 def add_flags():
     checkmem=True
     if platform.system()=='Windows':
@@ -273,13 +348,9 @@ def add_flags():
         if not (os.environ.get("ANDROID_NDK_HOME") or os.environ.get("ANDROID_NDK_ROOT")):
             print("warning: ANDROID_NDK_HOME not set, android cross-build may fail")
     elif is_plat("ios"):
-        add_cflags(
-            "-g",
-            "-fPIC",
-            "-DYUI_BACKEND_MOBILE",
-            "-Isrc",
-            "-Ilib",
-        )
+        configure_ios_toolchain()
+        _add_ios_compile_flags()
+        before_build(configure_ios_toolchain)
     elif platform.system()=='Darwin':
         add_cflags(
             '-g',
@@ -439,6 +510,9 @@ def after_build_mobile_prebuilt(target):
     if not os.path.isfile(src):
         return
     dest_dir = os.path.join("third_party", "yui-prebuilt", plat, arch)
+    if plat == "ios":
+        sdk = os.environ.get("IOS_SDK", "iphoneos")
+        dest_dir = os.path.join("third_party", "yui-prebuilt", plat, sdk, arch)
     os.makedirs(dest_dir, exist_ok=True)
     dest = os.path.join(dest_dir, os.path.basename(src))
     shutil.copy2(src, dest)

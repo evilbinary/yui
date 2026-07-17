@@ -14,6 +14,14 @@ extern char* android_clipboard_get_text(void);
 extern void android_clipboard_set_text(const char* text);
 #endif
 
+#if defined(__APPLE__)
+#include <TargetConditionals.h>
+#endif
+
+#if defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE
+#include "ios_metal_glue.h"
+#endif
+
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
@@ -656,6 +664,10 @@ void backend_mobile_set_native_surface(void* native_surface) {
     if (native_surface) {
         mobile_egl_init((ANativeWindow*)native_surface);
     }
+#elif defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE
+    if (native_surface) {
+        ios_metal_init(native_surface);
+    }
 #endif
 }
 
@@ -711,6 +723,8 @@ int backend_init(void) {
 void backend_quit(void) {
 #ifdef __ANDROID__
     mobile_egl_shutdown();
+#elif defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE
+    ios_metal_shutdown();
 #endif
     g_ui_root = NULL;
     g_native_surface = NULL;
@@ -754,6 +768,13 @@ void backend_render_fill_rect_color(Rect* rect, unsigned char r, unsigned char g
         mobile_draw_rect_norm((float)physical.x, (float)physical.y,
                               (float)physical.w, (float)physical.h, r, g, b, a);
     }
+#elif defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE
+    if (rect) {
+        Rect physical;
+        mobile_scale_rect(rect, &physical);
+        ios_metal_draw_rect((float)physical.x, (float)physical.y,
+                            (float)physical.w, (float)physical.h, r, g, b, a);
+    }
 #else
     (void)rect;
     (void)r;
@@ -791,6 +812,13 @@ void backend_render_rounded_rect_color(Rect* rect, unsigned char r, unsigned cha
         mobile_draw_rounded_rect_phys((float)physical.x, (float)physical.y,
                                       (float)physical.w, (float)physical.h,
                                       phys_radius, r, g, b, a);
+    }
+#elif defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE
+    if (rect) {
+        Rect physical;
+        mobile_scale_rect(rect, &physical);
+        ios_metal_draw_rect((float)physical.x, (float)physical.y,
+                            (float)physical.w, (float)physical.h, r, g, b, a);
     }
 #else
     (void)rect;
@@ -930,6 +958,8 @@ void backend_set_windowsize(int width, int height) {
     if (g_egl_ready) {
         glViewport(0, 0, g_window_w, g_window_h);
     }
+#elif defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE
+    ios_metal_resize(g_window_w, g_window_h);
 #endif
     if (g_ui_root && g_resize_callback) {
         g_resize_callback(g_ui_root, g_window_w, g_window_h);
@@ -954,6 +984,8 @@ void backend_render_present(void) {
     if (g_egl_ready && g_egl_display != EGL_NO_DISPLAY) {
         eglSwapBuffers(g_egl_display, g_egl_surface);
     }
+#elif defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE
+    ios_metal_present();
 #endif
 }
 
@@ -982,6 +1014,8 @@ void backend_render_clear_color(unsigned char r, unsigned char g, unsigned char 
         glClearColor(r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f);
         glClear(GL_COLOR_BUFFER_BIT);
     }
+#elif defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE
+    ios_metal_clear(r, g, b, a);
 #else
     (void)r;
     (void)g;
