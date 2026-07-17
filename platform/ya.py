@@ -78,6 +78,7 @@ target("yui-web.js")
         "-sINVOKE_RUN=0",
         "-sEXPORTED_RUNTIME_METHODS=['callMain','FS']",
         "-sENVIRONMENT=web",
+        "-sSTACK_SIZE=8388608",
     ),
 )
 
@@ -95,6 +96,7 @@ target("yui-web-lvgl.js")
         "-Ilib/jsmodule",
         "-Ilib/lvglmodule",
         "-DHAS_JS_MODULE",
+        "-DYUI_HAS_LVGLMODULE",
     ),
     add_files("web/vanilla/main_lvgl.c", "common/yui_boot.c"),
     add_ldflags(
@@ -103,5 +105,6 @@ target("yui-web-lvgl.js")
         "-sINVOKE_RUN=0",
         "-sEXPORTED_RUNTIME_METHODS=['callMain','FS']",
         "-sENVIRONMENT=web",
+        "-sSTACK_SIZE=8388608",
     ),
 )

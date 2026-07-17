@@ -23,6 +23,10 @@
 #endif
 #endif
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -710,6 +714,8 @@ int backend_query_texture(Texture* texture, Uint32* format, int* access, int* w,
 #endif
 }
 
+static void backend_lvgl_frame(void);
+
 void backend_run(Layer* ui_root)
 {
     g_ui_root = ui_root;
@@ -719,45 +725,64 @@ void backend_run(Layer* ui_root)
     lv_port_set_sdl_event_hook(lvgl_yui_sdl_event_hook, g_ui_root);
 #endif
 
+#ifdef __EMSCRIPTEN__
+    emscripten_set_main_loop(backend_lvgl_frame, 0, 1);
+#else
     while (g_running) {
-        lv_port_tick_inc();
-        lv_port_input_poll();
-        if (lv_port_should_quit()) {
-            g_running = 0;
-            break;
-        }
+        backend_lvgl_frame();
+    }
+#endif
+}
 
-        for (int i = 0; i < g_update_callback_count; i++) {
-            if (g_update_callbacks[i]) {
-                g_update_callbacks[i]();
-            }
-        }
+static void backend_lvgl_frame(void)
+{
+    if (!g_running) {
+#ifdef __EMSCRIPTEN__
+        emscripten_cancel_main_loop();
+#endif
+        return;
+    }
 
-        backend_render_clear_color(30, 30, 30, 255);
-        if (g_ui_root) {
-            perf_frame_begin();
-            perf_render_tree_begin();
-            render_layer(g_ui_root);
-            perf_render_tree_end();
-            render_inspect_overlay(g_ui_root);
-            perf_draw_overlay(g_ui_root);
-            popup_manager_render();
-            perf_frame_end();
+    lv_port_tick_inc();
+    lv_port_input_poll();
+    if (lv_port_should_quit()) {
+        g_running = 0;
+#ifdef __EMSCRIPTEN__
+        emscripten_cancel_main_loop();
+#endif
+        return;
+    }
+
+    for (int i = 0; i < g_update_callback_count; i++) {
+        if (g_update_callbacks[i]) {
+            g_update_callbacks[i]();
         }
+    }
+
+    backend_render_clear_color(30, 30, 30, 255);
+    if (g_ui_root) {
+        perf_frame_begin();
+        perf_render_tree_begin();
+        render_layer(g_ui_root);
+        perf_render_tree_end();
+        render_inspect_overlay(g_ui_root);
+        perf_draw_overlay(g_ui_root);
+        popup_manager_render();
+        perf_frame_end();
+    }
 
 #if LV_USE_PERF_MONITOR || LV_USE_MEM_MONITOR
-        {
-            lv_disp_t* disp = lv_disp_get_default();
-            if (disp) {
-                lv_obj_invalidate(lv_disp_get_layer_sys(disp));
-            }
+    {
+        lv_disp_t* disp = lv_disp_get_default();
+        if (disp) {
+            lv_obj_invalidate(lv_disp_get_layer_sys(disp));
         }
+    }
 #endif
 
-        lv_timer_handler();
-        lv_port_flush();
-#if defined(YUI_LVGL_PORT_SDL)
-        SDL_Delay(16);
+    lv_timer_handler();
+    lv_port_flush();
+#if defined(YUI_LVGL_PORT_SDL) && !defined(__EMSCRIPTEN__)
+    SDL_Delay(16);
 #endif
-    }
 }

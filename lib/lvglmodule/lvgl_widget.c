@@ -545,9 +545,11 @@ void lvgl_apply_label_style(lv_obj_t* obj, Layer* layer, cJSON* json)
     }
 
     font = lvgl_font_get_for_text(lvgl_style_text_hint(obj, layer, json), layer);
+#if !defined(__EMSCRIPTEN__)
     if (font) {
         lv_obj_set_style_text_font(obj, font, 0);
     }
+#endif
 }
 
 void lvgl_apply_common_style(lv_obj_t* obj, Layer* layer, cJSON* json)

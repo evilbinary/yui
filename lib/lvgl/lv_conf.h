@@ -39,7 +39,11 @@
  *=========================*/
 
 /*1: use custom malloc/free, 0: use the built-in `lv_mem_alloc()` and `lv_mem_free()`*/
+#if defined(__EMSCRIPTEN__)
+#define LV_MEM_CUSTOM      1
+#else
 #define LV_MEM_CUSTOM      0
+#endif
 #if LV_MEM_CUSTOM == 0
 /*Size of the memory available for `lv_mem_alloc()` in bytes (>= 2kB)*/
 #  define LV_MEM_SIZE    (40*32U * 1024U)          /*[bytes]*/
@@ -186,11 +190,13 @@ e.g. "stm32f769xx.h" or "stm32f429xx.h"*/
  *-----------*/
 
 /*1: Show CPU usage and FPS count in the right bottom corner*/
+#if defined(__EMSCRIPTEN__)
+#define LV_USE_PERF_MONITOR     0
+#define LV_USE_MEM_MONITOR      0
+#else
 #define LV_USE_PERF_MONITOR     1
-
-/*1: Show the used memory and the memory fragmentation  in the left bottom corner
- * Requires LV_MEM_CUSTOM = 0*/
 #define LV_USE_MEM_MONITOR      1
+#endif
 
 /*1: Draw random colored rectangles over the redrawn areas*/
 #define LV_USE_REFR_DEBUG       0

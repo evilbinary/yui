@@ -12,22 +12,28 @@ static void* lvgl_label_create(Layer* layer, cJSON* json)
 {
     LvglComponent* component = lvgl_component_new(layer);
     const char* text;
+    lv_obj_t* root;
 
     if (!component) {
         return NULL;
     }
 
-    component->obj = lv_label_create(lv_port_get_root());
+    root = lv_port_get_root();
+    if (!root) {
+        free(component);
+        return NULL;
+    }
+
+    component->obj = lv_label_create(root);
+    if (!component->obj) {
+        free(component);
+        return NULL;
+    }
+
     text = layer->text && layer->text[0] ? layer->text
                                            : lvgl_json_string(json, "text", "");
     if (text[0]) {
         lv_label_set_text(component->obj, text);
-    }
-    {
-        cJSON* color_item = lvgl_json_get(json, "color");
-        if (color_item && cJSON_IsString(color_item)) {
-            parse_color(color_item->valuestring, &layer->color);
-        }
     }
     lvgl_apply_text_style(component->obj, layer, json);
     lvgl_widget_finish_create(layer, component, json);

@@ -244,10 +244,20 @@ int lv_port_disp_resize(int width, int height)
 
 static void disp_init(void)
 {
+    Uint32 window_flags;
+
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
         fprintf(stderr, "lv_port_disp_init: SDL_Init failed: %s\n", SDL_GetError());
         return;
     }
+
+#ifdef __EMSCRIPTEN__
+    SDL_SetHint(SDL_HINT_EMSCRIPTEN_ASYNCIFY, "0");
+    SDL_SetHint(SDL_HINT_RENDER_VSYNC, "0");
+    window_flags = SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI;
+#else
+    window_flags = SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI;
+#endif
 
     g_window = SDL_CreateWindow(
         "YUI LVGL",
@@ -255,15 +265,23 @@ static void disp_init(void)
         SDL_WINDOWPOS_CENTERED,
         g_fb_w,
         g_fb_h,
-        SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI);
+        window_flags);
     if (!g_window) {
         fprintf(stderr, "lv_port_disp_init: SDL_CreateWindow failed: %s\n", SDL_GetError());
         return;
     }
 
+#ifdef __EMSCRIPTEN__
+    g_renderer = SDL_CreateRenderer(g_window, -1, SDL_RENDERER_ACCELERATED);
+#else
     g_renderer = SDL_CreateRenderer(g_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+#endif
     if (!g_renderer) {
         fprintf(stderr, "lv_port_disp_init: SDL_CreateRenderer failed: %s\n", SDL_GetError());
+        g_renderer = SDL_CreateRenderer(g_window, -1, SDL_RENDERER_SOFTWARE);
+    }
+    if (!g_renderer) {
+        fprintf(stderr, "lv_port_disp_init: SDL_CreateRenderer retry failed: %s\n", SDL_GetError());
         return;
     }
 
