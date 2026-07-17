@@ -56,3 +56,25 @@ if get_plat() == "ios":
         add_deps("yui", "cjson", "yaml", "yaml2json", "mquickjs", "jsmodule", "socket"),
         add_rules("mode.debug", "mode.release"),
     )
+
+target("yui-web.html")
+(
+    add_deps("socket", "yui", "quickjs", "jsmodule-quickjs", "yaml2json"),
+    add_rules("mode.debug", "mode.release", "web.artifacts"),
+    set_kind("binary"),
+    add_flags(),
+    add_cflags(
+        "-Iplatform/common",
+        "-Isrc",
+        "-Ilib/cjson",
+        "-Ilib/yaml2json",
+        "-Ilib/jsmodule",
+        "-DHAS_JS_MODULE",
+    ),
+    add_files("web/vanilla/main.c", "common/yui_boot.c"),
+    add_ldflags(
+        "-s", "MODULARIZE=1",
+        "-s", "EXPORT_NAME=YuiModule",
+        "-s", "EXPORTED_RUNTIME_METHODS=['callMain','FS']",
+    ),
+)

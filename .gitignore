@@ -31,6 +31,8 @@ router-debug-err.txt
 app/shopping/capture/*.png
 .claude/settings.local.json
 platform/android/.gradle/*
+platform/web/vanilla/yui/*
+!platform/web/vanilla/yui/.gitignore
 
 third_party/yui-prebuilt/*
 platform/android/app/.cxx/*

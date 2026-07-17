@@ -217,7 +217,7 @@ def add_flags():
         tool['ld']='emcc'
         tool['ar']='emar'
         if platform.system()=='Windows':
-            mingw64='D:\\app\\msys2\\mingw64'
+            mingw64='E:\\soft\\msys2\\mingw64'
             add_cflags(
             # '--use-port=sdl2 ',
             '-g',
@@ -387,7 +387,7 @@ def add_flags():
             '-F../libs/'
             )
     elif platform.system()=='Windows':
-        mingw64='D:\\app\\msys2\\mingw64'
+        mingw64='E:\\soft\\msys2\\mingw64'
         if get_plat() in['emscripten','em']:
             tool=get_toolchain_node()
             tool['cc']='emcc'
@@ -524,6 +524,55 @@ rule_end()
 
 if get_plat() in ("android", "ios"):
     add_rules("mobile.prebuilt")
+
+def after_build_web_artifacts(target):
+    import shutil
+    plat = target.plat()
+    if plat not in ("em", "emscripten"):
+        return
+    name = target.get("name") or ""
+    if not name.startswith("yui-web"):
+        return
+    arch = target.get_arch()
+    mode = target.get_config("mode")
+    if not mode:
+        return
+    base = name.replace(".html", "")
+    dest_dir = os.path.join("platform", "web", "vanilla", "yui")
+    os.makedirs(dest_dir, exist_ok=True)
+    mapping = {
+        ".js": "playground.js",
+        ".wasm": "playground.wasm",
+        ".data": "playground.data",
+    }
+    build_dirs = []
+    seen = set()
+    for plat_name in (plat, "em", "emscripten"):
+        for arch_name in (arch, "None"):
+            path = os.path.join("build", str(plat_name), str(arch_name), str(mode))
+            if path not in seen:
+                seen.add(path)
+                build_dirs.append(path)
+    for ext, out_name in mapping.items():
+        copied = False
+        for build_dir in build_dirs:
+            candidates = [
+                os.path.join(build_dir, base + ext),
+                os.path.join(build_dir, name + ext),
+            ]
+            for src in candidates:
+                if os.path.isfile(src):
+                    dest = os.path.join(dest_dir, out_name)
+                    shutil.copy2(src, dest)
+                    print("[web] %s -> %s" % (src, dest))
+                    copied = True
+                    break
+            if copied:
+                break
+
+rule("web.artifacts")
+after_build(after_build_web_artifacts)
+rule_end()
 
 def add_run():
     on_run(run)

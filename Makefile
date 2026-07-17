@@ -74,6 +74,13 @@ ios-app:
 	cmake --build build/ios-xcode --config Debug
 	@echo "App: build/ios-xcode/Debug/YuiApp.app"
 
+web:
+	ya -p em -m release -b yui-web.html
+	@echo "WASM: platform/web/vanilla/yui/playground.js"
+
+web-serve:
+	cd platform/web/vanilla && python -m http.server 8080
+
 run: main
 	ya -r main
 
