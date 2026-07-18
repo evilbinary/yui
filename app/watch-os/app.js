@@ -182,59 +182,43 @@ function lockSwipe(ms) {
     }, ms || 350);
 }
 
-function backToLauncher() {
+// 按进入路径返回：表盘进 → 回表盘；启动器进 → 回启动器（不写死目标）
+function exitWatchApp() {
     var route = YUI.currentRoute ? YUI.currentRoute() : null;
     var fromPath = route ? route.path : "?";
     YUI.log("[backToLauncher] from=" + fromPath);
 
-    if (route && route.path === "/launcher") {
+    if (!route || isShellPath(route.path)) {
         updateWatchChrome();
         Theme.apply();
         return;
     }
 
-    // 优先静默 pop 到启动器；没有则丢掉应用页再 navigate，避免 YUI.back() 先露出表盘
-    if (typeof Router !== "undefined" && Router.stack) {
-        var idx = -1;
-        var i;
-        for (i = Router.stack.length - 1; i >= 0; i--) {
-            if (Router.stack[i].path === "/launcher") {
-                idx = i;
-                break;
-            }
-        }
-        if (idx >= 0) {
-            while (Router.stack.length > idx + 1) {
-                var leaving = Router.stack.pop();
-                if (leaving && leaving.layerId) {
-                    YUI.hide(leaving.layerId);
-                }
-            }
-            var launcher = Router.current();
-            if (launcher && launcher.layerId) {
-                YUI.hide("page_face");
-                YUI.hide("page_notifications");
-                YUI.show(launcher.layerId);
-            }
-            YUI.log("[backToLauncher] popped to launcher");
-            updateWatchChrome();
-            Theme.apply();
-            return;
-        }
-
-        while (Router.canBack()) {
-            route = Router.current();
-            if (route && route.path === "/") break;
-            var top = Router.stack.pop();
-            if (top && top.layerId) YUI.hide(top.layerId);
-        }
+    if (typeof Router === "undefined" || !Router.canBack()) {
+        YUI.navigate("/");
+        updateWatchChrome();
+        Theme.apply();
+        return;
     }
 
-    YUI.hide("page_face");
-    YUI.hide("page_notifications");
-    YUI.navigate("/launcher");
-    route = YUI.currentRoute ? YUI.currentRoute() : null;
-    YUI.log("[backToLauncher] navigate -> " + (route ? route.path : "?"));
+    var leaving = Router.stack.pop();
+    if (leaving && leaving.layerId) {
+        YUI.hide(leaving.layerId);
+    }
+
+    var returning = Router.current();
+    if (returning && returning.layerId) {
+        if (typeof Router._showEntry === "function") {
+            Router._showEntry(returning, leaving ? leaving.layerId : null);
+        } else {
+            YUI.show(returning.layerId);
+        }
+        YUI.log("[exitWatchApp] -> " + returning.path);
+    } else {
+        YUI.navigate("/");
+        YUI.log("[exitWatchApp] -> / (fallback)");
+    }
+
     updateWatchChrome();
     Theme.apply();
 }
@@ -251,7 +235,7 @@ function goWatchBack() {
     YUI.log("[goWatchBack] path=" + path + " stack=[" + stackPaths.join(" > ") + "]");
 
     if (!isShellPath(path)) {
-        backToLauncher();
+        exitWatchApp();
         return;
     }
 
@@ -305,11 +289,11 @@ function onPageTouch(type, deltaX, deltaY) {
     YUI.log("[swipe] dir=" + direction + " deltaX=" + deltaX + " deltaY=" + deltaY
         + " path=" + path + " stack=[" + stackPaths.join(" > ") + "]");
 
-    // 应用内：右滑（从左到右）返回应用列表；立刻锁手势，防止同一次拖动二次 swipe 把启动器滑回表盘
+    // 应用内右滑：回到进入前的页面（表盘或启动器），并锁手势防二次 swipe
     if (!isShellPath(path) && direction === "right") {
-        YUI.log("[swipe] action=backToLauncher");
+        YUI.log("[swipe] action=exitWatchApp");
         lockSwipe(400);
-        backToLauncher();
+        exitWatchApp();
         return;
     }
 
