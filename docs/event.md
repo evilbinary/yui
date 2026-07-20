@@ -61,7 +61,7 @@ PointerEvent pe = { .device = POINTER_DEVICE_MOUSE, .phase = POINTER_DOWN, ... }
 handle_pointer_event(root, &pe);
 ```
 
-**不再**对外暴露独立的 scroll / scrollbar 顶层 API（如历史上的 `handle_scroll_event`）。滚轮用 `phase == POINTER_WHEEL` + `wheel_dx/dy`；内容区拖动用 `POINTER_MOVE` + `delta_x/y`。
+**不再**对外暴露独立的 scroll / scrollbar 顶层 API（如历史上的 `handle_scroll_event`）。滚轮用 `phase == POINTER_WHEEL` + `delta_x/y`；内容区拖动用 `POINTER_MOVE` + `delta_x/y`。
 
 ### 事件结构：PointerEvent（`src/ytype.h`）
 
@@ -80,27 +80,31 @@ typedef struct PointerEvent {
     PointerDevice device;
     PointerPhase phase;
     int x, y;
-    int delta_x, delta_y;
-    int wheel_dx, wheel_dy;
-    Uint8 button;
-    int clicks;
-    int finger_count;
-    float scale, rotation;
-    Uint32 timestamp;
+    int delta_x, delta_y;  /* MOVE 拖动 / WHEEL 滚轮 / SWIPE 向量，由 phase 区分 */
+    Uint8 button;            /* device == POINTER_DEVICE_MOUSE 时有效 */
+    int pointer_id;          /* 触点 ID，mouse 为 0；手势事件可为 -1 */
+    int finger_count;        /* 当前屏幕触点数 */
+    union {
+        struct { float scale; float rotation; } gesture; /* PINCH / ROTATE */
+    } ext;
 } PointerEvent;
 ```
 
-#### phase 与 SDL 状态对应
+#### phase 与 delta 语义
 
-| SDL 鼠标 | `PointerEvent` |
-|----------|----------------|
-| `SDL_PRESSED` | `phase == POINTER_DOWN` |
-| `SDL_MOUSEMOTION` | `phase == POINTER_MOVE` |
-| `SDL_RELEASED` | `phase == POINTER_UP` |
-| 滚轮 | `phase == POINTER_WHEEL`，`wheel_dx/dy` |
-| 手势（swipe/pinch…） | `phase == POINTER_SWIPE` 等，`device == POINTER_DEVICE_TOUCH` |
+| phase | `delta_x/y` 含义 |
+|-------|------------------|
+| `POINTER_MOVE` | 拖动像素位移 |
+| `POINTER_WHEEL` | 滚轮步进（`delta_y` 为主） |
+| `POINTER_SWIPE` | 滑动方向向量 |
+| `POINTER_DOWN/UP` 等 | 通常为 0 |
 
-组件 hook 读 `event->phase`、`event->delta_x/y`；Layer 字段为 `handle_pointer_event`。
+#### 多点触控
+
+- 每个 `FINGERDOWN/MOTION/UP` 带 `pointer_id`（SDL `fingerId`）和 `finger_count`（当前触点数）
+- **单指**拖滚动：`finger_count == 1` 且 `POINTER_MOVE`
+- **多指**时 `event.c` 默认跳过内容区拖滚动，避免误触
+- **捏合/旋转**：`POINTER_PINCH` / `POINTER_ROTATE`，载荷在 `ext.gesture.scale` / `rotation`
 
 ### event.c 职责（目标态）
 

@@ -1719,6 +1719,25 @@ int text_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
 
     Rect content_rect;
     text_component_get_content_rect(component, layer, &content_rect);
+
+    if (event->phase == POINTER_DOUBLE_TAP) {
+        if (point_in_rect(pt, content_rect)) {
+            int click_pos = text_component_get_position_from_point(component, pt, layer);
+            int line_start, line_end;
+            if (layer->focusable) {
+                text_component_focus(component);
+            }
+            text_component_get_line_range_at_pos(component, layer, click_pos,
+                                                   &line_start, &line_end);
+            component->selection_start = line_start;
+            component->selection_end = line_end;
+            component->cursor_pos = line_end;
+            component->is_selecting = 0;
+            text_component_update_scroll_for_cursor(component);
+            mark_layer_dirty(layer, DIRTY_TEXT);
+            return 1;
+        }
+    }
     
     // 鼠标左键按下 - 设置光标位置并开始选择
     if (event->phase == POINTER_DOWN && event->button == SDL_BUTTON_LEFT) {
@@ -1729,23 +1748,11 @@ int text_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
 
             int click_pos = text_component_get_position_from_point(component, pt, layer);
 
-            if (event->clicks >= 2) {
-                int line_start, line_end;
-                text_component_get_line_range_at_pos(component, layer, click_pos,
-                                                       &line_start, &line_end);
-                component->selection_start = line_start;
-                component->selection_end = line_end;
-                component->cursor_pos = line_end;
-                component->is_selecting = 0;
-                text_component_update_scroll_for_cursor(component);
-                mark_layer_dirty(layer, DIRTY_TEXT);
-            } else {
-                component->cursor_pos = click_pos;
-                component->selection_start = click_pos;
-                component->selection_end = click_pos;
-                component->is_selecting = 1;
-                text_component_update_scroll_for_cursor(component);
-            }
+            component->cursor_pos = click_pos;
+            component->selection_start = click_pos;
+            component->selection_end = click_pos;
+            component->is_selecting = 1;
+            text_component_update_scroll_for_cursor(component);
             return 1;
         }
 

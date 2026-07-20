@@ -454,6 +454,10 @@ int list_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
     int can_pan = list_can_vertical_pan(layer);
 
     if (event->phase == POINTER_MOVE) {
+        if (event->device == POINTER_DEVICE_TOUCH && event->finger_count > 1) {
+            component->hovered_index = inside ? index : -1;
+            return inside || can_pan;
+        }
         int adx = event->delta_x < 0 ? -event->delta_x : event->delta_x;
         int ady = event->delta_y < 0 ? -event->delta_y : event->delta_y;
         if (ady >= adx && (adx >= 2 || ady >= 2)) {

@@ -233,7 +233,7 @@ static void lvgl_deliver_pointer_event(Layer* root, PointerEvent* pe)
 }
 
 static void lvgl_deliver_mouse_pointer(Layer* root, int x, int y, PointerPhase phase,
-                                       Uint8 button, int clicks, int dx, int dy)
+                                       Uint8 button, int dx, int dy)
 {
     PointerEvent pe;
     memset(&pe, 0, sizeof(pe));
@@ -242,15 +242,13 @@ static void lvgl_deliver_mouse_pointer(Layer* root, int x, int y, PointerPhase p
     pe.x = x;
     pe.y = y;
     pe.button = button;
-    pe.clicks = clicks;
     pe.delta_x = dx;
     pe.delta_y = dy;
-    pe.timestamp = SDL_GetTicks();
     lvgl_deliver_pointer_event(root, &pe);
 }
 
 static void lvgl_dispatch_touch(Layer* root, PointerPhase phase, int x, int y,
-                                int dx, int dy, int finger_count,
+                                int dx, int dy, int pointer_id, int finger_count,
                                 float scale, float rotation)
 {
     PointerEvent pe;
@@ -261,10 +259,10 @@ static void lvgl_dispatch_touch(Layer* root, PointerPhase phase, int x, int y,
     pe.y = y;
     pe.delta_x = dx;
     pe.delta_y = dy;
+    pe.pointer_id = pointer_id;
     pe.finger_count = finger_count;
-    pe.scale = scale;
-    pe.rotation = rotation;
-    pe.timestamp = SDL_GetTicks();
+    pe.ext.gesture.scale = scale;
+    pe.ext.gesture.rotation = rotation;
     handle_pointer_event(root, &pe);
 }
 
@@ -277,7 +275,7 @@ static void lvgl_emit_swipe_event(Layer* root, int x, int y, int dx, int dy)
         return;
     }
 
-    lvgl_dispatch_touch(root, POINTER_SWIPE, x, y, dx, dy, 1, 1.0f, 0.0f);
+    lvgl_dispatch_touch(root, POINTER_SWIPE, x, y, dx, dy, 0, 1, 0.0f, 0.0f);
 }
 
 static void lvgl_yui_sdl_event_hook(const SDL_Event* event, void* user_data)
@@ -331,8 +329,8 @@ static void lvgl_yui_sdl_event_hook(const SDL_Event* event, void* user_data)
             int delta_x = 0;
             int delta_y = 0;
             if (event->type == SDL_MOUSEBUTTONDOWN) {
-                phase = POINTER_DOWN;
-                if (button == SDL_BUTTON_LEFT) {
+                phase = (clicks >= 2) ? POINTER_DOUBLE_TAP : POINTER_DOWN;
+                if (button == SDL_BUTTON_LEFT && phase == POINTER_DOWN) {
                     g_pointer_drag_active = 1;
                     g_pointer_start_x = mouse_x;
                     g_pointer_start_y = mouse_y;
@@ -357,7 +355,7 @@ static void lvgl_yui_sdl_event_hook(const SDL_Event* event, void* user_data)
             }
 
             lvgl_deliver_mouse_pointer(root, mouse_x, mouse_y, phase, button,
-                                       clicks, delta_x, delta_y);
+                                       delta_x, delta_y);
         }
     } else if (event->type == SDL_MOUSEWHEEL) {
         int mouse_x = 0;
@@ -371,9 +369,8 @@ static void lvgl_yui_sdl_event_hook(const SDL_Event* event, void* user_data)
         pe.x = mouse_x;
         pe.y = mouse_y;
         pe.button = SDL_BUTTON_LEFT;
-        pe.wheel_dx = event->wheel.x;
-        pe.wheel_dy = -event->wheel.y;
-        pe.timestamp = SDL_GetTicks();
+        pe.delta_x = event->wheel.x;
+        pe.delta_y = -event->wheel.y;
         handle_pointer_event(root, &pe);
     } else if (event->type == SDL_FINGERDOWN) {
         int x;
@@ -392,13 +389,12 @@ static void lvgl_yui_sdl_event_hook(const SDL_Event* event, void* user_data)
             int touchId = (int)(event->tfinger.fingerId % LVGL_MAX_TOUCHES);
             g_touch_state.lastX[touchId] = x;
             g_touch_state.lastY[touchId] = y;
+            if (g_touch_state.fingerCount == 1) {
+                lvgl_deliver_mouse_pointer(root, x, y, POINTER_DOWN, SDL_BUTTON_LEFT, 0, 0);
+            }
+            lvgl_dispatch_touch(root, POINTER_DOWN, x, y, 0, 0,
+                                touchId, g_touch_state.fingerCount, 0.0f, 0.0f);
         }
-
-        if (g_touch_state.fingerCount == 1) {
-            lvgl_deliver_mouse_pointer(root, x, y, POINTER_DOWN, SDL_BUTTON_LEFT, 0, 0, 0);
-        }
-        lvgl_dispatch_touch(root, POINTER_DOWN, x, y, 0, 0,
-                            g_touch_state.fingerCount, 1.0f, 0.0f);
     } else if (event->type == SDL_FINGERMOTION) {
         int x;
         int y;
@@ -413,12 +409,12 @@ static void lvgl_yui_sdl_event_hook(const SDL_Event* event, void* user_data)
         g_touch_state.lastX[touchId] = x;
         g_touch_state.lastY[touchId] = y;
 
-        if (g_touch_state.fingerCount > 0) {
-            lvgl_deliver_mouse_pointer(root, x, y, POINTER_MOVE, SDL_BUTTON_LEFT, 0, 0, 0);
+        if (g_touch_state.fingerCount == 1) {
+            lvgl_deliver_mouse_pointer(root, x, y, POINTER_MOVE, SDL_BUTTON_LEFT, 0, 0);
         }
         if (!lvgl_any_scrollbar_dragging(root)) {
             lvgl_dispatch_touch(root, POINTER_MOVE, x, y, deltaX, deltaY,
-                                g_touch_state.fingerCount, 1.0f, 0.0f);
+                                touchId, g_touch_state.fingerCount, 0.0f, 0.0f);
         }
     } else if (event->type == SDL_FINGERUP) {
         int x;
@@ -430,14 +426,38 @@ static void lvgl_yui_sdl_event_hook(const SDL_Event* event, void* user_data)
 
         lvgl_finger_to_logical(&event->tfinger, &x, &y);
 
-        lvgl_dispatch_touch(root, POINTER_UP, x, y, 0, 0,
-                            g_touch_state.fingerCount, 1.0f, 0.0f);
+        {
+            int touchId = (int)(event->tfinger.fingerId % LVGL_MAX_TOUCHES);
+            lvgl_dispatch_touch(root, POINTER_UP, x, y, 0, 0,
+                                touchId, g_touch_state.fingerCount, 0.0f, 0.0f);
+        }
 
         if (g_touch_state.fingerCount == 0) {
             lvgl_emit_swipe_event(root, x, y,
                                   x - g_touch_swipe_start_x,
                                   y - g_touch_swipe_start_y);
-            lvgl_deliver_mouse_pointer(root, x, y, POINTER_UP, SDL_BUTTON_LEFT, 0, 0, 0);
+            lvgl_deliver_mouse_pointer(root, x, y, POINTER_UP, SDL_BUTTON_LEFT, 0, 0);
+        }
+    } else if (event->type == SDL_MULTIGESTURE) {
+        int winW = lv_port_get_width();
+        int winH = lv_port_get_height();
+        int cx, cy;
+        int fingers;
+
+        if (winW <= 0 || winH <= 0) {
+            return;
+        }
+        cx = (int)(event->mgesture.x * winW);
+        cy = (int)(event->mgesture.y * winH);
+        fingers = (int)event->mgesture.numFingers;
+        lvgl_pointer_to_logical(&cx, &cy);
+        if (event->mgesture.dDist != 0.0f) {
+            lvgl_dispatch_touch(root, POINTER_PINCH, cx, cy, 0, 0, -1, fingers,
+                                1.0f + event->mgesture.dDist, 0.0f);
+        }
+        if (event->mgesture.dTheta != 0.0f) {
+            lvgl_dispatch_touch(root, POINTER_ROTATE, cx, cy, 0, 0, -1, fingers,
+                                1.0f, event->mgesture.dTheta);
         }
     }
 }

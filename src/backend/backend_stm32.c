@@ -454,10 +454,10 @@ void backend_run(Layer* ui_root) {
         for (int i = 0; i < MAX_TOUCHES; i++) {
             int x, y;
             bool active = touch_get_position(i, &x, &y);
+            int finger_count;
             
             if (active) {
                 if (!touch_states[i].active) {
-                    // 新的触摸按下
                     touch_states[i].active = true;
                     touch_states[i].x = x;
                     touch_states[i].y = y;
@@ -468,10 +468,19 @@ void backend_run(Layer* ui_root) {
                     event.x = x;
                     event.y = y;
                     event.button = 1;
+                    event.pointer_id = i;
+                    finger_count = 0;
+                    for (int j = 0; j < MAX_TOUCHES; j++) {
+                        if (touch_states[j].active) {
+                            finger_count++;
+                        }
+                    }
+                    event.finger_count = finger_count;
 
                     handle_pointer_event(ui_root, &event);
                 } else {
-                    // 触摸移动
+                    int dx = x - touch_states[i].x;
+                    int dy = y - touch_states[i].y;
                     touch_states[i].x = x;
                     touch_states[i].y = y;
                     
@@ -480,11 +489,20 @@ void backend_run(Layer* ui_root) {
                     event.phase = POINTER_MOVE;
                     event.x = x;
                     event.y = y;
+                    event.delta_x = dx;
+                    event.delta_y = dy;
+                    event.pointer_id = i;
+                    finger_count = 0;
+                    for (int j = 0; j < MAX_TOUCHES; j++) {
+                        if (touch_states[j].active) {
+                            finger_count++;
+                        }
+                    }
+                    event.finger_count = finger_count;
 
                     handle_pointer_event(ui_root, &event);
                 }
             } else if (touch_states[i].active) {
-                // 触摸释放
                 touch_states[i].active = false;
                 
                 PointerEvent event = {0};
@@ -493,6 +511,14 @@ void backend_run(Layer* ui_root) {
                 event.x = touch_states[i].x;
                 event.y = touch_states[i].y;
                 event.button = 1;
+                event.pointer_id = i;
+                finger_count = 0;
+                for (int j = 0; j < MAX_TOUCHES; j++) {
+                    if (touch_states[j].active) {
+                        finger_count++;
+                    }
+                }
+                event.finger_count = finger_count;
 
                 handle_pointer_event(ui_root, &event);
             }

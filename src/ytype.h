@@ -210,17 +210,18 @@ typedef struct PointerEvent {
     PointerPhase phase;
     int x;
     int y;
-    int delta_x;
+    int delta_x;   /* MOVE 拖动 / WHEEL 滚轮 / SWIPE 向量，由 phase 区分 */
     int delta_y;
-    int wheel_dx;
-    int wheel_dy;
-    Uint8 button;
-    int clicks;
-    int finger_count;
-    float scale;
-    float rotation;
-    Uint32 timestamp;
+    Uint8 button;  /* device == POINTER_DEVICE_MOUSE 时有效 */
+    int pointer_id;   /* 触点 ID（SDL fingerId / Android pointer），mouse 为 0 */
+    int finger_count; /* 当前屏幕上的触点数 */
+    union {
+        struct { float scale; float rotation; } gesture; /* PINCH / ROTATE */
+    } ext;
 } PointerEvent;
+
+typedef struct Layer Layer;
+typedef struct KeyEvent KeyEvent;
 
 #ifdef YUI_ANIMATION
 #include "animate.h"

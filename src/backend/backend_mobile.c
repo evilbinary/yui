@@ -649,6 +649,17 @@ typedef struct {
 
 static MobileTouchState g_touches[MAX_TOUCHES];
 
+static int mobile_active_touch_count(void) {
+    int count = 0;
+    int i;
+    for (i = 0; i < MAX_TOUCHES; i++) {
+        if (g_touches[i].active) {
+            count++;
+        }
+    }
+    return count;
+}
+
 static void mobile_emit_swipe_event(int x, int y, int dx, int dy) {
     PointerEvent swipe;
     int adx = dx < 0 ? -dx : dx;
@@ -665,6 +676,7 @@ static void mobile_emit_swipe_event(int x, int y, int dx, int dy) {
     swipe.y = (int)(y / mobile_density());
     swipe.delta_x = (int)(dx / mobile_density());
     swipe.delta_y = (int)(dy / mobile_density());
+    swipe.pointer_id = 0;
     swipe.finger_count = 1;
     handle_pointer_event(g_ui_root, &swipe);
 }
@@ -721,6 +733,9 @@ void backend_mobile_on_touch(int pointer_id, int x, int y, int phase) {
         mobile_emit_swipe_event(x, y, x - touch->start_x, y - touch->start_y);
         touch->active = 0;
     }
+
+    event.pointer_id = id;
+    event.finger_count = mobile_active_touch_count();
 
     handle_pointer_event(g_ui_root, &event);
 }

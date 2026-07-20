@@ -297,15 +297,15 @@ static int default_scrollable_pointer_handler(Layer* layer, PointerEvent* event)
         return 0;
     }
 
-    if (event->phase == POINTER_WHEEL || event->wheel_dx || event->wheel_dy) {
+    if (event->phase == POINTER_WHEEL) {
         if (!is_point_in_rect(event->x, event->y, layer->rect)) {
             return 0;
         }
         if (layer->handle_scroll_event) {
-            layer->handle_scroll_event(layer, event->wheel_dy);
+            layer->handle_scroll_event(layer, event->delta_y);
         }
-        handler_virtical_scroll_event(layer, event->wheel_dy);
-        handle_horizontal_scroll_event(layer, event->wheel_dx);
+        handler_virtical_scroll_event(layer, event->delta_y);
+        handle_horizontal_scroll_event(layer, event->delta_x);
         return layer->handle_scroll_event || layer->scrollable ? 1 : 0;
     }
 
@@ -315,6 +315,9 @@ static int default_scrollable_pointer_handler(Layer* layer, PointerEvent* event)
 
     if (event->phase == POINTER_MOVE) {
         if (event->delta_x == 0 && event->delta_y == 0) {
+            return 0;
+        }
+        if (event->device == POINTER_DEVICE_TOUCH && event->finger_count > 1) {
             return 0;
         }
         if (layer_scrollbar_dragging(layer)) {
@@ -346,8 +349,8 @@ int handle_pointer_event(Layer* layer, PointerEvent* event) {
     }
 
     if (layer->parent == NULL) {
-        if ((event->phase == POINTER_WHEEL || event->wheel_dx || event->wheel_dy) &&
-            popup_manager_handle_scroll_event(event->wheel_dy)) {
+        if (event->phase == POINTER_WHEEL &&
+            popup_manager_handle_scroll_event(event->delta_y)) {
             return 1;
         }
         if (popup_manager_handle_pointer_event(event)) {

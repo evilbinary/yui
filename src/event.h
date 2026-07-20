@@ -5,9 +5,6 @@
 #include "layer.h"
 #include "layout.h"
 
-typedef struct KeyEvent KeyEvent;
-typedef struct PointerEvent PointerEvent;
-
 typedef void* (*EventHandler)(void* data);
 
 int register_event_handler(const char* name, EventHandler handler);
