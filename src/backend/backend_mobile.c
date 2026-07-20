@@ -633,7 +633,7 @@ static void mobile_apply_clip_rect(const Rect* clip) {
 }
 #endif
 
-extern Layer* g_ui_root;
+Layer* g_ui_root = NULL;
 static void* g_native_surface = NULL;
 static UpdateCallback g_update_callbacks[MAX_UPDATE_CALLBACKS];
 static int g_update_callback_count = 0;
