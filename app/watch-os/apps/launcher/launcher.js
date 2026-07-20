@@ -9,7 +9,7 @@
 
 var BUBBLE_D = 48;
 /** 相邻 App 边与边之间的逻辑边距（改这个即可调疏密） */
-var BUBBLE_MARGIN = 14;
+var BUBBLE_MARGIN = 6;
 var BUBBLE_PITCH = BUBBLE_D + BUBBLE_MARGIN;
 var BUBBLE_H = BUBBLE_PITCH * Math.sqrt(3) / 2;
 var BUBBLE_VP_W = 380;
