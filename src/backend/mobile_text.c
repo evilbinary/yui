@@ -161,7 +161,7 @@ static DFont* mobile_load_font_strict(const char* font_path, int size, const cha
 
     mobile_font->data = data;
     mobile_font->size = size > 0 ? size : 16;
-    mobile_font->scale = stbtt_ScaleForPixelHeight(
+    mobile_font->yui_density = stbtt_ScaleForPixelHeight(
         &mobile_font->info, (float)mobile_font->size * (yui_density > 0.0f ? yui_density : 1.0f));
 
     font = (DFont*)calloc(1, sizeof(DFont));
@@ -187,7 +187,7 @@ static DFont* mobile_get_fallback_font_for(DFont* primary) {
     };
     char sibling_path[MAX_PATH];
     const char* loaded_from = NULL;
-    const char* slash;
+    char* slash;
     int size;
     int i;
 
@@ -527,7 +527,7 @@ DFont* mobile_load_font(const char* font_path, int size, const char* weight) {
 
     mobile_font->data = data;
     mobile_font->size = size > 0 ? size : 16;
-    mobile_font->scale = stbtt_ScaleForPixelHeight(
+    mobile_font->yui_density = stbtt_ScaleForPixelHeight(
         &mobile_font->info, (float)mobile_font->size * (yui_density > 0.0f ? yui_density : 1.0f));
 
     font = (DFont*)calloc(1, sizeof(DFont));
@@ -598,7 +598,7 @@ static unsigned char* mobile_rasterize_font_text(MobileFont* mobile_font, Mobile
     }
 
     stbtt_GetFontVMetrics(&mobile_font->info, &ascent, &descent, &line_gap);
-    baseline = (int)(ascent * mobile_font->scale);
+    baseline = (int)(ascent * mobile_font->yui_density);
 
     cursor = text;
     while (mobile_utf8_next(&cursor, &cp)) {

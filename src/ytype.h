@@ -212,7 +212,7 @@ typedef struct PointerEvent {
     int y;
     int delta_x;   /* MOVE 拖动 / WHEEL 滚轮 / SWIPE 向量，由 phase 区分 */
     int delta_y;
-    Uint8 button;  /* device == POINTER_DEVICE_MOUSE 时有效 */
+    int button;  /* device == POINTER_DEVICE_MOUSE 时有效 */
     int pointer_id;   /* 触点 ID（SDL fingerId / Android pointer），mouse 为 0 */
     int finger_count; /* 当前屏幕上的触点数 */
     union {
