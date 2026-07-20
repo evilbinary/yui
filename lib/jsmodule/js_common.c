@@ -214,7 +214,7 @@ static void* js_module_touch_event(void* data)
 {
     Layer* layer = (Layer*)data;
     if (layer) {
-        printf("JS: Touch event on layer '%s'\n", layer->id);
+        // printf("JS: Touch event on layer '%s'\n", layer->id);
         js_module_call_layer_event(layer->id, "onTouch");
     }
     return NULL;

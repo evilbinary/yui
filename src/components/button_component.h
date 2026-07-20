@@ -16,6 +16,7 @@ typedef struct {
     int press_x;           // 按下/触摸起点
     int press_y;
     int pointer_active;    // 正在跟踪一次按压手势
+    int press_armed;       // 本手势曾在按钮内按下（UP 前保持）
     int drag_cancelled;    // 移动超过阈值，取消点击
 } ButtonComponent;
 

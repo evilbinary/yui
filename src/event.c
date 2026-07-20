@@ -234,7 +234,7 @@ int default_layer_handle_pointer_event(Layer* layer, PointerEvent* event) {
         }
     }
 
-    if (layer->event && layer->event->click) {
+    if (layer->event && layer->event->click && !layer->handle_pointer_event) {
         const YuiComponentOps* ops = yui_type_get_ops(layer->type);
         if (ops && (ops->flags & YUI_COMP_NATIVE_RENDER) &&
             event->phase == POINTER_UP && event->button == SDL_BUTTON_LEFT &&
