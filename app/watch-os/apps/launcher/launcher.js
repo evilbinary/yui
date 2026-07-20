@@ -45,6 +45,11 @@ var bubbleInertiaId = null;
 var bubbleDispSize = {};
 var bubbleSizeAnimId = null;
 var BUBBLE_SIZE_LERP = 0.22;
+/** 惯性：衰减越接近 1 滑得越远；松手初速放大 */
+var BUBBLE_INERTIA_DECAY = 0.91;
+var BUBBLE_INERTIA_BOOST = 2.4;
+var BUBBLE_INERTIA_STOP = 0.35;
+var bubbleReleaseTimer = null;
 
 /** 蜂窝测试用：额外 mock 应用数量（设 0 关闭） */
 var MOCK_LAUNCHER_COUNT = 48;
@@ -119,6 +124,7 @@ function rebuildLauncher() {
     bubbleDispSize = {};
     bubbleStopSizeAnim();
     bubbleStopInertia();
+    bubbleClearVelocity();
     YUI.setText("launcher_count", apps.length + " 个应用");
 
     buildLauncherBubble(apps);
@@ -436,42 +442,63 @@ function bubbleStopInertia() {
         clearTimeout(bubbleInertiaId);
         bubbleInertiaId = null;
     }
+}
+
+function bubbleCancelReleaseTimer() {
+    if (bubbleReleaseTimer !== null) {
+        clearTimeout(bubbleReleaseTimer);
+        bubbleReleaseTimer = null;
+    }
+}
+
+/** 拖在图标上时父层可能收不到 end，用短延迟兜底触发惯性 */
+function bubbleArmReleaseInertia() {
+    bubbleCancelReleaseTimer();
+    bubbleReleaseTimer = setTimeout(function() {
+        bubbleReleaseTimer = null;
+        bubbleStartInertia();
+    }, 90);
+}
+
+function bubbleClearVelocity() {
     bubbleVelX = 0;
     bubbleVelY = 0;
 }
 
 function bubbleStartInertia() {
     bubbleStopInertia();
-    if (Math.abs(bubbleVelX) < 0.5 && Math.abs(bubbleVelY) < 0.5) {
+    bubbleVelX *= BUBBLE_INERTIA_BOOST;
+    bubbleVelY *= BUBBLE_INERTIA_BOOST;
+    if (Math.abs(bubbleVelX) < BUBBLE_INERTIA_STOP && Math.abs(bubbleVelY) < BUBBLE_INERTIA_STOP) {
+        bubbleClearVelocity();
         bubbleSettlePan();
         return;
     }
     function step() {
         bubblePanRawX += bubbleVelX;
         bubblePanRawY += bubbleVelY;
-        bubbleVelX *= 0.86;
-        bubbleVelY *= 0.86;
+        bubbleVelX *= BUBBLE_INERTIA_DECAY;
+        bubbleVelY *= BUBBLE_INERTIA_DECAY;
         if (bubblePanRawX > BUBBLE_SCROLL_RANGE) {
             bubblePanRawX -= (bubblePanRawX - BUBBLE_SCROLL_RANGE) / 4;
-            bubbleVelX *= 0.7;
+            bubbleVelX *= 0.75;
         } else if (bubblePanRawX < -BUBBLE_SCROLL_RANGE) {
             bubblePanRawX -= (bubblePanRawX + BUBBLE_SCROLL_RANGE) / 4;
-            bubbleVelX *= 0.7;
+            bubbleVelX *= 0.75;
         }
         if (bubblePanRawY > BUBBLE_SCROLL_RANGE) {
             bubblePanRawY -= (bubblePanRawY - BUBBLE_SCROLL_RANGE) / 4;
-            bubbleVelY *= 0.7;
+            bubbleVelY *= 0.75;
         } else if (bubblePanRawY < -BUBBLE_SCROLL_RANGE) {
             bubblePanRawY -= (bubblePanRawY + BUBBLE_SCROLL_RANGE) / 4;
-            bubbleVelY *= 0.7;
+            bubbleVelY *= 0.75;
         }
         layoutBubbleIcons();
-        if (Math.abs(bubbleVelX) > 0.4 || Math.abs(bubbleVelY) > 0.4) {
+        if (Math.abs(bubbleVelX) > BUBBLE_INERTIA_STOP || Math.abs(bubbleVelY) > BUBBLE_INERTIA_STOP) {
             bubbleInertiaId = setTimeout(step, 16);
         } else {
             bubbleInertiaId = null;
-            bubbleVelX = 0;
-            bubbleVelY = 0;
+            bubbleClearVelocity();
             bubbleSettlePan();
         }
     }
@@ -502,13 +529,16 @@ function onLauncherTouch(type, deltaX, deltaY) {
         bubbleStopInertia();
         bubblePanRawX += deltaX / bubbleZoom;
         bubblePanRawY += deltaY / bubbleZoom;
-        bubbleVelX = deltaX / bubbleZoom;
-        bubbleVelY = deltaY / bubbleZoom;
+        /* 滑动过程平滑累计速度，松手才有可见惯性 */
+        bubbleVelX = bubbleVelX * 0.35 + (deltaX / bubbleZoom) * 0.65;
+        bubbleVelY = bubbleVelY * 0.35 + (deltaY / bubbleZoom) * 0.65;
         layoutBubbleIcons();
+        bubbleArmReleaseInertia();
         return;
     }
     if (type === "wheel") {
         bubbleStopInertia();
+        bubbleCancelReleaseTimer();
         bubbleZoom += deltaY > 0 ? -0.06 : 0.06;
         if (bubbleZoom < BUBBLE_ZOOM_MIN) {
             bubbleZoom = BUBBLE_ZOOM_MIN;
@@ -520,6 +550,7 @@ function onLauncherTouch(type, deltaX, deltaY) {
         return;
     }
     if (type === "end" || type === "cancel") {
+        bubbleCancelReleaseTimer();
         bubbleStartInertia();
     }
 }
