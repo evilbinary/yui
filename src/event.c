@@ -14,6 +14,15 @@ EventEntry global_event_handlers[MAX_EVENT];
 int event_count = 0;
 static PointerEvent current_pointer_event;
 static int current_pointer_event_active = 0;
+static int pointer_gesture_scrolled = 0;
+
+void pointer_gesture_mark_scrolled(void) {
+    pointer_gesture_scrolled = 1;
+}
+
+static int pointer_gesture_did_scroll(void) {
+    return pointer_gesture_scrolled;
+}
 
 static void handler_virtical_scroll_event(Layer* layer, int scroll_delta);
 static void handle_horizontal_scroll_event(Layer* layer, int scroll_delta);
@@ -271,8 +280,11 @@ static int apply_content_drag_scroll(Layer* layer, int dx, int dy) {
     if (adx > ady) {
         return 0;
     }
-    layout_scroll_vertical(layer, dy);
-    return 1;
+    if (layout_scroll_vertical(layer, dy)) {
+        pointer_gesture_mark_scrolled();
+        return 1;
+    }
+    return 0;
 }
 
 static int layer_is_scrollable_container(const Layer* layer) {
@@ -344,11 +356,17 @@ static SDL_EventType pointer_phase_to_sdl_type(PointerPhase phase) {
 }
 
 int handle_pointer_event(Layer* layer, PointerEvent* event) {
+    PointerEvent scroll_cancel_event;
+    PointerEvent* pe = event;
+
     if (!layer || !event) {
         return 0;
     }
 
     if (layer->parent == NULL) {
+        if (event->phase == POINTER_DOWN) {
+            pointer_gesture_scrolled = 0;
+        }
         if (event->phase == POINTER_WHEEL &&
             popup_manager_handle_scroll_event(event->delta_y)) {
             return 1;
@@ -359,19 +377,25 @@ int handle_pointer_event(Layer* layer, PointerEvent* event) {
         if (event->device == POINTER_DEVICE_MOUSE && event->phase == POINTER_UP) {
             reset_scrollbar_dragging_state(layer);
         }
+        /* 滚动过的手势：UP 统一改写为 CANCEL，子组件只收尾、不触发 click */
+        if (event->phase == POINTER_UP && pointer_gesture_did_scroll()) {
+            scroll_cancel_event = *event;
+            scroll_cancel_event.phase = POINTER_CANCEL;
+            pe = &scroll_cancel_event;
+        }
     }
 
-    Point pos = {event->x, event->y};
+    Point pos = {pe->x, pe->y};
 
     for (int i = layer->child_count - 1; i >= 0; i--) {
         if (layer->children[i] && layer->children[i]->visible == VISIBLE) {
-            int consumed = handle_pointer_event(layer->children[i], event);
+            int consumed = handle_pointer_event(layer->children[i], pe);
             if (consumed) return 1;
         }
     }
 
     int child_has_focus = 0;
-    if (event->phase == POINTER_DOWN && focused_layer) {
+    if (pe->phase == POINTER_DOWN && focused_layer) {
         for (int i = 0; i < layer->child_count; i++) {
             if (layer->children[i] == focused_layer) {
                 child_has_focus = 1;
@@ -382,7 +406,7 @@ int handle_pointer_event(Layer* layer, PointerEvent* event) {
 
     if (point_in_rect(pos, layer->rect)) {
         if (!child_has_focus && layer->focusable && layer->visible == VISIBLE &&
-            event->phase == POINTER_DOWN) {
+            pe->phase == POINTER_DOWN) {
             if (focused_layer && focused_layer != layer) {
                 focused_layer->state = LAYER_STATE_NORMAL;
             }
@@ -392,36 +416,37 @@ int handle_pointer_event(Layer* layer, PointerEvent* event) {
     }
 
     if (layer->sub && layer->sub->visible == VISIBLE) {
-        int consumed = handle_pointer_event(layer->sub, event);
+        int consumed = handle_pointer_event(layer->sub, pe);
         if (consumed) return 1;
     }
 
-    if (event->device == POINTER_DEVICE_MOUSE && event->phase != POINTER_UP) {
-        process_layer_scrollbar(layer, event->x, event->y,
-                                pointer_phase_to_sdl_type(event->phase));
+    if (event->device == POINTER_DEVICE_MOUSE &&
+        pe->phase != POINTER_UP && pe->phase != POINTER_CANCEL) {
+        process_layer_scrollbar(layer, pe->x, pe->y,
+                                pointer_phase_to_sdl_type(pe->phase));
         if (layer_scrollbar_dragging(layer)) {
             return 1;
         }
     }
 
     if (layer->handle_pointer_event) {
-        int consumed = layer->handle_pointer_event(layer, event);
+        int consumed = layer->handle_pointer_event(layer, pe);
         if (consumed) return 1;
     }
 
-    if (default_scrollable_pointer_handler(layer, event)) {
+    if (default_scrollable_pointer_handler(layer, pe)) {
         return 1;
     }
 
-    if (layer->event && layer->event->touch && event->device == POINTER_DEVICE_TOUCH) {
-        current_pointer_event = *event;
+    if (layer->event && layer->event->touch && pe->device == POINTER_DEVICE_TOUCH) {
+        current_pointer_event = *pe;
         current_pointer_event_active = 1;
         EVENT_INVOKE(layer->event->touch, layer);
         current_pointer_event_active = 0;
         return 1;
     }
 
-    return default_layer_handle_pointer_event(layer, event);
+    return default_layer_handle_pointer_event(layer, pe);
 }
 
 // 处理滚动条拖动事件

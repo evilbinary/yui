@@ -463,6 +463,7 @@ int list_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
         if (ady >= adx && (adx >= 2 || ady >= 2)) {
             if (layout_scroll_vertical(layer, event->delta_y)) {
                 component->touch_scrolled = 1;
+                pointer_gesture_mark_scrolled();
                 component->pressed_index = -1;
                 return 1;
             }
@@ -486,15 +487,16 @@ int list_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
         return inside || can_pan;
     }
 
-    if (event->phase == POINTER_UP) {
-        if (component->touch_scrolled) {
-            component->pressed_index = -1;
-            component->touch_scrolled = 0;
-            return 1;
-        }
+    if (event->phase == POINTER_CANCEL) {
+        component->pressed_index = -1;
+        component->touch_scrolled = 0;
+        return 1;
+    }
 
+    if (event->phase == POINTER_UP) {
         int clicked = inside && component->pressed_index == index && index >= 0;
         component->pressed_index = -1;
+        component->touch_scrolled = 0;
         if (clicked) {
             list_dispatch_select(component, index);
         }

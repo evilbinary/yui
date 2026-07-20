@@ -104,6 +104,7 @@ typedef struct PointerEvent {
 - 每个 `FINGERDOWN/MOTION/UP` 带 `pointer_id`（SDL `fingerId`）和 `finger_count`（当前触点数）
 - **单指**拖滚动：`finger_count == 1` 且 `POINTER_MOVE`
 - **多指**时 `event.c` 默认跳过内容区拖滚动，避免误触
+- **滚动后误触 click**：`event.c` 在 root 把 `POINTER_UP` 改写为 `POINTER_CANCEL`；组件只在 `POINTER_UP` 触发 click，在 `POINTER_CANCEL` 做状态收尾
 - **捏合/旋转**：`POINTER_PINCH` / `POINTER_ROTATE`，载荷在 `ext.gesture.scale` / `rotation`
 
 ### event.c 职责（目标态）

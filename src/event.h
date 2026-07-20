@@ -17,4 +17,7 @@ int default_layer_handle_pointer_event(Layer* layer, PointerEvent* event);
 const PointerEvent* get_current_pointer_event(void);
 const char* pointer_phase_to_string(PointerPhase phase);
 
+/* 当前指针手势是否发生过内容区滚动（DOWN→UP 之间） */
+void pointer_gesture_mark_scrolled(void);
+
 #endif

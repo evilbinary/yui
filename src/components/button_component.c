@@ -24,6 +24,15 @@ static int button_exceeded_slop(const ButtonComponent* component, int x, int y) 
     return dx > BUTTON_TAP_SLOP || dy > BUTTON_TAP_SLOP;
 }
 
+static int button_scroll_like_move(const PointerEvent* event) {
+    if (!event || event->phase != POINTER_MOVE) {
+        return 0;
+    }
+    int adx = event->delta_x < 0 ? -event->delta_x : event->delta_x;
+    int ady = event->delta_y < 0 ? -event->delta_y : event->delta_y;
+    return ady >= 2 && ady >= adx;
+}
+
 static void button_begin_pointer(ButtonComponent* component, Layer* layer, int x, int y) {
     component->press_x = x;
     component->press_y = y;
@@ -219,10 +228,15 @@ int button_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
             button_begin_pointer(component, layer, event->x, event->y);
         }
     } else if (event->phase == POINTER_MOVE) {
-        if (component->pointer_active && button_exceeded_slop(component, event->x, event->y)) {
+        if (component->pointer_active &&
+            (button_exceeded_slop(component, event->x, event->y) ||
+             button_scroll_like_move(event))) {
             component->drag_cancelled = 1;
             button_cancel_pointer(component, layer);
         }
+    } else if (event->phase == POINTER_CANCEL) {
+        button_cancel_pointer(component, layer);
+        return 0;
     } else if (event->phase == POINTER_UP) {
         int clicked = 0;
         if (component->pointer_active && !component->drag_cancelled && is_inside) {
