@@ -170,8 +170,14 @@ static int handle_position(Layer* layer, cJSON* value, int is_creating) {
     if (parse_int_array(value, &x, &y) == 0) {
         layer->rect.x = x;
         layer->rect.y = y;
+        if (layer->parent && layer->parent->layout_manager &&
+            layer->parent->layout_manager->type == LAYOUT_ABSOLUTE) {
+            layer->layout_base_rect.x = x;
+            layer->layout_base_rect.y = y;
+            layer->layout_base_valid = 1;
+        }
         if (!is_creating) {
-            mark_layer_dirty(layer, DIRTY_RECT);
+            mark_layer_dirty(layer, DIRTY_RECT | DIRTY_LAYOUT);
         }
     }
     return 1;

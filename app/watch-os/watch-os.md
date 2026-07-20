@@ -155,6 +155,8 @@ Theme.load("app/lib/themes/light" + suffix + ".json", "light");
 | 表盘快捷按钮 | 直达健康 / 计时 / 计算 |
 | 状态栏 `‹` | `goWatchBack()`，`YUI.back()` 或回表盘 |
 | 启动器列表项 | `openWatchApp(path)` |
+| 启动器 ◎ 蜂窝 | 气泡网格，任意方向拖动平移；近中心图标大、边缘小 |
+| 启动器 ⊞ 网格 | 经典四列网格（可滚动） |
 
 路由表（`app.js`）— 全部通过动态 JSON 挂载：
 

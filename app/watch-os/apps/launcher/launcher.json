@@ -7,36 +7,19 @@
     "type": "View",
     "variant": "surface",
     "flex": 1,
-    "scrollable": 1,
-    "layout": { "type": "vertical", "spacing": 10, "padding": [14, 20, 20, 20], "align": "center" },
+    "scrollable": 0,
+    "layout": { "type": "vertical", "spacing": 8, "padding": [10, 20, 16, 20], "align": "center" },
     "events": { "onLoad": "@onLauncherLoad", "onShow": "@onLauncherShow" },
     "children": [
         { "id": "launcher_title", "type": "Label", "variant": "overline", "text": "APPS", "size": [342, 12] },
         { "id": "launcher_count", "type": "Label", "variant": "caption", "text": "", "size": [342, 12] },
         {
-            "id": "launcher_grid",
-            "type": "Grid",
-            "width": 342,
-            "height": 60,
-            "layout": { "columns": 4, "spacing": 10 },
+            "id": "launcher_bubble",
+            "type": "View",
+            "size": [342, 280],
+            "layout": { "type": "absolute" },
+            "events": { "onTouch": "@onLauncherTouch" },
             "children": []
-        },
-        {
-            "id": "launcher_face_row",
-            "type": "Grid",
-            "size": [342, 58],
-            "layout": { "columns": 4, "spacing": 10 },
-            "children": [
-                {
-                    "id": "launcher_btn_face",
-                    "type": "Button",
-                    "variant": "dock-accent",
-                    "text": "◉",
-                    "size": [58, 58],
-                    "events": { "onClick": "@goWatchBack" }
-                },
-                { "id": "launcher_face_lbl", "type": "Label", "variant": "body", "text": "表盘", "size": [58, 58], "textAlign": "left" }
-            ]
         }
     ]
 }

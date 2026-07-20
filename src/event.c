@@ -85,6 +85,7 @@ const char* pointer_phase_to_string(PointerPhase phase) {
         case POINTER_DOWN: return "start";
         case POINTER_MOVE: return "move";
         case POINTER_UP: return "end";
+        case POINTER_CANCEL: return "cancel";
         case POINTER_WHEEL: return "wheel";
         case POINTER_SWIPE: return "swipe";
         case POINTER_DOUBLE_TAP: return "doubleTap";
@@ -438,7 +439,11 @@ int handle_pointer_event(Layer* layer, PointerEvent* event) {
         return 1;
     }
 
-    if (layer->event && layer->event->touch && pe->device == POINTER_DEVICE_TOUCH) {
+    if (layer->event && layer->event->touch &&
+        (pe->device == POINTER_DEVICE_TOUCH ||
+         (pe->device == POINTER_DEVICE_MOUSE &&
+          (pe->phase == POINTER_DOWN || pe->phase == POINTER_MOVE ||
+           pe->phase == POINTER_UP || pe->phase == POINTER_CANCEL)))) {
         current_pointer_event = *pe;
         current_pointer_event_active = 1;
         EVENT_INVOKE(layer->event->touch, layer);

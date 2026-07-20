@@ -148,18 +148,28 @@ int js_module_set_layer_event(Layer* layer, const char* event_name, const char* 
 static void* js_module_common_event(void* data)
 {
     Layer* layer = (Layer*)data;
-    if (layer && layer->event) {
-        // 查找 click_name 对应的 JS 函数并调用
-        if (layer->event->click_name[0] != '\0') {
-            const char* name = layer->event->click_name;
-            printf("JS: YUI click handler calling '%s'\n", name);
-            // 直接查找，如果失败则尝试加上图层ID前缀（支持文档级事件）
-            if (js_module_trigger_event(name, layer) != 0) {
-                char full_name[256];
-                snprintf(full_name, sizeof(full_name), "%s.%s", layer->id, name);
-                if (js_module_trigger_event(full_name, layer) != 0) {
-                    js_module_call_event(name, layer);
-                }
+    if (!layer || !layer->event) {
+        return NULL;
+    }
+    /* 指针手势（touch / mouse drag）优先走 touch_name，传递 phase + delta */
+    if (get_current_pointer_event() && layer->event->touch_name[0] != '\0') {
+        const char* name = layer->event->touch_name;
+        if (js_module_trigger_event(name, layer) != 0) {
+            char full_name[256];
+            snprintf(full_name, sizeof(full_name), "%s.%s", layer->id, name);
+            if (js_module_trigger_event(full_name, layer) != 0) {
+                js_module_call_event(name, layer);
+            }
+        }
+        return NULL;
+    }
+    if (layer->event->click_name[0] != '\0') {
+        const char* name = layer->event->click_name;
+        if (js_module_trigger_event(name, layer) != 0) {
+            char full_name[256];
+            snprintf(full_name, sizeof(full_name), "%s.%s", layer->id, name);
+            if (js_module_trigger_event(full_name, layer) != 0) {
+                js_module_call_event(name, layer);
             }
         }
     }
