@@ -27,7 +27,23 @@ typedef struct {
     int size;
 } MobileFont;
 
+#define MOBILE_TEXT_CACHE_MAX 128
+
+typedef struct {
+    DFont* font;
+    int font_size;
+    int scale_milli;
+    char text[256];
+    Color color;
+    Texture* texture;
+    Uint32 last_used;
+} MobileTextCacheEntry;
+
+static MobileTextCacheEntry g_text_cache[MOBILE_TEXT_CACHE_MAX];
+static int g_text_cache_scale = -1;
+
 DFont* mobile_load_font(const char* font_path, int size, const char* weight);
+static void mobile_destroy_text_texture_uncached(Texture* texture);
 
 static unsigned char* mobile_read_file(const char* path, size_t* out_size);
 
@@ -478,7 +494,116 @@ void mobile_init_text_gl(void) {
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
+static int mobile_text_scale_milli(void) {
+    return (int)(yui_density * 1000.0f + 0.5f);
+}
+
+static int mobile_text_cache_entry_matches(const MobileTextCacheEntry* e, DFont* font,
+                                           int font_size, Color color, const char* text) {
+    if (!e || !e->texture || e->font != font || e->font_size != font_size) {
+        return 0;
+    }
+    if (e->scale_milli != mobile_text_scale_milli()) {
+        return 0;
+    }
+    if (e->color.r != color.r || e->color.g != color.g ||
+        e->color.b != color.b || e->color.a != color.a) {
+        return 0;
+    }
+    return strcmp(e->text, text) == 0;
+}
+
+static void mobile_text_cache_clear(void) {
+    int i;
+    for (i = 0; i < MOBILE_TEXT_CACHE_MAX; i++) {
+        if (g_text_cache[i].texture) {
+            mobile_destroy_text_texture_uncached(g_text_cache[i].texture);
+            g_text_cache[i].texture = NULL;
+        }
+        memset(&g_text_cache[i], 0, sizeof(g_text_cache[i]));
+    }
+}
+
+void mobile_text_cache_invalidate(void) {
+    mobile_text_cache_clear();
+    g_text_cache_scale = -1;
+}
+
+static void mobile_text_cache_sync_scale(void) {
+    int scale = mobile_text_scale_milli();
+    if (g_text_cache_scale != scale) {
+        mobile_text_cache_clear();
+        g_text_cache_scale = scale;
+    }
+}
+
+static Texture* mobile_text_cache_get(DFont* font, const char* text, Color color, int font_size) {
+    int i;
+
+    if (!font || !text) {
+        return NULL;
+    }
+    mobile_text_cache_sync_scale();
+    for (i = 0; i < MOBILE_TEXT_CACHE_MAX; i++) {
+        if (mobile_text_cache_entry_matches(&g_text_cache[i], font, font_size, color, text)) {
+            g_text_cache[i].last_used = backend_get_ticks();
+            return g_text_cache[i].texture;
+        }
+    }
+    return NULL;
+}
+
+static void mobile_text_cache_put(DFont* font, const char* text, Color color, int font_size,
+                                  Texture* texture) {
+    int i;
+    int slot = -1;
+    Uint32 oldest = 0;
+
+    if (!font || !text || !texture || strlen(text) >= sizeof(g_text_cache[0].text)) {
+        return;
+    }
+
+    mobile_text_cache_sync_scale();
+
+    for (i = 0; i < MOBILE_TEXT_CACHE_MAX; i++) {
+        if (!g_text_cache[i].texture) {
+            slot = i;
+            break;
+        }
+        if (mobile_text_cache_entry_matches(&g_text_cache[i], font, font_size, color, text)) {
+            slot = i;
+            break;
+        }
+    }
+
+    if (slot < 0) {
+        oldest = g_text_cache[0].last_used;
+        slot = 0;
+        for (i = 1; i < MOBILE_TEXT_CACHE_MAX; i++) {
+            if (g_text_cache[i].last_used <= oldest) {
+                oldest = g_text_cache[i].last_used;
+                slot = i;
+            }
+        }
+    }
+
+    if (g_text_cache[slot].texture && g_text_cache[slot].texture != texture) {
+        mobile_destroy_text_texture_uncached(g_text_cache[slot].texture);
+    }
+
+    g_text_cache[slot].font = font;
+    g_text_cache[slot].font_size = font_size;
+    g_text_cache[slot].scale_milli = mobile_text_scale_milli();
+    strncpy(g_text_cache[slot].text, text, sizeof(g_text_cache[slot].text) - 1);
+    g_text_cache[slot].text[sizeof(g_text_cache[slot].text) - 1] = '\0';
+    g_text_cache[slot].color = color;
+    g_text_cache[slot].texture = texture;
+    g_text_cache[slot].last_used = backend_get_ticks();
+}
+
 void mobile_shutdown_text_gl(void) {
+    mobile_text_cache_clear();
+    g_text_cache_scale = -1;
     if (g_tex_program != 0) {
         glDeleteProgram(g_tex_program);
         g_tex_program = 0;
@@ -841,17 +966,26 @@ Texture* mobile_render_text_texture(DFont* font, const char* text, Color color) 
     unsigned char* bitmap = NULL;
     int width = 0;
     int height = 0;
+    int font_size;
+    Texture* texture;
 
     if (!font || !font->priv || !text || !text[0]) {
         return NULL;
     }
 
+    font_size = mobile_get_font_size(font);
+    texture = mobile_text_cache_get(font, text, color, font_size);
+    if (texture) {
+        return texture;
+    }
+
     render_font = mobile_resolve_render_font(font, text, &fallback);
     if (render_font == NULL && fallback && fallback != font) {
-        Texture* mixed = mobile_render_mixed_texture(font, fallback, text, color);
-        if (mixed) {
+        texture = mobile_render_mixed_texture(font, fallback, text, color);
+        if (texture) {
             MOBILE_FONT_LOG("texture mixed ok for '%.32s'", text);
-            return mixed;
+            mobile_text_cache_put(font, text, color, font_size, texture);
+            return texture;
         }
         MOBILE_FONT_WARN("mixed render failed for '%.32s'", text);
         render_font = font;
@@ -879,7 +1013,11 @@ Texture* mobile_render_text_texture(DFont* font, const char* text, Color color) 
     }
 
     MOBILE_FONT_LOG("texture ok '%.32s' %dx%d", text, width, height);
-    return mobile_upload_text_bitmap(bitmap, width, height);
+    texture = mobile_upload_text_bitmap(bitmap, width, height);
+    if (texture) {
+        mobile_text_cache_put(font, text, color, font_size, texture);
+    }
+    return texture;
 }
 
 void mobile_draw_text_texture(Texture* texture, const Rect* srcrect, const Rect* dstrect) {
@@ -1012,7 +1150,7 @@ void mobile_blit_rgba_rect(const unsigned char* rgba, int tex_w, int tex_h,
     glDeleteTextures(1, &tex);
 }
 
-void mobile_destroy_text_texture(Texture* texture) {
+static void mobile_destroy_text_texture_uncached(Texture* texture) {
     MobileGlTexture* gl_tex;
     if (!texture) {
         return;
@@ -1025,6 +1163,19 @@ void mobile_destroy_text_texture(Texture* texture) {
         free(gl_tex);
     }
     free(texture);
+}
+
+void mobile_destroy_text_texture(Texture* texture) {
+    int i;
+    if (!texture) {
+        return;
+    }
+    for (i = 0; i < MOBILE_TEXT_CACHE_MAX; i++) {
+        if (g_text_cache[i].texture == texture) {
+            return;
+        }
+    }
+    mobile_destroy_text_texture_uncached(texture);
 }
 
 #endif

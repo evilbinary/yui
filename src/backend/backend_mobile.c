@@ -1228,7 +1228,11 @@ void backend_set_window_icon(const char* path) {
     (void)path;
 }
 
-void backend_texture_cache_invalidate(void) {}
+void backend_texture_cache_invalidate(void) {
+#ifdef __ANDROID__
+    mobile_text_cache_invalidate();
+#endif
+}
 void backend_texture_cache_pin(DFont* font, const char* text, Color color) {
     (void)font;
     (void)text;
