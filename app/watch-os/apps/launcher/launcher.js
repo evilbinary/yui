@@ -1,13 +1,23 @@
-/** Watch 启动器 · 蜂窝视图：六边形排布 + 视口中心锚点 + 拖动平移 */
+/** Watch 启动器 · 浏览态蜂窝（刚性网格 + 视口透视）
+ *
+ * 相对位置锁死；pan 平移整盘；表冠 zoom 以视口中心为锚；
+ * 每帧按图标到视口中心距离重算 scale（近大远小）。
+ */
 
 var BUBBLE_D = 48;
-var BUBBLE_H = BUBBLE_D * Math.sqrt(3) / 2;
-var BUBBLE_CX = 171;
-var BUBBLE_CY = 140;
-var BUBBLE_CLIP_R = 138;
-var BUBBLE_FISHEYE_R = 120;
+/** 相邻 App 边与边之间的逻辑边距（改这个即可调疏密） */
+var BUBBLE_MARGIN = 14;
+var BUBBLE_PITCH = BUBBLE_D + BUBBLE_MARGIN;
+var BUBBLE_H = BUBBLE_PITCH * Math.sqrt(3) / 2;
+var BUBBLE_VP_W = 380;
+var BUBBLE_VP_H = 380;
+var BUBBLE_CX = BUBBLE_VP_W / 2;
+var BUBBLE_CY = BUBBLE_VP_H / 2;
+var BUBBLE_CLIP_R = 145;
+var BUBBLE_FISHEYE_R = 150;
+var BUBBLE_ZOOM_MIN = 0.55;
+var BUBBLE_ZOOM_MAX = 1.45;
 
-/** pointy-top 六边形轴向方向（与 ring 遍历顺序一致） */
 var HEX_DIRS = [[1, 0], [1, -1], [0, -1], [-1, 0], [-1, 1], [0, 1]];
 
 var LAUNCHER_COLS = 4;
@@ -20,6 +30,36 @@ var bubbleApps = [];
 var bubbleSlots = [];
 var bubblePanX = 0;
 var bubblePanY = 0;
+var bubbleZoom = 1;
+var bubbleVelX = 0;
+var bubbleVelY = 0;
+var bubbleInertiaId = null;
+
+/** 蜂窝测试用：额外 mock 应用数量（设 0 关闭） */
+var MOCK_LAUNCHER_COUNT = 24;
+var MOCK_LAUNCHER_ICONS = [
+    "🎵", "📷", "📚", "🎮", "✈️", "🏠", "💡", "🔑",
+    "🎁", "🧩", "🎯", "🚀", "🌙", "⭐", "🔥", "💎",
+    "🎧", "📺", "🗺", "🌧", "🍕", "⚽", "🛠", "📦"
+];
+
+function getMockLauncherApps() {
+    var list = [];
+    var i;
+    if (MOCK_LAUNCHER_COUNT <= 0) {
+        return list;
+    }
+    for (i = 0; i < MOCK_LAUNCHER_COUNT; i++) {
+        list.push({
+            id: "mock_" + i,
+            icon: MOCK_LAUNCHER_ICONS[i % MOCK_LAUNCHER_ICONS.length],
+            title: "Mock " + (i + 1),
+            launcher: true,
+            mock: true
+        });
+    }
+    return list;
+}
 
 function onLauncherLoad() {
     rebuildLauncher();
@@ -55,11 +95,15 @@ function rebuildLauncher() {
         return;
     }
 
-    var apps = WatchAppRegistry.getLauncherApps();
+    var apps = bubblePreferCenterClock(
+        WatchAppRegistry.getLauncherApps().concat(getMockLauncherApps())
+    );
     bubbleApps = apps;
     bubbleSlots = bubbleHexSlots(apps.length);
     bubblePanX = 0;
     bubblePanY = 0;
+    bubbleZoom = 1;
+    bubbleStopInertia();
     YUI.setText("launcher_count", apps.length + " 个应用");
 
     buildLauncherBubble(apps);
@@ -73,10 +117,33 @@ function rebuildLauncherGrid() {
     setLauncherMode(getWatchLauncherMode());
 }
 
+/** 时钟 App 固定占蜂窝中心锚点（若存在） */
+function bubblePreferCenterClock(apps) {
+    var list = apps.slice();
+    var i;
+    for (i = 0; i < list.length; i++) {
+        if (list[i].id === "clock") {
+            if (i !== 0) {
+                list.unshift(list.splice(i, 1)[0]);
+            }
+            break;
+        }
+    }
+    return list;
+}
+
 function bubbleHexSlots(count) {
     var slots = [];
     var ring = 1;
     var q, r, side, step;
+
+    if (count <= 0) {
+        return slots;
+    }
+    slots.push({ q: 0, r: 0 });
+    if (count === 1) {
+        return slots;
+    }
 
     while (slots.length < count) {
         q = -ring;
@@ -96,20 +163,40 @@ function bubbleHexSlots(count) {
     return slots;
 }
 
-/** 轴向 (q,r) → 像素；相邻圆心距 = BUBBLE_D，与图标直径一致 */
 function bubbleAxialToPixel(q, r) {
     return {
-        x: BUBBLE_D * (q + r / 2),
+        x: BUBBLE_PITCH * (q + r / 2),
         y: BUBBLE_H * r
     };
 }
 
-function bubbleFisheyeScale(dist) {
-    var t = dist / BUBBLE_FISHEYE_R;
-    if (t >= 1) {
-        return 0.52;
+/** 运行时改边距并刷新布局（单位：逻辑像素） */
+function setBubbleMargin(margin) {
+    if (typeof margin !== "number" || margin < 0) {
+        return;
     }
-    return 1 - 0.48 * t * t;
+    BUBBLE_MARGIN = margin;
+    BUBBLE_PITCH = BUBBLE_D + BUBBLE_MARGIN;
+    BUBBLE_H = BUBBLE_PITCH * Math.sqrt(3) / 2;
+    if (launcherBuilt && launcherMode === "bubble") {
+        layoutBubbleIcons();
+    }
+}
+
+/** 视口位置透视：指数衰减，中心 1 → 边缘 ~0.55 */
+function bubblePerspective(dist) {
+    var t = dist / BUBBLE_FISHEYE_R;
+    if (t > 1) {
+        t = 1;
+    }
+    /* t^0.8：外圈掉得更快，中心更突出 */
+    t = Math.pow(t, 0.8);
+    return 1 - t * 0.45;
+}
+
+function bubbleInClip(sx, sy, size) {
+    var d = Math.sqrt((sx - BUBBLE_CX) * (sx - BUBBLE_CX) + (sy - BUBBLE_CY) * (sy - BUBBLE_CY));
+    return d < BUBBLE_CLIP_R + size * 0.55;
 }
 
 function buildLauncherBubble(apps) {
@@ -161,25 +248,63 @@ function buildLauncherGrid(apps) {
 }
 
 function layoutBubbleIcons() {
+    var n = bubbleApps.length;
+    var items = [];
     var updates = [];
-    var i, app, slot, world, cx, cy, dist, scale, size;
+    var i, j, app, slot, world, lx, ly, dist, persp, size, sx, sy;
+    var dx, dy, d, minDist, push, nx, ny, gap, iter;
 
-    for (i = 0; i < bubbleApps.length; i++) {
+    for (i = 0; i < n; i++) {
         app = bubbleApps[i];
-        slot = bubbleSlots[i] || { q: 0, r: 1 };
+        slot = bubbleSlots[i] || { q: 0, r: 0 };
         world = bubbleAxialToPixel(slot.q, slot.r);
-        cx = BUBBLE_CX + world.x + bubblePanX;
-        cy = BUBBLE_CY + world.y + bubblePanY;
-        dist = Math.sqrt((cx - BUBBLE_CX) * (cx - BUBBLE_CX) + (cy - BUBBLE_CY) * (cy - BUBBLE_CY));
-        scale = bubbleFisheyeScale(dist);
-        size = Math.round(BUBBLE_D * scale);
+        lx = (world.x + bubblePanX) * bubbleZoom;
+        ly = (world.y + bubblePanY) * bubbleZoom;
+        dist = Math.sqrt(lx * lx + ly * ly);
+        persp = bubblePerspective(dist);
+        /* 先按透视收拢；后面用互推修正重叠 */
+        sx = BUBBLE_CX + lx * persp;
+        sy = BUBBLE_CY + ly * persp;
+        size = Math.round(BUBBLE_D * bubbleZoom * persp);
+        items.push({ id: app.id, x: sx, y: sy, size: size });
+    }
 
+    gap = BUBBLE_MARGIN * bubbleZoom;
+    for (iter = 0; iter < 6; iter++) {
+        for (i = 0; i < n; i++) {
+            for (j = i + 1; j < n; j++) {
+                dx = items[j].x - items[i].x;
+                dy = items[j].y - items[i].y;
+                d = Math.sqrt(dx * dx + dy * dy);
+                minDist = (items[i].size + items[j].size) * 0.5 + gap;
+                if (d < 0.001) {
+                    dx = 0.01 * (i + 1);
+                    dy = 0.01 * (j + 1);
+                    d = Math.sqrt(dx * dx + dy * dy);
+                }
+                if (d < minDist) {
+                    push = (minDist - d) * 0.5;
+                    nx = dx / d;
+                    ny = dy / d;
+                    items[i].x -= nx * push;
+                    items[i].y -= ny * push;
+                    items[j].x += nx * push;
+                    items[j].y += ny * push;
+                }
+            }
+        }
+    }
+
+    for (i = 0; i < n; i++) {
         updates.push({
-            target: "launcher_app_" + app.id,
+            target: "launcher_app_" + items[i].id,
             change: {
-                position: [Math.round(cx - size / 2), Math.round(cy - size / 2)],
-                size: [size, size],
-                visible: scale >= 0.4 && dist <= BUBBLE_CLIP_R + size * 0.55
+                position: [
+                    Math.round(items[i].x - items[i].size / 2),
+                    Math.round(items[i].y - items[i].size / 2)
+                ],
+                size: [items[i].size, items[i].size],
+                visible: bubbleInClip(items[i].x, items[i].y, items[i].size)
             }
         });
     }
@@ -187,15 +312,65 @@ function layoutBubbleIcons() {
     YUI.update(updates);
 }
 
+function bubbleStopInertia() {
+    if (bubbleInertiaId !== null) {
+        clearTimeout(bubbleInertiaId);
+        bubbleInertiaId = null;
+    }
+    bubbleVelX = 0;
+    bubbleVelY = 0;
+}
+
+function bubbleStartInertia() {
+    bubbleStopInertia();
+    if (Math.abs(bubbleVelX) < 0.5 && Math.abs(bubbleVelY) < 0.5) {
+        return;
+    }
+    function step() {
+        bubblePanX += bubbleVelX;
+        bubblePanY += bubbleVelY;
+        bubbleVelX *= 0.86;
+        bubbleVelY *= 0.86;
+        layoutBubbleIcons();
+        if (Math.abs(bubbleVelX) > 0.4 || Math.abs(bubbleVelY) > 0.4) {
+            bubbleInertiaId = setTimeout(step, 16);
+        } else {
+            bubbleInertiaId = null;
+            bubbleVelX = 0;
+            bubbleVelY = 0;
+        }
+    }
+    bubbleInertiaId = setTimeout(step, 16);
+}
+
 function onLauncherTouch(type, deltaX, deltaY) {
     if (launcherMode !== "bubble") {
         return;
     }
-    /* 只需处理 move：Button 会吞 DOWN，但 MOVE 会冒泡到 launcher_bubble */
     if (type === "move" && (deltaX !== 0 || deltaY !== 0)) {
-        bubblePanX += deltaX;
-        bubblePanY += deltaY;
+        bubbleStopInertia();
+        bubblePanX += deltaX / bubbleZoom;
+        bubblePanY += deltaY / bubbleZoom;
+        bubbleVelX = deltaX / bubbleZoom;
+        bubbleVelY = deltaY / bubbleZoom;
         layoutBubbleIcons();
+        return;
+    }
+    if (type === "wheel") {
+        bubbleStopInertia();
+        /* 表冠：以视口中心缩放整盘；中心锚点屏幕位置不变 */
+        bubbleZoom += deltaY > 0 ? -0.06 : 0.06;
+        if (bubbleZoom < BUBBLE_ZOOM_MIN) {
+            bubbleZoom = BUBBLE_ZOOM_MIN;
+        }
+        if (bubbleZoom > BUBBLE_ZOOM_MAX) {
+            bubbleZoom = BUBBLE_ZOOM_MAX;
+        }
+        layoutBubbleIcons();
+        return;
+    }
+    if (type === "end" || type === "cancel") {
+        bubbleStartInertia();
     }
 }
 
@@ -203,11 +378,18 @@ function onLauncherAppClick(layerId) {
     if (!layerId) {
         return;
     }
+    var id = null;
     if (layerId.indexOf("launcher_app_grid_") === 0) {
-        WatchAppRegistry.openById(layerId.substring("launcher_app_grid_".length));
+        id = layerId.substring("launcher_app_grid_".length);
+    } else if (layerId.indexOf("launcher_app_") === 0) {
+        id = layerId.substring("launcher_app_".length);
+    }
+    if (!id) {
         return;
     }
-    if (layerId.indexOf("launcher_app_") === 0) {
-        WatchAppRegistry.openById(layerId.substring("launcher_app_".length));
+    if (id.indexOf("mock_") === 0) {
+        YUI.log("Launcher mock app: " + id);
+        return;
     }
+    WatchAppRegistry.openById(id);
 }
