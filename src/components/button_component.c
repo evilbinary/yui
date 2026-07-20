@@ -227,8 +227,9 @@ int button_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
             button_begin_pointer(component, layer, event->x, event->y);
         }
     } else if (event->phase == POINTER_MOVE) {
+        /* 拖出按钮区域或超过 slop：取消点击（避免松手落在另一按钮上误开） */
         if (component->pointer_active &&
-            button_exceeded_slop(component, event->x, event->y)) {
+            (!is_inside || button_exceeded_slop(component, event->x, event->y))) {
             button_abort_drag(component, layer);
         }
     } else if (event->phase == POINTER_CANCEL) {
@@ -237,8 +238,7 @@ int button_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
         return armed ? 1 : 0;
     } else if (event->phase == POINTER_UP) {
         int armed = component->press_armed;
-        if (armed && !component->drag_cancelled && is_inside &&
-            !button_exceeded_slop(component, event->x, event->y)) {
+        if (armed && !component->drag_cancelled && is_inside) {
             button_fire_click(layer);
         }
         button_cancel_pointer(component, layer);
