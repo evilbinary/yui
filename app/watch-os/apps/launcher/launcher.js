@@ -1,14 +1,6 @@
-/** Watch 启动器 · 浏览态蜂窝（BubbleCloudView 球面投影）
- *
- * 参考 https://github.com/dodola/BubbleCloudView
- * - 六边形正交坐标 + scroll(pan)
- * - 极坐标 → 球面径向 swing / depth 缩放
- * - 再投回正交；边缘再软化 scale
- * - 表冠 zoom；松手惯性 + 橡皮筋边界
- */
+/** Watch 启动器 · 蜂窝浏览（BubbleCloudView 球面投影） */
 
 var BUBBLE_D = 48;
-/** 相邻 App 边与边之间的逻辑边距（改这个即可调疏密） */
 var BUBBLE_MARGIN = 6;
 var BUBBLE_PITCH = BUBBLE_D + BUBBLE_MARGIN;
 var BUBBLE_H = BUBBLE_PITCH * Math.sqrt(3) / 2;
@@ -16,19 +8,28 @@ var BUBBLE_VP_W = 380;
 var BUBBLE_VP_H = 380;
 var BUBBLE_CX = BUBBLE_VP_W / 2;
 var BUBBLE_CY = BUBBLE_VP_H / 2;
-/** 球面半径：控制近大远小的曲率（越大越平） */
 var BUBBLE_SPHERE_R = 160;
 var BUBBLE_EDGE = 36;
 var BUBBLE_CLIP_PAD = 8;
 var BUBBLE_ZOOM_MIN = 0.55;
 var BUBBLE_ZOOM_MAX = 1.45;
 var BUBBLE_SCROLL_RANGE = 220;
+var BUBBLE_SIZE_LERP = 0.22;
+var BUBBLE_INERTIA_DECAY = 0.91;
+var BUBBLE_INERTIA_BOOST = 2.4;
+var BUBBLE_INERTIA_STOP = 0.35;
 
 var HEX_DIRS = [[1, 0], [1, -1], [0, -1], [-1, 0], [-1, 1], [0, 1]];
-
 var LAUNCHER_COLS = 4;
 var LAUNCHER_BTN = 58;
 var LAUNCHER_SPACING = 10;
+
+var MOCK_LAUNCHER_COUNT = 48;
+var MOCK_LAUNCHER_ICONS = [
+    "🎵", "📷", "📚", "🎮", "✈️", "🏠", "💡", "🔑",
+    "🎁", "🧩", "🎯", "🚀", "🌙", "⭐", "🔥", "💎",
+    "🎧", "📺", "🗺", "🌧", "🍕", "⚽", "🛠", "📦"
+];
 
 var launcherMode = "bubble";
 var launcherBuilt = false;
@@ -44,34 +45,17 @@ var bubbleVelY = 0;
 var bubbleInertiaId = null;
 var bubbleDispSize = {};
 var bubbleSizeAnimId = null;
-var BUBBLE_SIZE_LERP = 0.22;
-/** 惯性：衰减越接近 1 滑得越远；松手初速放大 */
-var BUBBLE_INERTIA_DECAY = 0.91;
-var BUBBLE_INERTIA_BOOST = 2.4;
-var BUBBLE_INERTIA_STOP = 0.35;
 var bubbleReleaseTimer = null;
-
-/** 蜂窝测试用：额外 mock 应用数量（设 0 关闭） */
-var MOCK_LAUNCHER_COUNT = 48;
-var MOCK_LAUNCHER_ICONS = [
-    "🎵", "📷", "📚", "🎮", "✈️", "🏠", "💡", "🔑",
-    "🎁", "🧩", "🎯", "🚀", "🌙", "⭐", "🔥", "💎",
-    "🎧", "📺", "🗺", "🌧", "🍕", "⚽", "🛠", "📦"
-];
 
 function getMockLauncherApps() {
     var list = [];
     var i;
-    if (MOCK_LAUNCHER_COUNT <= 0) {
-        return list;
-    }
     for (i = 0; i < MOCK_LAUNCHER_COUNT; i++) {
         list.push({
             id: "mock_" + i,
             icon: MOCK_LAUNCHER_ICONS[i % MOCK_LAUNCHER_ICONS.length],
             title: "Mock " + (i + 1),
-            launcher: true,
-            mock: true
+            launcher: true
         });
     }
     return list;
@@ -121,10 +105,12 @@ function rebuildLauncher() {
     bubblePanRawX = 0;
     bubblePanRawY = 0;
     bubbleZoom = 1;
+    bubbleVelX = 0;
+    bubbleVelY = 0;
     bubbleDispSize = {};
     bubbleStopSizeAnim();
     bubbleStopInertia();
-    bubbleClearVelocity();
+    bubbleCancelReleaseTimer();
     YUI.setText("launcher_count", apps.length + " 个应用");
 
     buildLauncherBubble(apps);
@@ -138,7 +124,6 @@ function rebuildLauncherGrid() {
     setLauncherMode(getWatchLauncherMode());
 }
 
-/** 时钟 App 固定占蜂窝中心锚点（若存在） */
 function bubblePreferCenterClock(apps) {
     var list = apps.slice();
     var i;
@@ -162,9 +147,6 @@ function bubbleHexSlots(count) {
         return slots;
     }
     slots.push({ q: 0, r: 0 });
-    if (count === 1) {
-        return slots;
-    }
 
     while (slots.length < count) {
         q = -ring;
@@ -191,19 +173,6 @@ function bubbleAxialToPixel(q, r) {
     };
 }
 
-/** 运行时改边距并刷新布局（单位：逻辑像素） */
-function setBubbleMargin(margin) {
-    if (typeof margin !== "number" || margin < 0) {
-        return;
-    }
-    BUBBLE_MARGIN = margin;
-    BUBBLE_PITCH = BUBBLE_D + BUBBLE_MARGIN;
-    BUBBLE_H = BUBBLE_PITCH * Math.sqrt(3) / 2;
-    if (launcherBuilt && launcherMode === "bubble") {
-        layoutBubbleIcons();
-    }
-}
-
 function bubbleEaseInOutCubic(t, b, c, d) {
     t = t / (d / 2);
     if (t < 1) {
@@ -226,25 +195,13 @@ function bubbleEaseInSine(t, b, c, d) {
     return -c * Math.cos(t / d * (Math.PI / 2)) + c + b;
 }
 
-/**
- * BubbleCloudView.iconMapRefresh：正交 → 极坐标 → 球面 → 正交 + depth
- * 返回相对视口中心的屏幕偏移与 scale
- */
 function bubbleProjectIcon(worldX, worldY) {
     var ox = (worldX + bubblePanX) * bubbleZoom;
     var oy = (worldY + bubblePanY) * bubbleZoom;
     var r0 = Math.sqrt(ox * ox + oy * oy);
     var rad = Math.atan2(oy, ox);
     var sphereR = BUBBLE_SPHERE_R * bubbleZoom;
-    var t;
-    var rOut;
-    var depth;
-    var sx;
-    var sy;
-    var halfW;
-    var halfH;
-    var edge;
-    var scale;
+    var t, rOut, depth, sx, sy, halfW, halfH, edge, scale;
 
     if (r0 < 0.001) {
         return { x: 0, y: 0, scale: 1 };
@@ -256,12 +213,11 @@ function bubbleProjectIcon(worldX, worldY) {
         depth = bubbleEaseInOutCubic(t / (Math.PI / 2), 1, -0.5, 1);
     } else {
         rOut = r0;
-        depth = bubbleEaseInOutCubic(1, 1, -0.5, 1);
+        depth = 0.5;
     }
 
     sx = rOut * Math.cos(rad);
     sy = rOut * Math.sin(rad) * 1.14;
-
     halfW = BUBBLE_VP_W / 2;
     halfH = BUBBLE_VP_H / 2;
     edge = BUBBLE_EDGE * bubbleZoom;
@@ -451,7 +407,6 @@ function bubbleCancelReleaseTimer() {
     }
 }
 
-/** 拖在图标上时父层可能收不到 end，用短延迟兜底触发惯性 */
 function bubbleArmReleaseInertia() {
     bubbleCancelReleaseTimer();
     bubbleReleaseTimer = setTimeout(function() {
@@ -460,17 +415,13 @@ function bubbleArmReleaseInertia() {
     }, 90);
 }
 
-function bubbleClearVelocity() {
-    bubbleVelX = 0;
-    bubbleVelY = 0;
-}
-
 function bubbleStartInertia() {
     bubbleStopInertia();
     bubbleVelX *= BUBBLE_INERTIA_BOOST;
     bubbleVelY *= BUBBLE_INERTIA_BOOST;
     if (Math.abs(bubbleVelX) < BUBBLE_INERTIA_STOP && Math.abs(bubbleVelY) < BUBBLE_INERTIA_STOP) {
-        bubbleClearVelocity();
+        bubbleVelX = 0;
+        bubbleVelY = 0;
         bubbleSettlePan();
         return;
     }
@@ -498,7 +449,8 @@ function bubbleStartInertia() {
             bubbleInertiaId = setTimeout(step, 16);
         } else {
             bubbleInertiaId = null;
-            bubbleClearVelocity();
+            bubbleVelX = 0;
+            bubbleVelY = 0;
             bubbleSettlePan();
         }
     }
@@ -529,7 +481,6 @@ function onLauncherTouch(type, deltaX, deltaY) {
         bubbleStopInertia();
         bubblePanRawX += deltaX / bubbleZoom;
         bubblePanRawY += deltaY / bubbleZoom;
-        /* 滑动过程平滑累计速度，松手才有可见惯性 */
         bubbleVelX = bubbleVelX * 0.35 + (deltaX / bubbleZoom) * 0.65;
         bubbleVelY = bubbleVelY * 0.35 + (deltaY / bubbleZoom) * 0.65;
         layoutBubbleIcons();
@@ -556,20 +507,16 @@ function onLauncherTouch(type, deltaX, deltaY) {
 }
 
 function onLauncherAppClick(layerId) {
+    var id = null;
     if (!layerId) {
         return;
     }
-    var id = null;
     if (layerId.indexOf("launcher_app_grid_") === 0) {
         id = layerId.substring("launcher_app_grid_".length);
     } else if (layerId.indexOf("launcher_app_") === 0) {
         id = layerId.substring("launcher_app_".length);
     }
-    if (!id) {
-        return;
-    }
-    if (id.indexOf("mock_") === 0) {
-        YUI.log("Launcher mock app: " + id);
+    if (!id || id.indexOf("mock_") === 0) {
         return;
     }
     WatchAppRegistry.openById(id);
