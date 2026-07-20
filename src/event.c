@@ -443,7 +443,8 @@ int handle_pointer_event(Layer* layer, PointerEvent* event) {
         (pe->device == POINTER_DEVICE_TOUCH ||
          (pe->device == POINTER_DEVICE_MOUSE &&
           (pe->phase == POINTER_DOWN || pe->phase == POINTER_MOVE ||
-           pe->phase == POINTER_UP || pe->phase == POINTER_CANCEL)))) {
+           pe->phase == POINTER_UP || pe->phase == POINTER_CANCEL ||
+           pe->phase == POINTER_WHEEL)))) {
         current_pointer_event = *pe;
         current_pointer_event_active = 1;
         EVENT_INVOKE(layer->event->touch, layer);
