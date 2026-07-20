@@ -16,7 +16,7 @@
         {
             "id": "launcher_bubble",
             "type": "View",
-            "size": [342, 280],
+            "size": [380, 380],
             "layout": { "type": "absolute" },
             "events": { "onTouch": "@onLauncherTouch" },
             "children": []

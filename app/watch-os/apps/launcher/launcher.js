@@ -1,7 +1,10 @@
-/** Watch 启动器 · 浏览态蜂窝（刚性网格 + 视口透视）
+/** Watch 启动器 · 浏览态蜂窝（BubbleCloudView 球面投影）
  *
- * 相对位置锁死；pan 平移整盘；表冠 zoom 以视口中心为锚；
- * 每帧按图标到视口中心距离重算 scale（近大远小）。
+ * 参考 https://github.com/dodola/BubbleCloudView
+ * - 六边形正交坐标 + scroll(pan)
+ * - 极坐标 → 球面径向 swing / depth 缩放
+ * - 再投回正交；边缘再软化 scale
+ * - 表冠 zoom；松手惯性 + 橡皮筋边界
  */
 
 var BUBBLE_D = 48;
@@ -13,10 +16,13 @@ var BUBBLE_VP_W = 380;
 var BUBBLE_VP_H = 380;
 var BUBBLE_CX = BUBBLE_VP_W / 2;
 var BUBBLE_CY = BUBBLE_VP_H / 2;
-var BUBBLE_CLIP_R = 145;
-var BUBBLE_FISHEYE_R = 150;
+/** 球面半径：控制近大远小的曲率（越大越平） */
+var BUBBLE_SPHERE_R = 160;
+var BUBBLE_EDGE = 36;
+var BUBBLE_CLIP_PAD = 8;
 var BUBBLE_ZOOM_MIN = 0.55;
 var BUBBLE_ZOOM_MAX = 1.45;
+var BUBBLE_SCROLL_RANGE = 220;
 
 var HEX_DIRS = [[1, 0], [1, -1], [0, -1], [-1, 0], [-1, 1], [0, 1]];
 
@@ -30,13 +36,18 @@ var bubbleApps = [];
 var bubbleSlots = [];
 var bubblePanX = 0;
 var bubblePanY = 0;
+var bubblePanRawX = 0;
+var bubblePanRawY = 0;
 var bubbleZoom = 1;
 var bubbleVelX = 0;
 var bubbleVelY = 0;
 var bubbleInertiaId = null;
+var bubbleDispSize = {};
+var bubbleSizeAnimId = null;
+var BUBBLE_SIZE_LERP = 0.22;
 
 /** 蜂窝测试用：额外 mock 应用数量（设 0 关闭） */
-var MOCK_LAUNCHER_COUNT = 24;
+var MOCK_LAUNCHER_COUNT = 48;
 var MOCK_LAUNCHER_ICONS = [
     "🎵", "📷", "📚", "🎮", "✈️", "🏠", "💡", "🔑",
     "🎁", "🧩", "🎯", "🚀", "🌙", "⭐", "🔥", "💎",
@@ -102,7 +113,11 @@ function rebuildLauncher() {
     bubbleSlots = bubbleHexSlots(apps.length);
     bubblePanX = 0;
     bubblePanY = 0;
+    bubblePanRawX = 0;
+    bubblePanRawY = 0;
     bubbleZoom = 1;
+    bubbleDispSize = {};
+    bubbleStopSizeAnim();
     bubbleStopInertia();
     YUI.setText("launcher_count", apps.length + " 个应用");
 
@@ -183,20 +198,123 @@ function setBubbleMargin(margin) {
     }
 }
 
-/** 视口位置透视：指数衰减，中心 1 → 边缘 ~0.55 */
-function bubblePerspective(dist) {
-    var t = dist / BUBBLE_FISHEYE_R;
-    if (t > 1) {
-        t = 1;
+function bubbleEaseInOutCubic(t, b, c, d) {
+    t = t / (d / 2);
+    if (t < 1) {
+        return c / 2 * t * t * t + b;
     }
-    /* t^0.8：外圈掉得更快，中心更突出 */
-    t = Math.pow(t, 0.8);
-    return 1 - t * 0.45;
+    t -= 2;
+    return c / 2 * (t * t * t + 2) + b;
+}
+
+function bubbleSwing(t, b, c, d) {
+    t = t / d;
+    return -c * t * (t - 2) + b;
+}
+
+function bubbleEaseOutSine(t, b, c, d) {
+    return c * Math.sin(t / d * (Math.PI / 2)) + b;
+}
+
+function bubbleEaseInSine(t, b, c, d) {
+    return -c * Math.cos(t / d * (Math.PI / 2)) + c + b;
+}
+
+/**
+ * BubbleCloudView.iconMapRefresh：正交 → 极坐标 → 球面 → 正交 + depth
+ * 返回相对视口中心的屏幕偏移与 scale
+ */
+function bubbleProjectIcon(worldX, worldY) {
+    var ox = (worldX + bubblePanX) * bubbleZoom;
+    var oy = (worldY + bubblePanY) * bubbleZoom;
+    var r0 = Math.sqrt(ox * ox + oy * oy);
+    var rad = Math.atan2(oy, ox);
+    var sphereR = BUBBLE_SPHERE_R * bubbleZoom;
+    var t;
+    var rOut;
+    var depth;
+    var sx;
+    var sy;
+    var halfW;
+    var halfH;
+    var edge;
+    var scale;
+
+    if (r0 < 0.001) {
+        return { x: 0, y: 0, scale: 1 };
+    }
+
+    t = r0 / sphereR;
+    if (t < Math.PI / 2) {
+        rOut = r0 * bubbleSwing(t / (Math.PI / 2), 1.5, -0.5, 1);
+        depth = bubbleEaseInOutCubic(t / (Math.PI / 2), 1, -0.5, 1);
+    } else {
+        rOut = r0;
+        depth = bubbleEaseInOutCubic(1, 1, -0.5, 1);
+    }
+
+    sx = rOut * Math.cos(rad);
+    sy = rOut * Math.sin(rad) * 1.14;
+
+    halfW = BUBBLE_VP_W / 2;
+    halfH = BUBBLE_VP_H / 2;
+    edge = BUBBLE_EDGE * bubbleZoom;
+
+    if (Math.abs(sx) > halfW - edge || Math.abs(sy) > halfH - edge) {
+        scale = depth * 0.4;
+    } else if (Math.abs(sx) > halfW - 2 * edge && Math.abs(sy) > halfH - 2 * edge) {
+        scale = Math.min(
+            depth * bubbleEaseOutSine(halfW - Math.abs(sx) - edge, 0.4, 0.6, edge),
+            depth * bubbleEaseOutSine(halfH - Math.abs(sy) - edge, 0.3, 0.7, edge)
+        );
+    } else if (Math.abs(sx) > halfW - 2 * edge) {
+        scale = depth * bubbleEaseOutSine(halfW - Math.abs(sx) - edge, 0.4, 0.6, edge);
+    } else if (Math.abs(sy) > halfH - 2 * edge) {
+        scale = depth * bubbleEaseOutSine(halfH - Math.abs(sy) - edge, 0.4, 0.6, edge);
+    } else {
+        scale = depth;
+    }
+
+    if (sx < -halfW + 2 * edge) {
+        sx += bubbleEaseInSine(halfW - Math.abs(sx) - 2 * edge, 0, 6, 2 * edge);
+    } else if (sx > halfW - 2 * edge) {
+        sx += bubbleEaseInSine(halfW - Math.abs(sx) - 2 * edge, 0, -6, 2 * edge);
+    }
+    if (sy < -halfH + 2 * edge) {
+        sy += bubbleEaseInSine(halfH - Math.abs(sy) - 2 * edge, 0, 8, 2 * edge);
+    } else if (sy > halfH - 2 * edge) {
+        sy += bubbleEaseInSine(halfH - Math.abs(sy) - 2 * edge, 0, -8, 2 * edge);
+    }
+
+    if (scale < 0.28) {
+        scale = 0.28;
+    }
+    return { x: sx, y: sy, scale: scale };
 }
 
 function bubbleInClip(sx, sy, size) {
-    var d = Math.sqrt((sx - BUBBLE_CX) * (sx - BUBBLE_CX) + (sy - BUBBLE_CY) * (sy - BUBBLE_CY));
-    return d < BUBBLE_CLIP_R + size * 0.55;
+    return sx + size * 0.5 > -BUBBLE_CLIP_PAD &&
+        sx - size * 0.5 < BUBBLE_VP_W + BUBBLE_CLIP_PAD &&
+        sy + size * 0.5 > -BUBBLE_CLIP_PAD &&
+        sy - size * 0.5 < BUBBLE_VP_H + BUBBLE_CLIP_PAD;
+}
+
+function bubbleApplyRubberPan() {
+    var range = BUBBLE_SCROLL_RANGE;
+    if (bubblePanRawX > range) {
+        bubblePanX = range + (bubblePanRawX - range) / 2;
+    } else if (bubblePanRawX < -range) {
+        bubblePanX = -range + (bubblePanRawX + range) / 2;
+    } else {
+        bubblePanX = bubblePanRawX;
+    }
+    if (bubblePanRawY > range) {
+        bubblePanY = range + (bubblePanRawY - range) / 2;
+    } else if (bubblePanRawY < -range) {
+        bubblePanY = -range + (bubblePanRawY + range) / 2;
+    } else {
+        bubblePanY = bubblePanRawY;
+    }
 }
 
 function buildLauncherBubble(apps) {
@@ -248,68 +366,69 @@ function buildLauncherGrid(apps) {
 }
 
 function layoutBubbleIcons() {
-    var n = bubbleApps.length;
-    var items = [];
     var updates = [];
-    var i, j, app, slot, world, lx, ly, dist, persp, size, sx, sy;
-    var dx, dy, d, minDist, push, nx, ny, gap, iter;
+    var i, app, slot, world, proj, sx, sy, targetSize, cur, next, size;
+    var settling = false;
 
-    for (i = 0; i < n; i++) {
+    bubbleApplyRubberPan();
+
+    for (i = 0; i < bubbleApps.length; i++) {
         app = bubbleApps[i];
         slot = bubbleSlots[i] || { q: 0, r: 0 };
         world = bubbleAxialToPixel(slot.q, slot.r);
-        lx = (world.x + bubblePanX) * bubbleZoom;
-        ly = (world.y + bubblePanY) * bubbleZoom;
-        dist = Math.sqrt(lx * lx + ly * ly);
-        persp = bubblePerspective(dist);
-        /* 先按透视收拢；后面用互推修正重叠 */
-        sx = BUBBLE_CX + lx * persp;
-        sy = BUBBLE_CY + ly * persp;
-        size = Math.round(BUBBLE_D * bubbleZoom * persp);
-        items.push({ id: app.id, x: sx, y: sy, size: size });
-    }
-
-    gap = BUBBLE_MARGIN * bubbleZoom;
-    for (iter = 0; iter < 6; iter++) {
-        for (i = 0; i < n; i++) {
-            for (j = i + 1; j < n; j++) {
-                dx = items[j].x - items[i].x;
-                dy = items[j].y - items[i].y;
-                d = Math.sqrt(dx * dx + dy * dy);
-                minDist = (items[i].size + items[j].size) * 0.5 + gap;
-                if (d < 0.001) {
-                    dx = 0.01 * (i + 1);
-                    dy = 0.01 * (j + 1);
-                    d = Math.sqrt(dx * dx + dy * dy);
-                }
-                if (d < minDist) {
-                    push = (minDist - d) * 0.5;
-                    nx = dx / d;
-                    ny = dy / d;
-                    items[i].x -= nx * push;
-                    items[i].y -= ny * push;
-                    items[j].x += nx * push;
-                    items[j].y += ny * push;
-                }
-            }
+        proj = bubbleProjectIcon(world.x, world.y);
+        sx = BUBBLE_CX + proj.x;
+        sy = BUBBLE_CY + proj.y;
+        targetSize = BUBBLE_D * bubbleZoom * proj.scale;
+        cur = bubbleDispSize[app.id];
+        if (typeof cur !== "number") {
+            cur = targetSize;
         }
-    }
+        next = cur + (targetSize - cur) * BUBBLE_SIZE_LERP;
+        if (Math.abs(targetSize - next) < 0.5) {
+            next = targetSize;
+        } else {
+            settling = true;
+        }
+        bubbleDispSize[app.id] = next;
+        size = Math.round(next);
+        if (size < 1) {
+            size = 1;
+        }
 
-    for (i = 0; i < n; i++) {
         updates.push({
-            target: "launcher_app_" + items[i].id,
+            target: "launcher_app_" + app.id,
             change: {
-                position: [
-                    Math.round(items[i].x - items[i].size / 2),
-                    Math.round(items[i].y - items[i].size / 2)
-                ],
-                size: [items[i].size, items[i].size],
-                visible: bubbleInClip(items[i].x, items[i].y, items[i].size)
+                position: [Math.round(sx - size / 2), Math.round(sy - size / 2)],
+                size: [size, size],
+                visible: bubbleInClip(sx, sy, size)
             }
         });
     }
 
     YUI.update(updates);
+    if (settling) {
+        bubbleScheduleSizeAnim();
+    }
+}
+
+function bubbleStopSizeAnim() {
+    if (bubbleSizeAnimId !== null) {
+        clearTimeout(bubbleSizeAnimId);
+        bubbleSizeAnimId = null;
+    }
+}
+
+function bubbleScheduleSizeAnim() {
+    if (bubbleSizeAnimId !== null) {
+        return;
+    }
+    bubbleSizeAnimId = setTimeout(function() {
+        bubbleSizeAnimId = null;
+        if (launcherMode === "bubble" && launcherBuilt) {
+            layoutBubbleIcons();
+        }
+    }, 16);
 }
 
 function bubbleStopInertia() {
@@ -324,13 +443,28 @@ function bubbleStopInertia() {
 function bubbleStartInertia() {
     bubbleStopInertia();
     if (Math.abs(bubbleVelX) < 0.5 && Math.abs(bubbleVelY) < 0.5) {
+        bubbleSettlePan();
         return;
     }
     function step() {
-        bubblePanX += bubbleVelX;
-        bubblePanY += bubbleVelY;
+        bubblePanRawX += bubbleVelX;
+        bubblePanRawY += bubbleVelY;
         bubbleVelX *= 0.86;
         bubbleVelY *= 0.86;
+        if (bubblePanRawX > BUBBLE_SCROLL_RANGE) {
+            bubblePanRawX -= (bubblePanRawX - BUBBLE_SCROLL_RANGE) / 4;
+            bubbleVelX *= 0.7;
+        } else if (bubblePanRawX < -BUBBLE_SCROLL_RANGE) {
+            bubblePanRawX -= (bubblePanRawX + BUBBLE_SCROLL_RANGE) / 4;
+            bubbleVelX *= 0.7;
+        }
+        if (bubblePanRawY > BUBBLE_SCROLL_RANGE) {
+            bubblePanRawY -= (bubblePanRawY - BUBBLE_SCROLL_RANGE) / 4;
+            bubbleVelY *= 0.7;
+        } else if (bubblePanRawY < -BUBBLE_SCROLL_RANGE) {
+            bubblePanRawY -= (bubblePanRawY + BUBBLE_SCROLL_RANGE) / 4;
+            bubbleVelY *= 0.7;
+        }
         layoutBubbleIcons();
         if (Math.abs(bubbleVelX) > 0.4 || Math.abs(bubbleVelY) > 0.4) {
             bubbleInertiaId = setTimeout(step, 16);
@@ -338,9 +472,26 @@ function bubbleStartInertia() {
             bubbleInertiaId = null;
             bubbleVelX = 0;
             bubbleVelY = 0;
+            bubbleSettlePan();
         }
     }
     bubbleInertiaId = setTimeout(step, 16);
+}
+
+function bubbleSettlePan() {
+    if (bubblePanRawX > BUBBLE_SCROLL_RANGE) {
+        bubblePanRawX = BUBBLE_SCROLL_RANGE;
+    } else if (bubblePanRawX < -BUBBLE_SCROLL_RANGE) {
+        bubblePanRawX = -BUBBLE_SCROLL_RANGE;
+    }
+    if (bubblePanRawY > BUBBLE_SCROLL_RANGE) {
+        bubblePanRawY = BUBBLE_SCROLL_RANGE;
+    } else if (bubblePanRawY < -BUBBLE_SCROLL_RANGE) {
+        bubblePanRawY = -BUBBLE_SCROLL_RANGE;
+    }
+    bubblePanX = bubblePanRawX;
+    bubblePanY = bubblePanRawY;
+    layoutBubbleIcons();
 }
 
 function onLauncherTouch(type, deltaX, deltaY) {
@@ -349,8 +500,8 @@ function onLauncherTouch(type, deltaX, deltaY) {
     }
     if (type === "move" && (deltaX !== 0 || deltaY !== 0)) {
         bubbleStopInertia();
-        bubblePanX += deltaX / bubbleZoom;
-        bubblePanY += deltaY / bubbleZoom;
+        bubblePanRawX += deltaX / bubbleZoom;
+        bubblePanRawY += deltaY / bubbleZoom;
         bubbleVelX = deltaX / bubbleZoom;
         bubbleVelY = deltaY / bubbleZoom;
         layoutBubbleIcons();
@@ -358,7 +509,6 @@ function onLauncherTouch(type, deltaX, deltaY) {
     }
     if (type === "wheel") {
         bubbleStopInertia();
-        /* 表冠：以视口中心缩放整盘；中心锚点屏幕位置不变 */
         bubbleZoom += deltaY > 0 ? -0.06 : 0.06;
         if (bubbleZoom < BUBBLE_ZOOM_MIN) {
             bubbleZoom = BUBBLE_ZOOM_MIN;
