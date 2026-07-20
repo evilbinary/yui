@@ -7,7 +7,7 @@
     "type": "View",
     "variant": "surface",
     "flex": 1,
-    "scrollable": 0,
+    "scrollable": 1,
     "layout": { "type": "vertical", "spacing": 8, "padding": [10, 20, 16, 20], "align": "center" },
     "events": { "onLoad": "@onLauncherLoad", "onShow": "@onLauncherShow" },
     "children": [
