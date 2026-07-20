@@ -26,6 +26,41 @@
         },
         { "id": "settings_theme_val", "type": "Label", "variant": "caption", "text": "当前：暗色" },
         {
+            "id": "settings_launcher_row",
+            "type": "View",
+            "variant": "list-row",
+            "size": [358, 48],
+            "layout": { "type": "horizontal", "spacing": 8, "padding": [10, 12, 10, 12], "align": "space-between" },
+            "children": [
+                { "id": "settings_launcher_lbl", "type": "Label", "variant": "body", "text": "App 视图" },
+                {
+                    "id": "settings_launcher_btns",
+                    "type": "View",
+                    "size": [120, 32],
+                    "layout": { "type": "horizontal", "spacing": 6, "align": "center" },
+                    "children": [
+                        {
+                            "id": "btn_launcher_bubble",
+                            "type": "Button",
+                            "variant": "pill",
+                            "text": "◎",
+                            "size": [56, 32],
+                            "events": { "onClick": "@setWatchLauncherBubble" }
+                        },
+                        {
+                            "id": "btn_launcher_grid",
+                            "type": "Button",
+                            "variant": "pill",
+                            "text": "⊞",
+                            "size": [56, 32],
+                            "events": { "onClick": "@setWatchLauncherGrid" }
+                        }
+                    ]
+                }
+            ]
+        },
+        { "id": "settings_launcher_val", "type": "Label", "variant": "caption", "text": "当前：蜂窝" },
+        {
             "id": "settings_battery_row",
             "type": "View",
             "variant": "list-row",

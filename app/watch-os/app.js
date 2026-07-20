@@ -39,9 +39,56 @@ var Watch = {
     apps: []
 };
 
+Watch.launcherMode = "bubble";
+
 var clockTimer = null;
 var watchThemeDir = "app/watch-os/themes";
+var WATCH_CONFIG_PATH = "app/watch-os/config.json";
 var swipeAnimating = false;
+
+function loadWatchConfig() {
+    var cfg = { launcherMode: "bubble" };
+    if (typeof YUI.readFile !== "function") {
+        return cfg;
+    }
+    var raw = YUI.readFile(WATCH_CONFIG_PATH);
+    if (!raw) {
+        return cfg;
+    }
+    try {
+        var parsed = JSON.parse(raw);
+        if (parsed.launcherMode === "grid" || parsed.launcherMode === "bubble") {
+            cfg.launcherMode = parsed.launcherMode;
+        }
+    } catch (e) {
+        YUI.log("Watch config parse error: " + e);
+    }
+    return cfg;
+}
+
+function saveWatchConfig(cfg) {
+    if (typeof YUI.writeFile !== "function" || !cfg) {
+        return false;
+    }
+    return YUI.writeFile(WATCH_CONFIG_PATH, JSON.stringify(cfg, null, 2));
+}
+
+function getWatchLauncherMode() {
+    return Watch.launcherMode === "grid" ? "grid" : "bubble";
+}
+
+function getWatchLauncherModeLabel(mode) {
+    return (mode || getWatchLauncherMode()) === "grid" ? "网格" : "蜂窝";
+}
+
+function setWatchLauncherMode(mode) {
+    var next = mode === "grid" ? "grid" : "bubble";
+    Watch.launcherMode = next;
+    saveWatchConfig({ launcherMode: next });
+    if (typeof setLauncherMode === "function") {
+        setLauncherMode(next);
+    }
+}
 
 function initWatchThemes() {
     Theme.load(watchThemeDir + "/dark.json", "dark");
@@ -57,6 +104,8 @@ function initWatchApps() {
 }
 
 function onWatchLoad() {
+    var cfg = loadWatchConfig();
+    Watch.launcherMode = cfg.launcherMode;
     initWatchThemes();
 
     Router.init({

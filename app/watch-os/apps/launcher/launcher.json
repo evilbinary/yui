@@ -20,6 +20,24 @@
             "layout": { "type": "absolute" },
             "events": { "onTouch": "@onLauncherTouch" },
             "children": []
+        },
+        {
+            "id": "launcher_grid",
+            "type": "Grid",
+            "visible": false,
+            "width": 342,
+            "height": 60,
+            "layout": { "columns": 4, "spacing": 10 },
+            "children": []
+        },
+        {
+            "id": "launcher_face_row",
+            "type": "Grid",
+            "visible": false,
+            "size": [342, 58],
+            "layout": { "columns": 4, "spacing": 10 },
+            "children": [
+            ]
         }
     ]
 }
