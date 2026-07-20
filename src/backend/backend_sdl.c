@@ -1645,12 +1645,6 @@ void handle_event(Layer* root, SDL_Event* event) {
             }
             touchState.lastTapTime = currentTime;
         }
-
-#ifdef __EMSCRIPTEN__
-        if (touchState.fingerCount == 1) {
-            backend_deliver_mouse_pointer(root, x, y, POINTER_DOWN, SDL_BUTTON_LEFT, 0, 0);
-        }
-#endif
     }
     // 触摸移动事件
     else if (event->type == SDL_FINGERMOTION) {
@@ -1680,12 +1674,6 @@ void handle_event(Layer* root, SDL_Event* event) {
                 touchState.longPressDetected = 1;
             }
         }
-
-#ifdef __EMSCRIPTEN__
-        if (touchState.fingerCount == 1) {
-            backend_deliver_mouse_pointer(root, x, y, POINTER_MOVE, SDL_BUTTON_LEFT, 0, 0);
-        }
-#endif
     }
     // 触摸结束事件
     else if (event->type == SDL_FINGERUP) {
@@ -1711,12 +1699,6 @@ void handle_event(Layer* root, SDL_Event* event) {
                 x - touch_swipe_start_x, y - touch_swipe_start_y);
         }
 
-#ifdef __EMSCRIPTEN__
-        if (touchState.fingerCount == 0) {
-            backend_deliver_mouse_pointer(root, x, y, POINTER_UP, SDL_BUTTON_LEFT, 0, 0);
-        }
-#endif
-        
         // 如果所有手指都离开屏幕，重置状态
         if (touchState.fingerCount == 0) {
             resetTouchState();

@@ -105,6 +105,7 @@ typedef struct PointerEvent {
 - **单指**拖滚动：`finger_count == 1` 且 `POINTER_MOVE`
 - **多指**时 `event.c` 默认跳过内容区拖滚动，避免误触
 - **滚动后误触 click**：`event.c` 在 root 把 `POINTER_UP` 改写为 `POINTER_CANCEL`；组件只在 `POINTER_UP` 触发 click，在 `POINTER_CANCEL` 做状态收尾
+- **Web**：touch 不额外合成 mouse（`backend_sdl.c` 已去掉 FINGER* → mouse 合成，避免 UP 双发 / navigate 后误触）
 - **捏合/旋转**：`POINTER_PINCH` / `POINTER_ROTATE`，载荷在 `ext.gesture.scale` / `rotation`
 
 ### event.c 职责（目标态）
@@ -196,7 +197,7 @@ if (e->wheel_dy) {
 | 平台 | Mouse | Touch |
 |------|-------|-------|
 | 桌面 SDL | 真实鼠标 → `MouseEvent` | 真实手指 → `TouchEvent` |
-| Web (Emscripten) | 鼠标 → `MouseEvent`（含 `delta_*` 拖动） | 手指 → `TouchEvent`；合成 mouse 仅用于 Button 等点击，**不带 content drag delta** |
+| Web (Emscripten) | 鼠标 → `PointerEvent`（含 `delta_*` 拖动） | 手指 → `PointerEvent`（**不**再合成 mouse，避免双发 UP） |
 | LVGL SDL | 同上 | 手指可合成 mouse（`from_touch` 已废弃，用 delta=0 区分） |
 
 Hint 策略（`backend_sdl.c`）：
