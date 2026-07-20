@@ -2425,7 +2425,7 @@ Uint32 backend_get_ticks(void){
     return SDL_GetTicks();
 }
 
-void backend_get_mouse_state(int* x, int* y){
+void backend_get_pointer_state(int* x, int* y){
     SDL_GetMouseState(x, y);
 }
 

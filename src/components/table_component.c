@@ -277,7 +277,7 @@ static void table_tooltip_try_show(TableComponent* component, Layer* layer) {
     }
 
     int mx = 0, my = 0;
-    backend_get_mouse_state(&mx, &my);
+    backend_get_pointer_state(&mx, &my);
     table_show_tooltip(component, layer, text, mx, my);
     free(owned_text);
 }

@@ -311,7 +311,7 @@ void label_component_render(Layer* layer) {
         Uint32 now = backend_get_ticks();
         if (now - component->hover_start >= TOOLTIP_DELAY_MS) {
             int mx, my;
-            backend_get_mouse_state(&mx, &my);
+            backend_get_pointer_state(&mx, &my);
             show_tooltip(component, mx, my);
         }
     }

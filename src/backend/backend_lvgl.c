@@ -898,7 +898,7 @@ Uint32 backend_get_ticks(void)
 #endif
 }
 
-void backend_get_mouse_state(int* x, int* y)
+void backend_get_pointer_state(int* x, int* y)
 {
     if (x) *x = 0;
     if (y) *y = 0;

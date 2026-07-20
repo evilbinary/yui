@@ -25,6 +25,7 @@ extern void android_clipboard_set_text(const char* text);
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <time.h>
 
 #define MOBILE_DEFAULT_W 360
 #define MOBILE_DEFAULT_H 640
@@ -1021,10 +1022,14 @@ void backend_delay(int delay) {
 }
 
 Uint32 backend_get_ticks(void) {
-    return 0;
+    struct timespec ts;
+    if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0) {
+        return 0;
+    }
+    return (Uint32)((uint64_t)ts.tv_sec * 1000ull + (uint64_t)ts.tv_nsec / 1000000ull);
 }
 
-void backend_get_mouse_state(int* x, int* y) {
+void backend_get_pointer_state(int* x, int* y) {
     if (x) {
         *x = 0;
     }
