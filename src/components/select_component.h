@@ -119,7 +119,7 @@ void select_component_collapse(SelectComponent* component);
 void select_component_toggle(SelectComponent* component);
 
 // 事件处理
-int select_component_handle_mouse_event(Layer* layer, MouseEvent* event);
+int select_component_handle_pointer_event(Layer* layer, PointerEvent* event);
 int select_component_handle_key_event(Layer* layer, KeyEvent* event);
 void select_component_handle_scroll_event(Layer* layer, int scroll_delta);
 void select_component_scroll_callback(Layer* layer);
@@ -127,7 +127,7 @@ void select_component_render(Layer* layer);
 
 // 弹出层专用函数
 void select_component_render_dropdown_only(Layer* layer);
-int select_component_handle_dropdown_mouse_event(Layer* layer, MouseEvent* event);
+int select_component_handle_dropdown_mouse_event(Layer* layer, PointerEvent* event);
 int select_component_handle_dropdown_key_event(Layer* layer, KeyEvent* event);
 void select_component_handle_dropdown_scroll_event(Layer* layer, int scroll_delta);
 void select_component_popup_close_callback(PopupLayer* popup);

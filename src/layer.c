@@ -351,7 +351,7 @@ Layer* layer_create(Layer* root_layer, int x, int y, int width, int height) {
   layer->rect.w = width;
   layer->rect.h = height;
   layer_init_strings(layer);
-  layer->handle_mouse_event = default_layer_handle_mouse_event;
+  layer->handle_pointer_event = default_layer_handle_pointer_event;
   return layer;
 }
 
@@ -376,8 +376,8 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
     layer_init_strings(layer);
   }
 
-  if (!layer->handle_mouse_event) {
-    layer->handle_mouse_event = default_layer_handle_mouse_event;
+  if (!layer->handle_pointer_event) {
+    layer->handle_pointer_event = default_layer_handle_pointer_event;
   }
 
   // 初始化焦点相关字段

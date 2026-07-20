@@ -29,7 +29,7 @@ SliderComponent* slider_component_create(Layer* layer) {
     // 设置组件和渲染函数
     layer->component = component;
     layer->render = slider_component_render;
-    layer->handle_mouse_event = slider_component_handle_mouse_event;
+    layer->handle_pointer_event = slider_component_handle_pointer_event;
     layer->handle_key_event = slider_component_handle_key_event;
     
     return component;
@@ -258,12 +258,12 @@ float slider_calculate_value_from_position(SliderComponent* component, int mouse
 }
 
 // 处理鼠标事件
-int slider_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
+int slider_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
     if (!layer || !event || !layer->component) return 0;
     
     SliderComponent* component = (SliderComponent*)layer->component;
     // 只在按下事件时输出调试信息
-    if (event->state == SDL_PRESSED && event->button == SDL_BUTTON_LEFT) {
+    if (event->phase == POINTER_DOWN && event->button == SDL_BUTTON_LEFT) {
         printf("DEBUG: Mouse CLICK on slider at (%d,%d)\n", layer->rect.x, layer->rect.y);
     }
     
@@ -271,13 +271,13 @@ int slider_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     if (event->x < layer->rect.x || event->x >= layer->rect.x + layer->rect.w ||
         event->y < layer->rect.y || event->y >= layer->rect.y + layer->rect.h) {
         // 鼠标不在滑块区域内，只处理拖动释放事件
-        if (event->state == SDL_RELEASED && event->button == SDL_BUTTON_LEFT) {
+        if (event->phase == POINTER_UP && event->button == SDL_BUTTON_LEFT) {
             component->dragging = 0;
         }
         return 0;
     }
     
-    if (event->state == SDL_PRESSED && event->button == SDL_BUTTON_LEFT) {
+    if (event->phase == POINTER_DOWN && event->button == SDL_BUTTON_LEFT) {
         // 检查是否点击在滑块上
         int thumb_pos = slider_calculate_thumb_position(component);
         int thumb_size = 16;
@@ -299,7 +299,7 @@ int slider_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
             float new_value = slider_calculate_value_from_position(component, event->x, event->y);
             slider_component_set_value(component, new_value);
         }
-    } else if (event->state == SDL_RELEASED && event->button == SDL_BUTTON_LEFT) {
+    } else if (event->phase == POINTER_UP && event->button == SDL_BUTTON_LEFT) {
         component->dragging = 0;
     } else if (event->button == SDL_BUTTON_LEFT && component->dragging) {
         // 拖动滑块（鼠标移动时）

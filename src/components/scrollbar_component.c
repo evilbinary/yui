@@ -41,7 +41,7 @@ ScrollbarComponent* scrollbar_component_create(Layer* layer, Layer* target_layer
     layer->render = scrollbar_component_render;
     
     // 绑定事件处理函数
-    layer->handle_mouse_event = scrollbar_component_handle_mouse_event;
+    layer->handle_pointer_event = scrollbar_component_handle_pointer_event;
     // 初始更新位置
     scrollbar_component_update_position(component);
     
@@ -168,7 +168,7 @@ void scrollbar_component_update_position(ScrollbarComponent* component) {
 }
 
 // 处理鼠标事件
-int scrollbar_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
+int scrollbar_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
     ScrollbarComponent* component = (ScrollbarComponent*)layer->component;
     if (!component || !component->target_layer) {
         return 0;
@@ -181,7 +181,7 @@ int scrollbar_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     absolute_thumb_rect.y += layer->rect.y;
     
     // 鼠标按下事件
-    if (event->state == BUTTON_PRESSED && event->button == BUTTON_LEFT) {
+    if (event->phase == POINTER_DOWN && event->button == BUTTON_LEFT) {
         // 检查是否点击了滑块
         Point pt = {event->x, event->y};
         if (point_in_rect(pt, absolute_thumb_rect)) {
@@ -192,7 +192,7 @@ int scrollbar_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
                 component->drag_offset = event->x - absolute_thumb_rect.x;
             }
         }
-    } else if (event->state == 0) {
+    } else if (event->phase == POINTER_UP) {
         // 鼠标释放事件
         component->is_dragging = 0;
     }

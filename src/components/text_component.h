@@ -60,7 +60,7 @@ void text_component_set_syntax_highlight(TextComponent* component, const char* l
 void text_component_invalidate_layout(TextComponent* component);
 void text_component_set_on_change(TextComponent* component, EventHandler callback, void* user_data);
 int text_component_handle_key_event(Layer* layer, KeyEvent* event);
-int text_component_handle_mouse_event(Layer* layer, MouseEvent* event);
+int text_component_handle_pointer_event(Layer* layer, PointerEvent* event);
 void text_component_render(Layer* layer);
 int text_component_get_position_from_point(TextComponent* component, Point pt, Layer* layer);
 int text_component_register_event(Layer* layer, const char* event_name, const char* event_func_name, EventHandler event_handler);

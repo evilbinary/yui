@@ -1,33 +1,23 @@
 #ifndef YUI_EVENT_H
 #define YUI_EVENT_H
 
-#include "layer.h"
 #include "ytype.h"
+#include "layer.h"
 #include "layout.h"
 
-// Fix: Make sure EventHandler is properly declared
+typedef struct KeyEvent KeyEvent;
+typedef struct PointerEvent PointerEvent;
+
 typedef void* (*EventHandler)(void* data);
 
 int register_event_handler(const char* name, EventHandler handler);
 void print_registered_events();
 EventHandler find_event_by_name(const char* name);
 
-// 处理垂直滚动事件
-void handle_scroll_event(Layer* layer,int mouse_x,int mouse_y,int scroll_deltax,int scroll_deltay);
+void handle_key_event(Layer* layer, KeyEvent* event);
+int handle_pointer_event(Layer* layer, PointerEvent* event);
+int default_layer_handle_pointer_event(Layer* layer, PointerEvent* event);
+const PointerEvent* get_current_pointer_event(void);
+const char* pointer_phase_to_string(PointerPhase phase);
 
-// 处理水平滚动事件
-void handle_horizontal_scroll_event(Layer* layer, int scroll_delta);
-
-// 处理垂直滚动事件
-void handler_virtical_scroll_event(Layer* layer, int scroll_delta);
-
-// Fix: Make sure KeyEvent is properly declared
-void handle_key_event(Layer* layer, struct KeyEvent* event);
-
-int handle_mouse_event(Layer* layer, struct MouseEvent* event);
-int default_layer_handle_mouse_event(Layer* layer, struct MouseEvent* event);
-int handle_touch_event(Layer* layer, struct TouchEvent* event);
-void handle_scrollbar_drag_event(Layer* root, int mouse_x, int mouse_y, SDL_EventType event_type);
-const struct TouchEvent* get_current_touch_event(void);
-const char* touch_type_to_string(int type);
 #endif

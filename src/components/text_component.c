@@ -434,7 +434,7 @@ TextComponent* text_component_create(Layer* layer) {
     layer->component = component;
     layer->render = text_component_render;
     layer->handle_key_event = text_component_handle_key_event;
-    layer->handle_mouse_event = text_component_handle_mouse_event;
+    layer->handle_pointer_event = text_component_handle_pointer_event;
     layer->register_event = text_component_register_event;
     layer->get_property = text_component_get_property;
     layer->set_style = text_component_apply_theme_style;
@@ -1695,7 +1695,7 @@ static void text_component_blur(TextComponent* component) {
 }
 
 // 处理鼠标事件
-int text_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
+int text_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
     if (!layer || !event || !layer->component) {
         return 0;
     }
@@ -1704,14 +1704,14 @@ int text_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     Point pt = {event->x, event->y};
 
     if (layer->scrollbar_v && layer->scrollbar_v->is_dragging) {
-        if (event->state == SDL_RELEASED && event->button == SDL_BUTTON_LEFT) {
+        if (event->phase == POINTER_UP && event->button == SDL_BUTTON_LEFT) {
             component->is_selecting = 0;
         }
         return 1;
     }
 
     if (text_component_point_in_vertical_scrollbar(layer, pt)) {
-        if (event->state == SDL_RELEASED && event->button == SDL_BUTTON_LEFT) {
+        if (event->phase == POINTER_UP && event->button == SDL_BUTTON_LEFT) {
             component->is_selecting = 0;
         }
         return 1;
@@ -1721,7 +1721,7 @@ int text_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     text_component_get_content_rect(component, layer, &content_rect);
     
     // 鼠标左键按下 - 设置光标位置并开始选择
-    if (event->state == SDL_PRESSED && event->button == SDL_BUTTON_LEFT) {
+    if (event->phase == POINTER_DOWN && event->button == SDL_BUTTON_LEFT) {
         if (point_in_rect(pt, content_rect)) {
             if (layer->focusable) {
                 text_component_focus(component);
@@ -1761,7 +1761,7 @@ int text_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
         }
     }
     // 鼠标拖动 - 更新选择范围
-    else if (event->state == SDL_MOUSEMOTION && (event->button == SDL_BUTTON_LEFT) && component->is_selecting) {
+    else if (event->phase == POINTER_MOVE && (event->button == SDL_BUTTON_LEFT) && component->is_selecting) {
         int drag_pos;
         
         if (point_in_rect(pt, content_rect)) {
@@ -1795,7 +1795,7 @@ int text_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
         text_component_update_scroll_for_cursor(component);
     }
     // 鼠标释放 - 结束选择
-    else if (event->state == SDL_RELEASED && event->button == SDL_BUTTON_LEFT) {
+    else if (event->phase == POINTER_UP && event->button == SDL_BUTTON_LEFT) {
         component->is_selecting = 0;
     }
     return 0;

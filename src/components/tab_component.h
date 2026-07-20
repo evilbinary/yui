@@ -91,7 +91,7 @@ void tab_component_set_tab_changed_callback(TabComponent* component, void (*call
 void tab_component_set_tab_close_callback(TabComponent* component, void (*callback)(int, void*));
 
 // 处理鼠标事件
-int tab_component_handle_mouse_event(Layer* layer, MouseEvent* event);
+int tab_component_handle_pointer_event(Layer* layer, PointerEvent* event);
 
 // 处理键盘事件
 int tab_component_handle_key_event(Layer* layer, KeyEvent* event);

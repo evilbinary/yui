@@ -537,7 +537,7 @@ PaginationComponent* pagination_component_create(Layer* layer) {
 
     layer->component = component;
     layer->render = pagination_component_render;
-    layer->handle_mouse_event = pagination_component_handle_mouse_event;
+    layer->handle_pointer_event = pagination_component_handle_pointer_event;
     layer->get_property = pagination_component_get_property;
     layer->set_property = pagination_component_set_property_from_json;
     layer->set_style = pagination_component_apply_theme_style;
@@ -593,14 +593,14 @@ void pagination_component_render(Layer* layer) {
     }
 }
 
-int pagination_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
+int pagination_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
     if (!layer || !layer->component || layer->visible != VISIBLE) return 0;
     if (HAS_STATE(layer, LAYER_STATE_DISABLED)) return 0;
 
     PaginationComponent* component = (PaginationComponent*)layer->component;
     PaginationZone zone = pagination_hit_test(component, event->x, event->y);
 
-    if (event->state == SDL_MOUSEMOTION) {
+    if (event->phase == POINTER_MOVE) {
         if (zone != component->hovered_zone) {
             component->hovered_zone = zone;
             mark_layer_dirty(layer, DIRTY_TEXT);
@@ -608,7 +608,7 @@ int pagination_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
         return zone != PAGINATION_ZONE_NONE;
     }
 
-    if (event->state == SDL_PRESSED) {
+    if (event->phase == POINTER_DOWN) {
         if (zone != PAGINATION_ZONE_NONE && pagination_zone_enabled(component, zone)) {
             component->pressed_zone = zone;
             mark_layer_dirty(layer, DIRTY_TEXT);
@@ -617,7 +617,7 @@ int pagination_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
         return 0;
     }
 
-    if (event->state == SDL_RELEASED) {
+    if (event->phase == POINTER_UP) {
         PaginationZone pressed = component->pressed_zone;
         component->pressed_zone = PAGINATION_ZONE_NONE;
         mark_layer_dirty(layer, DIRTY_TEXT);

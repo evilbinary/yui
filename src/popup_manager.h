@@ -56,7 +56,7 @@ void popup_manager_close_by_type(PopupType type);
 void popup_manager_render(void);
 
 // 处理弹出层事件
-bool popup_manager_handle_mouse_event(MouseEvent* event);
+bool popup_manager_handle_pointer_event(PointerEvent* event);
 bool popup_manager_handle_key_event(KeyEvent* event);
 bool popup_manager_handle_scroll_event(int scroll_delta);
 

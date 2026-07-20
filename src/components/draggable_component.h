@@ -28,7 +28,7 @@ DraggableComponent* draggable_component_create(Layer* layer);
 DraggableComponent* draggable_component_create_from_json(Layer* layer, cJSON* json_obj);
 void draggable_component_destroy(DraggableComponent* component);
 void draggable_component_render(Layer* layer);
-int draggable_component_handle_mouse_event(Layer* layer, MouseEvent* event);
+int draggable_component_handle_pointer_event(Layer* layer, PointerEvent* event);
 void draggable_component_emit_connect_change(Layer* layer, const char* detail_json);
 
 #ifdef __cplusplus

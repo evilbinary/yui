@@ -22,7 +22,7 @@ typedef struct YuiComponentOps {
     YuiComponentCreateFn create;
     void (*destroy)(Layer* layer);
     void (*on_layout)(Layer* layer);
-    int  (*handle_mouse)(Layer* layer, MouseEvent* e);
+    int  (*handle_pointer)(Layer* layer, PointerEvent* e);
     int  (*handle_key)(Layer* layer, KeyEvent* e);
     void (*after_create)(Layer* layer, cJSON* json);
     uint32_t flags;

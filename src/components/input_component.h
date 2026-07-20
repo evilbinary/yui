@@ -32,7 +32,7 @@ void input_component_set_placeholder(InputComponent* component, const char* plac
 void input_component_set_max_length(InputComponent* component, int max_length);
 void input_component_set_cursor_color(InputComponent* component, Color cursor_color);
 int input_component_handle_key_event(Layer* layer, KeyEvent* event);
-int input_component_handle_mouse_event(Layer* layer,MouseEvent* event);
+int input_component_handle_pointer_event(Layer* layer,PointerEvent* event);
 int input_component_register_event(Layer* layer, const char* event_name,
                                    const char* event_func_name, EventHandler event_handler);
 void input_component_render(Layer* layer);

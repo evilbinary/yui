@@ -37,7 +37,7 @@ SashComponent* sash_component_create(Layer* layer) {
 
     layer->component = comp;
     layer->render = sash_component_render;
-    layer->handle_mouse_event = sash_component_handle_mouse_event;
+    layer->handle_pointer_event = sash_component_handle_pointer_event;
     layer->register_event = sash_component_register_event;
     layer->set_style = sash_component_set_style;
 
@@ -288,7 +288,7 @@ void sash_component_render(Layer* layer) {
     }
 }
 
-int sash_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
+int sash_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
     if (!layer || !event) return 0;
     SashComponent* comp = (SashComponent*)layer->component;
     if (!comp) return 0;
@@ -296,7 +296,7 @@ int sash_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     int inside = (event->x >= layer->rect.x && event->x < layer->rect.x + layer->rect.w &&
                   event->y >= layer->rect.y && event->y < layer->rect.y + layer->rect.h);
 
-    if (event->state == SDL_MOUSEMOTION) {
+    if (event->phase == POINTER_MOVE) {
         if (inside && !comp->hover) {
             comp->hover = 1;
             mark_layer_dirty(layer, DIRTY_COLOR);
@@ -314,7 +314,7 @@ int sash_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
         return 0;
     }
 
-    if (event->state == SDL_PRESSED && event->button == SDL_BUTTON_LEFT && inside) {
+    if (event->phase == POINTER_DOWN && event->button == SDL_BUTTON_LEFT && inside) {
         ensure_target(comp);
         comp->dragging = 1;
         comp->drag_start_y = comp->horizontal ? event->x : event->y;
@@ -324,7 +324,7 @@ int sash_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
         return 1;
     }
 
-    if (event->state == SDL_RELEASED && event->button == SDL_BUTTON_LEFT) {
+    if (event->phase == POINTER_UP && event->button == SDL_BUTTON_LEFT) {
         if (comp->dragging) {
             sash_update_layout_base(comp);
             sash_dispatch_change(comp);

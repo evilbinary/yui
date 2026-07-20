@@ -96,7 +96,7 @@ CheckboxComponent* checkbox_component_create(Layer* layer, int default_checked) 
     layer->render = checkbox_component_render;
     
     // 绑定事件处理函数
-    layer->handle_mouse_event = checkbox_component_handle_mouse_event;
+    layer->handle_pointer_event = checkbox_component_handle_pointer_event;
     
     // 设置组件为可聚焦（默认情况下未禁用时可聚焦）
     layer->focusable = !HAS_STATE(layer, LAYER_STATE_DISABLED);
@@ -229,7 +229,7 @@ int checkbox_component_is_disabled(CheckboxComponent* component) {
 }
 
 // 处理鼠标事件
-int checkbox_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
+int checkbox_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
     if (!layer || !event || !layer->component) {
         return 0;
     }
@@ -248,7 +248,7 @@ int checkbox_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
                      event->y < layer->rect.y + layer->rect.h);
 
     // 处理鼠标点击事件
-    if (event->button == BUTTON_LEFT && event->state == BUTTON_PRESSED && is_inside) {
+    if (event->button == BUTTON_LEFT && event->phase == POINTER_DOWN && is_inside) {
         // 切换选中状态
         component->checked = !component->checked;
 

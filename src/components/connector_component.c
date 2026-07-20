@@ -1186,10 +1186,10 @@ int connector_try_remove_at(Layer* canvas, int x, int y, int dot_size)
 static void connector_render_drag_preview(void);
 static void connector_destroy_capture_layer(void);
 static int connector_create_capture_layer(void);
-static int connector_capture_handle_mouse(Layer* layer, MouseEvent* event);
+static int connector_capture_handle_mouse(Layer* layer, PointerEvent* event);
 static void connector_capture_render(Layer* layer);
 static void connector_sync_pick_layer(Layer* canvas);
-static int connector_pick_handle_mouse(Layer* layer, MouseEvent* event);
+static int connector_pick_handle_mouse(Layer* layer, PointerEvent* event);
 static int connector_interaction_start_modify(Layer* connector_layer, int x, int y,
                                               int dot_size);
 
@@ -1268,7 +1268,7 @@ static void connector_sync_pick_layer(Layer* canvas)
         pick->id[sizeof(pick->id) - 1] = '\0';
         pick->bg_color.a = 0;
         pick->focusable = 0;
-        pick->handle_mouse_event = connector_pick_handle_mouse;
+        pick->handle_pointer_event = connector_pick_handle_mouse;
         pick->parent = canvas;
 
         children = (Layer**)realloc(canvas->children,
@@ -1289,7 +1289,7 @@ static void connector_sync_pick_layer(Layer* canvas)
     pick->rect.h = canvas->rect.h;
 }
 
-static int connector_pick_handle_mouse(Layer* layer, MouseEvent* event)
+static int connector_pick_handle_mouse(Layer* layer, PointerEvent* event)
 {
     Layer* canvas;
     Layer* connector_layer;
@@ -1298,7 +1298,7 @@ static int connector_pick_handle_mouse(Layer* layer, MouseEvent* event)
         return 0;
     }
 
-    if (event->state != SDL_PRESSED || event->button != SDL_BUTTON_LEFT) {
+    if (event->phase != POINTER_DOWN || event->button != SDL_BUTTON_LEFT) {
         return 0;
     }
 
@@ -1438,7 +1438,7 @@ static void connector_capture_render(Layer* layer)
     connector_render_drag_preview();
 }
 
-static int connector_capture_handle_mouse(Layer* layer, MouseEvent* event)
+static int connector_capture_handle_mouse(Layer* layer, PointerEvent* event)
 {
     Layer* to_layer;
     ConnectorAnchor to_anchor;
@@ -1453,7 +1453,7 @@ static int connector_capture_handle_mouse(Layer* layer, MouseEvent* event)
     g_connector_drag.mouse_y = event->y;
     g_connector_drag.hover_layer = NULL;
 
-    if (event->state == SDL_MOUSEMOTION) {
+    if (event->phase == POINTER_MOVE) {
         if (connector_hit_test_canvas_ports(g_connector_drag.canvas, event->x, event->y,
                                             g_connector_drag.dot_size, &to_layer,
                                             &to_anchor)) {
@@ -1463,7 +1463,7 @@ static int connector_capture_handle_mouse(Layer* layer, MouseEvent* event)
         return 1;
     }
 
-    if (event->state == SDL_RELEASED && event->button == SDL_BUTTON_LEFT) {
+    if (event->phase == POINTER_UP && event->button == SDL_BUTTON_LEFT) {
         if (g_connector_drag.mode == CONNECTOR_DRAG_MODIFY &&
             g_connector_drag.modify_layer && g_connector_drag.modify_layer->component) {
             if (connector_hit_test_canvas_ports(g_connector_drag.canvas, event->x, event->y,
@@ -1545,7 +1545,7 @@ static int connector_create_capture_layer(void)
     capture->bg_color.a = 0;
     capture->focusable = 0;
     capture->render = connector_capture_render;
-    capture->handle_mouse_event = connector_capture_handle_mouse;
+    capture->handle_pointer_event = connector_capture_handle_mouse;
     capture->parent = canvas;
     capture->rect.x = canvas->rect.x;
     capture->rect.y = canvas->rect.y;

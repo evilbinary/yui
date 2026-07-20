@@ -80,7 +80,7 @@ TableComponent* table_component_create_from_json(Layer* layer, cJSON* json_obj);
 void table_component_update_content_size(TableComponent* component);
 int table_component_get_row_count(TableComponent* component);
 void table_component_render(Layer* layer);
-int table_component_handle_mouse_event(Layer* layer, MouseEvent* event);
+int table_component_handle_pointer_event(Layer* layer, PointerEvent* event);
 int table_component_handle_key_event(Layer* layer, KeyEvent* event);
 
 #ifdef __cplusplus

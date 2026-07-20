@@ -462,45 +462,39 @@ void backend_run(Layer* ui_root) {
                     touch_states[i].x = x;
                     touch_states[i].y = y;
                     
-                    // 创建鼠标按下事件
-                    MouseEvent event = {0};
-                    event.type = MOUSE_DOWN;
+                    PointerEvent event = {0};
+                    event.device = POINTER_DEVICE_TOUCH;
+                    event.phase = POINTER_DOWN;
                     event.x = x;
                     event.y = y;
-                    event.button = MOUSE_LEFT;
-                    
-                    if (ui_root->handle_mouse_event) {
-                        ui_root->handle_mouse_event(ui_root, &event);
-                    }
+                    event.button = 1;
+
+                    handle_pointer_event(ui_root, &event);
                 } else {
                     // 触摸移动
                     touch_states[i].x = x;
                     touch_states[i].y = y;
                     
-                    // 创建鼠标移动事件
-                    MouseEvent event = {0};
-                    event.type = MOUSE_MOVE;
+                    PointerEvent event = {0};
+                    event.device = POINTER_DEVICE_TOUCH;
+                    event.phase = POINTER_MOVE;
                     event.x = x;
                     event.y = y;
-                    
-                    if (ui_root->handle_mouse_event) {
-                        ui_root->handle_mouse_event(ui_root, &event);
-                    }
+
+                    handle_pointer_event(ui_root, &event);
                 }
             } else if (touch_states[i].active) {
                 // 触摸释放
                 touch_states[i].active = false;
                 
-                // 创建鼠标释放事件
-                MouseEvent event = {0};
-                event.type = MOUSE_UP;
+                PointerEvent event = {0};
+                event.device = POINTER_DEVICE_TOUCH;
+                event.phase = POINTER_UP;
                 event.x = touch_states[i].x;
                 event.y = touch_states[i].y;
-                event.button = MOUSE_LEFT;
-                
-                if (ui_root->handle_mouse_event) {
-                    ui_root->handle_mouse_event(ui_root, &event);
-                }
+                event.button = 1;
+
+                handle_pointer_event(ui_root, &event);
             }
         }
         

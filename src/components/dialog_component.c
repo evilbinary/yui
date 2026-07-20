@@ -103,7 +103,7 @@ DialogComponent* dialog_component_create(Layer* layer) {
     // 模板图层不参与普通渲染，仅通过 popup 显示
     layer->component = component;
     layer->set_visible = dialog_layer_set_visible;
-    layer->handle_mouse_event = dialog_component_handle_mouse_event;
+    layer->handle_pointer_event = dialog_component_handle_pointer_event;
     layer->handle_key_event = dialog_component_handle_key_event;
     layer->set_style = dialog_component_apply_theme_style;
     
@@ -353,7 +353,7 @@ bool dialog_component_show(DialogComponent* component, int x, int y) {
     component->popup_layer->assets = component->layer->assets;
     component->popup_layer->component = component;
     component->popup_layer->render = dialog_component_render;
-    component->popup_layer->handle_mouse_event = dialog_component_handle_mouse_event;
+    component->popup_layer->handle_pointer_event = dialog_component_handle_pointer_event;
     component->popup_layer->handle_key_event = dialog_component_handle_key_event;
     component->popup_layer->handle_scroll_event = dialog_component_handle_scroll_event;
 
@@ -911,7 +911,7 @@ int dialog_component_handle_key_event(Layer* layer, KeyEvent* event) {
 }
 
 // 处理鼠标事件
-int dialog_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
+int dialog_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
     DialogComponent* component = (DialogComponent*)layer->component;
     if (!component || !component->is_opened || !event) {
         return 0;
@@ -926,7 +926,7 @@ int dialog_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
         dialog_get_message_area(component, layer, &message_top, &message_area_height);
     }
 
-    if (event->state == SDL_MOUSEMOTION) {
+    if (event->phase == POINTER_MOVE) {
         if (component->dragging) {
             layer->rect.x = event->x - component->drag_offset_x;
             layer->rect.y = event->y - component->drag_offset_y;
@@ -954,7 +954,7 @@ int dialog_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
         }
         component->selected_button = dialog_get_button_at_position(component, layer, event->x, event->y);
         component->close_hovered = dialog_point_in_close_button(component, layer, event->x, event->y);
-    } else if (event->state == SDL_PRESSED && event->button == SDL_BUTTON_LEFT) {
+    } else if (event->phase == POINTER_DOWN && event->button == SDL_BUTTON_LEFT) {
         if (dialog_point_in_close_button(component, layer, event->x, event->y)) {
             if (component->on_close) {
                 component->on_close(component, -1);
@@ -995,7 +995,7 @@ int dialog_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
             }
             return 0;
         }
-    } else if (event->state == SDL_RELEASED && event->button == SDL_BUTTON_LEFT) {
+    } else if (event->phase == POINTER_UP && event->button == SDL_BUTTON_LEFT) {
         if (component->dragging) {
             component->dragging = 0;
             return 0;

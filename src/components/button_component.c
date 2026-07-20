@@ -106,8 +106,7 @@ ButtonComponent* button_component_create_from_json(Layer* layer, cJSON* json_obj
     layer->render = button_component_render;
     
     // 绑定事件处理函数
-    layer->handle_mouse_event = button_component_handle_mouse_event;
-    layer->handle_touch_event = button_component_handle_touch_event;
+    layer->handle_pointer_event = button_component_handle_pointer_event;
 
     // 绑定键盘事件处理函数
     layer->handle_key_event = button_component_handle_key_event;
@@ -200,10 +199,10 @@ int button_component_handle_key_event(Layer* layer, KeyEvent* event) {
     return 0;
 }
 
-// 处理鼠标事件
-int button_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
+// 处理指针事件（鼠标与触摸）
+int button_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
     ButtonComponent* component = (ButtonComponent*)layer->component;
-    if (!component || HAS_STATE(layer, LAYER_STATE_DISABLED)) {
+    if (!component || !event || HAS_STATE(layer, LAYER_STATE_DISABLED)) {
         return 0;
     }
 
@@ -215,48 +214,16 @@ int button_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
         CLEAR_STATE(layer, LAYER_STATE_HOVER);
     }
 
-    if (event->state == SDL_PRESSED) {
+    if (event->phase == POINTER_DOWN) {
         if (is_inside) {
             button_begin_pointer(component, layer, event->x, event->y);
         }
-    } else if (event->state == SDL_MOUSEMOTION) {
+    } else if (event->phase == POINTER_MOVE) {
         if (component->pointer_active && button_exceeded_slop(component, event->x, event->y)) {
             component->drag_cancelled = 1;
             button_cancel_pointer(component, layer);
         }
-    } else if (event->state == SDL_RELEASED) {
-        if (component->pointer_active && !component->drag_cancelled && is_inside) {
-            button_fire_click(layer);
-        }
-        button_cancel_pointer(component, layer);
-    }
-    return 0;
-}
-
-int button_component_handle_touch_event(Layer* layer, TouchEvent* event) {
-    ButtonComponent* component = (ButtonComponent*)layer->component;
-    if (!component || !event || HAS_STATE(layer, LAYER_STATE_DISABLED)) {
-        return 0;
-    }
-
-    int is_inside = button_point_inside(layer, event->x, event->y);
-
-    if (event->type == TOUCH_TYPE_START) {
-        if (is_inside) {
-            button_begin_pointer(component, layer, event->x, event->y);
-        }
-        return 0;
-    }
-
-    if (event->type == TOUCH_TYPE_MOVE) {
-        if (component->pointer_active && button_exceeded_slop(component, event->x, event->y)) {
-            component->drag_cancelled = 1;
-            button_cancel_pointer(component, layer);
-        }
-        return 0;
-    }
-
-    if (event->type == TOUCH_TYPE_END) {
+    } else if (event->phase == POINTER_UP) {
         int clicked = 0;
         if (component->pointer_active && !component->drag_cancelled && is_inside) {
             button_fire_click(layer);
@@ -265,7 +232,6 @@ int button_component_handle_touch_event(Layer* layer, TouchEvent* event) {
         button_cancel_pointer(component, layer);
         return clicked;
     }
-
     return 0;
 }
 

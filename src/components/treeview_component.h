@@ -144,7 +144,7 @@ void treeview_set_node_selected_callback(TreeViewComponent* component, void (*ca
 void treeview_set_node_expanded_callback(TreeViewComponent* component, void (*callback)(TreeNode*, int, void*));
 
 // 处理鼠标事件
-int treeview_component_handle_mouse_event(Layer* layer, MouseEvent* event);
+int treeview_component_handle_pointer_event(Layer* layer, PointerEvent* event);
 
 // 处理键盘事件
 int treeview_component_handle_key_event(Layer* layer, KeyEvent* event);

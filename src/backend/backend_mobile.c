@@ -650,7 +650,7 @@ typedef struct {
 static MobileTouchState g_touches[MAX_TOUCHES];
 
 static void mobile_emit_swipe_event(int x, int y, int dx, int dy) {
-    TouchEvent swipe;
+    PointerEvent swipe;
     int adx = dx < 0 ? -dx : dx;
     int ady = dy < 0 ? -dy : dy;
 
@@ -659,13 +659,14 @@ static void mobile_emit_swipe_event(int x, int y, int dx, int dy) {
     }
 
     memset(&swipe, 0, sizeof(swipe));
-    swipe.type = TOUCH_TYPE_SWIPE;
+    swipe.device = POINTER_DEVICE_TOUCH;
+    swipe.phase = POINTER_SWIPE;
     swipe.x = (int)(x / mobile_density());
     swipe.y = (int)(y / mobile_density());
-    swipe.deltaX = (int)(dx / mobile_density());
-    swipe.deltaY = (int)(dy / mobile_density());
-    swipe.fingerCount = 1;
-    handle_touch_event(g_ui_root, &swipe);
+    swipe.delta_x = (int)(dx / mobile_density());
+    swipe.delta_y = (int)(dy / mobile_density());
+    swipe.finger_count = 1;
+    handle_pointer_event(g_ui_root, &swipe);
 }
 
 void backend_mobile_set_native_surface(void* native_surface) {
@@ -682,7 +683,7 @@ void backend_mobile_set_native_surface(void* native_surface) {
 }
 
 void backend_mobile_on_touch(int pointer_id, int x, int y, int phase) {
-    TouchEvent event;
+    PointerEvent event;
     MobileTouchState* touch;
     int id = pointer_id;
 
@@ -692,11 +693,12 @@ void backend_mobile_on_touch(int pointer_id, int x, int y, int phase) {
 
     touch = &g_touches[id];
     memset(&event, 0, sizeof(event));
+    event.device = POINTER_DEVICE_TOUCH;
     event.x = (int)(x / mobile_density());
     event.y = (int)(y / mobile_density());
 
     if (phase == 0) {
-        event.type = TOUCH_TYPE_START;
+        event.phase = POINTER_DOWN;
         touch->active = 1;
         touch->start_x = x;
         touch->start_y = y;
@@ -706,21 +708,21 @@ void backend_mobile_on_touch(int pointer_id, int x, int y, int phase) {
         if (!touch->active) {
             return;
         }
-        event.type = TOUCH_TYPE_MOVE;
-        event.deltaX = (int)((x - touch->x) / mobile_density());
-        event.deltaY = (int)((y - touch->y) / mobile_density());
+        event.phase = POINTER_MOVE;
+        event.delta_x = (int)((x - touch->x) / mobile_density());
+        event.delta_y = (int)((y - touch->y) / mobile_density());
         touch->x = x;
         touch->y = y;
     } else {
         if (!touch->active) {
             return;
         }
-        event.type = TOUCH_TYPE_END;
+        event.phase = POINTER_UP;
         mobile_emit_swipe_event(x, y, x - touch->start_x, y - touch->start_y);
         touch->active = 0;
     }
 
-    handle_touch_event(g_ui_root, &event);
+    handle_pointer_event(g_ui_root, &event);
 }
 
 int backend_init(void) {

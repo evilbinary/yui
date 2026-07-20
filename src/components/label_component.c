@@ -129,7 +129,7 @@ LabelComponent* label_component_create_from_json(Layer* layer, cJSON* json_obj) 
 
     layer->component = component;
     layer->render = label_component_render;
-    layer->handle_mouse_event = label_component_handle_mouse_event;
+    layer->handle_pointer_event = label_component_handle_pointer_event;
 
     return component;
 }
@@ -318,14 +318,14 @@ void label_component_render(Layer* layer) {
 }
 
 // 鼠标事件处理
-int label_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
+int label_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
     if (!layer || !layer->component) return 0;
     LabelComponent* comp = (LabelComponent*)layer->component;
 
     int inside = (event->x >= layer->rect.x && event->x <= layer->rect.x + layer->rect.w &&
                   event->y >= layer->rect.y && event->y <= layer->rect.y + layer->rect.h);
 
-    if (event->state == SDL_MOUSEMOTION) {
+    if (event->phase == POINTER_MOVE) {
         if (inside && !comp->hovering) {
             // 鼠标进入
             comp->hovering = 1;
@@ -335,7 +335,7 @@ int label_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
             comp->hovering = 0;
             hide_tooltip(comp);
         }
-    } else if (event->state == SDL_PRESSED || event->state == SDL_RELEASED) {
+    } else if (event->phase == POINTER_DOWN || event->phase == POINTER_UP) {
         if (!inside && comp->hovering) {
             comp->hovering = 0;
             hide_tooltip(comp);
@@ -344,7 +344,7 @@ int label_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
 
     // 分发点击事件
     if (layer->event && layer->event->click) {
-        if (event->state == SDL_RELEASED && event->button == SDL_BUTTON_LEFT && inside) {
+        if (event->phase == POINTER_UP && event->button == SDL_BUTTON_LEFT && inside) {
             EVENT_INVOKE(layer->event->click, layer);
         }
     }

@@ -52,7 +52,7 @@ int pagination_component_register_event(Layer* layer, const char* event_name, co
 void pagination_component_trigger_on_change(PaginationComponent* component);
 
 void pagination_component_render(Layer* layer);
-int pagination_component_handle_mouse_event(Layer* layer, MouseEvent* event);
+int pagination_component_handle_pointer_event(Layer* layer, PointerEvent* event);
 
 int pagination_component_get_page_count(const PaginationComponent* component);
 void pagination_component_set_page(PaginationComponent* component, int page, int dispatch_change);

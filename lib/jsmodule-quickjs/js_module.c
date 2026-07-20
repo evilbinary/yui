@@ -1410,13 +1410,13 @@ static int is_js_identifier_name(const char* name)
 
 static int call_js_function_value(JSContext* ctx, JSValue func, const char* event_name, Layer* layer)
 {
-    const TouchEvent* touch = get_current_touch_event();
+    const PointerEvent* pe = get_current_pointer_event();
     JSValue result;
-    if (touch) {
+    if (pe) {
         JSValue args[3];
-        args[0] = JS_NewString(ctx, touch_type_to_string(touch->type));
-        args[1] = JS_NewInt32(ctx, touch->deltaX);
-        args[2] = JS_NewInt32(ctx, touch->deltaY);
+        args[0] = JS_NewString(ctx, pointer_phase_to_string(pe->phase));
+        args[1] = JS_NewInt32(ctx, pe->delta_x);
+        args[2] = JS_NewInt32(ctx, pe->delta_y);
         result = JS_Call(ctx, func, JS_UNDEFINED, 3, args);
         JS_FreeValue(ctx, args[0]);
         JS_FreeValue(ctx, args[1]);
@@ -1519,13 +1519,13 @@ int js_module_call_event(const char* event_name, Layer* layer)
 
     // 如果求值结果是函数则调用它
     if (JS_IsFunction(g_js_ctx, val)) {
-        const TouchEvent* touch = get_current_touch_event();
+        const PointerEvent* pe = get_current_pointer_event();
         JSValue result;
-        if (touch) {
+        if (pe) {
             JSValue args[3];
-            args[0] = JS_NewString(g_js_ctx, touch_type_to_string(touch->type));
-            args[1] = JS_NewInt32(g_js_ctx, touch->deltaX);
-            args[2] = JS_NewInt32(g_js_ctx, touch->deltaY);
+            args[0] = JS_NewString(g_js_ctx, pointer_phase_to_string(pe->phase));
+            args[1] = JS_NewInt32(g_js_ctx, pe->delta_x);
+            args[2] = JS_NewInt32(g_js_ctx, pe->delta_y);
             result = JS_Call(g_js_ctx, val, JS_UNDEFINED, 3, args);
             JS_FreeValue(g_js_ctx, args[0]);
             JS_FreeValue(g_js_ctx, args[1]);

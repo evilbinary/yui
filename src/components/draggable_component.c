@@ -169,7 +169,7 @@ static int draggable_is_drag_handle(DraggableComponent* component, Layer* layer,
     return is_point_in_rect(x, y, handle_rect);
 }
 
-static int draggable_dot_overlay_handle_mouse(Layer* layer, MouseEvent* event)
+static int draggable_dot_overlay_handle_mouse(Layer* layer, PointerEvent* event)
 {
     Layer* parent;
     DraggableComponent* component;
@@ -190,7 +190,7 @@ static int draggable_dot_overlay_handle_mouse(Layer* layer, MouseEvent* event)
         return 0;
     }
 
-    if (event->state == SDL_PRESSED && event->button == SDL_BUTTON_LEFT) {
+    if (event->phase == POINTER_DOWN && event->button == SDL_BUTTON_LEFT) {
         if (connector_hit_test_draggable_ports(parent, event->x, event->y,
                                                component->dot_size, &hit_layer,
                                                &hit_anchor)) {
@@ -200,7 +200,7 @@ static int draggable_dot_overlay_handle_mouse(Layer* layer, MouseEvent* event)
         }
     }
 
-    if (event->state == SDL_PRESSED && event->button == SDL_BUTTON_RIGHT) {
+    if (event->phase == POINTER_DOWN && event->button == SDL_BUTTON_RIGHT) {
         Layer* canvas = connector_find_canvas(parent);
         if (canvas) {
             return connector_try_remove_at(canvas, event->x, event->y,
@@ -296,7 +296,7 @@ static void draggable_sync_dot_overlay(DraggableComponent* component)
         overlay->bg_color.a = 0;
         overlay->focusable = 0;
         overlay->render = draggable_dot_overlay_render;
-        overlay->handle_mouse_event = draggable_dot_overlay_handle_mouse;
+        overlay->handle_pointer_event = draggable_dot_overlay_handle_mouse;
 
         overlay->parent = parent;
         children = (Layer**)realloc(parent->children,
@@ -365,7 +365,7 @@ DraggableComponent* draggable_component_create(Layer* layer)
     layer->component = component;
     layer->render = draggable_component_render;
     layer->layout = draggable_component_layout;
-    layer->handle_mouse_event = draggable_component_handle_mouse_event;
+    layer->handle_pointer_event = draggable_component_handle_pointer_event;
     layer->register_event = draggable_component_register_event;
     layer->on_destroy = draggable_layer_destroy;
 
@@ -510,7 +510,7 @@ void draggable_component_render(Layer* layer)
     }
 }
 
-int draggable_component_handle_mouse_event(Layer* layer, MouseEvent* event)
+int draggable_component_handle_pointer_event(Layer* layer, PointerEvent* event)
 {
     DraggableComponent* component;
 
@@ -520,7 +520,7 @@ int draggable_component_handle_mouse_event(Layer* layer, MouseEvent* event)
 
     component = (DraggableComponent*)layer->component;
 
-    if (event->state == SDL_MOUSEMOTION) {
+    if (event->phase == POINTER_MOVE) {
         if (!component->dragging) {
             return 0;
         }
@@ -531,7 +531,7 @@ int draggable_component_handle_mouse_event(Layer* layer, MouseEvent* event)
         return 1;
     }
 
-    if (event->state == SDL_PRESSED && event->button == SDL_BUTTON_LEFT) {
+    if (event->phase == POINTER_DOWN && event->button == SDL_BUTTON_LEFT) {
         if (!draggable_is_drag_handle(component, layer, event->x, event->y)) {
             return 0;
         }
@@ -545,7 +545,7 @@ int draggable_component_handle_mouse_event(Layer* layer, MouseEvent* event)
         return 1;
     }
 
-    if (event->state == SDL_RELEASED && event->button == SDL_BUTTON_LEFT) {
+    if (event->phase == POINTER_UP && event->button == SDL_BUTTON_LEFT) {
         if (!component->dragging) {
             return 0;
         }

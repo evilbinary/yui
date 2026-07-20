@@ -28,8 +28,7 @@ void button_component_set_color(ButtonComponent* component, LayerState state, Co
 void button_component_set_icon_path(ButtonComponent* component, const char* path);
 void button_component_set_icon_text(ButtonComponent* component, const char* text);
 void button_component_set_user_data(ButtonComponent* component, void* data);
-int button_component_handle_mouse_event(Layer* layer, MouseEvent* event);
-int button_component_handle_touch_event(Layer* layer, TouchEvent* event);
+int button_component_handle_pointer_event(Layer* layer, PointerEvent* event);
 void button_component_render(Layer* layer);
 int button_component_handle_key_event(Layer* layer, KeyEvent* event);
 

@@ -234,8 +234,8 @@ int yui_component_instantiate(Layer* layer, cJSON* json, Layer* parent,
 
     layer->component = ops->create(layer, json);
 
-    if (ops->handle_mouse) {
-        layer->handle_mouse_event = ops->handle_mouse;
+    if (ops->handle_pointer) {
+        layer->handle_pointer_event = ops->handle_pointer;
     }
     if (ops->handle_key) {
         layer->handle_key_event = ops->handle_key;

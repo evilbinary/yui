@@ -41,7 +41,7 @@ TreeViewComponent* treeview_component_create(Layer* layer) {
     // 设置组件
     layer->component = component;
     layer->render = treeview_component_render;
-    layer->handle_mouse_event = treeview_component_handle_mouse_event;
+    layer->handle_pointer_event = treeview_component_handle_pointer_event;
     layer->handle_key_event = treeview_component_handle_key_event;
     layer->focusable = 1;  // 支持键盘事件
     layer->get_property = treeview_component_get_property;
@@ -408,7 +408,7 @@ TreeViewComponent* treeview_component_create_from_json(Layer* layer, cJSON* json
     
     // 设置渲染函数和事件处理函数
     layer->render = treeview_component_render;
-    layer->handle_mouse_event = treeview_component_handle_mouse_event;
+    layer->handle_pointer_event = treeview_component_handle_pointer_event;
     layer->handle_key_event = treeview_component_handle_key_event;
     
     // 注册数据更新回调
@@ -1078,7 +1078,7 @@ static char* treeview_node_to_json(TreeNode* node) {
 }
 
 // 处理鼠标事件
-int treeview_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
+int treeview_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
     if (!layer || !event || !layer->component) return 0;
     
     TreeViewComponent* component = (TreeViewComponent*)layer->component;
@@ -1093,7 +1093,7 @@ int treeview_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
         return 1;
     }
     
-    if (event->state == SDL_PRESSED && event->button == SDL_BUTTON_LEFT) {
+    if (event->phase == POINTER_DOWN && event->button == SDL_BUTTON_LEFT) {
         // 调整鼠标坐标以考虑滚动偏移
         int adjusted_y = event->y;
         // 注意：treeview_get_node_from_position 内部已经处理了滚动偏移，所以这里不需要调整

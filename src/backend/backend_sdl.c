@@ -1042,6 +1042,8 @@ TouchState touchState = {0};
 static int pointer_drag_active = 0;
 static int pointer_start_x = 0;
 static int pointer_start_y = 0;
+static int pointer_last_x = 0;
+static int pointer_last_y = 0;
 static int touch_swipe_start_x = 0;
 static int touch_swipe_start_y = 0;
 static Uint32 last_swipe_emit_ms = 0;
@@ -1060,16 +1062,17 @@ static void backend_emit_swipe_event(Layer* root, int x, int y, int dx, int dy) 
     }
     last_swipe_emit_ms = now;
 
-    TouchEvent touchEvent;
-    memset(&touchEvent, 0, sizeof(TouchEvent));
-    touchEvent.type = TOUCH_TYPE_SWIPE;
-    touchEvent.x = x;
-    touchEvent.y = y;
-    touchEvent.deltaX = dx;
-    touchEvent.deltaY = dy;
-    touchEvent.fingerCount = 1;
-    touchEvent.timestamp = now;
-    handle_touch_event(root, &touchEvent);
+    PointerEvent pe;
+    memset(&pe, 0, sizeof(pe));
+    pe.device = POINTER_DEVICE_TOUCH;
+    pe.phase = POINTER_SWIPE;
+    pe.x = x;
+    pe.y = y;
+    pe.delta_x = dx;
+    pe.delta_y = dy;
+    pe.finger_count = 1;
+    pe.timestamp = now;
+    handle_pointer_event(root, &pe);
 }
 
 
@@ -1131,33 +1134,55 @@ static void backend_finger_to_logical(const SDL_TouchFingerEvent *finger, int *x
 }
 #endif
 
-static void backend_deliver_mouse_event(Layer* root, int mouse_x, int mouse_y,
-                                        int event_state, Uint8 button,
-                                        SDL_EventType sdl_type, int clicks) {
-    MouseEvent mouse_event;
-    SDL_Point mouse_pos;
+static void backend_deliver_pointer_event(Layer* root, PointerEvent* pe) {
+    SDL_Point pos;
     int deliver;
 
-    if (!root) {
+    if (!root || !pe) {
         return;
     }
 
-    mouse_pos.x = mouse_x;
-    mouse_pos.y = mouse_y;
-    memset(&mouse_event, 0, sizeof(mouse_event));
-    mouse_event.x = mouse_x;
-    mouse_event.y = mouse_y;
-    mouse_event.button = button;
-    mouse_event.state = event_state;
-    mouse_event.clicks = clicks;
-
-    handle_scrollbar_drag_event(root, mouse_x, mouse_y, sdl_type);
-
-    deliver = (event_state == SDL_MOUSEMOTION || event_state == SDL_RELEASED) ||
-              SDL_PointInRect(&mouse_pos, &root->rect);
+    pos.x = pe->x;
+    pos.y = pe->y;
+    deliver = (pe->phase == POINTER_MOVE || pe->phase == POINTER_UP) ||
+              SDL_PointInRect(&pos, &root->rect);
     if (deliver) {
-        handle_mouse_event(root, &mouse_event);
+        handle_pointer_event(root, pe);
     }
+}
+
+static void backend_deliver_mouse_pointer(Layer* root, int x, int y, PointerPhase phase,
+                                          Uint8 button, int clicks, int dx, int dy) {
+    PointerEvent pe;
+    memset(&pe, 0, sizeof(pe));
+    pe.device = POINTER_DEVICE_MOUSE;
+    pe.phase = phase;
+    pe.x = x;
+    pe.y = y;
+    pe.button = button;
+    pe.clicks = clicks;
+    pe.delta_x = dx;
+    pe.delta_y = dy;
+    pe.timestamp = SDL_GetTicks();
+    backend_deliver_pointer_event(root, &pe);
+}
+
+static void backend_dispatch_touch(Layer* root, PointerPhase phase, int x, int y,
+                                   int dx, int dy, int finger_count,
+                                   float scale, float rotation) {
+    PointerEvent pe;
+    memset(&pe, 0, sizeof(pe));
+    pe.device = POINTER_DEVICE_TOUCH;
+    pe.phase = phase;
+    pe.x = x;
+    pe.y = y;
+    pe.delta_x = dx;
+    pe.delta_y = dy;
+    pe.finger_count = finger_count;
+    pe.scale = scale;
+    pe.rotation = rotation;
+    pe.timestamp = SDL_GetTicks();
+    handle_pointer_event(root, &pe);
 }
 
 void draw_rounded_rect_with_border(SDL_Renderer* renderer, int x, int y, int w, int h, int radius, int border_width, SDL_Color bg_color, SDL_Color border_color);
@@ -1175,16 +1200,9 @@ int backend_init(){
     SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
     #endif
 
-    // 桌面开发：鼠标合成触摸事件（须在 SDL_Init 之前）
-    // MOUSE_TOUCH_EVENTS = 鼠标 → 触摸；TOUCH_MOUSE_EVENTS = 触摸 → 鼠标（勿搞反）
-#ifdef __EMSCRIPTEN__
-    // Web：分别处理 MOUSE / FINGER，勿双向合成；坐标由 Emscripten 按 canvas 映射
+    // 鼠标 / 触摸分轨：内容拖滚动由各自路径处理，勿双向合成以免双滚
     SDL_SetHint(SDL_HINT_MOUSE_TOUCH_EVENTS, "0");
     SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "0");
-#else
-    SDL_SetHint(SDL_HINT_MOUSE_TOUCH_EVENTS, "1");
-    SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "0");
-#endif
 
     // 初始化SDL
     SDL_Init(SDL_INIT_VIDEO);
@@ -1524,7 +1542,6 @@ void handle_event(Layer* root, SDL_Event* event) {
     // 处理鼠标事件
     if (event->type == SDL_MOUSEBUTTONDOWN || event->type == SDL_MOUSEBUTTONUP || event->type == SDL_MOUSEMOTION) {
         int mouse_x, mouse_y;
-        int event_state;
         Uint8 button = SDL_BUTTON_LEFT;
         int clicks = 0;
 
@@ -1541,41 +1558,58 @@ void handle_event(Layer* root, SDL_Event* event) {
         backend_pointer_to_logical(&mouse_x, &mouse_y);
 #endif
 
-        if (event->type == SDL_MOUSEBUTTONDOWN) {
-            event_state = SDL_PRESSED;
-            if (button == SDL_BUTTON_LEFT) {
-                pointer_drag_active = 1;
-                pointer_start_x = mouse_x;
-                pointer_start_y = mouse_y;
+        {
+            int delta_x = 0;
+            int delta_y = 0;
+            PointerPhase phase = POINTER_MOVE;
+            if (event->type == SDL_MOUSEBUTTONDOWN) {
+                phase = POINTER_DOWN;
+                if (button == SDL_BUTTON_LEFT) {
+                    pointer_drag_active = 1;
+                    pointer_start_x = mouse_x;
+                    pointer_start_y = mouse_y;
+                    pointer_last_x = mouse_x;
+                    pointer_last_y = mouse_y;
+                }
+            } else if (event->type == SDL_MOUSEBUTTONUP) {
+                phase = POINTER_UP;
+                if (button == SDL_BUTTON_LEFT && pointer_drag_active) {
+                    backend_emit_swipe_event(root, mouse_x, mouse_y,
+                        mouse_x - pointer_start_x, mouse_y - pointer_start_y);
+                    pointer_drag_active = 0;
+                }
+            } else {
+                if (pointer_drag_active) {
+                    delta_x = mouse_x - pointer_last_x;
+                    delta_y = mouse_y - pointer_last_y;
+                    pointer_last_x = mouse_x;
+                    pointer_last_y = mouse_y;
+                }
             }
-        } else if (event->type == SDL_MOUSEBUTTONUP) {
-            event_state = SDL_RELEASED;
-            if (button == SDL_BUTTON_LEFT && pointer_drag_active) {
-                backend_emit_swipe_event(root, mouse_x, mouse_y,
-                    mouse_x - pointer_start_x, mouse_y - pointer_start_y);
-                pointer_drag_active = 0;
-            }
-        } else {
-            event_state = SDL_MOUSEMOTION;
-        }
 
-        backend_deliver_mouse_event(root, mouse_x, mouse_y, event_state, button,
-                                    event->type, clicks);
+            backend_deliver_mouse_pointer(root, mouse_x, mouse_y, phase, button,
+                                          clicks, delta_x, delta_y);
+        }
     }
-    // 添加鼠标滚轮事件处理
+    // 滚轮并入 mouse 路径
     else if (event->type == SDL_MOUSEWHEEL) {
-        // 处理鼠标滚轮事件，传递给所有支持滚动的图层
-        int mouse_x = event->motion.x;
-        int mouse_y = event->motion.y;
+        int mouse_x = 0;
+        int mouse_y = 0;
+        PointerEvent pe;
         SDL_GetMouseState(&mouse_x, &mouse_y);
 #ifdef __EMSCRIPTEN__
         backend_pointer_to_logical(&mouse_x, &mouse_y);
 #endif
-        SDL_Point mouse_pos = { mouse_x, mouse_y };
-        if (SDL_PointInRect(&mouse_pos, &root->rect)) {
-            // printf("鼠标滚轮事件在图层内: %d %d, %d\n",root->type, event->wheel.x, event->wheel.y);
-            handle_scroll_event(root,mouse_x,mouse_y, event->wheel.x,-event->wheel.y);
-        }
+        memset(&pe, 0, sizeof(pe));
+        pe.device = POINTER_DEVICE_MOUSE;
+        pe.phase = POINTER_WHEEL;
+        pe.x = mouse_x;
+        pe.y = mouse_y;
+        pe.button = SDL_BUTTON_LEFT;
+        pe.wheel_dx = event->wheel.x;
+        pe.wheel_dy = -event->wheel.y;
+        pe.timestamp = SDL_GetTicks();
+        handle_pointer_event(root, &pe);
     }
     else if (event->type == SDL_WINDOWEVENT && event->window.event == SDL_WINDOWEVENT_RESIZED) {
         backend_handle_window_resize(root);
@@ -1600,30 +1634,16 @@ void handle_event(Layer* root, SDL_Event* event) {
         touchState.lastX[touchId] = x;
         touchState.lastY[touchId] = y;
         
-        // 创建触摸事件
-        TouchEvent touchEvent;
-        memset(&touchEvent, 0, sizeof(TouchEvent));
-        touchEvent.type = TOUCH_TYPE_START;
-        touchEvent.x = x;
-        touchEvent.y = y;
-        touchEvent.deltaX = 0;
-        touchEvent.deltaY = 0;
-        touchEvent.scale = 1.0f;
-        touchEvent.rotation = 0.0f;
-        touchEvent.fingerCount = touchState.fingerCount;
-        touchEvent.timestamp = SDL_GetTicks();
-        
-        // 传播触摸事件
-        handle_touch_event(root, &touchEvent);
+        backend_dispatch_touch(root, POINTER_DOWN, x, y, 0, 0,
+                               touchState.fingerCount, 1.0f, 0.0f);
         
         // 双击检测
         Uint32 currentTime = SDL_GetTicks();
         if (currentTime - touchState.lastTapTime < 300) {
             touchState.tapCount++;
             if (touchState.tapCount == 2) {
-                // 触发双击事件
-                touchEvent.type = TOUCH_TYPE_DOUBLE_TAP;
-                handle_touch_event(root, &touchEvent);
+                backend_dispatch_touch(root, POINTER_DOUBLE_TAP, x, y, 0, 0,
+                                       touchState.fingerCount, 1.0f, 0.0f);
                 touchState.tapCount = 0;
             }
         } else {
@@ -1633,8 +1653,7 @@ void handle_event(Layer* root, SDL_Event* event) {
 
 #ifdef __EMSCRIPTEN__
         if (touchState.fingerCount == 1) {
-            backend_deliver_mouse_event(root, x, y, SDL_PRESSED, SDL_BUTTON_LEFT,
-                                        SDL_FINGERDOWN, 0);
+            backend_deliver_mouse_pointer(root, x, y, POINTER_DOWN, SDL_BUTTON_LEFT, 0, 0, 0);
         }
 #endif
     }
@@ -1655,35 +1674,21 @@ void handle_event(Layer* root, SDL_Event* event) {
         touchState.lastX[touchId] = x;
         touchState.lastY[touchId] = y;
         
-        // 创建触摸事件
-        TouchEvent touchEvent;
-        memset(&touchEvent, 0, sizeof(TouchEvent));
-        touchEvent.type = TOUCH_TYPE_MOVE;
-        touchEvent.x = x;
-        touchEvent.y = y;
-        touchEvent.deltaX = deltaX;
-        touchEvent.deltaY = deltaY;
-        touchEvent.scale = 1.0f;
-        touchEvent.rotation = 0.0f;
-        touchEvent.fingerCount = touchState.fingerCount;
-        touchEvent.timestamp = SDL_GetTicks();
-        
-        // 传播触摸事件
-        handle_touch_event(root, &touchEvent);
+        backend_dispatch_touch(root, POINTER_MOVE, x, y, deltaX, deltaY,
+                               touchState.fingerCount, 1.0f, 0.0f);
         
         // 长按检测（500ms）
         if (touchState.fingerCount == 1 && !touchState.longPressDetected) {
             if (SDL_GetTicks() - touchState.startTime > 500) {
-                touchEvent.type = TOUCH_TYPE_LONG_PRESS;
-                handle_touch_event(root, &touchEvent);
+                backend_dispatch_touch(root, POINTER_LONG_PRESS, x, y, deltaX, deltaY,
+                                       touchState.fingerCount, 1.0f, 0.0f);
                 touchState.longPressDetected = 1;
             }
         }
 
 #ifdef __EMSCRIPTEN__
         if (touchState.fingerCount > 0) {
-            backend_deliver_mouse_event(root, x, y, SDL_MOUSEMOTION, SDL_BUTTON_LEFT,
-                                        SDL_FINGERMOTION, 0);
+            backend_deliver_mouse_pointer(root, x, y, POINTER_MOVE, SDL_BUTTON_LEFT, 0, 0, 0);
         }
 #endif
     }
@@ -1700,21 +1705,8 @@ void handle_event(Layer* root, SDL_Event* event) {
         x = (int)(event->tfinger.x * x);
         y = (int)(event->tfinger.y * y);
         
-        // 创建触摸事件
-        TouchEvent touchEvent;
-        memset(&touchEvent, 0, sizeof(TouchEvent));
-        touchEvent.type = TOUCH_TYPE_END;
-        touchEvent.x = x;
-        touchEvent.y = y;
-        touchEvent.deltaX = 0;
-        touchEvent.deltaY = 0;
-        touchEvent.scale = 1.0f;
-        touchEvent.rotation = 0.0f;
-        touchEvent.fingerCount = touchState.fingerCount;
-        touchEvent.timestamp = SDL_GetTicks();
-        
-        // 传播触摸事件
-        handle_touch_event(root, &touchEvent);
+        backend_dispatch_touch(root, POINTER_UP, x, y, 0, 0,
+                               touchState.fingerCount, 1.0f, 0.0f);
 
         if (touchState.fingerCount == 0) {
             backend_emit_swipe_event(root, x, y,
@@ -1722,8 +1714,7 @@ void handle_event(Layer* root, SDL_Event* event) {
         }
 
 #ifdef __EMSCRIPTEN__
-        backend_deliver_mouse_event(root, x, y, SDL_RELEASED, SDL_BUTTON_LEFT,
-                                    SDL_FINGERUP, 0);
+        backend_deliver_mouse_pointer(root, x, y, POINTER_UP, SDL_BUTTON_LEFT, 0, 0, 0);
 #endif
         
         // 如果所有手指都离开屏幕，重置状态
@@ -1737,28 +1728,18 @@ void handle_event(Layer* root, SDL_Event* event) {
         int winW, winH;
         SDL_GetWindowSize(window, &winW, &winH);
         
-        // 创建触摸事件
-        TouchEvent touchEvent;
-        memset(&touchEvent, 0, sizeof(TouchEvent));
-        
-        // 设置中心点坐标
-        touchEvent.x = (int)(event->mgesture.x * winW);
-        touchEvent.y = (int)(event->mgesture.y * winH);
-        touchEvent.fingerCount = event->mgesture.numFingers;
-        touchEvent.timestamp = SDL_GetTicks();
-        
-        // 处理缩放（捏合）
+        int cx = (int)(event->mgesture.x * winW);
+        int cy = (int)(event->mgesture.y * winH);
+        int fingers = event->mgesture.numFingers;
+
         if (event->mgesture.dDist != 0.0f) {
-            touchEvent.type = TOUCH_TYPE_PINCH;
-            touchEvent.scale = 1.0f + event->mgesture.dDist;
-            handle_touch_event(root, &touchEvent);
+            backend_dispatch_touch(root, POINTER_PINCH, cx, cy, 0, 0, fingers,
+                                   1.0f + event->mgesture.dDist, 0.0f);
         }
-        
-        // 处理旋转
+
         if (event->mgesture.dTheta != 0.0f) {
-            touchEvent.type = TOUCH_TYPE_ROTATE;
-            touchEvent.rotation = event->mgesture.dTheta;
-            handle_touch_event(root, &touchEvent);
+            backend_dispatch_touch(root, POINTER_ROTATE, cx, cy, 0, 0, fingers,
+                                   1.0f, event->mgesture.dTheta);
         }
     }
 }

@@ -281,7 +281,7 @@ InputComponent* input_component_create(Layer* layer) {
     // 设置组件指针和自定义渲染函数
     layer->component = component;
     layer->render = input_component_render;
-    layer->handle_mouse_event = input_component_handle_mouse_event;
+    layer->handle_pointer_event = input_component_handle_pointer_event;
     layer->handle_key_event = input_component_handle_key_event;
     layer->register_event = input_component_register_event;
     layer->set_style = input_component_apply_style;
@@ -578,7 +578,7 @@ int input_component_register_event(Layer* layer, const char* event_name,
 }
 
 // 处理鼠标事件
-int input_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
+int input_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
     if (!layer || !layer->component || !event) {
         return 0;
     }
@@ -596,7 +596,7 @@ int input_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
         CLEAR_STATE(layer, LAYER_STATE_HOVER);
     }
 
-    if (event->state == SDL_MOUSEMOTION && component->is_selecting) {
+    if (event->phase == POINTER_MOVE && component->is_selecting) {
         int pos = in_content ? input_pos_from_mouse_x(component, layer, event->x) :
                   (event->x < content.x ? 0 : (layer->text ? (int)strlen(layer->text) : 0));
         component->cursor_pos = pos;
@@ -606,7 +606,7 @@ int input_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
         return 1;
     }
 
-    if (event->state == SDL_PRESSED && event->button == SDL_BUTTON_LEFT) {
+    if (event->phase == POINTER_DOWN && event->button == SDL_BUTTON_LEFT) {
         if (is_inside) {
             input_component_focus(component);
             int pos = in_content ? input_pos_from_mouse_x(component, layer, event->x) :
@@ -623,7 +623,7 @@ int input_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
             input_component_blur(component);
             component->is_selecting = 0;
         }
-    } else if (event->state == SDL_RELEASED && event->button == SDL_BUTTON_LEFT) {
+    } else if (event->phase == POINTER_UP && event->button == SDL_BUTTON_LEFT) {
         if (component->is_selecting) {
             component->is_selecting = 0;
             if (component->selection_start == component->selection_end) {

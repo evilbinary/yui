@@ -46,7 +46,7 @@ RadioboxComponent* radiobox_component_create(Layer* layer, const char* group_id,
     layer->render = radiobox_component_render;
     
     // 绑定事件处理函数
-    layer->handle_mouse_event = radiobox_component_handle_mouse_event;
+    layer->handle_pointer_event = radiobox_component_handle_pointer_event;
     
     // 设置组件为可聚焦
     layer->focusable = !HAS_STATE(layer, LAYER_STATE_DISABLED);
@@ -163,7 +163,7 @@ int radiobox_component_is_disabled(RadioboxComponent* component) {
 }
 
 // 处理鼠标事件
-int radiobox_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
+int radiobox_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
     if (!layer || !event || !layer->component) {
         return 0;
     }
@@ -181,7 +181,7 @@ int radiobox_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
         event->y >= layer->rect.y && 
         event->y < layer->rect.y + layer->rect.h);
     // 处理鼠标点击事件
-    if (event->button == BUTTON_LEFT && event->state == BUTTON_PRESSED && is_inside) {
+    if (event->button == BUTTON_LEFT && event->phase == POINTER_DOWN && is_inside) {
         // 选中当前单选框，取消同组内其他单选框的选中状态
         radiobox_set_group_checked(component->group_id, component);
 

@@ -53,7 +53,7 @@ MenuComponent* menu_component_create(Layer* layer) {
 
 
     // 绑定事件处理函数
-    layer->handle_mouse_event = menu_component_handle_mouse_event;
+    layer->handle_pointer_event = menu_component_handle_pointer_event;
     layer->handle_key_event = menu_component_handle_key_event;
 
     // 确保图层有可用的字体
@@ -696,7 +696,7 @@ void menu_component_collapse(MenuComponent* component) {
 }
 
 // 处理鼠标事件
-int menu_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
+int menu_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
     MenuComponent* component = (MenuComponent*)layer->component;
     if (!component) {
         return 0;
@@ -705,7 +705,7 @@ int menu_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     Rect* rect = &layer->rect;
     int is_popup_style = (layer->text == NULL || layer->text[0] == '\0');
 
-    if (event->state == SDL_MOUSEMOTION) {
+    if (event->phase == POINTER_MOVE) {
         if (component->expanded || is_popup_style) {
             int prev_hovered = component->hovered_item;
             component->hovered_item = menu_component_get_item_at_position(component, event->x, event->y);
@@ -741,7 +741,7 @@ int menu_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
             component->hovered_item = -1;
         }
 
-    } else if (event->state == SDL_PRESSED && event->button == SDL_BUTTON_LEFT) {
+    } else if (event->phase == POINTER_DOWN && event->button == SDL_BUTTON_LEFT) {
         int y_offset = (layer->text && strlen(layer->text) > 0) ? component->item_height : 0;
         int relative_y = event->y - rect->y;
 
@@ -1010,7 +1010,7 @@ bool menu_component_show_popup(MenuComponent* component, int x, int y) {
     component->popup_layer->radius = 4;  // 默认圆角
     component->popup_layer->component = component;
     component->popup_layer->render = menu_component_render;
-    component->popup_layer->handle_mouse_event = menu_component_handle_mouse_event;
+    component->popup_layer->handle_pointer_event = menu_component_handle_pointer_event;
     component->popup_layer->handle_key_event = menu_component_handle_key_event;
     
     // 创建弹出层并添加到弹出管理器

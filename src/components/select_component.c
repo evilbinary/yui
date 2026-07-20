@@ -65,7 +65,7 @@ SelectComponent* select_component_create(Layer* layer) {
     // 设置组件和渲染函数
     layer->component = component;
     layer->render = select_component_render;
-    layer->handle_mouse_event = select_component_handle_mouse_event;
+    layer->handle_pointer_event = select_component_handle_pointer_event;
     layer->handle_key_event = select_component_handle_key_event;
     layer->handle_scroll_event = select_component_handle_scroll_event;
     layer->register_event = select_component_register_event;
@@ -725,7 +725,7 @@ void select_component_expand(SelectComponent* component) {
 
         component->dropdown_layer->component = component;
         component->dropdown_layer->render = select_component_render_dropdown_only;
-        component->dropdown_layer->handle_mouse_event = select_component_handle_dropdown_mouse_event;
+        component->dropdown_layer->handle_pointer_event = select_component_handle_dropdown_mouse_event;
         component->dropdown_layer->handle_key_event = select_component_handle_dropdown_key_event;
         component->dropdown_layer->handle_scroll_event = select_component_handle_dropdown_scroll_event;
     }
@@ -790,7 +790,7 @@ void select_component_toggle(SelectComponent* component) {
 }
 
 // 处理鼠标事件
-int select_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
+int select_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
     if (!layer || !event || !layer->component) return 0;
     
     SelectComponent* component = (SelectComponent*)layer->component;
@@ -798,7 +798,7 @@ int select_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
 
     
     // 如果正在拖拽，优先处理拖拽逻辑
-    if (component->is_dragging && (event->state == SDL_MOUSEMOTION || event->state == SDL_PRESSED)) {
+    if (component->is_dragging && (event->phase == POINTER_MOVE || event->phase == POINTER_DOWN)) {
         printf("DEBUG: Dragging scrollbar, mouse_y=%d, start_y=%d, start_scroll=%d\n", 
                event->y, component->drag_start_y, component->drag_start_scroll);
         
@@ -869,7 +869,7 @@ int select_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
         CLEAR_STATE(layer, LAYER_STATE_HOVER);
     }
     
-    if (event->state == SDL_PRESSED && event->button == SDL_BUTTON_LEFT) {
+    if (event->phase == POINTER_DOWN && event->button == SDL_BUTTON_LEFT) {
         if (component->expanded && !in_select_area && !in_dropdown_area && !component->just_expanded) {
             select_component_collapse(component);
             return 0;
@@ -970,12 +970,12 @@ int select_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
                 }
             }
         }
-    } else if (event->state == SDL_RELEASED && event->button == SDL_BUTTON_LEFT) {
+    } else if (event->phase == POINTER_UP && event->button == SDL_BUTTON_LEFT) {
         if (component->is_dragging) {
             component->is_dragging = 0;
         }
         component->just_expanded = 0;
-    } else if (event->state == SDL_MOUSEMOTION) {
+    } else if (event->phase == POINTER_MOVE) {
         // printf("DEBUG: Mouse motion - x=%d, y=%d, is_dragging=%d\n",
             //    event->x, event->y, component->is_dragging);
 
@@ -1395,7 +1395,7 @@ void select_component_render_dropdown_only(Layer* layer) {
 }
 
 // 弹出层专用鼠标事件处理
-int select_component_handle_dropdown_mouse_event(Layer* layer, MouseEvent* event) {
+int select_component_handle_dropdown_mouse_event(Layer* layer, PointerEvent* event) {
     if (!layer || !event || !layer->component) return 0;
     
     SelectComponent* component = (SelectComponent*)layer->component;
@@ -1414,7 +1414,7 @@ int select_component_handle_dropdown_mouse_event(Layer* layer, MouseEvent* event
     }
     
     // 如果正在拖拽，优先处理拖拽逻辑
-    if (component->is_dragging && (event->state == SDL_MOUSEMOTION || event->state == SDL_PRESSED)) {
+    if (component->is_dragging && (event->phase == POINTER_MOVE || event->phase == POINTER_DOWN)) {
         // printf("DEBUG: Dragging scrollbar, mouse_y=%d, start_y=%d, start_scroll=%d\n", 
         //       event->y, component->drag_start_y, component->drag_start_scroll);
         
@@ -1443,7 +1443,7 @@ int select_component_handle_dropdown_mouse_event(Layer* layer, MouseEvent* event
         content_width -= component->scrollbar_width;
     }
     
-    if (event->state == SDL_PRESSED && event->button == SDL_BUTTON_LEFT) {
+    if (event->phase == POINTER_DOWN && event->button == SDL_BUTTON_LEFT) {
         // 检查是否点击在下拉菜单内容区域
         if (event->x >= dropdown_x && event->x < dropdown_x + content_width &&
             event->y >= dropdown_y && event->y < dropdown_y + dropdown_height) {
@@ -1502,12 +1502,12 @@ int select_component_handle_dropdown_mouse_event(Layer* layer, MouseEvent* event
                 component->drag_start_scroll = component->scroll_position;
             }
         }
-    } else if (event->state == SDL_RELEASED && event->button == SDL_BUTTON_LEFT) {
+    } else if (event->phase == POINTER_UP && event->button == SDL_BUTTON_LEFT) {
         // 停止拖拽
         if (component->is_dragging) {
             component->is_dragging = 0;
         }
-    } else if (event->state == SDL_MOUSEMOTION) {
+    } else if (event->phase == POINTER_MOVE) {
         if (component->expanded) {
             // 更新悬停状态
             if (event->x >= dropdown_x && event->x < dropdown_x + content_width) {

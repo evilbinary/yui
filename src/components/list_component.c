@@ -238,10 +238,9 @@ ListComponent* list_component_create(Layer* layer) {
 
     layer->component = component;
     layer->render = list_component_render;
-    layer->handle_mouse_event = list_component_handle_mouse_event;
+    layer->handle_pointer_event = list_component_handle_pointer_event;
     layer->handle_scroll_event = list_component_handle_scroll_event;
     layer->handle_key_event = list_component_handle_key_event;
-    layer->handle_touch_event = list_component_handle_touch_event;
     layer->focusable = 1;
     layer->on_data_update = list_data_update;
     layer->on_destroy = list_layer_destroy;
@@ -444,38 +443,58 @@ void list_component_render(Layer* layer) {
     backend_render_set_clip_rect(&prev_clip);
 }
 
-int list_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
+static int list_can_vertical_pan(const Layer* layer);
+
+int list_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
     if (!layer || !event || !layer->component) return 0;
 
     ListComponent* component = (ListComponent*)layer->component;
     int index = -1;
     int inside = list_point_in_item(component, event->x, event->y, &index);
+    int can_pan = list_can_vertical_pan(layer);
 
-    if (event->state == SDL_MOUSEMOTION) {
+    if (event->phase == POINTER_MOVE) {
+        int adx = event->delta_x < 0 ? -event->delta_x : event->delta_x;
+        int ady = event->delta_y < 0 ? -event->delta_y : event->delta_y;
+        if (ady >= adx && (adx >= 2 || ady >= 2)) {
+            if (layout_scroll_vertical(layer, event->delta_y)) {
+                component->touch_scrolled = 1;
+                component->pressed_index = -1;
+                return 1;
+            }
+        }
+
         component->hovered_index = inside ? index : -1;
         if (!inside || component->pressed_index < 0) {
             if (!inside) component->pressed_index = -1;
         }
+        return inside || can_pan;
+    }
+
+    if (event->device == POINTER_DEVICE_MOUSE && event->button != SDL_BUTTON_LEFT) {
         return inside;
     }
 
-    if (event->button != SDL_BUTTON_LEFT) {
-        return inside;
-    }
-
-    if (event->state == SDL_PRESSED) {
+    if (event->phase == POINTER_DOWN) {
+        component->touch_scrolled = 0;
         component->pressed_index = inside ? index : -1;
         component->hovered_index = inside ? index : -1;
-        return inside;
+        return inside || can_pan;
     }
 
-    if (event->state == SDL_RELEASED) {
+    if (event->phase == POINTER_UP) {
+        if (component->touch_scrolled) {
+            component->pressed_index = -1;
+            component->touch_scrolled = 0;
+            return 1;
+        }
+
         int clicked = inside && component->pressed_index == index && index >= 0;
         component->pressed_index = -1;
         if (clicked) {
             list_dispatch_select(component, index);
         }
-        return inside;
+        return inside || clicked;
     }
 
     return inside;
@@ -496,53 +515,6 @@ static int list_can_vertical_pan(const Layer* layer) {
         visible_height -= layer->layout_manager->padding[0] + layer->layout_manager->padding[2];
     }
     return layer->content_height > visible_height;
-}
-
-int list_component_handle_touch_event(Layer* layer, TouchEvent* event) {
-    if (!layer || !event || !layer->component) return 0;
-
-    ListComponent* component = (ListComponent*)layer->component;
-    int index = -1;
-    int inside = list_point_in_item(component, event->x, event->y, &index);
-    int can_pan = list_can_vertical_pan(layer);
-    int consumed = 0;
-
-    if (event->type == TOUCH_TYPE_START) {
-        component->touch_scrolled = 0;
-        if (inside) {
-            component->pressed_index = index;
-            component->hovered_index = index;
-        }
-        consumed = inside || can_pan;
-    } else if (event->type == TOUCH_TYPE_MOVE) {
-        int adx = event->deltaX < 0 ? -event->deltaX : event->deltaX;
-        int ady = event->deltaY < 0 ? -event->deltaY : event->deltaY;
-        if (ady >= adx && (adx >= 2 || ady >= 2)) {
-            if (layout_scroll_vertical(layer, event->deltaY)) {
-                component->touch_scrolled = 1;
-                component->pressed_index = -1;
-                consumed = 1;
-            }
-        }
-        if (!consumed) {
-            consumed = inside || can_pan;
-        }
-    } else if (event->type == TOUCH_TYPE_END) {
-        if (component->touch_scrolled) {
-            component->pressed_index = -1;
-            component->touch_scrolled = 0;
-            consumed = 1;
-        } else {
-            int clicked = inside && component->pressed_index == index && index >= 0;
-            component->pressed_index = -1;
-            if (clicked) {
-                list_dispatch_select(component, index);
-            }
-            consumed = inside || clicked;
-        }
-    }
-
-    return consumed;
 }
 
 int list_component_handle_key_event(Layer* layer, KeyEvent* event) {

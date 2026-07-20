@@ -186,6 +186,41 @@ typedef YuiFont DFont;
 #define YUI_PAGINATION_COMPONENT 1
 #define YUI_LOADING_COMPONENT 1
 
+// 指针输入设备（须在 animate.h 之前：animate→layer→event 依赖 PointerPhase）
+typedef enum {
+    POINTER_DEVICE_MOUSE = 0,
+    POINTER_DEVICE_TOUCH = 1,
+} PointerDevice;
+
+typedef enum {
+    POINTER_DOWN = 0,
+    POINTER_MOVE,
+    POINTER_UP,
+    POINTER_WHEEL,
+    POINTER_SWIPE,
+    POINTER_DOUBLE_TAP,
+    POINTER_LONG_PRESS,
+    POINTER_PINCH,
+    POINTER_ROTATE,
+    POINTER_CANCEL,
+} PointerPhase;
+
+typedef struct PointerEvent {
+    PointerDevice device;
+    PointerPhase phase;
+    int x;
+    int y;
+    int delta_x;
+    int delta_y;
+    int wheel_dx;
+    int wheel_dy;
+    Uint8 button;
+    int clicks;
+    int finger_count;
+    float scale;
+    float rotation;
+    Uint32 timestamp;
+} PointerEvent;
 
 #ifdef YUI_ANIMATION
 #include "animate.h"
@@ -355,31 +390,6 @@ typedef struct Scrollbar {
     ScrollbarDirection direction;  // 滚动条方向
 } Scrollbar;
 
-// 触屏事件类型枚举
-typedef enum {
-    TOUCH_TYPE_START,    // 触摸开始
-    TOUCH_TYPE_MOVE,     // 触摸移动
-    TOUCH_TYPE_END,      // 触摸结束
-    TOUCH_TYPE_SWIPE,    // 滑动
-    TOUCH_TYPE_DOUBLE_TAP, // 双击
-    TOUCH_TYPE_LONG_PRESS, // 长按
-    TOUCH_TYPE_PINCH,    // 捏合
-    TOUCH_TYPE_ROTATE    // 旋转
-} TouchType;
-
-// 触屏事件参数结构
-typedef struct TouchEvent {
-    TouchType type;       // 事件类型
-    int x;                // x坐标
-    int y;                // y坐标
-    int deltaX;           // x方向变化量
-    int deltaY;           // y方向变化量
-    float scale;          // 缩放比例（用于捏合）
-    float rotation;       // 旋转角度（用于旋转）
-    int fingerCount;      // 手指数量
-    Uint32 timestamp;     // 时间戳
-} TouchEvent;
-
 // 自定义键盘事件结构体
 typedef struct KeyEvent{
     enum {
@@ -403,16 +413,6 @@ typedef struct KeyEvent{
         } text;
     } data;
 } KeyEvent;
-
-// 事件结构
-typedef struct MouseEvent {
-    int x;
-    int y;
-    int button;
-    int state;
-    int clicks;         // 连击次数（1=单击，2=双击）
-    Uint32 timestamp;
-} MouseEvent;
 
 typedef struct ResizeEvent {
     int old_width;
@@ -575,9 +575,8 @@ typedef struct Layer {
 
     // 新增事件处理函数指针
     int (*handle_key_event)(Layer* layer, KeyEvent* event);
-    int (*handle_mouse_event)(Layer* layer, MouseEvent* event);
+    int (*handle_pointer_event)(Layer* layer, PointerEvent* event);
     void (*handle_scroll_event)(Layer* layer, int scroll_delta);
-    int (*handle_touch_event)(Layer* layer, TouchEvent* event);
     void (*handle_resize_event)(Layer* layer, const ResizeEvent* event);
 
     //事件注册

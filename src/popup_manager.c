@@ -196,7 +196,7 @@ void popup_manager_render(void) {
     }
 }
 
-static int popup_point_inside(Layer* layer, MouseEvent* event) {
+static int popup_point_inside(Layer* layer, PointerEvent* event) {
     if (!layer || !event) {
         return 0;
     }
@@ -206,7 +206,7 @@ static int popup_point_inside(Layer* layer, MouseEvent* event) {
            event->y < layer->rect.y + layer->rect.h;
 }
 
-bool popup_manager_handle_mouse_event(MouseEvent* event) {
+bool popup_manager_handle_pointer_event(PointerEvent* event) {
     if (!g_popup_manager || !event) {
         return false;
     }
@@ -221,7 +221,7 @@ bool popup_manager_handle_mouse_event(MouseEvent* event) {
     while (current) {
         if ((uintptr_t)current == 0xabababababababab || 
             (uintptr_t)current == 0xfeeefeeefeeefeee) {
-            printf("ERROR: popup_manager_handle_mouse_event - detected freed memory pointer, clearing list\n");
+            printf("ERROR: popup_manager_handle_pointer_event - detected freed memory pointer, clearing list\n");
             g_popup_manager->active_popups = NULL;
             g_popup_manager->top_popup = NULL;
             return false;
@@ -233,9 +233,9 @@ bool popup_manager_handle_mouse_event(MouseEvent* event) {
         if (popup_layer) {
             int inside = popup_point_inside(popup_layer, event);
 
-            if (popup_layer->handle_mouse_event) {
+            if (popup_layer->handle_pointer_event) {
                 if (inside || current->type == POPUP_TYPE_DIALOG) {
-                    popup_layer->handle_mouse_event(popup_layer, event);
+                    popup_layer->handle_pointer_event(popup_layer, event);
                 }
             }
 

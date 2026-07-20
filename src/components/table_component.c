@@ -407,7 +407,7 @@ static int table_edit_pos_from_mouse_x(TableComponent* component, Layer* layer, 
     return len;
 }
 
-static int table_handle_edit_mouse(TableComponent* component, Layer* layer, MouseEvent* event) {
+static int table_handle_edit_mouse(TableComponent* component, Layer* layer, PointerEvent* event) {
     if (!component || component->editing_row < 0 || component->editing_col < 0) return 0;
 
     Rect cell;
@@ -415,7 +415,7 @@ static int table_handle_edit_mouse(TableComponent* component, Layer* layer, Mous
     Point pt = {event->x, event->y};
     int in_edit_cell = point_in_rect(pt, cell);
 
-    if (event->state == SDL_MOUSEMOTION) {
+    if (event->phase == POINTER_MOVE) {
         if (component->edit_mouse_selecting) {
             int pos = in_edit_cell ? table_edit_pos_from_mouse_x(component, layer, cell, event->x) :
                      (event->x < cell.x ? 0 : (int)strlen(component->edit_buffer));
@@ -430,7 +430,7 @@ static int table_handle_edit_mouse(TableComponent* component, Layer* layer, Mous
 
     if (event->button != SDL_BUTTON_LEFT) return 0;
 
-    if (event->state == SDL_PRESSED) {
+    if (event->phase == POINTER_DOWN) {
         if (!in_edit_cell) return 0;
         int pos = table_edit_pos_from_mouse_x(component, layer, cell, event->x);
         component->edit_cursor = pos;
@@ -442,7 +442,7 @@ static int table_handle_edit_mouse(TableComponent* component, Layer* layer, Mous
         return 1;
     }
 
-    if (event->state == SDL_RELEASED) {
+    if (event->phase == POINTER_UP) {
         if (!component->edit_mouse_selecting) return 0;
         component->edit_mouse_selecting = 0;
         if (component->edit_sel_start == component->edit_sel_end) {
@@ -695,7 +695,7 @@ static int table_point_in_scrollbar(TableComponent* component, Layer* layer, int
     return point_in_rect(pt, track);
 }
 
-static int table_handle_vertical_scrollbar_mouse(TableComponent* component, Layer* layer, MouseEvent* event) {
+static int table_handle_vertical_scrollbar_mouse(TableComponent* component, Layer* layer, PointerEvent* event) {
     if (!layer->scrollbar_v) return 0;
 
     table_component_update_content_size(component);
@@ -705,12 +705,12 @@ static int table_handle_vertical_scrollbar_mouse(TableComponent* component, Laye
     }
 
     if (layer->scrollbar_v->is_dragging) {
-        if (event->state == SDL_MOUSEMOTION) {
+        if (event->phase == POINTER_MOVE) {
             table_apply_vertical_thumb_drag(component, layer, event->y);
             mark_layer_dirty(layer, DIRTY_TEXT);
             return 1;
         }
-        if (event->state == SDL_RELEASED && event->button == SDL_BUTTON_LEFT) {
+        if (event->phase == POINTER_UP && event->button == SDL_BUTTON_LEFT) {
             layer->scrollbar_v->is_dragging = 0;
             component->pressed_row = -1;
             return 1;
@@ -722,7 +722,7 @@ static int table_handle_vertical_scrollbar_mouse(TableComponent* component, Laye
         return table_point_in_scrollbar(component, layer, event->x, event->y);
     }
 
-    if (event->state == SDL_PRESSED) {
+    if (event->phase == POINTER_DOWN) {
         Rect thumb;
         if (table_vertical_thumb_rect(component, layer, &thumb)) {
             Point pt = {event->x, event->y};
@@ -1371,7 +1371,7 @@ TableComponent* table_component_create(Layer* layer) {
 
     layer->component = component;
     layer->render = table_component_render;
-    layer->handle_mouse_event = table_component_handle_mouse_event;
+    layer->handle_pointer_event = table_component_handle_pointer_event;
     layer->handle_key_event = table_component_handle_key_event;
     layer->focusable = 1;
     layer->on_data_update = table_data_update;
@@ -1765,19 +1765,19 @@ void table_component_render(Layer* layer) {
     table_tooltip_try_show(component, layer);
 }
 
-int table_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
+int table_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
     if (!layer || !event || !layer->component) return 0;
 
     TableComponent* component = (TableComponent*)layer->component;
 
     if (component->resizing_column >= 0) {
-        if (event->state == SDL_MOUSEMOTION) {
+        if (event->phase == POINTER_MOVE) {
             int delta = event->x - component->resize_drag_start_x;
             table_apply_column_resize(component, component->resizing_column,
                                       component->resize_drag_start_w + delta);
             return 1;
         }
-        if (event->state == SDL_RELEASED && event->button == SDL_BUTTON_LEFT) {
+        if (event->phase == POINTER_UP && event->button == SDL_BUTTON_LEFT) {
             component->resizing_column = -1;
             component->resize_col_hover = table_resize_column_at(component, layer, event->x, event->y);
             return 1;
@@ -1793,7 +1793,7 @@ int table_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
         if (table_handle_edit_mouse(component, layer, event)) {
             return 1;
         }
-        if (event->state == SDL_PRESSED && event->button == SDL_BUTTON_LEFT) {
+        if (event->phase == POINTER_DOWN && event->button == SDL_BUTTON_LEFT) {
             int row = table_row_at_point(component, layer, event->x, event->y);
             int col = table_column_at_point(component, layer, event->x, event->y);
             if (row != component->editing_row || col != component->editing_col) {
@@ -1805,7 +1805,7 @@ int table_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
     int in_header = table_point_in_header(component, layer, event->x, event->y);
     int resize_col = in_header ? table_resize_column_at(component, layer, event->x, event->y) : -1;
 
-    if (event->state == SDL_MOUSEMOTION) {
+    if (event->phase == POINTER_MOVE) {
         int prev_hover = component->resize_col_hover;
         component->resize_col_hover = resize_col;
         if (prev_hover != resize_col && (prev_hover >= 0 || resize_col >= 0)) {
@@ -1830,12 +1830,12 @@ int table_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
         return row >= 0;
     }
 
-    if (event->state == SDL_PRESSED) {
+    if (event->phase == POINTER_DOWN) {
         table_tooltip_reset(component);
     }
 
     if (in_header && event->button == SDL_BUTTON_LEFT) {
-        if (event->state == SDL_PRESSED && resize_col >= 0) {
+        if (event->phase == POINTER_DOWN && resize_col >= 0) {
             component->resizing_column = resize_col;
             component->resize_drag_start_x = event->x;
             component->resize_drag_start_w = component->columns[resize_col].computed_width;
@@ -1852,7 +1852,7 @@ int table_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
         return in_body;
     }
 
-    if (event->state == SDL_PRESSED) {
+    if (event->phase == POINTER_DOWN) {
         component->pressed_row = in_body ? row : -1;
         component->hovered_row = in_body ? row : -1;
         if (in_body && component->editing_row < 0) {
@@ -1864,7 +1864,7 @@ int table_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
         return in_body;
     }
 
-    if (event->state == SDL_RELEASED) {
+    if (event->phase == POINTER_UP) {
         if (component->editing_row >= 0) {
             component->pressed_row = -1;
             return 1;

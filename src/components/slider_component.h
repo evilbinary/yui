@@ -39,7 +39,7 @@ void slider_component_set_orientation(SliderComponent* component, int orientatio
 void slider_component_set_colors(SliderComponent* component, Color track, Color thumb, Color active_thumb);
 void slider_component_set_user_data(SliderComponent* component, void* data);
 void slider_component_set_value_changed_callback(SliderComponent* component, void (*callback)(float, void*));
-int slider_component_handle_mouse_event(Layer* layer, MouseEvent* event);
+int slider_component_handle_pointer_event(Layer* layer, PointerEvent* event);
 int slider_component_handle_key_event(Layer* layer, KeyEvent* event);
 void slider_component_render(Layer* layer);
 

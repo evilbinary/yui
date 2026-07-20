@@ -2,6 +2,7 @@
 // 在 main.c 的 backend_init() 之后添加以下代码
 
 #include "popup_manager.h"
+#include "event.h"
 
 // 在 main() 函数中的 backend_init() 之后添加：
 void init_popup_system(void) {
@@ -16,12 +17,12 @@ void render_popups(void) {
 }
 
 // 在事件处理中添加：
-bool handle_popup_events(MouseEvent* mouse_event, KeyEvent* key_event, int scroll_delta) {
+bool handle_popup_events(PointerEvent* pointer_event, KeyEvent* key_event, int scroll_delta) {
     bool handled = false;
     
     // 优先处理弹出层事件
-    if (mouse_event) {
-        handled = popup_manager_handle_mouse_event(mouse_event);
+    if (pointer_event) {
+        handled = popup_manager_handle_pointer_event(pointer_event);
     }
     
     if (!handled && key_event) {
@@ -33,10 +34,10 @@ bool handle_popup_events(MouseEvent* mouse_event, KeyEvent* key_event, int scrol
     }
     
     // 如果点击不在任何弹出层内，关闭所有自动关闭的弹出层
-    if (mouse_event && mouse_event->state == SDL_PRESSED && 
-        mouse_event->button == SDL_BUTTON_LEFT && !handled) {
+    if (pointer_event && pointer_event->phase == POINTER_DOWN &&
+        pointer_event->button == SDL_BUTTON_LEFT && !handled) {
         
-        if (!popup_manager_is_point_in_popups(mouse_event->x, mouse_event->y)) {
+        if (!popup_manager_is_point_in_popups(pointer_event->x, pointer_event->y)) {
             popup_manager_close_all();
         }
     }
@@ -64,7 +65,7 @@ int main(int argc, char* argv[]) {
     // 在主循环中：
     while (running) {
         // 处理事件时优先处理弹出层
-        bool event_handled = handle_popup_events(mouse_event, key_event, scroll_delta);
+        bool event_handled = handle_popup_events(pointer_event, key_event, scroll_delta);
         
         if (!event_handled) {
             // 处理常规组件事件

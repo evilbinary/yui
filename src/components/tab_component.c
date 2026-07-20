@@ -32,7 +32,7 @@ TabComponent* tab_component_create(Layer* layer) {
   // 设置组件类型和渲染函数
   layer->component = component;
   layer->render = tab_component_render;
-  layer->handle_mouse_event = tab_component_handle_mouse_event;
+  layer->handle_pointer_event = tab_component_handle_pointer_event;
   layer->handle_key_event = tab_component_handle_key_event;
 
   return component;
@@ -134,7 +134,7 @@ TabComponent* tab_component_create_from_json(Layer* layer, cJSON* json_obj) {
 
   // 设置渲染和事件处理函数
   layer->render = tab_component_render;
-  layer->handle_mouse_event = tab_component_handle_mouse_event;
+  layer->handle_pointer_event = tab_component_handle_pointer_event;
   layer->handle_key_event = tab_component_handle_key_event;
 
   return tabComponent;
@@ -460,12 +460,12 @@ int tab_is_close_button_clicked(TabComponent* component, int tab_index, int x,
 }
 
 // 处理鼠标事件
-int tab_component_handle_mouse_event(Layer* layer, MouseEvent* event) {
+int tab_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
   if (!layer || !event || !layer->component) return 0;
 
   TabComponent* component = (TabComponent*)layer->component;
 
-  if (event->state == SDL_PRESSED && event->button == SDL_BUTTON_LEFT) {
+  if (event->phase == POINTER_DOWN && event->button == SDL_BUTTON_LEFT) {
     // 检查点击了哪个标签
     int tab_index = tab_get_tab_from_position(component, event->x, event->y);
     if (tab_index >= 0) {

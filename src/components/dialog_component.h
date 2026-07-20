@@ -104,7 +104,7 @@ void dialog_component_hide(DialogComponent* component);
 bool dialog_component_is_opened(DialogComponent* component);
 
 // 事件处理
-int dialog_component_handle_mouse_event(Layer* layer, MouseEvent* event);
+int dialog_component_handle_pointer_event(Layer* layer, PointerEvent* event);
 int dialog_component_handle_key_event(Layer* layer, KeyEvent* event);
 void dialog_component_render(Layer* layer);
 
