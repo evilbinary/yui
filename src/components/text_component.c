@@ -108,6 +108,9 @@ static int text_component_measure_width(TextComponent* component, const char* te
 }
 
 static int text_component_find_wrap_end(const char* text, int start, int line_end, int max_width, TextComponent* component) {
+    int pos;
+    int clen;
+
     if (start >= line_end) return start;
     if (text_component_measure_width(component, text, start, line_end) <= max_width) {
         return line_end;
@@ -122,7 +125,17 @@ static int text_component_find_wrap_end(const char* text, int start, int line_en
             hi = mid;
         }
     }
-    return lo - 1;
+    /* 二分按字节，结果对齐到 UTF-8 字符边界，避免中文截断乱码 */
+    pos = lo - 1;
+    if (pos < start) pos = start;
+    pos = start + utf8_safe_prefix_bytes(text + start, pos - start);
+    if (pos <= start) {
+        clen = utf8_char_len_at(text + start);
+        if (clen <= 0) clen = 1;
+        pos = start + clen;
+        if (pos > line_end) pos = line_end;
+    }
+    return pos;
 }
 
 void text_component_invalidate_layout(TextComponent* component) {
@@ -177,7 +190,8 @@ static void text_component_ensure_layout(TextComponent* component, int max_width
 
         int split_pos = text_component_find_wrap_end(text, current_pos, line_end, max_width, component);
         if (split_pos <= current_pos) {
-            split_pos = current_pos + 1;
+            int clen = utf8_char_len_at(text + current_pos);
+            split_pos = current_pos + (clen > 0 ? clen : 1);
         }
         if (split_pos < line_end) {
             current_pos = split_pos;
@@ -211,7 +225,10 @@ static int text_component_count_visual_lines_in_range(TextComponent* component, 
     int pos = start;
     while (pos < logical_end) {
         int split_pos = text_component_find_wrap_end(text, pos, logical_end, max_width, component);
-        if (split_pos <= pos) split_pos = pos + 1;
+        if (split_pos <= pos) {
+            int clen = utf8_char_len_at(text + pos);
+            split_pos = pos + (clen > 0 ? clen : 1);
+        }
         lines++;
         pos = split_pos;
     }
@@ -2772,8 +2789,9 @@ void text_component_render(Layer* layer) {
     // 恢复裁剪区域
     backend_render_set_clip_rect(&prev_clip);
     
-    // 多行滚动条：仅当未启用 layer 通用垂直滚动条时自绘，避免与 render_vertical_scrollbar 重复
-    if (component->multiline && layer->scrollable != 1 && layer->scrollable != 3) {
+    // 多行滚动条：只读气泡不显示；且未启用 layer 通用垂直滚动条时才自绘
+    if (component->multiline && component->editable &&
+        layer->scrollable != 1 && layer->scrollable != 3) {
         int pad_top;
         int pad_right;
         int pad_bottom;

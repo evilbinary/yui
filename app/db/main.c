@@ -85,7 +85,7 @@ int main(int argc, char* argv[]) {
     // 注册 MySQL 事件处理器（不依赖 QuickJS API）
     register_mysql_handlers();
 
-    char* json_path="app/playground/app.json";
+    char* json_path="app/db/db.json";
     // 加载UI描述文件
     if(argc>1){
         json_path=argv[1];

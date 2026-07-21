@@ -28,6 +28,10 @@ lvgl-sdl: build-lvgl
 db:  
 	ya -r db -- app/db/db.json
 
+photo:
+	ya -b photo
+	ya -r photo -- app/photo/app.json
+
 menu: build-playground
 	ya -r playground -- app/tests/test-menu.json
 

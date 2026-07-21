@@ -1,0 +1,327 @@
+{
+  "id": "photoApp",
+  "text": "Photo AI",
+  "type": "View",
+  "size": [390, 844],
+  "assets": "app/assets",
+  "font": "Roboto-Regular.ttf",
+  "fontFallback": "NotoEmoji-Regular.ttf",
+  "fontSize": 14,
+  "js": ["../lib/http.js", "api.js", "photo.js"],
+  "events": {
+    "onLoad": "@onPhotoLoad"
+  },
+  "layout": {
+    "type": "vertical",
+    "spacing": 0,
+    "padding": [0, 0, 0, 0]
+  },
+  "style": {
+    "titleBarBgColor": "#1a1a2e",
+    "titleBarTextColor": "#e0e0e0",
+    "bgColor": "#0f0f1a",
+    "color": "#e0e0e0"
+  },
+  "children": [
+    {
+      "id": "headerBar",
+      "type": "View",
+      "size": [390, 52],
+      "layout": {
+        "type": "horizontal",
+        "spacing": 6,
+        "padding": [10, 12, 10, 12],
+        "align": "center"
+      },
+      "style": {
+        "bgColor": "#1a1a2e",
+        "borderBottomWidth": 1,
+        "borderBottomColor": "#2a2a4a"
+      },
+      "children": [
+        {
+          "id": "appTitle",
+          "type": "Label",
+          "text": "Photo AI",
+          "size": [90, 24],
+          "style": {
+            "color": "#f472b6",
+            "fontSize": 16,
+            "fontWeight": "bold"
+          }
+        },
+        {
+          "id": "statusBadge",
+          "type": "Label",
+          "text": "未连接",
+          "size": [52, 22],
+          "style": {
+            "color": "#ff6b6b",
+            "fontSize": 11,
+            "textAlign": "center"
+          }
+        },
+        {
+          "id": "sessionLabel",
+          "type": "Label",
+          "text": "",
+          "size": [0, 18],
+          "flex": 1,
+          "style": {
+            "color": "#64748b",
+            "fontSize": 10,
+            "textAlign": "right"
+          }
+        },
+        {
+          "id": "btnHealth",
+          "type": "Button",
+          "text": "检测",
+          "size": [44, 28],
+          "style": {
+            "color": "#94a3b8",
+            "bgColor": "#2a2a4a",
+            "borderRadius": 14,
+            "fontSize": 11
+          },
+          "events": { "onClick": "@onHealthCheck" }
+        },
+        {
+          "id": "btnNewSession",
+          "type": "Button",
+          "text": "新会话",
+          "size": [52, 28],
+          "style": {
+            "color": "#94a3b8",
+            "bgColor": "#2a2a4a",
+            "borderRadius": 14,
+            "fontSize": 11
+          },
+          "events": { "onClick": "@onNewSession" }
+        },
+        {
+          "id": "btnClearChat",
+          "type": "Button",
+          "text": "清空",
+          "size": [44, 28],
+          "style": {
+            "color": "#94a3b8",
+            "bgColor": "#2a2a4a",
+            "borderRadius": 14,
+            "fontSize": 11
+          },
+          "events": { "onClick": "@onClearChat" }
+        }
+      ]
+    },
+    {
+      "id": "configBar",
+      "type": "View",
+      "size": [390, 36],
+      "layout": {
+        "type": "horizontal",
+        "spacing": 6,
+        "padding": [4, 12, 4, 12],
+        "align": "center"
+      },
+      "style": {
+        "bgColor": "#12121f",
+        "borderBottomWidth": 1,
+        "borderBottomColor": "#2a2a4a"
+      },
+      "children": [
+        {
+          "id": "apiUrlInput",
+          "type": "Input",
+          "text": "http://127.0.0.1:8082",
+          "size": [0, 28],
+          "flex": 1,
+          "style": {
+            "color": "#94a3b8",
+            "bgColor": "#1a1a2e",
+            "fontSize": 11,
+            "padding": [4, 8, 4, 8],
+            "borderRadius": 8
+          }
+        },
+        {
+          "id": "imageUrlInput",
+          "type": "Input",
+          "text": "",
+          "placeholder": "图片URL可选",
+          "size": [120, 28],
+          "style": {
+            "color": "#94a3b8",
+            "bgColor": "#1a1a2e",
+            "fontSize": 11,
+            "padding": [4, 8, 4, 8],
+            "borderRadius": 8
+          }
+        }
+      ]
+    },
+    {
+      "id": "chatScroll",
+      "type": "View",
+      "size": [390, 560],
+      "flex": 1,
+      "scrollable": 1,
+      "layout": {
+        "type": "vertical",
+        "spacing": 10,
+        "padding": [12, 12, 12, 12]
+      },
+      "style": {
+        "bgColor": "#0f0f1a"
+      },
+      "children": []
+    },
+    {
+      "id": "streamBar",
+      "type": "View",
+      "size": [390, 24],
+      "layout": {
+        "type": "horizontal",
+        "padding": [2, 12, 2, 12],
+        "align": "center"
+      },
+      "style": {
+        "bgColor": "#12121f"
+      },
+      "children": [
+        {
+          "id": "streamHint",
+          "type": "Label",
+          "text": "就绪",
+          "size": [366, 18],
+          "flex": 1,
+          "style": {
+            "color": "#64748b",
+            "fontSize": 10
+          }
+        }
+      ]
+    },
+    {
+      "id": "quickBar",
+      "type": "View",
+      "size": [390, 40],
+      "layout": {
+        "type": "horizontal",
+        "spacing": 6,
+        "padding": [4, 10, 4, 10],
+        "align": "center"
+      },
+      "style": {
+        "bgColor": "#0f0f1a",
+        "borderTopWidth": 1,
+        "borderTopColor": "#2a2a4a"
+      },
+      "children": [
+        {
+          "id": "btnPromptReview",
+          "type": "Button",
+          "text": "点评",
+          "size": [0, 28],
+          "flex": 1,
+          "style": {
+            "color": "#c4b5fd",
+            "bgColor": "#2a1a3a",
+            "borderRadius": 14,
+            "fontSize": 11
+          },
+          "events": { "onClick": "@onPromptReview" }
+        },
+        {
+          "id": "btnPromptPlan",
+          "type": "Button",
+          "text": "策划",
+          "size": [0, 28],
+          "flex": 1,
+          "style": {
+            "color": "#c4b5fd",
+            "bgColor": "#2a1a3a",
+            "borderRadius": 14,
+            "fontSize": 11
+          },
+          "events": { "onClick": "@onPromptPlan" }
+        },
+        {
+          "id": "btnPromptSearch",
+          "type": "Button",
+          "text": "灵感",
+          "size": [0, 28],
+          "flex": 1,
+          "style": {
+            "color": "#c4b5fd",
+            "bgColor": "#2a1a3a",
+            "borderRadius": 14,
+            "fontSize": 11
+          },
+          "events": { "onClick": "@onPromptSearch" }
+        },
+        {
+          "id": "btnPromptXiaohongshu",
+          "type": "Button",
+          "text": "小红书",
+          "size": [0, 28],
+          "flex": 1,
+          "style": {
+            "color": "#c4b5fd",
+            "bgColor": "#2a1a3a",
+            "borderRadius": 14,
+            "fontSize": 11
+          },
+          "events": { "onClick": "@onPromptXiaohongshu" }
+        }
+      ]
+    },
+    {
+      "id": "inputBar",
+      "type": "View",
+      "size": [390, 64],
+      "layout": {
+        "type": "horizontal",
+        "spacing": 8,
+        "padding": [10, 12, 14, 12],
+        "align": "center"
+      },
+      "style": {
+        "bgColor": "#1a1a2e",
+        "borderTopWidth": 1,
+        "borderTopColor": "#2a2a4a"
+      },
+      "children": [
+        {
+          "id": "chatInput",
+          "type": "Input",
+          "text": "",
+          "placeholder": "输入消息…",
+          "size": [0, 40],
+          "flex": 1,
+          "style": {
+            "color": "#e0e0e0",
+            "bgColor": "#0f0f1a",
+            "fontSize": 14,
+            "padding": [8, 12, 8, 12],
+            "borderRadius": 20
+          }
+        },
+        {
+          "id": "btnSend",
+          "type": "Button",
+          "text": "发送",
+          "size": [64, 40],
+          "style": {
+            "color": "#ffffff",
+            "bgColor": "#7c3aed",
+            "borderRadius": 20,
+            "fontSize": 13,
+            "fontWeight": "bold"
+          },
+          "events": { "onClick": "@onSendMessage" }
+        }
+      ]
+    }
+  ]
+}

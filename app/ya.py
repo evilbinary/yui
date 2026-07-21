@@ -230,6 +230,16 @@ target("db")
     add_run()
 )
 
+target("photo")
+(
+    add_deps("socket","yui","quickjs","jsmodule-quickjs","yaml2json"),
+    add_rules("mode.debug", "mode.release"),
+    set_kind("binary"),
+    add_flags(),
+    add_files("photo/main.c"),
+    add_run()
+)
+
 # LVGL backend demo (YUI_PLAT=lvgl or -p lvgl)
 target("lvgl-sdl")
 (
