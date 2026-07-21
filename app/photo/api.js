@@ -3,12 +3,7 @@
  * 对接 e:\workspace\sheep\cmd\photo HTTP 服务
  *
  * 默认地址: http://127.0.0.1:8082
- * 主要接口:
- *   GET  /api/health
- *   GET  /api/tools
- *   GET  /api/sessions
- *   POST /api/chat   { message, session_id, stream, files }
- *   POST /api/upload multipart file
+ * 全部走异步 HTTP，避免同步请求卡死 UI
  */
 
 var PhotoAPI = {
@@ -36,18 +31,15 @@ var PhotoAPI = {
     },
 
     health: function(callback) {
-        var url = this.baseURL + "/api/health";
-        this._getJSON(url, callback, 5000);
+        this._getJSON(this.baseURL + "/api/health", callback, 5000);
     },
 
     listTools: function(callback) {
-        var url = this.baseURL + "/api/tools";
-        this._getJSON(url, callback, 8000);
+        this._getJSON(this.baseURL + "/api/tools", callback, 8000);
     },
 
     listSessions: function(callback) {
-        var url = this.baseURL + "/api/sessions";
-        this._getJSON(url, callback, 8000);
+        this._getJSON(this.baseURL + "/api/sessions", callback, 8000);
     },
 
     getSession: function(sessionId, callback) {
@@ -56,18 +48,17 @@ var PhotoAPI = {
     },
 
     /**
-     * 同步聊天（非流式）
+     * 异步聊天（非流式）
      * body: { message, session_id, files?, stream:false }
      */
     chatSync: function(body, callback) {
-        var url = this.baseURL + "/api/chat";
         var payload = body || {};
         payload.stream = false;
-        this._postJSON(url, payload, callback, 180000);
+        this._postJSON(this.baseURL + "/api/chat", payload, callback, 180000);
     },
 
     /**
-     * SSE 流式聊天
+     * SSE 流式聊天（异步）
      * handlers: { onEvent(type, data), onDone(data), onError(err) }
      */
     chatStream: function(body, handlers) {
@@ -76,9 +67,9 @@ var PhotoAPI = {
         var payload = body || {};
         payload.stream = true;
 
-        if (typeof http_post_sse_async === "undefined" && typeof http_post_sse === "undefined") {
+        if (typeof http_post_sse_async === "undefined") {
             if (handlers.onError) {
-                handlers.onError("SSE unavailable: load app/lib/http.js");
+                handlers.onError("SSE async unavailable: load app/lib/http.js");
             }
             return;
         }
@@ -111,27 +102,24 @@ var PhotoAPI = {
             }
         };
 
-        var options = {
+        http_post_sse_async(url, JSON.stringify(payload), streamHandlers, {
             headers: { "Content-Type": "application/json" },
             contentType: "application/json",
             timeout: 300000
-        };
-
-        if (typeof http_post_sse_async !== "undefined") {
-            http_post_sse_async(url, JSON.stringify(payload), streamHandlers, options);
-        } else {
-            http_post_sse(url, JSON.stringify(payload), streamHandlers, options);
-        }
+        });
     },
 
     _getJSON: function(url, callback, timeout) {
-        YUI.log("PhotoAPI GET " + url);
-        if (typeof http_get === "undefined") {
-            if (callback) callback({ error: "http_get unavailable" });
+        YUI.log("PhotoAPI GET async " + url);
+        if (typeof http_get_async === "undefined") {
+            if (callback) callback({ error: "http_get_async unavailable" });
             return;
         }
-        try {
-            var response = http_get(url, { timeout: timeout || 8000 });
+        http_get_async(url, function(err, response) {
+            if (err || !response) {
+                if (callback) callback({ error: err || "empty response" });
+                return;
+            }
             if (response.status >= 200 && response.status < 300) {
                 var parsed = {};
                 try {
@@ -140,29 +128,23 @@ var PhotoAPI = {
                     parsed = { raw: response.body };
                 }
                 if (callback) callback(parsed);
-            } else {
-                if (callback) {
-                    callback({ error: "HTTP " + response.status, body: response.body });
-                }
+            } else if (callback) {
+                callback({ error: "HTTP " + response.status, body: response.body });
             }
-        } catch (e) {
-            YUI.log("PhotoAPI GET failed: " + e.message);
-            if (callback) callback({ error: e.message || String(e) });
-        }
+        }, { timeout: timeout || 8000 });
     },
 
     _postJSON: function(url, data, callback, timeout) {
-        YUI.log("PhotoAPI POST " + url);
-        if (typeof http_post === "undefined") {
-            if (callback) callback({ error: "http_post unavailable" });
+        YUI.log("PhotoAPI POST async " + url);
+        if (typeof http_post_async === "undefined") {
+            if (callback) callback({ error: "http_post_async unavailable" });
             return;
         }
-        try {
-            var response = http_post(url, JSON.stringify(data), {
-                timeout: timeout || 60000,
-                headers: { "Content-Type": "application/json" },
-                contentType: "application/json"
-            });
+        http_post_async(url, JSON.stringify(data), function(err, response) {
+            if (err || !response) {
+                if (callback) callback({ error: err || "empty response" });
+                return;
+            }
             if (response.status >= 200 && response.status < 300) {
                 var parsed = {};
                 try {
@@ -183,9 +165,10 @@ var PhotoAPI = {
                     });
                 }
             }
-        } catch (e) {
-            YUI.log("PhotoAPI POST failed: " + e.message);
-            if (callback) callback({ error: e.message || String(e) });
-        }
+        }, {
+            timeout: timeout || 60000,
+            headers: { "Content-Type": "application/json" },
+            contentType: "application/json"
+        });
     }
 };
