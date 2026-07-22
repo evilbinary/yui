@@ -1,4 +1,4 @@
-#ifdef __ANDROID__
+#ifdef YUI_BACKEND_MOBILE
 
 #include "mobile_text.h"
 #include "backend.h"
@@ -699,8 +699,9 @@ static Texture* mobile_upload_text_bitmap(unsigned char* bitmap, int width, int 
     return texture;
 }
 
-static unsigned char* mobile_rasterize_font_text(MobileFont* mobile_font, MobileFont* fallback_font,
-                                                 const char* text, Color color, int* out_w, int* out_h) {
+static int mobile_measure_text_bounds(MobileFont* mobile_font, MobileFont* fallback_font,
+                                      const char* text, int* out_w, int* out_h,
+                                      int* out_min_x, int* out_min_y) {
     const char* cursor;
     int width = 0;
     int height = 0;
@@ -713,13 +714,12 @@ static unsigned char* mobile_rasterize_font_text(MobileFont* mobile_font, Mobile
     int max_x = 0;
     int max_y = 0;
     int has_glyph = 0;
-    unsigned char* bitmap = NULL;
     int pen_x = 0;
     int cp = 0;
     MobileFont* active_font;
 
     if (!mobile_font || !text || !text[0] || !out_w || !out_h) {
-        return NULL;
+        return 0;
     }
 
     stbtt_GetFontVMetrics(&mobile_font->info, &ascent, &descent, &line_gap);
@@ -743,6 +743,9 @@ static unsigned char* mobile_rasterize_font_text(MobileFont* mobile_font, Mobile
         }
 
         active_font = mobile_pick_font_for_codepoint(mobile_font, fallback_font, cp);
+        if (!active_font) {
+            continue;
+        }
         stbtt_GetCodepointHMetrics(&active_font->info, cp, &advance, &lsb);
         stbtt_GetCodepointBitmapBox(&active_font->info, cp, active_font->yui_density,
                                     active_font->yui_density, &x0, &y0, &x1, &y1);
@@ -766,14 +769,58 @@ static unsigned char* mobile_rasterize_font_text(MobileFont* mobile_font, Mobile
     }
 
     if (!has_glyph) {
-        return NULL;
+        return 0;
     }
 
     width = max_x - min_x;
     height = max_y - min_y;
     if (width <= 0 || height <= 0) {
+        return 0;
+    }
+
+    *out_w = width;
+    *out_h = height;
+    if (out_min_x) {
+        *out_min_x = min_x;
+    }
+    if (out_min_y) {
+        *out_min_y = min_y;
+    }
+    return 1;
+}
+
+static int mobile_bounds_to_layout_width(int width) {
+    float density = yui_density > 0.0f ? yui_density : 1.0f;
+    return (int)((float)width / density + 0.5f);
+}
+
+static unsigned char* mobile_rasterize_font_text(MobileFont* mobile_font, MobileFont* fallback_font,
+                                                 const char* text, Color color, int* out_w, int* out_h) {
+    int width = 0;
+    int height = 0;
+    int min_x = 0;
+    int min_y = 0;
+    int ascent = 0;
+    int descent = 0;
+    int line_gap = 0;
+    int baseline = 0;
+    unsigned char* bitmap = NULL;
+    const char* cursor;
+    int pen_x = 0;
+    int cp = 0;
+    MobileFont* active_font;
+
+    if (!mobile_font || !text || !text[0] || !out_w || !out_h) {
         return NULL;
     }
+
+    if (!mobile_measure_text_bounds(mobile_font, fallback_font, text, &width, &height,
+                                    &min_x, &min_y)) {
+        return NULL;
+    }
+
+    stbtt_GetFontVMetrics(&mobile_font->info, &ascent, &descent, &line_gap);
+    baseline = (int)(ascent * mobile_font->yui_density);
 
     bitmap = (unsigned char*)calloc((size_t)width * (size_t)height, 4);
     if (!bitmap) {
@@ -956,6 +1003,100 @@ static Texture* mobile_render_mixed_texture(DFont* primary, DFont* fallback, con
     }
 
     return mobile_upload_text_bitmap(final_bitmap, total_w, max_h);
+}
+
+int mobile_measure_text_width(DFont* font, const char* text) {
+    DFont* fallback = NULL;
+    DFont* render_font;
+    MobileFont* mobile_font;
+    MobileFont* fallback_font = NULL;
+    int width = 0;
+    int height = 0;
+
+    if (!font || !font->priv || !text || !text[0]) {
+        return 0;
+    }
+
+    render_font = mobile_resolve_render_font(font, text, &fallback);
+    if (render_font == NULL && fallback && fallback != font) {
+        const char* cursor = text;
+        const char* run_starts[128];
+        const char* run_ends[128];
+        MobileFont* run_fonts[128];
+        int run_count = 0;
+        int total_w = 0;
+        int i;
+        char run_buf[256];
+        MobileFont* primary_font = (MobileFont*)font->priv;
+        MobileFont* fallback_font_m = fallback ? (MobileFont*)fallback->priv : NULL;
+
+        while (*cursor && run_count < 128) {
+            const char* run_start = cursor;
+            uint32_t codepoint = 0;
+            MobileFont* chosen;
+
+            if (!utf8_decode_codepoint(&cursor, &codepoint)) {
+                break;
+            }
+            chosen = mobile_pick_font_for_codepoint(primary_font, fallback_font_m, (int)codepoint);
+            if (!chosen) {
+                continue;
+            }
+
+            if (run_count > 0 && run_fonts[run_count - 1] == chosen) {
+                run_ends[run_count - 1] = cursor;
+            } else {
+                run_starts[run_count] = run_start;
+                run_ends[run_count] = cursor;
+                run_fonts[run_count] = chosen;
+                run_count++;
+            }
+        }
+
+        for (i = 0; i < run_count; i++) {
+            int len = (int)(run_ends[i] - run_starts[i]);
+            int rw = 0;
+            int rh = 0;
+            MobileFont* other = (run_fonts[i] == primary_font) ? fallback_font_m : primary_font;
+
+            if (len <= 0 || len >= (int)sizeof(run_buf)) {
+                continue;
+            }
+            memcpy(run_buf, run_starts[i], (size_t)len);
+            run_buf[len] = '\0';
+            if (!mobile_measure_text_bounds(run_fonts[i], other, run_buf, &rw, &rh, NULL, NULL)) {
+                continue;
+            }
+            total_w += rw;
+        }
+
+        if (total_w <= 0) {
+            return 0;
+        }
+        return mobile_bounds_to_layout_width(total_w);
+    }
+
+    if (!render_font) {
+        render_font = font;
+    }
+
+    mobile_font = (MobileFont*)render_font->priv;
+    if (fallback && fallback->priv) {
+        fallback_font = (MobileFont*)fallback->priv;
+    }
+
+    if (!mobile_measure_text_bounds(mobile_font, fallback_font, text, &width, &height, NULL, NULL)) {
+        if (fallback && fallback != render_font && fallback->priv) {
+            mobile_font = (MobileFont*)fallback->priv;
+            if (!mobile_measure_text_bounds(mobile_font, NULL, text, &width, &height, NULL, NULL)) {
+                return 0;
+            }
+        } else {
+            return 0;
+        }
+    }
+
+    return mobile_bounds_to_layout_width(width);
 }
 
 Texture* mobile_render_text_texture(DFont* font, const char* text, Color color) {

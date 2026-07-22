@@ -7,9 +7,11 @@
 #include "screenshot.h"
 #include "ytype.h"
 
-#ifdef __ANDROID__
+#ifdef YUI_BACKEND_MOBILE
 #include "mobile_text.h"
+#endif
 
+#ifdef __ANDROID__
 extern char* android_clipboard_get_text(void);
 extern void android_clipboard_set_text(const char* text);
 #endif
@@ -773,7 +775,7 @@ Texture* backend_load_texture_from_base64(const char* base64_data, size_t data_l
 }
 
 Texture* backend_render_texture(DFont* font, const char* text, Color color) {
-#ifdef __ANDROID__
+#ifdef YUI_BACKEND_MOBILE
     return mobile_render_text_texture(font, text, color);
 #else
     (void)font;
@@ -784,9 +786,7 @@ Texture* backend_render_texture(DFont* font, const char* text, Color color) {
 }
 
 int backend_measure_text_width(DFont* font, const char* text) {
-    (void)font;
-    (void)text;
-    return 0;
+    return mobile_measure_text_width(font, text);
 }
 
 void backend_render_fill_rect(Rect* rect, Color color) {
@@ -1067,7 +1067,7 @@ DFont* backend_load_font(char* font_path, int size) {
 }
 
 DFont* backend_load_font_with_weight(char* font_path, int size, const char* weight) {
-#ifdef __ANDROID__
+#ifdef YUI_BACKEND_MOBILE
     return mobile_load_font(font_path, size, weight);
 #else
     DFont* font;
@@ -1235,7 +1235,7 @@ void backend_set_window_icon(const char* path) {
 }
 
 void backend_texture_cache_invalidate(void) {
-#ifdef __ANDROID__
+#ifdef YUI_BACKEND_MOBILE
     mobile_text_cache_invalidate();
 #endif
 }

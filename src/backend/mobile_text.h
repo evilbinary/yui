@@ -3,9 +3,10 @@
 
 #include "ytype.h"
 
-#ifdef __ANDROID__
+#ifdef YUI_BACKEND_MOBILE
 
 DFont* mobile_load_font(const char* font_path, int size, const char* weight);
+int mobile_measure_text_width(DFont* font, const char* text);
 Texture* mobile_render_text_texture(DFont* font, const char* text, Color color);
 void mobile_draw_text_texture(Texture* texture, const Rect* srcrect, const Rect* dstrect);
 void mobile_blit_rgba_rect(const unsigned char* rgba, int tex_w, int tex_h,
