@@ -600,6 +600,13 @@ static JSValue js_yui_update(JSContext *ctx, JSValue *this_val, int argc, JSValu
         }
         JS_FreeValue(ctx, json);
         JS_FreeValue(ctx, global);
+        if (JS_IsException(stringified)) {
+            JSValue exc = JS_GetException(ctx);
+            fprintf(stderr, "YUI.update: JSON.stringify failed\n");
+            JS_FreeValue(ctx, exc);
+            JS_FreeValue(ctx, stringified);
+            return JS_NewInt32(ctx, -1);
+        }
         if (JS_IsString(ctx, stringified)) {
             update_json = JS_ToCString(ctx, stringified, &buf);
         }
