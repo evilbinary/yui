@@ -2,6 +2,7 @@
 #include "../backend.h"
 #include "../event.h"
 #include "../util.h"
+#include "../layout.h"
 #include "../layer_update.h"
 #include <stdlib.h>
 #include <string.h>
@@ -43,6 +44,7 @@ TreeViewComponent* treeview_component_create(Layer* layer) {
     layer->render = treeview_component_render;
     layer->handle_pointer_event = treeview_component_handle_pointer_event;
     layer->handle_key_event = treeview_component_handle_key_event;
+    layer->handle_scroll_event = treeview_component_handle_scroll_event;
     layer->focusable = 1;  // 支持键盘事件
     layer->get_property = treeview_component_get_property;
     layer->set_style = treeview_component_apply_theme_style;
@@ -412,6 +414,7 @@ TreeViewComponent* treeview_component_create_from_json(Layer* layer, cJSON* json
     layer->render = treeview_component_render;
     layer->handle_pointer_event = treeview_component_handle_pointer_event;
     layer->handle_key_event = treeview_component_handle_key_event;
+    layer->handle_scroll_event = treeview_component_handle_scroll_event;
     
     // 注册数据更新回调
     layer->on_data_update = treeview_data_update;
@@ -1086,6 +1089,15 @@ int treeview_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
     TreeViewComponent* component = (TreeViewComponent*)layer->component;
     treeview_update_scrollbar(component);
 
+    if (event->phase == POINTER_WHEEL) {
+        Point pt = {event->x, event->y};
+        if (!point_in_rect(pt, layer->rect)) {
+            return 0;
+        }
+        treeview_component_handle_scroll_event(layer, event->delta_y);
+        return 1;
+    }
+
     if ((layer->scrollbar_v && layer->scrollbar_v->is_dragging) ||
         (layer->scrollbar_h && layer->scrollbar_h->is_dragging)) {
         return 1;
@@ -1164,6 +1176,17 @@ int treeview_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
         }
     }
     return 0;
+}
+
+void treeview_component_handle_scroll_event(Layer* layer, int scroll_delta) {
+    if (!layer || !layer->component || scroll_delta == 0) return;
+
+    TreeViewComponent* component = (TreeViewComponent*)layer->component;
+    treeview_update_scrollbar(component);
+    if (layout_scroll_vertical(layer, -scroll_delta * 20)) {
+        treeview_update_scrollbar(component);
+        mark_layer_dirty(layer, DIRTY_LAYOUT | DIRTY_TEXT);
+    }
 }
 
 // 处理键盘事件

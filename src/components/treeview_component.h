@@ -146,6 +146,9 @@ void treeview_set_node_expanded_callback(TreeViewComponent* component, void (*ca
 // 处理鼠标事件
 int treeview_component_handle_pointer_event(Layer* layer, PointerEvent* event);
 
+// 处理滚轮滚动
+void treeview_component_handle_scroll_event(Layer* layer, int scroll_delta);
+
 // 处理键盘事件
 int treeview_component_handle_key_event(Layer* layer, KeyEvent* event);
 
