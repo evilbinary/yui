@@ -1,0 +1,141 @@
+{
+  "id": "dialogLibTestApp",
+  "type": "View",
+  "size": [520, 560],
+  "js": ["../lib/dialog.js", "test-dialog-lib.js"],
+  "style": {
+    "bgColor": "#0f0f1a",
+    "color": "#e0e0e0"
+  },
+  "layout": {
+    "type": "absolute"
+  },
+  "events": {
+    "onLoad": "@onDialogTestLoad"
+  },
+  "children": [
+    {
+      "id": "dialogLibContent",
+      "type": "View",
+      "position": [0, 0],
+      "size": [520, 560],
+      "layout": {
+        "type": "vertical",
+        "spacing": 8,
+        "padding": [16, 16, 16, 16]
+      },
+      "style": {
+        "bgColor": "#0f0f1a"
+      },
+      "children": [
+        {
+          "id": "title",
+          "type": "Label",
+          "text": "dialog.js 测试",
+          "size": [488, 32],
+          "style": { "color": "#f472b6", "fontSize": 20, "fontWeight": "bold" }
+        },
+        {
+          "id": "summary",
+          "type": "Label",
+          "text": "就绪",
+          "size": [488, 22],
+          "style": { "color": "#94a3b8", "fontSize": 12 }
+        },
+        {
+          "id": "btnRow1",
+          "type": "View",
+          "size": [488, 36],
+          "layout": { "type": "horizontal", "spacing": 8, "align": "center" },
+          "children": [
+            {
+              "id": "btnRunUnit",
+              "type": "Button",
+              "text": "运行单元测试",
+              "size": [120, 32],
+              "style": { "color": "#fff", "bgColor": "#7c3aed", "borderRadius": 6, "fontSize": 12 },
+              "events": { "onClick": "@onRunUnitTests" }
+            },
+            {
+              "id": "btnRunAll",
+              "type": "Button",
+              "text": "运行全部",
+              "size": [100, 32],
+              "style": { "color": "#e0e0e0", "bgColor": "#2a2a4a", "borderRadius": 6, "fontSize": 12 },
+              "events": { "onClick": "@onRunAllTests" }
+            },
+            {
+              "id": "btnClear",
+              "type": "Button",
+              "text": "清空日志",
+              "size": [100, 32],
+              "style": { "color": "#e0e0e0", "bgColor": "#2a2a4a", "borderRadius": 6, "fontSize": 12 },
+              "events": { "onClick": "@onClearLog" }
+            }
+          ]
+        },
+        {
+          "id": "btnRow2",
+          "type": "View",
+          "size": [488, 36],
+          "layout": { "type": "horizontal", "spacing": 8, "align": "center" },
+          "children": [
+            {
+              "id": "btnAlert",
+              "type": "Button",
+              "text": "Alert",
+              "size": [80, 32],
+              "style": { "color": "#e0e0e0", "bgColor": "#1a3a2a", "borderRadius": 6, "fontSize": 12 },
+              "events": { "onClick": "@onTestAlert" }
+            },
+            {
+              "id": "btnConfirm",
+              "type": "Button",
+              "text": "Confirm",
+              "size": [80, 32],
+              "style": { "color": "#e0e0e0", "bgColor": "#1a3a2a", "borderRadius": 6, "fontSize": 12 },
+              "events": { "onClick": "@onTestConfirm" }
+            },
+            {
+              "id": "btnPrompt",
+              "type": "Button",
+              "text": "Prompt",
+              "size": [80, 32],
+              "style": { "color": "#e0e0e0", "bgColor": "#1a3a2a", "borderRadius": 6, "fontSize": 12 },
+              "events": { "onClick": "@onTestPrompt" }
+            },
+            {
+              "id": "btnPickFile",
+              "type": "Button",
+              "text": "PickFile",
+              "size": [90, 32],
+              "style": { "color": "#e0e0e0", "bgColor": "#1a3a2a", "borderRadius": 6, "fontSize": 12 },
+              "events": { "onClick": "@onTestPickFile" }
+            },
+            {
+              "id": "btnMount",
+              "type": "Button",
+              "text": "挂载检查",
+              "size": [90, 32],
+              "style": { "color": "#e0e0e0", "bgColor": "#1a3a2a", "borderRadius": 6, "fontSize": 12 },
+              "events": { "onClick": "@onTestMount" }
+            }
+          ]
+        },
+        {
+          "id": "log",
+          "type": "Label",
+          "text": "log:",
+          "size": [488, 380],
+          "style": {
+            "color": "#a6adc8",
+            "fontSize": 11,
+            "bgColor": "#181825",
+            "padding": [8, 10, 8, 10],
+            "borderRadius": 8
+          }
+        }
+      ]
+    }
+  ]
+}

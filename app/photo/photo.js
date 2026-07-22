@@ -559,7 +559,7 @@ function onPromptXiaohongshu() {
 }
 
 function onPickImage() {
-    YUI.openFile({
+    YUI.pickFile({
         title: "选择图片",
         filter: "*.*",
         startPath: "app"

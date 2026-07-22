@@ -6,8 +6,10 @@
  *   YUI.confirm("确定删除？", function(ok) { if (ok) ... })
  *   YUI.prompt("文件名", "默认.json", function(name) { if (name) ... })
  *   YUI.dialog({ title: "...", content: [...], buttons: [...] })
- *   YUI.openFile({ title: "选择图片", filter: "*.jpg,*.png" }, function(path) { ... })
+ *   YUI.pickFile({ title: "选择图片", filter: "*.jpg,*.png", width: 360, height: 620 }, function(path) { ... })
  *   // filter 支持通配符: *.jpg  .png  image_*  *  *.{jpg,png}
+ *   // width/height 控制面板尺寸；x/y 或 position 指定面板位置（默认居中）
+ *   // 可选 overlayWidth/overlayHeight 控制遮罩
  */
 (function () {
 
@@ -94,6 +96,7 @@ function showDialog(opts, callback) {
         type: "View",
         size: [appW, 844],
         position: [0, 0],
+        layout: { type: "absolute" },
         style: { bgColor: "transparent" },
         children: [
             {
@@ -474,7 +477,52 @@ globalThis.onPhotoFileSelect = onPhotoFileSelect;
 globalThis.onPhotoFileOk = onPhotoFileOk;
 globalThis.onPhotoFileCancel = onPhotoFileCancel;
 
-function openFile(opts, callback) {
+function applyFileDialogSize(opts) {
+    if (typeof YUI.update !== "function") return;
+
+    var panelW = opts.width || 360;
+    var panelH = opts.height || 620;
+    var padX = 15;
+    var padY = 60;
+    var overlayW = opts.overlayWidth || (panelW + padX * 2);
+    var overlayH = opts.overlayHeight || (panelH + padY + 40);
+    var listH = panelH - 40 - 36 - 40 - 48;
+    if (listH < 80) listH = 80;
+
+    var panelX;
+    var panelY;
+    if (opts.position && opts.position.length >= 2) {
+        panelX = opts.position[0];
+        panelY = opts.position[1];
+    } else if (opts.x != null || opts.y != null) {
+        panelX = opts.x != null ? opts.x : Math.floor((overlayW - panelW) / 2);
+        panelY = opts.y != null ? opts.y : Math.floor((overlayH - panelH) / 2);
+    } else {
+        panelX = Math.floor((overlayW - panelW) / 2);
+        panelY = Math.floor((overlayH - panelH) / 2);
+    }
+    if (panelX < 0) panelX = 0;
+    if (panelY < 0) panelY = 0;
+
+    function resize(id, size, position) {
+        var change = { size: size };
+        if (position) change.position = position;
+        YUI.update({ target: id, change: change });
+    }
+
+    resize("photoFileDialog", [overlayW, overlayH], [opts.overlayX || 0, opts.overlayY || 0]);
+    resize("photoFilePanel", [panelW, panelH], [panelX, panelY]);
+    resize("photoFileTitleBar", [panelW, 40]);
+    resize("photoFileTitle", [panelW - 70, 24]);
+    resize("photoFileNav", [panelW, 36]);
+    resize("photoFilePath", [panelW - 60, 20]);
+    resize("photoFileList", [panelW, listH]);
+    resize("photoFileInputRow", [panelW, 40]);
+    resize("photoFileInput", [panelW - 80, 28]);
+    resize("photoFileButtons", [panelW, 48]);
+}
+
+function pickFile(opts, callback) {
     if (typeof opts === "function") { callback = opts; opts = {}; }
     opts = opts || {};
     callback = callback || function () {};
@@ -489,12 +537,13 @@ function openFile(opts, callback) {
     fileDialogFilter = opts.filter || null;
     YUI.setText("photoFileTitle", opts.title || "选择文件");
     YUI.setText("photoFileInput", "");
+    applyFileDialogSize(opts);
     refreshPhotoFileList();
     YUI.show("photoFileDialog");
     fileDialogCallback = callback;
 }
 
-YUI.openFile = openFile;
+YUI.pickFile = pickFile;
 
 // 供测试用例访问（app/tests/test-dialog-lib.js）
 if (typeof YUI !== "undefined") {
