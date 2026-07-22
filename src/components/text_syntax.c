@@ -663,6 +663,40 @@ static void render_plain_segment(DFont* font, const char* text, int start, int e
     backend_render_text_destroy(tex);
 }
 
+int text_syntax_measure_range(DFont* font, const char* text, int start, int end,
+                              const TextSyntaxConfig* config) {
+    HighlightToken tokens[MAX_HIGHLIGHT_TOKENS];
+    int token_count = 0;
+    int width = 0;
+
+    if (!font || !text || !config || start >= end) return 0;
+    if (config->language == TEXT_SYNTAX_NONE) {
+        return text_syntax_measure_width(font, text, start, end, config->default_color);
+    }
+
+    if (config->language == TEXT_SYNTAX_JSON) {
+        token_count = json_tokenize_line(text, start, end, tokens, MAX_HIGHLIGHT_TOKENS);
+    } else if (config->language == TEXT_SYNTAX_SQL) {
+        token_count = sql_tokenize_line(text, start, end, tokens, MAX_HIGHLIGHT_TOKENS);
+    } else if (config->language == TEXT_SYNTAX_MARKDOWN) {
+        token_count = markdown_tokenize_line(text, start, end, tokens, MAX_HIGHLIGHT_TOKENS);
+    }
+
+    if (token_count == 0) {
+        return text_syntax_measure_width(font, text, start, end, config->default_color);
+    }
+
+    for (int i = 0; i < token_count; i++) {
+        int seg_start = tokens[i].start < start ? start : tokens[i].start;
+        int seg_end = tokens[i].end > end ? end : tokens[i].end;
+        if (seg_start < seg_end) {
+            width += text_syntax_measure_width(font, text, seg_start, seg_end,
+                                               token_color(config, tokens[i].type));
+        }
+    }
+    return width;
+}
+
 void text_syntax_render_range(DFont* font, const char* text, int start, int end,
                               const TextSyntaxConfig* config, int x, int y) {
     if (!font || !text || !config || start >= end) return;

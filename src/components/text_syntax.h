@@ -48,6 +48,8 @@ void text_syntax_config_init(TextSyntaxConfig* config, TextSyntaxLanguage langua
 void text_syntax_config_set_color(TextSyntaxConfig* config, const char* name, Color color);
 
 int text_syntax_measure_width(DFont* font, const char* text, int start, int end, Color color);
+int text_syntax_measure_range(DFont* font, const char* text, int start, int end,
+                              const TextSyntaxConfig* config);
 void text_syntax_render_range(DFont* font, const char* text, int start, int end,
                               const TextSyntaxConfig* config, int x, int y);
 

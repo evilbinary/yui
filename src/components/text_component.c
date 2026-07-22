@@ -208,7 +208,8 @@ static int text_component_measure_width(TextComponent* component, const char* te
         return 0;
     }
 
-    measured = text_syntax_measure_width(component->layer->font->default_font, text, start, end, component->layer->color);
+    measured = text_syntax_measure_range(component->layer->font->default_font, text, start, end,
+                                         &component->syntax_config);
 
     pos = start;
     while (pos < end) {
@@ -357,7 +358,7 @@ static void text_component_ensure_layout(TextComponent* component, int max_width
 
     int count = 0;
     int current_pos = 0;
-    while (current_pos <= text_len) {
+    while (current_pos < text_len) {
         if (count >= capacity) {
             capacity *= 2;
             int* grown = (int*)realloc(starts, sizeof(int) * (size_t)capacity);
@@ -365,7 +366,6 @@ static void text_component_ensure_layout(TextComponent* component, int max_width
             starts = grown;
         }
         starts[count++] = current_pos;
-        if (current_pos >= text_len) break;
 
         int line_end = current_pos;
         while (line_end < text_len && text[line_end] != '\n') {
@@ -387,6 +387,24 @@ static void text_component_ensure_layout(TextComponent* component, int max_width
             current_pos = line_end + 1;
         } else {
             current_pos = line_end;
+        }
+    }
+
+    /*
+     * A trailing empty visual line exists only for empty text or a final
+     * explicit newline.  Adding one after every non-empty line made the
+     * cursor and content height one line too large when wrap was disabled.
+     */
+    if (text_len == 0 || text[text_len - 1] == '\n') {
+        if (count >= capacity) {
+            int* grown = (int*)realloc(starts, sizeof(int) * (size_t)(capacity + 1));
+            if (grown) {
+                starts = grown;
+                capacity++;
+            }
+        }
+        if (count < capacity) {
+            starts[count++] = text_len;
         }
     }
 
@@ -693,6 +711,7 @@ TextComponent* text_component_create(Layer* layer) {
     // 文本内容现在存储在 layer->text 中，不需要初始化 component->text
     component->placeholder[0] = '\0';
     component->cursor_pos = 0;
+    component->cursor_visual_line = -1;
     component->selection_start = -1;
     component->selection_end = -1;
     component->max_length = MAX_TEXT * 4;
@@ -2182,6 +2201,54 @@ int get_line_end(TextComponent* component, int pos) {
     return end;
 }
 
+static void text_component_get_layout_line_range(TextComponent* component, const char* text,
+                                                 int text_len, int line_index,
+                                                 int* out_start, int* out_end) {
+    int start = 0;
+    int end = 0;
+
+    if (component && component->layout_count > 0 &&
+        line_index >= 0 && line_index < component->layout_count) {
+        start = component->layout_starts[line_index];
+        end = (line_index + 1 < component->layout_count)
+            ? component->layout_starts[line_index + 1] : text_len;
+        while (end > start && text[end - 1] == '\n') {
+            end--;
+        }
+    }
+
+    if (out_start) *out_start = start;
+    if (out_end) *out_end = end;
+}
+
+static int text_component_position_in_layout_line(TextComponent* component, const char* text,
+                                                  int start, int end, int click_x) {
+    int best_pos = start;
+    int best_distance = abs(click_x);
+    int pos = start;
+
+    while (pos < end) {
+        int next = text_component_grapheme_end(text, pos, end);
+        int width;
+        int distance;
+
+        if (next <= pos) {
+            int clen = utf8_char_len_at(text + pos);
+            next = pos + (clen > 0 ? clen : 1);
+        }
+        if (next > end) next = end;
+
+        width = text_component_measure_width(component, text, start, next);
+        distance = abs(click_x - width);
+        if (distance < best_distance) {
+            best_distance = distance;
+            best_pos = next;
+        }
+        pos = next;
+    }
+    return best_pos;
+}
+
 // 辅助函数：根据鼠标坐标计算对应的文本位置
 int text_component_get_position_from_point(TextComponent* component, Point pt, Layer* layer) {
     if (!component || !layer) {
@@ -2201,203 +2268,27 @@ int text_component_get_position_from_point(TextComponent* component, Point pt, L
         return 0;
     }
     
-    // 获取行高
-    int line_height = 20;
-    
-    if (layer->font && layer->font->default_font) {
-        Texture* temp_tex = backend_render_texture(layer->font->default_font, "X", layer->color);
-        if (temp_tex) {
-            int temp_width, temp_height;
-            backend_query_texture(temp_tex, NULL, NULL, &temp_width, &temp_height);
-            line_height = temp_height / yui_density;
-            backend_render_text_destroy(temp_tex);
-        }
-    }
-    
     if (component->multiline) {
-        // 多行模式处理 - 使用与文本渲染完全相同的算法
-        char* text = component->layer->text;
-        int text_len = strlen(text);
-        int current_pos = 0;
-        int visual_line = 0;  // 视觉上的行号（包括自动换行）
-        int max_width = render_rect.w;
-        
-        // 计算点击位置对应的视觉行号
-        int click_y = pt.y - render_rect.y;
-        int target_visual_line = click_y / (line_height + 2);
-        
-        // 考虑滚动偏移，计算实际的目标视觉行
-        int actual_scroll_line = layer->scroll_offset / (line_height + 2);
-        target_visual_line += actual_scroll_line;
-        if (target_visual_line < 0) target_visual_line = 0;
-        
-        // 遍历文本，模拟渲染过程（与文本渲染使用相同的算法）
-        while (current_pos < text_len) {
-            // 查找当前行可以显示的最大文本长度
-            int line_end = current_pos;
-            
-            // 尝试找到合适的换行点（找到\n或文本末尾）
-            while (line_end < text_len) {
-                // 遇到换行符时立即换行
-                if (text[line_end] == '\n') {
-                    break;
-                }
-                line_end++;
-            }
-            
-            // 计算整行文本的宽度
-            int current_width = 0;
-            char* temp_line = (char*)malloc(line_end - current_pos + 1);
-            if (temp_line) {
-                strncpy(temp_line, text + current_pos, line_end - current_pos);
-                temp_line[line_end - current_pos] = '\0';
-                
-                Texture* line_tex = backend_render_texture(layer->font->default_font, temp_line, layer->color);
-                if (line_tex) {
-                    int line_width, line_height_ignore;
-                    backend_query_texture(line_tex, NULL, NULL, &line_width, &line_height_ignore);
-                    current_width = line_width / yui_density;
-                    backend_render_text_destroy(line_tex);
-                }
-                
-                free(temp_line);
-            }
-            
-            // 确定当前视觉行的结束位置
-            int split_pos = current_pos;
-            
-            // 如果文本没有超过宽度限制，或关闭了自动换行
-            if (current_width <= max_width || !component->wrap) {
-                // 使用整行（到\n或文本末尾）
-                split_pos = line_end;
-            }
-            // 如果文本超过宽度限制，需要硬换行
-            else {
-                // 找到最大的不超过宽度的位置
-                split_pos = current_pos;
-                while (split_pos < line_end) {
-                    char* test_line = (char*)malloc(split_pos - current_pos + 1);
-                    if (test_line) {
-                        strncpy(test_line, text + current_pos, split_pos - current_pos);
-                        test_line[split_pos - current_pos] = '\0';
-                        
-                        Texture* test_tex = backend_render_texture(layer->font->default_font, test_line, layer->color);
-                        if (test_tex) {
-                            int test_width, test_height;
-                            backend_query_texture(test_tex, NULL, NULL, &test_width, &test_height);
-                            if (test_width / yui_density > max_width) {
-                                backend_render_text_destroy(test_tex);
-                                free(test_line);
-                                break;
-                            }
-                            backend_render_text_destroy(test_tex);
-                        }
-                        
-                        free(test_line);
-                    }
-                    split_pos++;
-                } 
-                
-                if (split_pos > current_pos) {
-                    split_pos--;
-                }
-            }
-            
-            // 确保split_pos >= current_pos，防止负长度
-            if (split_pos < current_pos) {
-                split_pos = current_pos;
-            }
-            
-            // 检查是否是目标视觉行
-            if (visual_line == target_visual_line) {
-                // 这就是目标行，计算点击位置
-                int click_x = pt.x - render_rect.x;
-                int best_pos = current_pos;
-                int min_distance = abs(click_x);
-                
-                // 测试这一段内每个位置
-                for (int pos = current_pos; pos <= split_pos; pos++) {
-                    int len = pos - current_pos;
-                    char* temp_text = (char*)malloc(len + 1);
-                    if (temp_text) {
-                        strncpy(temp_text, text + current_pos, len);
-                        temp_text[len] = '\0';
-                        
-                        int actual_width = 0;
-                        if (len > 0) {
-                            Texture* temp_tex = backend_render_texture(layer->font->default_font, temp_text, layer->color);
-                            if (temp_tex) {
-                                int temp_w, temp_h;
-                                backend_query_texture(temp_tex, NULL, NULL, &temp_w, &temp_h);
-                                actual_width = temp_w / yui_density;
-                                backend_render_text_destroy(temp_tex);
-                            }
-                        }
-                        
-                        int distance = abs(click_x - actual_width);
-                        if (distance < min_distance) {
-                            min_distance = distance;
-                            best_pos = pos;
-                        }
-                        
-                        free(temp_text);
-                    }
-                }
-                
-                return best_pos;
-            }
-            
-            // 移动到下一视觉行
-            visual_line++;
-            
-            // 如果是在换行符处结束，直接跳到下一个字符
-            if (split_pos < text_len && text[split_pos] == '\n') {
-                current_pos = split_pos + 1;
-            } else {
-                current_pos = split_pos;
-            }
-        }
-        
-        // 如果超出范围，返回文本末尾
-        return text_len;
+        const char* text = component->layer->text;
+        int text_len = (int)strlen(text);
+        int line_height = text_component_get_line_height(component);
+        int line_stride = line_height + TEXT_LINE_SPACING;
+        int target_line = (pt.y - render_rect.y + layer->scroll_offset) / line_stride;
+        int start;
+        int end;
+
+        text_component_ensure_layout(component, render_rect.w);
+        if (target_line < 0) target_line = 0;
+        if (target_line >= component->layout_count) return text_len;
+        component->cursor_visual_line = target_line;
+        text_component_get_layout_line_range(component, text, text_len, target_line, &start, &end);
+        return text_component_position_in_layout_line(component, text, start, end,
+                                                      pt.x - render_rect.x);
     } else {
-        // 单行模式处理 - 使用实际渲染宽度
-        int click_x = pt.x - render_rect.x;
-        int text_len = strlen(component->layer->text);
-        int best_pos = 0;
-        int min_distance = abs(click_x);
-        
-        // 测试每个位置
-        for (int pos = 0; pos <= text_len; pos++) {
-            char* temp_text = (char*)malloc(pos + 1);
-            if (temp_text) {
-                strncpy(temp_text, component->layer->text, pos);
-                temp_text[pos] = '\0';
-                
-                // 渲染这段文本以获取实际宽度
-                int actual_width = 0;
-                if (pos > 0) {
-                    Texture* temp_tex = backend_render_texture(layer->font->default_font, temp_text, layer->color);
-                    if (temp_tex) {
-                        int temp_w, temp_h;
-                        backend_query_texture(temp_tex, NULL, NULL, &temp_w, &temp_h);
-                        actual_width = temp_w / yui_density;
-                        backend_render_text_destroy(temp_tex);
-                    }
-                }
-                
-                // 计算到点击位置的距离
-                int distance = abs(click_x - actual_width);
-                if (distance < min_distance) {
-                    min_distance = distance;
-                    best_pos = pos;
-                }
-                
-                free(temp_text);
-            }
-        }
-        
-        return best_pos;
+        component->cursor_visual_line = -1;
+        return text_component_position_in_layout_line(component, component->layer->text,
+                                                      0, (int)strlen(component->layer->text),
+                                                      pt.x - render_rect.x + component->scroll_x);
     }
 }
 
@@ -2909,7 +2800,42 @@ void text_component_render(Layer* layer) {
         int line_height = text_component_get_line_height(component);
         
         if (component->multiline) {
-            // 多行模式：需要考虑自动换行来计算光标位置
+            const char* text = component->layer->text;
+            int cursor_line = 0;
+            int line_start = 0;
+            int line_end = 0;
+            int cursor_x;
+            int cursor_y;
+            int line_stride = line_height + TEXT_LINE_SPACING;
+
+            text_component_ensure_layout(component, render_rect.w);
+            for (int i = 0; i < component->layout_count; i++) {
+                int start;
+                int end;
+                text_component_get_layout_line_range(component, text, text_len, i, &start, &end);
+
+                if (component->cursor_pos < end ||
+                    (component->cursor_pos == end &&
+                     ((end < text_len && text[end] == '\n') ||
+                      component->cursor_visual_line == i)) ||
+                    i == component->layout_count - 1) {
+                    cursor_line = i;
+                    line_start = start;
+                    line_end = end;
+                    break;
+                }
+            }
+
+            if (component->cursor_pos < line_start) component->cursor_pos = line_start;
+            if (component->cursor_pos > line_end) component->cursor_pos = line_end;
+            cursor_x = render_rect.x + text_component_measure_width(
+                component, text, line_start, component->cursor_pos);
+            cursor_y = render_rect.y + cursor_line * line_stride - layer->scroll_offset;
+
+            backend_render_fill_rect(&(Rect){cursor_x, cursor_y, 2, line_height},
+                                     component->cursor_color);
+        } else if (component->multiline) {
+            // 旧的多行光标计算路径（保留以便后续移除）
             char* text = component->layer->text;
             int current_pos = 0;
             int visual_line = 0;

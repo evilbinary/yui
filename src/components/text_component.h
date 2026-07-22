@@ -13,6 +13,7 @@ typedef struct {
     // 注意：文本内容现在存储在 layer->text 中，不再使用固定大小的数组
     char placeholder[MAX_TEXT];  // 占位文本
     int cursor_pos;        // 光标位置
+    int cursor_visual_line; // 光标所在视觉行，消除自动换行边界位置歧义
     int selection_start;   // 选择起始位置
     int selection_end;     // 选择结束位置
     int max_length;        // 最大输入长度
