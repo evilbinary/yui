@@ -485,4 +485,14 @@ function openFile(opts, callback) {
 
 YUI.openFile = openFile;
 
+// 供测试用例访问（app/tests/test-dialog-lib.js）
+if (typeof YUI !== "undefined") {
+    YUI.__dialogTest__ = {
+        matchFileFilter: matchFileFilter,
+        parseDialogPayload: parseDialogPayload,
+        normalizePath: normalizePath,
+        ensureFileDialogLoaded: ensureFileDialogLoaded
+    };
+}
+
 })();

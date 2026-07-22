@@ -1497,9 +1497,14 @@ int js_module_call_event(const char* event_name, Layer* layer)
         }
         JS_FreeValue(g_js_ctx, global_obj);
         JS_FreeValue(g_js_ctx, func);
+        if (js_module_trigger_event(event_name, layer) == 0) {
+            return 0;
+        }
+        return -1;
     }
 
-    if (strchr(event_name, '.') != NULL) {
+    if (strncmp(event_name, "function", 8) != 0 &&
+        strchr(event_name, '.') != NULL) {
         return -1;
     }
 
