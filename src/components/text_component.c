@@ -2048,6 +2048,22 @@ int text_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
     TextComponent* component = (TextComponent*)layer->component;
     Point pt = {event->x, event->y};
 
+    if (event->phase == POINTER_WHEEL && component->multiline &&
+        point_in_rect(pt, layer->rect)) {
+        Rect content_rect;
+        int max_scroll;
+
+        text_component_get_content_rect(component, layer, &content_rect);
+        text_component_update_content_height(component);
+        max_scroll = layer->content_height - content_rect.h;
+        if (max_scroll > 0) {
+            layer->scroll_offset += event->delta_y * 20;
+            if (layer->scroll_offset < 0) layer->scroll_offset = 0;
+            if (layer->scroll_offset > max_scroll) layer->scroll_offset = max_scroll;
+            return 1;
+        }
+    }
+
     if (layer->scrollbar_v && layer->scrollbar_v->is_dragging) {
         if (event->phase == POINTER_UP && event->button == SDL_BUTTON_LEFT) {
             component->is_selecting = 0;
