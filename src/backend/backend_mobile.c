@@ -783,6 +783,12 @@ Texture* backend_render_texture(DFont* font, const char* text, Color color) {
 #endif
 }
 
+int backend_measure_text_width(DFont* font, const char* text) {
+    (void)font;
+    (void)text;
+    return 0;
+}
+
 void backend_render_fill_rect(Rect* rect, Color color) {
     backend_render_fill_rect_color(rect, color.r, color.g, color.b, color.a);
 }

@@ -634,13 +634,24 @@ int text_syntax_measure_width(DFont* font, const char* text, int start, int end,
     if (!font || !text || start >= end) return 0;
     int len = end - start;
     char* buf = (char*)malloc((size_t)len + 1);
+    int measured;
+    Texture* tex;
+    int width = 0;
+    int height = 0;
+
     if (!buf) return 0;
     memcpy(buf, text + start, (size_t)len);
     buf[len] = '\0';
-    Texture* tex = backend_render_texture(font, buf, color);
+
+    measured = backend_measure_text_width(font, buf);
+    if (measured > 0) {
+        free(buf);
+        return measured;
+    }
+
+    tex = backend_render_texture(font, buf, color);
     free(buf);
     if (!tex) return 0;
-    int width = 0, height = 0;
     backend_query_texture(tex, NULL, NULL, &width, &height);
     backend_render_text_destroy(tex);
     return width / (int)yui_density;

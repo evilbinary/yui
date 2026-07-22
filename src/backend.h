@@ -13,6 +13,8 @@ void backend_quit();
 Texture* backend_load_texture(char* path);
 Texture* backend_load_texture_from_base64(const char* base64_data, size_t data_len);
 Texture* backend_render_texture(DFont* font,const char* text,Color color);
+/* Measure text width in layout pixels without creating a render texture. */
+int backend_measure_text_width(DFont* font, const char* text);
 void backend_render_fill_rect(Rect* rect,Color color);
 void backend_render_rect(Rect* rect,Color color);
 void backend_render_rect_color(Rect* rect,unsigned char r,unsigned char g,unsigned char b,unsigned char a);

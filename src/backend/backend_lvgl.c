@@ -776,6 +776,24 @@ Texture* backend_load_texture_from_base64(const char* base64_data, size_t data_l
     return NULL;
 }
 
+int backend_measure_text_width(DFont* font, const char* text)
+{
+#if defined(YUI_LVGL_PORT_SDL)
+    int w = 0;
+    int h = 0;
+
+    if (!font || !text || !text[0]) {
+        return 0;
+    }
+    if (TTF_SizeUTF8((TTF_Font*)font, text, &w, &h) == 0 && w > 0) {
+        return (int)(((float)w / yui_density) + 0.5f);
+    }
+#endif
+    (void)font;
+    (void)text;
+    return 0;
+}
+
 Texture* backend_render_texture(DFont* font, const char* text, Color color)
 {
 #if defined(YUI_LVGL_PORT_SDL)

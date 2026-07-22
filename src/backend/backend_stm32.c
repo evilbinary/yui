@@ -109,6 +109,13 @@ Texture* backend_load_texture_from_base64(const char* base64_data, size_t data_l
     return NULL;
 }
 
+int backend_measure_text_width(DFont* font, const char* text) {
+    if (!font || !text || !text[0]) {
+        return 0;
+    }
+    return (int)(strlen(text) * font->size / 2);
+}
+
 Texture* backend_render_texture(DFont* font, const char* text, Color color) {
     // STM32 平台实现 - 渲染文本为纹理
     // 这里需要实现字体渲染

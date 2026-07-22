@@ -63,6 +63,7 @@ typedef struct {
     DFont* font;
     int font_size;
     int scale_milli;
+    uint16_t text_len;
     char text[256];
     Color color;
     SDL_Texture* texture;
@@ -123,7 +124,16 @@ static int backend_texture_cache_entry_matches(const TextureCacheEntry* entry, u
         entry->color.b != color.b || entry->color.a != color.a) {
         return 0;
     }
-    return strcmp(entry->text, text) == 0;
+    {
+        size_t len = text ? strlen(text) : 0;
+        if (entry->text_len != len) {
+            return 0;
+        }
+        if (len >= sizeof(entry->text)) {
+            return strncmp(entry->text, text, sizeof(entry->text) - 1) == 0;
+        }
+        return strcmp(entry->text, text) == 0;
+    }
 }
 
 static int backend_text_cache_volatile(const char* text) {
@@ -213,6 +223,7 @@ static void backend_texture_cache_store_entry(int cache_index, uint64_t key_hash
     texture_cache[cache_index].font = font;
     texture_cache[cache_index].font_size = font_size;
     texture_cache[cache_index].scale_milli = backend_texture_cache_scale_key();
+    texture_cache[cache_index].text_len = text ? (uint16_t)strlen(text) : 0;
     strncpy(texture_cache[cache_index].text, text, sizeof(texture_cache[cache_index].text) - 1);
     texture_cache[cache_index].text[sizeof(texture_cache[cache_index].text) - 1] = '\0';
     texture_cache[cache_index].color = color;
@@ -778,6 +789,7 @@ void init_texture_cache() {
         texture_cache[i].font = NULL;
         texture_cache[i].font_size = 0;
         texture_cache[i].scale_milli = 0;
+        texture_cache[i].text_len = 0;
         texture_cache[i].text[0] = '\0';
         texture_cache[i].texture = NULL;
         texture_cache[i].width = 0;
@@ -802,6 +814,7 @@ void cleanup_texture_cache() {
         texture_cache[i].font = NULL;
         texture_cache[i].font_size = 0;
         texture_cache[i].scale_milli = 0;
+        texture_cache[i].text_len = 0;
         texture_cache[i].text[0] = '\0';
         texture_cache[i].width = 0;
         texture_cache[i].height = 0;
@@ -821,6 +834,7 @@ void backend_texture_cache_invalidate(void) {
         texture_cache[i].texture = NULL;
         texture_cache[i].key_hash = 0;
         texture_cache[i].font = NULL;
+        texture_cache[i].text_len = 0;
         texture_cache[i].text[0] = '\0';
         texture_cache[i].width = 0;
         texture_cache[i].height = 0;
@@ -2226,6 +2240,93 @@ int backend_query_texture(Texture * texture,
                      int *w, int *h){
 
    return SDL_QueryTexture(texture,format,access,w,h);                      
+}
+
+int backend_measure_text_width(DFont* font, const char* text) {
+    DFont* fallback = NULL;
+    DFont* render_font;
+    int total_w = 0;
+    int w = 0;
+    int h = 0;
+
+    if (!font || !text || !text[0]) {
+        return 0;
+    }
+
+    render_font = backend_resolve_render_font(font, text, &fallback);
+    if (render_font) {
+        if (TTF_SizeUTF8(render_font, text, &w, &h) == 0 && w > 0) {
+            return (int)(((float)w / yui_density) + 0.5f);
+        }
+        return 0;
+    }
+
+    if (!fallback || fallback == font) {
+        return 0;
+    }
+
+    {
+        const char* cursor = text;
+        const char* run_start = NULL;
+        const char* run_end = NULL;
+        DFont* run_font = NULL;
+        char run_buf[256];
+
+        while (1) {
+            if (!*cursor) {
+                if (run_start && run_font && run_end > run_start) {
+                    int len = (int)(run_end - run_start);
+                    if (len > 0 && len < (int)sizeof(run_buf)) {
+                        memcpy(run_buf, run_start, (size_t)len);
+                        run_buf[len] = '\0';
+                        if (TTF_SizeUTF8(run_font, run_buf, &w, &h) == 0) {
+                            total_w += w;
+                        }
+                    }
+                }
+                break;
+            }
+
+            {
+                const char* next = cursor;
+                Uint32 codepoint = 0;
+                DFont* chosen;
+
+                if (!utf8_decode_codepoint(&next, &codepoint)) {
+                    break;
+                }
+                chosen = backend_pick_font_for_codepoint(font, fallback, codepoint);
+                if (!chosen) {
+                    cursor = next;
+                    continue;
+                }
+
+                if (run_font == chosen) {
+                    run_end = next;
+                } else {
+                    if (run_start && run_font && run_end > run_start) {
+                        int len = (int)(run_end - run_start);
+                        if (len > 0 && len < (int)sizeof(run_buf)) {
+                            memcpy(run_buf, run_start, (size_t)len);
+                            run_buf[len] = '\0';
+                            if (TTF_SizeUTF8(run_font, run_buf, &w, &h) == 0) {
+                                total_w += w;
+                            }
+                        }
+                    }
+                    run_start = cursor;
+                    run_end = next;
+                    run_font = chosen;
+                }
+                cursor = next;
+            }
+        }
+    }
+
+    if (total_w > 0) {
+        return (int)(((float)total_w / yui_density) + 0.5f);
+    }
+    return 0;
 }
 
 Texture* backend_render_texture(DFont* font,const char* text,Color color){
