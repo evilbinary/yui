@@ -1,31 +1,37 @@
 {
     "id": "textEditorPanel",
-    "type": "Panel",
-    "size": [600, 500],
+    "type": "View",
+    "size": [920, 720],
     "style": {
-        "bgColor": "#F5F5F5",
-        "borderRadius": 12,
-        "boxShadow": "0 8px 32px rgba(0,0,0,0.15)"
+        "borderRadius": 12
     },
     "layout": {
         "type": "vertical",
-        "spacing": 20
+        "spacing": 0
     },
     "children": [
         {
             "id": "editorHeader",
-            "type": "HStack",
-            "height":80,
+            "type": "View",
+            "size": [920, 56],
+            "layout": {
+                "type": "horizontal",
+                "spacing": 12,
+                "padding": [12, 20, 12, 20],
+                "align": "center",
+                "justify": "space-between"
+            },
             "style": {
                 "bgColor": "#FFFFFF",
-                "padding": [20, 20],
-                "borderBottom": "1px solid #E0E0E0"
+                "borderBottomWidth": 1,
+                "borderBottomColor": "#E0E0E0"
             },
             "children": [
                 {
                     "id": "editorTitle",
                     "type": "Label",
                     "text": "文本编辑器",
+                    "size": [200, 28],
                     "style": {
                         "color": "#333333",
                         "fontSize": 20,
@@ -36,12 +42,12 @@
                     "id": "closeButton",
                     "type": "Button",
                     "text": "关闭",
+                    "size": [72, 32],
                     "style": {
                         "color": "#FFFFFF",
                         "bgColor": "#FF5252",
                         "fontSize": 14,
-                        "borderRadius": 6,
-                        "padding": [8, 16]
+                        "borderRadius": 6
                     },
                     "events": {
                         "onClick": "@closeTextEditor"
@@ -51,53 +57,275 @@
         },
         {
             "id": "editorContent",
-            "type": "VStack",
+            "type": "View",
+            "size": [0, 0],
+            "flex": 1,
+            "layout": {
+                "type": "vertical",
+                "spacing": 10,
+                "padding": [16, 20, 16, 20]
+            },
             "style": {
-                "padding": [20, 20],
-                "flex": 1
+                "bgColor": "#F5F5F5"
             },
             "children": [
                 {
+                    "id": "plainSectionTitle",
+                    "type": "Label",
+                    "text": "普通编辑器",
+                    "size": [0, 18],
+                    "style": {
+                        "color": "#555555",
+                        "fontSize": 14,
+                        "fontWeight": "bold"
+                    }
+                },
+                {
                     "id": "textArea",
                     "type": "Text",
+                    "size": [0, 140],
                     "showLineNumbers": true,
                     "lineNumberWidth": 40,
                     "placeholder": "在此输入多行文本...",
                     "multiline": true,
                     "editable": true,
+                    "wrap": true,
+                    "scrollable": 1,
                     "style": {
                         "color": "#333333",
                         "bgColor": "#FFFFFF",
                         "fontSize": 16,
-                        "border": "1px solid #E0E0E0",
+                        "borderWidth": 1,
+                        "borderColor": "#E0E0E0",
                         "borderRadius": 8,
-                        "padding": [12, 16],
-                        "minHeight": 300,
-                        "flex": 1,
-                        "lineHeight": 1.5
+                        "padding": [10, 12, 10, 12]
                     },
                     "events": {
                         "onChange": "@onTextChange"
                     }
                 },
                 {
-                    "id": "toolbar",
-                    "type": "HStack",
+                    "id": "syntaxSectionTitle",
+                    "type": "Label",
+                    "text": "语法高亮编辑器（JSON / SQL / Markdown）",
+                    "size": [0, 18],
                     "style": {
+                        "color": "#555555",
+                        "fontSize": 14,
+                        "fontWeight": "bold"
+                    }
+                },
+                {
+                    "id": "syntaxEditorRow",
+                    "type": "View",
+                    "size": [0, 0],
+                    "flex": 1,
+                    "layout": {
+                        "type": "horizontal",
+                        "spacing": 10
+                    },
+                    "children": [
+                        {
+                            "id": "jsonSyntaxPanel",
+                            "type": "View",
+                            "size": [0, 0],
+                            "flex": 1,
+                            "layout": {
+                                "type": "vertical",
+                                "spacing": 4
+                            },
+                            "children": [
+                                {
+                                    "id": "jsonSyntaxLabel",
+                                    "type": "Label",
+                                    "text": "JSON",
+                                    "size": [0, 16],
+                                    "style": {
+                                        "color": "#89B4FA",
+                                        "fontSize": 12,
+                                        "fontWeight": "bold"
+                                    }
+                                },
+                                {
+                                    "id": "jsonSyntaxEditor",
+                                    "type": "Text",
+                                    "text": "{\n  \"name\": \"yui\",\n  \"version\": 1,\n  \"enabled\": true,\n  \"tags\": [\"ui\", \"test\"]\n}",
+                                    "size": [0, 0],
+                                    "flex": 1,
+                                    "showLineNumbers": true,
+                                    "lineNumberWidth": 36,
+                                    "multiline": true,
+                                    "editable": true,
+                                    "wrap": false,
+                                    "scrollable": 1,
+                                    "syntaxHighlight": "json",
+                                    "syntaxColors": {
+                                        "key": "#89B4FA",
+                                        "string": "#A6E3A1",
+                                        "number": "#FAB387",
+                                        "keyword": "#CBA6F7",
+                                        "punctuation": "#89DCEB",
+                                        "comment": "#6C7086"
+                                    },
+                                    "style": {
+                                        "bgColor": "#1E1E2E",
+                                        "color": "#CDD6F4",
+                                        "selectionColor": "#6BAF52CC",
+                                        "cursorColor": "#F5E0DC",
+                                        "fontSize": 13,
+                                        "fontFamily": "monospace",
+                                        "padding": [8, 10, 8, 10],
+                                        "borderWidth": 1,
+                                        "borderColor": "#313244",
+                                        "borderRadius": 6
+                                    },
+                                    "events": {
+                                        "onChange": "@onJsonSyntaxChange"
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "id": "sqlSyntaxPanel",
+                            "type": "View",
+                            "size": [0, 0],
+                            "flex": 1,
+                            "layout": {
+                                "type": "vertical",
+                                "spacing": 4
+                            },
+                            "children": [
+                                {
+                                    "id": "sqlSyntaxLabel",
+                                    "type": "Label",
+                                    "text": "SQL",
+                                    "size": [0, 16],
+                                    "style": {
+                                        "color": "#CBA6F7",
+                                        "fontSize": 12,
+                                        "fontWeight": "bold"
+                                    }
+                                },
+                                {
+                                    "id": "sqlSyntaxEditor",
+                                    "type": "Text",
+                                    "text": "SELECT u.id, u.name, COUNT(o.id) AS order_count\nFROM users u\nLEFT JOIN orders o ON o.user_id = u.id\nWHERE u.active = true\nGROUP BY u.id, u.name\nORDER BY order_count DESC\nLIMIT 10;",
+                                    "size": [0, 0],
+                                    "flex": 1,
+                                    "showLineNumbers": true,
+                                    "lineNumberWidth": 36,
+                                    "multiline": true,
+                                    "editable": true,
+                                    "wrap": false,
+                                    "scrollable": 1,
+                                    "syntaxHighlight": "sql",
+                                    "syntaxColors": {
+                                        "keyword": "#CBA6F7",
+                                        "string": "#A6E3A1",
+                                        "number": "#FAB387",
+                                        "comment": "#6C7086",
+                                        "punctuation": "#89DCEB"
+                                    },
+                                    "style": {
+                                        "bgColor": "#1E1E2E",
+                                        "color": "#CDD6F4",
+                                        "selectionColor": "#6BAF52CC",
+                                        "cursorColor": "#F5E0DC",
+                                        "fontSize": 13,
+                                        "fontFamily": "monospace",
+                                        "padding": [8, 10, 8, 10],
+                                        "borderWidth": 1,
+                                        "borderColor": "#313244",
+                                        "borderRadius": 6
+                                    },
+                                    "events": {
+                                        "onChange": "@onSqlSyntaxChange"
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "id": "mdSyntaxPanel",
+                            "type": "View",
+                            "size": [0, 0],
+                            "flex": 1,
+                            "layout": {
+                                "type": "vertical",
+                                "spacing": 4
+                            },
+                            "children": [
+                                {
+                                    "id": "mdSyntaxLabel",
+                                    "type": "Label",
+                                    "text": "Markdown",
+                                    "size": [0, 16],
+                                    "style": {
+                                        "color": "#F38BA8",
+                                        "fontSize": 12,
+                                        "fontWeight": "bold"
+                                    }
+                                },
+                                {
+                                    "id": "mdSyntaxEditor",
+                                    "type": "Text",
+                                    "text": "# YUI Editor\n\n**粗体**、*斜体*、`inline code`\n\n- 列表项一\n- 列表项二\n\n> 引用块\n\n```js\nconsole.log('hello');\n```",
+                                    "size": [0, 0],
+                                    "flex": 1,
+                                    "showLineNumbers": true,
+                                    "lineNumberWidth": 36,
+                                    "multiline": true,
+                                    "editable": true,
+                                    "wrap": true,
+                                    "scrollable": 1,
+                                    "syntaxHighlight": "markdown",
+                                    "syntaxColors": {
+                                        "heading": "#F9E2AF",
+                                        "keyword": "#F38BA8",
+                                        "string": "#A6E3A1",
+                                        "key": "#89B4FA",
+                                        "comment": "#6C7086",
+                                        "punctuation": "#89DCEB"
+                                    },
+                                    "style": {
+                                        "bgColor": "#1E1E2E",
+                                        "color": "#CDD6F4",
+                                        "selectionColor": "#6BAF52CC",
+                                        "cursorColor": "#F5E0DC",
+                                        "fontSize": 13,
+                                        "fontFamily": "monospace",
+                                        "padding": [8, 10, 8, 10],
+                                        "borderWidth": 1,
+                                        "borderColor": "#313244",
+                                        "borderRadius": 6
+                                    },
+                                    "events": {
+                                        "onChange": "@onMdSyntaxChange"
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "toolbar",
+                    "type": "View",
+                    "size": [0, 40],
+                    "layout": {
+                        "type": "horizontal",
                         "spacing": 10,
-                        "padding": [10, 0]
+                        "align": "center"
                     },
                     "children": [
                         {
                             "id": "saveButton",
                             "type": "Button",
                             "text": "保存",
+                            "size": [72, 32],
                             "style": {
                                 "color": "#FFFFFF",
                                 "bgColor": "#4CAF50",
                                 "fontSize": 14,
-                                "borderRadius": 6,
-                                "padding": [8, 16]
+                                "borderRadius": 6
                             },
                             "events": {
                                 "onClick": "@saveText"
@@ -107,12 +335,12 @@
                             "id": "clearButton",
                             "type": "Button",
                             "text": "清空",
+                            "size": [72, 32],
                             "style": {
                                 "color": "#FFFFFF",
                                 "bgColor": "#FF9800",
                                 "fontSize": 14,
-                                "borderRadius": 6,
-                                "padding": [8, 16]
+                                "borderRadius": 6
                             },
                             "events": {
                                 "onClick": "@clearText"
@@ -122,6 +350,7 @@
                             "id": "wordCount",
                             "type": "Label",
                             "text": "字数: 0",
+                            "size": [200, 20],
                             "style": {
                                 "color": "#666666",
                                 "fontSize": 14
