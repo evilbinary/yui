@@ -143,17 +143,18 @@ static int text_component_is_emoji_codepoint(unsigned int cp) {
 }
 
 static int text_component_estimate_cluster_width(TextComponent* component, unsigned int cp) {
-    int line_height = text_component_get_line_height(component);
-    if (line_height < 1) {
-        line_height = 20;
+    int font_size = 14;
+    if (component && component->layer && component->layer->font &&
+        component->layer->font->size > 0) {
+        font_size = component->layer->font->size;
     }
     if (text_component_is_emoji_codepoint(cp)) {
-        return line_height;
+        return font_size;
     }
     if (cp >= 0x80) {
-        return line_height;
+        return font_size;
     }
-    return line_height / 2;
+    return (font_size + 1) / 2;
 }
 
 static int text_component_grapheme_end(const char* text, int start, int end) {
@@ -221,10 +222,15 @@ static int text_component_measure_width(TextComponent* component, const char* te
         pos = gend;
     }
 
-    if (estimated > measured) {
-        return estimated;
+    /*
+     * backend_render_texture() is also what the normal rendering path uses,
+     * so its width is the only reliable width for wrapping.  The estimate is
+     * a fallback for backends that cannot create a texture for this text.
+     */
+    if (measured > 0) {
+        return measured;
     }
-    return measured > 0 ? measured : estimated;
+    return estimated;
 }
 
 static int text_component_grapheme_safe_end(const char* text, int start, int pos, int line_end) {
@@ -286,6 +292,22 @@ static int text_component_find_wrap_end(const char* text, int start, int line_en
     if (pos > line_end) {
         pos = line_end;
     }
+
+    /*
+     * The binary search probes byte offsets, which can land inside UTF-8
+     * sequences.  Fill forward from the resulting valid grapheme boundary
+     * using real measurements, so a valid character is never left behind
+     * merely because an intermediate probe was an invalid UTF-8 fragment.
+     */
+    while (pos < line_end) {
+        int next = text_component_grapheme_end(text, pos, line_end);
+        if (next <= pos ||
+            text_component_measure_width(component, text, start, next) > max_width) {
+            break;
+        }
+        pos = next;
+    }
+
     if (pos <= start) {
         pos = text_component_grapheme_end(text, start, line_end);
         if (pos <= start) {
