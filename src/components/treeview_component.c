@@ -344,6 +344,8 @@ static int treeview_data_update(Layer* layer, cJSON* data) {
             if (node) treeview_add_root_node(component, node);
         }
     }
+    treeview_update_scrollbar(component);
+    mark_layer_dirty(layer, DIRTY_LAYOUT | DIRTY_TEXT);
     return 0;
 }
 
