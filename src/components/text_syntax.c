@@ -6,27 +6,19 @@
 #include <stdlib.h>
 #include <string.h>
 
-
-
-typedef enum {
-    HL_TOKEN_DEFAULT = 0,
-    HL_TOKEN_KEY,
-    HL_TOKEN_STRING,
-    HL_TOKEN_NUMBER,
-    HL_TOKEN_KEYWORD,
-    HL_TOKEN_PUNCTUATION,
-    HL_TOKEN_COMMENT,
-    HL_TOKEN_HEADING,
-    HL_TOKEN_CODE,
-} HighlightTokenType;
-
-typedef struct {
-    int start;
-    int end;
-    HighlightTokenType type;
-} HighlightToken;
-
-#define MAX_HIGHLIGHT_TOKENS 256
+/* Keep old names as aliases during tokenizer migration */
+typedef TextHlToken HighlightToken;
+typedef TextHlKind HighlightTokenType;
+#define HL_TOKEN_DEFAULT      TEXT_HL_DEFAULT
+#define HL_TOKEN_KEY          TEXT_HL_KEY
+#define HL_TOKEN_STRING       TEXT_HL_STRING
+#define HL_TOKEN_NUMBER       TEXT_HL_NUMBER
+#define HL_TOKEN_KEYWORD      TEXT_HL_KEYWORD
+#define HL_TOKEN_PUNCTUATION  TEXT_HL_PUNCTUATION
+#define HL_TOKEN_COMMENT      TEXT_HL_COMMENT
+#define HL_TOKEN_HEADING      TEXT_HL_HEADING
+#define HL_TOKEN_CODE         TEXT_HL_CODE
+#define MAX_HIGHLIGHT_TOKENS  TEXT_SYNTAX_MAX_TOKENS
 
 static int syntax_utf8_char_len(const char* text, int pos, int end) {
     int len;
@@ -49,10 +41,11 @@ static int syntax_append_default_token(HighlightToken tokens[], int* count, int 
     return pos + clen;
 }
 
-void text_syntax_config_init(TextSyntaxConfig* config, TextSyntaxLanguage language, Color default_color) {
+void text_syntax_config_init(TextSyntaxConfig* config, const char* language, Color default_color) {
     if (!config) return;
+    text_syntax_ensure_init();
     memset(config, 0, sizeof(TextSyntaxConfig));
-    config->language = language;
+    config->lang = text_syntax_find(language);
     config->default_color = default_color;
     config->comment_color = (Color){108, 112, 134, 255};
     config->punctuation_color = (Color){137, 220, 235, 255};
@@ -60,19 +53,8 @@ void text_syntax_config_init(TextSyntaxConfig* config, TextSyntaxLanguage langua
     config->keyword_color = (Color){203, 166, 247, 255};
     config->string_color = (Color){166, 227, 161, 255};
     config->key_color = (Color){137, 180, 250, 255};
-    if (language == TEXT_SYNTAX_JSON) {
-        config->key_color = (Color){156, 220, 254, 255};
-        config->string_color = (Color){206, 145, 120, 255};
-        config->number_color = (Color){181, 206, 168, 255};
-        config->keyword_color = (Color){86, 156, 214, 255};
-        config->punctuation_color = (Color){212, 212, 212, 255};
-        config->comment_color = default_color;
-    } else if (language == TEXT_SYNTAX_MARKDOWN) {
-        config->keyword_color = (Color){250, 179, 135, 255};
-        config->string_color = (Color){166, 227, 161, 255};
-        config->key_color = (Color){243, 139, 168, 255};
-        config->comment_color = (Color){108, 112, 134, 255};
-        config->punctuation_color = (Color){137, 180, 250, 255};
+    if (config->lang && config->lang->init_colors) {
+        config->lang->init_colors(config, default_color);
     }
 }
 
@@ -100,6 +82,8 @@ static Color token_color(const TextSyntaxConfig* config, HighlightTokenType type
         case HL_TOKEN_COMMENT: return config->comment_color;
         case HL_TOKEN_HEADING: return config->keyword_color;
         case HL_TOKEN_CODE: return config->key_color;
+        case TEXT_HL_TYPE: return config->keyword_color;
+        case TEXT_HL_PREPROC: return config->key_color;
         default: return config->default_color;
     }
 }
@@ -122,7 +106,8 @@ static int is_json_keyword(const char* text, int pos, int end, const char* word,
     return 1;
 }
 
-static int json_tokenize_line(const char* text, int start, int end, HighlightToken tokens[], int max_tokens) {
+static int json_tokenize_line(const char* text, int start, int end, HighlightToken tokens[], int max_tokens, void* ctx) {
+    (void)ctx;
     int count = 0;
     int pos = start;
 
@@ -250,7 +235,8 @@ static int is_sql_keyword(const char* text, int start, int end) {
     return 0;
 }
 
-static int sql_tokenize_line(const char* text, int start, int end, HighlightToken tokens[], int max_tokens) {
+static int sql_tokenize_line(const char* text, int start, int end, HighlightToken tokens[], int max_tokens, void* ctx) {
+    (void)ctx;
     int count = 0;
     int pos = start;
 
@@ -414,7 +400,8 @@ static int md_try_delimited_span(const char* text, int end, int* pos, char open,
     return 1;
 }
 
-static int markdown_tokenize_line(const char* text, int start, int end, HighlightToken tokens[], int max_tokens) {
+static int markdown_tokenize_line(const char* text, int start, int end, HighlightToken tokens[], int max_tokens, void* ctx) {
+    (void)ctx;
     int count = 0;
     int first = md_line_first_nonspace(text, start, end);
 
@@ -681,17 +668,12 @@ int text_syntax_measure_range(DFont* font, const char* text, int start, int end,
     int width = 0;
 
     if (!font || !text || !config || start >= end) return 0;
-    if (config->language == TEXT_SYNTAX_NONE) {
+    if (!config->lang || !config->lang->tokenize_line) {
         return text_syntax_measure_width(font, text, start, end, config->default_color);
     }
 
-    if (config->language == TEXT_SYNTAX_JSON) {
-        token_count = json_tokenize_line(text, start, end, tokens, MAX_HIGHLIGHT_TOKENS);
-    } else if (config->language == TEXT_SYNTAX_SQL) {
-        token_count = sql_tokenize_line(text, start, end, tokens, MAX_HIGHLIGHT_TOKENS);
-    } else if (config->language == TEXT_SYNTAX_MARKDOWN) {
-        token_count = markdown_tokenize_line(text, start, end, tokens, MAX_HIGHLIGHT_TOKENS);
-    }
+    token_count = config->lang->tokenize_line(text, start, end, tokens, MAX_HIGHLIGHT_TOKENS,
+                                              config->lang->ctx);
 
     if (token_count == 0) {
         return text_syntax_measure_width(font, text, start, end, config->default_color);
@@ -712,20 +694,14 @@ void text_syntax_render_range(DFont* font, const char* text, int start, int end,
                               const TextSyntaxConfig* config, int x, int y) {
     if (!font || !text || !config || start >= end) return;
 
-    if (config->language == TEXT_SYNTAX_NONE) {
+    if (!config->lang || !config->lang->tokenize_line) {
         render_plain_segment(font, text, start, end, config->default_color, x, y);
         return;
     }
 
     HighlightToken tokens[MAX_HIGHLIGHT_TOKENS];
-    int token_count = 0;
-    if (config->language == TEXT_SYNTAX_JSON) {
-        token_count = json_tokenize_line(text, start, end, tokens, MAX_HIGHLIGHT_TOKENS);
-    } else if (config->language == TEXT_SYNTAX_SQL) {
-        token_count = sql_tokenize_line(text, start, end, tokens, MAX_HIGHLIGHT_TOKENS);
-    } else if (config->language == TEXT_SYNTAX_MARKDOWN) {
-        token_count = markdown_tokenize_line(text, start, end, tokens, MAX_HIGHLIGHT_TOKENS);
-    }
+    int token_count = config->lang->tokenize_line(text, start, end, tokens, MAX_HIGHLIGHT_TOKENS,
+                                                  config->lang->ctx);
 
     if (token_count == 0) {
         render_plain_segment(font, text, start, end, config->default_color, x, y);
@@ -743,4 +719,57 @@ void text_syntax_render_range(DFont* font, const char* text, int start, int end,
         render_plain_segment(font, text, seg_start, seg_end, color, cursor_x, y);
         cursor_x += text_syntax_measure_width(font, text, seg_start, seg_end, color);
     }
+}
+
+/* ---- language registry ---- */
+
+static const TextSyntaxLang* g_langs[TEXT_SYNTAX_MAX_LANGS];
+static int g_lang_count = 0;
+static int g_syntax_inited = 0;
+
+static const char* const markdown_aliases[] = { "md", NULL };
+
+static const TextSyntaxLang g_lang_json = {
+    "json", NULL, json_tokenize_line, NULL, NULL
+};
+static const TextSyntaxLang g_lang_sql = {
+    "sql", NULL, sql_tokenize_line, NULL, NULL
+};
+static const TextSyntaxLang g_lang_markdown = {
+    "markdown", markdown_aliases, markdown_tokenize_line, NULL, NULL
+};
+
+/* Optional extra language modules (compiled separately). */
+void text_syntax_lang_c_register(void);
+
+int text_syntax_register(const TextSyntaxLang* lang) {
+    if (!lang || !lang->name || !lang->tokenize_line) return -1;
+    if (text_syntax_find(lang->name)) return 0; /* already registered */
+    if (g_lang_count >= TEXT_SYNTAX_MAX_LANGS) return -1;
+    g_langs[g_lang_count++] = lang;
+    return 0;
+}
+
+const TextSyntaxLang* text_syntax_find(const char* name) {
+    if (!name || name[0] == '\0') return NULL;
+    for (int i = 0; i < g_lang_count; i++) {
+        const TextSyntaxLang* lang = g_langs[i];
+        if (!lang || !lang->name) continue;
+        if (strcmp(lang->name, name) == 0) return lang;
+        if (lang->aliases) {
+            for (int a = 0; lang->aliases[a]; a++) {
+                if (strcmp(lang->aliases[a], name) == 0) return lang;
+            }
+        }
+    }
+    return NULL;
+}
+
+void text_syntax_ensure_init(void) {
+    if (g_syntax_inited) return;
+    g_syntax_inited = 1;
+    text_syntax_register(&g_lang_json);
+    text_syntax_register(&g_lang_sql);
+    text_syntax_register(&g_lang_markdown);
+    text_syntax_lang_c_register();
 }

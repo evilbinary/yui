@@ -534,7 +534,7 @@ static void text_component_render_text_segment(TextComponent* component, const c
     }
     if (start >= end) return;
 
-    if (component->syntax_config.language != TEXT_SYNTAX_NONE) {
+    if (component->syntax_config.lang != NULL) {
         text_syntax_render_range(component->layer->font->default_font, text, start, end,
                                  &component->syntax_config, x, y);
         return;
@@ -560,18 +560,10 @@ static void text_component_render_text_segment(TextComponent* component, const c
     }
 }
 
-static TextSyntaxLanguage text_component_parse_syntax_language(const char* language) {
-    if (!language || language[0] == '\0') return TEXT_SYNTAX_NONE;
-    if (strcmp(language, "json") == 0) return TEXT_SYNTAX_JSON;
-    if (strcmp(language, "sql") == 0) return TEXT_SYNTAX_SQL;
-    if (strcmp(language, "markdown") == 0 || strcmp(language, "md") == 0) return TEXT_SYNTAX_MARKDOWN;
-    return TEXT_SYNTAX_NONE;
-}
-
 void text_component_set_syntax_highlight(TextComponent* component, const char* language) {
     if (!component) return;
-    TextSyntaxLanguage lang = text_component_parse_syntax_language(language);
-    text_syntax_config_init(&component->syntax_config, lang, component->layer ? component->layer->color : (Color){0, 0, 0, 255});
+    text_syntax_config_init(&component->syntax_config, language,
+                            component->layer ? component->layer->color : (Color){0, 0, 0, 255});
 }
 
 static void text_component_parse_syntax_colors(TextComponent* component, cJSON* colors_obj) {
@@ -736,7 +728,7 @@ TextComponent* text_component_create(Layer* layer) {
     component->layout_cache_revision = -1;
     component->layout_cache_max_width = 0;
     component->layout_cache_text_len = -1;
-    text_syntax_config_init(&component->syntax_config, TEXT_SYNTAX_NONE, layer->color);
+    text_syntax_config_init(&component->syntax_config, NULL, layer->color);
     
     // 初始化图层的文本字段
     if (!layer->text) {
