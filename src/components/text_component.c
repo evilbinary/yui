@@ -760,6 +760,17 @@ cJSON* text_component_get_property(Layer* layer, const char* property_name) {
         // 最大长度
         return cJSON_CreateNumber(component->max_length);
     }
+    else if (strcmp(property_name, "contentHeight") == 0 || strcmp(property_name, "content_height") == 0) {
+        int pad_top;
+        int pad_bottom;
+        if (layer->dirty_flags & DIRTY_TEXT) {
+            text_component_invalidate_layout(component);
+            layer->dirty_flags &= ~DIRTY_TEXT;
+        }
+        text_component_update_content_height(component);
+        text_component_get_padding(layer, &pad_top, NULL, &pad_bottom, NULL);
+        return cJSON_CreateNumber(layer->content_height + pad_top + pad_bottom);
+    }
     
     // 未知的属性，返回 NULL
     return NULL;
