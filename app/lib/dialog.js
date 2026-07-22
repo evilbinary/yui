@@ -63,9 +63,20 @@ function buildButtons(dialogId, buttons, callback) {
     return cols;
 }
 
+function resolveRootId(rootId) {
+    if (rootId && typeof YUI.find === "function" && YUI.find(rootId)) {
+        return rootId;
+    }
+    if (typeof YUI.find === "function" && YUI.find("photoApp")) {
+        return "photoApp";
+    }
+    /* 空串：renderFromJson 挂到当前页面根图层，不告警 */
+    return "";
+}
+
 function showDialog(opts, callback) {
     var dialogId = uid();
-    var rootId = opts.root || "photoApp";
+    var rootId = resolveRootId(opts.root);
     var contentList = opts.content || [];
     if (!(contentList instanceof Array)) contentList = [contentList];
 
@@ -467,7 +478,7 @@ function openFile(opts, callback) {
     if (typeof opts === "function") { callback = opts; opts = {}; }
     opts = opts || {};
     callback = callback || function () {};
-    var rootId = opts.root || "photoApp";
+    var rootId = resolveRootId(opts.root);
 
     if (!ensureFileDialogLoaded(rootId)) {
         callback(null);

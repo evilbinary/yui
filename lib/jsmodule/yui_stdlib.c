@@ -349,11 +349,16 @@ static JSValue js_render_from_json(JSContext *ctx, JSValue *this_val, int argc, 
         return JS_NewInt32(ctx, -4);
     }
 
-    Layer* parent_layer = find_layer_by_id(g_layer_root, layer_id);
-    if (!parent_layer) {
-        printf("YUI: WARN - Layer '%s' not found, fallback to root '%s'\n",
-               layer_id, g_layer_root->id);
+    Layer* parent_layer = NULL;
+    if (layer_id[0] == '\0') {
         parent_layer = g_layer_root;
+    } else {
+        parent_layer = find_layer_by_id(g_layer_root, layer_id);
+        if (!parent_layer) {
+            printf("YUI: WARN - Layer '%s' not found, fallback to root '%s'\n",
+                   layer_id, g_layer_root->id);
+            parent_layer = g_layer_root;
+        }
     }
 
     if (!append && parent_layer->children) {
