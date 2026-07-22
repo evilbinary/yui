@@ -79,16 +79,6 @@ var PhotoAPI = {
                 if (handlers.onEvent) {
                     handlers.onEvent(eventType, data);
                 }
-                if (eventType === "done" && handlers.onDone) {
-                    handlers.onDone(data || {});
-                }
-                if (eventType === "error" && handlers.onError) {
-                    var msg = data;
-                    if (data && typeof data === "object" && data.error) {
-                        msg = data.error;
-                    }
-                    handlers.onError(String(msg));
-                }
             },
             onDone: function(data) {
                 if (handlers.onDone) {

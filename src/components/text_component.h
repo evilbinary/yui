@@ -21,6 +21,7 @@ typedef struct {
     int scroll_y;          // 垂直滚动位置
     int line_height;       // 行高
     int multiline;         // 是否为多行模式
+    int wrap;              // 多行时是否按宽度自动换行
     int editable;          // 是否可编辑
     int show_line_numbers; // 是否显示行号
     int line_number_width; // 行号区域宽度
@@ -50,6 +51,7 @@ void text_component_set_placeholder(TextComponent* component, const char* placeh
 void text_component_set_max_length(TextComponent* component, int max_length);
 void text_component_set_cursor_color(TextComponent* component, Color cursor_color);
 void text_component_set_multiline(TextComponent* component, int multiline);
+void text_component_set_wrap(TextComponent* component, int wrap);
 void text_component_set_editable(TextComponent* component, int editable);
 void text_component_set_show_line_numbers(TextComponent* component, int show_line_numbers);
 void text_component_set_line_number_width(TextComponent* component, int width);

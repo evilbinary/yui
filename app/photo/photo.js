@@ -9,6 +9,11 @@ var photoState = {
     msgSeq: 0,
     isLoading: false,
     streamBuffer: "",
+    streamChunks: [],
+    streamQueuedChars: 0,
+    streamRenderTimer: null,
+    streamDone: false,
+    activeRequestId: 0,
     currentSection: "",
     online: false,
     streamingMsgId: ""
@@ -21,6 +26,9 @@ var LINE_H = 22;
 var TEXT_PAD_X = 24;
 var TEXT_PAD_Y = 16;
 var TEXT_INNER_PAD = 8; // Text 上下内边距合计（padding top+bottom）
+var AI_LOADING_H = 28;
+var STREAM_RENDER_INTERVAL = 20;
+var MAX_RESPONSE_CHARS = 12000;
 
 function generateSessionId() {
     return "photo_" + Date.now().toString(36) + "_" + Math.floor(Math.random() * 1e6).toString(36);
@@ -41,47 +49,14 @@ function formatTime(ts) {
     return pad2(d.getHours()) + ":" + pad2(d.getMinutes());
 }
 
-/** 估算显示宽度：ASCII≈0.55，中文等全角≈1 */
-function measureDisplayUnits(str) {
-    var units = 0;
-    var s = String(str || "");
-    for (var i = 0; i < s.length; i++) {
-        var code = s.charCodeAt(i);
-        if (code >= 0xD800 && code <= 0xDBFF) {
-            // surrogate pair (emoji等)
-            units += 1.2;
-            i++;
-            continue;
-        }
-        if (code < 0x80) {
-            units += 0.55;
-        } else if (code < 0x100) {
-            units += 0.7;
-        } else {
-            units += 1;
-        }
+function displayText(text) {
+    var value = String(text || "");
+    // 数字键帽在部分字体里仍会退化成方框，先降级成普通编号。
+    value = value.replace(/([0-9])\uFE0F?\u20E3/g, "$1.");
+    if (value.length > MAX_RESPONSE_CHARS) {
+        value = value.substring(0, MAX_RESPONSE_CHARS) + "\n\n[回答过长，已截断显示]";
     }
-    return units;
-}
-
-function estimateTextHeight(text, contentW) {
-    var s = String(text || "");
-    if (!s) return LINE_H + TEXT_INNER_PAD;
-    // 黑体 14px：中文约 14px/字，留一点余量避免低估
-    var unitsPerLine = contentW / 14.5;
-    if (unitsPerLine < 4) unitsPerLine = 4;
-
-    var lines = 0;
-    var parts = s.split(/\r?\n/);
-    for (var i = 0; i < parts.length; i++) {
-        var u = measureDisplayUnits(parts[i]);
-        var row = Math.ceil(u / unitsPerLine);
-        if (row < 1) row = 1;
-        lines += row;
-    }
-    if (lines < 1) lines = 1;
-    // 行高含 TEXT_LINE_SPACING(2)
-    return lines * (LINE_H + 2) + TEXT_INNER_PAD;
+    return value;
 }
 
 function bubbleDims(msg) {
@@ -90,6 +65,10 @@ function bubbleDims(msg) {
     var bubbleW = isWide ? (CHAT_WIDTH - AVATAR_SIZE - 16) : BUBBLE_MAX_W;
     var textW = bubbleW - TEXT_PAD_X;
     return { meta: meta, bubbleW: bubbleW, textW: textW };
+}
+
+function isAssistantWaiting(msg) {
+    return !!msg && msg.role === "AI" && !String(msg.text || "");
 }
 
 function applyBubbleHeights(msg, textH) {
@@ -116,18 +95,45 @@ function applyBubbleHeights(msg, textH) {
         },
         {
             target: msg.id + "_text",
-            change: {
-                text: msg.text || "",
-                size: [d.textW, textH]
-            }
+            change: { size: [d.textW, textH] }
+        }
+    ]);
+    msg.renderedTextHeight = textH;
+}
+
+function syncAssistantBubbleState(msg) {
+    if (!msg || msg.role !== "AI") {
+        return;
+    }
+    var waiting = isAssistantWaiting(msg);
+    YUI.update([
+        {
+            target: msg.id + "_loading",
+            change: { visible: waiting }
+        },
+        {
+            target: msg.id + "_text",
+            change: { visible: !waiting }
         }
     ]);
 }
 
-/** 按文字估算自适应气泡高度 */
+/** 使用 Text 组件基于真实字体和换行计算的内容高度。 */
 function syncBubbleHeight(msg) {
-    var d = bubbleDims(msg);
-    applyBubbleHeights(msg, estimateTextHeight(msg.text, d.textW));
+    if (isAssistantWaiting(msg)) {
+        syncAssistantBubbleState(msg);
+        applyBubbleHeights(msg, AI_LOADING_H);
+        return;
+    }
+    var textH = Number(YUI.getProperty(msg.id + "_text", "contentHeight"));
+    if (!isFinite(textH) || textH < 1) {
+        return;
+    }
+    syncAssistantBubbleState(msg);
+    if (msg.renderedTextHeight === textH) {
+        return;
+    }
+    applyBubbleHeights(msg, textH);
 }
 
 function roleMeta(role) {
@@ -245,7 +251,8 @@ function buildBubbleJson(msg) {
     var timeStr = formatTime(msg.time);
     var bubbleW = d.bubbleW;
     var textW = d.textW;
-    var textH = estimateTextHeight(text, textW);
+    var waiting = isAssistantWaiting(msg);
+    var textH = waiting ? AI_LOADING_H : (LINE_H + TEXT_INNER_PAD);
     var bubbleH = textH + TEXT_PAD_Y;
     var bodyH = bubbleH + 20;
     var rowH = bodyH > AVATAR_SIZE ? bodyH : AVATAR_SIZE;
@@ -268,6 +275,7 @@ function buildBubbleJson(msg) {
         size: [bubbleW, bubbleH],
         layout: {
             type: "vertical",
+            spacing: 0,
             padding: [8, 12, 8, 12]
         },
         style: {
@@ -276,9 +284,22 @@ function buildBubbleJson(msg) {
         },
         children: [
             {
+                id: msg.id + "_loading",
+                type: "Loading",
+                visible: waiting,
+                size: [56, 20],
+                variant: "dots",
+                speed: 1,
+                style: {
+                    color: meta.textColor,
+                    trackColor: "transparent"
+                }
+            },
+            {
                 id: msg.id + "_text",
                 type: "Text",
                 text: text,
+                visible: !waiting,
                 multiline: true,
                 editable: false,
                 scrollable: 0,
@@ -336,6 +357,7 @@ function appendBubble(msg) {
     if (typeof YUI.show === "function") {
         YUI.show(msg.id);
     }
+    msg.renderedTextHeight = 0;
     syncBubbleHeight(msg);
     return code;
 }
@@ -365,21 +387,63 @@ function pushMessage(role, text) {
 }
 
 function updateLastAssistant(text) {
+    var visibleText = displayText(text);
     for (var i = photoState.messages.length - 1; i >= 0; i--) {
         if (photoState.messages[i].role === "AI") {
-            photoState.messages[i].text = text || "";
+            photoState.messages[i].text = visibleText;
             photoState.streamingMsgId = photoState.messages[i].id;
+            // Text 会根据真实字体更新 contentHeight，仅在实际高度变化时重排气泡。
+            YUI.setText(photoState.messages[i].id + "_text", visibleText);
             syncBubbleHeight(photoState.messages[i]);
             return photoState.messages[i];
         }
     }
-    return pushMessage("AI", text || "");
+    return pushMessage("AI", visibleText);
+}
+
+function clearPendingStreamRender() {
+    if (photoState.streamRenderTimer !== null) {
+        clearTimeout(photoState.streamRenderTimer);
+        photoState.streamRenderTimer = null;
+    }
+}
+
+function flushAssistantStream() {
+    clearPendingStreamRender();
+    if (photoState.streamChunks.length === 0) {
+        return;
+    }
+    photoState.streamBuffer += photoState.streamChunks.join("");
+    photoState.streamChunks = [];
+    photoState.streamQueuedChars = 0;
+    updateLastAssistant(photoState.streamBuffer);
+}
+
+function queueAssistantChunk(chunk) {
+    var value;
+    var remaining;
+    if (!chunk || photoState.streamBuffer.length >= MAX_RESPONSE_CHARS) {
+        return;
+    }
+    remaining = MAX_RESPONSE_CHARS - photoState.streamBuffer.length - photoState.streamQueuedChars;
+    if (remaining <= 0) {
+        return;
+    }
+    value = String(chunk);
+    if (value.length > remaining) {
+        value = value.substring(0, remaining);
+    }
+    photoState.streamChunks.push(value);
+    photoState.streamQueuedChars += value.length;
+    if (photoState.streamRenderTimer === null) {
+        photoState.streamRenderTimer = setTimeout(flushAssistantStream, STREAM_RENDER_INTERVAL);
+    }
 }
 
 function ensureAssistantBubble() {
     var last = photoState.messages[photoState.messages.length - 1];
     if (!last || last.role !== "AI") {
-        return pushMessage("AI", "…");
+        return pushMessage("AI", "");
     }
     return last;
 }
@@ -398,9 +462,15 @@ function buildFilesPayload() {
 }
 
 function onPhotoLoad() {
+    photoState.activeRequestId += 1;
+    clearPendingStreamRender();
     photoState.sessionId = generateSessionId();
     photoState.messages = [];
     photoState.msgSeq = 0;
+    photoState.streamBuffer = "";
+    photoState.streamChunks = [];
+    photoState.streamQueuedChars = 0;
+    photoState.streamDone = false;
     photoState.streamingMsgId = "";
     refreshSessionLabel();
     clearChatBubbles();
@@ -436,12 +506,17 @@ function onHealthCheck() {
 }
 
 function onNewSession() {
+    photoState.activeRequestId += 1;
+    clearPendingStreamRender();
     photoState.sessionId = generateSessionId();
     photoState.messages = [];
     photoState.msgSeq = 0;
     photoState.streamBuffer = "";
+    photoState.streamChunks = [];
+    photoState.streamQueuedChars = 0;
+    photoState.streamDone = false;
     photoState.streamingMsgId = "";
-    photoState.isLoading = false;
+    setSending(false);
     refreshSessionLabel();
     clearChatBubbles();
     setStreamHint("已新建会话");
@@ -449,10 +524,16 @@ function onNewSession() {
 }
 
 function onClearChat() {
+    photoState.activeRequestId += 1;
+    clearPendingStreamRender();
     photoState.messages = [];
     photoState.msgSeq = 0;
     photoState.streamBuffer = "";
+    photoState.streamChunks = [];
+    photoState.streamQueuedChars = 0;
+    photoState.streamDone = false;
     photoState.streamingMsgId = "";
+    setSending(false);
     clearChatBubbles();
     setStreamHint("对话已清空");
 }
@@ -494,7 +575,11 @@ function handleStreamEvent(eventType, data) {
     if (eventType === "start") {
         setStreamHint("AI 思考中…");
         ensureAssistantBubble();
+        clearPendingStreamRender();
         photoState.streamBuffer = "";
+        photoState.streamChunks = [];
+        photoState.streamQueuedChars = 0;
+        photoState.streamDone = false;
         photoState.currentSection = "";
         return;
     }
@@ -509,9 +594,8 @@ function handleStreamEvent(eventType, data) {
         if (!chunk) return;
 
         if (photoState.currentSection === "response" || photoState.currentSection === "") {
-            photoState.streamBuffer += chunk;
-            updateLastAssistant(photoState.streamBuffer);
-            setStreamHint("响应中… " + photoState.streamBuffer.length + " 字");
+            queueAssistantChunk(chunk);
+            setStreamHint("响应中…");
         } else {
             setStreamHint("[" + photoState.currentSection + "] " + String(chunk).substring(0, 40));
         }
@@ -521,8 +605,7 @@ function handleStreamEvent(eventType, data) {
     if (eventType === "response") {
         photoState.currentSection = "response";
         if (data && data.content) {
-            photoState.streamBuffer += data.content;
-            updateLastAssistant(photoState.streamBuffer);
+            queueAssistantChunk(data.content);
         } else {
             setStreamHint("生成回答中…");
         }
@@ -557,12 +640,21 @@ function handleStreamEvent(eventType, data) {
     }
 
     if (eventType === "done") {
+        photoState.streamDone = true;
+        clearPendingStreamRender();
         var answer = photoState.streamBuffer;
         if (data && data.answer) {
-            answer = data.answer;
+            answer = displayText(data.answer);
+            photoState.streamBuffer = answer;
+            photoState.streamChunks = [];
+            photoState.streamQueuedChars = 0;
+            updateLastAssistant(answer);
+        } else {
+            flushAssistantStream();
+            answer = photoState.streamBuffer;
         }
         if (answer) {
-            updateLastAssistant(answer);
+            // 已在上面刷新，保留完整答案到消息对象即可。
         } else {
             ensureAssistantBubble();
             updateLastAssistant("(空响应)");
@@ -573,6 +665,8 @@ function handleStreamEvent(eventType, data) {
         }
         setStreamHint("完成" + tokens);
         photoState.streamBuffer = "";
+        photoState.streamChunks = [];
+        photoState.streamQueuedChars = 0;
         photoState.currentSection = "";
         photoState.streamingMsgId = "";
         return;
@@ -581,7 +675,6 @@ function handleStreamEvent(eventType, data) {
     if (eventType === "error") {
         var err = data;
         if (data && typeof data === "object" && data.error) err = data.error;
-        pushMessage("错误", String(err));
         setStreamHint("错误: " + err);
     }
 }
@@ -616,6 +709,8 @@ function onSendMessage() {
     setSending(true);
     setStreamHint("请求中…");
 
+    var requestId = photoState.activeRequestId + 1;
+    photoState.activeRequestId = requestId;
     PhotoAPI.chatStream({
         message: text,
         session_id: photoState.sessionId,
@@ -623,21 +718,32 @@ function onSendMessage() {
         stream: true
     }, {
         onEvent: function(type, data) {
+            if (photoState.activeRequestId !== requestId) {
+                return;
+            }
             handleStreamEvent(type, data);
         },
         onDone: function(data) {
-            if (data && data.answer && !photoState.streamBuffer) {
+            if (photoState.activeRequestId !== requestId) {
+                return;
+            }
+            if (data && data.answer && !photoState.streamDone) {
                 handleStreamEvent("done", data);
             }
             setSending(false);
+            photoState.activeRequestId = 0;
             if (photoState.online) {
                 setStatus("在线", true);
             }
         },
         onError: function(err) {
+            if (photoState.activeRequestId !== requestId) {
+                return;
+            }
             pushMessage("错误", String(err));
             setStreamHint("失败: " + err);
             setSending(false);
+            photoState.activeRequestId = 0;
             setStatus("离线", false);
         }
     });
