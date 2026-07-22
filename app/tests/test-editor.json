@@ -107,7 +107,7 @@
                 {
                     "id": "syntaxSectionTitle",
                     "type": "Label",
-                    "text": "语法高亮编辑器（JSON / SQL / Markdown）",
+                    "text": "语法高亮编辑器（JSON / SQL / Markdown / C）",
                     "size": [0, 18],
                     "style": {
                         "color": "#555555",
@@ -303,6 +303,66 @@
                                     }
                                 }
                             ]
+                        },
+                        {
+                            "id": "cSyntaxPanel",
+                            "type": "View",
+                            "size": [0, 0],
+                            "flex": 1,
+                            "layout": {
+                                "type": "vertical",
+                                "spacing": 4
+                            },
+                            "children": [
+                                {
+                                    "id": "cSyntaxLabel",
+                                    "type": "Label",
+                                    "text": "C",
+                                    "size": [0, 16],
+                                    "style": {
+                                        "color": "#94E2D5",
+                                        "fontSize": 12,
+                                        "fontWeight": "bold"
+                                    }
+                                },
+                                {
+                                    "id": "cSyntaxEditor",
+                                    "type": "Text",
+                                    "text": "#include <stdio.h>\n#include <stdint.h>\n\n/* count active items */\nstatic int count_active(const uint32_t* items, size_t n) {\n    int total = 0;\n    for (size_t i = 0; i < n; i++) {\n        if (items[i] != 0) {\n            total++;\n        }\n    }\n    return total;\n}\n\nint main(void) {\n    uint32_t data[] = {1, 0, 3, 0, 5};\n    printf(\"active=%d\\n\", count_active(data, 5));\n    return 0;\n}",
+                                    "size": [0, 0],
+                                    "flex": 1,
+                                    "showLineNumbers": true,
+                                    "lineNumberWidth": 36,
+                                    "multiline": true,
+                                    "editable": true,
+                                    "wrap": false,
+                                    "scrollable": 1,
+                                    "syntaxHighlight": "c",
+                                    "syntaxColors": {
+                                        "keyword": "#CBA6F7",
+                                        "key": "#F9E2AF",
+                                        "string": "#A6E3A1",
+                                        "number": "#FAB387",
+                                        "comment": "#6C7086",
+                                        "punctuation": "#89DCEB"
+                                    },
+                                    "style": {
+                                        "bgColor": "#1E1E2E",
+                                        "color": "#CDD6F4",
+                                        "selectionColor": "#6BAF52CC",
+                                        "cursorColor": "#F5E0DC",
+                                        "fontSize": 13,
+                                        "fontFamily": "monospace",
+                                        "padding": [8, 10, 8, 10],
+                                        "borderWidth": 1,
+                                        "borderColor": "#313244",
+                                        "borderRadius": 6
+                                    },
+                                    "events": {
+                                        "onChange": "@onCSyntaxChange"
+                                    }
+                                }
+                            ]
                         }
                     ]
                 },
@@ -360,5 +420,15 @@
                 }
             ]
         }
-    ]
+    ],
+    "events": {
+        "onTextChange": "function() { var t = YUI.getText('textArea') || ''; YUI.setText('wordCount', '字数: ' + t.length); }",
+        "clearText": "function() { YUI.setText('textArea', ''); YUI.setText('wordCount', '字数: 0'); }",
+        "saveText": "function() { YUI.log('saveText: chars=' + ((YUI.getText('textArea') || '').length)); }",
+        "closeTextEditor": "function() { YUI.log('closeTextEditor'); }",
+        "onJsonSyntaxChange": "function() {}",
+        "onSqlSyntaxChange": "function() {}",
+        "onMdSyntaxChange": "function() {}",
+        "onCSyntaxChange": "function() {}"
+    }
 }
