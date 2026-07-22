@@ -579,24 +579,46 @@ static JSValue js_yui_update(JSContext *ctx, JSValue *this_val, int argc, JSValu
 
     JSCStringBuf buf;
     const char* update_json = NULL;
-    int need_free = 0;
-    
-    // mquickjs 只支持字符串参数
-    // 如果 JS 代码需要传入对象，应该在 JS 层调用 JSON.stringify(obj)
+    JSValue stringified = JS_UNDEFINED;
+
     if (JS_IsString(ctx, argv[0])) {
         update_json = JS_ToCString(ctx, argv[0], &buf);
+    } else if (JS_IsObject(ctx, argv[0])) {
+        JSValue global = JS_GetGlobalObject(ctx);
+        JSValue json = JS_GetPropertyStr(ctx, global, "JSON");
+        if (!JS_IsUndefined(json) && !JS_IsNull(json)) {
+            JSValue fn = JS_GetPropertyStr(ctx, json, "stringify");
+            if (!JS_IsUndefined(fn) && !JS_IsNull(fn)) {
+                if (!JS_StackCheck(ctx, 3)) {
+                    JS_PushArg(ctx, argv[0]);   // arg
+                    JS_PushArg(ctx, fn);         // func
+                    JS_PushArg(ctx, json);       // this
+                    stringified = JS_Call(ctx, 1);
+                }
+                JS_FreeValue(ctx, fn);
+            }
+        }
+        JS_FreeValue(ctx, json);
+        JS_FreeValue(ctx, global);
+        if (JS_IsString(ctx, stringified)) {
+            update_json = JS_ToCString(ctx, stringified, &buf);
+        }
     } else {
-        printf("YUI.update: 参数必须是 JSON 字符串。如果要传对象，请在 JS 代码中使用 JSON.stringify(obj)\n");
+        printf("YUI.update: 参数必须是 JSON 字符串或对象/数组\n");
         return JS_NewInt32(ctx, -1);
     }
 
+    int result = -1;
     if (update_json && g_layer_root) {
-        int result = yui_update(g_layer_root, update_json);
-        return JS_NewInt32(ctx, result);
+        result = yui_update(g_layer_root, update_json);
+    } else {
+        printf("YUI.update: 无效的参数或未初始化\n");
     }
 
-    printf("YUI.update: 无效的参数或未初始化\n");
-    return JS_NewInt32(ctx, -1);
+    if (!JS_IsUndefined(stringified)) {
+        JS_FreeValue(ctx, stringified);
+    }
+    return JS_NewInt32(ctx, result);
 #endif
 }
 
