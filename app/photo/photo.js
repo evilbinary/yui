@@ -16,7 +16,8 @@ var photoState = {
     activeRequestId: 0,
     currentSection: "",
     online: false,
-    streamingMsgId: ""
+    streamingMsgId: "",
+    imagePath: ""
 };
 
 var CHAT_WIDTH = 366;
@@ -450,11 +451,10 @@ function ensureAssistantBubble() {
 
 function buildFilesPayload() {
     var files = [];
-    var imageUrl = YUI.getText("imageUrlInput");
-    if (imageUrl && String(imageUrl).trim()) {
+    if (photoState.imagePath) {
         files.push({
             type: "image",
-            url: String(imageUrl).trim(),
+            url: photoState.imagePath,
             name: "image"
         });
     }
@@ -557,6 +557,25 @@ function onPromptSearch() {
 function onPromptXiaohongshu() {
     fillPrompt("根据当前对话内容，写一篇小红书风格的摄影笔记文案，带标题和标签。");
 }
+
+function onPickImage() {
+    YUI.openFile({
+        title: "选择图片",
+        filter: "*.*",
+        startPath: "app"
+    }, function(path) {
+        if (path) {
+            photoState.imagePath = path;
+            var parts = path.replace(/\\/g, "/").split("/");
+            var name = parts[parts.length - 1];
+            YUI.setText("imagePathLabel", "📷 " + (name || path));
+            YUI.update({ target: "imagePathLabel", change: { visible: 1 } });
+            YUI.setText("streamHint", "已选择图片: " + name);
+        }
+    });
+}
+
+
 
 function setSending(busy) {
     photoState.isLoading = !!busy;
@@ -701,7 +720,9 @@ function onSendMessage() {
         displayText = "请点评这张摄影图片";
     }
     if (files.length > 0) {
-        displayText = displayText + "\n[图片] " + files[0].url;
+        var parts = (photoState.imagePath || "").replace(/\\/g, "/").split("/");
+        var name = parts[parts.length - 1] || "";
+        displayText = displayText + "\n[图片] " + name;
     }
 
     pushMessage("你", displayText);

@@ -267,6 +267,10 @@ static EventHandler get_event_handler_by_type(const char* event_type)
         return js_module_change_event;
     } else if (strcmp(event_type, "resize") == 0 || strcmp(event_type, "onResize") == 0) {
         return NULL;
+    } else if (strcmp(event_type, "onSelect") == 0 || strcmp(event_type, "onExpand") == 0 ||
+               strcmp(event_type, "onSelectionChanged") == 0) {
+        /* 组件自定义事件，由 register_js_event_mapping 注册全局 handler */
+        return NULL;
     } else if (layer_lifecycle_is_event(event_type)) {
         return NULL;
     }

@@ -351,8 +351,9 @@ static JSValue js_render_from_json(JSContext *ctx, JSValue *this_val, int argc, 
 
     Layer* parent_layer = find_layer_by_id(g_layer_root, layer_id);
     if (!parent_layer) {
-        printf("YUI: ERROR - Layer '%s' not found\n", layer_id);
-        return JS_NewInt32(ctx, -1);
+        printf("YUI: WARN - Layer '%s' not found, fallback to root '%s'\n",
+               layer_id, g_layer_root->id);
+        parent_layer = g_layer_root;
     }
 
     if (!append && parent_layer->children) {

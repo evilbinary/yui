@@ -1,0 +1,138 @@
+{
+        "id": "photoFileDialog",
+      "type": "View",
+  "visible": 0,
+      "position": [0, 0],
+      "size": [390, 844],
+      "style": { "bgColor": "rgba(0,0,0,0.5)" },
+      "layout": { "type": "absolute" },
+      "children": [
+        {
+          "id": "photoFilePanel",
+          "type": "View",
+          "class": "panel",
+          "position": [15, 60],
+          "size": [360, 620],
+          "layout": { "type": "vertical", "spacing": 0, "padding": [0, 0, 0, 0] },
+          "style": { "bgColor": "#1a1a2e", "borderRadius": 12 },
+          "children": [
+            {
+              "id": "photoFileTitleBar",
+              "type": "View",
+              "class": "toolbar",
+              "size": [360, 40],
+              "layout": { "type": "horizontal", "spacing": 6, "padding": [0, 12, 0, 12], "align": "center" },
+              "style": { "bgColor": "#12121f" },
+              "children": [
+                {
+                  "id": "photoFileTitle",
+                  "type": "Label",
+                  "class": "heading",
+                  "text": "选择图片",
+                  "size": [290, 24],
+                  "style": { "color": "#e0e0e0", "fontSize": 14, "fontWeight": "bold" }
+                },
+                {
+                  "id": "photoFileCloseBtn",
+                  "type": "Button",
+                  "class": "tertiary",
+                  "text": "×",
+                  "size": [28, 28],
+                  "style": { "color": "#94a3b8", "bgColor": "transparent", "fontSize": 18 },
+                  "events": { "onClick": "@onPhotoFileCancel" }
+                }
+              ]
+            },
+            {
+              "id": "photoFileNav",
+              "type": "View",
+              "class": "surface",
+              "size": [360, 36],
+              "layout": { "type": "horizontal", "spacing": 6, "padding": [4, 10, 4, 10], "align": "center" },
+              "style": { "bgColor": "#0f0f1a" },
+              "children": [
+                {
+                  "id": "photoFileUpBtn",
+                  "type": "Button",
+                  "class": "secondary compact",
+                  "text": "..",
+                  "size": [28, 24],
+                  "style": { "color": "#a78bfa", "bgColor": "#2a2a4a", "borderRadius": 4, "fontSize": 13 },
+                  "events": { "onClick": "@onPhotoFileUp" }
+                },
+                {
+                  "id": "photoFilePath",
+                  "type": "Label",
+                  "class": "subtitle",
+                  "text": "./",
+                  "size": [300, 20],
+                  "style": { "color": "#64748b", "fontSize": 11 }
+                }
+              ]
+            },
+            {
+              "id": "photoFileList",
+              "type": "Treeview",
+              "size": [360, 380],
+              "scrollable": 1,
+              "style": { "color": "#e0e0e0", "bgColor": "#1a1a2e", "fontSize": 12 },
+              "events": { "onSelect": "@onPhotoFileSelect" }
+            },
+            {
+              "id": "photoFileInputRow",
+              "type": "View",
+              "class": "surface",
+              "size": [360, 40],
+              "layout": { "type": "horizontal", "spacing": 6, "padding": [6, 10, 6, 10], "align": "center" },
+              "style": { "bgColor": "#0f0f1a" },
+              "children": [
+                {
+                  "id": "photoFileInputLabel",
+                  "type": "Label",
+                  "class": "caption",
+                  "text": "文件:",
+                  "size": [36, 24],
+                  "style": { "color": "#94a3b8", "fontSize": 11 }
+                },
+                {
+                  "id": "photoFileInput",
+                  "type": "Input",
+                  "text": "",
+                  "placeholder": "输入或选择文件名",
+                  "size": [280, 28],
+                  "style": { "color": "#e0e0e0", "bgColor": "#1a1a2e", "fontSize": 11, "padding": [4, 8, 4, 8] }
+                }
+              ]
+            },
+            {
+              "id": "photoFileButtons",
+              "type": "View",
+              "class": "toolbar",
+              "size": [360, 48],
+              "layout": { "type": "horizontal", "spacing": 12, "padding": [8, 16, 8, 16], "justify": "right" },
+              "style": { "bgColor": "#12121f" },
+              "children": [
+                {
+                  "id": "photoFileCancelBtn",
+                  "type": "Button",
+                  "class": "secondary",
+                  "text": "取消",
+                  "size": [80, 32],
+                  "style": { "color": "#e0e0e0", "bgColor": "#2a2a4a", "borderRadius": 6, "fontSize": 12 },
+                  "events": { "onClick": "@onPhotoFileCancel" }
+                },
+                {
+                  "id": "photoFileOkBtn",
+                  "type": "Button",
+                  "class": "primary",
+                  "text": "确定",
+                  "size": [80, 32],
+                  "style": { "color": "#ffffff", "bgColor": "#7c3aed", "borderRadius": 6, "fontSize": 12 },
+                  "events": { "onClick": "@onPhotoFileOk" }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }

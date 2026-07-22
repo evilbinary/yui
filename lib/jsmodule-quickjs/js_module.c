@@ -296,10 +296,9 @@ static JSValue js_render_from_json(JSContext *ctx, JSValueConst this_val, int ar
 
     Layer* parent_layer = find_layer_by_id(g_layer_root, layer_id);
     if (!parent_layer) {
-        LOGE("js", "renderFromJson: layer '%s' not found", layer_id);
-        JS_FreeCString(ctx, layer_id);
-        JS_FreeCString(ctx, json_str);
-        return JS_NewInt32(ctx, -1);
+        LOGW("js", "renderFromJson: layer '%s' not found, fallback to root '%s'",
+             layer_id, g_layer_root->id);
+        parent_layer = g_layer_root;
     }
 
     if (!append && parent_layer->children) {
@@ -342,6 +341,7 @@ static JSValue js_render_from_json(JSContext *ctx, JSValueConst this_val, int ar
     }
 
     layout_layer(parent_layer);
+    load_all_fonts(new_layer);
     theme_manager_apply_to_tree(new_layer);
 
     cJSON* page_json = parse_json_string(json_str);
