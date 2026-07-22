@@ -58,7 +58,7 @@
         {
             "id": "resultLabel",
             "type": "Label",
-            "text": "点击按钮显示弹出菜单，或在此区域右键点击",
+            "text": "点击按钮或下方区域，验证 layerId:onClick 事件简写",
             "position": [50, 120],
             "size": [500, 30],
             "style": {
@@ -86,10 +86,10 @@
         "onLoad": "@initApp",
         "showMenuBtn:onClick": "@showContextMenu",
         "showContextBtn:onClick": "@showFileMenu",
-        "contextArea:onRightClick": "@showAreaContextMenu",
-        "initApp": "function() { console.log('弹出菜单测试应用已加载'); }",
-        "showContextMenu": "function() { showPopupMenu('context', 100, 150); }",
-        "showFileMenu": "function() { showPopupMenu('file', 300, 150); }",
-        "showAreaContextMenu": "function(event) { showPopupMenu('area', event.x, event.y); }"
+        "contextArea:onClick": "@showAreaContextMenu",
+        "initApp": "function() { YUI.log('popup-menu test loaded'); YUI.setText('resultLabel', 'loaded: click buttons to test'); }",
+        "showContextMenu": "function() { YUI.log('showContextMenu'); YUI.setText('resultLabel', 'event: showContextMenu'); }",
+        "showFileMenu": "function() { YUI.log('showFileMenu'); YUI.setText('resultLabel', 'event: showFileMenu'); }",
+        "showAreaContextMenu": "function() { YUI.log('showAreaContextMenu'); YUI.setText('resultLabel', 'event: showAreaContextMenu'); }"
     }
 }

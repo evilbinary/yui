@@ -195,10 +195,10 @@
     }
   ],
   "events": {
-    "showInfoDialog": "function() { YUI.show('infoDialog'); }",
-    "showWarningDialog": "function() { YUI.show('warningDialog') }",
-    "showErrorDialog": "function() { YUI.show('errorDialog') }",
-    "showQuestionDialog": "function() { YUI.show('questionDialog') }",
-    "showCustomDialog": "function() { YUI.show('customDialog') }"
+    "showInfoDialog": "function() { YUI.log('showInfoDialog123434'); YUI.show('infoDialog'); }",
+    "showWarningDialog": "function() { YUI.show('warningDialog'); }",
+    "showErrorDialog": "function() { YUI.show('errorDialog'); }",
+    "showQuestionDialog": "function() { YUI.show('questionDialog'); }",
+    "showCustomDialog": "function() { YUI.show('customDialog'); }"
   }
 }
