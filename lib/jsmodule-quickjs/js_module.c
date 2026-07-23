@@ -1425,7 +1425,9 @@ void js_module_register_api(void)
     JS_SetPropertyStr(g_js_ctx, yui_obj, "inspect", inspect_obj);
 
     js_module_register_perf_api(g_js_ctx, yui_obj);
+#if YUI_WITH_GAME
     js_game_register_api(g_js_ctx);
+#endif
     
     // 添加 setEvent 到 YUI 对象
     JS_SetPropertyStr(g_js_ctx, yui_obj, "setEvent", JS_NewCFunction(g_js_ctx, js_set_event, "setEvent", 3));
