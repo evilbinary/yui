@@ -1018,6 +1018,7 @@ TextComponent* text_component_create(Layer* layer) {
     component->line_number_bg_color = (Color){30, 30, 30, 255};  // 默认行号背景颜色
     component->selection_color = (Color){70, 130, 180, 100};  // 默认选中颜色（半透明蓝色）
     component->is_selecting = 0;  // 默认不在选择状态
+    component->pending_line_select = 0;
     component->cached_line_height = 0;  // 行高缓存初始化为0（无效）
     component->line_height_valid = 0;  // 标记缓存无效
     component->text_revision = 0;
@@ -2990,38 +2991,20 @@ int text_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
     Rect content_rect;
     text_component_get_content_rect(component, layer, &content_rect);
 
-    if (event->phase == POINTER_DOUBLE_TAP) {
+    // 鼠标左键按下 / 双击：双击先当按下，抬起未拖动再选行
+    if ((event->phase == POINTER_DOWN || event->phase == POINTER_DOUBLE_TAP) &&
+        event->button == SDL_BUTTON_LEFT) {
         if (point_in_rect(pt, content_rect)) {
-            int click_pos = text_component_get_position_from_point(component, pt, layer);
-            int line_start, line_end;
+            int click_pos;
             if (layer->focusable) {
                 text_component_focus(component);
             }
-            text_component_get_line_range_at_pos(component, layer, click_pos,
-                                                   &line_start, &line_end);
-            component->selection_start = line_start;
-            component->selection_end = line_end;
-            component->cursor_pos = line_end;
-            component->is_selecting = 0;
-            text_component_update_scroll_for_cursor(component);
-            mark_layer_dirty(layer, DIRTY_TEXT);
-            return 1;
-        }
-    }
-    
-    // 鼠标左键按下 - 设置光标位置并开始选择
-    if (event->phase == POINTER_DOWN && event->button == SDL_BUTTON_LEFT) {
-        if (point_in_rect(pt, content_rect)) {
-            if (layer->focusable) {
-                text_component_focus(component);
-            }
-
-            int click_pos = text_component_get_position_from_point(component, pt, layer);
-
+            click_pos = text_component_get_position_from_point(component, pt, layer);
             component->cursor_pos = click_pos;
             component->selection_start = click_pos;
             component->selection_end = click_pos;
             component->is_selecting = 1;
+            component->pending_line_select = (event->phase == POINTER_DOUBLE_TAP);
             text_component_update_scroll_for_cursor(component);
             return 1;
         }
@@ -3030,16 +3013,19 @@ int text_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
             component->selection_start = -1;
             component->selection_end = -1;
             component->is_selecting = 0;
+            component->pending_line_select = 0;
         } else if (focused_layer == layer) {
             component->selection_start = -1;
             component->selection_end = -1;
             component->is_selecting = 0;
+            component->pending_line_select = 0;
             text_component_blur(component);
         }
     }
     // 鼠标拖动 - 更新选择范围
     else if (event->phase == POINTER_MOVE && (event->button == SDL_BUTTON_LEFT) && component->is_selecting) {
         int drag_pos;
+        component->pending_line_select = 0;
         
         if (point_in_rect(pt, content_rect)) {
             // 在文本区域内，使用正常计算
@@ -3073,6 +3059,18 @@ int text_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
     }
     // 鼠标释放 - 结束选择
     else if (event->phase == POINTER_UP && event->button == SDL_BUTTON_LEFT) {
+        if (component->pending_line_select) {
+            int line_start = 0;
+            int line_end = 0;
+            text_component_get_line_range_at_pos(component, layer, component->cursor_pos,
+                                                   &line_start, &line_end);
+            component->selection_start = line_start;
+            component->selection_end = line_end;
+            component->cursor_pos = line_end;
+            text_component_update_scroll_for_cursor(component);
+            mark_layer_dirty(layer, DIRTY_TEXT);
+        }
+        component->pending_line_select = 0;
         component->is_selecting = 0;
     }
     return 0;

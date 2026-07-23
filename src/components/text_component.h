@@ -32,6 +32,7 @@ typedef struct {
     Color line_number_bg_color; // 行号背景颜色
     Color selection_color; // 选中背景颜色
     int is_selecting;       // 是否正在选择文本
+    int pending_line_select; /* 双击：任意拖动则改拖选，抬起未拖才选行 */
     EventHandler on_change; // onChange 回调函数
     char* change_name;        // 用户数据
     int cached_line_height; // 缓存的行高（用于性能优化）
