@@ -1,0 +1,91 @@
+{
+  "id": "e2e_root",
+  "type": "View",
+  "size": [420, 280],
+  "autoTest": true,
+  "js": ["../integration/lib/ytest.js", "test-button-click.js"],
+  "style": {
+    "bgColor": "#1e1e22"
+  },
+  "events": {
+    "onLoad": "@onE2ELoad"
+  },
+  "layout": {
+    "type": "vertical",
+    "spacing": 12,
+    "padding": [20, 20, 20, 20]
+  },
+  "children": [
+    {
+      "id": "e2e_title",
+      "type": "Label",
+      "text": "E2E button click",
+      "size": [380, 28],
+      "style": {
+        "color": "#ffffff",
+        "fontSize": 16,
+        "bgColor": "#2d6cdf",
+        "borderRadius": 4
+      }
+    },
+    {
+      "id": "counterLabel",
+      "type": "Label",
+      "text": "count: 0",
+      "size": [380, 28],
+      "style": {
+        "color": "#dddddd",
+        "fontSize": 14
+      }
+    },
+    {
+      "id": "statusLabel",
+      "type": "Label",
+      "text": "idle",
+      "size": [380, 24],
+      "style": {
+        "color": "#aaaaaa",
+        "fontSize": 12
+      }
+    },
+    {
+      "id": "btnRow",
+      "type": "View",
+      "size": [380, 44],
+      "layout": {
+        "type": "horizontal",
+        "spacing": 12
+      },
+      "children": [
+        {
+          "id": "incBtn",
+          "type": "Button",
+          "text": "Increment",
+          "size": [140, 40],
+          "style": {
+            "color": "#ffffff",
+            "bgColor": "#27ae60",
+            "borderRadius": 4
+          },
+          "events": {
+            "onClick": "@onIncClick"
+          }
+        },
+        {
+          "id": "resetBtn",
+          "type": "Button",
+          "text": "Reset",
+          "size": [100, 40],
+          "style": {
+            "color": "#ffffff",
+            "bgColor": "#e67e22",
+            "borderRadius": 4
+          },
+          "events": {
+            "onClick": "@onResetClick"
+          }
+        }
+      ]
+    }
+  ]
+}

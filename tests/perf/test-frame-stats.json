@@ -1,0 +1,79 @@
+{
+  "id": "perf_root",
+  "type": "View",
+  "size": [480, 320],
+  "autoTest": true,
+  "js": ["../integration/lib/ytest.js", "test-frame-stats.js"],
+  "style": {
+    "bgColor": "#1e1e22"
+  },
+  "events": {
+    "onLoad": "@onPerfLoad"
+  },
+  "layout": {
+    "type": "vertical",
+    "spacing": 8,
+    "padding": [12, 12, 12, 12]
+  },
+  "children": [
+    {
+      "id": "perf_title",
+      "type": "Label",
+      "text": "perf frame stats",
+      "size": [456, 28],
+      "style": {
+        "color": "#ffffff",
+        "fontSize": 16,
+        "bgColor": "#2d6cdf",
+        "borderRadius": 4
+      }
+    },
+    {
+      "id": "perf_body",
+      "type": "View",
+      "size": [456, 200],
+      "style": {
+        "bgColor": "#2a2a30",
+        "borderRadius": 4
+      },
+      "layout": {
+        "type": "vertical",
+        "spacing": 4,
+        "padding": [8, 8, 8, 8]
+      },
+      "children": [
+        {
+          "id": "perf_line_0",
+          "type": "Label",
+          "text": "row 0",
+          "size": [440, 22],
+          "style": { "color": "#cccccc", "fontSize": 13 }
+        },
+        {
+          "id": "perf_line_1",
+          "type": "Label",
+          "text": "row 1",
+          "size": [440, 22],
+          "style": { "color": "#cccccc", "fontSize": 13 }
+        },
+        {
+          "id": "perf_line_2",
+          "type": "Label",
+          "text": "row 2",
+          "size": [440, 22],
+          "style": { "color": "#cccccc", "fontSize": 13 }
+        }
+      ]
+    },
+    {
+      "id": "perf_status",
+      "type": "Label",
+      "text": "warming up…",
+      "size": [456, 24],
+      "style": {
+        "color": "#aaaaaa",
+        "fontSize": 12
+      }
+    }
+  ]
+}

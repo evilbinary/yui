@@ -1,0 +1,3 @@
+# Generated screenshots (baselines are committed)
+tests/visual/output/
+*.png.diff.png

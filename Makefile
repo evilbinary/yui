@@ -104,5 +104,20 @@ test-unit:
 test-integration:
 	python scripts/run_tests.py --integration
 
+test-perf:
+	python scripts/run_tests.py --perf
+
+test-e2e:
+	python scripts/run_tests.py --e2e
+
+test-visual:
+	python scripts/run_tests.py --visual
+
+test-visual-update:
+	python scripts/run_tests.py --visual --update-baselines
+
+test-all:
+	python scripts/run_tests.py --all
+
 clean:
 	rm -rf build

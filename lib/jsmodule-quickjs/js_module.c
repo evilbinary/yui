@@ -45,6 +45,7 @@ JSValue js_read_file(JSContext* ctx, JSValueConst this_val, int argc, JSValueCon
 JSValue js_write_file(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv);
 JSValue js_resize_root(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv);
 JSValue js_screenshot(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv);
+JSValue js_click(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv);
 JSValue js_list_dir(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv);
 JSValue js_focus(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv);
 
@@ -1341,6 +1342,7 @@ void js_module_register_api(void)
     JS_SetPropertyStr(g_js_ctx, yui_obj, "writeFile", JS_NewCFunction(g_js_ctx, js_write_file, "writeFile", 2));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "resizeRoot", JS_NewCFunction(g_js_ctx, js_resize_root, "resizeRoot", 2));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "screenshot", JS_NewCFunction(g_js_ctx, js_screenshot, "screenshot", 1));
+    JS_SetPropertyStr(g_js_ctx, yui_obj, "click", JS_NewCFunction(g_js_ctx, js_click, "click", 1));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "listDir", JS_NewCFunction(g_js_ctx, js_list_dir, "listDir", 1));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "focus", JS_NewCFunction(g_js_ctx, js_focus, "focus", 1));
 
@@ -1776,6 +1778,53 @@ JSValue js_screenshot(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     int rc = backend_screenshot(file_path);
     JS_FreeCString(ctx, file_path);
     return JS_NewInt32(ctx, rc);
+}
+
+/* Synthesize mouse click at layer center — for e2e / auto tests. */
+JSValue js_click(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+    const char* layer_id;
+    Layer* layer;
+    PointerEvent pe;
+    int x;
+    int y;
+
+    (void)this_val;
+    if (argc < 1) {
+        return JS_ThrowTypeError(ctx, "Expected 1 argument: layer_id");
+    }
+    if (!g_layer_root) {
+        return JS_NewBool(ctx, 0);
+    }
+
+    layer_id = JS_ToCString(ctx, argv[0]);
+    if (!layer_id) {
+        return JS_ThrowTypeError(ctx, "Invalid layer id");
+    }
+
+    layer = find_layer_by_id(g_layer_root, layer_id);
+    if (!layer || layer->rect.w <= 0 || layer->rect.h <= 0) {
+        printf("YUI.click: layer '%s' not found or has empty rect\n", layer_id);
+        JS_FreeCString(ctx, layer_id);
+        return JS_NewBool(ctx, 0);
+    }
+
+    x = layer->rect.x + layer->rect.w / 2;
+    y = layer->rect.y + layer->rect.h / 2;
+
+    memset(&pe, 0, sizeof(pe));
+    pe.device = POINTER_DEVICE_MOUSE;
+    pe.button = BUTTON_LEFT;
+    pe.x = x;
+    pe.y = y;
+    pe.phase = POINTER_DOWN;
+    handle_pointer_event(g_layer_root, &pe);
+
+    pe.phase = POINTER_UP;
+    handle_pointer_event(g_layer_root, &pe);
+
+    printf("YUI.click: '%s' at (%d,%d)\n", layer_id, x, y);
+    JS_FreeCString(ctx, layer_id);
+    return JS_NewBool(ctx, 1);
 }
 
 // 列出目录内容

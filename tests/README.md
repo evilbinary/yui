@@ -7,38 +7,19 @@ tests/
 ├── unit/            # C unit tests (cmocka)
 ├── integration/     # JSON + JS (YTest), autoTest: true
 │   └── lib/ytest.js
-├── e2e/             # reserved
-├── visual/          # reserved
-└── perf/            # reserved
+├── e2e/             # end-to-end (YUI.click + UI asserts)
+├── visual/
+│   ├── cases/       # scene JSON + capture JS
+│   ├── baselines/   # committed PNG baselines
+│   └── output/      # generated screenshots (gitignored)
+└── perf/            # frame-budget gates (YUI.perf)
 ```
 
 `app/tests/` remains manual playground demos (not in default CI suite).
 
 ## Unit (cmocka)
 
-Add `tests/unit/test_foo.c`:
-
-```c
-#include <stdarg.h>
-#include <stddef.h>
-#include <setjmp.h>
-#include <stdint.h>
-#include <cmocka.h>
-
-static void test_example(void **state) {
-    (void)state;
-    assert_int_equal(1 + 1, 2);
-}
-
-int main(void) {
-    const struct CMUnitTest tests[] = {
-        cmocka_unit_test(test_example),
-    };
-    return cmocka_run_group_tests(tests, NULL, NULL);
-}
-```
-
-Run one: `ya -r test_foo`
+Add `tests/unit/test_foo.c` and run `ya -r test_foo`.
 
 ## Integration (YTest)
 
@@ -46,25 +27,51 @@ Run one: `ya -r test_foo`
 2. `"js": ["lib/ytest.js", "test-foo.js"]`
 3. `onLoad` → `YTest.describe` / `it` → `YTest.run()` → `YTest.exit()`
 
-```js
-function onTestLoad() {
-  YTest.describe("feature", function () {
-    YTest.it("works", function () {
-      YTest.expect(1).toBe(1);
-    });
-  });
-  YTest.run();
-  YTest.exit();
-}
+## E2E
+
+`tests/e2e/*.json` with `autoTest: true`. Drive the real pointer path via `YUI.click(id)` (layer center DOWN+UP), then assert with `YUI.getText` / `YUI.dump`.
+
+```bash
+python scripts/run_tests.py --e2e
+make test-e2e
 ```
+
+## Perf
+
+`tests/perf/*.json` with `autoTest: true`. Enable `YUI.perf`, wait a few frames, assert soft budgets (`frameMs` / `renderMs`).
+
+Not in the default suite — run explicitly:
+
+```bash
+python scripts/run_tests.py --perf
+make test-perf
+```
+
+## Visual
+
+1. Add `tests/visual/cases/test-foo.json` (`autoTest: true`) that calls `YUI.screenshot("tests/visual/output/foo.png")` after a short delay.
+2. Prefer solid-color Views (no text) for stable diffs.
+3. Capture / update baselines:
+
+```bash
+python scripts/run_tests.py --visual --update-baselines
+python scripts/run_tests.py --visual
+make test-visual
+```
+
+Diff tolerates ≤2% pixels with channel delta ≤8.
 
 ## Runner
 
 ```bash
-python scripts/run_tests.py
+python scripts/run_tests.py                 # unit + integration
 python scripts/run_tests.py --unit
 python scripts/run_tests.py --integration
+python scripts/run_tests.py --perf
+python scripts/run_tests.py --e2e
+python scripts/run_tests.py --visual
+python scripts/run_tests.py --all
 python scripts/run_tests.py --filter layer
 ```
 
-Or: `make test`
+Or: `make test` / `make test-all` / `make test-e2e`
