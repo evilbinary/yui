@@ -168,6 +168,16 @@ void input_state_reset(void)
     memset(g_btn_pressed, 0, sizeof(g_btn_pressed));
 }
 
+void input_state_release_all_keys(void)
+{
+    int i;
+    input_state_init();
+    for (i = 0; i < g_key_count; i++) {
+        g_keys[i].down = 0;
+    }
+    memset(g_btn_down, 0, sizeof(g_btn_down));
+}
+
 void input_state_begin_frame(void)
 {
     int i;

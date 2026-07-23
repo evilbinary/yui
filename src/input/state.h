@@ -10,6 +10,7 @@ extern "C" {
 void input_state_init(void);
 void input_state_reset(void);
 void input_state_begin_frame(void);
+void input_state_release_all_keys(void);
 
 /* 查询（由 KeyEvent / PointerEvent 监听更新） */
 int input_state_key_down(const char* name);
