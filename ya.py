@@ -147,6 +147,20 @@ def _resolve_mingw64():
 def configure_emscripten_toolchain(target=None):
     if get_plat() not in ("em", "emscripten", "em-lvgl"):
         return
+    # Debian/system emscripten ships FROZEN_CACHE=True with ports under
+    # /usr/share/emscripten/cache/ports (not writable). Override so -sUSE_SDL=2
+    # can fetch/build SDL2 into a user-owned cache. Empty EM_FROZEN_CACHE is
+    # falsy and disables the package default (string "0" would still be truthy).
+    if "EM_FROZEN_CACHE" not in os.environ:
+        os.environ["EM_FROZEN_CACHE"] = ""
+    if not os.environ.get("EM_CACHE"):
+        cache_dir = os.path.join(os.path.expanduser("~"), ".emscripten_cache")
+        os.makedirs(cache_dir, exist_ok=True)
+        os.environ["EM_CACHE"] = cache_dir
+    if not os.environ.get("EM_PORTS"):
+        ports_dir = os.path.join(os.environ["EM_CACHE"], "ports")
+        os.makedirs(ports_dir, exist_ok=True)
+        os.environ["EM_PORTS"] = ports_dir
     tool = get_toolchain_node()
     if not tool:
         print("warning: emscripten toolchain not found")
@@ -160,13 +174,19 @@ def configure_emscripten_toolchain(target=None):
     tool["ld"] = cc
     tool["ar"] = ar
 
-def _emscripten_link_flags():
-    # ymake ldflags dedup breaks paired "-s", "FOO=1"; use -sFOO=1 single tokens.
+def _emscripten_sdl_flags():
+    """Compile + link: emcc ports need these on both sides for SDL2 headers/libs."""
     return [
         "-sUSE_SDL=2",
         "-sUSE_SDL_IMAGE=2",
         "-sSDL2_IMAGE_FORMATS=[\"png\",\"jpg\"]",
         "-sUSE_SDL_TTF=2",
+    ]
+
+def _emscripten_link_flags():
+    # ymake ldflags dedup breaks paired "-s", "FOO=1"; use -sFOO=1 single tokens.
+    return [
+        *_emscripten_sdl_flags(),
         "-sALLOW_MEMORY_GROWTH=1",
         "-sASSERTIONS=2",
         "-sEXPORT_ALL=1",
@@ -327,7 +347,7 @@ def add_flags():
     if platform.system()=='Windows':
         checkmem=False
         
-    if checkmem and not is_plat("stm32") and get_plat() not in ("android", "ios"):
+    if checkmem and not is_plat("stm32") and get_plat() not in ("android", "ios", "em", "emscripten", "em-lvgl"):
         tool=get_toolchain_node()
         tool['ld']='gcc'
         add_cflags(
@@ -341,43 +361,24 @@ def add_flags():
         set_toolchain('emscripten')
         configure_emscripten_toolchain()
         before_build(configure_emscripten_toolchain)
-        if platform.system()=='Windows':
-            mingw64 = _resolve_mingw64()
-            add_cflags(
-            # '--use-port=sdl2 ',
+        # -sUSE_SDL=2 must be on cflags too, else #include <SDL.h> resolves to SDL1
+        # in emscripten sysroot (SDL_Color has no .a, no SDL_PIXELFORMAT_RGBA32, …).
+        add_cflags(
             '-g',
-            '-Wno-incompatible-pointer-types -Wno-implicit-function-declaration',
-            '-F../libs/',
-            '-I'+os.path.join(mingw64, 'include', 'SDL2'),
+            '-Wno-incompatible-pointer-types',
+            '-Wno-implicit-function-declaration',
             '-I.',
             '-I./src/components',
-            '-I./src/'
-            )
-            add_ldflags(
+            '-I./src/',
+            *_emscripten_sdl_flags(),
+        )
+        if platform.system() != 'Windows':
+            add_cflags('-gsource-map')
+        add_ldflags(
             *_emscripten_link_flags(),
-            "-Wbad-function-cast",
-            "-Wcast-function-type",
-            )
-        else:
-            mingw64='../libs/'
-
-            add_cflags(
-            # '--use-port=sdl2 ',
-            '-g',
-            '-gsource-map',
-            '-Wno-incompatible-pointer-types -Wno-implicit-function-declaration',
-            '-F../libs/',
-            '-I'+mingw64+'\\include\\SDL2',
-            '-I.',
-            '-I./src/components',
-            '-I./src/'
-            )
-        
-            add_ldflags(
-                *_emscripten_link_flags(),
-                '-Wbad-function-cast',
-                '-Wcast-function-type',
-                )
+            '-Wbad-function-cast',
+            '-Wcast-function-type',
+        )
     elif is_plat("stm32"):
         # STM32平台特定的编译选项
         add_cflags(

@@ -78,7 +78,7 @@ target("yui-web.js")
         "-sINVOKE_RUN=0",
         "-sEXPORTED_RUNTIME_METHODS=['callMain','FS']",
         "-sENVIRONMENT=web",
-        "-sSTACK_SIZE=8388608",
+        "-sTOTAL_STACK=8388608",
     ),
 )
 
@@ -105,6 +105,6 @@ target("yui-web-lvgl.js")
         "-sINVOKE_RUN=0",
         "-sEXPORTED_RUNTIME_METHODS=['callMain','FS']",
         "-sENVIRONMENT=web",
-        "-sSTACK_SIZE=8388608",
+        "-sTOTAL_STACK=8388608",
     ),
 )
