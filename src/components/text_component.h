@@ -3,6 +3,8 @@
 
 #include "../ytype.h"
 #include "text_syntax.h"
+#include "text_edit_history.h"
+#include "text_style_runs.h"
 
 typedef struct Layer Layer;
 typedef struct KeyEvent KeyEvent;
@@ -41,6 +43,13 @@ typedef struct {
     int layout_cache_revision; // 布局缓存对应的文本版本
     int layout_cache_max_width; // 布局缓存对应的最大宽度
     int layout_cache_text_len;  // 布局缓存对应的文本长度
+    TextEditHistory history;
+    int history_suppress;
+    TextStyleRun* style_runs;
+    int style_run_count;
+    uint32_t typing_style;
+    DFont* bold_font_cache;
+    int bold_font_size_cache;
 } TextComponent;
 
 // 函数声明

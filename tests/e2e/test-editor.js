@@ -6,9 +6,9 @@
  * cut-copy-paste / fontSize / Enter newline / scroll-to-cursor / maxLength /
  * readonly.
  *
- * Not covered here (platform / missing feature): IME compose UI, undo/redo,
- * attributedText (bold/italic), keyboardType, autocapitalize/autocorrect,
- * secure entry, double-click word select, drag-select gesture.
+ * Not covered here (platform / missing feature): IME compose UI,
+ * keyboardType, autocapitalize/autocorrect, secure entry, double-click word
+ * select, drag-select gesture.
  */
 function prop(id, name) {
   return YUI.getProperty(id, name);
@@ -262,6 +262,79 @@ function onEditorE2ELoad() {
         var before = textOf("readonlyEditor");
         setProp("readonlyEditor", "backspace", 1);
         YTest.expect(textOf("readonlyEditor")).toBe(before);
+      });
+    });
+
+    /* -------- 8. undo / redo -------- */
+    YTest.describe("8. undo redo", function () {
+      YTest.it("undo restores previous text after insertText", function () {
+        YUI.setText("inputEditor", "");
+        setProp("inputEditor", "insertText", "hello");
+        YTest.expect(textOf("inputEditor")).toBe("hello");
+        YTest.expect(prop("inputEditor", "canUndo")).toBeTruthy();
+        setProp("inputEditor", "undo", 1);
+        YTest.expect(textOf("inputEditor")).toBe("");
+        YTest.expect(prop("inputEditor", "canRedo")).toBeTruthy();
+      });
+
+      YTest.it("redo reapplies undone insert", function () {
+        YUI.setText("inputEditor", "");
+        setProp("inputEditor", "insertText", "abc");
+        setProp("inputEditor", "undo", 1);
+        setProp("inputEditor", "redo", 1);
+        YTest.expect(textOf("inputEditor")).toBe("abc");
+      });
+
+      YTest.it("Ctrl+Z / Ctrl+Y key path", function () {
+        YUI.setText("inputEditor", "");
+        setProp("inputEditor", "insertText", "xyz");
+        YUI.sendKey({ id: "inputEditor", key: "z", mod: "ctrl" });
+        YTest.expect(textOf("inputEditor")).toBe("");
+        YUI.sendKey({ id: "inputEditor", key: "y", mod: "ctrl" });
+        YTest.expect(textOf("inputEditor")).toBe("xyz");
+      });
+
+      YTest.it("setText clears undo history", function () {
+        YUI.setText("inputEditor", "");
+        setProp("inputEditor", "insertText", "keep");
+        YUI.setText("inputEditor", "reset");
+        YTest.expect(prop("inputEditor", "canUndo")).toBeFalsy();
+        setProp("inputEditor", "undo", 1);
+        YTest.expect(textOf("inputEditor")).toBe("reset");
+      });
+    });
+
+    /* -------- 9. rich text bold/italic -------- */
+    YTest.describe("9. rich text styles", function () {
+      YTest.it("bold on selection creates style run", function () {
+        YUI.setText("selectEditor", "Hello World");
+        setProp("selectEditor", "selection", "0,5");
+        setProp("selectEditor", "bold", 1);
+        YTest.expect(prop("selectEditor", "bold")).toBeTruthy();
+        var styles = prop("selectEditor", "styles");
+        YTest.expect(typeof styles === "string" && styles.indexOf('"flags"') >= 0).toBeTruthy();
+      });
+
+      YTest.it("undo restores style runs", function () {
+        YUI.setText("selectEditor", "Hello");
+        setProp("selectEditor", "selection", "0,5");
+        setProp("selectEditor", "bold", 1);
+        setProp("selectEditor", "undo", 1);
+        var styles = prop("selectEditor", "styles");
+        YTest.expect(styles === "[]" || styles === null || styles === undefined).toBeTruthy();
+        YTest.expect(textOf("selectEditor")).toBe("Hello");
+      });
+
+      YTest.it("Ctrl+B toggles bold", function () {
+        YUI.setText("selectEditor", "BoldMe");
+        setProp("selectEditor", "selection", "0,6");
+        setProp("selectEditor", "toggleBold", 1);
+        YTest.expect(prop("selectEditor", "bold")).toBeTruthy();
+        setProp("selectEditor", "toggleBold", 1);
+        YTest.expect(prop("selectEditor", "bold")).toBeFalsy();
+        setProp("selectEditor", "selection", "0,6");
+        YUI.sendKey({ id: "selectEditor", key: "b", mod: "ctrl" });
+        YTest.expect(prop("selectEditor", "bold")).toBeTruthy();
       });
     });
 

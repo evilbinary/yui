@@ -115,45 +115,44 @@ static JSValue js_get_property(JSContext *ctx, JSValueConst this_val, int argc, 
         // 直接调用 layer_get_property_as_json，避免字符串中转
         extern cJSON* layer_get_property_as_json(Layer* layer, const char* key);
         Layer* layer = find_layer_by_id(g_layer_root, layer_id);
-        
-        JS_FreeCString(ctx, layer_id);
-        JS_FreeCString(ctx, property_name);
-        
+        JSValue result = JS_UNDEFINED;
+
         if (!layer) {
             printf("JS: Layer '%s' not found\n", layer_id);
-            return JS_UNDEFINED;
-        }
-        
-        cJSON* json_value = layer_get_property_as_json(layer, property_name);
-        if (!json_value) {
-            printf("JS: Property '%s' not found for layer '%s'\n", property_name, layer_id);
-            return JS_UNDEFINED;
-        }
-        
-        JSValue result;
-        if (cJSON_IsString(json_value)) {
-            result = JS_NewString(ctx, json_value->valuestring);
-        } else if (cJSON_IsNumber(json_value)) {
-            result = JS_NewFloat64(ctx, json_value->valuedouble);
-        } else if (cJSON_IsBool(json_value)) {
-            result = cJSON_IsTrue(json_value) ? JS_TRUE : JS_FALSE;
-        } else if (cJSON_IsNull(json_value)) {
-            result = JS_NULL;
-        } else if (cJSON_IsArray(json_value) || cJSON_IsObject(json_value)) {
-            // 数组和对象转为 JSON 字符串
-            char* json_str = cJSON_PrintUnformatted(json_value);
-            result = JS_NewString(ctx, json_str);
-            free(json_str);
         } else {
-            result = JS_UNDEFINED;
+            cJSON* json_value = layer_get_property_as_json(layer, property_name);
+            if (!json_value) {
+                printf("JS: Property '%s' not found for layer '%s'\n", property_name, layer_id);
+            } else if (cJSON_IsString(json_value)) {
+                result = JS_NewString(ctx, json_value->valuestring);
+                cJSON_Delete(json_value);
+            } else if (cJSON_IsNumber(json_value)) {
+                result = JS_NewFloat64(ctx, json_value->valuedouble);
+                cJSON_Delete(json_value);
+            } else if (cJSON_IsBool(json_value)) {
+                result = cJSON_IsTrue(json_value) ? JS_TRUE : JS_FALSE;
+                cJSON_Delete(json_value);
+            } else if (cJSON_IsNull(json_value)) {
+                result = JS_NULL;
+                cJSON_Delete(json_value);
+            } else if (cJSON_IsArray(json_value) || cJSON_IsObject(json_value)) {
+                // 数组和对象转为 JSON 字符串
+                char* json_str = cJSON_PrintUnformatted(json_value);
+                result = JS_NewString(ctx, json_str ? json_str : "null");
+                free(json_str);
+                cJSON_Delete(json_value);
+            } else {
+                cJSON_Delete(json_value);
+            }
         }
-        
-        cJSON_Delete(json_value);
+
+        JS_FreeCString(ctx, layer_id);
+        JS_FreeCString(ctx, property_name);
         return result;
     }
 
-    JS_FreeCString(ctx, layer_id);
-    JS_FreeCString(ctx, property_name);
+    if (layer_id) JS_FreeCString(ctx, layer_id);
+    if (property_name) JS_FreeCString(ctx, property_name);
     return JS_UNDEFINED;
 }
 

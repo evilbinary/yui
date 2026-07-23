@@ -36,3 +36,4 @@ third_party/yui-prebuilt/*
 platform/android/app/.cxx/*
 platform/android/.idea/*
 tests/visual/output/
+smoke-test-temp.txt

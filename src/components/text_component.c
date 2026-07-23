@@ -6,6 +6,8 @@
 #include "../backend.h"
 #include "../render.h"
 #include "../util.h"
+#include "text_edit_history.h"
+#include "text_style_runs.h"
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
@@ -86,6 +88,173 @@ static void text_component_insert_text(TextComponent* component, const char* tex
 static void text_component_delete_selection(TextComponent* component);
 static void text_component_delete_prev_char(TextComponent* component);
 static void text_component_delete_next_char(TextComponent* component);
+
+static TextEditSnapshot* text_component_capture_snapshot(TextComponent* component)
+{
+    const char* text;
+    if (!component || !component->layer) {
+        return NULL;
+    }
+    text = component->layer->text ? component->layer->text : "";
+    return text_edit_snapshot_create(text,
+                                    component->cursor_pos,
+                                    component->selection_start,
+                                    component->selection_end,
+                                    component->style_runs,
+                                    component->style_run_count,
+                                    component->typing_style);
+}
+
+static void text_component_apply_snapshot(TextComponent* component, TextEditSnapshot* snap)
+{
+    if (!component || !snap) {
+        return;
+    }
+    layer_set_text(component->layer, snap->text ? snap->text : "");
+    component->cursor_pos = snap->cursor_pos;
+    component->selection_start = snap->selection_start;
+    component->selection_end = snap->selection_end;
+    component->typing_style = snap->typing_style;
+    text_style_runs_free(component->style_runs);
+    component->style_runs = text_style_runs_clone(snap->runs, snap->run_count);
+    component->style_run_count = component->style_runs ? snap->run_count : 0;
+    component->cursor_visual_line = -1;
+    text_component_invalidate_layout(component);
+    text_component_update_content_height(component);
+    text_component_update_scroll_for_cursor(component);
+    text_component_trigger_on_change(component);
+}
+
+static void text_component_begin_edit(TextComponent* component, TextEditKind kind)
+{
+    TextEditSnapshot* snap;
+    if (!component) {
+        return;
+    }
+    if (component->history_suppress > 0) {
+        return;
+    }
+    snap = text_component_capture_snapshot(component);
+    if (!snap) {
+        return;
+    }
+    text_edit_history_before_edit(&component->history, snap, kind, backend_get_ticks());
+}
+
+static void text_component_history_suppress_begin(TextComponent* component)
+{
+    if (component) {
+        component->history_suppress++;
+    }
+}
+
+static void text_component_history_suppress_end(TextComponent* component)
+{
+    if (component && component->history_suppress > 0) {
+        component->history_suppress--;
+    }
+}
+
+static int text_component_do_undo(TextComponent* component)
+{
+    TextEditSnapshot* current;
+    TextEditSnapshot* prev;
+    if (!component || !text_edit_history_can_undo(&component->history)) {
+        return 0;
+    }
+    current = text_component_capture_snapshot(component);
+    prev = text_edit_history_undo(&component->history, current);
+    if (!prev) {
+        return 0;
+    }
+    text_component_history_suppress_begin(component);
+    text_component_apply_snapshot(component, prev);
+    text_component_history_suppress_end(component);
+    text_edit_snapshot_free(prev);
+    return 1;
+}
+
+static int text_component_do_redo(TextComponent* component)
+{
+    TextEditSnapshot* current;
+    TextEditSnapshot* next;
+    if (!component || !text_edit_history_can_redo(&component->history)) {
+        return 0;
+    }
+    current = text_component_capture_snapshot(component);
+    next = text_edit_history_redo(&component->history, current);
+    if (!next) {
+        return 0;
+    }
+    text_component_history_suppress_begin(component);
+    text_component_apply_snapshot(component, next);
+    text_component_history_suppress_end(component);
+    text_edit_snapshot_free(next);
+    return 1;
+}
+
+static void text_component_normalize_selection_range(TextComponent* component, int* start, int* end)
+{
+    int s;
+    int e;
+    int text_len;
+    if (!component || !start || !end) {
+        return;
+    }
+    s = component->selection_start;
+    e = component->selection_end;
+    if (s < 0 || e < 0) {
+        *start = component->cursor_pos;
+        *end = component->cursor_pos;
+        return;
+    }
+    if (s > e) {
+        int t = s;
+        s = e;
+        e = t;
+    }
+    text_len = component->layer && component->layer->text ? (int)strlen(component->layer->text) : 0;
+    if (s < 0) s = 0;
+    if (e > text_len) e = text_len;
+    *start = s;
+    *end = e;
+}
+
+static int text_component_toggle_style(TextComponent* component, uint32_t flags)
+{
+    int start;
+    int end;
+    if (!component || flags == 0) {
+        return 0;
+    }
+    text_component_normalize_selection_range(component, &start, &end);
+    text_component_begin_edit(component, TEXT_EDIT_STYLE);
+    if (start < end) {
+        text_style_runs_toggle(&component->style_runs, &component->style_run_count, start, end, flags);
+    } else {
+        component->typing_style ^= flags;
+    }
+    mark_layer_dirty(component->layer, DIRTY_TEXT);
+    return 1;
+}
+
+static DFont* text_component_font_for_flags(TextComponent* component, uint32_t flags)
+{
+    Font* font;
+    if (!component || !component->layer || !component->layer->font) {
+        return NULL;
+    }
+    font = component->layer->font;
+    if (!(flags & TEXT_STYLE_BOLD)) {
+        return font->default_font;
+    }
+    if (component->bold_font_cache && component->bold_font_size_cache == font->size) {
+        return component->bold_font_cache;
+    }
+    component->bold_font_cache = backend_load_font_with_weight(font->path, font->size, "bold");
+    component->bold_font_size_cache = font->size;
+    return component->bold_font_cache ? component->bold_font_cache : font->default_font;
+}
 
 static int text_component_get_line_height(TextComponent* component) {
     if (!component || !component->layer) return 20;
@@ -460,8 +629,9 @@ static int text_component_count_visual_lines_in_range(TextComponent* component, 
     return lines > 0 ? lines : 1;
 }
 
-static int text_component_render_text_cluster(TextComponent* component, const char* text,
-                                               int start, int end, int x, int y) {
+static int text_component_render_text_cluster_font(TextComponent* component, DFont* font,
+                                                   const char* text, int start, int end,
+                                                   int x, int y) {
     int len;
     char* buf;
     Texture* tex;
@@ -470,7 +640,7 @@ static int text_component_render_text_cluster(TextComponent* component, const ch
     Rect rect;
     int draw_w = 0;
 
-    if (!component || !component->layer || !component->layer->font || !component->layer->font->default_font) {
+    if (!component || !component->layer || !font) {
         return 0;
     }
     if (start >= end) {
@@ -484,7 +654,7 @@ static int text_component_render_text_cluster(TextComponent* component, const ch
     }
     memcpy(buf, text + start, (size_t)len);
     buf[len] = '\0';
-    tex = backend_render_texture(component->layer->font->default_font, buf, component->layer->color);
+    tex = backend_render_texture(font, buf, component->layer->color);
     free(buf);
     if (!tex) {
         return 0;
@@ -500,8 +670,18 @@ static int text_component_render_text_cluster(TextComponent* component, const ch
     return draw_w;
 }
 
-static void text_component_render_text_segment_graphemes(TextComponent* component, const char* text,
-                                                       int start, int end, int x, int y) {
+static int text_component_render_text_cluster(TextComponent* component, const char* text,
+                                               int start, int end, int x, int y) {
+    if (!component || !component->layer || !component->layer->font || !component->layer->font->default_font) {
+        return 0;
+    }
+    return text_component_render_text_cluster_font(component, component->layer->font->default_font,
+                                                   text, start, end, x, y);
+}
+
+static void text_component_render_text_segment_graphemes_font(TextComponent* component, DFont* font,
+                                                             const char* text, int start, int end,
+                                                             int x, int y) {
     int pos = start;
     int cursor_x = x;
 
@@ -515,27 +695,102 @@ static void text_component_render_text_segment_graphemes(TextComponent* componen
             clen = utf8_char_len_at(text + pos);
             gend = pos + (clen > 0 ? clen : 1);
         }
-        int drawn_w = text_component_render_text_cluster(component, text, pos, gend, cursor_x, y);
-        if (drawn_w > 0) {
-            cursor_x += drawn_w;
-        } else {
-            cp = text_component_codepoint_at(text + pos, &clen);
-            advance = text_component_estimate_cluster_width(component, cp);
-            if (advance < 1) {
-                advance = 1;
+        {
+            int drawn_w = text_component_render_text_cluster_font(component, font, text, pos, gend,
+                                                                  cursor_x, y);
+            if (drawn_w > 0) {
+                cursor_x += drawn_w;
+            } else {
+                cp = text_component_codepoint_at(text + pos, &clen);
+                advance = text_component_estimate_cluster_width(component, cp);
+                if (advance < 1) {
+                    advance = 1;
+                }
+                cursor_x += advance;
             }
-            cursor_x += advance;
         }
         pos = gend;
     }
 }
 
-static void text_component_render_text_segment(TextComponent* component, const char* text,
-                                               int start, int end, int x, int y) {
+static void text_component_render_text_segment_graphemes(TextComponent* component, const char* text,
+                                                       int start, int end, int x, int y) {
+    if (!component || !component->layer || !component->layer->font || !component->layer->font->default_font) {
+        return;
+    }
+    text_component_render_text_segment_graphemes_font(component, component->layer->font->default_font,
+                                                      text, start, end, x, y);
+}
+
+static int text_component_style_seg_end(TextComponent* component, int start, int end)
+{
+    int i;
+    int seg_end = end;
+    uint32_t flags;
+
+    if (!component || start >= end) {
+        return end;
+    }
+    flags = text_style_runs_flags_at(component->style_runs, component->style_run_count, start);
+    for (i = 0; i < component->style_run_count; i++) {
+        TextStyleRun* r = &component->style_runs[i];
+        if (r->end <= start || r->start >= end) {
+            continue;
+        }
+        if (r->start > start && r->start < seg_end) {
+            seg_end = r->start;
+        }
+        if (start >= r->start && start < r->end) {
+            if (r->end < seg_end) {
+                seg_end = r->end;
+            }
+            if (r->flags != flags) {
+                /* should not happen for flags_at, keep going */
+            }
+        }
+    }
+    if (seg_end <= start) {
+        seg_end = start + 1;
+    }
+    if (seg_end > end) {
+        seg_end = end;
+    }
+    return seg_end;
+}
+
+static void text_component_render_text_segment_plain(TextComponent* component, DFont* font,
+                                                    const char* text, int start, int end,
+                                                    int x, int y) {
     int len;
     char* buf;
     Texture* tex;
 
+    if (!component || !font || start >= end) {
+        return;
+    }
+
+    len = end - start;
+    buf = (char*)malloc((size_t)len + 1);
+    if (!buf) return;
+    memcpy(buf, text + start, (size_t)len);
+    buf[len] = '\0';
+    tex = backend_render_texture(font, buf, component->layer->color);
+    free(buf);
+    if (!tex) {
+        text_component_render_text_segment_graphemes_font(component, font, text, start, end, x, y);
+        return;
+    }
+    {
+        int width = 0, height = 0;
+        backend_query_texture(tex, NULL, NULL, &width, &height);
+        Rect rect = {x, y, width / yui_density, height / yui_density};
+        backend_render_text_copy(tex, NULL, &rect);
+        backend_render_text_destroy(tex);
+    }
+}
+
+static void text_component_render_text_segment(TextComponent* component, const char* text,
+                                               int start, int end, int x, int y) {
     if (!component || !component->layer || !component->layer->font || !component->layer->font->default_font) {
         return;
     }
@@ -547,24 +802,60 @@ static void text_component_render_text_segment(TextComponent* component, const c
         return;
     }
 
-    len = end - start;
-    buf = (char*)malloc((size_t)len + 1);
-    if (!buf) return;
-    memcpy(buf, text + start, (size_t)len);
-    buf[len] = '\0';
-    tex = backend_render_texture(component->layer->font->default_font, buf, component->layer->color);
-    free(buf);
-    if (!tex) {
-        text_component_render_text_segment_graphemes(component, text, start, end, x, y);
+    if (component->style_run_count > 0) {
+        int pos = start;
+        int cursor_x = x;
+        while (pos < end) {
+            uint32_t flags = text_style_runs_flags_at(component->style_runs,
+                                                     component->style_run_count, pos);
+            int seg_end = text_component_style_seg_end(component, pos, end);
+            DFont* font = text_component_font_for_flags(component, flags);
+            int len = seg_end - pos;
+            char* buf;
+            Texture* tex;
+            if (!font) {
+                font = component->layer->font->default_font;
+            }
+            buf = (char*)malloc((size_t)len + 1);
+            if (!buf) {
+                break;
+            }
+            memcpy(buf, text + pos, (size_t)len);
+            buf[len] = '\0';
+            tex = backend_render_texture(font, buf, component->layer->color);
+            free(buf);
+            if (!tex) {
+                text_component_render_text_segment_graphemes_font(component, font, text, pos, seg_end,
+                                                                  cursor_x, y);
+                /* approximate advance for next piece */
+                {
+                    int approx = 0;
+                    int p = pos;
+                    while (p < seg_end) {
+                        int clen = 0;
+                        unsigned int cp = text_component_codepoint_at(text + p, &clen);
+                        int adv = text_component_estimate_cluster_width(component, cp);
+                        if (adv < 1) adv = 1;
+                        approx += adv;
+                        p += clen > 0 ? clen : 1;
+                    }
+                    cursor_x += approx;
+                }
+            } else {
+                int width = 0, height = 0;
+                backend_query_texture(tex, NULL, NULL, &width, &height);
+                Rect rect = {cursor_x, y, width / yui_density, height / yui_density};
+                backend_render_text_copy(tex, NULL, &rect);
+                backend_render_text_destroy(tex);
+                cursor_x += width / yui_density;
+            }
+            pos = seg_end;
+        }
         return;
     }
-    {
-        int width = 0, height = 0;
-        backend_query_texture(tex, NULL, NULL, &width, &height);
-        Rect rect = {x, y, width / yui_density, height / yui_density};
-        backend_render_text_copy(tex, NULL, &rect);
-        backend_render_text_destroy(tex);
-    }
+
+    text_component_render_text_segment_plain(component, component->layer->font->default_font,
+                                             text, start, end, x, y);
 }
 
 void text_component_set_syntax_highlight(TextComponent* component, const char* language) {
@@ -735,6 +1026,13 @@ TextComponent* text_component_create(Layer* layer) {
     component->layout_cache_revision = -1;
     component->layout_cache_max_width = 0;
     component->layout_cache_text_len = -1;
+    text_edit_history_init(&component->history, 80);
+    component->history_suppress = 0;
+    component->style_runs = NULL;
+    component->style_run_count = 0;
+    component->typing_style = 0;
+    component->bold_font_cache = NULL;
+    component->bold_font_size_cache = 0;
     text_syntax_config_init(&component->syntax_config, NULL, layer->color);
     
     // 初始化图层的文本字段
@@ -851,6 +1149,10 @@ TextComponent* text_component_create_from_json(Layer* layer,cJSON* json_obj){
 void text_component_destroy(TextComponent* component) {
     if (component) {
         text_component_free_layout(component);
+        text_edit_history_free(&component->history);
+        text_style_runs_free(component->style_runs);
+        component->style_runs = NULL;
+        component->style_run_count = 0;
         free(component);
     }
 }
@@ -888,6 +1190,11 @@ void text_component_set_text(TextComponent* component, const char* text) {
     component->cursor_pos = text_len;
     component->selection_start = -1;
     component->selection_end = -1;
+    text_style_runs_free(component->style_runs);
+    component->style_runs = NULL;
+    component->style_run_count = 0;
+    component->typing_style = 0;
+    text_edit_history_clear(&component->history);
     
     // 使行高缓存失效（因为文本或字体可能改变）
     component->line_height_valid = 0;
@@ -1155,6 +1462,42 @@ cJSON* text_component_get_property(Layer* layer, const char* property_name) {
     else if (strcmp(property_name, "lineEnd") == 0) {
         return cJSON_CreateNumber(get_line_end(component, component->cursor_pos));
     }
+    else if (strcmp(property_name, "canUndo") == 0) {
+        return cJSON_CreateBool(text_edit_history_can_undo(&component->history));
+    }
+    else if (strcmp(property_name, "canRedo") == 0) {
+        return cJSON_CreateBool(text_edit_history_can_redo(&component->history));
+    }
+    else if (strcmp(property_name, "bold") == 0 || strcmp(property_name, "italic") == 0) {
+        uint32_t flag = (strcmp(property_name, "bold") == 0) ? TEXT_STYLE_BOLD : TEXT_STYLE_ITALIC;
+        int start;
+        int end;
+        uint32_t flags;
+        text_component_normalize_selection_range(component, &start, &end);
+        if (start < end) {
+            flags = text_style_runs_common_flags(component->style_runs, component->style_run_count, start, end);
+        } else {
+            flags = component->typing_style;
+            if (flags == 0) {
+                flags = text_style_runs_flags_at(component->style_runs, component->style_run_count,
+                                                 component->cursor_pos > 0 ? component->cursor_pos - 1
+                                                                          : component->cursor_pos);
+            }
+        }
+        return cJSON_CreateBool((flags & flag) != 0);
+    }
+    else if (strcmp(property_name, "styles") == 0) {
+        cJSON* arr = cJSON_CreateArray();
+        int i;
+        for (i = 0; i < component->style_run_count; i++) {
+            cJSON* run = cJSON_CreateObject();
+            cJSON_AddNumberToObject(run, "start", component->style_runs[i].start);
+            cJSON_AddNumberToObject(run, "end", component->style_runs[i].end);
+            cJSON_AddNumberToObject(run, "flags", (double)component->style_runs[i].flags);
+            cJSON_AddItemToArray(arr, run);
+        }
+        return arr;
+    }
 
     // 未知的属性，返回 NULL
     return NULL;
@@ -1401,6 +1744,59 @@ int text_component_set_property_from_json(Layer* layer, const char* key, cJSON* 
         text_component_delete_next_char(component);
         return 1;
     }
+    if (strcmp(key, "undo") == 0) {
+        if (!component->editable) {
+            return 0;
+        }
+        return text_component_do_undo(component);
+    }
+    if (strcmp(key, "redo") == 0) {
+        if (!component->editable) {
+            return 0;
+        }
+        return text_component_do_redo(component);
+    }
+    if (strcmp(key, "bold") == 0 || strcmp(key, "italic") == 0) {
+        uint32_t flag = (strcmp(key, "bold") == 0) ? TEXT_STYLE_BOLD : TEXT_STYLE_ITALIC;
+        int start;
+        int end;
+        int enable;
+        if (!component->editable) {
+            return 0;
+        }
+        enable = cJSON_IsTrue(value) || (cJSON_IsNumber(value) && value->valueint) ||
+                 (cJSON_IsString(value) && value->valuestring &&
+                  (strcmp(value->valuestring, "1") == 0 || strcmp(value->valuestring, "true") == 0));
+        text_component_normalize_selection_range(component, &start, &end);
+        text_component_begin_edit(component, TEXT_EDIT_STYLE);
+        if (start < end) {
+            if (enable) {
+                text_style_runs_apply(&component->style_runs, &component->style_run_count,
+                                      start, end, flag, 0);
+            } else {
+                text_style_runs_apply(&component->style_runs, &component->style_run_count,
+                                      start, end, 0, flag);
+            }
+        } else if (enable) {
+            component->typing_style |= flag;
+        } else {
+            component->typing_style &= ~flag;
+        }
+        mark_layer_dirty(component->layer, DIRTY_TEXT);
+        return 1;
+    }
+    if (strcmp(key, "toggleBold") == 0) {
+        if (!component->editable) {
+            return 0;
+        }
+        return text_component_toggle_style(component, TEXT_STYLE_BOLD);
+    }
+    if (strcmp(key, "toggleItalic") == 0) {
+        if (!component->editable) {
+            return 0;
+        }
+        return text_component_toggle_style(component, TEXT_STYLE_ITALIC);
+    }
     if (strcmp(key, "moveLineStart") == 0) {
         component->cursor_pos = get_line_start(component, component->cursor_pos);
         component->cursor_visual_line = -1;
@@ -1516,6 +1912,8 @@ static void text_component_delete_selection(TextComponent* component) {
     
     // 只有当start < end时才执行删除操作
     if (start < end) {
+        text_component_begin_edit(component, TEXT_EDIT_DELETE);
+
         // 计算新文本的长度
         size_t new_len = text_len - (end - start);
         
@@ -1533,6 +1931,8 @@ static void text_component_delete_selection(TextComponent* component) {
         // 设置新文本
         layer_set_text(component->layer, new_text);
         free(new_text);
+
+        text_style_runs_delete(&component->style_runs, &component->style_run_count, start, end);
         
         component->cursor_pos = start;
         text_component_invalidate_layout(component);
@@ -1555,18 +1955,29 @@ static void text_component_insert_char(TextComponent* component, char c) {
     }
 
     int len = strlen(component->layer->text);
-
-    // 移除最大长度限制，使用动态内存分配
-    // 注释掉最大长度检查，因为现在使用 layer_set_text_with_size 进行动态内存分配
-    /*
-    if (len >= component->max_length - 1) {
-        return;
-    }
-    */
+    int has_selection = 0;
+    int insert_at;
 
     // 如果有选中的文本，先删除
     if (component->selection_start != -1 && component->selection_end != -1) {
+        int start = component->selection_start;
+        int end = component->selection_end;
+        if (start > end) {
+            int temp = start;
+            start = end;
+            end = temp;
+        }
+        if (start != end) {
+            has_selection = 1;
+        }
+    }
+
+    text_component_begin_edit(component, has_selection ? TEXT_EDIT_REPLACE : TEXT_EDIT_TYPING);
+
+    if (has_selection) {
+        text_component_history_suppress_begin(component);
         text_component_delete_selection(component);
+        text_component_history_suppress_end(component);
         // 更新len，因为删除选择后文本长度可能改变
         len = strlen(component->layer->text);
     }
@@ -1574,13 +1985,7 @@ static void text_component_insert_char(TextComponent* component, char c) {
     // 确保cursor_pos在有效范围内
     if (component->cursor_pos < 0) component->cursor_pos = 0;
     if (component->cursor_pos > len) component->cursor_pos = len;
-
-    // 插入字符，使用动态内存分配
-    // 移除最大长度限制，使用动态内存分配
-    // 注释掉最大长度检查，因为现在使用 layer_set_text_with_size 进行动态内存分配
-    /*
-    if (component->cursor_pos < component->max_length - 1) {
-    */
+    insert_at = component->cursor_pos;
     
     // 计算新文本长度
     size_t new_len = len + 1;
@@ -1601,6 +2006,12 @@ static void text_component_insert_char(TextComponent* component, char c) {
     // 设置新文本
     layer_set_text(component->layer, new_text);
     free(new_text);
+
+    text_style_runs_insert(&component->style_runs, &component->style_run_count, insert_at, 1);
+    if (component->typing_style) {
+        text_style_runs_apply(&component->style_runs, &component->style_run_count,
+                              insert_at, insert_at + 1, component->typing_style, 0);
+    }
     
     component->cursor_pos++;
     text_component_invalidate_layout(component);
@@ -1828,6 +2239,10 @@ static void text_component_delete_prev_char(TextComponent* component) {
         // 获取光标前一个 UTF-8 字符的字节长度
         int char_len = get_prev_utf8_char_len(component->layer->text, component->cursor_pos);
         if (char_len <= 0) char_len = 1;
+        int del_start = component->cursor_pos - char_len;
+        int del_end = component->cursor_pos;
+
+        text_component_begin_edit(component, TEXT_EDIT_DELETE);
         
         // 计算新文本长度
         size_t new_len = len - char_len;
@@ -1846,6 +2261,8 @@ static void text_component_delete_prev_char(TextComponent* component) {
         // 设置新文本
         layer_set_text(component->layer, new_text);
         free(new_text);
+
+        text_style_runs_delete(&component->style_runs, &component->style_run_count, del_start, del_end);
         
         component->cursor_pos -= char_len;
         text_component_invalidate_layout(component);
@@ -1893,6 +2310,8 @@ static void text_component_delete_next_char(TextComponent* component) {
     if (component->cursor_pos >= len) {
         return; // 已经在文本末尾，无需删除
     }
+
+    text_component_begin_edit(component, TEXT_EDIT_DELETE);
     
     // 计算新文本长度
     size_t new_len = len - 1;
@@ -1911,6 +2330,9 @@ static void text_component_delete_next_char(TextComponent* component) {
     // 设置新文本
     layer_set_text(component->layer, new_text);
     free(new_text);
+
+    text_style_runs_delete(&component->style_runs, &component->style_run_count,
+                           component->cursor_pos, component->cursor_pos + 1);
     text_component_invalidate_layout(component);
     
     // 更新内容高度
@@ -1962,16 +2384,35 @@ static void text_component_insert_text(TextComponent* component, const char* tex
     const char* insert_text = normalized;
     
     int current_len = strlen(component->layer->text);
+    int has_selection = 0;
+    int insert_at;
     
     // 如果有选中的文本，先删除
     if (component->selection_start != -1 && component->selection_end != -1) {
+        int start = component->selection_start;
+        int end = component->selection_end;
+        if (start > end) {
+            int temp = start;
+            start = end;
+            end = temp;
+        }
+        if (start != end) {
+            has_selection = 1;
+        }
+    }
+
+    if (has_selection) {
+        text_component_begin_edit(component, TEXT_EDIT_REPLACE);
+        text_component_history_suppress_begin(component);
         text_component_delete_selection(component);
+        text_component_history_suppress_end(component);
         current_len = strlen(component->layer->text);
     }
     
     // 确保cursor_pos在有效范围内
     if (component->cursor_pos < 0) component->cursor_pos = 0;
     if (component->cursor_pos > current_len) component->cursor_pos = current_len;
+    insert_at = component->cursor_pos;
     
     // 检查是否包含换行符，如果包含则设置为多行模式
     int has_newlines = 0;
@@ -1993,6 +2434,10 @@ static void text_component_insert_text(TextComponent* component, const char* tex
             return;
         }
     }
+
+    if (!has_selection) {
+        text_component_begin_edit(component, TEXT_EDIT_REPLACE);
+    }
     
     // 计算新文本长度
     size_t new_len = current_len + text_len;
@@ -2000,6 +2445,7 @@ static void text_component_insert_text(TextComponent* component, const char* tex
     // 创建临时缓冲区存储新文本
     char* new_text = malloc(new_len + 1);
     if (!new_text) {
+        free(normalized);
         return;
     }
     
@@ -2016,6 +2462,12 @@ static void text_component_insert_text(TextComponent* component, const char* tex
     layer_set_text(component->layer, new_text);
     free(new_text);
     free(normalized);
+
+    text_style_runs_insert(&component->style_runs, &component->style_run_count, insert_at, text_len);
+    if (component->typing_style) {
+        text_style_runs_apply(&component->style_runs, &component->style_run_count,
+                              insert_at, insert_at + text_len, component->typing_style, 0);
+    }
     
     component->cursor_pos += text_len;
     text_component_invalidate_layout(component);
@@ -2277,6 +2729,42 @@ int text_component_handle_key_event(Layer* layer, KeyEvent* event) {
                     }
                 } else if (event->type == KEY_EVENT_TEXT_INPUT) {
                     text_component_insert_char(component, 'x');
+                }
+                break;
+            case SDLK_z:
+                if (event->data.key.mod & KMOD_CTRL) {
+                    if (event->data.key.mod & KMOD_SHIFT) {
+                        text_component_do_redo(component);
+                    } else {
+                        text_component_do_undo(component);
+                    }
+                } else if (event->type == KEY_EVENT_TEXT_INPUT) {
+                    text_component_insert_char(component, 'z');
+                }
+                break;
+            case SDLK_y:
+                if (event->data.key.mod & KMOD_CTRL) {
+                    text_component_do_redo(component);
+                } else if (event->type == KEY_EVENT_TEXT_INPUT) {
+                    text_component_insert_char(component, 'y');
+                }
+                break;
+            case SDLK_b:
+            case 'B':
+                if (event->data.key.mod & KMOD_CTRL) {
+                    text_component_toggle_style(component, TEXT_STYLE_BOLD);
+                    return 1;
+                } else if (event->type == KEY_EVENT_TEXT_INPUT) {
+                    text_component_insert_char(component, 'b');
+                }
+                break;
+            case SDLK_i:
+            case 'I':
+                if (event->data.key.mod & KMOD_CTRL) {
+                    text_component_toggle_style(component, TEXT_STYLE_ITALIC);
+                    return 1;
+                } else if (event->type == KEY_EVENT_TEXT_INPUT) {
+                    text_component_insert_char(component, 'i');
                 }
                 break;
             default:

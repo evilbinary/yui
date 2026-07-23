@@ -69,6 +69,18 @@ typedef int SDL_EventType;
 #ifndef SDLK_x
 #define SDLK_x 'x'
 #endif
+#ifndef SDLK_z
+#define SDLK_z 'z'
+#endif
+#ifndef SDLK_y
+#define SDLK_y 'y'
+#endif
+#ifndef SDLK_b
+#define SDLK_b 'b'
+#endif
+#ifndef SDLK_i
+#define SDLK_i 'i'
+#endif
 #ifndef SDLK_UP
 #define SDLK_UP 1073741906
 #endif
