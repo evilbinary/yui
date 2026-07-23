@@ -44,8 +44,12 @@ var bubbleVelX = 0;
 var bubbleVelY = 0;
 var bubbleInertiaId = null;
 var bubbleDispSize = {};
+var bubbleLastLayout = {};
 var bubbleSizeAnimId = null;
 var bubbleReleaseTimer = null;
+var bubbleDragPending = false;
+var bubbleDragLayoutId = null;
+var bubbleDragging = false;
 
 function getMockLauncherApps() {
     var list = [];
@@ -108,9 +112,12 @@ function rebuildLauncher() {
     bubbleVelX = 0;
     bubbleVelY = 0;
     bubbleDispSize = {};
+    bubbleLastLayout = {};
     bubbleStopSizeAnim();
     bubbleStopInertia();
     bubbleCancelReleaseTimer();
+    bubbleCancelDragLayout();
+    bubbleDragging = false;
     YUI.setText("launcher_count", apps.length + " 个应用");
 
     buildLauncherBubble(apps);
@@ -327,10 +334,12 @@ function buildLauncherGrid(apps) {
     }
 }
 
-function layoutBubbleIcons() {
+function layoutBubbleIcons(opts) {
     var updates = [];
-    var i, app, slot, world, proj, sx, sy, targetSize, cur, next, size;
+    var i, app, slot, world, proj, sx, sy, targetSize, cur, next, size, vis;
     var settling = false;
+    var dragging = opts && opts.dragging;
+    var prev;
 
     bubbleApplyRubberPan();
 
@@ -342,36 +351,90 @@ function layoutBubbleIcons() {
         sx = BUBBLE_CX + proj.x;
         sy = BUBBLE_CY + proj.y;
         targetSize = BUBBLE_D * bubbleZoom * proj.scale;
-        cur = bubbleDispSize[app.id];
-        if (typeof cur !== "number") {
-            cur = targetSize;
-        }
-        next = cur + (targetSize - cur) * BUBBLE_SIZE_LERP;
-        if (Math.abs(targetSize - next) < 0.5) {
+
+        if (dragging) {
+            /* Snap size while dragging — skip lerp / extra anim frames. */
             next = targetSize;
+            bubbleDispSize[app.id] = next;
         } else {
-            settling = true;
+            cur = bubbleDispSize[app.id];
+            if (typeof cur !== "number") {
+                cur = targetSize;
+            }
+            next = cur + (targetSize - cur) * BUBBLE_SIZE_LERP;
+            if (Math.abs(targetSize - next) < 0.5) {
+                next = targetSize;
+            } else {
+                settling = true;
+            }
+            bubbleDispSize[app.id] = next;
         }
-        bubbleDispSize[app.id] = next;
+
         size = Math.round(next);
         if (size < 1) {
             size = 1;
         }
+        vis = bubbleInClip(sx, sy, size) ? 1 : 0;
+
+        prev = bubbleLastLayout[app.id];
+        if (prev &&
+            prev.x === Math.round(sx - size / 2) &&
+            prev.y === Math.round(sy - size / 2) &&
+            prev.s === size &&
+            prev.v === vis) {
+            continue;
+        }
+        bubbleLastLayout[app.id] = {
+            x: Math.round(sx - size / 2),
+            y: Math.round(sy - size / 2),
+            s: size,
+            v: vis
+        };
 
         updates.push({
             target: "launcher_app_" + app.id,
             change: {
-                position: [Math.round(sx - size / 2), Math.round(sy - size / 2)],
+                position: [bubbleLastLayout[app.id].x, bubbleLastLayout[app.id].y],
                 size: [size, size],
-                visible: bubbleInClip(sx, sy, size)
+                visible: vis
             }
         });
     }
 
-    YUI.update(updates);
-    if (settling) {
+    if (updates.length > 0) {
+        YUI.update(updates);
+    }
+    if (!dragging && settling) {
         bubbleScheduleSizeAnim();
     }
+}
+
+function bubbleCancelDragLayout() {
+    if (bubbleDragLayoutId !== null) {
+        clearTimeout(bubbleDragLayoutId);
+        bubbleDragLayoutId = null;
+    }
+    bubbleDragPending = false;
+}
+
+function bubbleFlushDragLayout() {
+    bubbleDragLayoutId = null;
+    if (!bubbleDragPending) {
+        return;
+    }
+    bubbleDragPending = false;
+    if (launcherMode === "bubble" && launcherBuilt) {
+        layoutBubbleIcons({ dragging: true });
+    }
+}
+
+function bubbleRequestDragLayout() {
+    bubbleDragPending = true;
+    if (bubbleDragLayoutId !== null) {
+        return;
+    }
+    /* Coalesce many POINTER_MOVE events into one layout per frame. */
+    bubbleDragLayoutId = setTimeout(bubbleFlushDragLayout, 0);
 }
 
 function bubbleStopSizeAnim() {
@@ -382,12 +445,12 @@ function bubbleStopSizeAnim() {
 }
 
 function bubbleScheduleSizeAnim() {
-    if (bubbleSizeAnimId !== null) {
+    if (bubbleSizeAnimId !== null || bubbleDragging) {
         return;
     }
     bubbleSizeAnimId = setTimeout(function() {
         bubbleSizeAnimId = null;
-        if (launcherMode === "bubble" && launcherBuilt) {
+        if (launcherMode === "bubble" && launcherBuilt && !bubbleDragging) {
             layoutBubbleIcons();
         }
     }, 16);
@@ -479,17 +542,21 @@ function onLauncherTouch(type, deltaX, deltaY) {
     }
     if (type === "move" && (deltaX !== 0 || deltaY !== 0)) {
         bubbleStopInertia();
+        bubbleStopSizeAnim();
+        bubbleDragging = true;
         bubblePanRawX += deltaX / bubbleZoom;
         bubblePanRawY += deltaY / bubbleZoom;
         bubbleVelX = bubbleVelX * 0.35 + (deltaX / bubbleZoom) * 0.65;
         bubbleVelY = bubbleVelY * 0.35 + (deltaY / bubbleZoom) * 0.65;
-        layoutBubbleIcons();
+        bubbleRequestDragLayout();
         bubbleArmReleaseInertia();
         return;
     }
     if (type === "wheel") {
         bubbleStopInertia();
         bubbleCancelReleaseTimer();
+        bubbleCancelDragLayout();
+        bubbleDragging = false;
         bubbleZoom += deltaY > 0 ? -0.06 : 0.06;
         if (bubbleZoom < BUBBLE_ZOOM_MIN) {
             bubbleZoom = BUBBLE_ZOOM_MIN;
@@ -502,6 +569,9 @@ function onLauncherTouch(type, deltaX, deltaY) {
     }
     if (type === "end" || type === "cancel") {
         bubbleCancelReleaseTimer();
+        bubbleCancelDragLayout();
+        bubbleDragging = false;
+        layoutBubbleIcons();
         bubbleStartInertia();
     }
 }

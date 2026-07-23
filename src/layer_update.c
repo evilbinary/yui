@@ -16,6 +16,11 @@ static int s_batch_size = 0;
 static Layer* s_batch_prealloc_parent = NULL;
 static Layer* s_batch_dirty = NULL;
 
+int yui_update_is_batching(void)
+{
+    return s_batch_depth > 0;
+}
+
 static void batch_prealloc_children(Layer* parent) {
     if (!s_batch_depth || s_batch_size <= 0 || parent == s_batch_prealloc_parent) {
         return;

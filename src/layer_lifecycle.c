@@ -179,7 +179,7 @@ void layer_set_visible(Layer* layer, int visible) {
         layer_lifecycle_on_show(layer);
     }
 
-    if (layer->parent) {
+    if (layer->parent && !yui_update_is_batching()) {
         layout_layer(layer->parent);
     }
 }

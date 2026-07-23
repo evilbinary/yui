@@ -31,6 +31,9 @@ extern "C" {
  */
 int yui_update(Layer* root, const char* update_json);
 
+/** Non-zero while a batch YUI.update([]) is applying (defer parent layouts). */
+int yui_update_is_batching(void);
+
 /**
  * 从 JSON 对象更新单个图层
  * @param root 根图层
