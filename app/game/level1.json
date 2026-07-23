@@ -7,48 +7,56 @@
       "tag": "platform",
       "solid": 1,
       "transform": { "x": -40, "y": 400, "z": 0 },
-      "sprite": { "w": 900, "h": 40, "color": "#3d5a40" },
-      "collider": { "w": 900, "h": 40, "solid": 1 }
+      "sprite": { "w": 920, "h": 44, "color": "#2f4f35" },
+      "collider": { "w": 920, "h": 44, "solid": 1 }
     },
     {
       "id": "plat1",
       "tag": "platform",
       "solid": 1,
-      "transform": { "x": 180, "y": 300, "z": 0 },
-      "sprite": { "w": 160, "h": 20, "color": "#5c6b73" },
-      "collider": { "w": 160, "h": 20, "solid": 1 }
+      "transform": { "x": 160, "y": 300, "z": 0 },
+      "sprite": { "w": 180, "h": 18, "color": "#5c6b73" },
+      "collider": { "w": 180, "h": 18, "solid": 1 }
     },
     {
       "id": "plat2",
       "tag": "platform",
       "solid": 1,
-      "transform": { "x": 420, "y": 220, "z": 0 },
-      "sprite": { "w": 140, "h": 20, "color": "#5c6b73" },
-      "collider": { "w": 140, "h": 20, "solid": 1 }
+      "transform": { "x": 400, "y": 220, "z": 0 },
+      "sprite": { "w": 160, "h": 18, "color": "#5c6b73" },
+      "collider": { "w": 160, "h": 18, "solid": 1 }
     },
     {
       "id": "player",
       "tag": "player",
       "script": "playerUpdate",
-      "transform": { "x": 80, "y": 200, "z": 10 },
-      "sprite": { "w": 24, "h": 32, "color": "#4dabf7" },
-      "collider": { "w": 22, "h": 30, "ox": 1, "oy": 2 }
+      "transform": { "x": 60, "y": 200, "z": 10 },
+      "sprite": { "w": 22, "h": 34, "color": "#4dabf7" },
+      "collider": { "w": 20, "h": 32, "ox": 1, "oy": 2 }
     },
     {
-      "id": "enemy1",
+      "id": "e_patrol_1",
       "tag": "enemy",
-      "script": "enemyUpdate",
-      "transform": { "x": 500, "y": 360, "z": 5 },
-      "sprite": { "w": 28, "h": 28, "color": "#fa5252" },
-      "collider": { "w": 28, "h": 28 }
+      "script": "patrolEnemyUpdate",
+      "transform": { "x": 480, "y": 368, "z": 5 },
+      "sprite": { "w": 42, "h": 24, "color": "#e03131" },
+      "collider": { "w": 40, "h": 20, "ox": 1, "oy": 2 }
     },
     {
-      "id": "enemy2",
+      "id": "e_fly_1",
       "tag": "enemy",
-      "script": "enemyUpdate",
-      "transform": { "x": 450, "y": 180, "z": 5 },
-      "sprite": { "w": 28, "h": 28, "color": "#ff8787" },
-      "collider": { "w": 28, "h": 28 }
+      "script": "flyEnemyUpdate",
+      "transform": { "x": 320, "y": 150, "z": 8 },
+      "sprite": { "w": 32, "h": 20, "color": "#7950f2" },
+      "collider": { "w": 28, "h": 16, "ox": 2, "oy": 2 }
+    },
+    {
+      "id": "e_slime_1",
+      "tag": "enemy",
+      "script": "slimeEnemyUpdate",
+      "transform": { "x": 430, "y": 188, "z": 5 },
+      "sprite": { "w": 30, "h": 34, "color": "#37b24d" },
+      "collider": { "w": 26, "h": 30, "ox": 2, "oy": 2 }
     }
   ]
 }

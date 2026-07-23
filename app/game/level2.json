@@ -1,0 +1,94 @@
+{
+  "id": "level2",
+  "camera": { "x": 0, "y": 0, "follow": "player" },
+  "entities": [
+    {
+      "id": "ground",
+      "tag": "platform",
+      "solid": 1,
+      "transform": { "x": -60, "y": 400, "z": 0 },
+      "sprite": { "w": 1100, "h": 44, "color": "#3d2f4f" },
+      "collider": { "w": 1100, "h": 44, "solid": 1 }
+    },
+    {
+      "id": "plat_a",
+      "tag": "platform",
+      "solid": 1,
+      "transform": { "x": 120, "y": 310, "z": 0 },
+      "sprite": { "w": 140, "h": 18, "color": "#6b5c73" },
+      "collider": { "w": 140, "h": 18, "solid": 1 }
+    },
+    {
+      "id": "plat_b",
+      "tag": "platform",
+      "solid": 1,
+      "transform": { "x": 340, "y": 250, "z": 0 },
+      "sprite": { "w": 120, "h": 18, "color": "#6b5c73" },
+      "collider": { "w": 120, "h": 18, "solid": 1 }
+    },
+    {
+      "id": "plat_c",
+      "tag": "platform",
+      "solid": 1,
+      "transform": { "x": 540, "y": 190, "z": 0 },
+      "sprite": { "w": 150, "h": 18, "color": "#6b5c73" },
+      "collider": { "w": 150, "h": 18, "solid": 1 }
+    },
+    {
+      "id": "plat_d",
+      "tag": "platform",
+      "solid": 1,
+      "transform": { "x": 700, "y": 300, "z": 0 },
+      "sprite": { "w": 160, "h": 18, "color": "#6b5c73" },
+      "collider": { "w": 160, "h": 18, "solid": 1 }
+    },
+    {
+      "id": "player",
+      "tag": "player",
+      "script": "playerUpdate",
+      "transform": { "x": 40, "y": 200, "z": 10 },
+      "sprite": { "w": 22, "h": 34, "color": "#4dabf7" },
+      "collider": { "w": 20, "h": 32, "ox": 1, "oy": 2 }
+    },
+    {
+      "id": "e_patrol_1",
+      "tag": "enemy",
+      "script": "patrolEnemyUpdate",
+      "transform": { "x": 200, "y": 278, "z": 5 },
+      "sprite": { "w": 42, "h": 24, "color": "#f03e3e" },
+      "collider": { "w": 40, "h": 20, "ox": 1, "oy": 2 }
+    },
+    {
+      "id": "e_patrol_2",
+      "tag": "enemy",
+      "script": "patrolEnemyUpdate",
+      "transform": { "x": 560, "y": 368, "z": 5 },
+      "sprite": { "w": 42, "h": 24, "color": "#f03e3e" },
+      "collider": { "w": 40, "h": 20, "ox": 1, "oy": 2 }
+    },
+    {
+      "id": "e_fly_1",
+      "tag": "enemy",
+      "script": "flyEnemyUpdate",
+      "transform": { "x": 380, "y": 120, "z": 8 },
+      "sprite": { "w": 32, "h": 20, "color": "#9775fa" },
+      "collider": { "w": 28, "h": 16, "ox": 2, "oy": 2 }
+    },
+    {
+      "id": "e_fly_2",
+      "tag": "enemy",
+      "script": "flyEnemyUpdate",
+      "transform": { "x": 620, "y": 150, "z": 8 },
+      "sprite": { "w": 32, "h": 20, "color": "#9775fa" },
+      "collider": { "w": 28, "h": 16, "ox": 2, "oy": 2 }
+    },
+    {
+      "id": "e_boss_1",
+      "tag": "enemy",
+      "script": "bossEnemyUpdate",
+      "transform": { "x": 720, "y": 352, "z": 6 },
+      "sprite": { "w": 52, "h": 44, "color": "#c92a2a" },
+      "collider": { "w": 48, "h": 40, "ox": 2, "oy": 2 }
+    }
+  ]
+}

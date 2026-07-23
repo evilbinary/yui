@@ -292,6 +292,13 @@ static void lvgl_yui_sdl_event_hook(const SDL_Event* event, void* user_data)
         key_event.data.key.mod = event->key.keysym.mod;
         key_event.data.key.repeat = event->key.repeat;
         handle_key_event(root, &key_event);
+    } else if (event->type == SDL_KEYUP) {
+        KeyEvent key_event;
+        key_event.type = KEY_EVENT_UP;
+        key_event.data.key.key_code = event->key.keysym.sym;
+        key_event.data.key.mod = event->key.keysym.mod;
+        key_event.data.key.repeat = 0;
+        handle_key_event(root, &key_event);
     } else if (event->type == SDL_TEXTEDITING) {
         KeyEvent key_event;
         key_event.type = KEY_EVENT_TEXT_EDITING;

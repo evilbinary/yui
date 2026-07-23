@@ -8,6 +8,7 @@
 #include "popup_manager.h"
 #include "screenshot.h"
 #include "game/game.h"
+#include "input/state.h"
 #include "log.h"
 #include <stdbool.h>  // 添加支持bool类型
 #include <math.h>     // 添加数学函数支持
@@ -1577,6 +1578,13 @@ int pointInLayer(SDL_Point* point, Layer* layer) {
 }
 
 void handle_event(Layer* root, SDL_Event* event) {
+    if (event->type == SDL_WINDOWEVENT) {
+        if (event->window.event == SDL_WINDOWEVENT_FOCUS_LOST ||
+            event->window.event == SDL_WINDOWEVENT_MINIMIZED) {
+            input_state_release_all_keys();
+        }
+    }
+
     // 处理键盘事件
     if (event->type == SDL_KEYDOWN) {
         // 创建键盘按键事件
@@ -1586,6 +1594,14 @@ void handle_event(Layer* root, SDL_Event* event) {
         key_event.data.key.mod = event->key.keysym.mod;
         key_event.data.key.repeat = event->key.repeat;
         
+        handle_key_event(root, &key_event);
+    } else if (event->type == SDL_KEYUP) {
+        KeyEvent key_event;
+        key_event.type = KEY_EVENT_UP;
+        key_event.data.key.key_code = event->key.keysym.sym;
+        key_event.data.key.mod = event->key.keysym.mod;
+        key_event.data.key.repeat = 0;
+
         handle_key_event(root, &key_event);
     } else if (event->type == SDL_TEXTEDITING) {
         // 处理 IME 文本编辑事件（显示候选词）
