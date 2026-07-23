@@ -1,0 +1,87 @@
+{
+  "id": "smokeRoot",
+  "type": "View",
+  "size": [400, 300],
+  "autoTest": true,
+  "js": ["lib/ytest.js", "test-yapi-smoke.js"],
+  "style": {
+    "bgColor": "#1e1e2e"
+  },
+  "layout": {
+    "type": "vertical",
+    "spacing": 8,
+    "padding": [12, 12, 12, 12]
+  },
+  "children": [
+    {
+      "id": "testLabel",
+      "type": "Label",
+      "text": "test label",
+      "size": [0, 24],
+      "style": {
+        "color": "#cdd6f4",
+        "fontSize": 14
+      }
+    },
+    {
+      "id": "testView",
+      "type": "View",
+      "size": [0, 80],
+      "style": {
+        "bgColor": "#313244",
+        "borderRadius": 4
+      },
+      "layout": {
+        "type": "horizontal",
+        "spacing": 8
+      },
+      "children": [
+        {
+          "id": "testInput",
+          "type": "Input",
+          "text": "",
+          "placeholder": "test input",
+          "size": [0, 32],
+          "flex": 1,
+          "style": {
+            "bgColor": "#1e1e2e",
+            "color": "#cdd6f4",
+            "fontSize": 14,
+            "padding": [4, 8, 4, 8],
+            "borderRadius": 4
+          }
+        }
+      ]
+    },
+    {
+      "id": "testText",
+      "type": "Text",
+      "text": "multiline text content\nfor testing contentHeight property",
+      "multiline": true,
+      "editable": false,
+      "scrollable": 0,
+      "size": [0, 60],
+      "style": {
+        "bgColor": "#11111b",
+        "color": "#cdd6f4",
+        "fontSize": 13,
+        "padding": [4, 4, 4, 4]
+      }
+    },
+    {
+      "id": "testButton",
+      "type": "Button",
+      "text": "Test Button",
+      "size": [120, 36],
+      "style": {
+        "bgColor": "#89b4fa",
+        "color": "#1e1e2e",
+        "fontSize": 13,
+        "borderRadius": 4
+      }
+    }
+  ],
+  "events": {
+    "onLoad": "@onSmokeLoad"
+  }
+}

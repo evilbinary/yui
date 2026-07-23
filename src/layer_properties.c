@@ -674,7 +674,7 @@ cJSON* layer_get_property_as_json(Layer* layer, const char* key) {
         return cJSON_CreateNumber(layer->rotation);
     }
     else if (strcmp(key, "visible") == 0) {
-        return cJSON_CreateBool(layer->visible);
+        return cJSON_CreateBool(layer->visible == VISIBLE);
     }
     else if (strcmp(key, "focusable") == 0) {
         return cJSON_CreateBool(layer->focusable);

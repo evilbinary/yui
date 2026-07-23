@@ -1,0 +1,165 @@
+{
+  "id": "textMemoryRoot",
+  "type": "View",
+  "size": [500, 400],
+  "js": "test-text-memory.js",
+  "autoTest": true,
+  "style": {
+    "bgColor": "#1e1e2e"
+  },
+  "layout": {
+    "type": "vertical",
+    "spacing": 8,
+    "padding": [12, 12, 12, 12]
+  },
+  "children": [
+    {
+      "id": "titleLabel",
+      "type": "Label",
+      "text": "YUI.setText 内存压力测试",
+      "size": [0, 28],
+      "style": {
+        "color": "#cdd6f4",
+        "fontSize": 16,
+        "fontWeight": "bold"
+      }
+    },
+    {
+      "id": "statusLabel",
+      "type": "Label",
+      "text": "就绪",
+      "size": [0, 20],
+      "style": {
+        "color": "#a6e3a1",
+        "fontSize": 12
+      }
+    },
+    {
+      "id": "statsLabel",
+      "type": "Label",
+      "text": "统计: -",
+      "size": [0, 20],
+      "style": {
+        "color": "#89b4fa",
+        "fontSize": 11,
+        "fontFamily": "monospace"
+      }
+    },
+    {
+      "id": "streamText",
+      "type": "Text",
+      "text": "",
+      "multiline": true,
+      "editable": false,
+      "scrollable": 1,
+      "size": [0, 200],
+      "style": {
+        "bgColor": "#11111b",
+        "color": "#cdd6f4",
+        "fontSize": 12,
+        "padding": [8, 8, 8, 8],
+        "borderRadius": 4
+      }
+    },
+    {
+      "id": "btnRow1",
+      "type": "View",
+      "size": [0, 36],
+      "layout": {
+        "type": "horizontal",
+        "spacing": 8
+      },
+      "children": [
+        {
+          "id": "startBtn",
+          "type": "Button",
+          "text": "高频 setText (20ms)",
+          "size": [140, 32],
+          "style": {
+            "bgColor": "#f38ba8",
+            "color": "#1e1e2e",
+            "fontSize": 11,
+            "borderRadius": 4
+          },
+          "events": { "onClick": "@start" }
+        },
+        {
+          "id": "stopBtn",
+          "type": "Button",
+          "text": "停止",
+          "size": [80, 32],
+          "style": {
+            "bgColor": "#45475a",
+            "color": "#cdd6f4",
+            "fontSize": 11,
+            "borderRadius": 4
+          },
+          "events": { "onClick": "@stop" }
+        },
+        {
+          "id": "resetBtn",
+          "type": "Button",
+          "text": "重置",
+          "size": [80, 32],
+          "style": {
+            "bgColor": "#313244",
+            "color": "#cdd6f4",
+            "fontSize": 11,
+            "borderRadius": 4
+          },
+          "events": { "onClick": "@reset" }
+        }
+      ]
+    },
+    {
+      "id": "btnRow2",
+      "type": "View",
+      "size": [0, 36],
+      "layout": {
+        "type": "horizontal",
+        "spacing": 8
+      },
+      "children": [
+        {
+          "id": "dirtyCheckBtn",
+          "type": "Button",
+          "text": "脏检查测试",
+          "size": [120, 32],
+          "style": {
+            "bgColor": "#fab387",
+            "color": "#1e1e2e",
+            "fontSize": 11,
+            "borderRadius": 4
+          },
+          "events": { "onClick": "@startDirtyCheckTest" }
+        },
+        {
+          "id": "batchedBtn",
+          "type": "Button",
+          "text": "批量刷新 (100ms)",
+          "size": [140, 32],
+          "style": {
+            "bgColor": "#a6e3a1",
+            "color": "#1e1e2e",
+            "fontSize": 11,
+            "borderRadius": 4
+          },
+          "events": { "onClick": "@startBatchedTest" }
+        }
+      ]
+    },
+    {
+      "id": "hintLabel",
+      "type": "Label",
+      "text": "提示: 打开任务管理器观察 playground.exe 内存变化",
+      "size": [0, 20],
+      "style": {
+        "color": "#6c7086",
+        "fontSize": 10
+      }
+    }
+  ],
+  "events": {
+    "onLoad": "@onLoad"
+  }
+}
