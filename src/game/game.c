@@ -9,6 +9,7 @@
 static int g_inited;
 static int g_enabled = 1;
 static GameScriptUpdateFn g_script_update;
+static int g_entity_draws;
 
 void game_init(void)
 {
@@ -19,6 +20,9 @@ void game_init(void)
     game_camera_init();
     game_input_reset();
     game_time_reset();
+    game_tilemap_clear();
+    game_particles_clear();
+    game_audio_init();
     g_script_update = NULL;
     g_enabled = 1;
     g_inited = 1;
@@ -30,6 +34,7 @@ void game_shutdown(void)
         return;
     }
     game_clear_scene();
+    game_audio_shutdown();
     g_script_update = NULL;
     g_inited = 0;
 }
@@ -67,6 +72,7 @@ void game_update(float dt_override)
     if (!g_inited || !g_enabled) {
         return;
     }
+    game_perf_begin_update();
     game_input_begin_frame();
     dt = dt_override >= 0.0f ? dt_override : game_time_tick();
 
@@ -82,11 +88,15 @@ void game_update(float dt_override)
         if (!e->alive) {
             continue;
         }
+        game_anim_update(e, dt);
         if (!e->solid) {
             game_move_and_collide(e, dt);
         }
     }
+    game_trigger_update();
+    game_particles_update(dt);
     game_camera_update();
+    game_perf_end_update();
 }
 
 void game_render(void)
@@ -99,6 +109,9 @@ void game_render(void)
     if (!g_inited || !g_enabled) {
         return;
     }
+    game_perf_begin_render();
+    g_entity_draws = 0;
+    game_tilemap_render();
     all = game_entities(&n);
     for (i = 0; i < n; i++) {
         if (all[i].alive) {
@@ -110,7 +123,10 @@ void game_render(void)
     }
     for (i = 0; i < count; i++) {
         game_sprite_draw_entity(sorted[i]);
+        g_entity_draws++;
     }
+    game_particles_render();
+    game_perf_end_render(g_entity_draws);
 }
 
 #endif

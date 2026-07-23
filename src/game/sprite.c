@@ -10,6 +10,7 @@ void game_sprite_draw_entity(const GameEntity* e)
     float sx;
     float sy;
     Rect dst;
+    Rect src;
     if (!e || !e->alive) {
         return;
     }
@@ -22,7 +23,15 @@ void game_sprite_draw_entity(const GameEntity* e)
     if (dst.h < 1) dst.h = 1;
 
     if (e->texture) {
-        backend_render_text_copy(e->texture, NULL, &dst);
+        if (e->use_frame && e->frame_w > 0 && e->frame_h > 0) {
+            src.x = e->frame_x;
+            src.y = e->frame_y;
+            src.w = e->frame_w;
+            src.h = e->frame_h;
+            backend_render_text_copy(e->texture, &src, &dst);
+        } else {
+            backend_render_text_copy(e->texture, NULL, &dst);
+        }
     } else {
         backend_render_fill_rect(&dst, e->color);
     }

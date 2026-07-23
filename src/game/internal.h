@@ -24,5 +24,13 @@ void game_sprite_draw_entity(const GameEntity* e);
 
 void game_collide_resolve_solids(GameEntity* e, float dt);
 
+void game_anim_apply_json(GameEntity* e, cJSON* anim);
+
+void game_perf_begin_update(void);
+void game_perf_end_update(void);
+void game_perf_begin_render(void);
+void game_perf_end_render(int entity_draws);
+int game_particles_draw_count(void);
+
 #endif
 #endif

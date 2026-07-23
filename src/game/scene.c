@@ -14,6 +14,8 @@ void game_clear_scene(void)
 {
     game_entity_pool_clear();
     game_camera_init();
+    game_tilemap_clear();
+    game_particles_clear();
     g_scene_active = 0;
 }
 
@@ -62,6 +64,8 @@ GameEntity* game_spawn_from_json(cJSON* obj)
     cJSON* t;
     cJSON* sp;
     cJSON* col;
+    cJSON* anim;
+    cJSON* frame;
     const char* id = NULL;
     if (!obj || !cJSON_IsObject(obj)) {
         return NULL;
@@ -78,6 +82,11 @@ GameEntity* game_spawn_from_json(cJSON* obj)
     t = cJSON_GetObjectItem(obj, "tag");
     if (cJSON_IsString(t) && t->valuestring) {
         strncpy(e->tag, t->valuestring, GAME_ID_LEN - 1);
+        strncpy(e->prefab, t->valuestring, GAME_ID_LEN - 1);
+    }
+    t = cJSON_GetObjectItem(obj, "prefab");
+    if (cJSON_IsString(t) && t->valuestring) {
+        strncpy(e->prefab, t->valuestring, GAME_ID_LEN - 1);
     }
     t = cJSON_GetObjectItem(obj, "script");
     if (cJSON_IsString(t) && t->valuestring) {
@@ -106,8 +115,25 @@ GameEntity* game_spawn_from_json(cJSON* obj)
         if (cJSON_IsNumber(t)) e->h = (float)t->valuedouble;
         t = cJSON_GetObjectItem(sp, "color");
         e->color = game_parse_color(t, e->color);
+        frame = cJSON_GetObjectItem(sp, "frame");
+        if (cJSON_IsObject(frame)) {
+            t = cJSON_GetObjectItem(frame, "x");
+            if (cJSON_IsNumber(t)) e->frame_x = t->valueint;
+            t = cJSON_GetObjectItem(frame, "y");
+            if (cJSON_IsNumber(t)) e->frame_y = t->valueint;
+            t = cJSON_GetObjectItem(frame, "w");
+            if (cJSON_IsNumber(t)) e->frame_w = t->valueint;
+            t = cJSON_GetObjectItem(frame, "h");
+            if (cJSON_IsNumber(t)) e->frame_h = t->valueint;
+            e->use_frame = 1;
+        }
     } else if (cJSON_IsString(sp) && sp->valuestring) {
         game_apply_sprite(e, sp->valuestring);
+    }
+
+    anim = cJSON_GetObjectItem(obj, "anim");
+    if (cJSON_IsObject(anim)) {
+        game_anim_apply_json(e, anim);
     }
 
     t = cJSON_GetObjectItem(obj, "color");
@@ -150,6 +176,7 @@ int game_load_scene_json(const char* path)
     cJSON* ents;
     cJSON* cam;
     cJSON* child;
+    cJSON* tm;
     GameCamera* camera;
     if (!path) {
         return 0;
@@ -199,6 +226,11 @@ int game_load_scene_json(const char* path)
         if (cJSON_IsString(t) && t->valuestring) {
             game_camera_follow(t->valuestring);
         }
+    }
+
+    tm = cJSON_GetObjectItem(root, "tilemap");
+    if (cJSON_IsObject(tm)) {
+        game_tilemap_load_from_json(tm);
     }
 
     ents = cJSON_GetObjectItem(root, "entities");

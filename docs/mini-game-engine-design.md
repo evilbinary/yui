@@ -301,17 +301,17 @@ ya -r playground -- app/game/demo.json
 
 ### V1 — 可玩
 
-- [ ] 精灵表 / 帧动画
-- [ ] 更完整碰撞（固体 + trigger → JS）
-- [ ] 音频（BGM + SFX）
-- [ ] `loadScene` 切换、简单对象池
+- [x] 精灵表 / 帧动画（`frame` + `anim.frames`/`fps`，`Game.playAnim`）
+- [x] 更完整碰撞（固体 + trigger enter/stay/exit → `onTrigger` / `Game.onTrigger`）
+- [x] 音频（miniaudio：`Game.audio.play` / `playBgm` / `stopBgm`）
+- [x] `loadScene` 切换、简单对象池（`Game.pool.acquire` / `release`）+ `Game.findAllByTag`
 
 ### V2 — 像引擎
 
-- [ ] 可选物理中间件
-- [ ] Tilemap / 粒子
-- [ ] 极简场景编辑（导出 JSON）
-- [ ] Profiler（实体数、draw、帧时）
+- [ ] 可选物理中间件（本轮不做）
+- [x] Tilemap / 粒子（`tilemap` 场景字段；`Game.spawnParticles`）
+- [ ] 极简场景编辑（导出 JSON）（本轮不做）
+- [x] Profiler（`Game.perf.getStats`：entities / draws / fps / updateMs / renderMs）
 
 ---
 

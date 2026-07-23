@@ -1,5 +1,6 @@
 /**
- * Jump + shoot demo — patrol / flyer / slime / boss enemies, 2 levels.
+ * Jump + shoot demo — V1/V2 features:
+ * patrol/fly/slime/boss AI, triggers, particles, audio, pool, multi-level.
  * Controls: A/D or arrows move, Space jump, click or F shoot.
  */
 var gScore = 0;
@@ -46,7 +47,7 @@ var LEVEL_ENEMY_CFG = [
 
 function enemyCfg(id) {
   if (!gEnemyState[id]) {
-    gEnemyState[id] = { hopTimer: 1, squash: 0 };
+    gEnemyState[id] = { hopTimer: 1, squash: 0, anim: 0 };
   }
   return ENEMY_CFG[id] || null;
 }
@@ -72,14 +73,8 @@ function updateLevelHud() {
 }
 
 function countLiveEnemies() {
-  var n = 0;
-  var i;
-  for (i = 0; i < gEnemyRoster.length; i++) {
-    if (Game.find(gEnemyRoster[i])) {
-      n++;
-    }
-  }
-  return n;
+  var list = Game.findAllByTag("enemy");
+  return list ? list.length : 0;
 }
 
 function initEnemyHp() {
@@ -92,6 +87,23 @@ function initEnemyHp() {
     cfg = ENEMY_CFG[id];
     gEnemyHp[id] = cfg && cfg.hp ? cfg.hp : 1;
   }
+}
+
+function sfx(path) {
+  if (Game.audio && Game.audio.play) {
+    Game.audio.play(path);
+  }
+}
+
+function burst(x, y, color) {
+  Game.spawnParticles({
+    x: x,
+    y: y,
+    count: 14,
+    color: color || "#ff922b",
+    speed: 160,
+    life: 0.4
+  });
 }
 
 function loadLevel(index) {
@@ -113,6 +125,7 @@ function loadLevel(index) {
 }
 
 function onLevelCleared() {
+  sfx("app/game/assets/clear.wav");
   if (gCurrentLevel + 1 < LEVELS.length) {
     setHudText("hudTitle", "Level clear! Next stage...");
     gLevelClearDelay = 1.8;
@@ -124,14 +137,21 @@ function onLevelCleared() {
   }
 }
 
-function damageEnemy(id) {
+function damageEnemy(enemy) {
+  var id;
   var hp;
+  if (!enemy) {
+    return;
+  }
+  id = enemy.id;
   if (!gEnemyHp[id]) {
     gEnemyHp[id] = 1;
   }
   hp = gEnemyHp[id] - 1;
+  burst(enemy.x + enemy.w * 0.5, enemy.y + enemy.h * 0.5, "#fa5252");
+  sfx("app/game/assets/hit.wav");
   if (hp <= 0) {
-    Game.destroy(id);
+    Game.destroy(enemy);
     delete gEnemyHp[id];
     setScore(gScore + (id.indexOf("boss") >= 0 ? 30 : 10));
     if (countLiveEnemies() <= 0) {
@@ -143,6 +163,34 @@ function damageEnemy(id) {
   }
 }
 
+function onTrigger(a, b, phase) {
+  var bullet;
+  var other;
+  if (phase !== "enter") {
+    return;
+  }
+  if (!a || !b) {
+    return;
+  }
+  if (a.tag === "bullet") {
+    bullet = a;
+    other = b;
+  } else if (b.tag === "bullet") {
+    bullet = b;
+    other = a;
+  } else {
+    return;
+  }
+  if (other.tag === "enemy") {
+    damageEnemy(other);
+    if (Game.pool && Game.pool.release) {
+      Game.pool.release(bullet);
+    } else {
+      Game.destroy(bullet);
+    }
+  }
+}
+
 function onGameDemoLoad() {
   gScore = 0;
   gVictory = false;
@@ -151,8 +199,9 @@ function onGameDemoLoad() {
     print("Game API missing");
     return;
   }
+  Game.onTrigger = onTrigger;
   loadLevel(0);
-  print("A/D move, Space jump, Click/F shoot.");
+  print("A/D move, Space jump, Click/F shoot. V1/V2 engine features active.");
 }
 
 function playerUpdate(entity, dt) {
@@ -207,6 +256,7 @@ function playerUpdate(entity, dt) {
     bullet = Game.spawn({
       id: "bullet_" + (gBulletSeq++),
       tag: "bullet",
+      prefab: "bullet",
       script: "bulletUpdate",
       transform: {
         x: entity.x + entity.w * 0.5,
@@ -218,29 +268,22 @@ function playerUpdate(entity, dt) {
       vx: aimx * 420,
       vy: aimy * 420
     });
+    sfx("app/game/assets/shoot.wav");
     gShootCool = 0.18;
   }
 }
 
 function bulletUpdate(entity, dt) {
-  var i;
-  var id;
-  var enemy;
-  for (i = 0; i < gEnemyRoster.length; i++) {
-    id = gEnemyRoster[i];
-    enemy = Game.find(id);
-    if (enemy && Game.overlaps(entity, enemy)) {
-      damageEnemy(id);
-      Game.destroy(entity);
-      return;
-    }
-  }
+  /* hit detection via onTrigger; only cull off-screen here */
   if (entity.x < -200 || entity.x > 1400 || entity.y < -200 || entity.y > 800) {
-    Game.destroy(entity);
+    if (Game.pool && Game.pool.release) {
+      Game.pool.release(entity);
+    } else {
+      Game.destroy(entity);
+    }
   }
 }
 
-/* Ground crab: patrol back and forth on platforms */
 function patrolEnemyUpdate(entity, dt) {
   var cfg = enemyCfg(entity.id);
   var st;
@@ -254,17 +297,13 @@ function patrolEnemyUpdate(entity, dt) {
   if (entity.x <= cfg.minX) {
     entity.x = cfg.minX;
     cfg.dir = 1;
-    st.facing = 1;
   } else if (entity.x + entity.w >= cfg.maxX) {
     entity.x = cfg.maxX - entity.w;
     cfg.dir = -1;
-    st.facing = -1;
   }
-  /* lean into movement — squash body slightly */
   entity.h = 24 + Math.sin(st.anim * 8) * 2;
 }
 
-/* Bat: hover with sine wave + slow drift */
 function flyEnemyUpdate(entity, dt) {
   var cfg = enemyCfg(entity.id);
   if (!cfg) {
@@ -277,7 +316,6 @@ function flyEnemyUpdate(entity, dt) {
   entity.w = 32 + Math.sin(cfg.t * 2) * 4;
 }
 
-/* Slime: periodic hop toward player */
 function slimeEnemyUpdate(entity, dt) {
   var cfg = enemyCfg(entity.id);
   var st = gEnemyState[entity.id];
@@ -307,7 +345,6 @@ function slimeEnemyUpdate(entity, dt) {
   }
 }
 
-/* Boss: slow patrol + occasional hop, extra HP */
 function bossEnemyUpdate(entity, dt) {
   var cfg = enemyCfg(entity.id);
   var st = gEnemyState[entity.id];

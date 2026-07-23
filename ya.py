@@ -460,6 +460,8 @@ def add_flags():
             '-lSDL2_ttf',
             '-lSDL2_image',
             '-lm',
+            '-lpthread',
+            '-ldl',
             )
     elif platform.system()=='Windows':
         mingw64 = _resolve_mingw64()

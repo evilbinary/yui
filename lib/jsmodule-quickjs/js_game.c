@@ -344,6 +344,200 @@ static JSValue js_game_world_to_screen(JSContext* ctx, JSValueConst this_val, in
     return obj;
 }
 
+static void js_game_on_trigger(GameEntity* a, GameEntity* b, GameTriggerPhase phase)
+{
+    JSValue global;
+    JSValue fn;
+    JSValue args[3];
+    JSValue ret;
+    const char* phase_name = "stay";
+    if (!g_game_ctx) {
+        return;
+    }
+    if (phase == GAME_TRIGGER_ENTER) phase_name = "enter";
+    else if (phase == GAME_TRIGGER_EXIT) phase_name = "exit";
+    global = JS_GetGlobalObject(g_game_ctx);
+    fn = JS_GetPropertyStr(g_game_ctx, global, "onTrigger");
+    if (!JS_IsFunction(g_game_ctx, fn)) {
+        JSValue game = JS_GetPropertyStr(g_game_ctx, global, "Game");
+        JS_FreeValue(g_game_ctx, fn);
+        fn = JS_GetPropertyStr(g_game_ctx, game, "onTrigger");
+        JS_FreeValue(g_game_ctx, game);
+    }
+    if (!JS_IsFunction(g_game_ctx, fn)) {
+        JS_FreeValue(g_game_ctx, fn);
+        JS_FreeValue(g_game_ctx, global);
+        return;
+    }
+    args[0] = game_entity_to_js(g_game_ctx, a);
+    args[1] = game_entity_to_js(g_game_ctx, b);
+    args[2] = JS_NewString(g_game_ctx, phase_name);
+    ret = JS_Call(g_game_ctx, fn, JS_UNDEFINED, 3, args);
+    JS_FreeValue(g_game_ctx, ret);
+    JS_FreeValue(g_game_ctx, args[0]);
+    JS_FreeValue(g_game_ctx, args[1]);
+    JS_FreeValue(g_game_ctx, args[2]);
+    JS_FreeValue(g_game_ctx, fn);
+    JS_FreeValue(g_game_ctx, global);
+}
+
+static JSValue js_game_find_all_by_tag(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv)
+{
+    const char* tag;
+    GameEntity* list[GAME_MAX_ENTITIES];
+    int n;
+    int i;
+    JSValue arr;
+    (void)this_val;
+    if (argc < 1) {
+        return JS_NewArray(ctx);
+    }
+    tag = JS_ToCString(ctx, argv[0]);
+    n = game_find_all_by_tag(tag, list, GAME_MAX_ENTITIES);
+    if (tag) JS_FreeCString(ctx, tag);
+    arr = JS_NewArray(ctx);
+    for (i = 0; i < n; i++) {
+        JS_SetPropertyUint32(ctx, arr, (uint32_t)i, game_entity_to_js(ctx, list[i]));
+    }
+    return arr;
+}
+
+static JSValue js_game_pool_acquire(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv)
+{
+    const char* prefab = "bullet";
+    GameEntity* e;
+    (void)this_val;
+    if (argc >= 1) {
+        prefab = JS_ToCString(ctx, argv[0]);
+    }
+    e = game_pool_acquire(prefab);
+    if (argc >= 1 && prefab) JS_FreeCString(ctx, prefab);
+    return game_entity_to_js(ctx, e);
+}
+
+static JSValue js_game_pool_release(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv)
+{
+    (void)this_val;
+    if (argc < 1) {
+        return JS_NewBool(ctx, 0);
+    }
+    game_pool_release(game_entity_from_js(ctx, argv[0]));
+    return JS_NewBool(ctx, 1);
+}
+
+static JSValue js_game_play_anim(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv)
+{
+    GameEntity* e;
+    const char* clip;
+    int ok;
+    (void)this_val;
+    if (argc < 2) {
+        return JS_NewBool(ctx, 0);
+    }
+    e = game_entity_from_js(ctx, argv[0]);
+    clip = JS_ToCString(ctx, argv[1]);
+    ok = game_play_anim(e, clip);
+    if (clip) JS_FreeCString(ctx, clip);
+    return JS_NewBool(ctx, ok);
+}
+
+static JSValue js_game_audio_play(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv)
+{
+    const char* path;
+    int ok;
+    (void)this_val;
+    if (argc < 1) return JS_NewBool(ctx, 0);
+    path = JS_ToCString(ctx, argv[0]);
+    ok = game_audio_play_sfx(path);
+    if (path) JS_FreeCString(ctx, path);
+    return JS_NewBool(ctx, ok);
+}
+
+static JSValue js_game_audio_play_bgm(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv)
+{
+    const char* path;
+    int loop = 1;
+    int ok;
+    (void)this_val;
+    if (argc < 1) return JS_NewBool(ctx, 0);
+    path = JS_ToCString(ctx, argv[0]);
+    if (argc >= 2) {
+        loop = JS_ToBool(ctx, argv[1]);
+    }
+    ok = game_audio_play_bgm(path, loop);
+    if (path) JS_FreeCString(ctx, path);
+    return JS_NewBool(ctx, ok);
+}
+
+static JSValue js_game_audio_stop_bgm(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv)
+{
+    (void)ctx; (void)this_val; (void)argc; (void)argv;
+    game_audio_stop_bgm();
+    return JS_UNDEFINED;
+}
+
+static JSValue js_game_spawn_particles(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv)
+{
+    double x = 0, y = 0, speed = 120, life = 0.45;
+    int count = 12;
+    Color color = {255, 200, 80, 255};
+    JSValue v;
+    (void)this_val;
+    if (argc < 1 || !JS_IsObject(argv[0])) {
+        return JS_NewInt32(ctx, 0);
+    }
+    v = JS_GetPropertyStr(ctx, argv[0], "x");
+    if (JS_IsNumber(v)) JS_ToFloat64(ctx, &x, v);
+    JS_FreeValue(ctx, v);
+    v = JS_GetPropertyStr(ctx, argv[0], "y");
+    if (JS_IsNumber(v)) JS_ToFloat64(ctx, &y, v);
+    JS_FreeValue(ctx, v);
+    v = JS_GetPropertyStr(ctx, argv[0], "count");
+    if (JS_IsNumber(v)) {
+        int32_t c = 12;
+        JS_ToInt32(ctx, &c, v);
+        count = c;
+    }
+    JS_FreeValue(ctx, v);
+    v = JS_GetPropertyStr(ctx, argv[0], "speed");
+    if (JS_IsNumber(v)) JS_ToFloat64(ctx, &speed, v);
+    JS_FreeValue(ctx, v);
+    v = JS_GetPropertyStr(ctx, argv[0], "life");
+    if (JS_IsNumber(v)) JS_ToFloat64(ctx, &life, v);
+    JS_FreeValue(ctx, v);
+    v = JS_GetPropertyStr(ctx, argv[0], "color");
+    if (JS_IsString(v)) {
+        const char* s = JS_ToCString(ctx, v);
+        unsigned int rgb = 0;
+        if (s && s[0] == '#' && strlen(s) >= 7) {
+            sscanf(s + 1, "%06x", &rgb);
+            color.r = (unsigned char)((rgb >> 16) & 0xff);
+            color.g = (unsigned char)((rgb >> 8) & 0xff);
+            color.b = (unsigned char)(rgb & 0xff);
+        }
+        if (s) JS_FreeCString(ctx, s);
+    }
+    JS_FreeValue(ctx, v);
+    return JS_NewInt32(ctx, game_spawn_particles((float)x, (float)y, count, color, (float)speed, (float)life));
+}
+
+static JSValue js_game_perf_get_stats(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv)
+{
+    const GamePerfStats* st = game_perf_get_stats();
+    JSValue obj = JS_NewObject(ctx);
+    (void)this_val; (void)argc; (void)argv;
+    if (!st) {
+        return obj;
+    }
+    JS_SetPropertyStr(ctx, obj, "entities", JS_NewInt32(ctx, st->entities));
+    JS_SetPropertyStr(ctx, obj, "draws", JS_NewInt32(ctx, st->draws));
+    JS_SetPropertyStr(ctx, obj, "particles", JS_NewInt32(ctx, st->particles));
+    JS_SetPropertyStr(ctx, obj, "fps", JS_NewFloat64(ctx, st->fps));
+    JS_SetPropertyStr(ctx, obj, "updateMs", JS_NewFloat64(ctx, st->update_ms));
+    JS_SetPropertyStr(ctx, obj, "renderMs", JS_NewFloat64(ctx, st->render_ms));
+    return obj;
+}
+
 void js_game_register_api(JSContext* ctx)
 {
     JSValue global;
@@ -351,6 +545,9 @@ void js_game_register_api(JSContext* ctx)
     JSValue input_obj;
     JSValue time_obj;
     JSValue camera_obj;
+    JSValue audio_obj;
+    JSValue pool_obj;
+    JSValue perf_obj;
 
     if (!ctx) {
         return;
@@ -358,6 +555,7 @@ void js_game_register_api(JSContext* ctx)
     g_game_ctx = ctx;
     game_init();
     game_set_script_update_fn(js_game_script_update);
+    game_set_trigger_fn(js_game_on_trigger);
 
     global = JS_GetGlobalObject(ctx);
     game_obj = JS_NewObject(ctx);
@@ -368,7 +566,10 @@ void js_game_register_api(JSContext* ctx)
     JS_SetPropertyStr(ctx, game_obj, "destroy", JS_NewCFunction(ctx, js_game_destroy, "destroy", 1));
     JS_SetPropertyStr(ctx, game_obj, "find", JS_NewCFunction(ctx, js_game_find, "find", 1));
     JS_SetPropertyStr(ctx, game_obj, "findByTag", JS_NewCFunction(ctx, js_game_find_by_tag, "findByTag", 1));
+    JS_SetPropertyStr(ctx, game_obj, "findAllByTag", JS_NewCFunction(ctx, js_game_find_all_by_tag, "findAllByTag", 1));
     JS_SetPropertyStr(ctx, game_obj, "overlaps", JS_NewCFunction(ctx, js_game_overlaps, "overlaps", 2));
+    JS_SetPropertyStr(ctx, game_obj, "playAnim", JS_NewCFunction(ctx, js_game_play_anim, "playAnim", 2));
+    JS_SetPropertyStr(ctx, game_obj, "spawnParticles", JS_NewCFunction(ctx, js_game_spawn_particles, "spawnParticles", 1));
 
     input_obj = JS_NewObject(ctx);
     JS_SetPropertyStr(ctx, input_obj, "down", JS_NewCFunction(ctx, js_game_input_down, "down", 1));
@@ -381,7 +582,6 @@ void js_game_register_api(JSContext* ctx)
 
     time_obj = JS_NewObject(ctx);
     JS_SetPropertyStr(ctx, time_obj, "dt", JS_NewCFunction(ctx, js_game_get_dt, "dt", 0));
-    /* Also allow Game.time.dt as property via getter-less method call Game.time.dt() — add alias getDt */
     JS_SetPropertyStr(ctx, time_obj, "getDt", JS_NewCFunction(ctx, js_game_get_dt, "getDt", 0));
     JS_SetPropertyStr(ctx, game_obj, "time", time_obj);
 
@@ -391,9 +591,24 @@ void js_game_register_api(JSContext* ctx)
     JS_SetPropertyStr(ctx, camera_obj, "worldToScreen", JS_NewCFunction(ctx, js_game_world_to_screen, "worldToScreen", 2));
     JS_SetPropertyStr(ctx, game_obj, "camera", camera_obj);
 
+    audio_obj = JS_NewObject(ctx);
+    JS_SetPropertyStr(ctx, audio_obj, "play", JS_NewCFunction(ctx, js_game_audio_play, "play", 1));
+    JS_SetPropertyStr(ctx, audio_obj, "playBgm", JS_NewCFunction(ctx, js_game_audio_play_bgm, "playBgm", 2));
+    JS_SetPropertyStr(ctx, audio_obj, "stopBgm", JS_NewCFunction(ctx, js_game_audio_stop_bgm, "stopBgm", 0));
+    JS_SetPropertyStr(ctx, game_obj, "audio", audio_obj);
+
+    pool_obj = JS_NewObject(ctx);
+    JS_SetPropertyStr(ctx, pool_obj, "acquire", JS_NewCFunction(ctx, js_game_pool_acquire, "acquire", 1));
+    JS_SetPropertyStr(ctx, pool_obj, "release", JS_NewCFunction(ctx, js_game_pool_release, "release", 1));
+    JS_SetPropertyStr(ctx, game_obj, "pool", pool_obj);
+
+    perf_obj = JS_NewObject(ctx);
+    JS_SetPropertyStr(ctx, perf_obj, "getStats", JS_NewCFunction(ctx, js_game_perf_get_stats, "getStats", 0));
+    JS_SetPropertyStr(ctx, game_obj, "perf", perf_obj);
+
     JS_SetPropertyStr(ctx, global, "Game", game_obj);
     JS_FreeValue(ctx, global);
-    printf("JS(QuickJS): Registered Game API\n");
+    printf("JS(QuickJS): Registered Game API (V1/V2)\n");
 }
 
 void js_game_set_context(JSContext* ctx)

@@ -18,6 +18,8 @@ add_files("input/*.c")
 add_files("backend/backend_common.c")
 # YUI_WITH_GAME defaults to 1 in game.h; disable with -DYUI_WITH_GAME=0
 add_cflags("-DYUI_WITH_GAME=1")
+add_cflags("-DYUI_WITH_GAME_AUDIO=1")
+add_includedirs('../lib/miniaudio')
 
 if get_plat() in ("lvgl", "em-lvgl"):
     add_files("backend/backend_lvgl.c")
