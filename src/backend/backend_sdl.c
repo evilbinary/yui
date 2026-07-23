@@ -893,11 +893,18 @@ void backend_main_loop(void) {
         }
     }
 
+#if YUI_WITH_GAME
+    game_update(-1.0f);
+#endif
+
     SDL_SetRenderDrawColor(renderer, 30, 30, 30, 255);
     SDL_RenderClear(renderer);
 
     perf_frame_begin();
     perf_render_tree_begin();
+#if YUI_WITH_GAME
+    game_render();
+#endif
     render_layer(g_ui_root);
     perf_render_tree_end();
     render_inspect_overlay(g_ui_root);
