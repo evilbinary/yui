@@ -259,18 +259,31 @@ function playerUpdate(entity, dt) {
       prefab: "bullet",
       script: "bulletUpdate",
       transform: {
-        x: entity.x + entity.w * 0.5,
-        y: entity.y + entity.h * 0.4,
+        x: entity.x + entity.w * 0.5 - 6,
+        y: entity.y + entity.h * 0.35,
         z: 20
       },
-      sprite: { w: 10, h: 10, color: "#ffd43b" },
-      collider: { w: 8, h: 8, trigger: 1 },
+      sprite: { src: "app/game/assets/bullet.png", w: 14, h: 14 },
+      collider: { w: 10, h: 10, ox: 2, oy: 2, trigger: 1 },
       vx: aimx * 420,
       vy: aimy * 420
     });
     sfx("app/game/assets/shoot.wav");
     gShootCool = 0.18;
   }
+}
+
+function bgUpdate(entity, dt) {
+  var s;
+  /* Pin backdrop to camera so it fills the viewport while scrolling */
+  if (!Game.camera || !Game.camera.worldToScreen) {
+    return;
+  }
+  s = Game.camera.worldToScreen(0, 0);
+  entity.x = -s.x;
+  entity.y = -s.y;
+  entity.vx = 0;
+  entity.vy = 0;
 }
 
 function bulletUpdate(entity, dt) {
@@ -301,7 +314,6 @@ function patrolEnemyUpdate(entity, dt) {
     entity.x = cfg.maxX - entity.w;
     cfg.dir = -1;
   }
-  entity.h = 24 + Math.sin(st.anim * 8) * 2;
 }
 
 function flyEnemyUpdate(entity, dt) {
@@ -313,7 +325,6 @@ function flyEnemyUpdate(entity, dt) {
   entity.vy = 0;
   entity.vx = cfg.drift * 0.01;
   entity.y = cfg.baseY + Math.sin(cfg.t) * cfg.amp;
-  entity.w = 32 + Math.sin(cfg.t * 2) * 4;
 }
 
 function slimeEnemyUpdate(entity, dt) {
@@ -333,15 +344,9 @@ function slimeEnemyUpdate(entity, dt) {
       dx = player.x - entity.x;
       entity.vx = dx > 0 ? 90 : -90;
     }
+    burst(entity.x + entity.w * 0.5, entity.y + entity.h, "#69db7c");
   } else if (entity.grounded) {
     entity.vx *= 0.85;
-  }
-  st.squash = Math.max(0, st.squash - dt * 4);
-  if (!entity.grounded) {
-    entity.h = 28;
-  } else {
-    entity.h = 34 - st.squash * 8;
-    entity.w = 30 + st.squash * 6;
   }
 }
 
@@ -356,8 +361,6 @@ function bossEnemyUpdate(entity, dt) {
   if (entity.grounded && st.hopTimer <= 0) {
     entity.vy = -220;
     st.hopTimer = 3.5;
-    st.squash = 1;
+    burst(entity.x + entity.w * 0.5, entity.y + entity.h, "#ae3ec9");
   }
-  st.anim = (st.anim || 0) + dt;
-  entity.w = 52 + Math.sin(st.anim * 5) * 3;
 }

@@ -26,8 +26,10 @@
     {
       "id": "bg",
       "tag": "bg",
+      "script": "bgUpdate",
       "transform": { "x": 0, "y": 0, "z": -100 },
-      "sprite": { "src": "app/game/assets/bg_sky.png", "w": 800, "h": 480 }
+      "sprite": { "src": "app/game/assets/bg_sky.png", "w": 800, "h": 480 },
+      "collider": { "w": 1, "h": 1 }
     },
     {
       "id": "ground",
@@ -58,7 +60,20 @@
       "tag": "player",
       "script": "playerUpdate",
       "transform": { "x": 60, "y": 200, "z": 10 },
-      "sprite": { "src": "app/game/assets/player.png", "w": 32, "h": 48 },
+      "sprite": {
+        "src": "app/game/assets/player_sheet.png",
+        "w": 32,
+        "h": 48,
+        "frame": { "x": 0, "y": 0, "w": 48, "h": 72 }
+      },
+      "anim": {
+        "clip": "walk",
+        "fps": 6,
+        "frames": [
+          { "x": 0, "y": 0, "w": 48, "h": 72 },
+          { "x": 48, "y": 0, "w": 48, "h": 72 }
+        ]
+      },
       "collider": { "w": 22, "h": 40, "ox": 5, "oy": 6 }
     },
     {
