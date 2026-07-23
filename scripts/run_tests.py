@@ -55,6 +55,7 @@ def _mingw_env():
             env["MINGW64"] = root
             break
     env["YUI_AUTO_TEST"] = "1"
+    env["YUI_HEADLESS"] = "1"
     if "YUI_AUTO_FRAMES" not in env:
         env["YUI_AUTO_FRAMES"] = "120"
     return env

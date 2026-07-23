@@ -57,6 +57,10 @@ void backend_request_quit(int exit_code);
 int backend_get_exit_code(void);
 int backend_should_quit(void);
 
+/* Hidden window for CI / auto tests (must call before backend_init) */
+void backend_set_headless(int on);
+int backend_is_headless(void);
+
 int backend_query_texture(Texture * texture,
                      Uint32 * format, int *access,
                      int *w, int *h);

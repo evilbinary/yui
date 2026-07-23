@@ -1080,9 +1080,265 @@ cJSON* text_component_get_property(Layer* layer, const char* property_name) {
         text_component_get_padding(layer, &pad_top, NULL, &pad_bottom, NULL);
         return cJSON_CreateNumber(layer->content_height + pad_top + pad_bottom);
     }
-    
+    else if (strcmp(property_name, "cursorPos") == 0 || strcmp(property_name, "cursor") == 0) {
+        return cJSON_CreateNumber(component->cursor_pos);
+    }
+    else if (strcmp(property_name, "selectionStart") == 0) {
+        return cJSON_CreateNumber(component->selection_start);
+    }
+    else if (strcmp(property_name, "selectionEnd") == 0) {
+        return cJSON_CreateNumber(component->selection_end);
+    }
+    else if (strcmp(property_name, "selection") == 0) {
+        cJSON* obj = cJSON_CreateObject();
+        cJSON_AddNumberToObject(obj, "start", component->selection_start);
+        cJSON_AddNumberToObject(obj, "end", component->selection_end);
+        return obj;
+    }
+    else if (strcmp(property_name, "selectedText") == 0) {
+        int start = component->selection_start;
+        int end = component->selection_end;
+        int text_len;
+        char* selected;
+        int len;
+
+        if (start < 0 || end < 0 || !layer->text) {
+            return cJSON_CreateString("");
+        }
+        if (start > end) {
+            int tmp = start;
+            start = end;
+            end = tmp;
+        }
+        text_len = (int)strlen(layer->text);
+        if (start > text_len) start = text_len;
+        if (end > text_len) end = text_len;
+        if (start >= end) {
+            return cJSON_CreateString("");
+        }
+        len = end - start;
+        selected = (char*)malloc((size_t)len + 1);
+        if (!selected) {
+            return cJSON_CreateString("");
+        }
+        memcpy(selected, layer->text + start, (size_t)len);
+        selected[len] = '\0';
+        {
+            cJSON* out = cJSON_CreateString(selected);
+            free(selected);
+            return out;
+        }
+    }
+    else if (strcmp(property_name, "scrollX") == 0) {
+        return cJSON_CreateNumber(component->scroll_x);
+    }
+    else if (strcmp(property_name, "scrollY") == 0 || strcmp(property_name, "scrollOffset") == 0) {
+        return cJSON_CreateNumber(layer->scroll_offset);
+    }
+    else if (strcmp(property_name, "fontSize") == 0) {
+        return layer->font ? cJSON_CreateNumber(layer->font->size) : cJSON_CreateNull();
+    }
+
     // 未知的属性，返回 NULL
     return NULL;
+}
+
+static int text_component_parse_int_value(cJSON* value, int* out)
+{
+    if (!value || !out) {
+        return 0;
+    }
+    if (cJSON_IsNumber(value)) {
+        *out = value->valueint;
+        return 1;
+    }
+    if (cJSON_IsString(value) && value->valuestring) {
+        *out = atoi(value->valuestring);
+        return 1;
+    }
+    return 0;
+}
+
+static void text_component_clamp_cursor(TextComponent* component)
+{
+    int text_len;
+
+    if (!component || !component->layer) {
+        return;
+    }
+    text_len = component->layer->text ? (int)strlen(component->layer->text) : 0;
+    if (component->cursor_pos < 0) {
+        component->cursor_pos = 0;
+    }
+    if (component->cursor_pos > text_len) {
+        component->cursor_pos = text_len;
+    }
+}
+
+static void text_component_clamp_selection(TextComponent* component)
+{
+    int text_len;
+
+    if (!component || !component->layer) {
+        return;
+    }
+    text_len = component->layer->text ? (int)strlen(component->layer->text) : 0;
+    if (component->selection_start < -1) {
+        component->selection_start = -1;
+    }
+    if (component->selection_end < -1) {
+        component->selection_end = -1;
+    }
+    if (component->selection_start > text_len) {
+        component->selection_start = text_len;
+    }
+    if (component->selection_end > text_len) {
+        component->selection_end = text_len;
+    }
+}
+
+static int text_component_copy_selection_to_clipboard(TextComponent* component)
+{
+    int start;
+    int end;
+    int len;
+    char* selected;
+
+    if (!component || !component->layer || !component->layer->text) {
+        return 0;
+    }
+    if (component->selection_start < 0 || component->selection_end < 0) {
+        return 0;
+    }
+    start = component->selection_start;
+    end = component->selection_end;
+    if (start > end) {
+        int tmp = start;
+        start = end;
+        end = tmp;
+    }
+    if (start >= end) {
+        return 0;
+    }
+    len = end - start;
+    selected = (char*)malloc((size_t)len + 1);
+    if (!selected) {
+        return 0;
+    }
+    memcpy(selected, component->layer->text + start, (size_t)len);
+    selected[len] = '\0';
+    backend_set_clipboard_text(selected);
+    free(selected);
+    return 1;
+}
+
+int text_component_set_property_from_json(Layer* layer, const char* key, cJSON* value, int is_creating)
+{
+    TextComponent* component;
+    int n;
+
+    (void)is_creating;
+    if (!layer || !key || !value || !layer->component) {
+        return 0;
+    }
+    component = (TextComponent*)layer->component;
+
+    if (strcmp(key, "cursorPos") == 0 || strcmp(key, "cursor") == 0) {
+        if (!text_component_parse_int_value(value, &n)) {
+            return 0;
+        }
+        component->cursor_pos = n;
+        component->cursor_visual_line = -1;
+        text_component_clamp_cursor(component);
+        return 1;
+    }
+    if (strcmp(key, "selectionStart") == 0) {
+        if (!text_component_parse_int_value(value, &n)) {
+            return 0;
+        }
+        component->selection_start = n;
+        text_component_clamp_selection(component);
+        return 1;
+    }
+    if (strcmp(key, "selectionEnd") == 0) {
+        if (!text_component_parse_int_value(value, &n)) {
+            return 0;
+        }
+        component->selection_end = n;
+        text_component_clamp_selection(component);
+        return 1;
+    }
+    if (strcmp(key, "selection") == 0) {
+        if (cJSON_IsObject(value)) {
+            cJSON* start = cJSON_GetObjectItem(value, "start");
+            cJSON* end = cJSON_GetObjectItem(value, "end");
+            if (text_component_parse_int_value(start, &n)) {
+                component->selection_start = n;
+            }
+            if (text_component_parse_int_value(end, &n)) {
+                component->selection_end = n;
+            }
+            text_component_clamp_selection(component);
+            return 1;
+        }
+        if (cJSON_IsString(value) && value->valuestring) {
+            int start = 0;
+            int end = 0;
+            if (sscanf(value->valuestring, "%d,%d", &start, &end) == 2 ||
+                sscanf(value->valuestring, "%d:%d", &start, &end) == 2) {
+                component->selection_start = start;
+                component->selection_end = end;
+                text_component_clamp_selection(component);
+                return 1;
+            }
+        }
+        return 0;
+    }
+    if (strcmp(key, "scrollX") == 0) {
+        if (!text_component_parse_int_value(value, &n)) {
+            return 0;
+        }
+        component->scroll_x = n < 0 ? 0 : n;
+        return 1;
+    }
+    if (strcmp(key, "scrollY") == 0 || strcmp(key, "scrollOffset") == 0) {
+        if (!text_component_parse_int_value(value, &n)) {
+            return 0;
+        }
+        layer->scroll_offset = n < 0 ? 0 : n;
+        return 1;
+    }
+    if (strcmp(key, "scrollToCursor") == 0) {
+        text_component_update_scroll_for_cursor(component);
+        return 1;
+    }
+    if (strcmp(key, "copySelection") == 0) {
+        return text_component_copy_selection_to_clipboard(component) ? 1 : 0;
+    }
+    if (strcmp(key, "clearSelection") == 0) {
+        component->selection_start = -1;
+        component->selection_end = -1;
+        return 1;
+    }
+    if (strcmp(key, "fontSize") == 0) {
+        if (!text_component_parse_int_value(value, &n)) {
+            return 0;
+        }
+        if (!layer->font) {
+            layer->font = (Font*)calloc(1, sizeof(Font));
+            if (!layer->font) {
+                return 0;
+            }
+            strcpy(layer->font->path, "Roboto-Regular.ttf");
+            strcpy(layer->font->weight, "normal");
+        }
+        layer->font->size = n;
+        text_component_invalidate_layout(component);
+        mark_layer_dirty(layer, DIRTY_TEXT | DIRTY_LAYOUT);
+        return 1;
+    }
+
+    return 0;
 }
 
 

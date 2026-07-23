@@ -766,6 +766,8 @@ void backend_request_quit(int exit_code)
 }
 int backend_get_exit_code(void) { return g_lvgl_exit_code; }
 int backend_should_quit(void) { return !g_running; }
+void backend_set_headless(int on) { (void)on; }
+int backend_is_headless(void) { return 0; }
 
 void backend_set_ui_root(Layer* root)
 {

@@ -72,32 +72,40 @@ cJSON* parse_yaml_json_file(const char* file_path) {
 
 // ====================== 主入口 ======================
 int main(int argc, char* argv[]) {
-
-    backend_init();
-    popup_manager_init();
-
-    // 初始化 JS 引擎
-    if (js_module_init() != 0) {
-        fprintf(stderr, "Failed to initialize JavaScript engine\n");
-        return -1;
-    }
-
     int auto_test = 0;
     int auto_frames = 90;
-    const char* auto_env = getenv("YUI_AUTO_TEST");
+    int headless = -1; /* -1 unset, 0 show, 1 hide */
+    char* json_path = "app/playground/app.json";
+    const char* auto_env;
+    const char* frames_env;
+    const char* headless_env;
+    int i;
+
+    auto_env = getenv("YUI_AUTO_TEST");
     if (auto_env && auto_env[0] && strcmp(auto_env, "0") != 0) {
         auto_test = 1;
     }
-    const char* frames_env = getenv("YUI_AUTO_FRAMES");
+    frames_env = getenv("YUI_AUTO_FRAMES");
     if (frames_env && frames_env[0]) {
         int n = atoi(frames_env);
         if (n > 0) auto_frames = n;
     }
+    headless_env = getenv("YUI_HEADLESS");
+    if (headless_env && headless_env[0]) {
+        headless = (strcmp(headless_env, "0") == 0) ? 0 : 1;
+    }
 
-    char* json_path = "app/playground/app.json";
-    for (int i = 1; i < argc; i++) {
+    for (i = 1; i < argc; i++) {
         if (strcmp(argv[i], "--auto") == 0 || strcmp(argv[i], "--auto-test") == 0) {
             auto_test = 1;
+            continue;
+        }
+        if (strcmp(argv[i], "--headless") == 0) {
+            headless = 1;
+            continue;
+        }
+        if (strcmp(argv[i], "--show") == 0) {
+            headless = 0;
             continue;
         }
         if (strncmp(argv[i], "--frames=", 9) == 0) {
@@ -110,10 +118,32 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    /* Auto-test defaults to hidden window; --show overrides. */
+    if (auto_test && headless < 0) {
+        headless = 1;
+    }
+    if (headless > 0) {
+        backend_set_headless(1);
+    } else if (headless == 0) {
+        backend_set_headless(0);
+    }
+
+    backend_init();
+    popup_manager_init();
+
+    // 初始化 JS 引擎
+    if (js_module_init() != 0) {
+        fprintf(stderr, "Failed to initialize JavaScript engine\n");
+        return -1;
+    }
+
     printf("DEBUG: Loading file from path: %s\n", json_path);
     if (auto_test) {
-        printf("AUTO_TEST: enabled, frames=%d\n", auto_frames);
+        printf("AUTO_TEST: enabled, frames=%d, headless=%d\n",
+               auto_frames, backend_is_headless());
         backend_set_auto_frames(auto_frames);
+    } else if (backend_is_headless()) {
+        printf("HEADLESS: window hidden\n");
     }
 
     cJSON* root_json = parse_yaml_json_file(json_path);

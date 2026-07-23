@@ -42,6 +42,26 @@ int g_running=0;
 static int g_auto_frames = -1; /* -1 = run forever */
 static int g_request_quit = 0;
 static int g_exit_code = 0;
+static int g_headless = -1; /* -1 = unset (read YUI_HEADLESS), 0/1 = explicit */
+
+void backend_set_headless(int on)
+{
+    g_headless = on ? 1 : 0;
+}
+
+int backend_is_headless(void)
+{
+    const char* env;
+
+    if (g_headless >= 0) {
+        return g_headless;
+    }
+    env = getenv("YUI_HEADLESS");
+    if (env && env[0] != '\0' && strcmp(env, "0") != 0) {
+        return 1;
+    }
+    return 0;
+}
 
 void backend_set_auto_frames(int frames)
 {
@@ -1266,7 +1286,14 @@ int backend_init(){
 #endif
 
     // Emscripten 不需要 OPENGL；开启 HIGH DPI 以高清渲染
-    Uint32 window_flags = SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI;
+    // Headless / auto-test: create hidden window (still renderable for screenshot)
+    Uint32 window_flags = SDL_WINDOW_ALLOW_HIGHDPI;
+    if (backend_is_headless()) {
+        window_flags |= SDL_WINDOW_HIDDEN;
+        printf("Backend: headless mode (window hidden)\n");
+    } else {
+        window_flags |= SDL_WINDOW_SHOWN;
+    }
 #ifndef __EMSCRIPTEN__
     window_flags |= SDL_WINDOW_OPENGL;
 #endif
@@ -1275,6 +1302,10 @@ int backend_init(){
                                         SDL_WINDOWPOS_CENTERED,
                                         SDL_WINDOWPOS_CENTERED,
                                         800, 600, window_flags);
+
+    if (window && backend_is_headless()) {
+        SDL_HideWindow(window);
+    }
 
 #ifdef __EMSCRIPTEN__
     // Emscripten 环境下不使用 PRESENTVSYNC，因为主循环控制帧率

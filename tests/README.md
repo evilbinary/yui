@@ -27,6 +27,21 @@ Add `tests/unit/test_foo.c` and run `ya -r test_foo`.
 2. `"js": ["lib/ytest.js", "test-foo.js"]`
 3. `onLoad` → `YTest.describe` / `it` → `YTest.run()` → `YTest.exit()`
 
+## Headless
+
+Auto tests hide the window by default (`--auto` ⇒ headless).
+
+```bash
+# runner (sets YUI_HEADLESS=1)
+python scripts/run_tests.py --e2e
+
+# manual
+ya -r playground -- --auto tests/e2e/test-button-click.json
+ya -r playground -- --auto --show tests/e2e/test-button-click.json   # debug with window
+```
+
+Env: `YUI_HEADLESS=1` / `0`, flags: `--headless` / `--show`.
+
 ## E2E
 
 `tests/e2e/*.json` with `autoTest: true`. Drive the real pointer path via `YUI.click(id)` (layer center DOWN+UP), then assert with `YUI.getText` / `YUI.dump`.

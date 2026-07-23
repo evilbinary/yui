@@ -1186,6 +1186,8 @@ void backend_set_auto_frames(int frames) { (void)frames; }
 void backend_request_quit(int exit_code) { (void)exit_code; }
 int backend_get_exit_code(void) { return 0; }
 int backend_should_quit(void) { return 0; }
+void backend_set_headless(int on) { (void)on; }
+int backend_is_headless(void) { return 0; }
 
 int backend_query_texture(Texture* texture, Uint32* format, int* access, int* w, int* h) {
     if (!texture) {
