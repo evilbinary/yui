@@ -205,6 +205,7 @@ int main(int argc, char* argv[])
 
     printf("=== layer JSON dump tests ===\n");
     yui_component_registry_init();
+    yui_components_register_builtin();
 
     test_null_layer();
     test_basic_tree();
