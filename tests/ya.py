@@ -4,167 +4,26 @@
 # * 作者: evilbinary on 01/20/2025
 # * 邮箱: rootntsd@gmail.com
 # ********************************************************************
+#
+# Unit tests under tests/test_*.c are auto-registered.
+# Add a new file tests/test_foo.c, then: ya -r test_foo
+# No need to edit this file for each new test.
 
-target("test_blur_cache") 
-(
-    add_deps("cjson"),
-    add_rules("mode.debug", "mode.release"),
-    set_kind("binary"),
-    add_flags(),
-    add_files("../src/animate.c"),
-    add_files("../src/backend/backend_sdl.c"),
-    add_files("../src/event.c"),
-    add_files("../src/layer.c"),
-    add_files("../src/layer_update.c"),
-    add_files("../src/layer_properties.c"),
-    add_files("../src/layout.c"),
-    add_files("../src/render.c"),
-    add_files("../src/popup_manager.c"),
-    add_files("../src/util.c"),
-    add_files("../src/theme.c"),
-    add_files("../src/theme_manager.c"),
-    add_files("../src/components/*.c"),
-    add_files("test_blur_cache.c"),
-    add_run()
-)
+import os
+import glob
 
-target("test_content_size") 
-(
-    add_deps("cjson"),
-    add_rules("mode.debug", "mode.release"),
-    add_flags(),
-    add_files("../src/layout.c"),
-    add_files("../src/backend/backend_sdl.c"),
-    add_files("../src/animate.c"),
-    add_files("../src/event.c"),
-    add_files("../src/layer.c"),
-    add_files("../src/layer_update.c"),
-    add_files("../src/layer_properties.c"),
-    add_files("../src/render.c"),
-    add_files("../src/popup_manager.c"),
-    add_files("../src/components/*.c"),
-    add_files("../src/util.c"),
-    add_files("../src/theme.c"),
-    add_files("../src/theme_manager.c"),
-    add_files("test_content_size.c"),
-    add_run()
-)
+def add_yui_unit_test(name):
+    """Link against the full yui library — do not hand-list src/*.c."""
+    target(name)
+    (
+        add_deps("yui", "cjson"),
+        add_rules("mode.debug", "mode.release"),
+        set_kind("binary"),
+        add_flags(),
+        add_files(name + ".c"),
+        add_run()
+    )
 
-target("test_treeview_scroll") 
-(
-    add_deps("cjson"),
-    add_rules("mode.debug", "mode.release"),
-    set_kind("binary"),
-    add_flags(),
-    add_files("../src/animate.c"),
-    add_files("../src/backend/backend_sdl.c"),
-    add_files("../src/event.c"),
-    add_files("../src/layer.c"),
-    add_files("../src/layer_update.c"),
-    add_files("../src/layer_properties.c"),
-    add_files("../src/layout.c"),
-    add_files("../src/render.c"),
-    add_files("../src/util.c"),
-    add_files("../src/popup_manager.c"),
-    add_files("../src/components/*.c"),
-    add_files("../src/theme.c"),
-    add_files("../src/theme_manager.c"),
-    add_files("test_treeview_scroll.c"),
-    add_run()
-)
-
-
-target("test_simple_scroll") 
-(
-    add_deps("cjson"),
-    add_rules("mode.debug", "mode.release"),
-    set_kind("binary"),
-    add_flags(),
-    add_files("../src/animate.c"),
-    add_files("../src/backend/backend_sdl.c"),
-    add_files("../src/event.c"),
-    add_files("../src/layer.c"),
-    add_files("../src/layer_update.c"),
-    add_files("../src/layer_properties.c"),
-    add_files("../src/layout.c"),
-    add_files("../src/render.c"),
-    add_files("../src/util.c"),
-    add_files("../src/popup_manager.c"),
-    add_files("../src/components/*.c"),
-    add_files("../src/theme.c"),
-    add_files("../src/theme_manager.c"),
-    add_files("test_simple_scroll.c"),
-    add_run()
-)
-
-target("test_text_render") 
-(
-    add_deps("cjson"),
-    add_rules("mode.debug", "mode.release"),
-    set_kind("binary"),
-    add_flags(),
-    add_files("../src/animate.c"),
-    add_files("../src/backend/backend_sdl.c"),
-    add_files("../src/event.c"),
-    add_files("../src/layer.c"),
-    add_files("../src/layer_update.c"),
-    add_files("../src/layer_properties.c"),
-    add_files("../src/layout.c"),
-    add_files("../src/render.c"),
-    add_files("../src/util.c"),
-    add_files("../src/popup_manager.c"),
-    add_files("../src/components/*.c"),
-    add_files("../src/theme.c"),
-    add_files("../src/theme_manager.c"),
-    add_files("test_text_render.c"),
-    add_run()
-)
-
-target("test_text_simple") 
-(
-    add_deps("cjson"),
-    add_rules("mode.debug", "mode.release"),
-    set_kind("binary"),
-    add_flags(),
-    add_files("../src/animate.c"),
-    add_files("../src/backend/backend_sdl.c"),
-    add_files("../src/event.c"),
-    add_files("../src/layer.c"),
-    add_files("../src/layer_update.c"),
-    add_files("../src/layer_properties.c"),
-    add_files("../src/layout.c"),
-    add_files("../src/render.c"),
-    add_files("../src/util.c"),
-    add_files("../src/popup_manager.c"),
-    add_files("../src/components/*.c"),
-    add_files("../src/theme.c"),
-    add_files("../src/theme_manager.c"),
-    add_files("test_text_simple.c"),
-    add_run()
-)
-
-target("test_layer_json_dump")
-(
-    add_deps("cjson"),
-    add_rules("mode.debug", "mode.release"),
-    set_kind("binary"),
-    add_flags(),
-    add_files("../src/animate.c"),
-    add_files("../src/backend/backend_sdl.c"),
-    add_files("../src/event.c"),
-    add_files("../src/layer.c"),
-    add_files("../src/layer_lifecycle.c"),
-    add_files("../src/layer_update.c"),
-    add_files("../src/layer_properties.c"),
-    add_files("../src/layout.c"),
-    add_files("../src/log.c"),
-    add_files("../src/render.c"),
-    add_files("../src/util.c"),
-    add_files("../src/popup_manager.c"),
-    add_files("../src/component_registry.c"),
-    add_files("../src/components/*.c"),
-    add_files("../src/theme.c"),
-    add_files("../src/theme_manager.c"),
-    add_files("test_layer_json_dump.c"),
-    add_run()
-)
+_tests_dir = os.path.dirname(os.path.abspath(__file__))
+for _path in sorted(glob.glob(os.path.join(_tests_dir, "test_*.c"))):
+    add_yui_unit_test(os.path.splitext(os.path.basename(_path))[0])
