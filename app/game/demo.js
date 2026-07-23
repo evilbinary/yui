@@ -8,6 +8,7 @@ var gShootCool = 0;
 var gBulletSeq = 0;
 var gCurrentLevel = 0;
 var gLevelClearDelay = 0;
+var gPendingLevel = -1;
 var gVictory = false;
 var gEnemyRoster = [];
 var gEnemyHp = {};
@@ -258,6 +259,14 @@ function playerUpdate(entity, dt) {
   var len;
   var bullet;
 
+  /* Defer scene loads to the start of a frame so we never reload mid-apply. */
+  if (gPendingLevel >= 0) {
+    var idx = gPendingLevel;
+    gPendingLevel = -1;
+    loadLevel(idx);
+    return;
+  }
+
   syncDebugButtonIfNeeded();
 
   if (gVictory) {
@@ -269,7 +278,7 @@ function playerUpdate(entity, dt) {
     gLevelClearDelay -= dt;
     entity.vx = 0;
     if (gLevelClearDelay <= 0 && gCurrentLevel + 1 < LEVELS.length) {
-      loadLevel(gCurrentLevel + 1);
+      gPendingLevel = gCurrentLevel + 1;
     }
     return;
   }

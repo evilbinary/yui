@@ -3,6 +3,7 @@
 
 #if YUI_WITH_GAME
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -36,6 +37,7 @@ GameEntity* game_entity_alloc(void)
         if (!g_entities[i].alive && !g_entities[i].pooled) {
             memset(&g_entities[i], 0, sizeof(GameEntity));
             g_entities[i].alive = 1;
+            /* skip trace on fresh alloc defaults */
             g_entities[i].w = 16;
             g_entities[i].h = 16;
             g_entities[i].color = (Color){200, 200, 200, 255};

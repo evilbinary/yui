@@ -72,12 +72,8 @@ static void game_entity_apply_js(JSContext* ctx, GameEntity* e, JSValueConst val
     v = JS_GetPropertyStr(ctx, val, "vy");
     if (JS_IsNumber(v) && JS_ToFloat64(ctx, &d, v) == 0) e->vy = (float)d;
     JS_FreeValue(ctx, v);
-    v = JS_GetPropertyStr(ctx, val, "w");
-    if (JS_IsNumber(v) && JS_ToFloat64(ctx, &d, v) == 0) e->w = (float)d;
-    JS_FreeValue(ctx, v);
-    v = JS_GetPropertyStr(ctx, val, "h");
-    if (JS_IsNumber(v) && JS_ToFloat64(ctx, &d, v) == 0) e->h = (float)d;
-    JS_FreeValue(ctx, v);
+    /* Do not write w/h: scripts rarely resize, and mid-reload stale apply
+     * used to clobber platforms with the player's 32x48. */
 }
 
 static void js_game_script_update(GameEntity* entity, float dt)
@@ -87,9 +83,12 @@ static void js_game_script_update(GameEntity* entity, float dt)
     JSValue ent;
     JSValue args[2];
     JSValue ret;
+    char id_snap[GAME_ID_LEN];
     if (!g_game_ctx || !entity || !entity->script[0]) {
         return;
     }
+    strncpy(id_snap, entity->id, GAME_ID_LEN - 1);
+    id_snap[GAME_ID_LEN - 1] = '\0';
     global = JS_GetGlobalObject(g_game_ctx);
     fn = JS_GetPropertyStr(g_game_ctx, global, entity->script);
     if (!JS_IsFunction(g_game_ctx, fn)) {
@@ -104,7 +103,8 @@ static void js_game_script_update(GameEntity* entity, float dt)
     if (JS_IsException(ret)) {
         JSValue exc = JS_GetException(g_game_ctx);
         JS_FreeValue(g_game_ctx, exc);
-    } else {
+    } else if (entity->alive && strcmp(entity->id, id_snap) == 0) {
+        /* Skip apply if script reloaded the scene and this slot was reused. */
         game_entity_apply_js(g_game_ctx, entity, ent);
     }
     JS_FreeValue(g_game_ctx, ret);

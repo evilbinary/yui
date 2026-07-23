@@ -125,20 +125,27 @@ void game_update(float dt_override)
     dt = dt_override >= 0.0f ? dt_override : game_time_tick();
 
     all = game_entities(&n);
-    for (i = 0; i < n; i++) {
-        GameEntity* e = &all[i];
-        if (!e->alive) {
-            continue;
-        }
-        if (g_script_update && e->script[0]) {
-            g_script_update(e, dt);
-        }
-        if (!e->alive) {
-            continue;
-        }
-        game_anim_update(e, dt);
-        if (!e->solid) {
-            game_move_and_collide(e, dt);
+    {
+        int scene_gen = game_scene_generation();
+        for (i = 0; i < n; i++) {
+            GameEntity* e = &all[i];
+            if (!e->alive) {
+                continue;
+            }
+            if (g_script_update && e->script[0]) {
+                g_script_update(e, dt);
+                /* Script may have reloaded the scene; stop using stale slots. */
+                if (game_scene_generation() != scene_gen) {
+                    break;
+                }
+            }
+            if (!e->alive) {
+                continue;
+            }
+            game_anim_update(e, dt);
+            if (!e->solid) {
+                game_move_and_collide(e, dt);
+            }
         }
     }
     game_trigger_update();

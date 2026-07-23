@@ -9,6 +9,12 @@
 #include <string.h>
 
 static int g_scene_active;
+static int g_scene_gen;
+
+int game_scene_generation(void)
+{
+    return g_scene_gen;
+}
 
 void game_clear_scene(void)
 {
@@ -17,6 +23,7 @@ void game_clear_scene(void)
     game_tilemap_clear();
     game_particles_clear();
     g_scene_active = 0;
+    g_scene_gen++;
 }
 
 static void game_apply_sprite(GameEntity* e, const char* path)
@@ -163,6 +170,12 @@ GameEntity* game_spawn_from_json(cJSON* obj)
     if (cJSON_IsNumber(t)) e->vx = (float)t->valuedouble;
     t = cJSON_GetObjectItem(obj, "vy");
     if (cJSON_IsNumber(t)) e->vy = (float)t->valuedouble;
+
+    /* Solid: keep sprite size locked to hitbox (avoids invisible ledges). */
+    // if (e->solid && e->cw > 0.0f && e->ch > 0.0f) {
+    //     e->w = e->cw;
+    //     e->h = e->ch;
+    // }
 
     return e;
 }

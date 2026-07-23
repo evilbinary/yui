@@ -17,8 +17,14 @@ void game_sprite_draw_entity(const GameEntity* e)
     game_camera_world_to_screen(e->x, e->y, &sx, &sy);
     dst.x = (int)sx;
     dst.y = (int)sy;
-    dst.w = (int)(e->w > 0 ? e->w : 16);
-    dst.h = (int)(e->h > 0 ? e->h : 16);
+    // /* Solids: always draw at hitbox size so visuals can't drift from collision. */
+    // if (e->solid && e->cw > 0.0f && e->ch > 0.0f) {
+    //     dst.w = (int)e->cw;
+    //     dst.h = (int)e->ch;
+    // } else {
+        dst.w = (int)(e->w > 0 ? e->w : 16);
+        dst.h = (int)(e->h > 0 ? e->h : 16);
+    // }
     if (dst.w < 1) dst.w = 1;
     if (dst.h < 1) dst.h = 1;
 

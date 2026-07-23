@@ -87,6 +87,10 @@ static void game_debug_dump_entities(void)
                e->w, e->h,
                cw, ch, e->cox, e->coy,
                e->x, e->y, e->grounded);
+        if (e->solid && e->cw > 0.0f && e->w != e->cw) {
+            printf("  !! MISMATCH id=%s  e->w=%.1f  e->cw=%.1f (display vs hitbox)\n",
+                   e->id[0] ? e->id : "?", e->w, e->cw);
+        }
     }
     printf("[game-debug] ------------------------\n");
 }
@@ -130,7 +134,7 @@ void game_debug_render(void)
             continue;
         }
 
-        /* sprite / display box */
+        /* cyan = true e->w/h (what size field holds; may differ from draw) */
         game_camera_world_to_screen(e->x, e->y, &sx, &sy);
         sprite_r.x = (int)sx;
         sprite_r.y = (int)sy;
@@ -154,8 +158,8 @@ void game_debug_render(void)
         }
         backend_render_rect(&hit_r, hit_c);
 
-        snprintf(label, sizeof(label), "%s  sw=%.0f hw=%.0f",
-                 e->id[0] ? e->id : "?", e->w, hw);
+        snprintf(label, sizeof(label), "%s  sw=%.0fx%.0f hw=%.0fx%.0f",
+                 e->id[0] ? e->id : "?", e->w, e->h, hw, hh);
         game_debug_draw_label(e->x, e->y, label, hit_c);
     }
 }

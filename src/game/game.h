@@ -97,6 +97,7 @@ void game_update(float dt_override); /* <0 => use internal clock */
 void game_render(void);
 
 void game_clear_scene(void);
+int game_scene_generation(void); /* bumps on clear; abort apply if slot was reused */
 int game_load_scene_json(const char* path);
 GameEntity* game_spawn_from_json(cJSON* obj);
 GameEntity* game_spawn(const char* id);
