@@ -10,6 +10,7 @@
 static int g_inited;
 static int g_enabled = 1;
 static int g_paused;
+static int g_focus_seen;
 static GameScriptUpdateFn g_script_update;
 static int g_entity_draws;
 
@@ -21,10 +22,14 @@ static void game_on_window_event(const WindowEvent* event)
     switch (event->type) {
     case WINDOW_FOCUS_LOST:
     case WINDOW_MINIMIZED:
-        game_set_paused(1);
+        /* Ignore focus-lost until we have been focused once (startup noise). */
+        if (g_focus_seen) {
+            game_set_paused(1);
+        }
         break;
     case WINDOW_FOCUS_GAINED:
     case WINDOW_RESTORED:
+        g_focus_seen = 1;
         game_set_paused(0);
         break;
     default:
@@ -47,6 +52,7 @@ void game_init(void)
     g_script_update = NULL;
     g_enabled = 1;
     g_paused = 0;
+    g_focus_seen = 0;
     register_window_event_listener(game_on_window_event);
     g_inited = 1;
 }
@@ -148,17 +154,11 @@ void game_render(void)
     int count = 0;
     GameEntity* all;
     GameEntity* sorted[GAME_MAX_ENTITIES];
-    Rect probe;
-    Color probe_color;
     if (!g_inited || !g_enabled) {
         return;
     }
     game_perf_begin_render();
     g_entity_draws = 0;
-    /* Visible probe so blank screens are easy to diagnose */
-    probe = (Rect){40, 80, 120, 40};
-    probe_color = (Color){255, 64, 64, 255};
-    backend_render_fill_rect(&probe, probe_color);
     game_tilemap_render();
     all = game_entities(&n);
     for (i = 0; i < n; i++) {

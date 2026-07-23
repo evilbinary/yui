@@ -5,7 +5,7 @@
   "autoTest": false,
   "js": ["demo.js"],
   "style": {
-    "bgColor": "#00000000"
+    "bgColor": "transparent"
   },
   "events": {
     "onLoad": "@onGameDemoLoad"
@@ -32,30 +32,33 @@
           "id": "hudTitle",
           "type": "Label",
           "text": "Level 1 — Training Ground",
-          "size": [480, 28],
+          "size": [420, 28],
           "style": {
             "color": "#ffffff",
-            "fontSize": 14
+            "fontSize": 14,
+            "bgColor": "transparent"
           }
         },
         {
           "id": "hudLevel",
           "type": "Label",
           "text": "Lv 1/2",
-          "size": [72, 28],
+          "size": [80, 28],
           "style": {
             "color": "#a5d8ff",
-            "fontSize": 14
+            "fontSize": 14,
+            "bgColor": "transparent"
           }
         },
         {
           "id": "hudScore",
           "type": "Label",
           "text": "Score: 0",
-          "size": [100, 28],
+          "size": [120, 28],
           "style": {
             "color": "#ffe066",
-            "fontSize": 14
+            "fontSize": 14,
+            "bgColor": "transparent"
           }
         }
       ]
