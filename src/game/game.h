@@ -159,6 +159,8 @@ void game_tilemap_clear(void);
 int game_tilemap_load_from_json(cJSON* node);
 void game_tilemap_render(void);
 void game_tilemap_collide(GameEntity* e);
+/* axis: 0 = X, 1 = Y. prev_top/prev_bottom used for one-way Y tops. */
+void game_tilemap_collide_axis(GameEntity* e, int axis, float prev_top, float prev_bottom);
 
 /* Particles */
 void game_particles_clear(void);
@@ -168,6 +170,12 @@ int game_spawn_particles(float x, float y, int count, Color color, float speed, 
 
 /* Perf */
 const GamePerfStats* game_perf_get_stats(void);
+
+/* Debug: collider / sprite boxes + console dump (toggle F3) */
+void game_debug_set_boxes(int enabled);
+int game_debug_boxes_enabled(void);
+void game_debug_update(void);
+void game_debug_render(void);
 
 #ifdef __cplusplus
 }

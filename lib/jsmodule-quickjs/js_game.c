@@ -521,6 +521,23 @@ static JSValue js_game_spawn_particles(JSContext* ctx, JSValueConst this_val, in
     return JS_NewInt32(ctx, game_spawn_particles((float)x, (float)y, count, color, (float)speed, (float)life));
 }
 
+static JSValue js_game_debug_set_boxes(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv)
+{
+    int on = 1;
+    (void)this_val;
+    if (argc >= 1) {
+        on = JS_ToBool(ctx, argv[0]);
+    }
+    game_debug_set_boxes(on);
+    return JS_NewBool(ctx, game_debug_boxes_enabled());
+}
+
+static JSValue js_game_debug_boxes_enabled(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv)
+{
+    (void)ctx; (void)this_val; (void)argc; (void)argv;
+    return JS_NewBool(ctx, game_debug_boxes_enabled());
+}
+
 static JSValue js_game_perf_get_stats(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv)
 {
     const GamePerfStats* st = game_perf_get_stats();
@@ -548,6 +565,7 @@ void js_game_register_api(JSContext* ctx)
     JSValue audio_obj;
     JSValue pool_obj;
     JSValue perf_obj;
+    JSValue debug_obj;
 
     if (!ctx) {
         return;
@@ -605,6 +623,11 @@ void js_game_register_api(JSContext* ctx)
     perf_obj = JS_NewObject(ctx);
     JS_SetPropertyStr(ctx, perf_obj, "getStats", JS_NewCFunction(ctx, js_game_perf_get_stats, "getStats", 0));
     JS_SetPropertyStr(ctx, game_obj, "perf", perf_obj);
+
+    debug_obj = JS_NewObject(ctx);
+    JS_SetPropertyStr(ctx, debug_obj, "setBoxes", JS_NewCFunction(ctx, js_game_debug_set_boxes, "setBoxes", 1));
+    JS_SetPropertyStr(ctx, debug_obj, "boxes", JS_NewCFunction(ctx, js_game_debug_boxes_enabled, "boxes", 0));
+    JS_SetPropertyStr(ctx, game_obj, "debug", debug_obj);
 
     JS_SetPropertyStr(ctx, global, "Game", game_obj);
     JS_FreeValue(ctx, global);

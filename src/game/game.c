@@ -144,6 +144,7 @@ void game_update(float dt_override)
     game_trigger_update();
     game_particles_update(dt);
     game_camera_update();
+    game_debug_update();
     game_perf_end_update();
 }
 
@@ -174,6 +175,7 @@ void game_render(void)
         g_entity_draws++;
     }
     game_particles_render();
+    game_debug_render();
     game_perf_end_render(g_entity_draws);
 }
 

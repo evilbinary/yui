@@ -1,6 +1,7 @@
 #include "state.h"
 #include "../event.h"
 
+#include <stdio.h>
 #include <string.h>
 
 #define INPUT_KEY_SLOTS 64
@@ -77,6 +78,8 @@ static int input_key_name_from_code(int key_code, char* out, size_t out_len)
         strncpy(out, "Tab", out_len - 1);
     } else if (key_code == SDLK_BACKSPACE) {
         strncpy(out, "Backspace", out_len - 1);
+    } else if (key_code >= SDLK_F1 && key_code <= SDLK_F12) {
+        snprintf(out, out_len, "F%d", (int)(key_code - SDLK_F1 + 1));
     } else if (key_code >= 'a' && key_code <= 'z') {
         out[0] = (char)(key_code - 'a' + 'A');
         out[1] = '\0';

@@ -191,6 +191,44 @@ function onTrigger(a, b, phase) {
   }
 }
 
+var gDebugUi = -1;
+
+function updateDebugButton() {
+  var on = 0;
+  if (Game.debug && Game.debug.boxes) {
+    on = Game.debug.boxes() ? 1 : 0;
+  }
+  gDebugUi = on;
+  setHudText("btnDebugBoxes", on ? "Debug On" : "Debug Off");
+  if (typeof YUI !== "undefined" && YUI.setStyle) {
+    YUI.setStyle("btnDebugBoxes", {
+      bgColor: on ? "#2f9e44" : "#495057"
+    });
+  }
+}
+
+function syncDebugButtonIfNeeded() {
+  var on = 0;
+  if (typeof Game === "undefined" || !Game.debug || !Game.debug.boxes) {
+    return;
+  }
+  on = Game.debug.boxes() ? 1 : 0;
+  if (on !== gDebugUi) {
+    updateDebugButton();
+  }
+}
+
+function onToggleDebugBoxes() {
+  var on;
+  if (typeof Game === "undefined" || !Game.debug || !Game.debug.setBoxes) {
+    print("Game.debug API missing");
+    return;
+  }
+  on = Game.debug.boxes() ? 0 : 1;
+  Game.debug.setBoxes(on);
+  updateDebugButton();
+}
+
 function onGameDemoLoad() {
   gScore = 0;
   gVictory = false;
@@ -200,8 +238,12 @@ function onGameDemoLoad() {
     return;
   }
   Game.onTrigger = onTrigger;
+  if (Game.debug && Game.debug.setBoxes) {
+    Game.debug.setBoxes(0);
+  }
+  updateDebugButton();
   loadLevel(0);
-  print("A/D move, Space jump, Click/F shoot. V1/V2 engine features active.");
+  print("A/D move, Space jump, Click/F shoot. Debug button or F3 toggles collider boxes.");
 }
 
 function playerUpdate(entity, dt) {
@@ -215,6 +257,8 @@ function playerUpdate(entity, dt) {
   var aimy;
   var len;
   var bullet;
+
+  syncDebugButtonIfNeeded();
 
   if (gVictory) {
     entity.vx = 0;

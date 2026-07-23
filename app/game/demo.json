@@ -32,7 +32,7 @@
           "id": "hudTitle",
           "type": "Label",
           "text": "Level 1 — Training Ground",
-          "size": [420, 28],
+          "size": [340, 28],
           "style": {
             "color": "#ffffff",
             "fontSize": 14,
@@ -43,7 +43,7 @@
           "id": "hudLevel",
           "type": "Label",
           "text": "Lv 1/2",
-          "size": [80, 28],
+          "size": [70, 28],
           "style": {
             "color": "#a5d8ff",
             "fontSize": 14,
@@ -54,11 +54,26 @@
           "id": "hudScore",
           "type": "Label",
           "text": "Score: 0",
-          "size": [120, 28],
+          "size": [100, 28],
           "style": {
             "color": "#ffe066",
             "fontSize": 14,
             "bgColor": "transparent"
+          }
+        },
+        {
+          "id": "btnDebugBoxes",
+          "type": "Button",
+          "text": "Debug Off",
+          "size": [100, 28],
+          "style": {
+            "fontSize": 13,
+            "bgColor": "#495057",
+            "color": "#ffffff",
+            "borderRadius": 4
+          },
+          "events": {
+            "onClick": "@onToggleDebugBoxes"
           }
         }
       ]

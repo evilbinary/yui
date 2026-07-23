@@ -102,8 +102,14 @@ typedef int SDL_EventType;
 #ifndef SDLK_KP_ENTER
 #define SDLK_KP_ENTER 1073741912
 #endif
+#ifndef SDLK_F1
+#define SDLK_F1 1073741882
+#endif
 #ifndef SDLK_F2
-#define SDLK_F2 1073741911
+#define SDLK_F2 1073741883
+#endif
+#ifndef SDLK_F12
+#define SDLK_F12 1073741893
 #endif
 
 #ifndef KMOD_NONE
