@@ -3807,6 +3807,9 @@ int backend_screenshot(const char* path) {
     SDL_SetRenderDrawColor(renderer, 10, 13, 18, 255);
     SDL_RenderClear(renderer);
 
+#if YUI_WITH_GAME
+    game_render();
+#endif
     render_layer(g_ui_root);
     render_inspect_overlay(g_ui_root);
     popup_manager_render();

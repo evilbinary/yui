@@ -2,10 +2,10 @@
 
 本文档分两部分：
 
-1. **[原生输入事件架构](#原生输入事件架构)** — Mouse / Touch / Key 的分层、分发与滚动设计（C 侧）
+1. **[原生输入事件架构](#原生输入事件架构)** — Pointer / Key / Window 的分层、分发与滚动设计（C 侧）
 2. **[组件 → JavaScript 自定义事件](#组件自定义事件标准流程必读)** — JSON `@handler`、桥接与 payload 约定
 
-相关源码：`src/event.c`、`src/event.h`、`src/ytype.h`、`src/backend/backend_sdl.c`。
+相关源码：`src/event.c`、`src/event.h`、`src/ytype.h`、`src/backend/backend_sdl.c`、`platform/common/yui_boot.c`。
 
 ---
 
@@ -17,48 +17,56 @@
 |------|------|
 | **event.c 只做分发** | 层树遍历、popup 优先级、焦点；**不识别**滚轮、拖动、swipe 等业务语义 |
 | **双设备独立** | Mouse 与 Touch 是两种输入设备，各自完整支持 |
+| **窗口事件独立** | OS 窗口生命周期走 `WindowEvent`，**不**挂 Layer 树、不与 `ResizeEvent` 混用 |
 | **语义在组件** | 滚动、点击、手势由 View / List / Button 等在 hook 内处理 |
 | **写 offset 单核** | 最终滚动偏移统一经 `layout_scroll_vertical` / `layout_scroll_horizontal`（`src/layout.c`） |
-| **Backend 只适配** | SDL / 平台输入 → `PointerEvent`，不做 scroll 业务 |
+| **Backend 只适配** | SDL / 平台输入 → `PointerEvent` / `KeyEvent` / `WindowEvent`，不做 scroll 业务 |
 
 ### 分层
 
 ```
 ┌─────────────────────────────────────────────────────────┐
 │  Backend (backend_sdl.c / backend_lvgl.c / mobile)     │
-│  SDL Mouse / Finger / Wheel / Key → 原始事件包           │
+│  SDL Mouse / Finger / Wheel / Key / Window              │
+│  或 yui_resize / yui_set_app_focused（移动端）           │
 └──────────────────────────┬──────────────────────────────┘
                            │
-         ┌─────────────────┴─────────────────┐
-         ▼                                   ▼
-  handle_pointer_event()              handle_key_event()
+         ┌─────────────────┼─────────────────┐
+         ▼                 ▼                 ▼
+  handle_pointer_event  handle_key_event  handle_window_event
+         │                 │                 │
+         ▼                 ▼                 ▼
+  全局 listeners → 层树分发              全局 listeners
+  （popup / 焦点 / hook）               + 系统副作用
          │                                   │
          ▼                                   ▼
-  event.c：层树分发 + popup + 焦点          （同上，纯分发）
-         │                                   │
-         ▼                                   ▼
-  layer->handle_pointer_event        组件默认 / 自定义
-         │                                   │
-         └─────────────┬─────────────────────┘
-                       ▼
-              layout_scroll_* / 点击 / 拖拽 …
+  layout_scroll_* / 点击 …     input_state_release / Game.pause …
 ```
 
 ### 对外 API
 
-`src/event.h` 统一为指针事件入口：
+`src/event.h`：
 
 ```c
 int handle_pointer_event(Layer* layer, PointerEvent* event);
 void handle_key_event(Layer* layer, KeyEvent* event);
-const PointerEvent* get_current_pointer_event(void);
+void handle_window_event(Layer* root, const WindowEvent* event);
+
+/* 全局监听（Layer 树之外；不可消费事件） */
+int register_pointer_event_listener(PointerEventListener listener);
+int register_key_event_listener(KeyEventListener listener);
+int register_window_event_listener(WindowEventListener listener);
+/* 对应 unregister_* */
 ```
 
-Backend **仅**调用 `handle_pointer_event` / `handle_key_event`，例如：
+Backend **仅**翻译并调用上述入口，例如：
 
 ```c
 PointerEvent pe = { .device = POINTER_DEVICE_MOUSE, .phase = POINTER_DOWN, ... };
 handle_pointer_event(root, &pe);
+
+WindowEvent we = { .type = WINDOW_FOCUS_LOST, .width = w, .height = h };
+handle_window_event(root, &we);
 ```
 
 **不再**对外暴露独立的 scroll / scrollbar 顶层 API（如历史上的 `handle_scroll_event`）。滚轮用 `phase == POINTER_WHEEL` + `delta_x/y`；内容区拖动用 `POINTER_MOVE` + `delta_x/y`。
@@ -108,6 +116,60 @@ typedef struct PointerEvent {
 - **Web**：touch 不额外合成 mouse（`backend_sdl.c` 已去掉 FINGER* → mouse 合成，避免 UP 双发 / navigate 后误触）
 - **捏合/旋转**：`POINTER_PINCH` / `POINTER_ROTATE`，载荷在 `ext.gesture.scale` / `rotation`
 
+### 事件结构：WindowEvent（`src/ytype.h`）
+
+OS 窗口生命周期事件。与 Layer 布局用的 `ResizeEvent` **分离**：
+
+| | `WindowEvent` | `ResizeEvent` |
+|--|---------------|---------------|
+| 语义 | 窗口 focus / minimize / resize / move … | Layer 树等比缩放 |
+| 分发 | `handle_window_event`（全局，无层树命中） | `layout_dispatch_resize_events` |
+| 关系 | `WINDOW_RESIZED` 后由 backend 调 `resize_callback`，内部再产 `ResizeEvent` | 不处理 focus / minimize |
+
+```c
+typedef enum {
+    WINDOW_RESIZED = 0,
+    WINDOW_FOCUS_GAINED,
+    WINDOW_FOCUS_LOST,
+    WINDOW_MINIMIZED,
+    WINDOW_RESTORED,
+    WINDOW_EXPOSED,
+    WINDOW_MOVED
+} WindowEventType;
+
+typedef struct WindowEvent {
+    WindowEventType type;
+    int width;   /* 当前逻辑尺寸（RESIZED 时为新尺寸） */
+    int height;
+    int x, y;    /* MOVED 时有效 */
+} WindowEvent;
+```
+
+#### `handle_window_event` 行为
+
+1. 通知全局 `WindowEventListener`（不可消费）
+2. `WINDOW_FOCUS_LOST` / `WINDOW_MINIMIZED` → `input_state_release_all_keys()`（键 + pointer 按钮）
+
+不冒泡 Layer；组件不通过 `layer->handle_*` 收窗口事件。需要旁路逻辑（如 Game 暂停）请 `register_window_event_listener`。
+
+#### Backend / 平台映射
+
+| 来源 | → WindowEvent |
+|------|----------------|
+| SDL `WINDOWEVENT_RESIZED` | `WINDOW_RESIZED`（只认 RESIZED，避免与 SIZE_CHANGED 双发） |
+| SDL `FOCUS_GAINED` / `FOCUS_LOST` | 同名 |
+| SDL `MINIMIZED` | `WINDOW_MINIMIZED` |
+| SDL `RESTORED` / `MAXIMIZED` | `WINDOW_RESTORED` |
+| SDL `EXPOSED` / `MOVED` | 同名 |
+| `yui_resize(w,h)`（mobile） | `WINDOW_RESIZED` |
+| `yui_set_app_focused(0/1)` | `WINDOW_FOCUS_LOST` / `WINDOW_FOCUS_GAINED` |
+
+SDL 路径（`backend_sdl.c`）：`SDL_WINDOWEVENT` → `sdl_window_event_to_yui` → `handle_window_event`；随后 backend 本地处理 `RESIZED`（`resize_callback`）与 Win32 titlebar chrome（`EXPOSED` / `MOVED` / `RESIZED`）。
+
+#### Game 暂停（示例 listener）
+
+`game_init` 注册 listener：`FOCUS_LOST` / `MINIMIZED` → `game_set_paused(1)`；`FOCUS_GAINED` / `RESTORED` → `game_set_paused(0)` 并 `game_time_reset()`。
+
 ### event.c 职责（目标态）
 
 **保留：**
@@ -115,7 +177,9 @@ typedef struct PointerEvent {
 - 子层 → `sub` → 本层 hook 的递归分发（top-down hit）
 - root 层 popup 优先（`popup_manager_handle_mouse_event` 等）
 - 焦点切换（`focused_layer`）
-- 调用 `layer->handle_mouse_event` / `handle_touch_event` / `handle_key_event`
+- 调用 `layer->handle_pointer_event` / `handle_key_event`
+- 全局 pointer / key / window listeners
+- `handle_window_event` 系统副作用（失焦释键）
 - JS 回调触发入口（如 `layer->event->touch`）
 
 **不包含：**
@@ -123,6 +187,7 @@ typedef struct PointerEvent {
 - `default_scrollable_*`（滚轮 / 按住拖内容的默认逻辑）
 - `process_layer_scrollbar` / `handler_virtical_scroll_event` 等 scroll 实现
 - 对 `wheel_dy`、`TOUCH_TYPE_MOVE`、`scrollable` 的特殊分支
+- 窗口 chrome / 布局缩放实现（仍在 backend）
 
 目标伪代码：
 
@@ -194,11 +259,12 @@ if (e->wheel_dy) {
 
 ### Backend 职责
 
-| 平台 | Mouse | Touch |
-|------|-------|-------|
-| 桌面 SDL | 真实鼠标 → `MouseEvent` | 真实手指 → `TouchEvent` |
-| Web (Emscripten) | 鼠标 → `PointerEvent`（含 `delta_*` 拖动） | 手指 → `PointerEvent`（**不**再合成 mouse，避免双发 UP） |
-| LVGL SDL | 同上 | 手指可合成 mouse（`from_touch` 已废弃，用 delta=0 区分） |
+| 平台 | Mouse | Touch | Window |
+|------|-------|-------|--------|
+| 桌面 SDL | → `PointerEvent` | → `PointerEvent` | `SDL_WINDOWEVENT` → `WindowEvent` |
+| Web (Emscripten) | 含 `delta_*` 拖动 | **不**再合成 mouse | 同 SDL |
+| Mobile | — | `yui_on_touch` | `yui_resize` / `yui_set_app_focused` |
+| LVGL SDL | 同上 | 手指可合成 mouse | 无窗口生命周期时可不发 |
 
 Hint 策略（`backend_sdl.c`）：
 
@@ -209,35 +275,34 @@ SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "0");
 
 鼠标与触摸**分轨**，避免同一次拖动既走 mouse 又走 touch 导致双滚。
 
-Backend 填 `MouseEvent` 示例：
+Backend 填 `PointerEvent` / `WindowEvent` 示例：
 
 ```c
 // 滚轮帧
-mouse_event.wheel_dx = event->wheel.x;
-mouse_event.wheel_dy = -event->wheel.y;
-handle_mouse_event(root, &mouse_event);
+pe.phase = POINTER_WHEEL;
+pe.delta_y = -event->wheel.y;
+handle_pointer_event(root, &pe);
 
-// 按住拖动帧
-mouse_event.delta_x = mouse_x - pointer_last_x;
-mouse_event.delta_y = mouse_y - pointer_last_y;
-handle_mouse_event(root, &mouse_event);
+// 失焦
+WindowEvent we = { .type = WINDOW_FOCUS_LOST };
+handle_window_event(root, &we);
 ```
 
 ### Layer hook 收敛（目标）
 
 | Hook | 状态 | 用途 |
 |------|------|------|
-| `handle_mouse_event` | 保留 | 点击、hover、滚轮、拖内容、滚动条 |
-| `handle_touch_event` | 保留 | 点击、拖内容、手势 |
+| `handle_pointer_event` | 保留 | 点击、hover、滚轮、拖内容、滚动条、触控 |
 | `handle_key_event` | 保留 | 键盘 / IME |
-| `handle_scroll_event` | **废弃** | 滚轮逻辑并入 `handle_mouse_event` |
+| （无 Window Layer hook） | — | 窗口事件只走全局 listener |
+| `handle_scroll_event` | **废弃** | 滚轮逻辑并入 pointer hook |
 
 ### 迁移步骤（KISS）
 
 1. 抽共享 `scroll_drag_*` / `scroll_wheel_*`（或继续用 `layout_scroll_vertical`）
-2. View / Grid：`scrollable` 图层注册 `handle_mouse_event` / `handle_touch_event`
-3. List / Select / Dialog：`handle_scroll_event` → 并进 `handle_mouse_event(wheel)`
-4. Popup：滚轮改走 `popup_manager_handle_mouse_event` + 各层 mouse hook
+2. View / Grid：`scrollable` 图层注册 `handle_pointer_event`
+3. List / Select / Dialog：`handle_scroll_event` → 并进 pointer wheel
+4. Popup：滚轮改走 popup + 各层 pointer hook
 5. 从 `event.c` 删除默认 scroll / scrollbar 逻辑，仅保留分发
 6. 删除 `Layer->handle_scroll_event` 字段（`ytype.h`）
 
@@ -248,8 +313,11 @@ handle_mouse_event(root, &mouse_event);
 | 滚轮 / 滚动条 / 默认 scrollable 在 `event.c` | 过渡实现，待迁入 View/List 等组件 |
 | `handle_scroll_event` 顶层 API | 已改为 `event.c` 内部 static |
 | `Layer->handle_scroll_event` | 仍存在，List/Select/Dialog 使用，待迁移后删除 |
-| Backend 只调 mouse/touch | 已达成 |
-| `MouseEvent.delta_*` / `wheel_*` | 已定义，backend 已填充 |
+| Backend 只调 pointer / key / window | 已达成 |
+| `PointerEvent` 合并 mouse/touch | 已落地 |
+| `WindowEvent` + `handle_window_event` | 已落地 |
+| 全局 window listener + Game 暂停 | 已落地 |
+| `yui_set_app_focused`（iOS/Android） | 已落地 |
 
 ---
 
@@ -415,12 +483,15 @@ JavaScript:  onTextChange()  →  JSON.parse(YUI.getText("layerId"))
 | 场景 | 文件 |
 |------|------|
 | 输入分发（目标：纯路由） | `src/event.c`、`src/event.h` |
-| 事件结构 | `src/ytype.h`（`MouseEvent`、`TouchEvent`、`KeyEvent`） |
-| SDL Backend 适配 | `src/backend/backend_sdl.c` |
+| 事件结构 | `src/ytype.h`（`PointerEvent`、`KeyEvent`、`WindowEvent`、`ResizeEvent`） |
+| SDL Backend 适配 | `src/backend/backend_sdl.c`（`sdl_handle_window_event`） |
+| 移动端窗口/焦点 | `platform/common/yui_boot.c`（`yui_resize` / `yui_set_app_focused`） |
+| Game 暂停 listener | `src/game/game.c`（`game_on_window_event`） |
+| Input state | `src/input/state.c`（失焦释键） |
 | LVGL Backend 适配 | `src/backend/backend_lvgl.c` |
 | 滚动偏移写入 | `src/layout.c`（`layout_scroll_vertical`） |
 | 带 JSON payload 的自定义事件 | `src/components/list_component.c`（`list_dispatch_select`） |
-| 滚轮（待迁入 mouse hook） | `src/components/list_component.c`（`list_component_handle_scroll_event`） |
+| 滚轮（待迁入 pointer hook） | `src/components/list_component.c`（`list_component_handle_scroll_event`） |
 | `onChange` + `register_event` | `src/components/sash_component.c` |
 | 图连线事件 | `src/components/connector_component.c`（`connector_emit_connect_change`） |
 | 节点拖动事件 | `src/components/draggable_component.c`（`draggable_emit_drag_change`） |

@@ -148,11 +148,17 @@ void game_render(void)
     int count = 0;
     GameEntity* all;
     GameEntity* sorted[GAME_MAX_ENTITIES];
+    Rect probe;
+    Color probe_color;
     if (!g_inited || !g_enabled) {
         return;
     }
     game_perf_begin_render();
     g_entity_draws = 0;
+    /* Visible probe so blank screens are easy to diagnose */
+    probe = (Rect){40, 80, 120, 40};
+    probe_color = (Color){255, 64, 64, 255};
+    backend_render_fill_rect(&probe, probe_color);
     game_tilemap_render();
     all = game_entities(&n);
     for (i = 0; i < n; i++) {

@@ -22,6 +22,7 @@ void game_sprite_draw_entity(const GameEntity* e)
     if (dst.w < 1) dst.w = 1;
     if (dst.h < 1) dst.h = 1;
 
+    /* Skip completely off-screen (optional cull) — still draw if partially visible */
     if (e->texture) {
         if (e->use_frame && e->frame_w > 0 && e->frame_h > 0) {
             src.x = e->frame_x;
@@ -33,7 +34,11 @@ void game_sprite_draw_entity(const GameEntity* e)
             backend_render_text_copy(e->texture, NULL, &dst);
         }
     } else {
-        backend_render_fill_rect(&dst, e->color);
+        Color c = e->color;
+        if (c.a == 0) {
+            c.a = 255;
+        }
+        backend_render_fill_rect(&dst, c);
     }
 }
 
