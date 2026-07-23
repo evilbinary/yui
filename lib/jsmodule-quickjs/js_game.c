@@ -151,7 +151,8 @@ static JSValue js_game_spawn(JSContext* ctx, JSValueConst this_val, int argc, JS
         e = game_spawn(id);
         if (id) JS_FreeCString(ctx, id);
     } else if (JS_IsObject(argv[0])) {
-        JSValue json_obj = JS_GetPropertyStr(ctx, JS_GetGlobalObject(ctx), "JSON");
+        JSValue global = JS_GetGlobalObject(ctx);
+        JSValue json_obj = JS_GetPropertyStr(ctx, global, "JSON");
         JSValue stringify = JS_GetPropertyStr(ctx, json_obj, "stringify");
         JSValue str_val = JS_Call(ctx, stringify, json_obj, 1, &argv[0]);
         const char* s = JS_ToCString(ctx, str_val);
@@ -162,6 +163,7 @@ static JSValue js_game_spawn(JSContext* ctx, JSValueConst this_val, int argc, JS
         JS_FreeValue(ctx, str_val);
         JS_FreeValue(ctx, stringify);
         JS_FreeValue(ctx, json_obj);
+        JS_FreeValue(ctx, global);
         e = game_spawn_from_json(json);
         cJSON_Delete(json);
     } else {
@@ -399,6 +401,19 @@ void js_game_set_context(JSContext* ctx)
     g_game_ctx = ctx;
 }
 
+void js_game_shutdown(void)
+{
+    if (!g_game_ctx) {
+        game_shutdown();
+        return;
+    }
+    JSValue global = JS_GetGlobalObject(g_game_ctx);
+    JS_SetPropertyStr(g_game_ctx, global, "Game", JS_UNDEFINED);
+    JS_FreeValue(g_game_ctx, global);
+    g_game_ctx = NULL;
+    game_shutdown();
+}
+
 #else /* !YUI_WITH_GAME */
 
 void js_game_register_api(JSContext* ctx)
@@ -409,6 +424,10 @@ void js_game_register_api(JSContext* ctx)
 void js_game_set_context(JSContext* ctx)
 {
     (void)ctx;
+}
+
+void js_game_shutdown(void)
+{
 }
 
 #endif

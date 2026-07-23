@@ -835,7 +835,10 @@ void js_module_cleanup(void)
     if (g_js_ctx) {
         js_timer_clear_all(g_js_ctx);
         js_module_clear_events();
+#if YUI_WITH_GAME
+        js_game_shutdown();
         js_game_set_context(NULL);
+#endif
 
         if (g_js_rt) {
             JS_RunGC(g_js_rt);
