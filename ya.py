@@ -449,18 +449,17 @@ def add_flags():
     elif platform.system()=='Linux':
         add_cflags(
             '-g',
-            '-F../libs/',
-            '-I../libs/SDL2.framework/Headers',
-            '-I../libs/SDL2_ttf.framework/Headers',
-            '-I../libs/SDL2_image.framework/Headers',
-            '-Isrc'
+            '-I/usr/include/SDL2',
+            '-Isrc',
+            '-Ilib',
+            '-Ilib/mquickjs',
+            '-DHAS_JS_MODULE',
             )
         add_ldflags(
-            '-F../libs/',
-            '-framework SDL2',
-            '-framework SDL2_ttf',
-            '-framework SDL2_image ',
-            '-F../libs/'
+            '-lSDL2',
+            '-lSDL2_ttf',
+            '-lSDL2_image',
+            '-lm',
             )
     elif platform.system()=='Windows':
         mingw64 = _resolve_mingw64()

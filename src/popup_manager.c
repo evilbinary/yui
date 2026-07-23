@@ -229,17 +229,18 @@ bool popup_manager_handle_pointer_event(PointerEvent* event) {
         
         PopupLayer* next = current->next;
         Layer* popup_layer = current->layer;
+        PopupType popup_type = current->type;
 
         if (popup_layer) {
             int inside = popup_point_inside(popup_layer, event);
 
             if (popup_layer->handle_pointer_event) {
-                if (inside || current->type == POPUP_TYPE_DIALOG) {
+                if (inside || popup_type == POPUP_TYPE_DIALOG) {
                     popup_layer->handle_pointer_event(popup_layer, event);
                 }
             }
 
-            if (current->type == POPUP_TYPE_DIALOG) {
+            if (popup_type == POPUP_TYPE_DIALOG) {
                 block_main = true;
             } else if (inside) {
                 block_main = true;
