@@ -11,6 +11,7 @@
 #include "js_socket.h"
 #include "js_timer.h"
 #include "js_perf.h"
+#include "js_game.h"
 #include "../../src/event.h"
 #include "../../src/backend.h"
 #include "../../src/log.h"
@@ -1413,6 +1414,7 @@ void js_module_register_api(void)
     JS_SetPropertyStr(g_js_ctx, yui_obj, "inspect", inspect_obj);
 
     js_module_register_perf_api(g_js_ctx, yui_obj);
+    js_game_register_api(g_js_ctx);
     
     // 添加 setEvent 到 YUI 对象
     JS_SetPropertyStr(g_js_ctx, yui_obj, "setEvent", JS_NewCFunction(g_js_ctx, js_set_event, "setEvent", 3));

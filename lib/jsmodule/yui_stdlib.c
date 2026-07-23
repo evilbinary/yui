@@ -234,7 +234,7 @@ static JSValue js_get_property(JSContext *ctx, JSValue *this_val, int argc, JSVa
         } else if (cJSON_IsNumber(json_value)) {
             result = JS_NewNumber(ctx, json_value->valuedouble);
         } else if (cJSON_IsBool(json_value)) {
-            result = JS_NewBool(ctx, cJSON_IsTrue(json_value));
+            result = cJSON_IsTrue(json_value) ? JS_TRUE : JS_FALSE;
         } else if (cJSON_IsNull(json_value)) {
             result = JS_NULL;
         } else if (cJSON_IsArray(json_value) || cJSON_IsObject(json_value)) {

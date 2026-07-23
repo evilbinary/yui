@@ -16,12 +16,122 @@ static PointerEvent current_pointer_event;
 static int current_pointer_event_active = 0;
 static int pointer_gesture_scrolled = 0;
 
+#define MAX_DEVICE_LISTENERS 32
+static PointerEventListener g_pointer_listeners[MAX_DEVICE_LISTENERS];
+static int g_pointer_listener_count = 0;
+static KeyEventListener g_key_listeners[MAX_DEVICE_LISTENERS];
+static int g_key_listener_count = 0;
+
 void pointer_gesture_mark_scrolled(void) {
     pointer_gesture_scrolled = 1;
 }
 
 static int pointer_gesture_did_scroll(void) {
     return pointer_gesture_scrolled;
+}
+
+static void notify_pointer_listeners(const PointerEvent* event)
+{
+    int i;
+    if (!event) {
+        return;
+    }
+    for (i = 0; i < g_pointer_listener_count; i++) {
+        if (g_pointer_listeners[i]) {
+            g_pointer_listeners[i](event);
+        }
+    }
+}
+
+static void notify_key_listeners(const KeyEvent* event)
+{
+    int i;
+    if (!event) {
+        return;
+    }
+    for (i = 0; i < g_key_listener_count; i++) {
+        if (g_key_listeners[i]) {
+            g_key_listeners[i](event);
+        }
+    }
+}
+
+int register_pointer_event_listener(PointerEventListener listener)
+{
+    int i;
+    if (!listener) {
+        return -1;
+    }
+    for (i = 0; i < g_pointer_listener_count; i++) {
+        if (g_pointer_listeners[i] == listener) {
+            return 0;
+        }
+    }
+    if (g_pointer_listener_count >= MAX_DEVICE_LISTENERS) {
+        fprintf(stderr, "error: pointer event listeners full\n");
+        return -1;
+    }
+    g_pointer_listeners[g_pointer_listener_count++] = listener;
+    return 0;
+}
+
+int unregister_pointer_event_listener(PointerEventListener listener)
+{
+    int i;
+    int j;
+    if (!listener) {
+        return -1;
+    }
+    for (i = 0; i < g_pointer_listener_count; i++) {
+        if (g_pointer_listeners[i] == listener) {
+            for (j = i; j < g_pointer_listener_count - 1; j++) {
+                g_pointer_listeners[j] = g_pointer_listeners[j + 1];
+            }
+            g_pointer_listener_count--;
+            g_pointer_listeners[g_pointer_listener_count] = NULL;
+            return 0;
+        }
+    }
+    return -1;
+}
+
+int register_key_event_listener(KeyEventListener listener)
+{
+    int i;
+    if (!listener) {
+        return -1;
+    }
+    for (i = 0; i < g_key_listener_count; i++) {
+        if (g_key_listeners[i] == listener) {
+            return 0;
+        }
+    }
+    if (g_key_listener_count >= MAX_DEVICE_LISTENERS) {
+        fprintf(stderr, "error: key event listeners full\n");
+        return -1;
+    }
+    g_key_listeners[g_key_listener_count++] = listener;
+    return 0;
+}
+
+int unregister_key_event_listener(KeyEventListener listener)
+{
+    int i;
+    int j;
+    if (!listener) {
+        return -1;
+    }
+    for (i = 0; i < g_key_listener_count; i++) {
+        if (g_key_listeners[i] == listener) {
+            for (j = i; j < g_key_listener_count - 1; j++) {
+                g_key_listeners[j] = g_key_listeners[j + 1];
+            }
+            g_key_listener_count--;
+            g_key_listeners[g_key_listener_count] = NULL;
+            return 0;
+        }
+    }
+    return -1;
 }
 
 static void handler_virtical_scroll_event(Layer* layer, int scroll_delta);
@@ -166,7 +276,7 @@ static void handle_horizontal_scroll_event(Layer* layer, int scroll_delta) {
 }
 
 // 处理键盘事件
-void handle_key_event(Layer* layer, KeyEvent* event) {
+static void handle_key_event_tree(Layer* layer, KeyEvent* event) {
     if (!layer || !event) {
         return;
     }
@@ -184,14 +294,22 @@ void handle_key_event(Layer* layer, KeyEvent* event) {
     // 递归处理子图层的键盘事件，寻找焦点图层
     for (int i = 0; i < layer->child_count; i++) {
         if (layer->children[i]) {
-            handle_key_event(layer->children[i], event);
+            handle_key_event_tree(layer->children[i], event);
         }
     }
 
     // 处理sub图层的键盘事件
     if (layer->sub) {
-        handle_key_event(layer->sub, event);
+        handle_key_event_tree(layer->sub, event);
     }
+}
+
+void handle_key_event(Layer* layer, KeyEvent* event) {
+    if (!layer || !event) {
+        return;
+    }
+    notify_key_listeners(event);
+    handle_key_event_tree(layer, event);
 }
 
 // 递归检查指定位置是否有子图层可以处理点击事件
@@ -365,6 +483,7 @@ int handle_pointer_event(Layer* layer, PointerEvent* event) {
     }
 
     if (layer->parent == NULL) {
+        notify_pointer_listeners(event);
         if (event->phase == POINTER_DOWN) {
             pointer_gesture_scrolled = 0;
         }

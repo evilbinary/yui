@@ -16,6 +16,7 @@ add_files(
     'js_socket.c',
     'js_timer.c',
     'js_perf.c',
+    'js_game.c',
     '../jsmodule/js_common.c'
 ) 
 add_includedirs('.', '../..', '../jsmodule', public=true)

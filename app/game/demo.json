@@ -1,0 +1,54 @@
+{
+  "id": "game_demo_root",
+  "type": "View",
+  "size": [800, 480],
+  "autoTest": false,
+  "js": ["demo.js"],
+  "style": {
+    "bgColor": "#00000000"
+  },
+  "events": {
+    "onLoad": "@onGameDemoLoad"
+  },
+  "layout": {
+    "type": "vertical",
+    "padding": [8, 8, 8, 8]
+  },
+  "children": [
+    {
+      "id": "hudBar",
+      "type": "View",
+      "size": [784, 36],
+      "layout": {
+        "type": "horizontal",
+        "spacing": 12
+      },
+      "style": {
+        "bgColor": "#202028cc",
+        "borderRadius": 6
+      },
+      "children": [
+        {
+          "id": "hudTitle",
+          "type": "Label",
+          "text": "Jump + Shoot  |  A/D move  Space jump  Click/F shoot",
+          "size": [560, 28],
+          "style": {
+            "color": "#ffffff",
+            "fontSize": 14
+          }
+        },
+        {
+          "id": "hudScore",
+          "type": "Label",
+          "text": "Score: 0",
+          "size": [120, 28],
+          "style": {
+            "color": "#ffe066",
+            "fontSize": 14
+          }
+        }
+      ]
+    }
+  ]
+}

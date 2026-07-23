@@ -7,6 +7,7 @@
 #include "util.h"
 #include "popup_manager.h"
 #include "screenshot.h"
+#include "game/game.h"
 #include "log.h"
 #include <stdbool.h>  // 添加支持bool类型
 #include <math.h>     // 添加数学函数支持
@@ -1925,11 +1926,18 @@ void backend_run(Layer* ui_root){
             }
         }
 
+#if YUI_WITH_GAME
+        game_update(-1.0f);
+#endif
+
         SDL_SetRenderDrawColor(renderer, 30, 30, 30, 255);
         SDL_RenderClear(renderer);
 
         perf_frame_begin();
         perf_render_tree_begin();
+#if YUI_WITH_GAME
+        game_render();
+#endif
         render_layer(ui_root);
         perf_render_tree_end();
         render_inspect_overlay(ui_root);
@@ -1988,11 +1996,18 @@ void backend_tick(Layer* ui_root) {
         }
     }
 
+#if YUI_WITH_GAME
+    game_update(-1.0f);
+#endif
+
     SDL_SetRenderDrawColor(renderer, 30, 30, 30, 255);
     SDL_RenderClear(renderer);
 
     perf_frame_begin();
     perf_render_tree_begin();
+#if YUI_WITH_GAME
+    game_render();
+#endif
     render_layer(ui_root);
     perf_render_tree_end();
     render_inspect_overlay(ui_root);
