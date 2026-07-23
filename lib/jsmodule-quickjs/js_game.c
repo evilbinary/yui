@@ -394,9 +394,19 @@ void js_game_register_api(JSContext* ctx)
     printf("JS(QuickJS): Registered Game API\n");
 }
 
+void js_game_set_context(JSContext* ctx)
+{
+    g_game_ctx = ctx;
+}
+
 #else /* !YUI_WITH_GAME */
 
 void js_game_register_api(JSContext* ctx)
+{
+    (void)ctx;
+}
+
+void js_game_set_context(JSContext* ctx)
 {
     (void)ctx;
 }

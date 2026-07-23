@@ -834,10 +834,18 @@ void js_module_cleanup(void)
 
     if (g_js_ctx) {
         js_timer_clear_all(g_js_ctx);
+        js_module_clear_events();
+        js_game_set_context(NULL);
+
+        if (g_js_rt) {
+            JS_RunGC(g_js_rt);
+        }
+
         JS_FreeContext(g_js_ctx);
         g_js_ctx = NULL;
     }
     if (g_js_rt) {
+        JS_RunGC(g_js_rt);
         JS_FreeRuntime(g_js_rt);
         g_js_rt = NULL;
     }

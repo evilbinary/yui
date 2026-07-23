@@ -731,6 +731,15 @@ void js_module_shutdown(void)
     if (g_layer_root) {
         layer_lifecycle_before_destroy(g_layer_root);
     }
+    layer_lifecycle_set_dispatch(NULL);
+    js_module_init_layer(NULL);
+}
+
+void js_module_detach_layer_root_if(Layer* layer)
+{
+    if (g_layer_root == layer) {
+        g_layer_root = NULL;
+    }
 }
 
 void js_module_init_layer_lifecycle(void)

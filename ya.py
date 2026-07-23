@@ -510,7 +510,11 @@ def run(target):
     else:
         # 直接使用 Python 的 subprocess 来运行，确保环境变量正确传递
         import subprocess
+        import sys
         cmd = ["./" + targetfile]
+        argv = sys.argv[1:]
+        if '--' in argv:
+            cmd.extend(argv[argv.index('--') + 1:])
         
         # 复制当前环境变量并确保关键变量存在
         env = os.environ.copy()

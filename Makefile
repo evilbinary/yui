@@ -10,6 +10,9 @@ main:
 playground:
 	ya -r playground
 
+build-playground:
+	ya -b playground
+	
 build-db:
 	ya -b db
 
@@ -35,7 +38,8 @@ photo:
 menu: build-playground
 	ya -r playground -- app/tests/test-menu.json
 
-
+game: build-playground
+	ya -r playground -- app/game/demo.json
 
 gdb: build-db
 	gdb -x  gdb.gdb ./build/None/None/None/db.exe  app/db/db.json

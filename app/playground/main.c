@@ -248,10 +248,10 @@ int main(int argc, char* argv[]) {
 
     backend_run(ui_root);
 
-    // 清理资源
+    // 清理资源：先走 JS onUnload，再释放引擎，最后销毁 C 层树
+    js_module_shutdown();
+    js_module_cleanup();
     destroy_layer(ui_root);
-    js_module_init_layer(NULL);
-    js_module_cleanup();  // 清理 JS 引擎
     popup_manager_cleanup();
     backend_quit();
 

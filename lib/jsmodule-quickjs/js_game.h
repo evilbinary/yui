@@ -5,4 +5,6 @@
 
 void js_game_register_api(JSContext* ctx);
 
+void js_game_set_context(JSContext* ctx);
+
 #endif

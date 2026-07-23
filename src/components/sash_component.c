@@ -17,6 +17,12 @@ static void sash_component_set_style(Layer* layer, cJSON* style);
 int sash_component_register_event(Layer* layer, const char* event_name,
                                 const char* event_func_name, EventHandler event_handler);
 
+static void sash_layer_destroy(Layer* layer) {
+    if (!layer || !layer->component) return;
+    sash_component_destroy((SashComponent*)layer->component);
+    layer->component = NULL;
+}
+
 SashComponent* sash_component_create(Layer* layer) {
     if (!layer) return NULL;
 
@@ -40,6 +46,7 @@ SashComponent* sash_component_create(Layer* layer) {
     layer->handle_pointer_event = sash_component_handle_pointer_event;
     layer->register_event = sash_component_register_event;
     layer->set_style = sash_component_set_style;
+    layer->on_destroy = sash_layer_destroy;
 
     return comp;
 }

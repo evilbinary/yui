@@ -1161,6 +1161,10 @@ void text_component_destroy(TextComponent* component) {
         text_style_runs_free(component->style_runs);
         component->style_runs = NULL;
         component->style_run_count = 0;
+        if (component->change_name) {
+            free(component->change_name);
+            component->change_name = NULL;
+        }
         free(component);
     }
 }
@@ -1348,6 +1352,9 @@ int text_component_register_event(Layer* layer, const char* event_name, const ch
         component->on_change = event_handler;
         if (event_func_name && event_func_name[0] == '@') {
             event_func_name++;
+        }
+        if (component->change_name) {
+            free(component->change_name);
         }
         component->change_name = strdup(event_func_name);
         return 0;

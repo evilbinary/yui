@@ -9,6 +9,7 @@
 
 // 外部变量声明
 
+static void select_layer_destroy(Layer* layer);
 
 // 创建 Select 组件
 SelectComponent* select_component_create(Layer* layer) {
@@ -77,8 +78,23 @@ SelectComponent* select_component_create(Layer* layer) {
         memset(layer->event, 0, sizeof(Event));
     }
     layer->event->scroll = (EventHandler)(void*)select_component_scroll_callback;
+    layer->on_destroy = select_layer_destroy;
     
     return component;
+}
+
+static void select_layer_destroy(Layer* layer) {
+    if (!layer || !layer->component) return;
+    SelectComponent* component = (SelectComponent*)layer->component;
+    if (component->expanded) {
+        select_component_collapse(component);
+    }
+    if (layer->event) {
+        free(layer->event);
+        layer->event = NULL;
+    }
+    select_component_destroy(component);
+    layer->component = NULL;
 }
 
 static int select_color_key_set(cJSON* style, cJSON* colors, const char* key) {
@@ -350,6 +366,10 @@ void select_component_destroy(SelectComponent* component) {
     select_component_clear_items(component);
     
     // 清理指针
+    if (component->change_name) {
+        free(component->change_name);
+        component->change_name = NULL;
+    }
     component->layer = NULL;
     component->dropdown_layer = NULL;
     component->user_data = NULL;
@@ -1655,6 +1675,9 @@ int select_component_register_event(Layer* layer, const char* event_name, const 
         component->on_change = event_handler;
         if (event_func_name && event_func_name[0] == '@') {
             event_func_name++;
+        }
+        if (component->change_name) {
+            free(component->change_name);
         }
         component->change_name = strdup(event_func_name);
         return 0;
