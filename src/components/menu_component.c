@@ -11,6 +11,14 @@
 
 static void menu_component_apply_theme_style(Layer* layer, cJSON* style);
 
+static void menu_layer_destroy(Layer* layer) {
+    if (!layer || !layer->component) {
+        return;
+    }
+    menu_component_destroy((MenuComponent*)layer->component);
+    layer->component = NULL;
+}
+
 // 创建菜单组件
 MenuComponent* menu_component_create(Layer* layer) {
     if (!layer) {
@@ -50,6 +58,7 @@ MenuComponent* menu_component_create(Layer* layer) {
     layer->component = component;
     layer->render = menu_component_render;
     layer->set_style = menu_component_apply_theme_style;
+    layer->on_destroy = menu_layer_destroy;
 
 
     // 绑定事件处理函数
@@ -107,14 +116,22 @@ void menu_component_destroy(MenuComponent* component) {
             }
         }
         free(component->items);
+        component->items = NULL;
+        component->item_count = 0;
     }
 
-    // 子菜单的内部图层由我们分配，需要释放
+    // 子菜单的内部图层由我们分配，不在主 Layer 树中，这里直接释放
     if (component->is_submenu && component->layer) {
+        component->layer->on_destroy = NULL;
+        component->layer->component = NULL;
         if (component->layer->font) {
             free(component->layer->font);
+            component->layer->font = NULL;
         }
         free(component->layer);
+        component->layer = NULL;
+    } else if (component->layer) {
+        component->layer->component = NULL;
     }
     free(component);
 }
