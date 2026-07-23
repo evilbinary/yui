@@ -209,17 +209,45 @@ static JSValue js_get_property(JSContext *ctx, JSValue *this_val, int argc, JSVa
     const char* layer_id = JS_ToCString(ctx, argv[0], &buf1);
     const char* property_name = JS_ToCString(ctx, argv[1], &buf2);
 
-    if (layer_id && property_name) {
-        // 调用 js_common.c 中的函数
-        extern const char* js_module_get_property_value(const char* layer_id, const char* property_name);
-        const char* value = js_module_get_property_value(layer_id, property_name);
+    if (layer_id && property_name && g_layer_root) {
+        // 直接调用 layer_get_property_as_json，避免字符串中转
+        extern cJSON* layer_get_property_as_json(Layer* layer, const char* key);
+        Layer* layer = find_layer_by_id(g_layer_root, layer_id);
         
-        if (value) {
-            JSValue result = JS_NewString(ctx, value);
-            // 释放返回的字符串
-            free((void*)value);
-            return result;
+        JS_FreeCString(ctx, &buf1);
+        JS_FreeCString(ctx, &buf2);
+        
+        if (!layer) {
+            printf("JS: Layer '%s' not found\n", layer_id);
+            return JS_UNDEFINED;
         }
+        
+        cJSON* json_value = layer_get_property_as_json(layer, property_name);
+        if (!json_value) {
+            printf("JS: Property '%s' not found for layer '%s'\n", property_name, layer_id);
+            return JS_UNDEFINED;
+        }
+        
+        JSValue result;
+        if (cJSON_IsString(json_value)) {
+            result = JS_NewString(ctx, json_value->valuestring);
+        } else if (cJSON_IsNumber(json_value)) {
+            result = JS_NewNumber(ctx, json_value->valuedouble);
+        } else if (cJSON_IsBool(json_value)) {
+            result = JS_NewBool(ctx, cJSON_IsTrue(json_value));
+        } else if (cJSON_IsNull(json_value)) {
+            result = JS_NULL;
+        } else if (cJSON_IsArray(json_value) || cJSON_IsObject(json_value)) {
+            // 数组和对象转为 JSON 字符串
+            char* json_str = cJSON_PrintUnformatted(json_value);
+            result = JS_NewString(ctx, json_str);
+            free(json_str);
+        } else {
+            result = JS_UNDEFINED;
+        }
+        
+        cJSON_Delete(json_value);
+        return result;
     }
 
     return JS_UNDEFINED;
