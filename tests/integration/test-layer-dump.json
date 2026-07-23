@@ -2,13 +2,14 @@
   "id": "dump_root",
   "type": "View",
   "size": [640, 400],
-  "js": "test-layer-dump.js",
+  "autoTest": true,
+  "js": ["lib/ytest.js", "test-layer-dump.js"],
   "style": {
     "bgColor": "#1e1e22",
     "borderRadius": 8
   },
   "events": {
-    "onLoad": "@onDumpPageLoad"
+    "onLoad": "@onTestLoad"
   },
   "layout": {
     "type": "vertical",
@@ -37,27 +38,6 @@
         "color": "#cccccc",
         "fontSize": 14
       }
-    },
-    {
-      "id": "btn_dump_root",
-      "type": "Button",
-      "text": "YUI.dump()",
-      "size": [200, 40],
-      "events": { "onClick": "@onDumpRoot" }
-    },
-    {
-      "id": "btn_dump_title",
-      "type": "Button",
-      "text": "YUI.dump('dump_title')",
-      "size": [260, 40],
-      "events": { "onClick": "@onDumpTitle" }
-    },
-    {
-      "id": "btn_dump_full",
-      "type": "Button",
-      "text": "dump + style/events",
-      "size": [240, 40],
-      "events": { "onClick": "@onDumpFull" }
     }
   ]
 }

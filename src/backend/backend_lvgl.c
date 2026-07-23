@@ -755,6 +755,18 @@ void backend_quit(void)
     lv_port_deinit();
 }
 
+static int g_lvgl_exit_code = 0;
+static int g_lvgl_auto_frames = -1;
+
+void backend_set_auto_frames(int frames) { g_lvgl_auto_frames = frames; }
+void backend_request_quit(int exit_code)
+{
+    g_lvgl_exit_code = exit_code;
+    g_running = 0;
+}
+int backend_get_exit_code(void) { return g_lvgl_exit_code; }
+int backend_should_quit(void) { return !g_running; }
+
 void backend_set_ui_root(Layer* root)
 {
     g_ui_root = root;
@@ -1193,6 +1205,13 @@ void backend_run(Layer* ui_root)
 #else
     while (g_running) {
         backend_lvgl_frame();
+        if (g_lvgl_auto_frames >= 0) {
+            if (g_lvgl_auto_frames == 0) {
+                g_running = 0;
+            } else {
+                g_lvgl_auto_frames--;
+            }
+        }
     }
 #endif
 }

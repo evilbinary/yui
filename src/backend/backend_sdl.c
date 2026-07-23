@@ -39,6 +39,34 @@ DFont* default_font=NULL;
 Layer* g_ui_root = NULL;
 int g_running=0;
 
+static int g_auto_frames = -1; /* -1 = run forever */
+static int g_request_quit = 0;
+static int g_exit_code = 0;
+
+void backend_set_auto_frames(int frames)
+{
+    g_auto_frames = frames;
+    g_request_quit = 0;
+    g_exit_code = 0;
+}
+
+void backend_request_quit(int exit_code)
+{
+    g_exit_code = exit_code;
+    g_request_quit = 1;
+    g_running = 0;
+}
+
+int backend_get_exit_code(void)
+{
+    return g_exit_code;
+}
+
+int backend_should_quit(void)
+{
+    return g_request_quit;
+}
+
 // 主循环更新回调管理
 static UpdateCallback update_callbacks[MAX_UPDATE_CALLBACKS] = {NULL};
 static int update_callback_count = 0;
@@ -1826,10 +1854,14 @@ void backend_run(Layer* ui_root){
     emscripten_set_main_loop(backend_main_loop, 0, 1);
 #else
     // 桌面环境使用普通循环
-    // 主循环
+    // 主循环（onLoad 可能已在 backend_run 前调用 YUI.exit）
     SDL_Event event;
-    int running = 1;
+    int running = !g_request_quit;
     while (running) {
+        if (g_request_quit) {
+            running = 0;
+            break;
+        }
 
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) running = 0;
@@ -1890,6 +1922,14 @@ void backend_run(Layer* ui_root){
             }
         }
 #endif
+
+        if (g_auto_frames >= 0) {
+            if (g_auto_frames == 0) {
+                running = 0;
+            } else {
+                g_auto_frames--;
+            }
+        }
 
         SDL_Delay(16);
     }

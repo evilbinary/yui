@@ -51,6 +51,12 @@ void backend_run(Layer* ui_root);
 /* 单帧更新（移动端 / platform 宿主驱动；桌面 SDL 可用 backend_run） */
 void backend_tick(Layer* ui_root);
 
+/* Auto-test helpers: quit after N frames (-1 = forever), or request quit with exit code */
+void backend_set_auto_frames(int frames);
+void backend_request_quit(int exit_code);
+int backend_get_exit_code(void);
+int backend_should_quit(void);
+
 int backend_query_texture(Texture * texture,
                      Uint32 * format, int *access,
                      int *w, int *h);

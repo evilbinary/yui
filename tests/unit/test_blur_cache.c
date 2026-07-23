@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <SDL.h>
 #include <SDL_image.h>
-#include "../src/backend.h"
+#include "../../src/backend.h"
 
 #if defined(_WIN32)
 #include <windows.h>

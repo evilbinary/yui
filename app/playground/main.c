@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdbool.h>
 #include <limits.h>
 #include <string.h>
@@ -81,15 +82,39 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
+    int auto_test = 0;
+    int auto_frames = 90;
+    const char* auto_env = getenv("YUI_AUTO_TEST");
+    if (auto_env && auto_env[0] && strcmp(auto_env, "0") != 0) {
+        auto_test = 1;
+    }
+    const char* frames_env = getenv("YUI_AUTO_FRAMES");
+    if (frames_env && frames_env[0]) {
+        int n = atoi(frames_env);
+        if (n > 0) auto_frames = n;
+    }
 
-    char* json_path="app/playground/app.json";
-    // 加载UI描述文件
-    if(argc>1){
-        json_path=argv[1];
+    char* json_path = "app/playground/app.json";
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "--auto") == 0 || strcmp(argv[i], "--auto-test") == 0) {
+            auto_test = 1;
+            continue;
+        }
+        if (strncmp(argv[i], "--frames=", 9) == 0) {
+            int n = atoi(argv[i] + 9);
+            if (n > 0) auto_frames = n;
+            continue;
+        }
+        if (argv[i][0] != '-') {
+            json_path = argv[i];
+        }
     }
 
     printf("DEBUG: Loading file from path: %s\n", json_path);
-
+    if (auto_test) {
+        printf("AUTO_TEST: enabled, frames=%d\n", auto_frames);
+        backend_set_auto_frames(auto_frames);
+    }
 
     cJSON* root_json = parse_yaml_json_file(json_path);
     if (!root_json) {
@@ -198,5 +223,13 @@ int main(int argc, char* argv[]) {
     // destroy_layer(ui_root);  // 暂时注释掉以避免内存问题
     popup_manager_cleanup();
     backend_quit();
+
+    if (auto_test) {
+        if (!backend_should_quit()) {
+            fprintf(stderr, "AUTO_TEST: timeout (no YUI.exit)\n");
+            return 2;
+        }
+        return backend_get_exit_code();
+    }
     return 0;
 }

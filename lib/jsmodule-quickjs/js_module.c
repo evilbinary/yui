@@ -724,6 +724,19 @@ static JSValue js_dump(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
     return result;
 }
 
+static JSValue js_exit(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv)
+{
+    int code = 0;
+    (void)this_val;
+    if (argc >= 1) {
+        if (JS_ToInt32(ctx, &code, argv[0])) {
+            code = 1;
+        }
+    }
+    backend_request_quit(code);
+    return JS_UNDEFINED;
+}
+
 /* ====================== 初始化和清理 ====================== */
 
 // 初始化 JS 引擎（使用 QuickJS）
@@ -1316,6 +1329,7 @@ void js_module_register_api(void)
     JS_SetPropertyStr(g_js_ctx, yui_obj, "renderFromJson", JS_NewCFunction(g_js_ctx, js_render_from_json, "renderFromJson", 3));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "update", JS_NewCFunction(g_js_ctx, js_update, "update", 1));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "dump", JS_NewCFunction(g_js_ctx, js_dump, "dump", 1));
+    JS_SetPropertyStr(g_js_ctx, yui_obj, "exit", JS_NewCFunction(g_js_ctx, js_exit, "exit", 1));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "log", JS_NewCFunction(g_js_ctx, js_log, "log", 1));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "themeLoad", JS_NewCFunction(g_js_ctx, js_theme_load, "themeLoad", 1));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "themeSetCurrent", JS_NewCFunction(g_js_ctx, js_theme_set_current, "themeSetCurrent", 1));

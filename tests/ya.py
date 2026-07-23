@@ -5,25 +5,27 @@
 # * 邮箱: rootntsd@gmail.com
 # ********************************************************************
 #
-# Unit tests under tests/test_*.c are auto-registered.
-# Add a new file tests/test_foo.c, then: ya -r test_foo
-# No need to edit this file for each new test.
+# Unit tests: tests/unit/test_*.c (cmocka)
+#   ya -r test_layer_json_dump
+#
+# Integration / full suite:
+#   python scripts/run_tests.py
 
 import os
 import glob
 
 def add_yui_unit_test(name):
-    """Link against the full yui library — do not hand-list src/*.c."""
     target(name)
     (
-        add_deps("yui", "cjson"),
+        add_deps("yui", "cjson", "cmocka"),
         add_rules("mode.debug", "mode.release"),
         set_kind("binary"),
         add_flags(),
-        add_files(name + ".c"),
+        add_files("unit/" + name + ".c"),
+        add_includedirs(".", "../src", "../lib/cmocka/include"),
         add_run()
     )
 
-_tests_dir = os.path.dirname(os.path.abspath(__file__))
-for _path in sorted(glob.glob(os.path.join(_tests_dir, "test_*.c"))):
+_unit_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "unit")
+for _path in sorted(glob.glob(os.path.join(_unit_dir, "test_*.c"))):
     add_yui_unit_test(os.path.splitext(os.path.basename(_path))[0])

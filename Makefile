@@ -95,5 +95,14 @@ web-serve-lvgl: web-lvgl
 run: main
 	ya -r main
 
+test:
+	python scripts/run_tests.py
+
+test-unit:
+	python scripts/run_tests.py --unit
+
+test-integration:
+	python scripts/run_tests.py --integration
+
 clean:
 	rm -rf build
