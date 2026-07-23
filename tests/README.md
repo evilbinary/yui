@@ -4,9 +4,10 @@
 
 ```text
 tests/
+├── lib/             # shared JS helpers (YTest, …)
+│   └── ytest.js
 ├── unit/            # C unit tests (cmocka)
 ├── integration/     # JSON + JS (YTest), autoTest: true
-│   └── lib/ytest.js
 ├── e2e/             # end-to-end (YUI.click + UI asserts)
 ├── visual/
 │   ├── cases/       # scene JSON + capture JS
@@ -24,7 +25,7 @@ Add `tests/unit/test_foo.c` and run `ya -r test_foo`.
 ## Integration (YTest)
 
 1. `tests/integration/test-foo.json` with `"autoTest": true`
-2. `"js": ["lib/ytest.js", "test-foo.js"]`
+2. `"js": ["../lib/ytest.js", "test-foo.js"]`
 3. `onLoad` → `YTest.describe` / `it` → `YTest.run()` → `YTest.exit()`
 
 ## Headless

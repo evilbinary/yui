@@ -1,6 +1,6 @@
 /**
  * YTest — lightweight Jest-like harness for YUI playground JS.
- * Load before test files: "js": ["lib/ytest.js", "my-test.js"]
+ * Load before test files: "js": ["../lib/ytest.js", "my-test.js"]
  */
 (function (global) {
   var suites = [];

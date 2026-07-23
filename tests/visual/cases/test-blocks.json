@@ -3,7 +3,7 @@
   "type": "View",
   "size": [400, 300],
   "autoTest": true,
-  "js": ["../../integration/lib/ytest.js", "test-blocks.js"],
+  "js": ["../../lib/ytest.js", "test-blocks.js"],
   "style": {
     "bgColor": "#0f1115"
   },

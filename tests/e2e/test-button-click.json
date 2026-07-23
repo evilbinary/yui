@@ -3,7 +3,7 @@
   "type": "View",
   "size": [420, 280],
   "autoTest": true,
-  "js": ["../integration/lib/ytest.js", "test-button-click.js"],
+  "js": ["../lib/ytest.js", "test-button-click.js"],
   "style": {
     "bgColor": "#1e1e22"
   },

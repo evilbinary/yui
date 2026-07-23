@@ -3,7 +3,7 @@
   "type": "View",
   "size": [400, 300],
   "autoTest": true,
-  "js": ["lib/ytest.js", "test-yapi-smoke.js"],
+  "js": ["../lib/ytest.js", "test-yapi-smoke.js"],
   "style": {
     "bgColor": "#1e1e2e"
   },
