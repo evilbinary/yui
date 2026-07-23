@@ -14,7 +14,7 @@
       "id": "ground",
       "tag": "platform",
       "solid": 1,
-      "transform": { "x": -60, "y": 400, "z": 0 },
+      "transform": { "x": -60, "y": 620, "z": 0 },
       "sprite": { "src": "app/game/assets/ground_cave.png", "w": 1100, "h": 44 },
       "collider": { "w": 1100, "h": 44, "solid": 1 }
     },
@@ -22,7 +22,7 @@
       "id": "plat_a",
       "tag": "platform",
       "solid": 1,
-      "transform": { "x": 120, "y": 310, "z": 0 },
+      "transform": { "x": 120, "y": 530, "z": 0 },
       "sprite": { "src": "app/game/assets/plat_cave.png", "w": 140, "h": 18 },
       "collider": { "w": 140, "h": 18, "solid": 1 }
     },
@@ -30,7 +30,7 @@
       "id": "plat_b",
       "tag": "platform",
       "solid": 1,
-      "transform": { "x": 340, "y": 250, "z": 0 },
+      "transform": { "x": 340, "y": 470, "z": 0 },
       "sprite": { "src": "app/game/assets/plat_cave_sm.png", "w": 120, "h": 18 },
       "collider": { "w": 120, "h": 18, "solid": 1 }
     },
@@ -38,7 +38,7 @@
       "id": "plat_c",
       "tag": "platform",
       "solid": 1,
-      "transform": { "x": 540, "y": 190, "z": 0 },
+      "transform": { "x": 540, "y": 410, "z": 0 },
       "sprite": { "src": "app/game/assets/plat_cave_md.png", "w": 150, "h": 18 },
       "collider": { "w": 150, "h": 18, "solid": 1 }
     },
@@ -46,7 +46,7 @@
       "id": "plat_d",
       "tag": "platform",
       "solid": 1,
-      "transform": { "x": 700, "y": 300, "z": 0 },
+      "transform": { "x": 700, "y": 520, "z": 0 },
       "sprite": { "src": "app/game/assets/plat_cave.png", "w": 160, "h": 18 },
       "collider": { "w": 160, "h": 18, "solid": 1 }
     },
@@ -54,7 +54,7 @@
       "id": "player",
       "tag": "player",
       "script": "playerUpdate",
-      "transform": { "x": 40, "y": 200, "z": 10 },
+      "transform": { "x": 40, "y": 420, "z": 10 },
       "sprite": {
         "src": "app/game/assets/player_sheet.png",
         "w": 32,
@@ -75,7 +75,7 @@
       "id": "e_patrol_1",
       "tag": "enemy",
       "script": "patrolEnemyUpdate",
-      "transform": { "x": 200, "y": 266, "z": 5 },
+      "transform": { "x": 200, "y": 486, "z": 5 },
       "sprite": { "src": "app/game/assets/enemy_crab.png", "w": 48, "h": 28 },
       "collider": { "w": 42, "h": 22, "ox": 3, "oy": 4 }
     },
@@ -83,7 +83,7 @@
       "id": "e_patrol_2",
       "tag": "enemy",
       "script": "patrolEnemyUpdate",
-      "transform": { "x": 560, "y": 356, "z": 5 },
+      "transform": { "x": 560, "y": 576, "z": 5 },
       "sprite": { "src": "app/game/assets/enemy_crab.png", "w": 48, "h": 28 },
       "collider": { "w": 42, "h": 22, "ox": 3, "oy": 4 }
     },
@@ -91,7 +91,7 @@
       "id": "e_fly_1",
       "tag": "enemy",
       "script": "flyEnemyUpdate",
-      "transform": { "x": 380, "y": 110, "z": 8 },
+      "transform": { "x": 380, "y": 330, "z": 8 },
       "sprite": {
         "src": "app/game/assets/enemy_bat_sheet.png",
         "w": 40,
@@ -112,7 +112,7 @@
       "id": "e_fly_2",
       "tag": "enemy",
       "script": "flyEnemyUpdate",
-      "transform": { "x": 620, "y": 140, "z": 8 },
+      "transform": { "x": 620, "y": 360, "z": 8 },
       "sprite": {
         "src": "app/game/assets/enemy_bat_sheet.png",
         "w": 40,
@@ -133,7 +133,7 @@
       "id": "e_boss_1",
       "tag": "enemy",
       "script": "bossEnemyUpdate",
-      "transform": { "x": 720, "y": 320, "z": 6 },
+      "transform": { "x": 720, "y": 540, "z": 6 },
       "sprite": { "src": "app/game/assets/enemy_boss.png", "w": 64, "h": 56 },
       "collider": { "w": 52, "h": 48, "ox": 6, "oy": 6 }
     }

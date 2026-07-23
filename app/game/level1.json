@@ -35,7 +35,7 @@
       "id": "ground",
       "tag": "platform",
       "solid": 1,
-      "transform": { "x": -40, "y": 400, "z": 0 },
+      "transform": { "x": -40, "y": 620, "z": 0 },
       "sprite": { "src": "app/game/assets/ground.png", "w": 920, "h": 44 },
       "collider": { "w": 920, "h": 44, "solid": 1 }
     },
@@ -43,7 +43,7 @@
       "id": "plat1",
       "tag": "platform",
       "solid": 1,
-      "transform": { "x": 160, "y": 300, "z": 0 },
+      "transform": { "x": 160, "y": 520, "z": 0 },
       "sprite": { "src": "app/game/assets/plat.png", "w": 180, "h": 18 },
       "collider": { "w": 180, "h": 18, "solid": 1 }
     },
@@ -51,7 +51,7 @@
       "id": "plat2",
       "tag": "platform",
       "solid": 1,
-      "transform": { "x": 400, "y": 220, "z": 0 },
+      "transform": { "x": 400, "y": 440, "z": 0 },
       "sprite": { "src": "app/game/assets/plat_sm.png", "w": 160, "h": 18 },
       "collider": { "w": 160, "h": 18, "solid": 1 }
     },
@@ -59,7 +59,7 @@
       "id": "player",
       "tag": "player",
       "script": "playerUpdate",
-      "transform": { "x": 60, "y": 200, "z": 10 },
+      "transform": { "x": 60, "y": 420, "z": 10 },
       "sprite": {
         "src": "app/game/assets/player_sheet.png",
         "w": 32,
@@ -80,7 +80,7 @@
       "id": "e_patrol_1",
       "tag": "enemy",
       "script": "patrolEnemyUpdate",
-      "transform": { "x": 480, "y": 356, "z": 5 },
+      "transform": { "x": 480, "y": 576, "z": 5 },
       "sprite": { "src": "app/game/assets/enemy_crab.png", "w": 48, "h": 28 },
       "collider": { "w": 42, "h": 22, "ox": 3, "oy": 4 }
     },
@@ -88,7 +88,7 @@
       "id": "e_fly_1",
       "tag": "enemy",
       "script": "flyEnemyUpdate",
-      "transform": { "x": 320, "y": 140, "z": 8 },
+      "transform": { "x": 320, "y": 360, "z": 8 },
       "sprite": {
         "src": "app/game/assets/enemy_bat_sheet.png",
         "w": 40,
@@ -109,7 +109,7 @@
       "id": "e_slime_1",
       "tag": "enemy",
       "script": "slimeEnemyUpdate",
-      "transform": { "x": 430, "y": 168, "z": 5 },
+      "transform": { "x": 430, "y": 388, "z": 5 },
       "sprite": { "src": "app/game/assets/enemy_slime.png", "w": 36, "h": 40 },
       "collider": { "w": 28, "h": 32, "ox": 4, "oy": 6 }
     }

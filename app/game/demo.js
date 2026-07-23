@@ -33,14 +33,14 @@ var ENEMY_CFG = {};
 var LEVEL_ENEMY_CFG = [
   {
     e_patrol_1: { minX: 440, maxX: 700, speed: 70, dir: 1 },
-    e_fly_1: { baseY: 140, amp: 22, drift: 28, t: 0 },
+    e_fly_1: { baseY: 360, amp: 22, drift: 28, t: 0 },
     e_slime_1: { hopEvery: 2.2, hopVy: -260 }
   },
   {
     e_patrol_1: { minX: 130, maxX: 240, speed: 75, dir: 1 },
     e_patrol_2: { minX: 520, maxX: 780, speed: 90, dir: -1 },
-    e_fly_1: { baseY: 100, amp: 20, drift: 24, t: 0 },
-    e_fly_2: { baseY: 120, amp: 26, drift: -30, t: 1.2 },
+    e_fly_1: { baseY: 320, amp: 20, drift: 24, t: 0 },
+    e_fly_2: { baseY: 340, amp: 26, drift: -30, t: 1.2 },
     e_boss_1: { minX: 660, maxX: 820, speed: 45, dir: 1, hp: 3 }
   }
 ];

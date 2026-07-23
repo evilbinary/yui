@@ -47,8 +47,10 @@ void game_camera_update(void)
         return;
     }
     backend_get_windowsize(&ww, &wh);
+    /* Horizontal center; vertical bias keeps the follow target above mid-screen
+     * so the floor sits lower (typical platformer framing). */
     g_camera.x = e->x + e->w * 0.5f - (float)ww * 0.5f;
-    g_camera.y = e->y + e->h * 0.5f - (float)wh * 0.5f;
+    g_camera.y = e->y + e->h * 0.5f - (float)wh * 0.80f;
 }
 
 void game_camera_world_to_screen(float wx, float wy, float* sx, float* sy)
