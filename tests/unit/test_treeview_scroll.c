@@ -1,128 +1,106 @@
-#include <stdio.h>
-#include <stdlib.h>
+#include <stdarg.h>
+#include <stddef.h>
+#include <setjmp.h>
+#include <stdint.h>
 #include <string.h>
-#include "../../src/ytype.h"
-#include "../../src/layout.h"
-#include "../../src/components/treeview_component.h"
-#include "../../src/components/scrollbar_component.h"
+#include <stdio.h>
+#include <cmocka.h>
+
+#include "ytype.h"
+#include "components/treeview_component.h"
+
+int main(int argc, char **argv);
 
 #if defined(_WIN32)
 #include <windows.h>
-int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
-    int argc = __argc;
-    char** argv = __argv;
-    return main(argc, argv);
+int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
+{
+    (void)hInstance;
+    (void)hPrevInstance;
+    (void)lpCmdLine;
+    (void)nCmdShow;
+    return main(__argc, __argv);
 }
 #endif
 
-// 模拟后端函数（简化测试）
-void mock_backend_init() {
-    printf("Mock backend initialized\n");
-}
-
-// 简单的TreeView滚动测试
-void test_treeview_scroll() {
-    printf("=== 测试TreeView滚动功能 ===\n");
-    
-    // 创建父layer
+static void test_treeview_content_and_scroll_to_node(void **state)
+{
     Layer parent;
-    memset(&parent, 0, sizeof(Layer));
+    TreeViewComponent *treeview;
+    int content_height;
+    int i;
+    int before_offset;
+    TreeNode *target;
+
+    (void)state;
+    memset(&parent, 0, sizeof(parent));
     strcpy(parent.id, "treeview_parent");
-    parent.rect.x = 50;
-    parent.rect.y = 50;
-    parent.rect.w = 300;
-    parent.rect.h = 200;
+    parent.rect = (Rect){50, 50, 300, 200};
     parent.type = TREEVIEW;
-    parent.scrollable = 1; // 启用垂直滚动
-    
-    // 创建TreeView组件
-    TreeViewComponent* treeview = treeview_component_create(&parent);
-    if (!treeview) {
-        printf("ERROR: Failed to create TreeView component\n");
-        return;
-    }
-    
-    // 添加多个测试节点
-    for (int i = 0; i < 20; i++) {
+    parent.scrollable = 1;
+
+    treeview = treeview_component_create(&parent);
+    assert_non_null(treeview);
+
+    for (i = 0; i < 20; i++) {
         char node_text[50];
+        TreeNode *node;
         sprintf(node_text, "Node %d", i);
-        TreeNode* node = treeview_create_node(node_text);
-        if (node) {
-            treeview_add_root_node(treeview, node);
-            
-            // 为部分节点添加子节点
-            if (i % 3 == 0) {
-                for (int j = 0; j < 3; j++) {
-                    char child_text[50];
-                    sprintf(child_text, "Child %d-%d", i, j);
-                    TreeNode* child = treeview_create_node(child_text);
-                    if (child) {
-                        treeview_add_child_node(node, child);
-                    }
-                }
-                // 展开节点
-                treeview_expand_node(node);
+        node = treeview_create_node(node_text);
+        assert_non_null(node);
+        assert_true(treeview_add_root_node(treeview, node) >= 0);
+
+        if (i % 3 == 0) {
+            int j;
+            for (j = 0; j < 3; j++) {
+                char child_text[50];
+                TreeNode *child;
+                sprintf(child_text, "Child %d-%d", i, j);
+                child = treeview_create_node(child_text);
+                assert_non_null(child);
+                treeview_add_child_node(node, child);
             }
+            treeview_expand_node(node);
         }
     }
-    
-    // 创建滚动条组件
-    Layer scrollbar_layer;
-    memset(&scrollbar_layer, 0, sizeof(Layer));
-    strcpy(scrollbar_layer.id, "scrollbar");
-    scrollbar_layer.rect.x = parent.rect.x + parent.rect.w - 8;
-    scrollbar_layer.rect.y = parent.rect.y;
-    scrollbar_layer.rect.w = 8;
-    scrollbar_layer.rect.h = parent.rect.h;
-    scrollbar_layer.type = SCROLLBAR;
-    
-    ScrollbarComponent* scrollbar = scrollbar_component_create(&scrollbar_layer, &parent, SCROLLBAR_DIRECTION_VERTICAL);
-    if (!scrollbar) {
-        printf("ERROR: Failed to create Scrollbar component\n");
-        treeview_component_destroy(treeview);
-        return;
-    }
-    
-    // 设置滚动条关联
-    parent.scrollbar_v = scrollbar;
-    
-    // 测试内容高度计算
-    int content_height = treeview_calculate_content_height(treeview);
-    printf("TreeView content height: %d\n", content_height);
-    printf("TreeView visible height: %d\n", parent.rect.h);
-    printf("Should show scrollbar: %s\n", content_height > parent.rect.h ? "YES" : "NO");
-    
-    // 测试滚动条更新
+
+    content_height = treeview_calculate_content_height(treeview);
+    assert_true(content_height > parent.rect.h);
+    assert_int_equal(treeview->root_count, 20);
+
+    parent.scroll_offset = 0;
     treeview_update_scrollbar(treeview);
-    printf("Scrollbar visible: %d\n", scrollbar->visible);
-    
-    // 测试滚动偏移
-    printf("Initial scroll offset: %d\n", parent.scroll_offset);
-    
-    // 模拟滚动
+
     parent.scroll_offset = 50;
     treeview_update_scrollbar(treeview);
-    printf("After scroll to 50, scrollbar thumb position: %d\n", scrollbar->thumb_rect.y);
-    
-    // 测试滚动到节点
-    if (treeview->root_count > 10) {
-        TreeNode* target_node = treeview->root_nodes[10];
-        treeview_scroll_to_node(treeview, target_node);
-        printf("After scroll to node 10, scroll offset: %d\n", parent.scroll_offset);
+    assert_int_equal(parent.scroll_offset, 50);
+
+    parent.scroll_offset = 0;
+    target = treeview->root_nodes[10];
+    treeview_scroll_to_node(treeview, target);
+    {
+        int max_offset = content_height - parent.rect.h;
+        if (max_offset < 0) {
+            max_offset = 0;
+        }
+        assert_true(parent.scroll_offset >= 0);
+        assert_true(parent.scroll_offset <= max_offset);
+        before_offset = parent.scroll_offset;
     }
-    
-    // 测试边界情况
-    parent.scroll_offset = 1000; // 超出范围
-    treeview_scroll_to_node(treeview, treeview->root_count > 15 ? treeview->root_nodes[15] : treeview->root_nodes[0]);
-    printf("After attempting over-scroll, scroll offset: %d\n", parent.scroll_offset);
-    
-    // 清理
+
+    /* target further down should not decrease offset when starting from 0 path above */
+    treeview_scroll_to_node(treeview, treeview->root_nodes[15]);
+    assert_true(parent.scroll_offset >= before_offset);
+
     treeview_component_destroy(treeview);
-    printf("TreeView scroll test completed\n");
 }
 
-int main(int argc, char *argv[]) {
-    mock_backend_init();
-    test_treeview_scroll();
-    return 0;
+int main(int argc, char **argv)
+{
+    const struct CMUnitTest tests[] = {
+        cmocka_unit_test(test_treeview_content_and_scroll_to_node),
+    };
+    (void)argc;
+    (void)argv;
+    return cmocka_run_group_tests(tests, NULL, NULL);
 }

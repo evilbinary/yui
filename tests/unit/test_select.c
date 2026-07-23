@@ -1,53 +1,63 @@
-#include <stdio.h>
-#include <stdlib.h>
+#include <stdarg.h>
+#include <stddef.h>
+#include <setjmp.h>
+#include <stdint.h>
 #include <string.h>
+#include <stdio.h>
+#include <cmocka.h>
+
+int main(int argc, char **argv);
 
 #if defined(_WIN32)
 #include <windows.h>
-int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
-    extern int __argc;
-    extern char** __argv;
+int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
+{
+    (void)hInstance;
+    (void)hPrevInstance;
+    (void)lpCmdLine;
+    (void)nCmdShow;
     return main(__argc, __argv);
 }
 #endif
 
-// 简化测试，只测试select组件的核心功能
-int main(int argc, char *argv[]) {
-    (void)argc;
-    (void)argv;
-    printf("Testing select component just_expanded functionality\n");
-    
-    // 模拟展开和点击行为
+/* Select dropdown: first outside click clears just_expanded; second closes. */
+static void test_just_expanded_keeps_open_then_closes(void **state)
+{
     int just_expanded = 0;
     int expanded = 0;
-    
-    // 模拟点击展开
-    printf("1. Clicking to expand dropdown\n");
+
+    (void)state;
+
     expanded = 1;
     just_expanded = 1;
-    printf("   expanded=%d, just_expanded=%d\n", expanded, just_expanded);
-    
-    // 模拟第一次点击其他地方
-    printf("2. First click outside dropdown\n");
+    assert_int_equal(expanded, 1);
+    assert_int_equal(just_expanded, 1);
+
+    /* first outside click */
     if (just_expanded) {
         just_expanded = 0;
-        printf("   Cleared just_expanded flag, dropdown stays open\n");
-        printf("   expanded=%d, just_expanded=%d\n", expanded, just_expanded);
     } else {
-        printf("   Would close dropdown\n");
-    }
-    
-    // 模拟第二次点击其他地方
-    printf("3. Second click outside dropdown\n");
-    if (just_expanded) {
-        just_expanded = 0;
-        printf("   Cleared just_expanded flag, dropdown stays open\n");
-    } else {
-        printf("   Closing dropdown\n");
         expanded = 0;
     }
-    printf("   expanded=%d, just_expanded=%d\n", expanded, just_expanded);
-    
-    printf("Test completed successfully!\n");
-    return 0;
+    assert_int_equal(expanded, 1);
+    assert_int_equal(just_expanded, 0);
+
+    /* second outside click */
+    if (just_expanded) {
+        just_expanded = 0;
+    } else {
+        expanded = 0;
+    }
+    assert_int_equal(expanded, 0);
+    assert_int_equal(just_expanded, 0);
+}
+
+int main(int argc, char **argv)
+{
+    const struct CMUnitTest tests[] = {
+        cmocka_unit_test(test_just_expanded_keeps_open_then_closes),
+    };
+    (void)argc;
+    (void)argv;
+    return cmocka_run_group_tests(tests, NULL, NULL);
 }
