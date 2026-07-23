@@ -2,7 +2,9 @@
   "id": "level1",
   "camera": { "x": 0, "y": 0, "follow": "player" },
   "tilemap": {
+    "src": "app/game/assets/tileset.png",
     "tileSize": 32,
+    "tilesetCols": 2,
     "solidNonZero": false,
     "map": [
       [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
@@ -17,16 +19,22 @@
       [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
       [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
       [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
     ]
   },
   "entities": [
+    {
+      "id": "bg",
+      "tag": "bg",
+      "transform": { "x": 0, "y": 0, "z": -100 },
+      "sprite": { "src": "app/game/assets/bg_sky.png", "w": 800, "h": 480 }
+    },
     {
       "id": "ground",
       "tag": "platform",
       "solid": 1,
       "transform": { "x": -40, "y": 400, "z": 0 },
-      "sprite": { "w": 920, "h": 44, "color": "#2f4f35" },
+      "sprite": { "src": "app/game/assets/ground.png", "w": 920, "h": 44 },
       "collider": { "w": 920, "h": 44, "solid": 1 }
     },
     {
@@ -34,7 +42,7 @@
       "tag": "platform",
       "solid": 1,
       "transform": { "x": 160, "y": 300, "z": 0 },
-      "sprite": { "w": 180, "h": 18, "color": "#5c6b73" },
+      "sprite": { "src": "app/game/assets/plat.png", "w": 180, "h": 18 },
       "collider": { "w": 180, "h": 18, "solid": 1 }
     },
     {
@@ -42,7 +50,7 @@
       "tag": "platform",
       "solid": 1,
       "transform": { "x": 400, "y": 220, "z": 0 },
-      "sprite": { "w": 160, "h": 18, "color": "#5c6b73" },
+      "sprite": { "src": "app/game/assets/plat_sm.png", "w": 160, "h": 18 },
       "collider": { "w": 160, "h": 18, "solid": 1 }
     },
     {
@@ -50,32 +58,45 @@
       "tag": "player",
       "script": "playerUpdate",
       "transform": { "x": 60, "y": 200, "z": 10 },
-      "sprite": { "w": 22, "h": 34, "color": "#4dabf7" },
-      "collider": { "w": 20, "h": 32, "ox": 1, "oy": 2 }
+      "sprite": { "src": "app/game/assets/player.png", "w": 32, "h": 48 },
+      "collider": { "w": 22, "h": 40, "ox": 5, "oy": 6 }
     },
     {
       "id": "e_patrol_1",
       "tag": "enemy",
       "script": "patrolEnemyUpdate",
-      "transform": { "x": 480, "y": 368, "z": 5 },
-      "sprite": { "w": 42, "h": 24, "color": "#e03131" },
-      "collider": { "w": 40, "h": 20, "ox": 1, "oy": 2 }
+      "transform": { "x": 480, "y": 356, "z": 5 },
+      "sprite": { "src": "app/game/assets/enemy_crab.png", "w": 48, "h": 28 },
+      "collider": { "w": 42, "h": 22, "ox": 3, "oy": 4 }
     },
     {
       "id": "e_fly_1",
       "tag": "enemy",
       "script": "flyEnemyUpdate",
-      "transform": { "x": 320, "y": 150, "z": 8 },
-      "sprite": { "w": 32, "h": 20, "color": "#7950f2" },
-      "collider": { "w": 28, "h": 16, "ox": 2, "oy": 2 }
+      "transform": { "x": 320, "y": 140, "z": 8 },
+      "sprite": {
+        "src": "app/game/assets/enemy_bat_sheet.png",
+        "w": 40,
+        "h": 28,
+        "frame": { "x": 0, "y": 0, "w": 72, "h": 48 }
+      },
+      "anim": {
+        "clip": "flap",
+        "fps": 8,
+        "frames": [
+          { "x": 0, "y": 0, "w": 72, "h": 48 },
+          { "x": 72, "y": 0, "w": 72, "h": 48 }
+        ]
+      },
+      "collider": { "w": 32, "h": 20, "ox": 4, "oy": 4 }
     },
     {
       "id": "e_slime_1",
       "tag": "enemy",
       "script": "slimeEnemyUpdate",
-      "transform": { "x": 430, "y": 188, "z": 5 },
-      "sprite": { "w": 30, "h": 34, "color": "#37b24d" },
-      "collider": { "w": 26, "h": 30, "ox": 2, "oy": 2 }
+      "transform": { "x": 430, "y": 168, "z": 5 },
+      "sprite": { "src": "app/game/assets/enemy_slime.png", "w": 36, "h": 40 },
+      "collider": { "w": 28, "h": 32, "ox": 4, "oy": 6 }
     }
   ]
 }
