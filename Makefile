@@ -95,29 +95,31 @@ web-serve-lvgl: web-lvgl
 run: main
 	ya -r main
 
+PYTHON ?= python3
+
 test:
-	python scripts/run_tests.py
+	$(PYTHON) scripts/run_tests.py
 
 test-unit:
-	python scripts/run_tests.py --unit
+	$(PYTHON) scripts/run_tests.py --unit
 
 test-integration:
-	python scripts/run_tests.py --integration
+	$(PYTHON) scripts/run_tests.py --integration
 
 test-perf:
-	python scripts/run_tests.py --perf
+	$(PYTHON) scripts/run_tests.py --perf
 
 test-e2e:
-	python scripts/run_tests.py --e2e
+	$(PYTHON) scripts/run_tests.py --e2e
 
 test-visual:
-	python scripts/run_tests.py --visual
+	$(PYTHON) scripts/run_tests.py --visual
 
 test-visual-update:
-	python scripts/run_tests.py --visual --update-baselines
+	$(PYTHON) scripts/run_tests.py --visual --update-baselines
 
 test-all:
-	python scripts/run_tests.py --all
+	$(PYTHON) scripts/run_tests.py --all
 
 clean:
 	rm -rf build

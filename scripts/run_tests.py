@@ -24,6 +24,10 @@ import sys
 import time
 import zlib
 
+if sys.version_info[0] < 3:
+    sys.stderr.write("run_tests.py requires Python 3 (use: python3 scripts/run_tests.py)\n")
+    sys.exit(2)
+
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 UNIT_DIR = os.path.join(ROOT, "tests", "unit")
 INTEGRATION_DIR = os.path.join(ROOT, "tests", "integration")
