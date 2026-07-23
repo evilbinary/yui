@@ -7,6 +7,7 @@
 #include "../../src/layer_lifecycle.h"
 #include "../../src/render.h"
 #include "../../src/theme_manager.h"
+#include "../../src/components/text_component.h"
 #include "js_socket.h"
 #include "js_timer.h"
 #include "js_perf.h"
@@ -46,6 +47,10 @@ JSValue js_write_file(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
 JSValue js_resize_root(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv);
 JSValue js_screenshot(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv);
 JSValue js_click(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv);
+JSValue js_click_at(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv);
+JSValue js_send_key(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv);
+JSValue js_get_clipboard(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv);
+JSValue js_set_clipboard(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv);
 JSValue js_list_dir(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv);
 JSValue js_focus(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv);
 
@@ -63,8 +68,11 @@ static JSValue js_set_text(JSContext *ctx, JSValueConst this_val, int argc, JSVa
     if (layer_id && text && g_layer_root) {
         struct Layer* layer = find_layer_by_id(g_layer_root, layer_id);
         if (layer) {
-            layer_set_text(layer, text); //
-        
+            if (layer->type == TEXT && layer->component) {
+                text_component_set_text((TextComponent*)layer->component, text);
+            } else {
+                layer_set_text(layer, text);
+            }
         }
     }
 
@@ -125,45 +133,65 @@ static JSValue js_get_property(JSContext *ctx, JSValueConst this_val, int argc, 
 
 // 设置属性
 static JSValue js_set_property(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
+    const char* layer_id;
+    const char* property_name;
+    cJSON* json_value = NULL;
+    int result = 0;
+
     if (argc < 3) {
         return JS_ThrowTypeError(ctx, "Expected 3 arguments: layer_id, property_name, value");
     }
 
-    const char* layer_id = JS_ToCString(ctx, argv[0]);
-    const char* property_name = JS_ToCString(ctx, argv[1]);
-    const char* value = JS_ToCString(ctx, argv[2]);
-
-    if (!layer_id || !property_name || !value) {
+    layer_id = JS_ToCString(ctx, argv[0]);
+    property_name = JS_ToCString(ctx, argv[1]);
+    if (!layer_id || !property_name) {
         if (layer_id) JS_FreeCString(ctx, layer_id);
         if (property_name) JS_FreeCString(ctx, property_name);
-        if (value) JS_FreeCString(ctx, value);
         return JS_ThrowTypeError(ctx, "Invalid arguments");
     }
 
-    if (g_layer_root) {
+    if (JS_IsNumber(argv[2])) {
+        double d = 0;
+        JS_ToFloat64(ctx, &d, argv[2]);
+        json_value = cJSON_CreateNumber(d);
+    } else if (JS_IsBool(argv[2])) {
+        json_value = cJSON_CreateBool(JS_ToBool(ctx, argv[2]));
+    } else if (JS_IsNull(argv[2]) || JS_IsUndefined(argv[2])) {
+        json_value = cJSON_CreateNull();
+    } else {
+        const char* value = JS_ToCString(ctx, argv[2]);
+        if (!value) {
+            JS_FreeCString(ctx, layer_id);
+            JS_FreeCString(ctx, property_name);
+            return JS_ThrowTypeError(ctx, "Invalid value");
+        }
+        /* Allow JSON object/array encoded as string, else plain string */
+        if ((value[0] == '{' || value[0] == '[') && value[1] != '\0') {
+            json_value = cJSON_Parse(value);
+        }
+        if (!json_value) {
+            json_value = cJSON_CreateString(value);
+        }
+        JS_FreeCString(ctx, value);
+    }
+
+    if (g_layer_root && json_value) {
         Layer* layer = find_layer_by_id(g_layer_root, layer_id);
         if (layer) {
-            // 创建 JSON 对象来存储字符串值
-            extern cJSON* cJSON_CreateString(const char* string);
-            extern void cJSON_Delete(cJSON* item);
-            extern int layer_set_property_from_json(Layer* layer, const char* key, cJSON* value, int is_creating);
-            
-            cJSON* json_value = cJSON_CreateString(value);
-            if (json_value) {
-                int result = layer_set_property_from_json(layer, property_name, json_value, 0);
-                printf("JS(QuickJS): Set property '%s' to '%s' on layer '%s', result=%d\n", 
-                       property_name, value, layer_id, result);
-                cJSON_Delete(json_value);
-            }
+            result = layer_set_property_from_json(layer, property_name, json_value, 0);
+            printf("JS(QuickJS): Set property '%s' on layer '%s', result=%d\n",
+                   property_name, layer_id, result);
         } else {
             printf("JS(QuickJS): Layer '%s' not found\n", layer_id);
         }
     }
 
+    if (json_value) {
+        cJSON_Delete(json_value);
+    }
     JS_FreeCString(ctx, layer_id);
     JS_FreeCString(ctx, property_name);
-    JS_FreeCString(ctx, value);
-    return JS_UNDEFINED;
+    return JS_NewBool(ctx, result);
 }
 
 // 设置背景颜色
@@ -1343,6 +1371,10 @@ void js_module_register_api(void)
     JS_SetPropertyStr(g_js_ctx, yui_obj, "resizeRoot", JS_NewCFunction(g_js_ctx, js_resize_root, "resizeRoot", 2));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "screenshot", JS_NewCFunction(g_js_ctx, js_screenshot, "screenshot", 1));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "click", JS_NewCFunction(g_js_ctx, js_click, "click", 1));
+    JS_SetPropertyStr(g_js_ctx, yui_obj, "clickAt", JS_NewCFunction(g_js_ctx, js_click_at, "clickAt", 3));
+    JS_SetPropertyStr(g_js_ctx, yui_obj, "sendKey", JS_NewCFunction(g_js_ctx, js_send_key, "sendKey", 1));
+    JS_SetPropertyStr(g_js_ctx, yui_obj, "getClipboard", JS_NewCFunction(g_js_ctx, js_get_clipboard, "getClipboard", 0));
+    JS_SetPropertyStr(g_js_ctx, yui_obj, "setClipboard", JS_NewCFunction(g_js_ctx, js_set_clipboard, "setClipboard", 1));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "listDir", JS_NewCFunction(g_js_ctx, js_list_dir, "listDir", 1));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "focus", JS_NewCFunction(g_js_ctx, js_focus, "focus", 1));
 
@@ -1825,6 +1857,209 @@ JSValue js_click(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
     printf("YUI.click: '%s' at (%d,%d)\n", layer_id, x, y);
     JS_FreeCString(ctx, layer_id);
     return JS_NewBool(ctx, 1);
+}
+
+/* clickAt(id, localX, localY) — local coords relative to layer rect */
+JSValue js_click_at(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+    const char* layer_id;
+    Layer* layer;
+    PointerEvent pe;
+    int local_x = 0;
+    int local_y = 0;
+    int x;
+    int y;
+
+    (void)this_val;
+    if (argc < 3) {
+        return JS_ThrowTypeError(ctx, "Expected 3 arguments: layer_id, localX, localY");
+    }
+    if (!g_layer_root) {
+        return JS_NewBool(ctx, 0);
+    }
+    layer_id = JS_ToCString(ctx, argv[0]);
+    if (!layer_id || JS_ToInt32(ctx, &local_x, argv[1]) || JS_ToInt32(ctx, &local_y, argv[2])) {
+        if (layer_id) JS_FreeCString(ctx, layer_id);
+        return JS_ThrowTypeError(ctx, "Invalid arguments");
+    }
+    layer = find_layer_by_id(g_layer_root, layer_id);
+    if (!layer) {
+        JS_FreeCString(ctx, layer_id);
+        return JS_NewBool(ctx, 0);
+    }
+    x = layer->rect.x + local_x;
+    y = layer->rect.y + local_y;
+    memset(&pe, 0, sizeof(pe));
+    pe.device = POINTER_DEVICE_MOUSE;
+    pe.button = BUTTON_LEFT;
+    pe.x = x;
+    pe.y = y;
+    pe.phase = POINTER_DOWN;
+    handle_pointer_event(g_layer_root, &pe);
+    pe.phase = POINTER_UP;
+    handle_pointer_event(g_layer_root, &pe);
+    printf("YUI.clickAt: '%s' local(%d,%d) -> (%d,%d)\n", layer_id, local_x, local_y, x, y);
+    JS_FreeCString(ctx, layer_id);
+    return JS_NewBool(ctx, 1);
+}
+
+/*
+ * sendKey(opts):
+ *   { id?, key: "Backspace"|"Delete"|"Enter"|"Left"|"Right"|"a"|...,
+ *     mod?: "ctrl"|"shift"|"ctrl+shift"|number,
+ *     type?: "down"|"text",
+ *     text?: "你好" }  // for type:"text"
+ */
+JSValue js_send_key(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+    JSValue opts;
+    JSValue v;
+    KeyEvent ke;
+    Layer* target = NULL;
+    const char* key_name = NULL;
+    const char* text = NULL;
+    const char* mod_str = NULL;
+    int key_code = 0;
+    int mod = 0;
+    int is_text = 0;
+
+    (void)this_val;
+    if (argc < 1 || !JS_IsObject(argv[0])) {
+        return JS_ThrowTypeError(ctx, "Expected options object");
+    }
+    if (!g_layer_root) {
+        return JS_NewBool(ctx, 0);
+    }
+    opts = argv[0];
+    memset(&ke, 0, sizeof(ke));
+
+    v = JS_GetPropertyStr(ctx, opts, "id");
+    if (JS_IsString(v)) {
+        const char* id = JS_ToCString(ctx, v);
+        if (id) {
+            target = find_layer_by_id(g_layer_root, id);
+            if (target) {
+                extern Layer* focused_layer;
+                if (focused_layer && focused_layer != target) {
+                    CLEAR_STATE(focused_layer, LAYER_STATE_FOCUSED);
+                }
+                focused_layer = target;
+                SET_STATE(target, LAYER_STATE_FOCUSED);
+            }
+            JS_FreeCString(ctx, id);
+        }
+    }
+    JS_FreeValue(ctx, v);
+    if (!target) {
+        extern Layer* focused_layer;
+        target = focused_layer ? focused_layer : g_layer_root;
+    }
+
+    v = JS_GetPropertyStr(ctx, opts, "type");
+    if (JS_IsString(v)) {
+        const char* t = JS_ToCString(ctx, v);
+        if (t && strcmp(t, "text") == 0) {
+            is_text = 1;
+        }
+        if (t) JS_FreeCString(ctx, t);
+    }
+    JS_FreeValue(ctx, v);
+
+    v = JS_GetPropertyStr(ctx, opts, "mod");
+    if (JS_IsNumber(v)) {
+        JS_ToInt32(ctx, &mod, v);
+    } else if (JS_IsString(v)) {
+        mod_str = JS_ToCString(ctx, v);
+        if (mod_str) {
+            if (strstr(mod_str, "ctrl") || strstr(mod_str, "CTRL")) mod |= KMOD_CTRL;
+            if (strstr(mod_str, "shift") || strstr(mod_str, "SHIFT")) mod |= KMOD_SHIFT;
+            if (strstr(mod_str, "alt") || strstr(mod_str, "ALT")) mod |= KMOD_ALT;
+            JS_FreeCString(ctx, mod_str);
+        }
+    }
+    JS_FreeValue(ctx, v);
+
+    if (is_text) {
+        v = JS_GetPropertyStr(ctx, opts, "text");
+        if (!JS_IsString(v)) {
+            JS_FreeValue(ctx, v);
+            return JS_ThrowTypeError(ctx, "type:text requires text string");
+        }
+        text = JS_ToCString(ctx, v);
+        JS_FreeValue(ctx, v);
+        if (!text) {
+            return JS_NewBool(ctx, 0);
+        }
+        ke.type = KEY_EVENT_TEXT_INPUT;
+        strncpy(ke.data.text.text, text, sizeof(ke.data.text.text) - 1);
+        ke.data.text.text[sizeof(ke.data.text.text) - 1] = '\0';
+        JS_FreeCString(ctx, text);
+        handle_key_event(target, &ke);
+        return JS_NewBool(ctx, 1);
+    }
+
+    v = JS_GetPropertyStr(ctx, opts, "key");
+    if (JS_IsNumber(v)) {
+        JS_ToInt32(ctx, &key_code, v);
+    } else if (JS_IsString(v)) {
+        key_name = JS_ToCString(ctx, v);
+        if (key_name) {
+            if (strcmp(key_name, "Backspace") == 0) key_code = SDLK_BACKSPACE;
+            else if (strcmp(key_name, "Delete") == 0) key_code = SDLK_DELETE;
+            else if (strcmp(key_name, "Enter") == 0 || strcmp(key_name, "Return") == 0) key_code = SDLK_RETURN;
+            else if (strcmp(key_name, "Left") == 0) key_code = SDLK_LEFT;
+            else if (strcmp(key_name, "Right") == 0) key_code = SDLK_RIGHT;
+            else if (strcmp(key_name, "Up") == 0) key_code = SDLK_UP;
+            else if (strcmp(key_name, "Down") == 0) key_code = SDLK_DOWN;
+            else if (strcmp(key_name, "Home") == 0) key_code = SDLK_HOME;
+            else if (strcmp(key_name, "End") == 0) key_code = SDLK_END;
+            else if (strlen(key_name) == 1) key_code = (unsigned char)key_name[0];
+            else key_code = 0;
+            JS_FreeCString(ctx, key_name);
+        }
+    }
+    JS_FreeValue(ctx, v);
+
+    if (key_code == 0) {
+        return JS_ThrowTypeError(ctx, "Unknown key");
+    }
+
+    ke.type = KEY_EVENT_DOWN;
+    ke.data.key.key_code = key_code;
+    ke.data.key.mod = mod;
+    ke.data.key.repeat = 0;
+    handle_key_event(target, &ke);
+    return JS_NewBool(ctx, 1);
+}
+
+JSValue js_get_clipboard(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+    char* text;
+    JSValue result;
+
+    (void)this_val;
+    (void)argc;
+    (void)argv;
+    text = backend_get_clipboard_text();
+    if (!text) {
+        return JS_NewString(ctx, "");
+    }
+    result = JS_NewString(ctx, text);
+    free(text);
+    return result;
+}
+
+JSValue js_set_clipboard(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+    const char* text;
+
+    (void)this_val;
+    if (argc < 1) {
+        return JS_ThrowTypeError(ctx, "Expected 1 argument: text");
+    }
+    text = JS_ToCString(ctx, argv[0]);
+    if (!text) {
+        return JS_ThrowTypeError(ctx, "Invalid text");
+    }
+    backend_set_clipboard_text(text);
+    JS_FreeCString(ctx, text);
+    return JS_TRUE;
 }
 
 // 列出目录内容

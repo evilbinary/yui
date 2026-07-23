@@ -115,6 +115,15 @@ typedef int SDL_EventType;
 #ifndef KMOD_CTRL
 #define KMOD_CTRL (KMOD_LCTRL | KMOD_RCTRL)
 #endif
+#ifndef KMOD_LALT
+#define KMOD_LALT 0x0100
+#endif
+#ifndef KMOD_RALT
+#define KMOD_RALT 0x0200
+#endif
+#ifndef KMOD_ALT
+#define KMOD_ALT (KMOD_LALT | KMOD_RALT)
+#endif
 
 typedef struct Rect {
     int x, y;

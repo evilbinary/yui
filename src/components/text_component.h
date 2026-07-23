@@ -70,8 +70,9 @@ int text_component_register_event(Layer* layer, const char* event_name, const ch
 void text_component_trigger_on_change(TextComponent* component);
 void text_component_update_scroll_for_cursor(TextComponent* component);
 
-// 通用属性获取函数
+// 通用属性获取 / 设置
 cJSON* text_component_get_property(Layer* layer, const char* property_name);
+int text_component_set_property_from_json(Layer* layer, const char* key, cJSON* value, int is_creating);
 // 辅助函数声明
 int get_line_start(TextComponent* component, int pos);
 int get_line_end(TextComponent* component, int pos);

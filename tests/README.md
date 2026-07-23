@@ -44,7 +44,24 @@ Env: `YUI_HEADLESS=1` / `0`, flags: `--headless` / `--show`.
 
 ## E2E
 
-`tests/e2e/*.json` with `autoTest: true`. Drive the real pointer path via `YUI.click(id)` (layer center DOWN+UP), then assert with `YUI.getText` / `YUI.dump`.
+`tests/e2e/*.json` with `autoTest: true`.
+
+- `YUI.click(id)` / `YUI.clickAt(id, x, y)` — pointer path  
+- `YUI.sendKey({ id, key, mod, type, text })` — key path  
+- `YUI.setClipboard` / `getClipboard`  
+- Text props: `cursorPos`, `selection`, `selectedText`, `insertText`, `selectAll`, `backspace`, `cutSelection`, `copySelection`, `paste`, `scrollToCursor`, `maxLength`, `editable`, …
+
+### Editor checklist coverage (`test-editor.json`)
+
+| Section | Covered | Not yet (native / missing) |
+|---------|---------|----------------------------|
+| 1 Input | plain / CJK / emoji / 100k / paste | IME compose UI |
+| 2 Cursor/selection | cursorPos, range, selectAll, line start/end | drag-select, double-click word |
+| 3 Edit | backspace, delete/replace selection, cut/copy/paste | undo / redo |
+| 4 Style | fontSize | bold/italic/underline, attributedText, alignment |
+| 5 Keyboard | Enter → `\n` | keyboardType, autocapitalize, secure |
+| 6 Scroll | scrollToCursor (Y), manual offset | caret-in-visible-rect pixel assert |
+| 7 Limits | maxLength, readonly/editable | input filter (digits only) |
 
 ```bash
 python scripts/run_tests.py --e2e

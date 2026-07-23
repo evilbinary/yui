@@ -1,0 +1,126 @@
+{
+  "id": "editor_e2e_root",
+  "type": "View",
+  "size": [560, 520],
+  "autoTest": true,
+  "js": ["../integration/lib/ytest.js", "test-editor.js"],
+  "style": {
+    "bgColor": "#1e1e22"
+  },
+  "events": {
+    "onLoad": "@onEditorE2ELoad"
+  },
+  "layout": {
+    "type": "vertical",
+    "spacing": 8,
+    "padding": [10, 10, 10, 10]
+  },
+  "children": [
+    {
+      "id": "editor_title",
+      "type": "Label",
+      "text": "Editor checklist E2E",
+      "size": [540, 24],
+      "style": {
+        "color": "#ffffff",
+        "fontSize": 15,
+        "bgColor": "#2d6cdf",
+        "borderRadius": 4
+      }
+    },
+    {
+      "id": "inputEditor",
+      "type": "Text",
+      "text": "",
+      "size": [540, 40],
+      "multiline": false,
+      "wrap": false,
+      "editable": true,
+      "maxLength": 200000,
+      "style": {
+        "color": "#222222",
+        "bgColor": "#ffffff",
+        "fontSize": 16,
+        "padding": [6, 8, 6, 8]
+      }
+    },
+    {
+      "id": "singleEditor",
+      "type": "Text",
+      "text": "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+      "size": [540, 36],
+      "multiline": false,
+      "wrap": false,
+      "editable": true,
+      "scrollable": 1,
+      "style": {
+        "color": "#222222",
+        "bgColor": "#ffffff",
+        "fontSize": 16,
+        "padding": [6, 8, 6, 8]
+      }
+    },
+    {
+      "id": "multiEditor",
+      "type": "Text",
+      "text": "line0\nline1\nline2\nline3\nline4\nline5\nline6\nline7\nline8\nline9\nline10\nline11\nline12\nline13\nline14\nline15\nline16\nline17\nline18\nline19",
+      "size": [540, 110],
+      "multiline": true,
+      "wrap": true,
+      "editable": true,
+      "scrollable": 1,
+      "showLineNumbers": true,
+      "lineNumberWidth": 28,
+      "style": {
+        "color": "#222222",
+        "bgColor": "#ffffff",
+        "fontSize": 14,
+        "padding": [6, 8, 6, 8]
+      }
+    },
+    {
+      "id": "selectEditor",
+      "type": "Text",
+      "text": "Hello World",
+      "size": [540, 36],
+      "multiline": false,
+      "wrap": false,
+      "editable": true,
+      "style": {
+        "color": "#222222",
+        "bgColor": "#ffffff",
+        "fontSize": 18,
+        "padding": [6, 8, 6, 8]
+      }
+    },
+    {
+      "id": "limitEditor",
+      "type": "Text",
+      "text": "abc",
+      "size": [540, 36],
+      "multiline": false,
+      "editable": true,
+      "maxLength": 8,
+      "style": {
+        "color": "#222222",
+        "bgColor": "#ffffff",
+        "fontSize": 16,
+        "padding": [6, 8, 6, 8]
+      }
+    },
+    {
+      "id": "readonlyEditor",
+      "type": "Text",
+      "text": "locked",
+      "size": [540, 36],
+      "multiline": false,
+      "editable": false,
+      "style": {
+        "color": "#666666",
+        "bgColor": "#eeeeee",
+        "fontSize": 16,
+        "padding": [6, 8, 6, 8]
+      }
+    }
+  ]
+}

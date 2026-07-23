@@ -38,6 +38,13 @@ VISUAL_MAX_DIFF_RATIO = 0.02
 VISUAL_MAX_CHANNEL_DELTA = 8
 
 
+def _safe_print_indent(line):
+    try:
+        print("   ", line)
+    except UnicodeEncodeError:
+        print("   ", line.encode("ascii", errors="replace").decode("ascii"))
+
+
 def _mingw_env():
     env = os.environ.copy()
     mingw = env.get("MINGW64") or env.get("MINGW64_HOME")
@@ -185,7 +192,7 @@ def run_unit(env, filt):
         if not ok and out:
             lines = out.strip().splitlines()
             for line in lines[-20:]:
-                print("   ", line)
+                _safe_print_indent(line)
         results.append(("unit", name, ok, dt, out if not ok else ""))
     return results
 
@@ -219,7 +226,7 @@ def _run_playground_cases(label, cases, env, filt, frames=120, timeout=180):
         print("[%s] %s %s (%.2fs, exit=%d)" % (label, status, name, dt, code))
         if not ok and out:
             for line in out.strip().splitlines()[-30:]:
-                print("   ", line)
+                _safe_print_indent(line)
         results.append((label, name, ok, dt, out if not ok else ""))
     return results
 
@@ -424,7 +431,7 @@ def run_visual(env, filt, update_baselines=False):
         print("[visual] %s %s (%.2fs) %s" % (status, name, dt, msg))
         if not ok and out:
             for line in out.strip().splitlines()[-20:]:
-                print("   ", line)
+                _safe_print_indent(line)
         results.append(("visual", name, ok, dt, "" if ok else msg))
     return results
 
