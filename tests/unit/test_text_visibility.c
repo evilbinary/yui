@@ -77,6 +77,7 @@ static void test_text_visible_after_set(void **state)
 
     assert_int_equal(layer.visible, VISIBLE);
     text_component_destroy(comp);
+    layer_set_text(&layer, NULL);
 }
 
 int main(int argc, char **argv)

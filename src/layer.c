@@ -1135,8 +1135,15 @@ void destroy_layer(Layer* layer) {
         layer->scrollbar_h = NULL;
     }
     
-    // 注意：不销毁 font 和 assets，因为它们可能是共享的
-    // 这些应该由全局资源管理器负责
+    // 释放自有 font/assets（与父层共享时不释放）
+    if (layer->font && (!layer->parent || layer->font != layer->parent->font)) {
+        free(layer->font);
+        layer->font = NULL;
+    }
+    if (layer->assets && (!layer->parent || layer->assets != layer->parent->assets)) {
+        free(layer->assets);
+        layer->assets = NULL;
+    }
 
     if (layer->on_destroy) {
         layer->on_destroy(layer);

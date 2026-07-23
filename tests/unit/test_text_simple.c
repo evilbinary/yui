@@ -68,6 +68,7 @@ static void test_text_set_get_roundtrip(void **state)
     assert_int_equal(count_lines(got), 5);
 
     text_component_destroy(comp);
+    layer_set_text(&layer, NULL);
 }
 
 int main(int argc, char **argv)

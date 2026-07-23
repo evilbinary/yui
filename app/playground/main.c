@@ -249,8 +249,9 @@ int main(int argc, char* argv[]) {
     backend_run(ui_root);
 
     // 清理资源
+    destroy_layer(ui_root);
+    js_module_init_layer(NULL);
     js_module_cleanup();  // 清理 JS 引擎
-    // destroy_layer(ui_root);  // 暂时注释掉以避免内存问题
     popup_manager_cleanup();
     backend_quit();
 

@@ -259,6 +259,12 @@ static void input_draw_text_part(Layer* layer, const char* text, Color color,
 }
 
 // 创建输入组件
+static void input_layer_destroy(Layer* layer) {
+    if (!layer || !layer->component) return;
+    input_component_destroy((InputComponent*)layer->component);
+    layer->component = NULL;
+}
+
 InputComponent* input_component_create(Layer* layer) {
     if (!layer) {
         return NULL;
@@ -291,6 +297,7 @@ InputComponent* input_component_create(Layer* layer) {
 
     component->cursor_color = (Color){255, 0, 0, 255};
     component->selection_color = (Color){137, 180, 250, 255};
+    layer->on_destroy = input_layer_destroy;
     return component;
 }
 

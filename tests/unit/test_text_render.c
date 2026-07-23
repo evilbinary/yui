@@ -72,6 +72,7 @@ static void test_multiline_create_and_update(void **state)
     assert_int_equal(count_lines(got), 2);
 
     text_component_destroy(comp);
+    layer_set_text(&layer, NULL);
 }
 
 int main(int argc, char **argv)

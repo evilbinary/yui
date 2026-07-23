@@ -141,6 +141,7 @@ static void test_text_layer_layout_smoke(void **state)
     assert_non_null(layer_get_text(&text_layer));
     assert_true(strlen(layer_get_text(&text_layer)) > 0);
 
+    layer_set_text(&text_layer, NULL);
     free(font);
 }
 

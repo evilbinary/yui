@@ -990,6 +990,12 @@ static void text_component_apply_theme_style(Layer* layer, cJSON* style) {
 }
 
 // 创建文本组件
+static void text_layer_destroy(Layer* layer) {
+    if (!layer || !layer->component) return;
+    text_component_destroy((TextComponent*)layer->component);
+    layer->component = NULL;
+}
+
 TextComponent* text_component_create(Layer* layer) {
     TextComponent* component = (TextComponent*)malloc(sizeof(TextComponent));
     memset(component, 0, sizeof(TextComponent));
@@ -1053,6 +1059,7 @@ TextComponent* text_component_create(Layer* layer) {
     layer->get_property = text_component_get_property;
     layer->set_property = text_component_set_property_from_json;
     layer->set_style = text_component_apply_theme_style;
+    layer->on_destroy = text_layer_destroy;
 
     return component;
 }
