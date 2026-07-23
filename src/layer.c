@@ -805,6 +805,7 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
       cJSON* sub = parse_json(source->valuestring);
       if (sub != NULL) {
         layer->sub = parse_layer_from_json(NULL,sub, layer);
+        cJSON_Delete(sub);
       } else {
         printf("cannot load file %s\n", source->valuestring);
       }

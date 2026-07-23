@@ -57,6 +57,12 @@ ButtonComponent* button_component_create(Layer* layer) {
     return button_component_create_from_json(layer, NULL);
 }
 
+static void button_layer_destroy(Layer* layer) {
+    if (!layer || !layer->component) return;
+    button_component_destroy((ButtonComponent*)layer->component);
+    layer->component = NULL;
+}
+
 ButtonComponent* button_component_create_from_json(Layer* layer, cJSON* json_obj) {
     if (!layer) {
         return NULL;
@@ -121,6 +127,7 @@ ButtonComponent* button_component_create_from_json(Layer* layer, cJSON* json_obj
     
     // 设置组件为可聚焦
     layer->focusable = 1;
+    layer->on_destroy = button_layer_destroy;
     
     return component;
 }

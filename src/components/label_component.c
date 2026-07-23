@@ -103,6 +103,12 @@ LabelComponent* label_component_create(Layer* layer) {
     return label_component_create_from_json(layer, NULL);
 }
 
+static void label_layer_destroy(Layer* layer) {
+    if (!layer || !layer->component) return;
+    label_component_destroy((LabelComponent*)layer->component);
+    layer->component = NULL;
+}
+
 LabelComponent* label_component_create_from_json(Layer* layer, cJSON* json_obj) {
     if (!layer) return NULL;
 
@@ -130,6 +136,7 @@ LabelComponent* label_component_create_from_json(Layer* layer, cJSON* json_obj) 
     layer->component = component;
     layer->render = label_component_render;
     layer->handle_pointer_event = label_component_handle_pointer_event;
+    layer->on_destroy = label_layer_destroy;
 
     return component;
 }
