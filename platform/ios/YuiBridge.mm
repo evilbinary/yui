@@ -44,6 +44,12 @@ static int g_initialized = 0;
     }
 }
 
++ (void)setAppFocused:(BOOL)focused {
+    if (g_initialized) {
+        yui_set_app_focused(focused ? 1 : 0);
+    }
+}
+
 + (void)onTouchWithPointerId:(int)pointerId x:(float)x y:(float)y phase:(int)phase {
     if (g_initialized) {
         yui_on_touch(pointerId, (int)x, (int)y, phase);

@@ -9,6 +9,7 @@ extern "C" {
 
 int yui_init(const char* json_path, const char* assets_dir);
 void yui_resize(int width, int height);
+void yui_set_app_focused(int focused);
 void yui_tick(void);
 void yui_on_touch(int pointer_id, int x, int y, int phase);
 void yui_shutdown(void);

@@ -3,13 +3,34 @@
 
 #if YUI_WITH_GAME
 
+#include "../event.h"
 #include <stdlib.h>
 #include <string.h>
 
 static int g_inited;
 static int g_enabled = 1;
+static int g_paused;
 static GameScriptUpdateFn g_script_update;
 static int g_entity_draws;
+
+static void game_on_window_event(const WindowEvent* event)
+{
+    if (!event) {
+        return;
+    }
+    switch (event->type) {
+    case WINDOW_FOCUS_LOST:
+    case WINDOW_MINIMIZED:
+        game_set_paused(1);
+        break;
+    case WINDOW_FOCUS_GAINED:
+    case WINDOW_RESTORED:
+        game_set_paused(0);
+        break;
+    default:
+        break;
+    }
+}
 
 void game_init(void)
 {
@@ -25,6 +46,8 @@ void game_init(void)
     game_audio_init();
     g_script_update = NULL;
     g_enabled = 1;
+    g_paused = 0;
+    register_window_event_listener(game_on_window_event);
     g_inited = 1;
 }
 
@@ -33,20 +56,39 @@ void game_shutdown(void)
     if (!g_inited) {
         return;
     }
+    unregister_window_event_listener(game_on_window_event);
     game_clear_scene();
     game_audio_shutdown();
     g_script_update = NULL;
+    g_paused = 0;
     g_inited = 0;
 }
 
 int game_is_active(void)
 {
-    return g_inited && g_enabled;
+    return g_inited && g_enabled && !g_paused;
 }
 
 void game_set_enabled(int on)
 {
     g_enabled = on ? 1 : 0;
+}
+
+void game_set_paused(int on)
+{
+    int next = on ? 1 : 0;
+    if (next == g_paused) {
+        return;
+    }
+    g_paused = next;
+    if (!g_paused) {
+        game_time_reset();
+    }
+}
+
+int game_is_paused(void)
+{
+    return g_paused;
 }
 
 void game_set_script_update_fn(GameScriptUpdateFn fn)
@@ -69,7 +111,7 @@ void game_update(float dt_override)
     int n = 0;
     int i;
     GameEntity* all;
-    if (!g_inited || !g_enabled) {
+    if (!g_inited || !g_enabled || g_paused) {
         return;
     }
     game_perf_begin_update();

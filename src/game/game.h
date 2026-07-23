@@ -140,6 +140,8 @@ void game_set_trigger_fn(GameTriggerFn fn);
 
 void game_set_script_update_fn(GameScriptUpdateFn fn);
 void game_set_enabled(int on);
+void game_set_paused(int on);
+int game_is_paused(void);
 
 /* Animation */
 void game_anim_update(GameEntity* e, float dt);

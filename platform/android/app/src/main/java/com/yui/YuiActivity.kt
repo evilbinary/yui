@@ -12,6 +12,16 @@ class YuiActivity : AppCompatActivity() {
         setContentView(yuiView)
     }
 
+    override fun onPause() {
+        yuiView.setAppFocused(false)
+        super.onPause()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        yuiView.setAppFocused(true)
+    }
+
     override fun onDestroy() {
         yuiView.shutdown()
         super.onDestroy()

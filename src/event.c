@@ -3,6 +3,7 @@
 #include "backend.h"
 #include "popup_manager.h"
 #include "component_registry.h"
+#include "input/state.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
@@ -21,6 +22,8 @@ static PointerEventListener g_pointer_listeners[MAX_DEVICE_LISTENERS];
 static int g_pointer_listener_count = 0;
 static KeyEventListener g_key_listeners[MAX_DEVICE_LISTENERS];
 static int g_key_listener_count = 0;
+static WindowEventListener g_window_listeners[MAX_DEVICE_LISTENERS];
+static int g_window_listener_count = 0;
 
 void pointer_gesture_mark_scrolled(void) {
     pointer_gesture_scrolled = 1;
@@ -132,6 +135,70 @@ int unregister_key_event_listener(KeyEventListener listener)
         }
     }
     return -1;
+}
+
+static void notify_window_listeners(const WindowEvent* event)
+{
+    int i;
+    if (!event) {
+        return;
+    }
+    for (i = 0; i < g_window_listener_count; i++) {
+        if (g_window_listeners[i]) {
+            g_window_listeners[i](event);
+        }
+    }
+}
+
+int register_window_event_listener(WindowEventListener listener)
+{
+    int i;
+    if (!listener) {
+        return -1;
+    }
+    for (i = 0; i < g_window_listener_count; i++) {
+        if (g_window_listeners[i] == listener) {
+            return 0;
+        }
+    }
+    if (g_window_listener_count >= MAX_DEVICE_LISTENERS) {
+        fprintf(stderr, "error: window event listeners full\n");
+        return -1;
+    }
+    g_window_listeners[g_window_listener_count++] = listener;
+    return 0;
+}
+
+int unregister_window_event_listener(WindowEventListener listener)
+{
+    int i;
+    int j;
+    if (!listener) {
+        return -1;
+    }
+    for (i = 0; i < g_window_listener_count; i++) {
+        if (g_window_listeners[i] == listener) {
+            for (j = i; j < g_window_listener_count - 1; j++) {
+                g_window_listeners[j] = g_window_listeners[j + 1];
+            }
+            g_window_listener_count--;
+            g_window_listeners[g_window_listener_count] = NULL;
+            return 0;
+        }
+    }
+    return -1;
+}
+
+void handle_window_event(Layer* root, const WindowEvent* event)
+{
+    (void)root;
+    if (!event) {
+        return;
+    }
+    notify_window_listeners(event);
+    if (event->type == WINDOW_FOCUS_LOST || event->type == WINDOW_MINIMIZED) {
+        input_state_release_all_keys();
+    }
 }
 
 static void handler_virtical_scroll_event(Layer* layer, int scroll_delta);

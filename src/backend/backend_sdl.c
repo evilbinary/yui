@@ -785,6 +785,91 @@ static void backend_handle_window_resize(Layer* root) {
     resize_callback(root, w, h);
 }
 
+#ifdef YUI_WIN32_NATIVE
+static void apply_titlebar_dark_mode(HWND hwnd);
+#endif
+
+static void backend_refresh_window_chrome(void) {
+#ifdef YUI_WIN32_NATIVE
+    if (!window) return;
+    {
+        SDL_SysWMinfo wmInfo;
+        SDL_VERSION(&wmInfo.version);
+        if (SDL_GetWindowWMInfo(window, &wmInfo)) {
+            apply_titlebar_dark_mode(wmInfo.info.win.window);
+        }
+    }
+#endif
+}
+
+/* SDL_WINDOWEVENT → WindowEvent；未识别子事件返回 0 */
+static int sdl_window_event_to_yui(const SDL_Event* event, WindowEvent* out) {
+    int w = 0, h = 0, x = 0, y = 0;
+    if (!event || !out || event->type != SDL_WINDOWEVENT) {
+        return 0;
+    }
+    memset(out, 0, sizeof(*out));
+    if (window) {
+        SDL_GetWindowSize(window, &w, &h);
+        SDL_GetWindowPosition(window, &x, &y);
+    }
+    out->width = w;
+    out->height = h;
+    out->x = x;
+    out->y = y;
+    switch (event->window.event) {
+    case SDL_WINDOWEVENT_RESIZED:
+        out->type = WINDOW_RESIZED;
+        out->width = event->window.data1;
+        out->height = event->window.data2;
+        break;
+    case SDL_WINDOWEVENT_FOCUS_GAINED:
+        out->type = WINDOW_FOCUS_GAINED;
+        break;
+    case SDL_WINDOWEVENT_FOCUS_LOST:
+        out->type = WINDOW_FOCUS_LOST;
+        break;
+    case SDL_WINDOWEVENT_MINIMIZED:
+        out->type = WINDOW_MINIMIZED;
+        break;
+    case SDL_WINDOWEVENT_RESTORED:
+    case SDL_WINDOWEVENT_MAXIMIZED:
+        out->type = WINDOW_RESTORED;
+        break;
+    case SDL_WINDOWEVENT_EXPOSED:
+        out->type = WINDOW_EXPOSED;
+        break;
+    case SDL_WINDOWEVENT_MOVED:
+        out->type = WINDOW_MOVED;
+        out->x = event->window.data1;
+        out->y = event->window.data2;
+        break;
+    default:
+        return 0;
+    }
+    return 1;
+}
+
+static void sdl_handle_window_event(Layer* root, const SDL_Event* event) {
+    WindowEvent we;
+    if (!sdl_window_event_to_yui(event, &we)) {
+        return;
+    }
+    handle_window_event(root, &we);
+    switch (we.type) {
+    case WINDOW_RESIZED:
+        backend_handle_window_resize(root);
+        backend_refresh_window_chrome();
+        break;
+    case WINDOW_EXPOSED:
+    case WINDOW_MOVED:
+        backend_refresh_window_chrome();
+        break;
+    default:
+        break;
+    }
+}
+
 #ifdef __EMSCRIPTEN__
 void backend_main_loop(void) {
     if (!g_ui_root || !g_running) {
@@ -1579,10 +1664,8 @@ int pointInLayer(SDL_Point* point, Layer* layer) {
 
 void handle_event(Layer* root, SDL_Event* event) {
     if (event->type == SDL_WINDOWEVENT) {
-        if (event->window.event == SDL_WINDOWEVENT_FOCUS_LOST ||
-            event->window.event == SDL_WINDOWEVENT_MINIMIZED) {
-            input_state_release_all_keys();
-        }
+        sdl_handle_window_event(root, event);
+        return;
     }
 
     // 处理键盘事件
@@ -1693,9 +1776,6 @@ void handle_event(Layer* root, SDL_Event* event) {
         pe.delta_x = event->wheel.x;
         pe.delta_y = -event->wheel.y;
         handle_pointer_event(root, &pe);
-    }
-    else if (event->type == SDL_WINDOWEVENT && event->window.event == SDL_WINDOWEVENT_RESIZED) {
-        backend_handle_window_resize(root);
     }
     // 触摸开始事件
     else if (event->type == SDL_FINGERDOWN) {
@@ -1914,25 +1994,6 @@ void backend_run(Layer* ui_root){
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) running = 0;
             handle_event(ui_root, &event);
-
-#ifdef YUI_WIN32_NATIVE
-            // 窗口移动/大小改变后重新应用标题栏暗色
-            if (event.type == SDL_WINDOWEVENT) {
-                switch (event.window.event) {
-                case SDL_WINDOWEVENT_MOVED:
-                case SDL_WINDOWEVENT_RESIZED:
-                case SDL_WINDOWEVENT_EXPOSED:
-                    {
-                        SDL_SysWMinfo wmInfo;
-                        SDL_VERSION(&wmInfo.version);
-                        if (SDL_GetWindowWMInfo(window, &wmInfo)) {
-                            apply_titlebar_dark_mode(wmInfo.info.win.window);
-                        }
-                    }
-                    break;
-                }
-            }
-#endif
         }
 
         // 调用所有注册的更新回调

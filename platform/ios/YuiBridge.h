@@ -12,6 +12,7 @@ NS_ASSUME_NONNULL_BEGIN
               density:(float)density;
 
 + (void)resizeWithWidth:(int)width height:(int)height;
++ (void)setAppFocused:(BOOL)focused;
 + (void)onTouchWithPointerId:(int)pointerId x:(float)x y:(float)y phase:(int)phase;
 + (void)tick;
 + (void)shutdown;

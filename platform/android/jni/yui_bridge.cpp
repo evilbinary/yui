@@ -247,6 +247,15 @@ Java_com_yui_YuiView_nativeResize(JNIEnv* env, jobject thiz, jint width, jint he
 }
 
 extern "C" JNIEXPORT void JNICALL
+Java_com_yui_YuiView_nativeSetAppFocused(JNIEnv* env, jobject thiz, jint focused) {
+    (void)env;
+    (void)thiz;
+    if (g_initialized) {
+        yui_set_app_focused(focused ? 1 : 0);
+    }
+}
+
+extern "C" JNIEXPORT void JNICALL
 Java_com_yui_YuiView_nativeOnTouch(JNIEnv* env, jobject thiz, jint pointerId,
                                    jfloat x, jfloat y, jint phase) {
     (void)env;

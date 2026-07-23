@@ -64,6 +64,7 @@ class YuiView(context: Context) : SurfaceView(context), SurfaceHolder.Callback, 
         val frame = holder.surfaceFrame
         nativeResize(frame.width(), frame.height())
         running = true
+        nativeSetAppFocused(1)
         Choreographer.getInstance().postFrameCallback(this)
     }
 
@@ -72,6 +73,9 @@ class YuiView(context: Context) : SurfaceView(context), SurfaceHolder.Callback, 
     }
 
     override fun surfaceDestroyed(holder: SurfaceHolder) {
+        if (running) {
+            nativeSetAppFocused(0)
+        }
         running = false
         Choreographer.getInstance().removeFrameCallback(this)
         nativeShutdown()
@@ -88,6 +92,12 @@ class YuiView(context: Context) : SurfaceView(context), SurfaceHolder.Callback, 
         running = false
         Choreographer.getInstance().removeFrameCallback(this)
         nativeShutdown()
+    }
+
+    fun setAppFocused(focused: Boolean) {
+        if (running) {
+            nativeSetAppFocused(if (focused) 1 else 0)
+        }
     }
 
     private fun prepareAssets() {
@@ -122,6 +132,7 @@ class YuiView(context: Context) : SurfaceView(context), SurfaceHolder.Callback, 
         density: Float
     )
     private external fun nativeResize(width: Int, height: Int)
+    private external fun nativeSetAppFocused(focused: Int)
     private external fun nativeOnTouch(pointerId: Int, x: Float, y: Float, phase: Int)
     private external fun nativeTick()
     private external fun nativeShutdown()

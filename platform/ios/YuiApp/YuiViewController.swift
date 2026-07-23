@@ -25,6 +25,19 @@ class YuiViewController: UIViewController {
 
         let tap = UITapGestureRecognizer(target: self, action: #selector(handleTap(_:)))
         metalView.addGestureRecognizer(tap)
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(appWillResignActive),
+            name: UIApplication.willResignActiveNotification,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(appDidBecomeActive),
+            name: UIApplication.didBecomeActiveNotification,
+            object: nil
+        )
     }
 
     override func viewDidLayoutSubviews() {
@@ -42,7 +55,17 @@ class YuiViewController: UIViewController {
 
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
+        YuiBridge.setAppFocused(false)
         pause()
+    }
+
+    @objc private func appWillResignActive() {
+        YuiBridge.setAppFocused(false)
+    }
+
+    @objc private func appDidBecomeActive() {
+        guard running else { return }
+        YuiBridge.setAppFocused(true)
     }
 
     func pause() {
@@ -81,6 +104,7 @@ class YuiViewController: UIViewController {
         running = true
         displayLink = CADisplayLink(target: self, selector: #selector(onFrame))
         displayLink?.add(to: .main, forMode: .common)
+        YuiBridge.setAppFocused(true)
     }
 
     @objc private func onFrame() {
@@ -130,6 +154,7 @@ class YuiViewController: UIViewController {
     }
 
     deinit {
+        NotificationCenter.default.removeObserver(self)
         pause()
         YuiBridge.shutdown()
     }

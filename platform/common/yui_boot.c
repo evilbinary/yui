@@ -9,6 +9,7 @@
 #include "backend.h"
 #include "layer.h"
 #include "layout.h"
+#include "event.h"
 #include "popup_manager.h"
 #include "render.h"
 #include "yaml_cjson.h"
@@ -269,15 +270,28 @@ int yui_init(const char* json_path, const char* assets_dir) {
 
 void yui_resize(int width, int height) {
     float d = yui_density > 0.0f ? yui_density : 1.0f;
+    WindowEvent we;
 
     backend_set_windowsize(width, height);
-    // if (g_root) {
-    //     g_root->rect.x = 0;
-    //     g_root->rect.y = 0;
-    //     g_root->rect.w = (int)(width / d);
-    //     g_root->rect.h = (int)(height / d);
-    //     layout_layer(g_root);
-    // }
+    if (!g_root) {
+        return;
+    }
+    memset(&we, 0, sizeof(we));
+    we.type = WINDOW_RESIZED;
+    we.width = (int)(width / d);
+    we.height = (int)(height / d);
+    handle_window_event(g_root, &we);
+}
+
+void yui_set_app_focused(int focused) {
+    WindowEvent we;
+    if (!g_root) {
+        return;
+    }
+    memset(&we, 0, sizeof(we));
+    we.type = focused ? WINDOW_FOCUS_GAINED : WINDOW_FOCUS_LOST;
+    backend_get_windowsize(&we.width, &we.height);
+    handle_window_event(g_root, &we);
 }
 
 void yui_tick(void) {

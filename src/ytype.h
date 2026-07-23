@@ -243,6 +243,7 @@ typedef struct PointerEvent {
 
 typedef struct Layer Layer;
 typedef struct KeyEvent KeyEvent;
+typedef struct WindowEvent WindowEvent;
 
 #ifdef YUI_ANIMATION
 #include "animate.h"
@@ -444,6 +445,25 @@ typedef struct ResizeEvent {
     float scale_x;
     float scale_y;
 } ResizeEvent;
+
+/* OS 窗口生命周期（与 Layer ResizeEvent 分离） */
+typedef enum {
+    WINDOW_RESIZED = 0,
+    WINDOW_FOCUS_GAINED,
+    WINDOW_FOCUS_LOST,
+    WINDOW_MINIMIZED,
+    WINDOW_RESTORED,
+    WINDOW_EXPOSED,
+    WINDOW_MOVED
+} WindowEventType;
+
+typedef struct WindowEvent {
+    WindowEventType type;
+    int width;
+    int height;
+    int x;
+    int y;
+} WindowEvent;
 
 #define MAX_EVENT 512
 
