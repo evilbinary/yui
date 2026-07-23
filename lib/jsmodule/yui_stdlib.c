@@ -22,6 +22,7 @@
 
 #include "theme_manager.h"
 #include "layer.h"
+#include "layout.h"
 #include "layer_lifecycle.h"
 #include "cJSON.h"
 
@@ -504,6 +505,7 @@ static const JSPropDef js_yui[] = {
     JS_CFUNC_DEF("resizeRoot", 2, js_resize_root ),
     JS_CFUNC_DEF("call", 2, js_yui_call ),
     JS_CFUNC_DEF("update", 1, js_yui_update ),
+    JS_CFUNC_DEF("dump", 1, js_yui_dump ),
     JS_CFUNC_DEF("themeLoad", 1, js_yui_themeLoad ),
     JS_CFUNC_DEF("themeSetCurrent", 1, js_yui_themeSetCurrent ),
     JS_CFUNC_DEF("themeUnload", 1, js_yui_themeUnload ),
@@ -571,6 +573,102 @@ return JS_NewCFunctionParams(ctx, JS_CFUNCTION_rectangle_closure_test, argv[0]);
 #ifndef STDLIB_BUILD
 extern int yui_update(Layer* root, const char* update_json);
 #endif
+
+static int js_yui_dump_bool(JSContext *ctx, JSValue val)
+{
+    if (JS_IsBool(val)) {
+        return JS_VALUE_GET_SPECIAL_VALUE(val) != 0;
+    }
+    if (JS_IsInt(val)) {
+        return JS_VALUE_GET_INT(val) != 0;
+    }
+    return !JS_IsNull(val) && !JS_IsUndefined(val);
+}
+
+static int js_yui_dump_parse_flags(JSContext *ctx, JSValue opts)
+{
+    int flags = 0;
+    JSValue v;
+
+    if (!JS_IsObject(ctx, opts)) {
+        return 0;
+    }
+
+    v = JS_GetPropertyStr(ctx, opts, "style");
+    if (!JS_IsUndefined(v) && !JS_IsNull(v) && js_yui_dump_bool(ctx, v)) {
+        flags |= LAYER_JSON_STYLE;
+    }
+
+    v = JS_GetPropertyStr(ctx, opts, "events");
+    if (!JS_IsUndefined(v) && !JS_IsNull(v) && js_yui_dump_bool(ctx, v)) {
+        flags |= LAYER_JSON_EVENTS;
+    }
+
+    return flags;
+}
+
+/* YUI.dump(id?, opts?) — dump layer tree as JSON string (also prints to stdout) */
+static JSValue js_yui_dump(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+{
+#ifdef STDLIB_BUILD
+    (void)ctx; (void)this_val; (void)argc; (void)argv;
+    return JS_UNDEFINED;
+#else
+    const char* layer_id = NULL;
+    JSCStringBuf buf;
+    int flags = 0;
+    int argi = 0;
+    Layer* layer;
+    cJSON* json;
+    char* printed;
+    JSValue result;
+
+    (void)this_val;
+
+    if (argc >= 1 && JS_IsString(ctx, argv[0])) {
+        layer_id = JS_ToCString(ctx, argv[0], &buf);
+        argi = 1;
+    } else if (argc >= 1 && JS_IsObject(ctx, argv[0])) {
+        flags = js_yui_dump_parse_flags(ctx, argv[0]);
+        argi = 1;
+    }
+
+    if (argi < argc && JS_IsObject(ctx, argv[argi])) {
+        flags |= js_yui_dump_parse_flags(ctx, argv[argi]);
+    }
+
+    if (!g_layer_root) {
+        return JS_NULL;
+    }
+
+    if (layer_id && layer_id[0]) {
+        layer = find_layer_by_id(g_layer_root, layer_id);
+        if (!layer) {
+            printf("YUI.dump: layer '%s' not found\n", layer_id);
+            return JS_NULL;
+        }
+    } else {
+        layer = g_layer_root;
+    }
+
+    json = layer_to_json(layer, flags);
+    if (!json) {
+        return JS_NULL;
+    }
+
+    printed = cJSON_Print(json);
+    cJSON_Delete(json);
+    if (!printed) {
+        return JS_NULL;
+    }
+
+    puts(printed);
+    fflush(stdout);
+    result = JS_NewString(ctx, printed);
+    free(printed);
+    return result;
+#endif
+}
 
 // YUI.update() - JSON 增量更新
 static JSValue js_yui_update(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)

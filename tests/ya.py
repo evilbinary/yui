@@ -142,3 +142,29 @@ target("test_text_simple")
     add_files("test_text_simple.c"),
     add_run()
 )
+
+target("test_layer_json_dump")
+(
+    add_deps("cjson"),
+    add_rules("mode.debug", "mode.release"),
+    set_kind("binary"),
+    add_flags(),
+    add_files("../src/animate.c"),
+    add_files("../src/backend/backend_sdl.c"),
+    add_files("../src/event.c"),
+    add_files("../src/layer.c"),
+    add_files("../src/layer_lifecycle.c"),
+    add_files("../src/layer_update.c"),
+    add_files("../src/layer_properties.c"),
+    add_files("../src/layout.c"),
+    add_files("../src/log.c"),
+    add_files("../src/render.c"),
+    add_files("../src/util.c"),
+    add_files("../src/popup_manager.c"),
+    add_files("../src/component_registry.c"),
+    add_files("../src/components/*.c"),
+    add_files("../src/theme.c"),
+    add_files("../src/theme_manager.c"),
+    add_files("test_layer_json_dump.c"),
+    add_run()
+)

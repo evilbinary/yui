@@ -635,6 +635,95 @@ static JSValue js_set_event(JSContext *ctx, JSValueConst this_val, int argc, JSV
     return JS_NewBool(ctx, result == 0 ? 1 : 0);
 }
 
+static int js_dump_bool(JSContext* ctx, JSValueConst val)
+{
+    return JS_ToBool(ctx, val);
+}
+
+static int js_dump_parse_flags(JSContext* ctx, JSValueConst opts)
+{
+    int flags = 0;
+    JSValue v;
+
+    if (!JS_IsObject(opts)) {
+        return 0;
+    }
+
+    v = JS_GetPropertyStr(ctx, opts, "style");
+    if (!JS_IsUndefined(v) && !JS_IsNull(v) && js_dump_bool(ctx, v)) {
+        flags |= LAYER_JSON_STYLE;
+    }
+    JS_FreeValue(ctx, v);
+
+    v = JS_GetPropertyStr(ctx, opts, "events");
+    if (!JS_IsUndefined(v) && !JS_IsNull(v) && js_dump_bool(ctx, v)) {
+        flags |= LAYER_JSON_EVENTS;
+    }
+    JS_FreeValue(ctx, v);
+
+    return flags;
+}
+
+/* YUI.dump(id?, opts?) — dump layer tree as JSON string (also prints to stdout) */
+static JSValue js_dump(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv)
+{
+    const char* layer_id = NULL;
+    int flags = 0;
+    int argi = 0;
+    Layer* layer;
+    cJSON* json;
+    char* printed;
+    JSValue result;
+
+    (void)this_val;
+
+    if (argc >= 1 && JS_IsString(argv[0])) {
+        layer_id = JS_ToCString(ctx, argv[0]);
+        argi = 1;
+    } else if (argc >= 1 && JS_IsObject(argv[0])) {
+        flags = js_dump_parse_flags(ctx, argv[0]);
+        argi = 1;
+    }
+
+    if (argi < argc && JS_IsObject(argv[argi])) {
+        flags |= js_dump_parse_flags(ctx, argv[argi]);
+    }
+
+    if (!g_layer_root) {
+        if (layer_id) JS_FreeCString(ctx, layer_id);
+        return JS_NULL;
+    }
+
+    if (layer_id && layer_id[0]) {
+        layer = find_layer_by_id(g_layer_root, layer_id);
+        if (!layer) {
+            printf("YUI.dump: layer '%s' not found\n", layer_id);
+            JS_FreeCString(ctx, layer_id);
+            return JS_NULL;
+        }
+    } else {
+        layer = g_layer_root;
+    }
+
+    json = layer_to_json(layer, flags);
+    if (layer_id) JS_FreeCString(ctx, layer_id);
+    if (!json) {
+        return JS_NULL;
+    }
+
+    printed = cJSON_Print(json);
+    cJSON_Delete(json);
+    if (!printed) {
+        return JS_NULL;
+    }
+
+    puts(printed);
+    fflush(stdout);
+    result = JS_NewString(ctx, printed);
+    free(printed);
+    return result;
+}
+
 /* ====================== 初始化和清理 ====================== */
 
 // 初始化 JS 引擎（使用 QuickJS）
@@ -1226,6 +1315,7 @@ void js_module_register_api(void)
     JS_SetPropertyStr(g_js_ctx, yui_obj, "show", JS_NewCFunction(g_js_ctx, js_show, "show", 1));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "renderFromJson", JS_NewCFunction(g_js_ctx, js_render_from_json, "renderFromJson", 3));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "update", JS_NewCFunction(g_js_ctx, js_update, "update", 1));
+    JS_SetPropertyStr(g_js_ctx, yui_obj, "dump", JS_NewCFunction(g_js_ctx, js_dump, "dump", 1));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "log", JS_NewCFunction(g_js_ctx, js_log, "log", 1));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "themeLoad", JS_NewCFunction(g_js_ctx, js_theme_load, "themeLoad", 1));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "themeSetCurrent", JS_NewCFunction(g_js_ctx, js_theme_set_current, "themeSetCurrent", 1));

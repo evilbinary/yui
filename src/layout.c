@@ -1,6 +1,7 @@
 #include "layout.h"
 #include "util.h"
 #include "layer_update.h"
+#include "component_registry.h"
 
 #define printf
 
@@ -893,6 +894,216 @@ void layer_dump(const Layer* layer, int depth)
     if (layer->sub) {
         layer_dump(layer->sub, depth + 1);
     }
+}
+
+static cJSON* layer_json_color(Color color)
+{
+    char buf[20];
+    snprintf(buf, sizeof(buf), "#%02x%02x%02x%02x",
+             color.r, color.g, color.b, color.a);
+    return cJSON_CreateString(buf);
+}
+
+static cJSON* layer_json_xywh(int x, int y, int w, int h)
+{
+    cJSON* obj = cJSON_CreateObject();
+    if (!obj) {
+        return NULL;
+    }
+    cJSON_AddNumberToObject(obj, "x", x);
+    cJSON_AddNumberToObject(obj, "y", y);
+    cJSON_AddNumberToObject(obj, "w", w);
+    cJSON_AddNumberToObject(obj, "h", h);
+    return obj;
+}
+
+static cJSON* layer_json_wh(int w, int h)
+{
+    cJSON* obj = cJSON_CreateObject();
+    if (!obj) {
+        return NULL;
+    }
+    cJSON_AddNumberToObject(obj, "w", w);
+    cJSON_AddNumberToObject(obj, "h", h);
+    return obj;
+}
+
+static void layer_json_add_event(cJSON* events, const char* key, const char* name)
+{
+    char buf[MAX_PATH + 2];
+
+    if (!events || !key || !name || !name[0]) {
+        return;
+    }
+    if (name[0] == '@') {
+        cJSON_AddStringToObject(events, key, name);
+        return;
+    }
+    snprintf(buf, sizeof(buf), "@%s", name);
+    cJSON_AddStringToObject(events, key, buf);
+}
+
+static cJSON* layer_json_style(const Layer* layer)
+{
+    cJSON* style;
+    cJSON* padding;
+    int i;
+
+    if (!layer) {
+        return cJSON_CreateNull();
+    }
+
+    style = cJSON_CreateObject();
+    if (!style) {
+        return NULL;
+    }
+
+    cJSON_AddItemToObject(style, "color", layer_json_color(layer->color));
+    cJSON_AddItemToObject(style, "bgColor", layer_json_color(layer->bg_color));
+    cJSON_AddNumberToObject(style, "borderRadius", layer->radius);
+
+    padding = cJSON_CreateArray();
+    if (padding) {
+        for (i = 0; i < 4; i++) {
+            cJSON_AddItemToArray(padding, cJSON_CreateNumber(layer->padding[i]));
+        }
+        cJSON_AddItemToObject(style, "padding", padding);
+    }
+
+    if (layer->font) {
+        if (layer->font->path[0]) {
+            cJSON_AddStringToObject(style, "font", layer->font->path);
+        }
+        cJSON_AddNumberToObject(style, "fontSize", layer->font->size);
+        if (layer->font->weight[0]) {
+            cJSON_AddStringToObject(style, "fontWeight", layer->font->weight);
+        }
+    }
+
+    if (layer->backdrop_filter) {
+        cJSON_AddBoolToObject(style, "backdropFilter", 1);
+        cJSON_AddNumberToObject(style, "blurRadius", layer->blur_radius);
+        cJSON_AddNumberToObject(style, "saturation", layer->saturation);
+        cJSON_AddNumberToObject(style, "brightness", layer->brightness);
+    }
+
+    return style;
+}
+
+static cJSON* layer_json_events(const Layer* layer)
+{
+    cJSON* events;
+
+    if (!layer) {
+        return cJSON_CreateNull();
+    }
+
+    events = cJSON_CreateObject();
+    if (!events) {
+        return NULL;
+    }
+
+    if (layer->event) {
+        layer_json_add_event(events, "onClick", layer->event->click_name);
+        layer_json_add_event(events, "onScroll", layer->event->scroll_name);
+        layer_json_add_event(events, "onTouch", layer->event->touch_name);
+        layer_json_add_event(events, "onResize", layer->event->resize_name);
+    }
+
+    layer_json_add_event(events, "onLoad", layer->lifecycle_on_load);
+    layer_json_add_event(events, "onShow", layer->lifecycle_on_show);
+    layer_json_add_event(events, "onHide", layer->lifecycle_on_hide);
+    layer_json_add_event(events, "onUnload", layer->lifecycle_on_unload);
+
+    if (events->child == NULL) {
+        cJSON_Delete(events);
+        return cJSON_CreateNull();
+    }
+
+    return events;
+}
+
+cJSON* layer_to_json(const Layer* layer, int flags)
+{
+    cJSON* obj;
+    cJSON* children;
+    int i;
+
+    if (!layer) {
+        return cJSON_CreateNull();
+    }
+
+    obj = cJSON_CreateObject();
+    if (!obj) {
+        return NULL;
+    }
+
+    cJSON_AddStringToObject(obj, "id", layer->id[0] ? layer->id : "");
+    cJSON_AddStringToObject(obj, "type", yui_type_name(layer->type));
+    cJSON_AddItemToObject(obj, "rect",
+                          layer_json_xywh(layer->rect.x, layer->rect.y,
+                                          layer->rect.w, layer->rect.h));
+    cJSON_AddItemToObject(obj, "fixed",
+                          layer_json_wh(layer->fixed_width, layer->fixed_height));
+    cJSON_AddNumberToObject(obj, "visible", layer->visible);
+    cJSON_AddNumberToObject(obj, "scroll", layer->scroll_offset);
+
+    if (flags & LAYER_JSON_STYLE) {
+        cJSON_AddItemToObject(obj, "style", layer_json_style(layer));
+    }
+    if (flags & LAYER_JSON_EVENTS) {
+        cJSON_AddItemToObject(obj, "events", layer_json_events(layer));
+    }
+
+    children = cJSON_CreateArray();
+    if (!children) {
+        cJSON_Delete(obj);
+        return NULL;
+    }
+    if (layer->children) {
+        for (i = 0; i < layer->child_count; i++) {
+            if (layer->children[i]) {
+                cJSON_AddItemToArray(children,
+                                     layer_to_json(layer->children[i], flags));
+            }
+        }
+    }
+    cJSON_AddItemToObject(obj, "children", children);
+
+    if (layer->sub) {
+        cJSON_AddItemToObject(obj, "sub", layer_to_json(layer->sub, flags));
+    } else {
+        cJSON_AddItemToObject(obj, "sub", cJSON_CreateNull());
+    }
+
+    return obj;
+}
+
+void layer_dump_json(const Layer* layer, FILE* out, int flags)
+{
+    cJSON* json;
+    char* printed;
+
+    if (!out) {
+        out = stdout;
+    }
+
+    json = layer_to_json(layer, flags);
+    if (!json) {
+        fputs("null\n", out);
+        return;
+    }
+
+    printed = cJSON_Print(json);
+    cJSON_Delete(json);
+    if (!printed) {
+        fputs("null\n", out);
+        return;
+    }
+
+    fputs(printed, out);
+    fputc('\n', out);
+    free(printed);
 }
 
 int layout_scroll_vertical(Layer* layer, int delta_y) {

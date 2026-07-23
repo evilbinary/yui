@@ -1,0 +1,63 @@
+{
+  "id": "dump_root",
+  "type": "View",
+  "size": [640, 400],
+  "js": "test-layer-dump.js",
+  "style": {
+    "bgColor": "#1e1e22",
+    "borderRadius": 8
+  },
+  "events": {
+    "onLoad": "@onDumpPageLoad"
+  },
+  "layout": {
+    "type": "vertical",
+    "spacing": 12,
+    "padding": [16, 16, 16, 16]
+  },
+  "children": [
+    {
+      "id": "dump_title",
+      "type": "Label",
+      "text": "Layer JSON Dump",
+      "size": [608, 36],
+      "style": {
+        "color": "#ffffff",
+        "fontSize": 18,
+        "bgColor": "#2d6cdf",
+        "borderRadius": 6
+      }
+    },
+    {
+      "id": "dump_status",
+      "type": "Label",
+      "text": "ready",
+      "size": [608, 28],
+      "style": {
+        "color": "#cccccc",
+        "fontSize": 14
+      }
+    },
+    {
+      "id": "btn_dump_root",
+      "type": "Button",
+      "text": "YUI.dump()",
+      "size": [200, 40],
+      "events": { "onClick": "@onDumpRoot" }
+    },
+    {
+      "id": "btn_dump_title",
+      "type": "Button",
+      "text": "YUI.dump('dump_title')",
+      "size": [260, 40],
+      "events": { "onClick": "@onDumpTitle" }
+    },
+    {
+      "id": "btn_dump_full",
+      "type": "Button",
+      "text": "dump + style/events",
+      "size": [240, 40],
+      "events": { "onClick": "@onDumpFull" }
+    }
+  ]
+}
