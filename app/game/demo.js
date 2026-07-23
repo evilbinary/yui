@@ -10,6 +10,8 @@ var gCurrentLevel = 0;
 var gLevelClearDelay = 0;
 var gPendingLevel = -1;
 var gVictory = false;
+var gFallRestart = false;
+var FALL_DEATH_Y = 720;
 var gEnemyRoster = [];
 var gEnemyHp = {};
 var gEnemyState = {};
@@ -115,6 +117,7 @@ function loadLevel(index) {
   lvl = LEVELS[index];
   gCurrentLevel = index;
   gLevelClearDelay = 0;
+  gFallRestart = false;
   gEnemyRoster = lvl.enemies.slice();
   gEnemyState = {};
   ENEMY_CFG = LEVEL_ENEMY_CFG[index] || {};
@@ -123,6 +126,21 @@ function loadLevel(index) {
   setScore(gScore);
   updateLevelHud();
   print("Loaded " + lvl.title);
+}
+
+function onPlayerFell(entity) {
+  if (gFallRestart || gVictory || gLevelClearDelay > 0 || gPendingLevel >= 0) {
+    return;
+  }
+  gFallRestart = true;
+  entity.vx = 0;
+  entity.vy = 0;
+  /* Park above the death line so a stale apply cannot re-trigger fall. */
+  entity.y = FALL_DEATH_Y - 80;
+  burst(entity.x + entity.w * 0.5, entity.y + entity.h * 0.5, "#adb5bd");
+  sfx("app/game/assets/hit.wav");
+  setHudText("hudTitle", "Fell! Retrying level...");
+  gPendingLevel = gCurrentLevel;
 }
 
 function onLevelCleared() {
@@ -280,6 +298,11 @@ function playerUpdate(entity, dt) {
     if (gLevelClearDelay <= 0 && gCurrentLevel + 1 < LEVELS.length) {
       gPendingLevel = gCurrentLevel + 1;
     }
+    return;
+  }
+
+  if (entity.y > FALL_DEATH_Y) {
+    onPlayerFell(entity);
     return;
   }
 

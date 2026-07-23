@@ -83,12 +83,11 @@ static void js_game_script_update(GameEntity* entity, float dt)
     JSValue ent;
     JSValue args[2];
     JSValue ret;
-    char id_snap[GAME_ID_LEN];
+    int scene_gen;
     if (!g_game_ctx || !entity || !entity->script[0]) {
         return;
     }
-    strncpy(id_snap, entity->id, GAME_ID_LEN - 1);
-    id_snap[GAME_ID_LEN - 1] = '\0';
+    scene_gen = game_scene_generation();
     global = JS_GetGlobalObject(g_game_ctx);
     fn = JS_GetPropertyStr(g_game_ctx, global, entity->script);
     if (!JS_IsFunction(g_game_ctx, fn)) {
@@ -103,8 +102,8 @@ static void js_game_script_update(GameEntity* entity, float dt)
     if (JS_IsException(ret)) {
         JSValue exc = JS_GetException(g_game_ctx);
         JS_FreeValue(g_game_ctx, exc);
-    } else if (entity->alive && strcmp(entity->id, id_snap) == 0) {
-        /* Skip apply if script reloaded the scene and this slot was reused. */
+    } else if (game_scene_generation() == scene_gen && entity->alive) {
+        /* Scene reload mid-script: do not apply stale JS state onto reused slots. */
         game_entity_apply_js(g_game_ctx, entity, ent);
     }
     JS_FreeValue(g_game_ctx, ret);
