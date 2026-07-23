@@ -113,6 +113,17 @@ void game_move_and_collide(GameEntity* e, float dt)
             continue;
         }
         if (game_entity_vs_solid(e, &all[i], &nx, &ny)) {
+            /* Triggers (bullets): die on solid hit — do not MTV-slide along walls. */
+            if (e->trigger) {
+                e->vx = 0;
+                e->vy = 0;
+                if (e->pooled || e->prefab[0]) {
+                    game_pool_release(e);
+                } else {
+                    game_destroy(e);
+                }
+                return;
+            }
             e->x += nx;
             e->y += ny;
             if (ny < 0 && e->vy > 0) {

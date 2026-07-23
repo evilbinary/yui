@@ -174,6 +174,17 @@ void game_tilemap_collide(GameEntity* e)
             if (!game_aabb_overlap(ax, ay, aw, ah, bx, by, bw, bh)) {
                 continue;
             }
+            /* Triggers (bullets): die on solid tiles instead of sliding. */
+            if (e->trigger) {
+                e->vx = 0;
+                e->vy = 0;
+                if (e->pooled || e->prefab[0]) {
+                    game_pool_release(e);
+                } else {
+                    game_destroy(e);
+                }
+                return;
+            }
             overlap_x = (ax + aw * 0.5f < bx + bw * 0.5f)
                             ? (ax + aw) - bx
                             : (bx + bw) - ax;
