@@ -32,28 +32,130 @@ static int table_point_in_header(TableComponent* component, Layer* layer, int x,
 static int table_resize_column_at(TableComponent* component, Layer* layer, int x, int y);
 static char* table_json_value_to_string(cJSON* item);
 static void table_tooltip_schedule_show(TableComponent* component, Layer* layer);
+static int table_measure_text_width(Layer* layer, const char* text);
+
+#define TABLE_TOOLTIP_PAD 6
+#define TABLE_TOOLTIP_MAX_W 420
+
+static int table_tooltip_line_height(Layer* layer) {
+    int h = 16;
+    if (layer && layer->font && layer->font->size > 0) {
+        h = layer->font->size + 4;
+    }
+    return h > 14 ? h : 14;
+}
+
+/* 返回不超过 max_w 的最长 UTF-8 前缀字节数 */
+static int table_tooltip_fit_bytes(Layer* layer, const char* text, int max_w) {
+    int pos = 0;
+    int fit = 0;
+    int len;
+
+    if (!text || !text[0] || max_w <= 0) {
+        return 0;
+    }
+    len = (int)strlen(text);
+    if (table_measure_text_width(layer, text) <= max_w) {
+        return len;
+    }
+    while (pos < len) {
+        int clen = utf8_char_len_at(text + pos);
+        char buf[1024];
+        if (clen <= 0) {
+            clen = 1;
+        }
+        if (pos + clen >= (int)sizeof(buf)) {
+            break;
+        }
+        memcpy(buf, text, (size_t)(pos + clen));
+        buf[pos + clen] = '\0';
+        if (table_measure_text_width(layer, buf) > max_w) {
+            break;
+        }
+        pos += clen;
+        fit = pos;
+    }
+    if (fit <= 0) {
+        fit = utf8_char_len_at(text);
+        if (fit <= 0) {
+            fit = 1;
+        }
+    }
+    return fit;
+}
+
+static int table_tooltip_count_lines(Layer* layer, const char* text, int max_w) {
+    int lines = 0;
+    const char* p = text;
+    if (!p || !p[0]) {
+        return 0;
+    }
+    while (*p) {
+        int fit = table_tooltip_fit_bytes(layer, p, max_w);
+        if (fit <= 0) {
+            fit = 1;
+        }
+        p += fit;
+        lines++;
+    }
+    return lines > 0 ? lines : 1;
+}
 
 static void table_tooltip_layer_render(Layer* layer) {
-    if (!layer) return;
-
     Color bg = {50, 50, 60, 230};
     Color text_color = {220, 220, 220, 255};
+    int max_w;
+    int line_h;
+    int y;
+    const char* p;
+
+    if (!layer) {
+        return;
+    }
 
     backend_render_fill_rect(&layer->rect, bg);
 
-    Texture* tex = render_text(layer, layer->text, text_color);
-    if (!tex) return;
+    if (!layer->text || !layer->text[0]) {
+        return;
+    }
 
-    int tw = 0, th = 0;
-    backend_query_texture(tex, NULL, NULL, &tw, &th);
-    Rect text_rect = {
-        layer->rect.x + 6,
-        layer->rect.y + 4,
-        tw / yui_density,
-        th / yui_density
-    };
-    backend_render_text_copy(tex, NULL, &text_rect);
-    backend_render_text_destroy(tex);
+    max_w = layer->rect.w - TABLE_TOOLTIP_PAD * 2;
+    if (max_w < 8) {
+        max_w = 8;
+    }
+    line_h = table_tooltip_line_height(layer);
+    y = layer->rect.y + TABLE_TOOLTIP_PAD;
+    p = layer->text;
+
+    while (*p) {
+        char buf[1024];
+        int fit = table_tooltip_fit_bytes(layer, p, max_w);
+        Texture* tex;
+        if (fit <= 0) {
+            fit = 1;
+        }
+        if (fit >= (int)sizeof(buf)) {
+            fit = (int)sizeof(buf) - 1;
+        }
+        memcpy(buf, p, (size_t)fit);
+        buf[fit] = '\0';
+
+        tex = render_text(layer, buf, text_color);
+        if (tex) {
+            int tw = 0, th = 0;
+            Rect text_rect;
+            backend_query_texture(tex, NULL, NULL, &tw, &th);
+            text_rect.x = layer->rect.x + TABLE_TOOLTIP_PAD;
+            text_rect.y = y;
+            text_rect.w = tw / yui_density;
+            text_rect.h = th / yui_density;
+            backend_render_text_copy(tex, NULL, &text_rect);
+            backend_render_text_destroy(tex);
+        }
+
+        p += fit;
+        y += line_h;
+    }
 }
 
 static void table_hide_tooltip(TableComponent* component) {
@@ -147,31 +249,73 @@ static const char* table_get_tooltip_text(TableComponent* component, int row, in
 
 static void table_show_tooltip(TableComponent* component, Layer* layer,
                                const char* text, int mouse_x, int mouse_y) {
+    int tw;
+    int sw = 800, sh = 600;
+    int max_box_w;
+    int content_max;
+    int box_w;
+    int line_h;
+    int lines;
+    Layer* tl;
+
     if (!component || !layer || !text || !text[0] || component->tooltip_popup) return;
     if (!layer->font || !layer->font->default_font) return;
 
-    int tw = table_measure_text_width(layer, text);
+    tw = table_measure_text_width(layer, text);
     if (tw <= 0) return;
 
-    Layer* tl = calloc(1, sizeof(Layer));
+    tl = calloc(1, sizeof(Layer));
     if (!tl) return;
 
     tl->type = LABEL;
     tl->visible = VISIBLE;
     tl->font = layer->font;
 
-    int pad = 6;
-    int sw = 800, sh = 600;
     backend_get_windowsize(&sw, &sh);
+    max_box_w = sw - 24;
+    if (max_box_w > TABLE_TOOLTIP_MAX_W) {
+        max_box_w = TABLE_TOOLTIP_MAX_W;
+    }
+    if (max_box_w < 80) {
+        max_box_w = 80;
+    }
+    content_max = max_box_w - TABLE_TOOLTIP_PAD * 2;
+    if (content_max < 8) {
+        content_max = 8;
+    }
 
+    box_w = tw + TABLE_TOOLTIP_PAD * 2;
+    if (box_w > max_box_w) {
+        box_w = max_box_w;
+    }
+
+    line_h = table_tooltip_line_height(layer);
+    lines = table_tooltip_count_lines(layer, text, content_max);
+    if (lines < 1) {
+        lines = 1;
+    }
+
+    tl->rect.w = box_w;
+    tl->rect.h = lines * line_h + TABLE_TOOLTIP_PAD * 2;
+    if (tl->rect.h < 24) {
+        tl->rect.h = 24;
+    }
+
+    /* 贴边夹紧，避免长文本往左翻导致左边截断 */
     tl->rect.x = mouse_x + 12;
     tl->rect.y = mouse_y + 12;
-    tl->rect.w = tw + pad * 2;
-    tl->rect.h = layer->font->size + pad * 2;
-    if (tl->rect.h < 24) tl->rect.h = 24;
-
-    if (tl->rect.x + tl->rect.w > sw) tl->rect.x = mouse_x - tl->rect.w - 4;
-    if (tl->rect.y + tl->rect.h > sh) tl->rect.y = mouse_y - tl->rect.h - 4;
+    if (tl->rect.x + tl->rect.w > sw - 8) {
+        tl->rect.x = sw - 8 - tl->rect.w;
+    }
+    if (tl->rect.x < 8) {
+        tl->rect.x = 8;
+    }
+    if (tl->rect.y + tl->rect.h > sh - 8) {
+        tl->rect.y = sh - 8 - tl->rect.h;
+    }
+    if (tl->rect.y < 8) {
+        tl->rect.y = 8;
+    }
 
     tl->text = strdup(text);
     if (!tl->text) {
