@@ -276,18 +276,24 @@ void button_component_render(Layer* layer) {
     Color bg_color;
     int has_bg = 1;
     if (component->bg_transparent) {
-        // 透明背景：正常态不画，交互态用中性半透明叠加色
-        if (HAS_STATE(layer, LAYER_STATE_HOVER) || HAS_STATE(layer, LAYER_STATE_PRESSED) || HAS_STATE(layer, LAYER_STATE_FOCUSED)) {
-            if (HAS_STATE(layer, LAYER_STATE_PRESSED)) {
-                bg_color = (Color){128, 128, 128, 50};
-            } else if (HAS_STATE(layer, LAYER_STATE_HOVER)) {
-                bg_color = (Color){128, 128, 128, 30};
+        /* 透明按钮：hover/press 只叠半透明底，不画边框 */
+        has_bg = 0;
+        if (HAS_STATE(layer, LAYER_STATE_PRESSED)) {
+            if (component->hover_text_color.a > 0) {
+                bg_color = component->hover_text_color;
+                bg_color.a = 64;
             } else {
-                bg_color = (Color){128, 128, 128, 20};
+                bg_color = (Color){255, 255, 255, 56};
+            }
+        } else if (HAS_STATE(layer, LAYER_STATE_HOVER) || HAS_STATE(layer, LAYER_STATE_FOCUSED)) {
+            if (component->hover_text_color.a > 0) {
+                bg_color = component->hover_text_color;
+                bg_color.a = 40;
+            } else {
+                bg_color = (Color){255, 255, 255, 36};
             }
         } else {
-            bg_color = (Color){0, 0, 0, 0};  // 正常态透明
-            has_bg = 0;
+            bg_color = (Color){0, 0, 0, 0};
         }
     } else if (layer->bg_color.a > 0) {
         bg_color = layer->bg_color;
