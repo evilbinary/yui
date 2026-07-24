@@ -1121,7 +1121,8 @@ int treeview_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
         return 1;
     }
     
-    if (event->phase == POINTER_DOWN && event->button == SDL_BUTTON_LEFT) {
+    if ((event->phase == POINTER_DOWN || event->phase == POINTER_DOUBLE_TAP) &&
+        event->button == SDL_BUTTON_LEFT) {
         // 调整鼠标坐标以考虑滚动偏移
         int adjusted_y = event->y;
         // 注意：treeview_get_node_from_position 内部已经处理了滚动偏移，所以这里不需要调整
