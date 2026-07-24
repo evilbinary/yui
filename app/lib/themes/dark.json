@@ -270,6 +270,48 @@
         "color": "#6B7280",
         "fontSize": 14
       }
+    },
+    {
+      "selector": "View.settingsCard",
+      "style": {
+        "bgColor": "#12161E",
+        "borderRadius": 8
+      }
+    },
+    {
+      "selector": "#preferencesDialogFrame",
+      "style": {
+        "bgColor": "#3A4254",
+        "borderRadius": 9
+      }
+    },
+    {
+      "selector": "Label.navItem",
+      "style": {
+        "color": "#9AA3B2",
+        "fontSize": 12,
+        "padding": [8, 12, 8, 12],
+        "borderRadius": 6,
+        "bgColor": "transparent"
+      }
+    },
+    {
+      "selector": "Label.navItem.active",
+      "style": {
+        "color": "#F2F4F8",
+        "fontSize": 12,
+        "padding": [8, 12, 8, 12],
+        "borderRadius": 6,
+        "bgColor": "#2E3648"
+      }
+    },
+    {
+      "selector": "Label.sectionTitle",
+      "style": {
+        "color": "#9AA3B2",
+        "fontSize": 11,
+        "fontWeight": "bold"
+      }
     }
   ]
 }

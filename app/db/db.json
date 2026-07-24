@@ -466,7 +466,7 @@
       "id": "settingsMenuPopup",
       "type": "Menu",
       "position": [164, 0],
-      "size": [40, 146],
+      "size": [40, 88],
       "text": "设置",
       "fontSize": 12,
       "style": {
@@ -474,7 +474,6 @@
       },
       "items": [
         { "text": "偏好设置", "onClick": "onOpenSettings" },
-        { "text": "主题设置", "onClick": "onThemeSettings" },
         { "separator": true },
         { "text": "关于", "onClick": "onAbout" }
       ],
@@ -737,126 +736,177 @@
       "layout": { "type": "absolute" },
       "children": [
         {
+          "id": "preferencesDialogFrame",
+          "type": "View",
+          "position": [89, 59],
+          "size": [722, 482],
+          "layout": { "type": "absolute" },
+          "style": { "bgColor": "#45475A", "borderRadius": 9 },
+          "children": [
+        {
           "id": "preferencesDialogPanel",
           "type": "View",
-          "position": [220, 120],
-          "size": [460, 320],
+          "position": [1, 1],
+          "size": [720, 480],
           "layout": { "type": "vertical", "spacing": 0 },
           "style": { "bgColor": "#1E1E2E", "borderRadius": 8 },
           "children": [
             {
               "id": "preferencesDialogTitleBar",
               "type": "View",
-              "size": [460, 40],
-              "layout": { "type": "horizontal", "align": "center", "justify": "space-between", "padding": [0, 12, 0, 12] },
+              "size": [720, 44],
+              "layout": { "type": "horizontal", "align": "center", "justify": "space-between", "padding": [0, 16, 0, 16] },
               "style": { "bgColor": "#181825", "borderBottomWidth": 1, "borderBottomColor": "#313244" },
               "children": [
-                { "id": "preferencesDialogTitle", "type": "Label", "size": [360, 24], "text": "偏好设置", "style": { "color": "#CDD6F4", "fontSize": 14, "fontWeight": "bold" } },
+                { "id": "preferencesDialogTitle", "type": "Label", "size": [400, 24], "text": "偏好设置", "style": { "color": "#CDD6F4", "fontSize": 14, "fontWeight": "bold" } },
                 { "id": "preferencesDialogCloseBtn", "type": "Button", "size": [28, 28], "text": "×", "style": { "color": "#A6ADC8", "bgColor": "transparent", "fontSize": 16 }, "events": { "onClick": "@onPreferencesCancel" } }
               ]
             },
             {
               "id": "preferencesDialogBody",
               "type": "View",
-              "size": [460, 220],
-              "layout": { "type": "vertical", "spacing": 12, "padding": [16, 20, 16, 20] },
+              "size": [720, 376],
+              "layout": { "type": "horizontal", "spacing": 0 },
               "style": { "bgColor": "#1E1E2E" },
               "children": [
                 {
-                  "id": "prefAutoConnectRow",
+                  "id": "prefNav",
                   "type": "View",
-                  "size": [420, 28],
-                  "layout": { "type": "horizontal", "align": "center", "spacing": 8 },
-                  "style": { "bgColor": "#1E1E2E" },
+                  "size": [168, 376],
+                  "layout": { "type": "vertical", "spacing": 4, "padding": [12, 10, 12, 10] },
+                  "style": { "bgColor": "#181825", "borderRightWidth": 1, "borderRightColor": "#313244" },
                   "children": [
                     {
-                      "id": "prefAutoConnect",
-                      "type": "Checkbox",
-                      "size": [20, 20],
-                      "data": true
+                      "id": "prefNavAppearance",
+                      "type": "Label",
+                      "variant": "navItem active",
+                      "size": [148, 32],
+                      "text": "外观",
+                      "events": { "onClick": "@onPrefNavAppearance" }
                     },
                     {
-                      "id": "prefAutoConnectLabel",
+                      "id": "prefNavResults",
                       "type": "Label",
-                      "size": [380, 20],
-                      "text": "启动时自动连接数据库",
-                      "style": { "color": "#CDD6F4", "fontSize": 12 }
+                      "variant": "navItem",
+                      "size": [148, 32],
+                      "text": "查询结果",
+                      "events": { "onClick": "@onPrefNavResults" }
+                    },
+                    {
+                      "id": "prefNavConnection",
+                      "type": "Label",
+                      "variant": "navItem",
+                      "size": [148, 32],
+                      "text": "连接",
+                      "events": { "onClick": "@onPrefNavConnection" }
                     }
                   ]
                 },
-                { "id": "prefPageSizeLabel", "type": "Label", "text": "查询结果每页行数", "style": { "color": "#A6ADC8", "fontSize": 11 } },
-                { "id": "prefPageSizeInput", "type": "Input", "size": [420, 28], "text": "500", "style": { "color": "#CDD6F4", "bgColor": "#11111B", "fontSize": 12, "padding": [6, 10, 6, 10] } },
-                { "id": "prefFontSizeLabel", "type": "Label", "text": "SQL 编辑器字号", "style": { "color": "#A6ADC8", "fontSize": 11 } },
-                { "id": "prefFontSizeInput", "type": "Input", "size": [420, 28], "text": "13", "style": { "color": "#CDD6F4", "bgColor": "#11111B", "fontSize": 12, "padding": [6, 10, 6, 10] } }
+                {
+                  "id": "prefContent",
+                  "type": "View",
+                  "size": [552, 376],
+                  "scrollable": 1,
+                  "layout": { "type": "vertical", "spacing": 0, "padding": [16, 20, 16, 20] },
+                  "style": { "bgColor": "#1E1E2E" },
+                  "children": [
+                    {
+                      "id": "prefSectionAppearance",
+                      "type": "View",
+                      "size": [512, 300],
+                      "layout": { "type": "vertical", "spacing": 10 },
+                      "style": { "bgColor": "#1E1E2E" },
+                      "children": [
+                        { "id": "prefSectionAppearanceTitle", "type": "Label", "variant": "sectionTitle", "text": "外观" },
+                        {
+                          "id": "prefCardAppearance",
+                          "type": "View",
+                          "variant": "settingsCard",
+                          "size": [512, 260],
+                          "layout": { "type": "vertical", "spacing": 10, "padding": [14, 14, 14, 14] },
+                          "children": [
+                            { "id": "themeCurrentLabel", "type": "Label", "text": "当前主题：Mocha", "style": { "color": "#A6ADC8", "fontSize": 12 } },
+                            { "id": "prefThemeMochaBtn", "type": "Button", "size": [484, 32], "text": "Catppuccin Mocha（深色）", "style": { "color": "#CDD6F4", "bgColor": "#313244", "borderRadius": 4, "fontSize": 12 }, "events": { "onClick": "@onPrefThemeMocha" } },
+                            { "id": "prefThemeDarkBtn", "type": "Button", "size": [484, 32], "text": "Dark（通用深色）", "style": { "color": "#CDD6F4", "bgColor": "#313244", "borderRadius": 4, "fontSize": 12 }, "events": { "onClick": "@onPrefThemeDark" } },
+                            { "id": "prefThemeLatteBtn", "type": "Button", "size": [484, 32], "text": "Catppuccin Latte（浅色）", "style": { "color": "#4C4F69", "bgColor": "#CCD0DA", "borderRadius": 4, "fontSize": 12 }, "events": { "onClick": "@onPrefThemeLatte" } },
+                            { "id": "prefThemeElementPlusBtn", "type": "Button", "size": [484, 32], "text": "Element Plus（亮色）", "style": { "color": "#606266", "bgColor": "#FFFFFF", "borderRadius": 4, "fontSize": 12 }, "events": { "onClick": "@onPrefThemeElementPlus" } },
+                            { "id": "prefThemeElementPlusDarkBtn", "type": "Button", "size": [484, 32], "text": "Element Plus Dark（暗色）", "style": { "color": "#CFD3DC", "bgColor": "#1D1E1F", "borderRadius": 4, "fontSize": 12 }, "events": { "onClick": "@onPrefThemeElementPlusDark" } },
+                            { "id": "prefFontSizeLabel", "type": "Label", "text": "SQL 编辑器字号", "style": { "color": "#A6ADC8", "fontSize": 11 } },
+                            { "id": "prefFontSizeInput", "type": "Input", "size": [484, 28], "text": "13", "style": { "color": "#CDD6F4", "bgColor": "#11111B", "fontSize": 12, "padding": [6, 10, 6, 10] } }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "id": "prefSectionResults",
+                      "type": "View",
+                      "visible": false,
+                      "size": [512, 140],
+                      "layout": { "type": "vertical", "spacing": 10 },
+                      "style": { "bgColor": "#1E1E2E" },
+                      "children": [
+                        { "id": "prefSectionResultsTitle", "type": "Label", "variant": "sectionTitle", "text": "查询结果" },
+                        {
+                          "id": "prefCardResults",
+                          "type": "View",
+                          "variant": "settingsCard",
+                          "size": [512, 100],
+                          "layout": { "type": "vertical", "spacing": 10, "padding": [14, 14, 14, 14] },
+                          "children": [
+                            { "id": "prefPageSizeLabel", "type": "Label", "text": "每页行数", "style": { "color": "#A6ADC8", "fontSize": 11 } },
+                            { "id": "prefPageSizeInput", "type": "Input", "size": [484, 28], "text": "500", "style": { "color": "#CDD6F4", "bgColor": "#11111B", "fontSize": 12, "padding": [6, 10, 6, 10] } }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "id": "prefSectionConnection",
+                      "type": "View",
+                      "visible": false,
+                      "size": [512, 120],
+                      "layout": { "type": "vertical", "spacing": 10 },
+                      "style": { "bgColor": "#1E1E2E" },
+                      "children": [
+                        { "id": "prefSectionConnectionTitle", "type": "Label", "variant": "sectionTitle", "text": "连接" },
+                        {
+                          "id": "prefCardConnection",
+                          "type": "View",
+                          "variant": "settingsCard",
+                          "size": [512, 72],
+                          "layout": { "type": "vertical", "spacing": 8, "padding": [14, 14, 14, 14] },
+                          "children": [
+                            {
+                              "id": "prefAutoConnectRow",
+                              "type": "View",
+                              "size": [484, 28],
+                              "layout": { "type": "horizontal", "align": "center", "spacing": 8 },
+                              "style": { "bgColor": "transparent" },
+                              "children": [
+                                { "id": "prefAutoConnect", "type": "Checkbox", "size": [20, 20], "data": true },
+                                { "id": "prefAutoConnectLabel", "type": "Label", "size": [420, 20], "text": "启动时自动连接数据库", "style": { "color": "#CDD6F4", "fontSize": 12 } }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
               ]
             },
             {
               "id": "preferencesDialogButtons",
               "type": "View",
-              "size": [460, 60],
-              "layout": { "type": "horizontal", "spacing": 10, "padding": [12, 20, 12, 20] },
+              "size": [720, 60],
+              "layout": { "type": "horizontal", "align": "center", "justify": "flex-end", "spacing": 10, "padding": [12, 20, 12, 20] },
               "style": { "bgColor": "#181825", "borderTopWidth": 1, "borderTopColor": "#313244" },
               "children": [
-                { "id": "prefOkBtn", "type": "Button", "size": [88, 30], "text": "保存", "style": { "color": "#A6E3A1", "bgColor": "#313244", "borderRadius": 4, "fontSize": 12 }, "events": { "onClick": "@onPreferencesOk" } },
-                { "id": "prefCancelBtn", "type": "Button", "size": [88, 30], "text": "取消", "style": { "color": "#F38BA8", "bgColor": "#313244", "borderRadius": 4, "fontSize": 12 }, "events": { "onClick": "@onPreferencesCancel" } }
+                { "id": "prefCancelBtn", "type": "Button", "size": [88, 30], "text": "取消", "style": { "color": "#F38BA8", "bgColor": "#313244", "borderRadius": 4, "fontSize": 12 }, "events": { "onClick": "@onPreferencesCancel" } },
+                { "id": "prefOkBtn", "type": "Button", "size": [88, 30], "text": "保存", "style": { "color": "#A6E3A1", "bgColor": "#313244", "borderRadius": 4, "fontSize": 12 }, "events": { "onClick": "@onPreferencesOk" } }
               ]
             }
           ]
         }
-      ]
-    },
-    {
-      "id": "themeDialogOverlay",
-      "type": "View",
-      "visible": false,
-      "position": [0, 0],
-      "size": [900, 600],
-      "style": { "bgColor": "#00000066" },
-      "layout": { "type": "absolute" },
-      "children": [
-        {
-          "id": "themeDialogPanel",
-          "type": "View",
-          "position": [220, 100],
-          "size": [460, 396],
-          "layout": { "type": "vertical", "spacing": 0 },
-          "style": { "bgColor": "#1E1E2E", "borderRadius": 8 },
-          "children": [
-            {
-              "id": "themeDialogTitleBar",
-              "type": "View",
-              "size": [460, 40],
-              "layout": { "type": "horizontal", "align": "center", "justify": "space-between", "padding": [0, 12, 0, 12] },
-              "style": { "bgColor": "#181825", "borderBottomWidth": 1, "borderBottomColor": "#313244" },
-              "children": [
-                { "id": "themeDialogTitle", "type": "Label", "size": [360, 24], "text": "主题设置", "style": { "color": "#CDD6F4", "fontSize": 14, "fontWeight": "bold" } },
-                { "id": "themeDialogCloseBtn", "type": "Button", "size": [28, 28], "text": "×", "style": { "color": "#A6ADC8", "bgColor": "transparent", "fontSize": 16 }, "events": { "onClick": "@onThemeDialogClose" } }
-              ]
-            },
-            {
-              "id": "themeDialogBody",
-              "type": "View",
-              "size": [460, 296],
-              "layout": { "type": "vertical", "spacing": 10, "padding": [20, 24, 20, 24] },
-              "children": [
-                { "id": "themeCurrentLabel", "type": "Label", "text": "当前主题：Mocha", "style": { "color": "#A6ADC8", "fontSize": 12 } },
-                { "id": "themeMochaBtn", "type": "Button", "size": [412, 36], "text": "Catppuccin Mocha（深色）", "style": { "color": "#CDD6F4", "bgColor": "#313244", "borderRadius": 4, "fontSize": 12 }, "events": { "onClick": "@onThemePickMocha" } },
-                { "id": "themeDarkBtn", "type": "Button", "size": [412, 36], "text": "Dark（通用深色）", "style": { "color": "#CDD6F4", "bgColor": "#313244", "borderRadius": 4, "fontSize": 12 }, "events": { "onClick": "@onThemePickDark" } },
-                { "id": "themeLatteBtn", "type": "Button", "size": [412, 36], "text": "Catppuccin Latte（浅色）", "style": { "color": "#4C4F69", "bgColor": "#CCD0DA", "borderRadius": 4, "fontSize": 12 }, "events": { "onClick": "@onThemePickLatte" } },
-                { "id": "themeElementPlusBtn", "type": "Button", "size": [412, 36], "text": "Element Plus（亮色）", "style": { "color": "#606266", "bgColor": "#FFFFFF", "borderRadius": 4, "fontSize": 12 }, "events": { "onClick": "@onThemePickElementPlus" } },
-                { "id": "themeElementPlusDarkBtn", "type": "Button", "size": [412, 36], "text": "Element Plus Dark（暗色）", "style": { "color": "#CFD3DC", "bgColor": "#1D1E1F", "borderRadius": 4, "fontSize": 12 }, "events": { "onClick": "@onThemePickElementPlusDark" } }
-              ]
-            },
-            {
-              "id": "themeDialogButtons",
-              "type": "View",
-              "size": [460, 60],
-              "layout": { "type": "horizontal", "spacing": 10, "padding": [12, 20, 12, 20] },
-              "style": { "bgColor": "#181825", "borderTopWidth": 1, "borderTopColor": "#313244" },
-              "children": [
-                { "id": "themeCloseBtn", "type": "Button", "size": [88, 30], "text": "关闭", "style": { "color": "#89B4FA", "bgColor": "#313244", "borderRadius": 4, "fontSize": 12 }, "events": { "onClick": "@onThemeDialogClose" } }
-              ]
-            }
           ]
         }
       ]

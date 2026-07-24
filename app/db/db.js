@@ -24,6 +24,7 @@ var appPreferences = {
 };
 
 var currentTheme = "mocha";
+var pendingPrefTheme = null;
 
 var THEME_OPTIONS = {
     mocha: { label: "Catppuccin Mocha", path: "app/db/themes/mocha.json" },
@@ -275,7 +276,7 @@ function onDbMenuClick(itemText) {
 function onSettingsMenuClick(itemText) {
     switch (itemText) {
         case "偏好设置": onOpenSettings(); break;
-        case "主题设置": onThemeSettings(); break;
+        case "主题设置": onOpenSettings(); break;
         case "关于": onAbout(); break;
     }
 }
@@ -314,11 +315,34 @@ function onConnectionCancel() {
     hideOverlay("connectionDialogOverlay");
 }
 
+function setPrefNav(section) {
+    var items = [
+        { key: "appearance", nav: "prefNavAppearance", panel: "prefSectionAppearance" },
+        { key: "results", nav: "prefNavResults", panel: "prefSectionResults" },
+        { key: "connection", nav: "prefNavConnection", panel: "prefSectionConnection" }
+    ];
+    for (var i = 0; i < items.length; i++) {
+        var item = items[i];
+        var active = item.key === section;
+        var nav = yui.find(item.nav);
+        var panel = yui.find(item.panel);
+        if (nav) nav.variant = active ? "navItem active" : "navItem";
+        if (panel) panel.visible = active;
+    }
+}
+
+function onPrefNavAppearance() { setPrefNav("appearance"); }
+function onPrefNavResults() { setPrefNav("results"); }
+function onPrefNavConnection() { setPrefNav("connection"); }
+
 function onOpenSettings() {
+    pendingPrefTheme = currentTheme;
     var auto = yui.find("prefAutoConnect");
     if (auto) auto.data = appPreferences.autoConnect !== false;
     setInputText("prefPageSizeInput", appPreferences.pageSize);
     setInputText("prefFontSizeInput", appPreferences.fontSize);
+    updateThemeLabel(pendingPrefTheme);
+    setPrefNav("appearance");
     showOverlay("preferencesDialogOverlay");
 }
 
@@ -333,20 +357,28 @@ function onPreferencesOk() {
     if (appPreferences.fontSize > 24) appPreferences.fontSize = 24;
     RESULT_PAGE_SIZE = appPreferences.pageSize;
     applyPreferencesToUi();
-    saveDbConfig();
+    var themeToApply = pendingPrefTheme || currentTheme;
+    if (themeToApply !== currentTheme) {
+        applyTheme(themeToApply, true);
+    } else {
+        saveDbConfig();
+    }
+    pendingPrefTheme = null;
     hideOverlay("preferencesDialogOverlay");
     updateStatus("偏好设置已保存", "#A6E3A1");
 }
 
 function onPreferencesCancel() {
+    pendingPrefTheme = null;
     hideOverlay("preferencesDialogOverlay");
 }
 
-function updateThemeLabel() {
+function updateThemeLabel(themeId) {
     var label = yui.find("themeCurrentLabel");
-    var theme = THEME_OPTIONS[currentTheme];
+    var id = themeId || pendingPrefTheme || currentTheme;
+    var theme = THEME_OPTIONS[id];
     if (label) {
-        label.text = "当前主题：" + (theme ? theme.label : currentTheme);
+        label.text = "当前主题：" + (theme ? theme.label : id);
     }
 }
 
@@ -367,24 +399,24 @@ function applyTheme(themeId, silent) {
     YUI.themeSetCurrent(themeName);
     YUI.themeApplyToTree();
     renderTabs();
-    updateThemeLabel();
+    updateThemeLabel(currentTheme);
     saveDbConfig();
     if (!silent) updateStatus("已切换主题: " + theme.label, "#A6E3A1");
 }
 
-function onThemeSettings() {
-    updateThemeLabel();
-    showOverlay("themeDialogOverlay");
+function pickPrefTheme(themeId) {
+    pendingPrefTheme = themeId;
+    updateThemeLabel(themeId);
 }
 
-function onThemePickMocha() { applyTheme("mocha"); }
-function onThemePickDark() { applyTheme("dark"); }
-function onThemePickLatte() { applyTheme("latte"); }
-function onThemePickElementPlus() { applyTheme("element-plus"); }
-function onThemePickElementPlusDark() { applyTheme("element-plus-dark"); }
+function onPrefThemeMocha() { pickPrefTheme("mocha"); }
+function onPrefThemeDark() { pickPrefTheme("dark"); }
+function onPrefThemeLatte() { pickPrefTheme("latte"); }
+function onPrefThemeElementPlus() { pickPrefTheme("element-plus"); }
+function onPrefThemeElementPlusDark() { pickPrefTheme("element-plus-dark"); }
 
-function onThemeDialogClose() {
-    hideOverlay("themeDialogOverlay");
+function onThemeSettings() {
+    onOpenSettings();
 }
 
 function onExit() {

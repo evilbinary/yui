@@ -35,7 +35,13 @@
     { "selector": "View.tabBar", "style": { "bgColor": "#E6E9EF", "borderBottomWidth": 1, "borderBottomColor": "#CCD0DA" } },
     { "selector": "Label.tab", "style": { "color": "#9CA0B0", "fontSize": 11, "padding": [4, 10, 4, 10], "borderRadius": 4, "bgColor": "transparent" } },
     { "selector": "Label.tab.active", "style": { "color": "#4C4F69", "bgColor": "#FFFFFF", "fontSize": 11, "padding": [4, 10, 4, 10], "borderRadius": 4 } },
-    { "selector": "Label.tabAdd", "style": { "color": "#9CA0B0", "fontSize": 14 } }
+    { "selector": "Label.tabAdd", "style": { "color": "#9CA0B0", "fontSize": 14 } },
+
+    { "selector": "View.settingsCard", "style": { "bgColor": "#E6E9EF", "borderRadius": 8 } },
+    { "selector": "#preferencesDialogFrame", "style": { "bgColor": "#ACB0BE", "borderRadius": 9 } },
+    { "selector": "Label.navItem", "style": { "color": "#5C5F77", "fontSize": 12, "padding": [8, 12, 8, 12], "borderRadius": 6, "bgColor": "transparent" } },
+    { "selector": "Label.navItem.active", "style": { "color": "#4C4F69", "fontSize": 12, "padding": [8, 12, 8, 12], "borderRadius": 6, "bgColor": "#CCD0DA" } },
+    { "selector": "Label.sectionTitle", "style": { "color": "#5C5F77", "fontSize": 11, "fontWeight": "bold" } }
 
   ]
 
