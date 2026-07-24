@@ -36,6 +36,8 @@
 // ====================== 全局渲染器 ======================
 SDL_Renderer* renderer = NULL;
 float yui_density=1.0f;
+static Rect current_clip;
+static int clip_enabled = 0;
 SDL_Window* window=NULL;
 DFont* default_font=NULL;
 Layer* g_ui_root = NULL;
@@ -2773,11 +2775,45 @@ void backend_render_rect_color(Rect* rect,unsigned char r,unsigned char g,unsign
 
 
 void backend_render_get_clip_rect(Rect* prev_clip){
-    SDL_RenderGetClipRect(renderer, prev_clip);
+    if (!prev_clip) return;
+    if (clip_enabled) {
+        *prev_clip = current_clip;
+    } else {
+        memset(prev_clip, 0, sizeof(*prev_clip));
+    }
 }
 
 void backend_render_set_clip_rect(Rect* clip){
-    SDL_RenderSetClipRect(renderer, clip);
+    if (!clip) {
+        memset(&current_clip, 0, sizeof(current_clip));
+        clip_enabled = 0;
+        SDL_RenderSetClipRect(renderer, NULL);
+        return;
+    }
+
+    Rect next = *clip;
+    if (clip_enabled) {
+        int restores_parent =
+            next.x <= current_clip.x &&
+            next.y <= current_clip.y &&
+            next.x + next.w >= current_clip.x + current_clip.w &&
+            next.y + next.h >= current_clip.y + current_clip.h;
+
+        if (!restores_parent) {
+            int left = next.x > current_clip.x ? next.x : current_clip.x;
+            int top = next.y > current_clip.y ? next.y : current_clip.y;
+            int right = next.x + next.w < current_clip.x + current_clip.w
+                ? next.x + next.w : current_clip.x + current_clip.w;
+            int bottom = next.y + next.h < current_clip.y + current_clip.h
+                ? next.y + next.h : current_clip.y + current_clip.h;
+            next = (Rect){left, top, right > left ? right - left : 0,
+                          bottom > top ? bottom - top : 0};
+        }
+    }
+
+    current_clip = next;
+    clip_enabled = 1;
+    SDL_RenderSetClipRect(renderer, &current_clip);
 }
 
 
