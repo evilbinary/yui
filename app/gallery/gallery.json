@@ -1,0 +1,408 @@
+{
+  "id": "galleryRoot",
+  "type": "View",
+  "variant": "surface",
+  "size": [980, 720],
+  "js": ["gallery.js"],
+  "layout": { "type": "vertical", "spacing": 0 },
+  "children": [
+    {
+      "id": "galleryToolbar",
+      "type": "View",
+      "variant": "toolbar",
+      "size": [980, 118],
+      "layout": { "type": "vertical", "spacing": 8, "padding": [12, 16, 12, 16] },
+      "children": [
+        {
+          "id": "galleryTitleRow",
+          "type": "View",
+          "size": [948, 28],
+          "layout": { "type": "horizontal", "spacing": 12, "align": "center" },
+          "children": [
+            { "id": "galleryTitle", "type": "Label", "variant": "heading", "text": "Component Gallery" },
+            { "id": "galleryStatus", "type": "Label", "variant": "subtitle", "text": "加载主题中…" }
+          ]
+        },
+        {
+          "id": "galleryThemeRow1",
+          "type": "View",
+          "size": [948, 34],
+          "layout": { "type": "horizontal", "spacing": 8, "align": "center" },
+          "children": [
+            { "id": "btnThemeMocha", "type": "Button", "variant": "compact", "size": [110, 32], "text": "Mocha", "events": { "onClick": "@onThemeMocha" } },
+            { "id": "btnThemeDark", "type": "Button", "variant": "compact", "size": [110, 32], "text": "Dark", "events": { "onClick": "@onThemeDark" } },
+            { "id": "btnThemeLatte", "type": "Button", "variant": "compact", "size": [110, 32], "text": "Latte", "events": { "onClick": "@onThemeLatte" } },
+            { "id": "btnThemeEp", "type": "Button", "variant": "compact", "size": [130, 32], "text": "Element Plus", "events": { "onClick": "@onThemeElementPlus" } },
+            { "id": "btnThemeEpDark", "type": "Button", "variant": "compact", "size": [110, 32], "text": "EP Dark", "events": { "onClick": "@onThemeElementPlusDark" } },
+            { "id": "btnThemeSoft", "type": "Button", "variant": "primary", "size": [110, 32], "text": "Soft UI", "events": { "onClick": "@onThemeSoftUi" } },
+            { "id": "btnThemeSoftDark", "type": "Button", "variant": "compact", "size": [130, 32], "text": "Soft UI Dark", "events": { "onClick": "@onThemeSoftUiDark" } }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "galleryContent",
+      "type": "View",
+      "variant": "surface",
+      "size": [980, 602],
+      "scrollable": 1,
+      "layout": { "type": "vertical", "spacing": 16, "padding": [16, 16, 24, 16] },
+      "children": [
+        {
+          "id": "secLabels",
+          "type": "View",
+          "variant": "card",
+          "size": [948, 120],
+          "layout": { "type": "vertical", "spacing": 8, "padding": [14, 16, 14, 16] },
+          "children": [
+            { "type": "Label", "variant": "sectionTitle", "text": "Label" },
+            { "type": "Label", "variant": "title", "text": "Title 标题" },
+            { "type": "Label", "variant": "heading", "text": "Heading 小标题" },
+            {
+              "type": "View",
+              "size": [900, 28],
+              "layout": { "type": "horizontal", "spacing": 16 },
+              "children": [
+                { "type": "Label", "variant": "body", "text": "Body 正文" },
+                { "type": "Label", "variant": "subtitle", "text": "Subtitle 说明" },
+                { "type": "Label", "variant": "caption", "text": "Caption 小字" },
+                { "type": "Label", "variant": "link", "text": "Link 链接" }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "secButtons",
+          "type": "View",
+          "variant": "card",
+          "size": [948, 100],
+          "layout": { "type": "vertical", "spacing": 10, "padding": [14, 16, 14, 16] },
+          "children": [
+            { "type": "Label", "variant": "sectionTitle", "text": "Button" },
+            {
+              "type": "View",
+              "size": [900, 40],
+              "layout": { "type": "horizontal", "spacing": 10, "align": "center" },
+              "children": [
+                { "id": "btnPrimary", "type": "Button", "variant": "primary", "size": [120, 36], "text": "Primary", "events": { "onClick": "@onGalleryLog" } },
+                { "id": "btnSecondary", "type": "Button", "variant": "secondary", "size": [120, 36], "text": "Secondary", "events": { "onClick": "@onGalleryLog" } },
+                { "id": "btnTertiary", "type": "Button", "variant": "tertiary", "size": [120, 36], "text": "Tertiary", "events": { "onClick": "@onGalleryLog" } },
+                { "id": "btnDanger", "type": "Button", "variant": "danger", "size": [120, 36], "text": "Danger", "events": { "onClick": "@onGalleryLog" } },
+                { "id": "btnDefault", "type": "Button", "size": [120, 36], "text": "Default", "events": { "onClick": "@onGalleryLog" } }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "secInputs",
+          "type": "View",
+          "variant": "card",
+          "size": [948, 110],
+          "layout": { "type": "vertical", "spacing": 10, "padding": [14, 16, 14, 16] },
+          "children": [
+            { "type": "Label", "variant": "sectionTitle", "text": "Input" },
+            {
+              "type": "View",
+              "size": [900, 40],
+              "layout": { "type": "horizontal", "spacing": 12, "align": "center" },
+              "children": [
+                { "id": "galleryInput1", "type": "Input", "size": [280, 36], "text": "", "placeholder": "请输入…" },
+                { "id": "galleryInput2", "type": "Input", "size": [280, 36], "text": "已填写内容" }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "secChecks",
+          "type": "View",
+          "variant": "card",
+          "size": [948, 130],
+          "layout": { "type": "vertical", "spacing": 10, "padding": [14, 16, 14, 16] },
+          "children": [
+            { "type": "Label", "variant": "sectionTitle", "text": "Checkbox / Switch / Radiobox" },
+            {
+              "type": "View",
+              "size": [900, 36],
+              "layout": { "type": "horizontal", "spacing": 20, "align": "center" },
+              "children": [
+                { "id": "galleryCb1", "type": "Checkbox", "size": [20, 20], "data": true, "label": "勾选" },
+                { "id": "galleryCb2", "type": "Checkbox", "size": [20, 20], "data": false, "label": "未勾选" },
+                { "id": "gallerySwitch", "type": "Checkbox", "variant": "switch", "size": [40, 22], "data": true, "label": "自动" }
+              ]
+            },
+            {
+              "type": "View",
+              "size": [900, 28],
+              "layout": { "type": "horizontal", "spacing": 24, "align": "center" },
+              "children": [
+                { "id": "galleryRadio1", "type": "Radiobox", "size": [20, 20], "data": true, "label": "选项 A", "group": "galleryRadio" },
+                { "id": "galleryRadio2", "type": "Radiobox", "size": [20, 20], "data": false, "label": "选项 B", "group": "galleryRadio" },
+                { "id": "galleryRadio3", "type": "Radiobox", "size": [20, 20], "data": false, "label": "选项 C", "group": "galleryRadio" }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "secSelectSlider",
+          "type": "View",
+          "variant": "card",
+          "size": [948, 140],
+          "layout": { "type": "vertical", "spacing": 10, "padding": [14, 16, 14, 16] },
+          "children": [
+            { "type": "Label", "variant": "sectionTitle", "text": "Select / Slider / Progress" },
+            {
+              "type": "View",
+              "size": [900, 40],
+              "layout": { "type": "horizontal", "spacing": 16, "align": "center" },
+              "children": [
+                {
+                  "id": "gallerySelect",
+                  "type": "Select",
+                  "size": [220, 32],
+                  "selectConfig": {
+                    "placeholder": "请选择",
+                    "itemHeight": 28,
+                    "maxVisibleItems": 6,
+                    "items": ["选项一", "选项二", "选项三", "选项四"]
+                  }
+                },
+                {
+                  "id": "gallerySlider",
+                  "type": "Slider",
+                  "size": [260, 28],
+                  "data": 42,
+                  "min": 0,
+                  "max": 100,
+                  "step": 1,
+                  "orientation": 0
+                },
+                {
+                  "id": "galleryProgress",
+                  "type": "Progress",
+                  "size": [200, 12],
+                  "data": 65,
+                  "progressConfig": { "value": 65, "maxValue": 100, "showText": false }
+                }
+              ]
+            },
+            {
+              "type": "View",
+              "size": [900, 40],
+              "layout": { "type": "horizontal", "spacing": 16, "align": "center" },
+              "children": [
+                { "id": "galleryLoading", "type": "Loading", "size": [36, 36] },
+                { "type": "Label", "variant": "body", "text": "Loading 动画" },
+                { "id": "btnShowDialog", "type": "Button", "variant": "tertiary", "size": [140, 34], "text": "打开 Dialog", "events": { "onClick": "@onShowInfoDialog" } }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "secText",
+          "type": "View",
+          "variant": "card",
+          "size": [948, 180],
+          "layout": { "type": "vertical", "spacing": 8, "padding": [14, 16, 14, 16] },
+          "children": [
+            { "type": "Label", "variant": "sectionTitle", "text": "Text（编辑器）" },
+            {
+              "id": "galleryText",
+              "type": "Text",
+              "size": [900, 120],
+              "scrollable": 1,
+              "text": "-- Soft UI gallery sample\nSELECT id, name FROM users\nWHERE active = 1\nORDER BY name;\n-- keyword / string / number themed"
+            }
+          ]
+        },
+        {
+          "id": "secTable",
+          "type": "View",
+          "variant": "card",
+          "size": [948, 260],
+          "layout": { "type": "vertical", "spacing": 8, "padding": [14, 16, 14, 16] },
+          "children": [
+            { "type": "Label", "variant": "sectionTitle", "text": "Table" },
+            {
+              "id": "galleryTable",
+              "type": "Table",
+              "size": [900, 200],
+              "scrollable": 3,
+              "rowHeight": 28,
+              "headerHeight": 32,
+              "stripeRows": true,
+              "showGridLines": true,
+              "columns": [
+                { "key": "id", "title": "ID", "width": 60, "align": "right" },
+                { "key": "name", "title": "Name", "flex": 1 },
+                { "key": "role", "title": "Role", "width": 120 },
+                { "key": "status", "title": "Status", "width": 100, "align": "center" }
+              ],
+              "data": [
+                { "id": 1, "name": "Alice", "role": "Admin", "status": "active" },
+                { "id": 2, "name": "Bob", "role": "Editor", "status": "active" },
+                { "id": 3, "name": "Carol", "role": "Viewer", "status": "idle" },
+                { "id": 4, "name": "Dave", "role": "Editor", "status": "active" },
+                { "id": 5, "name": "Eve", "role": "Admin", "status": "busy" }
+              ],
+              "events": { "onSelect": "@onGallerySelect" }
+            }
+          ]
+        },
+        {
+          "id": "secTreePager",
+          "type": "View",
+          "variant": "card",
+          "size": [948, 280],
+          "layout": { "type": "vertical", "spacing": 10, "padding": [14, 16, 14, 16] },
+          "children": [
+            { "type": "Label", "variant": "sectionTitle", "text": "Treeview / Pagination / Tabs" },
+            {
+              "type": "View",
+              "size": [900, 200],
+              "layout": { "type": "horizontal", "spacing": 16 },
+              "children": [
+                {
+                  "id": "galleryTree",
+                  "type": "Treeview",
+                  "size": [280, 190],
+                  "itemHeight": 24,
+                  "scrollable": 1,
+                  "indentWidth": 18,
+                  "events": { "onSelect": "@onGallerySelect" },
+                  "nodes": [
+                    {
+                      "text": "项目",
+                      "expanded": true,
+                      "children": [
+                        { "text": "src", "expanded": true, "children": [
+                          { "text": "main.c", "children": [] },
+                          { "text": "theme.c", "children": [] }
+                        ]},
+                        { "text": "app", "expanded": false, "children": [
+                          { "text": "gallery", "children": [] }
+                        ]}
+                      ]
+                    },
+                    {
+                      "text": "文档",
+                      "expanded": false,
+                      "children": [
+                        { "text": "README.md", "children": [] }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "View",
+                  "size": [580, 190],
+                  "layout": { "type": "vertical", "spacing": 12 },
+                  "children": [
+                    {
+                      "id": "galleryTabBar",
+                      "type": "View",
+                      "variant": "tabBar",
+                      "size": [560, 36],
+                      "layout": { "type": "horizontal", "spacing": 4, "padding": [4, 8, 4, 8], "align": "center" },
+                      "children": [
+                        { "id": "galleryTab1", "type": "Label", "variant": "tab active", "text": "Tab One" },
+                        { "id": "galleryTab2", "type": "Label", "variant": "tab", "text": "Tab Two" },
+                        { "id": "galleryTab3", "type": "Label", "variant": "tab", "text": "Tab Three" },
+                        { "id": "galleryTabAdd", "type": "Label", "variant": "tabAdd", "text": "+" }
+                      ]
+                    },
+                    {
+                      "id": "galleryPanel",
+                      "type": "View",
+                      "variant": "panel",
+                      "size": [560, 80],
+                      "layout": { "type": "vertical", "padding": [12, 12, 12, 12] },
+                      "children": [
+                        { "type": "Label", "variant": "body", "text": "Panel / tabBar / nav 样式预览区" }
+                      ]
+                    },
+                    {
+                      "id": "galleryPager",
+                      "type": "Pagination",
+                      "mode": "simple",
+                      "size": [280, 28],
+                      "page": 2,
+                      "pageSize": 20,
+                      "total": 200,
+                      "showTotal": true,
+                      "events": { "onChange": "@onGalleryPagerChange" }
+                    },
+                    {
+                      "type": "View",
+                      "size": [560, 40],
+                      "layout": { "type": "horizontal", "spacing": 10, "align": "center" },
+                      "children": [
+                        { "id": "galleryNav1", "type": "Label", "variant": "navItem", "text": "导航项" },
+                        { "id": "galleryNav2", "type": "Label", "variant": "navItem active", "text": "选中项" }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "secSash",
+          "type": "View",
+          "variant": "card",
+          "size": [948, 160],
+          "layout": { "type": "vertical", "spacing": 8, "padding": [14, 16, 14, 16] },
+          "children": [
+            { "type": "Label", "variant": "sectionTitle", "text": "Sash（分割条）" },
+            {
+              "id": "gallerySplit",
+              "type": "View",
+              "size": [900, 100],
+              "layout": { "type": "horizontal", "spacing": 0 },
+              "children": [
+                {
+                  "id": "gallerySplitLeft",
+                  "type": "View",
+                  "variant": "elevated",
+                  "size": [300, 100],
+                  "layout": { "type": "vertical", "padding": [12, 12, 12, 12] },
+                  "children": [
+                    { "type": "Label", "variant": "body", "text": "左侧面板" }
+                  ]
+                },
+                {
+                  "id": "gallerySash",
+                  "type": "Sash",
+                  "size": [6, 100],
+                  "orientation": "horizontal",
+                  "target": "gallerySplitLeft",
+                  "minSize": 120
+                },
+                {
+                  "id": "gallerySplitRight",
+                  "type": "View",
+                  "variant": "elevated",
+                  "size": [594, 100],
+                  "layout": { "type": "vertical", "padding": [12, 12, 12, 12] },
+                  "children": [
+                    { "type": "Label", "variant": "body", "text": "右侧面板 — 拖动中间 Sash" }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "galleryInfoDialog",
+      "type": "Dialog",
+      "title": "Gallery Dialog",
+      "message": "主题切换后 Dialog 样式也会更新。",
+      "dialogType": "info",
+      "modal": true,
+      "size": [420, 220],
+      "buttons": [{ "text": "OK", "default": true }]
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "type": "main",
+  "assets": "app/assets",
+  "font": "Roboto-Regular.ttf",
+  "fontSize": "14",
+  "text": "Component Gallery",
+  "size": [980, 720],
+  "source": "app/gallery/gallery.json",
+  "style": {
+    "color": "#374151"
+  }
+}

@@ -31,6 +31,9 @@ lvgl-sdl: build-lvgl
 db:  
 	ya -r db -- app/db/db.json
 
+gallery:
+	ya -r playground -- app/gallery/app.json
+
 photo:
 	ya -b photo
 	ya -r photo -- app/photo/app.json

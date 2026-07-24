@@ -502,9 +502,17 @@ def run(target):
     arch_type= target.get_arch_type()
     mode =target.get_config('mode')
     plat=target.plat()
+    import subprocess
+    import sys
+    argv = sys.argv[1:]
+    extra = []
+    if '--' in argv:
+        extra = argv[argv.index('--') + 1:]
     if platform.system()=='Windows':
         yui=targetfile.replace('/','\\')
-        os.system(yui)
+        cmd = [yui] + extra
+        print('run', ' '.join(cmd))
+        subprocess.run(cmd)
     elif is_plat("stm32"):
         # STM32平台通过调试器运行
         print("STM32 target, run through debugger (e.g., ST-Link)")
@@ -512,12 +520,7 @@ def run(target):
         # 这里可以添加通过ST-Link或其他调试器运行的代码
     else:
         # 直接使用 Python 的 subprocess 来运行，确保环境变量正确传递
-        import subprocess
-        import sys
-        cmd = ["./" + targetfile]
-        argv = sys.argv[1:]
-        if '--' in argv:
-            cmd.extend(argv[argv.index('--') + 1:])
+        cmd = ["./" + targetfile] + extra
         
         # 复制当前环境变量并确保关键变量存在
         env = os.environ.copy()
