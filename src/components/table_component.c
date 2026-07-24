@@ -718,6 +718,10 @@ static int table_handle_vertical_scrollbar_mouse(TableComponent* component, Laye
         return 1;
     }
 
+    if (event->phase == POINTER_WHEEL) {
+        return 0;
+    }
+
     if (event->button != SDL_BUTTON_LEFT) {
         return table_point_in_scrollbar(component, layer, event->x, event->y);
     }
@@ -736,6 +740,71 @@ static int table_handle_vertical_scrollbar_mouse(TableComponent* component, Laye
     }
 
     return table_point_in_scrollbar(component, layer, event->x, event->y);
+}
+
+static void table_component_handle_scroll_event(Layer* layer, int scroll_delta) {
+    TableComponent* component;
+    int old_offset;
+
+    if (!layer || !layer->component || scroll_delta == 0) {
+        return;
+    }
+    component = (TableComponent*)layer->component;
+    table_component_update_content_size(component);
+    if (!table_needs_vertical_scroll(component, layer)) {
+        return;
+    }
+
+    old_offset = layer->scroll_offset;
+    layer->scroll_offset += scroll_delta * 20;
+    table_clamp_scroll(component, layer);
+    if (layer->scroll_offset != old_offset) {
+        mark_layer_dirty(layer, DIRTY_TEXT);
+    }
+}
+
+static int table_component_apply_wheel(TableComponent* component, Layer* layer, PointerEvent* event) {
+    int old_y;
+    int old_x;
+    int changed = 0;
+
+    if (!component || !layer || !event) {
+        return 0;
+    }
+
+    table_component_update_content_size(component);
+
+    if (event->delta_y != 0 &&
+        (layer->scrollable == 1 || layer->scrollable == 3) &&
+        table_needs_vertical_scroll(component, layer)) {
+        old_y = layer->scroll_offset;
+        layer->scroll_offset += event->delta_y * 20;
+        table_clamp_scroll(component, layer);
+        if (layer->scroll_offset != old_y) {
+            changed = 1;
+        }
+    }
+
+    if (event->delta_x != 0 &&
+        (layer->scrollable == 2 || layer->scrollable == 3) &&
+        layer->scrollbar_h) {
+        int viewport_w = table_viewport_width(component, layer);
+        int max_scroll_x = layer->content_width - viewport_w;
+        if (max_scroll_x > 0) {
+            old_x = layer->scroll_offset_x;
+            layer->scroll_offset_x += event->delta_x * 20;
+            table_clamp_scroll(component, layer);
+            if (layer->scroll_offset_x != old_x) {
+                changed = 1;
+            }
+        }
+    }
+
+    if (changed) {
+        mark_layer_dirty(layer, DIRTY_TEXT);
+        return 1;
+    }
+    return 0;
 }
 
 static void table_compute_column_widths(TableComponent* component, int viewport_width) {
@@ -1372,6 +1441,7 @@ TableComponent* table_component_create(Layer* layer) {
     layer->component = component;
     layer->render = table_component_render;
     layer->handle_pointer_event = table_component_handle_pointer_event;
+    layer->handle_scroll_event = table_component_handle_scroll_event;
     layer->handle_key_event = table_component_handle_key_event;
     layer->focusable = 1;
     layer->on_data_update = table_data_update;
@@ -1789,6 +1859,14 @@ int table_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
         return 1;
     }
 
+    if (event->phase == POINTER_WHEEL) {
+        Point pt = {event->x, event->y};
+        if (!point_in_rect(pt, layer->rect)) {
+            return 0;
+        }
+        return table_component_apply_wheel(component, layer, event);
+    }
+
     if (component->editing_row >= 0) {
         if (table_handle_edit_mouse(component, layer, event)) {
             return 1;
@@ -1834,7 +1912,7 @@ int table_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
         table_tooltip_reset(component);
     }
 
-    if (in_header && event->button == SDL_BUTTON_LEFT) {
+    if (in_header && event->button == SDL_BUTTON_LEFT && event->phase != POINTER_WHEEL) {
         if (event->phase == POINTER_DOWN && resize_col >= 0) {
             component->resizing_column = resize_col;
             component->resize_drag_start_x = event->x;
