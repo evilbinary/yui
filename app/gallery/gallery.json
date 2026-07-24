@@ -52,21 +52,21 @@
           "id": "secLabels",
           "type": "View",
           "variant": "card",
-          "size": [948, 120],
+          "size": [948, 168],
           "layout": { "type": "vertical", "spacing": 8, "padding": [14, 16, 14, 16] },
           "children": [
-            { "type": "Label", "variant": "sectionTitle", "text": "Label" },
-            { "type": "Label", "variant": "title", "text": "Title 标题" },
-            { "type": "Label", "variant": "heading", "text": "Heading 小标题" },
+            { "type": "Label", "variant": "sectionTitle", "size": [900, 18], "text": "Label" },
+            { "type": "Label", "variant": "title", "size": [900, 30], "text": "Title 标题" },
+            { "type": "Label", "variant": "heading", "size": [900, 28], "text": "Heading 小标题" },
             {
               "type": "View",
               "size": [900, 28],
-              "layout": { "type": "horizontal", "spacing": 16 },
+              "layout": { "type": "horizontal", "spacing": 16, "align": "center" },
               "children": [
-                { "type": "Label", "variant": "body", "text": "Body 正文" },
-                { "type": "Label", "variant": "subtitle", "text": "Subtitle 说明" },
-                { "type": "Label", "variant": "caption", "text": "Caption 小字" },
-                { "type": "Label", "variant": "link", "text": "Link 链接" }
+                { "type": "Label", "variant": "body", "size": [120, 24], "text": "Body 正文" },
+                { "type": "Label", "variant": "subtitle", "size": [140, 24], "text": "Subtitle 说明" },
+                { "type": "Label", "variant": "caption", "size": [120, 20], "text": "Caption 小字" },
+                { "type": "Label", "variant": "link", "size": [100, 24], "text": "Link 链接" }
               ]
             }
           ]
