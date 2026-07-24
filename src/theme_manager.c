@@ -294,6 +294,11 @@ static void theme_manager_apply_to_layer_recursive(Layer* layer) {
         }
     }
 
+    /* app.json 的 source 挂在 sub 上，主题切换必须覆盖到 */
+    if (layer->sub) {
+        theme_manager_apply_to_layer_recursive(layer->sub);
+    }
+
     if (layer->item_template) {
         theme_manager_apply_to_layer_recursive(layer->item_template);
     }

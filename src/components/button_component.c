@@ -65,6 +65,87 @@ static void button_layer_destroy(Layer* layer) {
     layer->component = NULL;
 }
 
+static Color button_shade_color(Color base, int delta) {
+    Color c = base;
+    int r = (int)base.r + delta;
+    int g = (int)base.g + delta;
+    int b = (int)base.b + delta;
+    if (r < 0) r = 0; else if (r > 255) r = 255;
+    if (g < 0) g = 0; else if (g > 255) g = 255;
+    if (b < 0) b = 0; else if (b > 255) b = 255;
+    c.r = (unsigned char)r;
+    c.g = (unsigned char)g;
+    c.b = (unsigned char)b;
+    return c;
+}
+
+static void button_sync_state_colors(ButtonComponent* component, Color base) {
+    if (!component) return;
+    component->colors[LAYER_STATE_NORMAL] = base;
+    component->colors[LAYER_STATE_HOVER] = button_shade_color(base, 18);
+    component->colors[LAYER_STATE_PRESSED] = button_shade_color(base, -28);
+    component->colors[LAYER_STATE_FOCUSED] = button_shade_color(base, 12);
+    component->colors[LAYER_STATE_DISABLED] = (Color){base.r, base.g, base.b, 150};
+}
+
+static void button_component_apply_theme_style(Layer* layer, cJSON* style) {
+    if (!layer || !layer->component || !style || !cJSON_IsObject(style)) {
+        return;
+    }
+
+    ButtonComponent* component = (ButtonComponent*)layer->component;
+    cJSON* bg = cJSON_GetObjectItem(style, "bgColor");
+    if (bg && cJSON_IsString(bg) && bg->valuestring) {
+        if (strcmp(bg->valuestring, "transparent") == 0) {
+            component->bg_transparent = 1;
+            layer->bg_color = (Color){0, 0, 0, 0};
+        } else {
+            Color c;
+            parse_color(bg->valuestring, &c);
+            component->bg_transparent = 0;
+            layer->bg_color = c;
+            button_sync_state_colors(component, c);
+        }
+        mark_layer_dirty(layer, DIRTY_COLOR);
+    }
+
+    cJSON* color = cJSON_GetObjectItem(style, "color");
+    if (color && cJSON_IsString(color) && color->valuestring) {
+        parse_color(color->valuestring, &layer->color);
+        mark_layer_dirty(layer, DIRTY_COLOR | DIRTY_TEXT);
+    }
+
+    cJSON* hover = cJSON_GetObjectItem(style, "hoverColor");
+    if (hover && cJSON_IsString(hover) && hover->valuestring) {
+        parse_color(hover->valuestring, &component->hover_text_color);
+        mark_layer_dirty(layer, DIRTY_COLOR);
+    }
+
+    cJSON* radius = cJSON_GetObjectItem(style, "borderRadius");
+    if (!radius) {
+        radius = cJSON_GetObjectItem(style, "radius");
+    }
+    if (radius && cJSON_IsNumber(radius)) {
+        layer->radius = radius->valueint;
+        mark_layer_dirty(layer, DIRTY_STYLE);
+    }
+
+    cJSON* font_size = cJSON_GetObjectItem(style, "fontSize");
+    if (font_size && cJSON_IsNumber(font_size)) {
+        if (!layer->font) {
+            layer->font = (Font*)malloc(sizeof(Font));
+            memset(layer->font, 0, sizeof(Font));
+            strcpy(layer->font->path, "Roboto-Regular.ttf");
+            strcpy(layer->font->weight, "normal");
+        }
+        if (layer->font->size != font_size->valueint) {
+            layer->font->size = font_size->valueint;
+            layer->font->default_font = NULL;
+            mark_layer_dirty(layer, DIRTY_TEXT | DIRTY_LAYOUT);
+        }
+    }
+}
+
 ButtonComponent* button_component_create_from_json(Layer* layer, cJSON* json_obj) {
     if (!layer) {
         return NULL;
@@ -130,6 +211,8 @@ ButtonComponent* button_component_create_from_json(Layer* layer, cJSON* json_obj
 
     // 绑定键盘事件处理函数
     layer->handle_key_event = button_component_handle_key_event;
+
+    layer->set_style = button_component_apply_theme_style;
     
     // 设置组件为可聚焦
     layer->focusable = 1;
@@ -296,7 +379,18 @@ void button_component_render(Layer* layer) {
             bg_color = (Color){0, 0, 0, 0};
         }
     } else if (layer->bg_color.a > 0) {
-        bg_color = layer->bg_color;
+        /* 主题/样式写入 layer->bg_color 后，hover/press 用同步过的状态色 */
+        if (HAS_STATE(layer, LAYER_STATE_PRESSED)) {
+            bg_color = component->colors[LAYER_STATE_PRESSED];
+        } else if (HAS_STATE(layer, LAYER_STATE_HOVER)) {
+            bg_color = component->colors[LAYER_STATE_HOVER];
+        } else if (HAS_STATE(layer, LAYER_STATE_FOCUSED)) {
+            bg_color = component->colors[LAYER_STATE_FOCUSED];
+        } else if (HAS_STATE(layer, LAYER_STATE_DISABLED)) {
+            bg_color = component->colors[LAYER_STATE_DISABLED];
+        } else {
+            bg_color = layer->bg_color;
+        }
     } else {
         // 根据状态使用组件默认色
         if (HAS_STATE(layer, LAYER_STATE_PRESSED)) {
