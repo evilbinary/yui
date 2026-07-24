@@ -425,31 +425,13 @@ void button_component_render(Layer* layer) {
             }
         }
     } else if (bg_color.a > 0 || layer->bg_gradient.enabled || layer->shadow.enabled) {
-        int drew_with_border = 0;
+        /* Soft UI / border-0：用 shadow 分层，不画硬边框色 */
+        (void)has_bg;
         render_layer_background(layer, layer->bg_gradient.enabled ? NULL : &bg_color);
 
         if (layer->backdrop_filter) {
             backend_render_backdrop_filter(&layer->rect, layer->blur_radius, layer->saturation, layer->brightness);
         }
-
-        /* Soft UI 默认无硬边框；有圆角且非渐变时仍可画细边 */
-        if (has_bg && layer->radius > 0 && !layer->bg_gradient.enabled && !layer->shadow.enabled) {
-            Color border_color = (Color){200, 200, 200, 255};
-            if (HAS_STATE(layer, LAYER_STATE_PRESSED)) {
-                border_color = (Color){100, 100, 100, 255};
-            } else if (HAS_STATE(layer, LAYER_STATE_HOVER)) {
-                border_color = (Color){150, 150, 150, 255};
-            } else if (HAS_STATE(layer, LAYER_STATE_FOCUSED)) {
-                border_color = (Color){50, 150, 255, 255};
-            }
-            backend_render_rounded_rect_with_border(&layer->rect, bg_color, layer->radius, 1, border_color);
-            drew_with_border = 1;
-        } else if (has_bg && layer->radius <= 0 && !layer->bg_gradient.enabled) {
-            Color border_color = (Color){200, 200, 200, 255};
-            backend_render_rect_color(&layer->rect, border_color.r, border_color.g, border_color.b, border_color.a);
-            drew_with_border = 1;
-        }
-        (void)drew_with_border;
     }
     
     // 渲染图标与文本

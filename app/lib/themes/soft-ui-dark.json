@@ -11,7 +11,8 @@
         "bgColor": "#1F2937",
         "color": "#E5E7EB",
         "fontSize": 14,
-        "borderRadius": 16
+        "borderRadius": 16,
+        "shadow": "0 6 18 0 #00000055"
       }
     },
     {
@@ -56,16 +57,16 @@
         "fontWeight": "bold",
         "borderRadius": 16,
         "bgGradient": "linear vertical #818CF8 #4F46E5",
-        "shadow": "0 6 18 0 #6366F166"
+        "shadow": "0 8 22 0 #6366F166"
       }
     },
     {
       "selector": "Button.secondary",
       "style": {
-        "bgColor": "#374151",
+        "bgColor": "#1F2937",
         "color": "#E5E7EB",
         "borderRadius": 16,
-        "shadow": "0 2 10 0 #00000055"
+        "shadow": "0 6 16 0 #00000055"
       }
     },
     {
@@ -73,7 +74,8 @@
       "style": {
         "bgColor": "#312E81",
         "color": "#C7D2FE",
-        "borderRadius": 16
+        "borderRadius": 16,
+        "shadow": "0 4 14 0 #6366F144"
       }
     },
     {
@@ -81,7 +83,8 @@
       "style": {
         "bgColor": "#3F1D1D",
         "color": "#FCA5A5",
-        "borderRadius": 16
+        "borderRadius": 16,
+        "shadow": "0 4 14 0 #EF444455"
       }
     },
     { "selector": "Button.tone-a", "style": { "bgColor": "#312E81", "color": "#C7D2FE", "fontWeight": "bold" } },
