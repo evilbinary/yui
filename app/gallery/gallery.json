@@ -49,6 +49,31 @@
       "layout": { "type": "vertical", "spacing": 16, "padding": [16, 16, 24, 16] },
       "children": [
         {
+          "id": "secPerf",
+          "type": "View",
+          "variant": "card",
+          "size": [948, 168],
+          "layout": { "type": "vertical", "spacing": 8, "padding": [14, 16, 14, 16] },
+          "children": [
+            { "type": "Label", "variant": "sectionTitle", "size": [900, 18], "text": "YUI.perf 性能分析" },
+            { "id": "galleryPerfStatus", "type": "Label", "variant": "subtitle", "size": [900, 20], "text": "状态：未启用" },
+            { "id": "galleryPerfStats", "type": "Label", "variant": "caption", "size": [900, 48], "text": "统计：点击「刷新」查看 fps / renderMs / Top layers" },
+            {
+              "type": "View",
+              "size": [900, 36],
+              "layout": { "type": "horizontal", "spacing": 8, "align": "center" },
+              "children": [
+                { "id": "btnPerfHud", "type": "Button", "variant": "secondary", "size": [100, 32], "text": "HUD 关", "events": { "onClick": "@onPerfToggleHud" } },
+                { "id": "btnPerfRefresh", "type": "Button", "variant": "secondary", "size": [90, 32], "text": "刷新", "events": { "onClick": "@onPerfRefresh" } },
+                { "id": "btnPerfPoll", "type": "Button", "variant": "secondary", "size": [110, 32], "text": "自动刷新", "events": { "onClick": "@onPerfTogglePoll" } },
+                { "id": "btnPerfExport", "type": "Button", "variant": "tertiary", "size": [90, 32], "text": "导出", "events": { "onClick": "@onPerfExport" } },
+                { "id": "btnPerfReset", "type": "Button", "variant": "compact", "size": [90, 32], "text": "重置", "events": { "onClick": "@onPerfReset" } },
+                { "id": "btnPerfDisable", "type": "Button", "variant": "danger", "size": [110, 32], "text": "关闭 perf", "events": { "onClick": "@onPerfDisable" } }
+              ]
+            }
+          ]
+        },
+        {
           "id": "secLabels",
           "type": "View",
           "variant": "card",
