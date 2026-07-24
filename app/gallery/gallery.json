@@ -10,7 +10,7 @@
       "id": "galleryToolbar",
       "type": "View",
       "variant": "toolbar",
-      "size": [980, 118],
+      "size": [980, 156],
       "layout": { "type": "vertical", "spacing": 8, "padding": [12, 16, 12, 16] },
       "children": [
         {
@@ -37,6 +37,15 @@
             { "id": "btnThemeSoft", "type": "Button", "variant": "compact", "size": [110, 32], "text": "Soft UI", "events": { "onClick": "@onThemeSoftUi" } },
             { "id": "btnThemeSoftDark", "type": "Button", "variant": "compact", "size": [130, 32], "text": "Soft UI Dark", "events": { "onClick": "@onThemeSoftUiDark" } }
           ]
+        },
+        {
+          "id": "galleryThemeRow2",
+          "type": "View",
+          "size": [948, 34],
+          "layout": { "type": "horizontal", "spacing": 8, "align": "center" },
+          "children": [
+            { "id": "btnThemeTerminal", "type": "Button", "variant": "compact", "size": [160, 32], "text": "Terminal", "events": { "onClick": "@onThemeTerminal" } }
+          ]
         }
       ]
     },
@@ -44,7 +53,7 @@
       "id": "galleryContent",
       "type": "View",
       "variant": "surface",
-      "size": [980, 602],
+      "size": [980, 564],
       "scrollable": 1,
       "layout": { "type": "vertical", "spacing": 16, "padding": [16, 16, 24, 16] },
       "children": [

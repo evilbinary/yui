@@ -34,7 +34,8 @@ var THEME_OPTIONS = {
     "element-plus": { label: "Element Plus", path: "app/lib/themes/element-plus.json" },
     "element-plus-dark": { label: "Element Plus Dark", path: "app/lib/themes/element-plus-dark.json" },
     "soft-ui": { label: "Soft UI", path: "app/lib/themes/soft-ui.json" },
-    "soft-ui-dark": { label: "Soft UI Dark", path: "app/lib/themes/soft-ui-dark.json" }
+    "soft-ui-dark": { label: "Soft UI Dark", path: "app/lib/themes/soft-ui-dark.json" },
+    "developer-terminal": { label: "Developer Terminal", path: "app/lib/themes/developer-terminal.json" }
 };
 
 function loadDbConfig() {
@@ -429,6 +430,7 @@ function onPrefThemeElementPlus() { pickPrefTheme("element-plus"); }
 function onPrefThemeElementPlusDark() { pickPrefTheme("element-plus-dark"); }
 function onPrefThemeSoftUi() { pickPrefTheme("soft-ui"); }
 function onPrefThemeSoftUiDark() { pickPrefTheme("soft-ui-dark"); }
+function onPrefThemeTerminal() { pickPrefTheme("developer-terminal"); }
 
 function onThemeSettings() {
     onOpenSettings();

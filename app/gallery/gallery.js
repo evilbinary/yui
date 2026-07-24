@@ -11,10 +11,11 @@ var GALLERY_THEMES = {
     "element-plus": { label: "Element Plus", path: "app/lib/themes/element-plus.json", buttonId: "btnThemeEp" },
     "element-plus-dark": { label: "EP Dark", path: "app/lib/themes/element-plus-dark.json", buttonId: "btnThemeEpDark" },
     "soft-ui": { label: "Soft UI", path: "app/lib/themes/soft-ui.json", buttonId: "btnThemeSoft" },
-    "soft-ui-dark": { label: "Soft UI Dark", path: "app/lib/themes/soft-ui-dark.json", buttonId: "btnThemeSoftDark" }
+    "soft-ui-dark": { label: "Soft UI Dark", path: "app/lib/themes/soft-ui-dark.json", buttonId: "btnThemeSoftDark" },
+    "developer-terminal": { label: "Terminal", path: "app/lib/themes/developer-terminal.json", buttonId: "btnThemeTerminal" }
 };
 
-var currentThemeId = "soft-ui";
+var currentThemeId = "developer-terminal";
 
 var g_perf = {
     overlayOn: false,
@@ -255,6 +256,7 @@ function onThemeElementPlus() { applyGalleryTheme("element-plus"); }
 function onThemeElementPlusDark() { applyGalleryTheme("element-plus-dark"); }
 function onThemeSoftUi() { applyGalleryTheme("soft-ui"); }
 function onThemeSoftUiDark() { applyGalleryTheme("soft-ui-dark"); }
+function onThemeTerminal() { applyGalleryTheme("developer-terminal"); }
 
 function onGalleryLog(msg) {
     setStatus(String(msg || "clicked"));

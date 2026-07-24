@@ -833,6 +833,7 @@
                             { "id": "prefThemeElementPlusDarkBtn", "type": "Button", "size": [484, 32], "text": "Element Plus Dark（暗色）", "style": { "color": "#CFD3DC", "bgColor": "#1D1E1F", "borderRadius": 4, "fontSize": 12 }, "events": { "onClick": "@onPrefThemeElementPlusDark" } },
                             { "id": "prefThemeSoftUiBtn", "type": "Button", "size": [484, 32], "text": "Soft UI（柔和亮色）", "style": { "color": "#374151", "bgColor": "#FFFFFF", "borderRadius": 16, "fontSize": 12 }, "events": { "onClick": "@onPrefThemeSoftUi" } },
                             { "id": "prefThemeSoftUiDarkBtn", "type": "Button", "size": [484, 32], "text": "Soft UI Dark（柔和暗色）", "style": { "color": "#E5E7EB", "bgColor": "#1F2937", "borderRadius": 16, "fontSize": 12 }, "events": { "onClick": "@onPrefThemeSoftUiDark" } },
+                            { "id": "prefThemeTerminalBtn", "type": "Button", "size": [484, 32], "text": "Developer Terminal（终端风）", "style": { "color": "#4AF626", "bgColor": "#0D141B", "borderRadius": 2, "fontSize": 12 }, "events": { "onClick": "@onPrefThemeTerminal" } },
                             { "id": "prefFontSizeLabel", "type": "Label", "text": "SQL 编辑器字号", "style": { "color": "#A6ADC8", "fontSize": 11 } },
                             { "id": "prefFontSizeInput", "type": "Input", "size": [484, 28], "text": "13", "style": { "color": "#CDD6F4", "bgColor": "#11111B", "fontSize": 12, "padding": [6, 10, 6, 10] } }
                           ]
