@@ -890,6 +890,28 @@ void backend_render_rounded_rect_with_border(Rect* rect, Color bg_color, int rad
     }
 }
 
+void backend_render_shadow(const Rect* rect, int radius,
+                           int offset_x, int offset_y, int blur, int spread, Color color) {
+    Rect r;
+    (void)blur;
+    if (!rect || color.a == 0) return;
+    r = *rect;
+    r.x += offset_x - spread;
+    r.y += offset_y - spread;
+    r.w += spread * 2;
+    r.h += spread * 2;
+    if (r.w > 0 && r.h > 0) {
+        backend_render_rounded_rect(&r, color, radius + (spread > 0 ? spread : 0));
+    }
+}
+
+void backend_render_rounded_gradient(const Rect* rect, int radius, int vertical,
+                                     const Color* colors, int count) {
+    (void)vertical;
+    if (!rect || !colors || count <= 0) return;
+    backend_render_rounded_rect((Rect*)rect, colors[0], radius);
+}
+
 void backend_render_line(int x1, int y1, int x2, int y2, Color color) {
 #ifdef __ANDROID__
     float d = mobile_density();

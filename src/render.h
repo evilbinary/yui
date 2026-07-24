@@ -22,4 +22,7 @@ void render_clip_end(Layer* layer,Rect* prev_clip);
 
 Texture* render_text(Layer* layer,const char* text, Color color);
 
+/* 绘制图层阴影 + 背景（纯色或渐变）。override_bg 非空时覆盖 layer->bg_color */
+void render_layer_background(Layer* layer, const Color* override_bg);
+
 #endif

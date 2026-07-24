@@ -797,6 +797,13 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
         layer->brightness = 1.0f;  // 默认亮度
       }
     }
+
+    if (cJSON_HasObjectItem(style, "shadow")) {
+      parse_layer_shadow(cJSON_GetObjectItem(style, "shadow"), &layer->shadow);
+    }
+    if (cJSON_HasObjectItem(style, "bgGradient")) {
+      parse_layer_gradient(cJSON_GetObjectItem(style, "bgGradient"), &layer->bg_gradient);
+    }
   }
 
   // 解析资源路径

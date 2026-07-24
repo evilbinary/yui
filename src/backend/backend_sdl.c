@@ -3171,6 +3171,172 @@ void draw_rounded_rect_with_border(SDL_Renderer* renderer, int x, int y, int w, 
     }
 }
 
+static Color sdl_gradient_sample(const Color* colors, int count, float t) {
+    if (!colors || count <= 0) {
+        Color z = {0, 0, 0, 0};
+        return z;
+    }
+    if (count == 1 || t <= 0.f) return colors[0];
+    if (t >= 1.f) return colors[count - 1];
+    float scaled = t * (float)(count - 1);
+    int i = (int)scaled;
+    float f = scaled - (float)i;
+    if (i >= count - 1) return colors[count - 1];
+    Color a = colors[i];
+    Color b = colors[i + 1];
+    Color c;
+    c.r = (unsigned char)(a.r + (b.r - a.r) * f + 0.5f);
+    c.g = (unsigned char)(a.g + (b.g - a.g) * f + 0.5f);
+    c.b = (unsigned char)(a.b + (b.b - a.b) * f + 0.5f);
+    c.a = (unsigned char)(a.a + (b.a - a.a) * f + 0.5f);
+    return c;
+}
+
+void backend_render_shadow(const Rect* rect, int radius,
+                           int offset_x, int offset_y, int blur, int spread, Color color) {
+    Rect base;
+    int b;
+    int steps;
+    if (!rect || !renderer || color.a == 0 || rect->w <= 0 || rect->h <= 0) {
+        return;
+    }
+
+    base = *rect;
+    base.x += offset_x - spread;
+    base.y += offset_y - spread;
+    base.w += spread * 2;
+    base.h += spread * 2;
+    if (base.w <= 0 || base.h <= 0) return;
+
+    b = blur;
+    if (b < 0) b = 0;
+    if (b > 28) b = 28;
+
+    if (b == 0) {
+        SDL_Color c = {color.r, color.g, color.b, color.a};
+        draw_rounded_rect(renderer, base.x, base.y, base.w, base.h, radius + (spread > 0 ? spread : 0), c);
+        return;
+    }
+
+    steps = b;
+    for (int i = steps; i >= 0; i--) {
+        float falloff = (float)(steps - i + 1) / (float)(steps + 1);
+        int alpha = (int)((color.a * falloff) / (float)(steps / 2 + 1));
+        Color cc = color;
+        Rect r = base;
+        if (alpha < 1) alpha = 1;
+        if (alpha > 255) alpha = 255;
+        cc.a = (unsigned char)alpha;
+        r.x -= i;
+        r.y -= i;
+        r.w += i * 2;
+        r.h += i * 2;
+        {
+            SDL_Color sc = {cc.r, cc.g, cc.b, cc.a};
+            draw_rounded_rect(renderer, r.x, r.y, r.w, r.h, radius + spread + i, sc);
+        }
+    }
+}
+
+void backend_render_rounded_gradient(const Rect* rect, int radius, int vertical,
+                                     const Color* colors, int count) {
+    int x, y, w, h, r;
+    YuiRadiusAA* aa;
+    if (!rect || !colors || count <= 0 || !renderer) return;
+    x = rect->x;
+    y = rect->y;
+    w = rect->w;
+    h = rect->h;
+    if (w <= 0 || h <= 0) return;
+
+    r = radius;
+    if (r > w / 2) r = w / 2;
+    if (r > h / 2) r = h / 2;
+
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+
+    if (r <= 0) {
+        if (vertical) {
+            for (int py = 0; py < h; py++) {
+                float t = (h <= 1) ? 0.f : (float)py / (float)(h - 1);
+                Color c = sdl_gradient_sample(colors, count, t);
+                SDL_SetRenderDrawColor(renderer, c.r, c.g, c.b, c.a);
+                SDL_Rect row = {x, y + py, w, 1};
+                SDL_RenderFillRect(renderer, &row);
+            }
+        } else {
+            for (int px = 0; px < w; px++) {
+                float t = (w <= 1) ? 0.f : (float)px / (float)(w - 1);
+                Color c = sdl_gradient_sample(colors, count, t);
+                SDL_SetRenderDrawColor(renderer, c.r, c.g, c.b, c.a);
+                SDL_Rect col = {x + px, y, 1, h};
+                SDL_RenderFillRect(renderer, &col);
+            }
+        }
+        return;
+    }
+
+    aa = yui_aa_circle_get(r);
+    if (!aa) {
+        backend_render_fill_rect((Rect*)rect, colors[0]);
+        return;
+    }
+
+    if (vertical) {
+        for (int py = y; py < y + h; py++) {
+            int local_y = py - y;
+            int cir_y = -1;
+            float t = (h <= 1) ? 0.f : (float)local_y / (float)(h - 1);
+            Color c = sdl_gradient_sample(colors, count, t);
+            SDL_Color sc = {c.r, c.g, c.b, c.a};
+
+            if (local_y < r) {
+                cir_y = r - local_y - 1;
+            } else if (local_y >= h - r) {
+                cir_y = local_y - (h - r);
+            }
+
+            if (cir_y < 0) {
+                SDL_SetRenderDrawColor(renderer, sc.r, sc.g, sc.b, sc.a);
+                SDL_Rect row = {x, py, w, 1};
+                SDL_RenderFillRect(renderer, &row);
+            } else {
+                yui_draw_rounded_row_aa(renderer, x, py, w, r, cir_y, aa, sc);
+            }
+        }
+    } else {
+        for (int py = y; py < y + h; py++) {
+            int local_y = py - y;
+            int cir_y = -1;
+            int x0 = x;
+            int x1 = x + w;
+
+            if (local_y < r) {
+                cir_y = r - local_y - 1;
+            } else if (local_y >= h - r) {
+                cir_y = local_y - (h - r);
+            }
+
+            if (cir_y >= 0) {
+                int aa_len = 0, x_start = 0;
+                uint8_t* aa_opa = NULL;
+                yui_aa_circle_get_line(aa, cir_y, &aa_len, &x_start, &aa_opa);
+                (void)aa_len;
+                (void)aa_opa;
+                x0 = x + x_start;
+                x1 = x + w - x_start;
+            }
+
+            for (int px = x0; px < x1; px++) {
+                float t = (w <= 1) ? 0.f : (float)(px - x) / (float)(w - 1);
+                Color c = sdl_gradient_sample(colors, count, t);
+                SDL_SetRenderDrawColor(renderer, c.r, c.g, c.b, c.a);
+                SDL_RenderDrawPoint(renderer, px, py);
+            }
+        }
+    }
+}
+
 // Add this function anywhere in backend_sdl.c after the global renderer declaration
 
 // 绘制抗锯齿线段的辅助函数

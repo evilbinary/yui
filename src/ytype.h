@@ -526,6 +526,24 @@ typedef enum {
 #define CLEAR_STATE(layer, st) (layer->state &= ~(st))
 #define CLEAR_ALL_STATES(layer) (layer->state = LAYER_STATE_NORMAL)
 
+/* CSS box-shadow: offset-x offset-y blur-radius spread-radius color */
+typedef struct LayerShadow {
+    unsigned char enabled;
+    int offset_x;
+    int offset_y;
+    int blur;
+    int spread;
+    Color color;
+} LayerShadow;
+
+#define LAYER_GRADIENT_MAX_STOPS 8
+typedef struct LayerGradient {
+    unsigned char enabled;
+    unsigned char vertical; /* 1=to bottom, 0=to right */
+    int count;
+    Color colors[LAYER_GRADIENT_MAX_STOPS];
+} LayerGradient;
+
 typedef  int (*register_event_fun_t)(Layer* layer, const char* event_name, const char* event_func_name, EventHandler event_handler);
 typedef  cJSON* (*get_property_fun_t)(Layer* layer, const char* property_name);
 typedef  int (*set_property_fun_t)(Layer* layer, const char* key, cJSON* value, int is_creating);
@@ -642,6 +660,11 @@ typedef struct Layer {
     int blur_radius;         // 模糊半径
     float saturation;         // 饱和度 (1.0为正常，>1.0为更饱和，<1.0为不饱和)
     float brightness;        // 亮度 (1.0为正常，>1.0为更亮，<1.0为更暗)
+
+    /* box-shadow: offset-x offset-y blur spread color */
+    LayerShadow shadow;
+    /* 背景线性渐变（启用时优先于纯色 bgColor） */
+    LayerGradient bg_gradient;
     
     // 增量更新支持：脏标记
     unsigned int dirty_flags; // 标记哪些属性被修改

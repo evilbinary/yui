@@ -33,10 +33,11 @@
       "selector": "View.card",
       "style": {
         "bgColor": "#1F2937",
-        "borderRadius": 24
+        "borderRadius": 24,
+        "shadow": "0 10 28 0 #00000066"
       }
     },
-    { "selector": "View.panel", "style": { "bgColor": "#312E81", "borderRadius": 20 } },
+    { "selector": "View.panel", "style": { "bgColor": "#312E81", "borderRadius": 20, "bgGradient": "linear vertical #312E81 #1E1B4B" } },
     { "selector": "View.divider", "style": { "bgColor": "#374151" } },
     { "selector": "Label.title", "style": { "color": "#F9FAFB", "fontSize": 22, "fontWeight": "bold" } },
     { "selector": "Label.heading", "style": { "color": "#F9FAFB", "fontSize": 20, "fontWeight": "bold" } },
@@ -53,7 +54,9 @@
         "bgColor": "#6366F1",
         "color": "#FFFFFF",
         "fontWeight": "bold",
-        "borderRadius": 16
+        "borderRadius": 16,
+        "bgGradient": "linear vertical #818CF8 #4F46E5",
+        "shadow": "0 6 18 0 #6366F166"
       }
     },
     {
@@ -61,7 +64,8 @@
       "style": {
         "bgColor": "#374151",
         "color": "#E5E7EB",
-        "borderRadius": 16
+        "borderRadius": 16,
+        "shadow": "0 2 10 0 #00000055"
       }
     },
     {

@@ -179,6 +179,35 @@ Texture* render_text(Layer* layer,const char* text, Color color) {
     return texture;
 }
 
+void render_layer_background(Layer* layer, const Color* override_bg) {
+    Color fill;
+    if (!layer) return;
+
+    if (layer->shadow.enabled && layer->shadow.color.a > 0) {
+        backend_render_shadow(&layer->rect, layer->radius,
+                              layer->shadow.offset_x, layer->shadow.offset_y,
+                              layer->shadow.blur, layer->shadow.spread,
+                              layer->shadow.color);
+    }
+
+    if (layer->bg_gradient.enabled && layer->bg_gradient.count >= 2) {
+        backend_render_rounded_gradient(&layer->rect, layer->radius,
+                                        layer->bg_gradient.vertical,
+                                        layer->bg_gradient.colors,
+                                        layer->bg_gradient.count);
+        return;
+    }
+
+    fill = override_bg ? *override_bg : layer->bg_color;
+    if (fill.a == 0) return;
+
+    if (layer->radius > 0) {
+        backend_render_rounded_rect(&layer->rect, fill, layer->radius);
+    } else {
+        backend_render_fill_rect(&layer->rect, fill);
+    }
+}
+
 // ====================== 渲染管线 ======================
 void render_layer(Layer* layer) {
     if (!layer) {
@@ -205,18 +234,11 @@ void render_layer(Layer* layer) {
     } else if (layer->render != NULL) {
         layer->render(layer);
     } else if (layer->type == VIEW) {
-        if (layer->bg_color.a > 0) {
-            if (layer->backdrop_filter) {
-                backend_render_backdrop_filter(&layer->rect, layer->blur_radius, layer->saturation, layer->brightness);
-            }
-
-            if (layer->radius > 0) {
-                backend_render_rounded_rect(&layer->rect, layer->bg_color, layer->radius);
-            } else {
-                backend_render_fill_rect(&layer->rect, layer->bg_color);
-            }
-        } else if (layer->backdrop_filter) {
+        if (layer->backdrop_filter) {
             backend_render_backdrop_filter(&layer->rect, layer->blur_radius, layer->saturation, layer->brightness);
+        }
+        if (layer->bg_gradient.enabled || layer->bg_color.a > 0 || layer->shadow.enabled) {
+            render_layer_background(layer, NULL);
         }
     }
 

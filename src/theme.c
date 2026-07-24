@@ -519,6 +519,10 @@ void theme_apply_to_layer(Theme* theme, Layer* layer, const char* id, const char
         return;
     }
 
+    /* 切换主题时先清空阴影/渐变，再由新规则写入 */
+    memset(&layer->shadow, 0, sizeof(layer->shadow));
+    memset(&layer->bg_gradient, 0, sizeof(layer->bg_gradient));
+
     printf("[Theme] Applying theme to layer id='%s', type='%s', specificity=%d\n",
            id, type, max_specificity);
 

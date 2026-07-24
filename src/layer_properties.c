@@ -73,6 +73,24 @@ static int handle_bg_color(Layer* layer, cJSON* value, int is_creating) {
     return 1;
 }
 
+static int handle_shadow(Layer* layer, cJSON* value, int is_creating) {
+    (void)is_creating;
+    if (!parse_layer_shadow(value, &layer->shadow)) {
+        return 0;
+    }
+    mark_layer_dirty(layer, DIRTY_STYLE | DIRTY_COLOR);
+    return 1;
+}
+
+static int handle_bg_gradient(Layer* layer, cJSON* value, int is_creating) {
+    (void)is_creating;
+    if (!parse_layer_gradient(value, &layer->bg_gradient)) {
+        return 0;
+    }
+    mark_layer_dirty(layer, DIRTY_STYLE | DIRTY_COLOR);
+    return 1;
+}
+
 // 字体相关处理器
 static int handle_font(Layer* layer, cJSON* value, int is_creating) {
     if (!cJSON_IsString(value)) return 0;
@@ -454,6 +472,8 @@ static const PropertyHandlerEntry property_handlers[] = {
     {"color", handle_color},
     {"bgColor", handle_bg_color},
     {"opacity", handle_opacity},
+    {"shadow", handle_shadow},
+    {"bgGradient", handle_bg_gradient},
     
     // 字体属性
     {"font", handle_font},

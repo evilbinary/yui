@@ -81,6 +81,14 @@ void backend_set_resize_callback(ResizeCallback callback);
 void backend_render_rounded_rect(Rect* rect, Color color, int radius);
 void backend_render_rounded_rect_color(Rect* rect, unsigned char r, unsigned char g, unsigned char b, unsigned char a, int radius);
 void backend_render_rounded_rect_with_border(Rect* rect, Color bg_color, int radius, int border_width, Color border_color);
+
+/* box-shadow: offset-x offset-y blur spread color */
+void backend_render_shadow(const Rect* rect, int radius,
+                           int offset_x, int offset_y, int blur, int spread, Color color);
+/* 圆角线性渐变；vertical=1 自上而下 */
+void backend_render_rounded_gradient(const Rect* rect, int radius, int vertical,
+                                     const Color* colors, int count);
+
 // Add this declaration in backend.h with the other function declarations
 void backend_render_line(int x1, int y1, int x2, int y2, Color color);
 void backend_render_bezier_cubic(int x0, int y0,
