@@ -1340,6 +1340,7 @@ void draw_rounded_rect_with_border(SDL_Renderer* renderer, int x, int y, int w, 
 void draw_rounded_rect(SDL_Renderer* renderer, int x, int y, int w, int h, int radius, SDL_Color color);
 
 static void yui_aa_circle_cache_free(void);
+static void yui_style_fx_cleanup(void);
 
 int backend_init(){
     yui_component_registry_init();
@@ -1950,6 +1951,7 @@ int find_available_cache_entry();
 void backend_quit(){
       // 清理毛玻璃缓存
       cleanup_blur_cache();
+      yui_style_fx_cleanup();
       yui_aa_circle_cache_free();
       cleanup_font_cache();
       cleanup_font_cache();
@@ -3192,11 +3194,421 @@ static Color sdl_gradient_sample(const Color* colors, int count, float t) {
     return c;
 }
 
+/* ---- Soft UI 风格效果缓存：shadow / gradient 同尺寸同色只烘焙一次 ---- */
+#define YUI_STYLE_FX_CACHE 32
+
+typedef struct {
+    SDL_Texture* tex;
+    int tw, th;
+    int kind; /* 1=shadow, 2=gradient */
+    int w, h, radius, blur, spread;
+    int vertical;
+    int stop_count;
+    Uint32 stops[LAYER_GRADIENT_MAX_STOPS];
+    Uint32 rgba;
+    uint64_t last_use;
+} YuiStyleFxEntry;
+
+static YuiStyleFxEntry g_style_fx[YUI_STYLE_FX_CACHE];
+static uint64_t g_style_fx_clock;
+
+static Uint32 yui_pack_rgba(Color c) {
+    return ((Uint32)c.r << 24) | ((Uint32)c.g << 16) | ((Uint32)c.b << 8) | (Uint32)c.a;
+}
+
+static Uint32 yui_fx_pixel_format(void) {
+    SDL_RendererInfo info;
+    if (SDL_GetRendererInfo(renderer, &info) == 0 && info.num_texture_formats > 0) {
+        return info.texture_formats[0];
+    }
+    return SDL_PIXELFORMAT_RGBA8888;
+}
+
+static void yui_style_fx_cleanup(void) {
+    for (int i = 0; i < YUI_STYLE_FX_CACHE; i++) {
+        if (g_style_fx[i].tex) {
+            SDL_DestroyTexture(g_style_fx[i].tex);
+            g_style_fx[i].tex = NULL;
+        }
+        memset(&g_style_fx[i], 0, sizeof(g_style_fx[i]));
+    }
+    g_style_fx_clock = 0;
+}
+
+static int yui_style_fx_alloc_slot(void) {
+    int free_i = -1;
+    int lru_i = 0;
+    uint64_t lru_use = UINT64_MAX;
+    for (int i = 0; i < YUI_STYLE_FX_CACHE; i++) {
+        if (!g_style_fx[i].tex) {
+            free_i = i;
+            break;
+        }
+        if (g_style_fx[i].last_use < lru_use) {
+            lru_use = g_style_fx[i].last_use;
+            lru_i = i;
+        }
+    }
+    if (free_i >= 0) return free_i;
+    if (g_style_fx[lru_i].tex) {
+        SDL_DestroyTexture(g_style_fx[lru_i].tex);
+        g_style_fx[lru_i].tex = NULL;
+    }
+    memset(&g_style_fx[lru_i], 0, sizeof(g_style_fx[lru_i]));
+    return lru_i;
+}
+
+static void yui_draw_vertical_gradient_fast(int x, int y, int w, int h, int radius,
+                                           const Color* colors, int count) {
+    YuiRadiusAA* aa = NULL;
+    int r = radius;
+    int strip;
+
+    if (r > w / 2) r = w / 2;
+    if (r > h / 2) r = h / 2;
+    if (r > 0) {
+        aa = yui_aa_circle_get(r);
+        if (!aa) r = 0;
+    }
+
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+    strip = (h >= 96) ? 4 : ((h >= 48) ? 2 : 1);
+
+    for (int py = 0; py < h; ) {
+        int local_y = py;
+        int run = strip;
+        int in_corner = (r > 0) && (local_y < r || local_y >= h - r);
+        float t;
+        Color c;
+        SDL_Color sc;
+
+        if (in_corner) run = 1;
+        if (py + run > h) run = h - py;
+
+        t = (h <= 1) ? 0.f : (float)(local_y + (run - 1) * 0.5f) / (float)(h - 1);
+        c = sdl_gradient_sample(colors, count, t);
+        sc.r = c.r; sc.g = c.g; sc.b = c.b; sc.a = c.a;
+
+        if (in_corner) {
+            int cir_y = (local_y < r) ? (r - local_y - 1) : (local_y - (h - r));
+            yui_draw_rounded_row_aa(renderer, x, y + py, w, r, cir_y, aa, sc);
+        } else {
+            SDL_SetRenderDrawColor(renderer, sc.r, sc.g, sc.b, sc.a);
+            SDL_Rect band = {x, y + py, w, run};
+            SDL_RenderFillRect(renderer, &band);
+        }
+        py += run;
+    }
+}
+
+static void yui_draw_horizontal_gradient_fast(int x, int y, int w, int h, int radius,
+                                             const Color* colors, int count) {
+    YuiRadiusAA* aa = NULL;
+    int r = radius;
+    int strip;
+
+    if (r > w / 2) r = w / 2;
+    if (r > h / 2) r = h / 2;
+    if (r > 0) {
+        aa = yui_aa_circle_get(r);
+        if (!aa) r = 0;
+    }
+
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+    strip = (w >= 96) ? 4 : ((w >= 48) ? 2 : 1);
+
+    if (r <= 0) {
+        for (int px = 0; px < w; ) {
+            int run = strip;
+            float t;
+            Color c;
+            if (px + run > w) run = w - px;
+            t = (w <= 1) ? 0.f : (float)(px + (run - 1) * 0.5f) / (float)(w - 1);
+            c = sdl_gradient_sample(colors, count, t);
+            SDL_SetRenderDrawColor(renderer, c.r, c.g, c.b, c.a);
+            SDL_Rect col = {x + px, y, run, h};
+            SDL_RenderFillRect(renderer, &col);
+            px += run;
+        }
+        return;
+    }
+
+    /* 圆角水平渐变：按行裁剪左右，列方向用粗条带 */
+    for (int py = y; py < y + h; py++) {
+        int local_y = py - y;
+        int cir_y = -1;
+        int x0 = x;
+        int x1 = x + w;
+
+        if (local_y < r) {
+            cir_y = r - local_y - 1;
+        } else if (local_y >= h - r) {
+            cir_y = local_y - (h - r);
+        }
+        if (cir_y >= 0) {
+            int aa_len = 0, x_start = 0;
+            uint8_t* aa_opa = NULL;
+            yui_aa_circle_get_line(aa, cir_y, &aa_len, &x_start, &aa_opa);
+            (void)aa_len;
+            (void)aa_opa;
+            x0 = x + x_start;
+            x1 = x + w - x_start;
+        }
+        for (int px = x0; px < x1; ) {
+            int run = strip;
+            float t;
+            Color c;
+            if (px + run > x1) run = x1 - px;
+            t = (w <= 1) ? 0.f : (float)(px - x + (run - 1) * 0.5f) / (float)(w - 1);
+            c = sdl_gradient_sample(colors, count, t);
+            SDL_SetRenderDrawColor(renderer, c.r, c.g, c.b, c.a);
+            SDL_Rect col = {px, py, run, 1};
+            SDL_RenderFillRect(renderer, &col);
+            px += run;
+        }
+    }
+}
+
+static void yui_shadow_fill_rounded(Uint32* px, int out_w, int out_h,
+                                    int x0, int y0, int bw, int bh, int radius,
+                                    Uint8 cr, Uint8 cg, Uint8 cb, Uint8 ca) {
+    int r = radius;
+    YuiRadiusAA* aa = NULL;
+    Uint32 solid;
+
+    if (bw <= 0 || bh <= 0 || ca == 0) return;
+    if (r > bw / 2) r = bw / 2;
+    if (r > bh / 2) r = bh / 2;
+    if (r > 0) {
+        aa = yui_aa_circle_get(r);
+        if (!aa) r = 0;
+    }
+
+    solid = ((Uint32)ca << 24) | ((Uint32)cr << 16) | ((Uint32)cg << 8) | (Uint32)cb;
+
+    for (int py = 0; py < bh; py++) {
+        int dy = y0 + py;
+        int cir_y = -1;
+        if (dy < 0 || dy >= out_h) continue;
+
+        if (r > 0) {
+            if (py < r) cir_y = r - py - 1;
+            else if (py >= bh - r) cir_y = py - (bh - r);
+        }
+
+        if (cir_y < 0) {
+            int x_start = x0;
+            int x_end = x0 + bw;
+            if (x_start < 0) x_start = 0;
+            if (x_end > out_w) x_end = out_w;
+            for (int dx = x_start; dx < x_end; dx++) {
+                px[dy * out_w + dx] = solid;
+            }
+        } else {
+            int aa_len = 0, x_start = 0;
+            uint8_t* aa_opa = NULL;
+            int cir_x_left;
+            int cir_x_right;
+            int mid_l, mid_r;
+
+            yui_aa_circle_get_line(aa, cir_y, &aa_len, &x_start, &aa_opa);
+            cir_x_left = x0 + r - x_start - 1;
+            cir_x_right = x0 + bw - r + x_start;
+            mid_l = cir_x_left + 1;
+            mid_r = cir_x_right;
+            if (mid_l < 0) mid_l = 0;
+            if (mid_r > out_w) mid_r = out_w;
+            for (int dx = mid_l; dx < mid_r; dx++) {
+                px[dy * out_w + dx] = solid;
+            }
+            for (int i = 0; i < aa_len; i++) {
+                Uint8 a = (Uint8)((ca * aa_opa[aa_len - 1 - i]) / 255);
+                Uint32 p = ((Uint32)a << 24) | ((Uint32)cr << 16) | ((Uint32)cg << 8) | (Uint32)cb;
+                int lx = cir_x_left - i;
+                int rx = cir_x_right + i;
+                if (lx >= 0 && lx < out_w) px[dy * out_w + lx] = p;
+                if (rx >= 0 && rx < out_w) px[dy * out_w + rx] = p;
+            }
+        }
+    }
+}
+
+/* 滑动窗口盒模糊（ARGB 打包：A<<24|R<<16|G<<8|B），全尺寸、无壳层环纹 */
+static void yui_shadow_box_blur(Uint32* px, int w, int h, int radius) {
+    Uint32* tmp;
+    int r = radius;
+    if (r < 1 || w <= 0 || h <= 0) return;
+    if (r > 24) r = 24;
+    tmp = (Uint32*)malloc((size_t)w * (size_t)h * sizeof(Uint32));
+    if (!tmp) return;
+
+    /* horizontal */
+    for (int y = 0; y < h; y++) {
+        const Uint32* src = px + y * w;
+        Uint32* dst = tmp + y * w;
+        int sum_a = 0, sum_r = 0, sum_g = 0, sum_b = 0;
+        int count = 0;
+
+        for (int i = -r; i <= r; i++) {
+            int x = i;
+            if (x < 0) x = 0;
+            if (x >= w) x = w - 1;
+            Uint32 p = src[x];
+            sum_a += (int)((p >> 24) & 255);
+            sum_r += (int)((p >> 16) & 255);
+            sum_g += (int)((p >> 8) & 255);
+            sum_b += (int)(p & 255);
+            count++;
+        }
+        dst[0] = ((Uint32)(sum_a / count) << 24) | ((Uint32)(sum_r / count) << 16) |
+                 ((Uint32)(sum_g / count) << 8) | (Uint32)(sum_b / count);
+
+        for (int x = 1; x < w; x++) {
+            int leave = x - r - 1;
+            int enter = x + r;
+            if (leave < 0) leave = 0;
+            if (enter >= w) enter = w - 1;
+            {
+                Uint32 pl = src[leave];
+                Uint32 pe = src[enter];
+                /* 重新用固定窗口更稳（边界 clamp 时滑动难维护），小半径可接受 */
+                (void)pl;
+                (void)pe;
+            }
+            sum_a = sum_r = sum_g = sum_b = 0;
+            count = 0;
+            for (int i = -r; i <= r; i++) {
+                int xx = x + i;
+                if (xx < 0) xx = 0;
+                if (xx >= w) xx = w - 1;
+                Uint32 p = src[xx];
+                sum_a += (int)((p >> 24) & 255);
+                sum_r += (int)((p >> 16) & 255);
+                sum_g += (int)((p >> 8) & 255);
+                sum_b += (int)(p & 255);
+                count++;
+            }
+            dst[x] = ((Uint32)(sum_a / count) << 24) | ((Uint32)(sum_r / count) << 16) |
+                     ((Uint32)(sum_g / count) << 8) | (Uint32)(sum_b / count);
+        }
+    }
+
+    /* vertical */
+    for (int x = 0; x < w; x++) {
+        for (int y = 0; y < h; y++) {
+            int sum_a = 0, sum_r = 0, sum_g = 0, sum_b = 0;
+            int count = 0;
+            for (int i = -r; i <= r; i++) {
+                int yy = y + i;
+                if (yy < 0) yy = 0;
+                if (yy >= h) yy = h - 1;
+                Uint32 p = tmp[yy * w + x];
+                sum_a += (int)((p >> 24) & 255);
+                sum_r += (int)((p >> 16) & 255);
+                sum_g += (int)((p >> 8) & 255);
+                sum_b += (int)(p & 255);
+                count++;
+            }
+            px[y * w + x] = ((Uint32)(sum_a / count) << 24) | ((Uint32)(sum_r / count) << 16) |
+                            ((Uint32)(sum_g / count) << 8) | (Uint32)(sum_b / count);
+        }
+    }
+
+    free(tmp);
+}
+
+static SDL_Texture* yui_shadow_texture_from_pixels(Uint32* px, int w, int h) {
+    SDL_Surface* surf;
+    SDL_Texture* tex;
+    /* 与打包一致：A R G B 字节序用 RGBA8888 在小端上对应 A<<24|R<<16|G<<8|B 不一定，改用带 mask 的 surface */
+    surf = SDL_CreateRGBSurfaceFrom(
+        px, w, h, 32, w * 4,
+        0x00FF0000u, 0x0000FF00u, 0x000000FFu, 0xFF000000u);
+    if (!surf) return NULL;
+    tex = SDL_CreateTextureFromSurface(renderer, surf);
+    SDL_FreeSurface(surf);
+    if (tex) {
+        SDL_SetTextureBlendMode(tex, SDL_BLENDMODE_BLEND);
+    }
+    return tex;
+}
+
+static SDL_Texture* yui_shadow_texture_get(int body_w, int body_h, int body_radius,
+                                          int blur, Color color) {
+    Uint32 rgba = yui_pack_rgba(color);
+    int out_w = body_w + blur * 2;
+    int out_h = body_h + blur * 2;
+    int slot;
+    Uint32* px;
+    SDL_Texture* tex;
+    int passes;
+    int br;
+
+    if (out_w < 1) out_w = 1;
+    if (out_h < 1) out_h = 1;
+
+    g_style_fx_clock++;
+    for (int i = 0; i < YUI_STYLE_FX_CACHE; i++) {
+        YuiStyleFxEntry* e = &g_style_fx[i];
+        if (e->kind == 1 && e->tex && e->w == body_w && e->h == body_h &&
+            e->radius == body_radius && e->blur == blur && e->rgba == rgba) {
+            e->last_use = g_style_fx_clock;
+            return e->tex;
+        }
+    }
+
+    px = (Uint32*)calloc((size_t)out_w * (size_t)out_h, sizeof(Uint32));
+    if (!px) return NULL;
+
+    /* 全尺寸：先画实心 AA 圆角，再盒模糊（2 次 ≈ 高斯），彻底去掉壳层毛刺 */
+    yui_shadow_fill_rounded(px, out_w, out_h, blur, blur, body_w, body_h, body_radius,
+                            color.r, color.g, color.b, color.a);
+
+    br = blur;
+    if (br > 20) br = 20;
+    passes = (blur >= 16) ? 3 : 2;
+    for (int p = 0; p < passes; p++) {
+        int rad = br / passes;
+        if (rad < 1) rad = 1;
+        if (p == passes - 1) rad = br - rad * (passes - 1);
+        if (rad < 1) rad = 1;
+        yui_shadow_box_blur(px, out_w, out_h, rad);
+    }
+
+    tex = yui_shadow_texture_from_pixels(px, out_w, out_h);
+    free(px);
+    if (!tex) return NULL;
+
+    slot = yui_style_fx_alloc_slot();
+    g_style_fx[slot].tex = tex;
+    g_style_fx[slot].tw = out_w;
+    g_style_fx[slot].th = out_h;
+    g_style_fx[slot].kind = 1;
+    g_style_fx[slot].w = body_w;
+    g_style_fx[slot].h = body_h;
+    g_style_fx[slot].radius = body_radius;
+    g_style_fx[slot].blur = blur;
+    g_style_fx[slot].rgba = rgba;
+    g_style_fx[slot].last_use = g_style_fx_clock;
+    return tex;
+}
+
+static void yui_shadow_draw_fallback(const Rect* base, int radius, int blur, Color color) {
+    /* 无缓存时的轻量回退：单层扩大半透明，不走壳层 */
+    int expand = blur > 0 ? (blur / 2 + 1) : 0;
+    SDL_Color sc = {color.r, color.g, color.b, color.a};
+    draw_rounded_rect(renderer,
+                      base->x - expand, base->y - expand,
+                      base->w + expand * 2, base->h + expand * 2,
+                      radius + expand, sc);
+}
+
 void backend_render_shadow(const Rect* rect, int radius,
                            int offset_x, int offset_y, int blur, int spread, Color color) {
     Rect base;
     int b;
-    int steps;
+    int body_r;
+    SDL_Texture* tex;
     if (!rect || !renderer || color.a == 0 || rect->w <= 0 || rect->h <= 0) {
         return;
     }
@@ -3210,38 +3622,85 @@ void backend_render_shadow(const Rect* rect, int radius,
 
     b = blur;
     if (b < 0) b = 0;
-    if (b > 28) b = 28;
+    if (b > 32) b = 32;
+    body_r = radius + (spread > 0 ? spread : 0);
 
     if (b == 0) {
         SDL_Color c = {color.r, color.g, color.b, color.a};
-        draw_rounded_rect(renderer, base.x, base.y, base.w, base.h, radius + (spread > 0 ? spread : 0), c);
+        draw_rounded_rect(renderer, base.x, base.y, base.w, base.h, body_r, c);
         return;
     }
 
-    steps = b;
-    for (int i = steps; i >= 0; i--) {
-        float falloff = (float)(steps - i + 1) / (float)(steps + 1);
-        int alpha = (int)((color.a * falloff) / (float)(steps / 2 + 1));
-        Color cc = color;
-        Rect r = base;
-        if (alpha < 1) alpha = 1;
-        if (alpha > 255) alpha = 255;
-        cc.a = (unsigned char)alpha;
-        r.x -= i;
-        r.y -= i;
-        r.w += i * 2;
-        r.h += i * 2;
-        {
-            SDL_Color sc = {cc.r, cc.g, cc.b, cc.a};
-            draw_rounded_rect(renderer, r.x, r.y, r.w, r.h, radius + spread + i, sc);
-        }
+    tex = yui_shadow_texture_get(base.w, base.h, body_r, b, color);
+    if (tex) {
+        SDL_Rect dst = {base.x - b, base.y - b, base.w + b * 2, base.h + b * 2};
+        SDL_RenderCopy(renderer, tex, NULL, &dst);
+        return;
     }
+
+    yui_shadow_draw_fallback(&base, body_r, b, color);
+}
+
+static SDL_Texture* yui_gradient_texture_get(int w, int h, int radius, int vertical,
+                                            const Color* colors, int count) {
+    Uint32 stops[LAYER_GRADIENT_MAX_STOPS];
+    int slot;
+    SDL_Texture* prev;
+    SDL_Texture* tex;
+    int n = count;
+
+    if (n > LAYER_GRADIENT_MAX_STOPS) n = LAYER_GRADIENT_MAX_STOPS;
+    for (int i = 0; i < n; i++) stops[i] = yui_pack_rgba(colors[i]);
+
+    g_style_fx_clock++;
+    for (int i = 0; i < YUI_STYLE_FX_CACHE; i++) {
+        YuiStyleFxEntry* e = &g_style_fx[i];
+        if (e->kind != 2 || !e->tex || e->w != w || e->h != h || e->radius != radius ||
+            e->vertical != vertical || e->stop_count != n) {
+            continue;
+        }
+        if (memcmp(e->stops, stops, (size_t)n * sizeof(Uint32)) != 0) continue;
+        e->last_use = g_style_fx_clock;
+        return e->tex;
+    }
+
+    slot = yui_style_fx_alloc_slot();
+    tex = SDL_CreateTexture(renderer, yui_fx_pixel_format(), SDL_TEXTUREACCESS_TARGET, w, h);
+    if (!tex) return NULL;
+    SDL_SetTextureBlendMode(tex, SDL_BLENDMODE_BLEND);
+
+    prev = SDL_GetRenderTarget(renderer);
+    if (SDL_SetRenderTarget(renderer, tex) != 0) {
+        SDL_DestroyTexture(tex);
+        return NULL;
+    }
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
+    SDL_RenderClear(renderer);
+    if (vertical) {
+        yui_draw_vertical_gradient_fast(0, 0, w, h, radius, colors, n);
+    } else {
+        yui_draw_horizontal_gradient_fast(0, 0, w, h, radius, colors, n);
+    }
+    SDL_SetRenderTarget(renderer, prev);
+
+    g_style_fx[slot].tex = tex;
+    g_style_fx[slot].tw = w;
+    g_style_fx[slot].th = h;
+    g_style_fx[slot].kind = 2;
+    g_style_fx[slot].w = w;
+    g_style_fx[slot].h = h;
+    g_style_fx[slot].radius = radius;
+    g_style_fx[slot].vertical = vertical;
+    g_style_fx[slot].stop_count = n;
+    memcpy(g_style_fx[slot].stops, stops, (size_t)n * sizeof(Uint32));
+    g_style_fx[slot].last_use = g_style_fx_clock;
+    return tex;
 }
 
 void backend_render_rounded_gradient(const Rect* rect, int radius, int vertical,
                                      const Color* colors, int count) {
     int x, y, w, h, r;
-    YuiRadiusAA* aa;
+    SDL_Texture* tex;
     if (!rect || !colors || count <= 0 || !renderer) return;
     x = rect->x;
     y = rect->y;
@@ -3253,87 +3712,17 @@ void backend_render_rounded_gradient(const Rect* rect, int radius, int vertical,
     if (r > w / 2) r = w / 2;
     if (r > h / 2) r = h / 2;
 
-    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-
-    if (r <= 0) {
-        if (vertical) {
-            for (int py = 0; py < h; py++) {
-                float t = (h <= 1) ? 0.f : (float)py / (float)(h - 1);
-                Color c = sdl_gradient_sample(colors, count, t);
-                SDL_SetRenderDrawColor(renderer, c.r, c.g, c.b, c.a);
-                SDL_Rect row = {x, y + py, w, 1};
-                SDL_RenderFillRect(renderer, &row);
-            }
-        } else {
-            for (int px = 0; px < w; px++) {
-                float t = (w <= 1) ? 0.f : (float)px / (float)(w - 1);
-                Color c = sdl_gradient_sample(colors, count, t);
-                SDL_SetRenderDrawColor(renderer, c.r, c.g, c.b, c.a);
-                SDL_Rect col = {x + px, y, 1, h};
-                SDL_RenderFillRect(renderer, &col);
-            }
-        }
-        return;
-    }
-
-    aa = yui_aa_circle_get(r);
-    if (!aa) {
-        backend_render_fill_rect((Rect*)rect, colors[0]);
+    tex = yui_gradient_texture_get(w, h, r, vertical ? 1 : 0, colors, count);
+    if (tex) {
+        SDL_Rect dst = {x, y, w, h};
+        SDL_RenderCopy(renderer, tex, NULL, &dst);
         return;
     }
 
     if (vertical) {
-        for (int py = y; py < y + h; py++) {
-            int local_y = py - y;
-            int cir_y = -1;
-            float t = (h <= 1) ? 0.f : (float)local_y / (float)(h - 1);
-            Color c = sdl_gradient_sample(colors, count, t);
-            SDL_Color sc = {c.r, c.g, c.b, c.a};
-
-            if (local_y < r) {
-                cir_y = r - local_y - 1;
-            } else if (local_y >= h - r) {
-                cir_y = local_y - (h - r);
-            }
-
-            if (cir_y < 0) {
-                SDL_SetRenderDrawColor(renderer, sc.r, sc.g, sc.b, sc.a);
-                SDL_Rect row = {x, py, w, 1};
-                SDL_RenderFillRect(renderer, &row);
-            } else {
-                yui_draw_rounded_row_aa(renderer, x, py, w, r, cir_y, aa, sc);
-            }
-        }
+        yui_draw_vertical_gradient_fast(x, y, w, h, r, colors, count);
     } else {
-        for (int py = y; py < y + h; py++) {
-            int local_y = py - y;
-            int cir_y = -1;
-            int x0 = x;
-            int x1 = x + w;
-
-            if (local_y < r) {
-                cir_y = r - local_y - 1;
-            } else if (local_y >= h - r) {
-                cir_y = local_y - (h - r);
-            }
-
-            if (cir_y >= 0) {
-                int aa_len = 0, x_start = 0;
-                uint8_t* aa_opa = NULL;
-                yui_aa_circle_get_line(aa, cir_y, &aa_len, &x_start, &aa_opa);
-                (void)aa_len;
-                (void)aa_opa;
-                x0 = x + x_start;
-                x1 = x + w - x_start;
-            }
-
-            for (int px = x0; px < x1; px++) {
-                float t = (w <= 1) ? 0.f : (float)(px - x) / (float)(w - 1);
-                Color c = sdl_gradient_sample(colors, count, t);
-                SDL_SetRenderDrawColor(renderer, c.r, c.g, c.b, c.a);
-                SDL_RenderDrawPoint(renderer, px, py);
-            }
-        }
+        yui_draw_horizontal_gradient_fast(x, y, w, h, r, colors, count);
     }
 }
 
