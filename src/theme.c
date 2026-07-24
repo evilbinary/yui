@@ -248,14 +248,27 @@ ThemeRule* theme_rule_create_from_json(cJSON* json) {
     
     // 边框宽度
     cJSON* border_width_obj = cJSON_GetObjectItem(style_obj, "borderWidth");
+    if (!border_width_obj) border_width_obj = cJSON_GetObjectItem(style_obj, "borderSize");
+    if (!border_width_obj) border_width_obj = cJSON_GetObjectItem(style_obj, "border-width");
     if (border_width_obj && cJSON_IsNumber(border_width_obj)) {
         rule->border_width = border_width_obj->valueint;
     }
     
     // 边框颜色
     cJSON* border_color_obj = cJSON_GetObjectItem(style_obj, "borderColor");
+    if (!border_color_obj) border_color_obj = cJSON_GetObjectItem(style_obj, "border-color");
     if (border_color_obj && cJSON_IsString(border_color_obj)) {
         parse_color(border_color_obj->valuestring, &rule->border_color);
+    }
+
+    /* border: "3px solid #ff6600" 简写覆盖 width/color */
+    cJSON* border_obj = cJSON_GetObjectItem(style_obj, "border");
+    if (border_obj) {
+        LayerBorder tmp;
+        if (parse_layer_border(border_obj, &tmp)) {
+            rule->border_width = tmp.width;
+            rule->border_color = tmp.color;
+        }
     }
     
     // 间距
@@ -468,20 +481,9 @@ void theme_apply_component_style(Layer* layer, cJSON* style) {
 
     if (layer->set_style) {
         layer->set_style(layer, style);
-        return;
     }
 
-    if (layer->set_property) {
-        cJSON* item = style->child;
-        while (item) {
-            if (item->string) {
-                layer->set_property(layer, item->string, item, 0);
-            }
-            item = item->next;
-        }
-        return;
-    }
-
+    /* 通用 Layer 样式（border/shadow/radius 等）始终经属性表应用 */
     layer_set_properties_from_json(layer, style, 0);
 }
 
@@ -519,9 +521,10 @@ void theme_apply_to_layer(Theme* theme, Layer* layer, const char* id, const char
         return;
     }
 
-    /* 切换主题时先清空阴影/渐变，再由新规则写入 */
+    /* 切换主题时先清空阴影/渐变/边框，再由新规则写入 */
     memset(&layer->shadow, 0, sizeof(layer->shadow));
     memset(&layer->bg_gradient, 0, sizeof(layer->bg_gradient));
+    memset(&layer->border, 0, sizeof(layer->border));
 
     printf("[Theme] Applying theme to layer id='%s', type='%s', specificity=%d\n",
            id, type, max_specificity);
@@ -619,9 +622,14 @@ void theme_merge_style(ThemeRule* rule, Layer* layer) {
         }
     }
     
-    // 边框颜色
-    if (rule->border_color.a > 0) {
-        // TODO: 需要添加边框支持
+    // 边框
+    if (rule->border_width > 0 || rule->border_color.a > 0) {
+        layer->border.width = rule->border_width;
+        layer->border.color = rule->border_color;
+        if (layer->border.width > 0 && layer->border.style == LAYER_BORDER_NONE) {
+            layer->border.style = LAYER_BORDER_SOLID;
+        }
+        mark_layer_dirty(layer, DIRTY_STYLE | DIRTY_COLOR);
     }
     
     // 间距（应用到布局管理器）

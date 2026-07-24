@@ -12,6 +12,9 @@
         "color": "#E5E7EB",
         "fontSize": 14,
         "borderRadius": 16,
+        "borderWidth": 0,
+        "borderStyle": "none",
+        "borderColor": "transparent",
         "shadow": "0 6 18 0 #00000055"
       }
     },

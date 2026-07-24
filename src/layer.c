@@ -804,6 +804,26 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
     if (cJSON_HasObjectItem(style, "bgGradient")) {
       parse_layer_gradient(cJSON_GetObjectItem(style, "bgGradient"), &layer->bg_gradient);
     }
+    if (cJSON_HasObjectItem(style, "border")) {
+      parse_layer_border(cJSON_GetObjectItem(style, "border"), &layer->border);
+    }
+    if (cJSON_HasObjectItem(style, "borderWidth") || cJSON_HasObjectItem(style, "borderSize") ||
+        cJSON_HasObjectItem(style, "border-width")) {
+      cJSON* bw = cJSON_GetObjectItem(style, "borderWidth");
+      if (!bw) bw = cJSON_GetObjectItem(style, "borderSize");
+      if (!bw) bw = cJSON_GetObjectItem(style, "border-width");
+      parse_layer_border_width(bw, &layer->border);
+    }
+    if (cJSON_HasObjectItem(style, "borderStyle") || cJSON_HasObjectItem(style, "border-style")) {
+      cJSON* bs = cJSON_GetObjectItem(style, "borderStyle");
+      if (!bs) bs = cJSON_GetObjectItem(style, "border-style");
+      parse_layer_border_style(bs, &layer->border);
+    }
+    if (cJSON_HasObjectItem(style, "borderColor") || cJSON_HasObjectItem(style, "border-color")) {
+      cJSON* bc = cJSON_GetObjectItem(style, "borderColor");
+      if (!bc) bc = cJSON_GetObjectItem(style, "border-color");
+      parse_layer_border_color(bc, &layer->border);
+    }
   }
 
   // 解析资源路径

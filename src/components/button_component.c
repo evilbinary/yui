@@ -153,6 +153,30 @@ static void button_component_apply_theme_style(Layer* layer, cJSON* style) {
         parse_layer_gradient(cJSON_GetObjectItem(style, "bgGradient"), &layer->bg_gradient);
         mark_layer_dirty(layer, DIRTY_STYLE | DIRTY_COLOR);
     }
+    if (cJSON_HasObjectItem(style, "border")) {
+        parse_layer_border(cJSON_GetObjectItem(style, "border"), &layer->border);
+        mark_layer_dirty(layer, DIRTY_STYLE | DIRTY_COLOR);
+    }
+    if (cJSON_HasObjectItem(style, "borderWidth") || cJSON_HasObjectItem(style, "borderSize") ||
+        cJSON_HasObjectItem(style, "border-width")) {
+        cJSON* bw = cJSON_GetObjectItem(style, "borderWidth");
+        if (!bw) bw = cJSON_GetObjectItem(style, "borderSize");
+        if (!bw) bw = cJSON_GetObjectItem(style, "border-width");
+        parse_layer_border_width(bw, &layer->border);
+        mark_layer_dirty(layer, DIRTY_STYLE | DIRTY_COLOR);
+    }
+    if (cJSON_HasObjectItem(style, "borderStyle") || cJSON_HasObjectItem(style, "border-style")) {
+        cJSON* bs = cJSON_GetObjectItem(style, "borderStyle");
+        if (!bs) bs = cJSON_GetObjectItem(style, "border-style");
+        parse_layer_border_style(bs, &layer->border);
+        mark_layer_dirty(layer, DIRTY_STYLE | DIRTY_COLOR);
+    }
+    if (cJSON_HasObjectItem(style, "borderColor") || cJSON_HasObjectItem(style, "border-color")) {
+        cJSON* bc = cJSON_GetObjectItem(style, "borderColor");
+        if (!bc) bc = cJSON_GetObjectItem(style, "border-color");
+        parse_layer_border_color(bc, &layer->border);
+        mark_layer_dirty(layer, DIRTY_STYLE | DIRTY_COLOR);
+    }
 }
 
 ButtonComponent* button_component_create_from_json(Layer* layer, cJSON* json_obj) {
@@ -424,8 +448,9 @@ void button_component_render(Layer* layer) {
                 backend_render_fill_rect(&layer->rect, bg_color);
             }
         }
-    } else if (bg_color.a > 0 || layer->bg_gradient.enabled || layer->shadow.enabled) {
-        /* Soft UI / border-0：用 shadow 分层，不画硬边框色 */
+    } else if (bg_color.a > 0 || layer->bg_gradient.enabled || layer->shadow.enabled ||
+               layer_border_visible(&layer->border)) {
+        /* Soft UI / border-0：默认无硬边；显式 borderWidth/border 时由 render_layer_background 画 */
         (void)has_bg;
         render_layer_background(layer, layer->bg_gradient.enabled ? NULL : &bg_color);
 

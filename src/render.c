@@ -3,6 +3,7 @@
 #include "component_registry.h"
 #include "animate.h"
 #include "perf/perf.h"
+#include "util.h"
 #include <limits.h>
 #include <math.h>
 
@@ -181,6 +182,8 @@ Texture* render_text(Layer* layer,const char* text, Color color) {
 
 void render_layer_background(Layer* layer, const Color* override_bg) {
     Color fill;
+    Rect fill_rect;
+    int fill_radius;
     if (!layer) return;
 
     if (layer->shadow.enabled && layer->shadow.color.a > 0) {
@@ -190,8 +193,28 @@ void render_layer_background(Layer* layer, const Color* override_bg) {
                               layer->shadow.color);
     }
 
+    fill_rect = layer->rect;
+    fill_radius = layer->radius;
+
+    /* 先画边框外环，再在内缩区域填背景（保留渐变不被边框覆盖） */
+    if (layer_border_visible(&layer->border)) {
+        int bw = layer->border.width;
+        if (layer->radius > 0) {
+            backend_render_rounded_rect(&layer->rect, layer->border.color, layer->radius);
+        } else {
+            backend_render_fill_rect(&layer->rect, layer->border.color);
+        }
+        fill_rect.x += bw;
+        fill_rect.y += bw;
+        fill_rect.w -= bw * 2;
+        fill_rect.h -= bw * 2;
+        fill_radius = layer->radius - bw;
+        if (fill_radius < 0) fill_radius = 0;
+        if (fill_rect.w <= 0 || fill_rect.h <= 0) return;
+    }
+
     if (layer->bg_gradient.enabled && layer->bg_gradient.count >= 2) {
-        backend_render_rounded_gradient(&layer->rect, layer->radius,
+        backend_render_rounded_gradient(&fill_rect, fill_radius,
                                         layer->bg_gradient.vertical,
                                         layer->bg_gradient.colors,
                                         layer->bg_gradient.count);
@@ -201,10 +224,10 @@ void render_layer_background(Layer* layer, const Color* override_bg) {
     fill = override_bg ? *override_bg : layer->bg_color;
     if (fill.a == 0) return;
 
-    if (layer->radius > 0) {
-        backend_render_rounded_rect(&layer->rect, fill, layer->radius);
+    if (fill_radius > 0) {
+        backend_render_rounded_rect(&fill_rect, fill, fill_radius);
     } else {
-        backend_render_fill_rect(&layer->rect, fill);
+        backend_render_fill_rect(&fill_rect, fill);
     }
 }
 
@@ -237,7 +260,8 @@ void render_layer(Layer* layer) {
         if (layer->backdrop_filter) {
             backend_render_backdrop_filter(&layer->rect, layer->blur_radius, layer->saturation, layer->brightness);
         }
-        if (layer->bg_gradient.enabled || layer->bg_color.a > 0 || layer->shadow.enabled) {
+        if (layer->bg_gradient.enabled || layer->bg_color.a > 0 ||
+            layer->shadow.enabled || layer_border_visible(&layer->border)) {
             render_layer_background(layer, NULL);
         }
     }

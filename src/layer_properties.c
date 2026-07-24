@@ -154,6 +154,34 @@ static int handle_border_radius(Layer* layer, cJSON* value, int is_creating) {
     return 1;
 }
 
+static int handle_border(Layer* layer, cJSON* value, int is_creating) {
+    (void)is_creating;
+    if (!parse_layer_border(value, &layer->border)) return 0;
+    mark_layer_dirty(layer, DIRTY_STYLE | DIRTY_COLOR);
+    return 1;
+}
+
+static int handle_border_width(Layer* layer, cJSON* value, int is_creating) {
+    (void)is_creating;
+    if (!parse_layer_border_width(value, &layer->border)) return 0;
+    mark_layer_dirty(layer, DIRTY_STYLE | DIRTY_COLOR);
+    return 1;
+}
+
+static int handle_border_style(Layer* layer, cJSON* value, int is_creating) {
+    (void)is_creating;
+    if (!parse_layer_border_style(value, &layer->border)) return 0;
+    mark_layer_dirty(layer, DIRTY_STYLE | DIRTY_COLOR);
+    return 1;
+}
+
+static int handle_border_color(Layer* layer, cJSON* value, int is_creating) {
+    (void)is_creating;
+    if (!parse_layer_border_color(value, &layer->border)) return 0;
+    mark_layer_dirty(layer, DIRTY_STYLE | DIRTY_COLOR);
+    return 1;
+}
+
 static int handle_opacity(Layer* layer, cJSON* value, int is_creating) {
     if (!cJSON_IsNumber(value)) return 0;
     int opacity = value->valueint;
@@ -482,6 +510,14 @@ static const PropertyHandlerEntry property_handlers[] = {
     
     // 样式属性
     {"borderRadius", handle_border_radius},
+    {"border", handle_border},
+    {"borderWidth", handle_border_width},
+    {"borderSize", handle_border_width},
+    {"border-width", handle_border_width},
+    {"borderStyle", handle_border_style},
+    {"border-style", handle_border_style},
+    {"borderColor", handle_border_color},
+    {"border-color", handle_border_color},
     {"source", handle_source},
     
     // 尺寸和位置属性

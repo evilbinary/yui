@@ -544,6 +544,20 @@ typedef struct LayerGradient {
     Color colors[LAYER_GRADIENT_MAX_STOPS];
 } LayerGradient;
 
+/* CSS border: width style color */
+typedef enum {
+    LAYER_BORDER_NONE = 0,
+    LAYER_BORDER_SOLID = 1,
+    LAYER_BORDER_DASHED = 2,
+    LAYER_BORDER_DOTTED = 3
+} LayerBorderStyle;
+
+typedef struct LayerBorder {
+    int width;
+    LayerBorderStyle style;
+    Color color;
+} LayerBorder;
+
 typedef  int (*register_event_fun_t)(Layer* layer, const char* event_name, const char* event_func_name, EventHandler event_handler);
 typedef  cJSON* (*get_property_fun_t)(Layer* layer, const char* property_name);
 typedef  int (*set_property_fun_t)(Layer* layer, const char* key, cJSON* value, int is_creating);
@@ -665,6 +679,8 @@ typedef struct Layer {
     LayerShadow shadow;
     /* 背景线性渐变（启用时优先于纯色 bgColor） */
     LayerGradient bg_gradient;
+    /* border / border-width / border-style / border-color */
+    LayerBorder border;
     
     // 增量更新支持：脏标记
     unsigned int dirty_flags; // 标记哪些属性被修改
