@@ -2,6 +2,7 @@
 #include "../render.h"
 #include "../backend.h"
 #include "../util.h"
+#include "../layer_update.h"
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,6 +11,9 @@
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
+
+static void loading_layer_destroy(Layer* layer);
+static void loading_component_apply_theme_style(Layer* layer, cJSON* style);
 
 static void loading_layer_destroy(Layer* layer)
 {
@@ -55,8 +59,33 @@ LoadingComponent* loading_component_create(Layer* layer)
     layer->component = component;
     layer->render = loading_component_render;
     layer->on_destroy = loading_layer_destroy;
+    layer->set_style = loading_component_apply_theme_style;
 
     return component;
+}
+
+static void loading_component_apply_theme_style(Layer* layer, cJSON* style)
+{
+    LoadingComponent* component;
+    cJSON* item;
+    if (!layer || !layer->component || !style) return;
+    component = (LoadingComponent*)layer->component;
+
+    item = cJSON_GetObjectItem(style, "color");
+    if (!item) item = cJSON_GetObjectItem(style, "fillColor");
+    if (item && cJSON_IsString(item) && item->valuestring) {
+        loading_parse_color(item->valuestring, &component->color);
+    }
+    item = cJSON_GetObjectItem(style, "trackColor");
+    if (item && cJSON_IsString(item) && item->valuestring) {
+        loading_parse_color(item->valuestring, &component->track_color);
+    }
+    item = cJSON_GetObjectItem(style, "strokeWidth");
+    if (item && cJSON_IsNumber(item)) {
+        component->stroke_width = item->valueint;
+        if (component->stroke_width < 1) component->stroke_width = 1;
+    }
+    mark_layer_dirty(layer, DIRTY_STYLE | DIRTY_COLOR);
 }
 
 LoadingComponent* loading_component_create_from_json(Layer* layer, cJSON* json_obj)

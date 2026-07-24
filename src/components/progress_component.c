@@ -2,6 +2,7 @@
 #include "../render.h"
 #include "../backend.h"
 #include "../util.h"
+#include "../layer_update.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -10,6 +11,8 @@
 
 
 #define printf
+
+static void progress_component_apply_theme_style(Layer* layer, cJSON* style);
 
 // 辅助函数：绘制圆弧（用于圆形进度条）- 使用后端抗锯齿渲染
 static void render_circle_arc(int center_x, int center_y, int radius, int start_angle, int end_angle, Color color, int line_width) {
@@ -42,8 +45,36 @@ ProgressComponent* progress_component_create(Layer* layer) {
     // 设置组件指针和自定义渲染函数
     layer->component = component;
     layer->render = progress_component_render;
+    layer->set_style = progress_component_apply_theme_style;
     
     return component;
+}
+
+static void progress_component_apply_theme_style(Layer* layer, cJSON* style) {
+    ProgressComponent* component;
+    cJSON* item;
+    if (!layer || !layer->component || !style) return;
+    component = (ProgressComponent*)layer->component;
+
+    item = cJSON_GetObjectItem(style, "fillColor");
+    if (!item) item = cJSON_GetObjectItem(style, "color");
+    if (item && cJSON_IsString(item) && item->valuestring) {
+        parse_color(item->valuestring, &component->fill_color);
+    }
+    item = cJSON_GetObjectItem(style, "bgColor");
+    if (item && cJSON_IsString(item) && item->valuestring) {
+        parse_color(item->valuestring, &layer->bg_color);
+    }
+    item = cJSON_GetObjectItem(style, "circleWidth");
+    if (item && cJSON_IsNumber(item)) {
+        component->circle_width = item->valueint;
+        if (component->circle_width < 1) component->circle_width = 1;
+    }
+    item = cJSON_GetObjectItem(style, "borderRadius");
+    if (item && cJSON_IsNumber(item)) {
+        layer->radius = item->valueint;
+    }
+    mark_layer_dirty(layer, DIRTY_STYLE | DIRTY_COLOR);
 }
 
 // 从 JSON 创建进度条组件
@@ -326,22 +357,14 @@ void progress_component_render(Layer* layer) {
     } else {
         // 长条形进度条渲染（原有的逻辑）
         
-        // 绘制背景 - 移除透明度检查，确保背景总是被渲染
-        if (layer->radius > 0) {
-            // 使用圆角背景
+        // 背景 + 可选主题边框
+        if (layer_border_visible(&layer->border)) {
+            backend_render_rounded_rect_with_border(&layer->rect, layer->bg_color, layer->radius,
+                                                   layer->border.width, layer->border.color);
+        } else if (layer->radius > 0) {
             backend_render_rounded_rect(&layer->rect, layer->bg_color, layer->radius);
         } else {
-            // 使用普通矩形背景
             backend_render_fill_rect(&layer->rect, layer->bg_color);
-        }
-        
-        // 绘制边框 - 移到背景之后，进度条之前，避免遮挡进度条颜色
-        if (layer->radius > 0) {
-            // 使用backend_render_rounded_rect_color绘制边框
-            backend_render_rounded_rect_color(&layer->rect, 150, 150, 150, 255, layer->radius);
-        } else {
-            // 使用普通边框
-            backend_render_rect_color(&layer->rect, 150, 150, 150, 255);
         }
         
         // 计算填充区域

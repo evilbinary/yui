@@ -2,8 +2,11 @@
 #include "../backend.h"
 #include "../event.h"
 #include "../util.h"
+#include "../layer_update.h"
 #include <stdlib.h>
 #include <math.h>
+
+static void slider_component_apply_theme_style(Layer* layer, cJSON* style);
 
 // 创建滑块组件
 SliderComponent* slider_component_create(Layer* layer) {
@@ -31,8 +34,39 @@ SliderComponent* slider_component_create(Layer* layer) {
     layer->render = slider_component_render;
     layer->handle_pointer_event = slider_component_handle_pointer_event;
     layer->handle_key_event = slider_component_handle_key_event;
+    layer->set_style = slider_component_apply_theme_style;
     
     return component;
+}
+
+static void slider_component_apply_theme_style(Layer* layer, cJSON* style) {
+    SliderComponent* component;
+    Color track, thumb, active;
+    int changed = 0;
+    if (!layer || !layer->component || !style) return;
+    component = (SliderComponent*)layer->component;
+    track = component->track_color;
+    thumb = component->thumb_color;
+    active = component->active_thumb_color;
+
+    if (cJSON_HasObjectItem(style, "trackColor")) {
+        parse_color(cJSON_GetObjectItem(style, "trackColor")->valuestring, &track);
+        changed = 1;
+    }
+    if (cJSON_HasObjectItem(style, "thumbColor")) {
+        parse_color(cJSON_GetObjectItem(style, "thumbColor")->valuestring, &thumb);
+        changed = 1;
+    }
+    if (cJSON_HasObjectItem(style, "activeThumbColor")) {
+        parse_color(cJSON_GetObjectItem(style, "activeThumbColor")->valuestring, &active);
+        changed = 1;
+    } else if (cJSON_HasObjectItem(style, "thumbColor")) {
+        active = thumb;
+    }
+    if (changed) {
+        slider_component_set_colors(component, track, thumb, active);
+        mark_layer_dirty(layer, DIRTY_STYLE | DIRTY_COLOR);
+    }
 }
 
 // 创建滑块组件，从JSON数据

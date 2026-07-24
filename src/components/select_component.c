@@ -3,6 +3,7 @@
 #include "../event.h"
 #include "../util.h"
 #include "../layer.h"
+#include "../layer_update.h"
 #include "../popup_manager.h"
 #include <stdlib.h>
 #include <string.h>
@@ -10,6 +11,7 @@
 // 外部变量声明
 
 static void select_layer_destroy(Layer* layer);
+static void select_component_apply_theme_style(Layer* layer, cJSON* style);
 
 // 创建 Select 组件
 SelectComponent* select_component_create(Layer* layer) {
@@ -71,6 +73,7 @@ SelectComponent* select_component_create(Layer* layer) {
     layer->handle_scroll_event = select_component_handle_scroll_event;
     layer->register_event = select_component_register_event;
     layer->get_property = select_component_get_property;
+    layer->set_style = select_component_apply_theme_style;
     
     // 设置滚动事件回调
     if (!layer->event) {
@@ -218,6 +221,22 @@ static void select_apply_colors_from_json(SelectComponent* component,
     }
 
     select_sync_dropdown_colors_from_style(component, style, colors);
+}
+
+static void select_component_apply_theme_style(Layer* layer, cJSON* style) {
+    SelectComponent* component;
+    if (!layer || !layer->component || !style) return;
+    component = (SelectComponent*)layer->component;
+    select_apply_color_config(component, style);
+    select_apply_style_layout(component, style);
+    select_sync_dropdown_colors_from_style(component, style, NULL);
+    if (layer->bg_color.a == 0 || cJSON_HasObjectItem(style, "bgColor")) {
+        layer->bg_color = component->bg_color;
+    }
+    if (cJSON_HasObjectItem(style, "color") || cJSON_HasObjectItem(style, "textColor")) {
+        layer->color = component->text_color;
+    }
+    mark_layer_dirty(layer, DIRTY_STYLE | DIRTY_COLOR);
 }
 
 // 从 JSON 创建 Select 组件
