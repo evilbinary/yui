@@ -34,7 +34,7 @@
             { "id": "btnThemeLatte", "type": "Button", "variant": "compact", "size": [110, 32], "text": "Latte", "events": { "onClick": "@onThemeLatte" } },
             { "id": "btnThemeEp", "type": "Button", "variant": "compact", "size": [130, 32], "text": "Element Plus", "events": { "onClick": "@onThemeElementPlus" } },
             { "id": "btnThemeEpDark", "type": "Button", "variant": "compact", "size": [110, 32], "text": "EP Dark", "events": { "onClick": "@onThemeElementPlusDark" } },
-            { "id": "btnThemeSoft", "type": "Button", "variant": "primary", "size": [110, 32], "text": "Soft UI", "events": { "onClick": "@onThemeSoftUi" } },
+            { "id": "btnThemeSoft", "type": "Button", "variant": "compact", "size": [110, 32], "text": "Soft UI", "events": { "onClick": "@onThemeSoftUi" } },
             { "id": "btnThemeSoftDark", "type": "Button", "variant": "compact", "size": [130, 32], "text": "Soft UI Dark", "events": { "onClick": "@onThemeSoftUiDark" } }
           ]
         }
