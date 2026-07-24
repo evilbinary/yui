@@ -25,13 +25,14 @@ var appPreferences = {
 
 var currentTheme = "mocha";
 var pendingPrefTheme = null;
+var themeBeforePrefs = null;
 
 var THEME_OPTIONS = {
-    mocha: { label: "Catppuccin Mocha", path: "app/db/themes/mocha.json" },
+    mocha: { label: "Catppuccin Mocha", path: "app/lib/themes/mocha.json" },
     dark: { label: "Dark", path: "app/lib/themes/dark.json" },
-    latte: { label: "Catppuccin Latte", path: "app/db/themes/latte.json" },
-    "element-plus": { label: "Element Plus", path: "app/db/themes/element-plus.json" },
-    "element-plus-dark": { label: "Element Plus Dark", path: "app/db/themes/element-plus-dark.json" }
+    latte: { label: "Catppuccin Latte", path: "app/lib/themes/latte.json" },
+    "element-plus": { label: "Element Plus", path: "app/lib/themes/element-plus.json" },
+    "element-plus-dark": { label: "Element Plus Dark", path: "app/lib/themes/element-plus-dark.json" }
 };
 
 function loadDbConfig() {
@@ -336,6 +337,7 @@ function onPrefNavResults() { setPrefNav("results"); }
 function onPrefNavConnection() { setPrefNav("connection"); }
 
 function onOpenSettings() {
+    themeBeforePrefs = currentTheme;
     pendingPrefTheme = currentTheme;
     var auto = yui.find("prefAutoConnect");
     if (auto) auto.data = appPreferences.autoConnect !== false;
@@ -364,12 +366,17 @@ function onPreferencesOk() {
         saveDbConfig();
     }
     pendingPrefTheme = null;
+    themeBeforePrefs = null;
     hideOverlay("preferencesDialogOverlay");
     updateStatus("偏好设置已保存", "#A6E3A1");
 }
 
 function onPreferencesCancel() {
+    if (themeBeforePrefs && themeBeforePrefs !== currentTheme) {
+        applyTheme(themeBeforePrefs, true);
+    }
     pendingPrefTheme = null;
+    themeBeforePrefs = null;
     hideOverlay("preferencesDialogOverlay");
 }
 
@@ -407,6 +414,10 @@ function applyTheme(themeId, silent) {
 function pickPrefTheme(themeId) {
     pendingPrefTheme = themeId;
     updateThemeLabel(themeId);
+    /* 点选即预览，取消时再回退到打开偏好前的主题 */
+    if (themeId !== currentTheme) {
+        applyTheme(themeId, true);
+    }
 }
 
 function onPrefThemeMocha() { pickPrefTheme("mocha"); }

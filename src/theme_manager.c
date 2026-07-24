@@ -74,6 +74,16 @@ Theme* theme_manager_load_theme(const char* theme_path) {
         printf("Failed to load theme from: %s\n", theme_path);
         return NULL;
     }
+
+    /* 同名主题已加载时替换，避免切换时一直命中旧副本 */
+    Theme* existing = theme_manager_get_theme(theme->name);
+    if (existing) {
+        int was_current = (manager->current_theme == existing);
+        theme_manager_unload_theme(theme->name);
+        if (was_current) {
+            manager->current_theme = NULL;
+        }
+    }
     
     // 检查是否需要扩展数组
     if (manager->theme_count >= manager->theme_capacity) {

@@ -521,18 +521,39 @@ void theme_apply_to_layer(Theme* theme, Layer* layer, const char* id, const char
 
     printf("[Theme] Applying theme to layer id='%s', type='%s', specificity=%d\n",
            id, type, max_specificity);
-    for (int i = rule_count - 1; i >= 0; i--) {
+
+    ThemeRule* matching[256];
+    int matching_spec[256];
+    int matching_count = 0;
+    /* JSON 顺序（低下标先写入）：同 specificity 时后写的覆盖先写的 */
+    for (int i = rule_count - 1; i >= 0 && matching_count < 256; i--) {
         ThemeRule* current = ordered[i];
         if (!theme_rule_matches(current, layer, id, type)) {
             continue;
         }
-        if (theme_rule_specificity(current) != max_specificity) {
-            continue;
-        }
+        matching[matching_count] = current;
+        matching_spec[matching_count] = theme_rule_specificity(current);
+        matching_count++;
+    }
 
+    /* 按 specificity 升序稳定排序后级联合并 */
+    for (int a = 0; a < matching_count - 1; a++) {
+        for (int b = 0; b < matching_count - 1 - a; b++) {
+            if (matching_spec[b] > matching_spec[b + 1]) {
+                int tmp_spec = matching_spec[b];
+                ThemeRule* tmp_rule = matching[b];
+                matching_spec[b] = matching_spec[b + 1];
+                matching[b] = matching[b + 1];
+                matching_spec[b + 1] = tmp_spec;
+                matching[b + 1] = tmp_rule;
+            }
+        }
+    }
+
+    for (int i = 0; i < matching_count; i++) {
         printf("[Theme] Merging style for layer id='%s' selector='%s'\n",
-               id, current->selector);
-        theme_merge_style(current, layer);
+               id, matching[i]->selector);
+        theme_merge_style(matching[i], layer);
     }
 }
 

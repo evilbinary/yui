@@ -1,50 +1,29 @@
 {
-
   "name": "latte",
-
   "version": "1.0",
-
   "description": "Catppuccin Latte",
-
   "styles": [
-
     { "selector": "View", "style": { "bgColor": "#EFF1F5" } },
-
     { "selector": "Label", "style": { "color": "#4C4F69", "fontSize": 12 } },
-
     { "selector": "Button", "style": { "bgColor": "#CCD0DA", "color": "#4C4F69", "borderRadius": 4, "fontSize": 12 } },
-
     { "selector": "Input", "style": { "bgColor": "#FFFFFF", "color": "#4C4F69", "fontSize": 12, "borderColor": "#CCD0DA", "focusBorderColor": "#1E66F5" } },
-
     { "selector": "Text", "style": { "color": "#4C4F69", "bgColor": "#FFFFFF", "fontSize": 13, "lineNumberBgColor": "#E6E9EF", "lineNumberColor": "#9CA0B0", "cursorColor": "#1E66F5", "selectionColor": "#ACB0BE99", "keyword": "#8839EF", "string": "#40A02B", "number": "#FE640B", "comment": "#9CA0B0", "punctuation": "#179299" } },
-
     { "selector": "Table", "style": { "color": "#4C4F69", "bgColor": "#FFFFFF", "headerBgColor": "#E6E9EF", "headerColor": "#5C5F77", "gridLineColor": "#CCD0DA", "rowAltBgColor": "#F5F7FA", "rowHoverColor": "#E6E9EF", "rowSelectedColor": "#CCD0DA", "scrollbarColor": "#9CA0B0", "scrollbarTrackColor": "#E6E9EF80" } },
-
     { "selector": "Treeview", "style": { "color": "#4C4F69", "bgColor": "#E6E9EF", "fontSize": 13, "selectedBgColor": "#CCD0DA", "hoverBgColor": "#DCE0E8", "scrollbarColor": "#9CA0B0", "scrollbarTrackColor": "#E6E9EF80" } },
-
     { "selector": "Pagination", "style": { "color": "#5C5F77", "buttonBgColor": "#CCD0DA", "buttonHoverColor": "#BCC0CC" } },
-
     { "selector": "Sash", "style": { "bgColor": "#CCD0DA", "hoverBgColor": "#BCC0CC", "borderColor": "#ACB0BE", "dotColor": "#9CA0B0", "hoverDotColor": "#5C5F77", "accentColor": "#1E66F5B3" } },
-
     { "selector": "Checkbox", "style": { "bgColor": "#FFFFFF", "borderColor": "#ACB0BE", "checkColor": "#40A02B" } },
     { "selector": "Checkbox.switch", "style": { "bgColor": "#E6E9EF", "borderColor": "#CCD0DA", "checkColor": "#40A02B" } },
-
     { "selector": "Menu", "style": { "bgColor": "#EFF1F5", "textColor": "#4C4F69", "hoverColor": "#CCD0DA", "disabledColor": "#9CA0B0", "separatorColor": "#CCD0DA", "itemHeight": 29 } },
-
     { "selector": "Dialog", "style": { "titleColor": "#1E66F5", "textColor": "#4C4F69", "bgColor": "#EFF1F5", "borderColor": "#CCD0DA", "buttonColor": "#CCD0DA", "buttonHoverColor": "#BCC0CC", "buttonTextColor": "#4C4F69" } },
-
     { "selector": "View.tabBar", "style": { "bgColor": "#E6E9EF", "borderBottomWidth": 1, "borderBottomColor": "#CCD0DA" } },
     { "selector": "Label.tab", "style": { "color": "#9CA0B0", "fontSize": 11, "padding": [4, 10, 4, 10], "borderRadius": 4, "bgColor": "transparent" } },
     { "selector": "Label.tab.active", "style": { "color": "#4C4F69", "bgColor": "#FFFFFF", "fontSize": 11, "padding": [4, 10, 4, 10], "borderRadius": 4 } },
     { "selector": "Label.tabAdd", "style": { "color": "#9CA0B0", "fontSize": 14 } },
-
     { "selector": "View.settingsCard", "style": { "bgColor": "#E6E9EF", "borderRadius": 8 } },
     { "selector": "#preferencesDialogFrame", "style": { "bgColor": "#ACB0BE", "borderRadius": 9 } },
     { "selector": "Label.navItem", "style": { "color": "#5C5F77", "fontSize": 12, "padding": [8, 12, 8, 12], "borderRadius": 6, "bgColor": "transparent" } },
     { "selector": "Label.navItem.active", "style": { "color": "#4C4F69", "fontSize": 12, "padding": [8, 12, 8, 12], "borderRadius": 6, "bgColor": "#CCD0DA" } },
     { "selector": "Label.sectionTitle", "style": { "color": "#5C5F77", "fontSize": 11, "fontWeight": "bold" } }
-
   ]
-
 }
-
