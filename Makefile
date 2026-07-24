@@ -61,6 +61,10 @@ android-arm64:
 android-armv7:
 	ya -p android -a armeabi-v7a -m release -b yui-android-prebuilt
 
+# 快速修补 prebuilt（event.c + input/state.c）；完整重建仍用 android-arm64/android-armv7
+android-patch-prebuilt:
+	python scripts/patch_android_prebuilt.py
+
 android: android-arm64 android-armv7
 	cd platform/android && ./gradlew :app:assembleDebug
 	@echo "APK: platform/android/app/build/outputs/apk/debug/app-debug.apk"

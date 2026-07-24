@@ -20,6 +20,16 @@ make android-armv7
 make android          # 两个 ABI 都打
 ```
 
+若 JNI 链接报 `undefined symbol: handle_window_event`（prebuilt 落后于 `src/event.c`），可先快速修补：
+
+```bash
+# 需 ANDROID_NDK_HOME
+python scripts/patch_android_prebuilt.py
+# 或 make android-patch-prebuilt
+```
+
+再重新 `./gradlew :app:assembleDebug`。
+
 需先设置 `ANDROID_NDK_HOME`（或 `ANDROID_NDK_ROOT`）。`ya` 与 Gradle 共用该变量，无需在 `local.properties` 写 `ndk.dir`。
 
 `ANDROID_HOME` / `ANDROID_SDK_ROOT` 用于定位 Android SDK；`local.properties` 会在路径无效时自动同步，无需手写 `cmake.dir`（由 `app/build.gradle.kts` 的 `cmake { version = "3.22.1" }` 解析）。
