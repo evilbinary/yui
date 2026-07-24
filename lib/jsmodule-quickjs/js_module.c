@@ -1591,25 +1591,55 @@ static int is_js_identifier_name(const char* name)
     return 1;
 }
 
-static int call_js_function_value(JSContext* ctx, JSValue func, const char* event_name, Layer* layer)
+static int event_name_is_layer_touch(const Layer* layer, const char* event_name)
+{
+    const char* tn;
+    const char* en;
+    if (!layer || !layer->event || !event_name || !event_name[0]) {
+        return 0;
+    }
+    tn = layer->event->touch_name;
+    if (!tn[0]) {
+        return 0;
+    }
+    /* Same string (named @fn or inline source stored on the layer). */
+    if (strcmp(tn, event_name) == 0) {
+        return 1;
+    }
+    en = event_name[0] == '@' ? event_name + 1 : event_name;
+    tn = tn[0] == '@' ? tn + 1 : tn;
+    return strcmp(tn, en) == 0;
+}
+
+/* One calling convention for all JS event functions:
+ * - onTouch / gesture: (layerId, event)
+ *     event = { type, deltaX, deltaY, pointerId, fingerCount, x, y }
+ * - everything else:   (layerId)
+ */
+static int js_invoke_event_function(JSContext* ctx, JSValue func, Layer* layer, int is_gesture)
 {
     const PointerEvent* pe = get_current_pointer_event();
     JSValue result;
-    /* 仅触屏手势把 phase 作为首参；鼠标 UI 回调必须传 layerId，
-     * 否则 onSelect/onExpand 会收到 "start" 导致 yui.find 失败。 */
-    if (pe && pe->device == POINTER_DEVICE_TOUCH) {
-        JSValue args[5];
-        args[0] = JS_NewString(ctx, pointer_phase_to_string(pe->phase));
-        args[1] = JS_NewInt32(ctx, pe->delta_x);
-        args[2] = JS_NewInt32(ctx, pe->delta_y);
-        args[3] = JS_NewInt32(ctx, pe->pointer_id);
-        args[4] = JS_NewInt32(ctx, pe->finger_count);
-        result = JS_Call(ctx, func, JS_UNDEFINED, 5, args);
+
+    if (is_gesture && pe) {
+        JSValue args[2];
+        JSValue ev = JS_NewObject(ctx);
+        JS_SetPropertyStr(ctx, ev, "type",
+                          JS_NewString(ctx, pointer_phase_to_string(pe->phase)));
+        JS_SetPropertyStr(ctx, ev, "deltaX", JS_NewInt32(ctx, pe->delta_x));
+        JS_SetPropertyStr(ctx, ev, "deltaY", JS_NewInt32(ctx, pe->delta_y));
+        JS_SetPropertyStr(ctx, ev, "pointerId", JS_NewInt32(ctx, pe->pointer_id));
+        JS_SetPropertyStr(ctx, ev, "fingerCount",
+                          JS_NewInt32(ctx, pe->device == POINTER_DEVICE_TOUCH
+                                              ? pe->finger_count
+                                              : 1));
+        JS_SetPropertyStr(ctx, ev, "x", JS_NewInt32(ctx, pe->x));
+        JS_SetPropertyStr(ctx, ev, "y", JS_NewInt32(ctx, pe->y));
+        args[0] = layer ? JS_NewString(ctx, layer->id) : JS_NULL;
+        args[1] = ev;
+        result = JS_Call(ctx, func, JS_UNDEFINED, 2, args);
         JS_FreeValue(ctx, args[0]);
         JS_FreeValue(ctx, args[1]);
-        JS_FreeValue(ctx, args[2]);
-        JS_FreeValue(ctx, args[3]);
-        JS_FreeValue(ctx, args[4]);
     } else {
         JSValue args[1];
         args[0] = layer ? JS_NewString(ctx, layer->id) : JS_NULL;
@@ -1619,16 +1649,19 @@ static int call_js_function_value(JSContext* ctx, JSValue func, const char* even
 
     if (JS_IsException(result)) {
         JSValue exc = JS_GetException(ctx);
-        char err_prefix[256];
-        snprintf(err_prefix, sizeof(err_prefix), "event '%s'", event_name ? event_name : "<unknown>");
-        print_quickjs_exception(ctx, exc, err_prefix);
+        print_quickjs_exception(ctx, exc, "event callback");
         JS_FreeValue(ctx, exc);
         JS_FreeValue(ctx, result);
         return -1;
     }
-
     JS_FreeValue(ctx, result);
     return 0;
+}
+
+static int call_js_function_value(JSContext* ctx, JSValue func, const char* event_name, Layer* layer)
+{
+    return js_invoke_event_function(ctx, func, layer,
+                                    event_name_is_layer_touch(layer, event_name));
 }
 
 int js_module_call_event(const char* event_name, Layer* layer)
@@ -1713,46 +1746,10 @@ int js_module_call_event(const char* event_name, Layer* layer)
 
     // 如果求值结果是函数则调用它
     if (JS_IsFunction(g_js_ctx, val)) {
-        const PointerEvent* pe = get_current_pointer_event();
-        JSValue result;
-        if (pe && pe->device == POINTER_DEVICE_TOUCH) {
-            JSValue args[5];
-            args[0] = JS_NewString(g_js_ctx, pointer_phase_to_string(pe->phase));
-            args[1] = JS_NewInt32(g_js_ctx, pe->delta_x);
-            args[2] = JS_NewInt32(g_js_ctx, pe->delta_y);
-            args[3] = JS_NewInt32(g_js_ctx, pe->pointer_id);
-            args[4] = JS_NewInt32(g_js_ctx, pe->finger_count);
-            result = JS_Call(g_js_ctx, val, JS_UNDEFINED, 5, args);
-            JS_FreeValue(g_js_ctx, args[0]);
-            JS_FreeValue(g_js_ctx, args[1]);
-            JS_FreeValue(g_js_ctx, args[2]);
-            JS_FreeValue(g_js_ctx, args[3]);
-            JS_FreeValue(g_js_ctx, args[4]);
-        } else if (pe) {
-            JSValue args[3];
-            args[0] = JS_NewString(g_js_ctx, pointer_phase_to_string(pe->phase));
-            args[1] = JS_NewInt32(g_js_ctx, pe->delta_x);
-            args[2] = JS_NewInt32(g_js_ctx, pe->delta_y);
-            result = JS_Call(g_js_ctx, val, JS_UNDEFINED, 3, args);
-            JS_FreeValue(g_js_ctx, args[0]);
-            JS_FreeValue(g_js_ctx, args[1]);
-            JS_FreeValue(g_js_ctx, args[2]);
-        } else {
-            JSValue args[1];
-            args[0] = layer ? JS_NewString(g_js_ctx, layer->id) : JS_NULL;
-            result = JS_Call(g_js_ctx, val, JS_UNDEFINED, 1, args);
-            JS_FreeValue(g_js_ctx, args[0]);
-        }
-
-        if (JS_IsException(result)) {
-            JSValue exc = JS_GetException(g_js_ctx);
-            print_quickjs_exception(g_js_ctx, exc, "<event>");
-            JS_FreeValue(g_js_ctx, exc);
-            JS_FreeValue(g_js_ctx, result);
-            JS_FreeValue(g_js_ctx, val);
-            return -1;
-        }
-        JS_FreeValue(g_js_ctx, result);
+        int ret = js_invoke_event_function(
+            g_js_ctx, val, layer, event_name_is_layer_touch(layer, event_name));
+        JS_FreeValue(g_js_ctx, val);
+        return ret;
     }
     JS_FreeValue(g_js_ctx, val);
     return 0;

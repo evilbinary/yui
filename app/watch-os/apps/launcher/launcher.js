@@ -47,9 +47,34 @@ var bubbleDispSize = {};
 var bubbleLastLayout = {};
 var bubbleSizeAnimId = null;
 var bubbleReleaseTimer = null;
-var bubbleDragPending = false;
-var bubbleDragLayoutId = null;
 var bubbleDragging = false;
+var bubbleLayoutPending = false;
+var bubbleLayoutDrag = false;
+
+function bubbleRequestLayout(opts) {
+    var dragging = opts && opts.dragging;
+    if (dragging) {
+        bubbleLayoutDrag = true;
+    }
+    if (bubbleLayoutPending) {
+        return;
+    }
+    bubbleLayoutPending = true;
+    setTimeout(function() {
+        var drag = bubbleLayoutDrag;
+        bubbleLayoutPending = false;
+        bubbleLayoutDrag = false;
+        if (launcherMode === "bubble" && launcherBuilt) {
+            layoutBubbleIcons(drag ? { dragging: true } : undefined);
+        }
+    }, 0);
+}
+
+function bubbleFlushLayout(opts) {
+    bubbleLayoutPending = false;
+    bubbleLayoutDrag = false;
+    layoutBubbleIcons(opts);
+}
 
 function getMockLauncherApps() {
     var list = [];
@@ -116,8 +141,9 @@ function rebuildLauncher() {
     bubbleStopSizeAnim();
     bubbleStopInertia();
     bubbleCancelReleaseTimer();
-    bubbleCancelDragLayout();
     bubbleDragging = false;
+    bubbleLayoutPending = false;
+    bubbleLayoutDrag = false;
     YUI.setText("launcher_count", apps.length + " 个应用");
 
     buildLauncherBubble(apps);
@@ -353,8 +379,12 @@ function layoutBubbleIcons(opts) {
         targetSize = BUBBLE_D * bubbleZoom * proj.scale;
 
         if (dragging) {
-            /* Snap size while dragging — skip lerp / extra anim frames. */
-            next = targetSize;
+            /* Freeze size while dragging — avoids size churn; position still tracks. */
+            cur = bubbleDispSize[app.id];
+            if (typeof cur !== "number") {
+                cur = targetSize;
+            }
+            next = cur;
             bubbleDispSize[app.id] = next;
         } else {
             cur = bubbleDispSize[app.id];
@@ -407,34 +437,6 @@ function layoutBubbleIcons(opts) {
     if (!dragging && settling) {
         bubbleScheduleSizeAnim();
     }
-}
-
-function bubbleCancelDragLayout() {
-    if (bubbleDragLayoutId !== null) {
-        clearTimeout(bubbleDragLayoutId);
-        bubbleDragLayoutId = null;
-    }
-    bubbleDragPending = false;
-}
-
-function bubbleFlushDragLayout() {
-    bubbleDragLayoutId = null;
-    if (!bubbleDragPending) {
-        return;
-    }
-    bubbleDragPending = false;
-    if (launcherMode === "bubble" && launcherBuilt) {
-        layoutBubbleIcons({ dragging: true });
-    }
-}
-
-function bubbleRequestDragLayout() {
-    bubbleDragPending = true;
-    if (bubbleDragLayoutId !== null) {
-        return;
-    }
-    /* Coalesce many POINTER_MOVE events into one layout per frame. */
-    bubbleDragLayoutId = setTimeout(bubbleFlushDragLayout, 0);
 }
 
 function bubbleStopSizeAnim() {
@@ -536,7 +538,10 @@ function bubbleSettlePan() {
     layoutBubbleIcons();
 }
 
-function onLauncherTouch(type, deltaX, deltaY) {
+function onLauncherTouch(layerId, event) {
+    var type = event.type;
+    var deltaX = event.deltaX;
+    var deltaY = event.deltaY;
     if (launcherMode !== "bubble") {
         return;
     }
@@ -548,14 +553,14 @@ function onLauncherTouch(type, deltaX, deltaY) {
         bubblePanRawY += deltaY / bubbleZoom;
         bubbleVelX = bubbleVelX * 0.35 + (deltaX / bubbleZoom) * 0.65;
         bubbleVelY = bubbleVelY * 0.35 + (deltaY / bubbleZoom) * 0.65;
-        bubbleRequestDragLayout();
+        /* Apply pan immediately; coalesce YUI.update to one per event-loop turn. */
+        bubbleRequestLayout({ dragging: true });
         bubbleArmReleaseInertia();
         return;
     }
     if (type === "wheel") {
         bubbleStopInertia();
         bubbleCancelReleaseTimer();
-        bubbleCancelDragLayout();
         bubbleDragging = false;
         bubbleZoom += deltaY > 0 ? -0.06 : 0.06;
         if (bubbleZoom < BUBBLE_ZOOM_MIN) {
@@ -564,14 +569,13 @@ function onLauncherTouch(type, deltaX, deltaY) {
         if (bubbleZoom > BUBBLE_ZOOM_MAX) {
             bubbleZoom = BUBBLE_ZOOM_MAX;
         }
-        layoutBubbleIcons();
+        bubbleFlushLayout();
         return;
     }
     if (type === "end" || type === "cancel") {
         bubbleCancelReleaseTimer();
-        bubbleCancelDragLayout();
         bubbleDragging = false;
-        layoutBubbleIcons();
+        bubbleFlushLayout();
         bubbleStartInertia();
     }
 }

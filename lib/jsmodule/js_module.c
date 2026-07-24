@@ -131,6 +131,44 @@ int js_module_load_file(const char* filename)
     return 0;
 }
 // 调用 JS 事件函数
+// onTouch: (layerId, event)  event = { type, deltaX, deltaY, pointerId, fingerCount, x, y }
+// 其它:    (layerId)
+static int event_name_is_layer_touch(const Layer* layer, const char* event_name)
+{
+    const char* tn;
+    const char* en;
+    if (!layer || !layer->event || !event_name || !event_name[0]) {
+        return 0;
+    }
+    tn = layer->event->touch_name;
+    if (!tn[0]) {
+        return 0;
+    }
+    if (strcmp(tn, event_name) == 0) {
+        return 1;
+    }
+    en = event_name[0] == '@' ? event_name + 1 : event_name;
+    tn = tn[0] == '@' ? tn + 1 : tn;
+    return strcmp(tn, en) == 0;
+}
+
+static JSValue js_make_pointer_event_object(JSContext* ctx, const PointerEvent* pe)
+{
+    JSValue ev = JS_NewObject(ctx);
+    JS_SetPropertyStr(ctx, ev, "type",
+                      JS_NewString(ctx, pointer_phase_to_string(pe->phase)));
+    JS_SetPropertyStr(ctx, ev, "deltaX", JS_NewInt32(ctx, pe->delta_x));
+    JS_SetPropertyStr(ctx, ev, "deltaY", JS_NewInt32(ctx, pe->delta_y));
+    JS_SetPropertyStr(ctx, ev, "pointerId", JS_NewInt32(ctx, pe->pointer_id));
+    JS_SetPropertyStr(ctx, ev, "fingerCount",
+                      JS_NewInt32(ctx, pe->device == POINTER_DEVICE_TOUCH
+                                          ? pe->finger_count
+                                          : 1));
+    JS_SetPropertyStr(ctx, ev, "x", JS_NewInt32(ctx, pe->x));
+    JS_SetPropertyStr(ctx, ev, "y", JS_NewInt32(ctx, pe->y));
+    return ev;
+}
+
 int js_module_call_event(const char* event_name, Layer* layer)
 {
     if (!g_js_ctx || !event_name) return -1;
@@ -151,21 +189,24 @@ int js_module_call_event(const char* event_name, Layer* layer)
         return js_module_trigger_event(func_name, layer);
     }
 
-    // 调用函数
-    if (JS_StackCheck(g_js_ctx, 3)) {
+    const PointerEvent* pe = get_current_pointer_event();
+    int is_gesture = event_name_is_layer_touch(layer, event_name) && pe != NULL;
+    int argc = is_gesture ? 2 : 1;
+
+    if (JS_StackCheck(g_js_ctx, (uint32_t)(argc + 2))) {
         return -1;
     }
 
-    JSValue layer_id_val = JS_NULL;
-    if (layer) {
-        layer_id_val = JS_NewString(g_js_ctx, layer->id);
-    }
+    JSValue layer_id_val = layer ? JS_NewString(g_js_ctx, layer->id) : JS_NULL;
 
-    // 按照正确的顺序 push: 参数 -> 函数 -> this
-    JS_PushArg(g_js_ctx, layer_id_val); // 参数
-    JS_PushArg(g_js_ctx, func); // 函数对象
-    JS_PushArg(g_js_ctx, JS_NULL); // this
-    JSValue result = JS_Call(g_js_ctx, 1); // 1 个参数
+    /* Push order: arg[n-1] ... arg[0], func, this */
+    if (is_gesture) {
+        JS_PushArg(g_js_ctx, js_make_pointer_event_object(g_js_ctx, pe));
+    }
+    JS_PushArg(g_js_ctx, layer_id_val);
+    JS_PushArg(g_js_ctx, func);
+    JS_PushArg(g_js_ctx, JS_NULL);
+    JSValue result = JS_Call(g_js_ctx, argc);
 
     if (JS_IsException(result)) {
         JSValue exc = JS_GetException(g_js_ctx);

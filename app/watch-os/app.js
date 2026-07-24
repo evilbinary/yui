@@ -315,7 +315,10 @@ function openNotifications() { openWatchApp("/notifications"); }
 function openBattery() { WatchAppRegistry.openById("battery"); }
 function openMessages() { WatchAppRegistry.openById("messages"); }
 
-function onPageTouch(type, deltaX, deltaY) {
+function onPageTouch(layerId, event) {
+    var type = event.type;
+    var deltaX = event.deltaX;
+    var deltaY = event.deltaY;
     if (type !== "swipe") {
         return;
     }
