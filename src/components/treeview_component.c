@@ -403,6 +403,20 @@ static void treeview_component_apply_theme_style(Layer* layer, cJSON* style) {
 
     treeview_set_colors(component, text_color, selected_text_color, selected_bg_color,
                         hover_bg_color, expand_icon_color);
+    cJSON* scrollbar_color = cJSON_GetObjectItem(style, "scrollbarColor");
+    if (scrollbar_color && cJSON_IsString(scrollbar_color)) {
+        Color sc;
+        parse_color(scrollbar_color->valuestring, &sc);
+        if (layer->scrollbar_v) layer->scrollbar_v->color = sc;
+        if (layer->scrollbar_h) layer->scrollbar_h->color = sc;
+    }
+    cJSON* scrollbar_track = cJSON_GetObjectItem(style, "scrollbarTrackColor");
+    if (scrollbar_track && cJSON_IsString(scrollbar_track)) {
+        Color sc;
+        parse_color(scrollbar_track->valuestring, &sc);
+        if (layer->scrollbar_v) layer->scrollbar_v->track_color = sc;
+        if (layer->scrollbar_h) layer->scrollbar_h->track_color = sc;
+    }
     mark_layer_dirty(layer, DIRTY_COLOR | DIRTY_TEXT | DIRTY_LAYOUT);
 }
 

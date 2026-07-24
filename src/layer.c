@@ -648,6 +648,7 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
         layer->scrollbar_v->visible = 1;
         layer->scrollbar_v->thickness = 10;
         layer->scrollbar_v->color = (Color){128, 128, 128, 200};
+        layer->scrollbar_v->track_color = (Color){100, 100, 100, 50};
         layer->scrollbar_v->direction = SCROLLBAR_DIRECTION_VERTICAL;
       }
 
@@ -658,6 +659,7 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
         layer->scrollbar_h->visible = 1;
         layer->scrollbar_h->thickness = 10;
         layer->scrollbar_h->color = (Color){128, 128, 128, 200};
+        layer->scrollbar_h->track_color = (Color){100, 100, 100, 50};
         layer->scrollbar_h->direction = SCROLLBAR_DIRECTION_HORIZONTAL;
         printf(
             "HORIZONTAL SCROLLBAR CREATED for layer '%s' with scrollable=%d, "

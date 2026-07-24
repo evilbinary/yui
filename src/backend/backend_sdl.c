@@ -1903,8 +1903,27 @@ void handle_event(Layer* root, SDL_Event* event) {
 void backend_render_text_copy(Texture * texture,
                    const Rect * srcrect,
                    const Rect * dstrect){
-
    SDL_RenderCopy(renderer, texture, srcrect, dstrect);                 
+}
+
+void backend_render_texture_tinted(Texture* texture,
+                                   const Rect* srcrect,
+                                   const Rect* dstrect,
+                                   Color tint) {
+    Uint8 r = 255;
+    Uint8 g = 255;
+    Uint8 b = 255;
+    Uint8 a = 255;
+    if (!texture || !dstrect) {
+        return;
+    }
+    SDL_GetTextureColorMod(texture, &r, &g, &b);
+    SDL_GetTextureAlphaMod(texture, &a);
+    SDL_SetTextureColorMod(texture, tint.r, tint.g, tint.b);
+    SDL_SetTextureAlphaMod(texture, tint.a);
+    SDL_RenderCopy(renderer, texture, srcrect, dstrect);
+    SDL_SetTextureColorMod(texture, r, g, b);
+    SDL_SetTextureAlphaMod(texture, a);
 }
 
 void backend_render_text_destroy(Texture * texture){

@@ -328,6 +328,15 @@ static void layer_apply_scrollbar_config(Layer* layer, cJSON* scrollbar) {
         if (layer->scrollbar_v) layer->scrollbar_v->color = parsed;
         if (layer->scrollbar_h) layer->scrollbar_h->color = parsed;
     }
+
+    cJSON* track_color = cJSON_GetObjectItem(scrollbar, "trackColor");
+    if (track_color && cJSON_IsString(track_color)) {
+        Color parsed;
+        parse_color(track_color->valuestring, &parsed);
+        if (layer->scrollbar) layer->scrollbar->track_color = parsed;
+        if (layer->scrollbar_v) layer->scrollbar_v->track_color = parsed;
+        if (layer->scrollbar_h) layer->scrollbar_h->track_color = parsed;
+    }
 }
 
 static int handle_scrollbar(Layer* layer, cJSON* value, int is_creating) {

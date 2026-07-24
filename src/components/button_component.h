@@ -13,6 +13,7 @@ typedef struct {
     struct Texture* icon_tex;  // 缓存的图标纹理
     int icon_size;         // 图标最大尺寸 (0 = 自动)
     int bg_transparent;    // bgColor 显式设为 transparent
+    Color hover_text_color; /* a==0 表示未设置 */
     int press_x;           // 按下/触摸起点
     int press_y;
     int pointer_active;    // 正在跟踪一次按压手势

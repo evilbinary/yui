@@ -18,9 +18,9 @@
 
     { "selector": "Text", "style": { "color": "#4C4F69", "bgColor": "#FFFFFF", "fontSize": 13, "lineNumberBgColor": "#E6E9EF", "lineNumberColor": "#9CA0B0", "cursorColor": "#1E66F5", "selectionColor": "#ACB0BE99", "keyword": "#8839EF", "string": "#40A02B", "number": "#FE640B", "comment": "#9CA0B0", "punctuation": "#179299" } },
 
-    { "selector": "Table", "style": { "color": "#4C4F69", "bgColor": "#FFFFFF", "headerBgColor": "#E6E9EF", "headerColor": "#5C5F77", "gridLineColor": "#CCD0DA", "rowAltBgColor": "#F5F7FA", "rowHoverColor": "#E6E9EF", "rowSelectedColor": "#CCD0DA" } },
+    { "selector": "Table", "style": { "color": "#4C4F69", "bgColor": "#FFFFFF", "headerBgColor": "#E6E9EF", "headerColor": "#5C5F77", "gridLineColor": "#CCD0DA", "rowAltBgColor": "#F5F7FA", "rowHoverColor": "#E6E9EF", "rowSelectedColor": "#CCD0DA", "scrollbarColor": "#9CA0B0", "scrollbarTrackColor": "#E6E9EF80" } },
 
-    { "selector": "Treeview", "style": { "color": "#4C4F69", "bgColor": "#E6E9EF", "fontSize": 13, "selectedBgColor": "#CCD0DA", "hoverBgColor": "#DCE0E8" } },
+    { "selector": "Treeview", "style": { "color": "#4C4F69", "bgColor": "#E6E9EF", "fontSize": 13, "selectedBgColor": "#CCD0DA", "hoverBgColor": "#DCE0E8", "scrollbarColor": "#9CA0B0", "scrollbarTrackColor": "#E6E9EF80" } },
 
     { "selector": "Pagination", "style": { "color": "#5C5F77", "buttonBgColor": "#CCD0DA", "buttonHoverColor": "#BCC0CC" } },
 

@@ -1056,6 +1056,11 @@ void backend_render_text_copy(Texture* texture, const Rect* srcrect, const Rect*
 #endif
 }
 
+void backend_render_texture_tinted(Texture* texture, const Rect* srcrect, const Rect* dstrect, Color tint) {
+    (void)tint;
+    backend_render_text_copy(texture, srcrect, dstrect);
+}
+
 void backend_render_get_clip_rect(Rect* prev_clip)
 {
     if (prev_clip) {

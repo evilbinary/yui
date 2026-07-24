@@ -18,9 +18,9 @@
 
     { "selector": "Text", "style": { "color": "#CDD6F4", "bgColor": "#11111B", "fontSize": 13, "lineNumberBgColor": "#181825", "lineNumberColor": "#6C7086", "cursorColor": "#89B4FA", "selectionColor": "#45475A99", "keyword": "#CBA6F7", "string": "#A6E3A1", "number": "#FAB387", "comment": "#6C7086", "punctuation": "#89DCEB" } },
 
-    { "selector": "Table", "style": { "color": "#CDD6F4", "bgColor": "#11111B", "headerBgColor": "#181825", "headerColor": "#A6ADC8", "gridLineColor": "#313244", "rowAltBgColor": "#1a1a24", "rowHoverColor": "#313244", "rowSelectedColor": "#45475A" } },
+    { "selector": "Table", "style": { "color": "#CDD6F4", "bgColor": "#11111B", "headerBgColor": "#181825", "headerColor": "#A6ADC8", "gridLineColor": "#313244", "rowAltBgColor": "#1a1a24", "rowHoverColor": "#313244", "rowSelectedColor": "#45475A", "scrollbarColor": "#585B70", "scrollbarTrackColor": "#11111B80" } },
 
-    { "selector": "Treeview", "style": { "color": "#CDD6F4", "bgColor": "#181825", "fontSize": 13, "selectedBgColor": "#45475A", "hoverBgColor": "#313244" } },
+    { "selector": "Treeview", "style": { "color": "#CDD6F4", "bgColor": "#181825", "fontSize": 13, "selectedBgColor": "#45475A", "hoverBgColor": "#313244", "scrollbarColor": "#585B70", "scrollbarTrackColor": "#18182580" } },
 
     { "selector": "Pagination", "style": { "color": "#A6ADC8", "buttonBgColor": "#313244", "buttonHoverColor": "#45475A" } },
 

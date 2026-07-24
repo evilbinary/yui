@@ -427,6 +427,11 @@ void backend_render_text_copy(Texture* texture, const Rect* srcrect, const Rect*
     }
 }
 
+void backend_render_texture_tinted(Texture* texture, const Rect* srcrect, const Rect* dstrect, Color tint) {
+    (void)tint;
+    backend_render_text_copy(texture, srcrect, dstrect);
+}
+
 // ====================== 裁剪区域函数 ======================
 void backend_render_get_clip_rect(Rect* prev_clip) {
     // STM32 平台实现：获取当前裁剪区域

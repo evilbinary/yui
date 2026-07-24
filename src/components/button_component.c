@@ -1,6 +1,8 @@
 #include "button_component.h"
 #include "../render.h"
 #include "../backend.h"
+#include "../layer_update.h"
+#include "../util.h"
 #include <stdlib.h>
 #include <string.h>
 #include "cJSON.h"
@@ -100,12 +102,16 @@ ButtonComponent* button_component_create_from_json(Layer* layer, cJSON* json_obj
             }
         }
 
-        // 检测 bgColor 是否显式设为 transparent
+        // 检测 bgColor 是否显式设为 transparent；可选 hoverColor
         cJSON* style = cJSON_GetObjectItem(json_obj, "style");
         if (style) {
             cJSON* bg = cJSON_GetObjectItem(style, "bgColor");
             if (bg && bg->valuestring && strcmp(bg->valuestring, "transparent") == 0) {
                 component->bg_transparent = 1;
+            }
+            cJSON* hover = cJSON_GetObjectItem(style, "hoverColor");
+            if (hover && hover->valuestring) {
+                parse_color(hover->valuestring, &component->hover_text_color);
             }
         }
 
@@ -222,11 +228,15 @@ int button_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
     }
 
     int is_inside = button_point_inside(layer, event->x, event->y);
+    int was_hover = HAS_STATE(layer, LAYER_STATE_HOVER);
 
     if (is_inside) {
         SET_STATE(layer, LAYER_STATE_HOVER);
     } else {
         CLEAR_STATE(layer, LAYER_STATE_HOVER);
+    }
+    if (was_hover != HAS_STATE(layer, LAYER_STATE_HOVER)) {
+        mark_layer_dirty(layer, DIRTY_TEXT | DIRTY_COLOR);
     }
 
     if (event->phase == POINTER_DOWN) {
@@ -346,6 +356,8 @@ void button_component_render(Layer* layer) {
     Color text_color = layer->color;
     if (HAS_STATE(layer, LAYER_STATE_DISABLED)) {
         text_color = (Color){255, 255, 255, 150};
+    } else if (HAS_STATE(layer, LAYER_STATE_HOVER) && component->hover_text_color.a > 0) {
+        text_color = component->hover_text_color;
     }
 
     int text_y_center = layer->rect.y + layer->rect.h / 2;
@@ -407,7 +419,11 @@ void button_component_render(Layer* layer) {
         int icon_x = has_text ? layer->rect.x + pad_h : layer->rect.x + (layer->rect.w - icon_w) / 2;
         int icon_y = text_y_center - icon_h / 2;
         Rect icon_rect = {icon_x, icon_y, icon_w, icon_h};
-        backend_render_text_copy(icon_tex, NULL, &icon_rect);
+        if (component->icon_path) {
+            backend_render_texture_tinted(icon_tex, NULL, &icon_rect, text_color);
+        } else {
+            backend_render_text_copy(icon_tex, NULL, &icon_rect);
+        }
         if (icon_tex_owned) backend_render_text_destroy(icon_tex);
     }
 

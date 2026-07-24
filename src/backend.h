@@ -38,6 +38,11 @@ void backend_render_text_destroy(Texture * texture);
 void backend_render_text_copy(Texture * texture,
                    const Rect * srcrect,
                    const Rect * dstrect);
+/* 带色调的纹理绘制（用于 SVG/图片图标 hover 变色） */
+void backend_render_texture_tinted(Texture* texture,
+                                   const Rect* srcrect,
+                                   const Rect* dstrect,
+                                   Color tint);
 
 void backend_render_fill_rect_color(Rect* rect,unsigned char r,unsigned char g,unsigned char b,unsigned char a);
 

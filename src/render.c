@@ -500,7 +500,9 @@ void render_vertical_scrollbar(Layer* layer) {
         
         // 绘制滚动条轨道
         Rect track_rect = {scrollbar_x, layer->rect.y, scrollbar_width, visible_height};
-        Color track_color = {100, 100, 100, 50}; // 半透明灰色
+        Color track_color = layer->scrollbar_v->track_color.a
+            ? layer->scrollbar_v->track_color
+            : (Color){100, 100, 100, 50};
         backend_render_fill_rect(&track_rect, track_color);
         
         // 绘制滚动条
@@ -562,7 +564,9 @@ void render_horizontal_scrollbar(Layer* layer) {
         
         // 绘制滚动条轨道
         Rect track_rect = {layer->rect.x, scrollbar_y, visible_width, scrollbar_height};
-        Color track_color = {100, 100, 100, 50}; // 半透明灰色
+        Color track_color = layer->scrollbar_h->track_color.a
+            ? layer->scrollbar_h->track_color
+            : (Color){100, 100, 100, 50};
         // printf("DEBUG: Drawing horizontal scrollbar track at x=%d, y=%d, w=%d, h=%d\n", 
         //        track_rect.x, track_rect.y, track_rect.w, track_rect.h);
         backend_render_fill_rect(&track_rect, track_color);

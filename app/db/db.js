@@ -28,7 +28,9 @@ var currentTheme = "mocha";
 var THEME_OPTIONS = {
     mocha: { label: "Catppuccin Mocha", path: "app/db/themes/mocha.json" },
     dark: { label: "Dark", path: "app/lib/themes/dark.json" },
-    latte: { label: "Catppuccin Latte", path: "app/db/themes/latte.json" }
+    latte: { label: "Catppuccin Latte", path: "app/db/themes/latte.json" },
+    "element-plus": { label: "Element Plus", path: "app/db/themes/element-plus.json" },
+    "element-plus-dark": { label: "Element Plus Dark", path: "app/db/themes/element-plus-dark.json" }
 };
 
 function loadDbConfig() {
@@ -378,6 +380,8 @@ function onThemeSettings() {
 function onThemePickMocha() { applyTheme("mocha"); }
 function onThemePickDark() { applyTheme("dark"); }
 function onThemePickLatte() { applyTheme("latte"); }
+function onThemePickElementPlus() { applyTheme("element-plus"); }
+function onThemePickElementPlusDark() { applyTheme("element-plus-dark"); }
 
 function onThemeDialogClose() {
     hideOverlay("themeDialogOverlay");
