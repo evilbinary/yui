@@ -1595,6 +1595,8 @@ static int call_js_function_value(JSContext* ctx, JSValue func, const char* even
 {
     const PointerEvent* pe = get_current_pointer_event();
     JSValue result;
+    /* 仅触屏手势把 phase 作为首参；鼠标 UI 回调必须传 layerId，
+     * 否则 onSelect/onExpand 会收到 "start" 导致 yui.find 失败。 */
     if (pe && pe->device == POINTER_DEVICE_TOUCH) {
         JSValue args[5];
         args[0] = JS_NewString(ctx, pointer_phase_to_string(pe->phase));
@@ -1608,15 +1610,6 @@ static int call_js_function_value(JSContext* ctx, JSValue func, const char* even
         JS_FreeValue(ctx, args[2]);
         JS_FreeValue(ctx, args[3]);
         JS_FreeValue(ctx, args[4]);
-    } else if (pe) {
-        JSValue args[3];
-        args[0] = JS_NewString(ctx, pointer_phase_to_string(pe->phase));
-        args[1] = JS_NewInt32(ctx, pe->delta_x);
-        args[2] = JS_NewInt32(ctx, pe->delta_y);
-        result = JS_Call(ctx, func, JS_UNDEFINED, 3, args);
-        JS_FreeValue(ctx, args[0]);
-        JS_FreeValue(ctx, args[1]);
-        JS_FreeValue(ctx, args[2]);
     } else {
         JSValue args[1];
         args[0] = layer ? JS_NewString(ctx, layer->id) : JS_NULL;

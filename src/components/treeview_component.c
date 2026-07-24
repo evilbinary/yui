@@ -975,9 +975,11 @@ int treeview_is_expand_icon_clicked(TreeViewComponent* component, TreeNode* node
         if (current == node) {
             // 找到节点，检查是否点击在展开图标上
             int icon_x = component->layer->rect.x - component->layer->scroll_offset_x + current->level * component->indent_width + left_margin;
-            int icon_y = item_y + (component->item_height - 10) / 2;
+            int icon_y = item_y;
+            int icon_w = 18;
+            int icon_h = component->item_height;
             
-            return (x >= icon_x && x < icon_x + 10 && y >= icon_y && y < icon_y + 10);
+            return (x >= icon_x && x < icon_x + icon_w && y >= icon_y && y < icon_y + icon_h);
         }
         item_y += component->item_height;
         
@@ -999,10 +1001,12 @@ int treeview_is_expand_icon_clicked(TreeViewComponent* component, TreeNode* node
                 if (stack_node == node) {
                     // 找到节点，检查是否点击在展开图标上
                     int icon_x = component->layer->rect.x - component->layer->scroll_offset_x + stack_node->level * component->indent_width + left_margin;
-                    int icon_y = item_y + (component->item_height - 10) / 2;
+                    int icon_y = item_y;
+                    int icon_w = 18;
+                    int icon_h = component->item_height;
                     
                     free(stack);
-                    return (x >= icon_x && x < icon_x + 10 && y >= icon_y && y < icon_y + 10);
+                    return (x >= icon_x && x < icon_x + icon_w && y >= icon_y && y < icon_y + icon_h);
                 }
                 item_y += component->item_height;
                 
@@ -1123,72 +1127,76 @@ int treeview_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
     
     if ((event->phase == POINTER_DOWN || event->phase == POINTER_DOUBLE_TAP) &&
         event->button == SDL_BUTTON_LEFT) {
-        // 调整鼠标坐标以考虑滚动偏移
-        int adjusted_y = event->y;
-        // 注意：treeview_get_node_from_position 内部已经处理了滚动偏移，所以这里不需要调整
-        
         TreeNode* node = treeview_get_node_from_position(component, event->x, event->y);
         
-        if (node) {
-            // 检查是否点击在展开/折叠图标上
-            if (treeview_is_expand_icon_clicked(component, node, event->x, event->y)) {
-                // 切换节点展开状态
-                int old_expanded = node->expanded;
+        if (!node) {
+            return 0;
+        }
+
+        int on_icon = treeview_is_expand_icon_clicked(component, node, event->x, event->y);
+        int can_expand = (node->child_count > 0 || node->expandable);
+
+        /* 点箭头，或点折叠的可展开行：切换/展开并触发 onExpand */
+        if (on_icon || (can_expand && !node->expanded && !on_icon)) {
+            int old_expanded = node->expanded;
+            if (on_icon) {
                 treeview_toggle_node(node);
-                
-                // 更新滚动条状态
-                treeview_update_scrollbar(component);
-                
-                // 调用回调函数
-                if (component->on_node_expanded && old_expanded != node->expanded) {
-                    component->on_node_expanded(node, node->expanded, component->user_data);
-                }
-
-                // 触发 JS onExpand 事件
-                if (component->on_expand_name && old_expanded != node->expanded) {
-                    EventHandler handler = find_event_by_name(component->on_expand_name);
-                    if (handler) {
-                        char* node_json = treeview_node_to_json(node);
-                        if (node_json) {
-                            if (!layer->event) {
-                                layer->event = calloc(1, sizeof(Event));
-                            }
-                            strncpy(layer->event->click_name, component->on_expand_name, MAX_PATH - 1);
-                            layer->event->click_name[MAX_PATH - 1] = '\0';
-                            free(layer->text);
-                            layer->text = strdup(node_json);
-                            free(node_json);
-                            handler(layer);
-                        }
-                    }
-                }
             } else {
-                // 选中节点
-                treeview_set_selected_node(component, node);
+                treeview_expand_node(node);
+            }
 
-                // 滚动到选中的节点
-                treeview_scroll_to_node(component, node);
+            treeview_update_scrollbar(component);
+            mark_layer_dirty(layer, DIRTY_LAYOUT | DIRTY_TEXT);
 
-                // 触发 onSelect 事件
-                if (component->on_select_name) {
-                    EventHandler handler = find_event_by_name(component->on_select_name);
-                    if (handler) {
-                        char* node_json = treeview_node_to_json(node);
-                        if (node_json) {
-                            if (!layer->event) {
-                                layer->event = calloc(1, sizeof(Event));
-                            }
-                            strncpy(layer->event->click_name, component->on_select_name, MAX_PATH - 1);
-                            layer->event->click_name[MAX_PATH - 1] = '\0';
-                            free(layer->text);
-                            layer->text = strdup(node_json);
-                            free(node_json);
-                            handler(layer);
+            if (component->on_node_expanded && old_expanded != node->expanded) {
+                component->on_node_expanded(node, node->expanded, component->user_data);
+            }
+
+            if (component->on_expand_name && old_expanded != node->expanded) {
+                EventHandler handler = find_event_by_name(component->on_expand_name);
+                if (handler) {
+                    char* node_json = treeview_node_to_json(node);
+                    if (node_json) {
+                        if (!layer->event) {
+                            layer->event = calloc(1, sizeof(Event));
                         }
+                        strncpy(layer->event->click_name, component->on_expand_name, MAX_PATH - 1);
+                        layer->event->click_name[MAX_PATH - 1] = '\0';
+                        free(layer->text);
+                        layer->text = strdup(node_json);
+                        free(node_json);
+                        handler(layer);
                     }
                 }
             }
         }
+
+        /* 非纯点箭头时，同时走选中 */
+        if (!on_icon) {
+            treeview_set_selected_node(component, node);
+            treeview_scroll_to_node(component, node);
+
+            if (component->on_select_name) {
+                EventHandler handler = find_event_by_name(component->on_select_name);
+                if (handler) {
+                    char* node_json = treeview_node_to_json(node);
+                    if (node_json) {
+                        if (!layer->event) {
+                            layer->event = calloc(1, sizeof(Event));
+                        }
+                        strncpy(layer->event->click_name, component->on_select_name, MAX_PATH - 1);
+                        layer->event->click_name[MAX_PATH - 1] = '\0';
+                        free(layer->text);
+                        layer->text = strdup(node_json);
+                        free(node_json);
+                        handler(layer);
+                    }
+                }
+            }
+        }
+
+        mark_layer_dirty(layer, DIRTY_LAYOUT | DIRTY_TEXT);
+        return 1;
     }
     return 0;
 }

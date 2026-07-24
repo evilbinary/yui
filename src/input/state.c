@@ -132,7 +132,7 @@ static void input_on_pointer(const PointerEvent* event)
     if (btn < 1 || btn > 3) {
         return;
     }
-    if (event->phase == POINTER_DOWN) {
+    if (event->phase == POINTER_DOWN || event->phase == POINTER_DOUBLE_TAP) {
         g_btn_down[btn] = 1;
     } else if (event->phase == POINTER_UP || event->phase == POINTER_CANCEL) {
         g_btn_down[btn] = 0;

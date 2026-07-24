@@ -934,8 +934,6 @@ function updateStatus(text, color) {
 // ====================== Events ======================
 
 function onDbSelect(layerId) {
-    YUI.log('onDbSelect');
-
     if (!layerId) return;
     var layer = yui.find(layerId);
     if (!layer) return;

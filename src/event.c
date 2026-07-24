@@ -507,7 +507,7 @@ static int default_scrollable_pointer_handler(Layer* layer, PointerEvent* event)
         return layer->handle_scroll_event || layer->scrollable ? 1 : 0;
     }
 
-    if (event->phase == POINTER_DOWN) {
+    if (event->phase == POINTER_DOWN || event->phase == POINTER_DOUBLE_TAP) {
         return is_point_in_rect(event->x, event->y, layer->rect);
     }
 
@@ -532,7 +532,7 @@ static int default_scrollable_pointer_handler(Layer* layer, PointerEvent* event)
 }
 
 static SDL_EventType pointer_phase_to_sdl_type(PointerPhase phase) {
-    if (phase == POINTER_DOWN) {
+    if (phase == POINTER_DOWN || phase == POINTER_DOUBLE_TAP) {
         return SDL_MOUSEBUTTONDOWN;
     }
     if (phase == POINTER_UP) {
@@ -551,7 +551,7 @@ int handle_pointer_event(Layer* layer, PointerEvent* event) {
 
     if (layer->parent == NULL) {
         notify_pointer_listeners(event);
-        if (event->phase == POINTER_DOWN) {
+        if (event->phase == POINTER_DOWN || event->phase == POINTER_DOUBLE_TAP) {
             pointer_gesture_scrolled = 0;
         }
         if (event->phase == POINTER_WHEEL &&
@@ -582,7 +582,7 @@ int handle_pointer_event(Layer* layer, PointerEvent* event) {
     }
 
     int child_has_focus = 0;
-    if (pe->phase == POINTER_DOWN && focused_layer) {
+    if ((pe->phase == POINTER_DOWN || pe->phase == POINTER_DOUBLE_TAP) && focused_layer) {
         for (int i = 0; i < layer->child_count; i++) {
             if (layer->children[i] == focused_layer) {
                 child_has_focus = 1;
@@ -593,7 +593,7 @@ int handle_pointer_event(Layer* layer, PointerEvent* event) {
 
     if (point_in_rect(pos, layer->rect)) {
         if (!child_has_focus && layer->focusable && layer->visible == VISIBLE &&
-            pe->phase == POINTER_DOWN) {
+            (pe->phase == POINTER_DOWN || pe->phase == POINTER_DOUBLE_TAP)) {
             if (focused_layer && focused_layer != layer) {
                 focused_layer->state = LAYER_STATE_NORMAL;
             }
