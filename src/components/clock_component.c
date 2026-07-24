@@ -7,6 +7,14 @@
 #include <time.h>
 #include <math.h>
 
+static void clock_layer_destroy(Layer* layer) {
+    if (!layer || !layer->component) {
+        return;
+    }
+    clock_component_destroy((ClockComponent*)layer->component);
+    layer->component = NULL;
+}
+
 // 创建时钟组件
 ClockComponent* clock_component_create(Layer* layer) {
     ClockComponent* component = (ClockComponent*)malloc(sizeof(ClockComponent));
@@ -38,6 +46,7 @@ ClockComponent* clock_component_create(Layer* layer) {
     // 设置组件
     layer->component = component;
     layer->render = clock_component_render;
+    layer->on_destroy = clock_layer_destroy;
     
     return component;
 }

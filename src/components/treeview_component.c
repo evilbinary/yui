@@ -9,6 +9,14 @@
 
 static void treeview_component_apply_theme_style(Layer* layer, cJSON* style);
 
+static void treeview_layer_destroy(Layer* layer) {
+    if (!layer || !layer->component) {
+        return;
+    }
+    treeview_component_destroy((TreeViewComponent*)layer->component);
+    layer->component = NULL;
+}
+
 // 创建树视图组件
 TreeViewComponent* treeview_component_create(Layer* layer) {
     TreeViewComponent* component = (TreeViewComponent*)malloc(sizeof(TreeViewComponent));
@@ -48,6 +56,7 @@ TreeViewComponent* treeview_component_create(Layer* layer) {
     layer->focusable = 1;  // 支持键盘事件
     layer->get_property = treeview_component_get_property;
     layer->set_style = treeview_component_apply_theme_style;
+    layer->on_destroy = treeview_layer_destroy;
     
     return component;
 }

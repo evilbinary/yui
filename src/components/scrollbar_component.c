@@ -8,6 +8,14 @@
 // 前向声明parse_color函数
 extern void parse_color(char* color_string, Color* color);
 
+static void scrollbar_layer_destroy(Layer* layer) {
+    if (!layer || !layer->component) {
+        return;
+    }
+    scrollbar_component_destroy((ScrollbarComponent*)layer->component);
+    layer->component = NULL;
+}
+
 // 创建滚动条组件
 ScrollbarComponent* scrollbar_component_create(Layer* layer, Layer* target_layer, ScrollbarDirection direction) {
     if (!layer) {
@@ -42,6 +50,7 @@ ScrollbarComponent* scrollbar_component_create(Layer* layer, Layer* target_layer
     
     // 绑定事件处理函数
     layer->handle_pointer_event = scrollbar_component_handle_pointer_event;
+    layer->on_destroy = scrollbar_layer_destroy;
     // 初始更新位置
     scrollbar_component_update_position(component);
     

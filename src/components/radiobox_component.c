@@ -9,6 +9,14 @@
 static RadioGroup groups[MAX_GROUPS] = {0};
 static int group_count = 0;
 
+static void radiobox_layer_destroy(Layer* layer) {
+    if (!layer || !layer->component) {
+        return;
+    }
+    radiobox_component_destroy((RadioboxComponent*)layer->component);
+    layer->component = NULL;
+}
+
 // 创建单选框组件
 RadioboxComponent* radiobox_component_create(Layer* layer, const char* group_id, int default_checked) {
     if (!layer) {
@@ -50,6 +58,7 @@ RadioboxComponent* radiobox_component_create(Layer* layer, const char* group_id,
     
     // 设置组件为可聚焦
     layer->focusable = !HAS_STATE(layer, LAYER_STATE_DISABLED);
+    layer->on_destroy = radiobox_layer_destroy;
     
     // 将单选框添加到组中
     radiobox_add_to_group(component);

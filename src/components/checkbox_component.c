@@ -100,6 +100,14 @@ static void checkbox_apply_style_from_json(CheckboxComponent* component, cJSON* 
     checkbox_apply_style(component, component->layer, style);
 }
 
+static void checkbox_layer_destroy(Layer* layer) {
+    if (!layer || !layer->component) {
+        return;
+    }
+    checkbox_component_destroy((CheckboxComponent*)layer->component);
+    layer->component = NULL;
+}
+
 // 创建复选框组件
 CheckboxComponent* checkbox_component_create(Layer* layer, int default_checked) {
     if (!layer) {
@@ -138,6 +146,7 @@ CheckboxComponent* checkbox_component_create(Layer* layer, int default_checked) 
     layer->on_data_update = checkbox_on_data_update;
     layer->get_property = checkbox_component_get_property;
     layer->set_style = checkbox_component_set_style;
+    layer->on_destroy = checkbox_layer_destroy;
 
     return component;
 }

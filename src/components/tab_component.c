@@ -9,6 +9,14 @@
 #include "../render.h"
 #include "../util.h"
 
+static void tab_layer_destroy(Layer* layer) {
+  if (!layer || !layer->component) {
+    return;
+  }
+  tab_component_destroy((TabComponent*)layer->component);
+  layer->component = NULL;
+}
+
 // 创建选项卡组件
 TabComponent* tab_component_create(Layer* layer) {
   TabComponent* component = (TabComponent*)malloc(sizeof(TabComponent));
@@ -34,6 +42,7 @@ TabComponent* tab_component_create(Layer* layer) {
   layer->render = tab_component_render;
   layer->handle_pointer_event = tab_component_handle_pointer_event;
   layer->handle_key_event = tab_component_handle_key_event;
+  layer->on_destroy = tab_layer_destroy;
 
   return component;
 }
