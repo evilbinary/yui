@@ -2030,7 +2030,8 @@ int table_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
         if (table_handle_edit_mouse(component, layer, event)) {
             return 1;
         }
-        if (event->phase == POINTER_DOWN && event->button == SDL_BUTTON_LEFT) {
+        if ((event->phase == POINTER_DOWN || event->phase == POINTER_DOUBLE_TAP) &&
+            event->button == SDL_BUTTON_LEFT) {
             int row = table_row_at_point(component, layer, event->x, event->y);
             int col = table_column_at_point(component, layer, event->x, event->y);
             if (row != component->editing_row || col != component->editing_col) {
@@ -2067,7 +2068,7 @@ int table_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
         return row >= 0;
     }
 
-    if (event->phase == POINTER_DOWN) {
+    if (event->phase == POINTER_DOWN || event->phase == POINTER_DOUBLE_TAP) {
         table_tooltip_reset(component);
     }
 
@@ -2089,13 +2090,21 @@ int table_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
         return in_body;
     }
 
-    if (event->phase == POINTER_DOWN) {
+    if (event->phase == POINTER_DOWN || event->phase == POINTER_DOUBLE_TAP) {
         component->pressed_row = in_body ? row : -1;
         component->hovered_row = in_body ? row : -1;
         if (in_body && component->editing_row < 0) {
             int col = table_column_at_point(component, layer, event->x, event->y);
             component->selected_row = row;
             component->selected_col = col;
+            /* SDL 连点第二次为 DOUBLE_TAP；直接进编辑，避免只认 DOWN 时丢双击 */
+            if (event->phase == POINTER_DOUBLE_TAP && component->editable) {
+                if (col < 0 && component->last_click_col >= 0) {
+                    col = component->last_click_col;
+                    component->selected_col = col;
+                }
+                table_begin_edit(component, row, col);
+            }
             mark_layer_dirty(layer, DIRTY_TEXT);
         }
         return in_body;
