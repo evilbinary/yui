@@ -3268,7 +3268,7 @@ void text_component_render(Layer* layer) {
             1,
             line_number_bg.h
         };
-        Color separator_color = {51, 51, 51, 255};
+        Color separator_color = component->line_number_color;
         backend_render_fill_rect(&separator_line, separator_color);
         
         // 获取行高

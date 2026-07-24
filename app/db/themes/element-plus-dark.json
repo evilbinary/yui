@@ -23,7 +23,9 @@
         "bgColor": "#141414",
         "color": "#CFD3DC",
         "fontSize": 12,
-        "borderRadius": 4
+        "borderRadius": 4,
+        "borderColor": "#4C4D4F",
+        "focusBorderColor": "#409EFF"
       }
     },
 

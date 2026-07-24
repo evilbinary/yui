@@ -131,9 +131,13 @@ static int input_get_text_draw_y(Layer* layer, const Rect* content, int line_h) 
 }
 
 static void input_component_apply_style(Layer* layer, cJSON* style) {
-    if (!layer || !style || !cJSON_IsObject(style)) {
+    InputComponent* component;
+    cJSON* item;
+
+    if (!layer || !style || !cJSON_IsObject(style) || !layer->component) {
         return;
     }
+    component = (InputComponent*)layer->component;
 
     cJSON* padding = cJSON_GetObjectItem(style, "padding");
     if (padding && layer_padding_apply_from_json(layer->padding, padding)) {
@@ -141,6 +145,15 @@ static void input_component_apply_style(Layer* layer, cJSON* style) {
             memcpy(layer->layout_manager->padding, layer->padding, sizeof(layer->padding));
         }
         mark_layer_dirty(layer, DIRTY_LAYOUT);
+    }
+
+    item = cJSON_GetObjectItem(style, "borderColor");
+    if (item && cJSON_IsString(item)) {
+        parse_color(item->valuestring, &component->border_color);
+    }
+    item = cJSON_GetObjectItem(style, "focusBorderColor");
+    if (item && cJSON_IsString(item)) {
+        parse_color(item->valuestring, &component->focus_border_color);
     }
 }
 
@@ -297,6 +310,8 @@ InputComponent* input_component_create(Layer* layer) {
 
     component->cursor_color = (Color){255, 0, 0, 255};
     component->selection_color = (Color){137, 180, 250, 255};
+    component->border_color = (Color){150, 150, 150, 255};
+    component->focus_border_color = (Color){70, 130, 180, 255};
     layer->on_destroy = input_layer_destroy;
     return component;
 }
@@ -653,9 +668,9 @@ void input_component_render(Layer* layer) {
     
     InputComponent* component = (InputComponent*)layer->component;
     const char* label_text = layer_get_label(layer);
-    Color border_color = (Color){150, 150, 150, 255};
+    Color border_color = component->border_color;
     if (HAS_STATE(layer, LAYER_STATE_FOCUSED)) {
-        border_color = (Color){70, 130, 180, 255};
+        border_color = component->focus_border_color;
     }
     
     if (layer->bg_color.a > 0) {

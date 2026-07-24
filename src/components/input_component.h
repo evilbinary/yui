@@ -19,6 +19,8 @@ typedef struct {
     int is_selecting;      // 鼠标拖选中文本
     Color cursor_color;    // 光标颜色
     Color selection_color; // 选中背景颜色
+    Color border_color;    // 边框颜色
+    Color focus_border_color; // 聚焦边框
     EventHandler on_change;
     char* change_name;
 } InputComponent;

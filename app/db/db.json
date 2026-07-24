@@ -140,6 +140,7 @@
                         "icon": "app/assets/icons/btnExplain.svg",
                         "style": {
                           "color": "#F9E2AF",
+                          "hoverColor": "#FCD34D",
                           "bgColor": "transparent",
                           "fontSize": 12,
                           "borderRadius": 3
@@ -153,6 +154,7 @@
                         "icon": "app/assets/icons/btnFormat.svg",
                         "style": {
                           "color": "#89B4FA",
+                          "hoverColor": "#B4D0FB",
                           "bgColor": "transparent",
                           "fontSize": 13,
                           "borderRadius": 3
@@ -166,6 +168,7 @@
                         "icon": "app/assets/icons/btnSave.svg",
                         "style": {
                           "color": "#A6ADC8",
+                          "hoverColor": "#CDD6F4",
                           "bgColor": "transparent",
                           "fontSize": 12,
                           "borderRadius": 3
@@ -179,6 +182,7 @@
                         "icon": "app/assets/icons/btnOpen.svg",
                         "style": {
                           "color": "#A6ADC8",
+                          "hoverColor": "#CDD6F4",
                           "bgColor": "transparent",
                           "fontSize": 12,
                           "borderRadius": 3
@@ -813,8 +817,8 @@
         {
           "id": "themeDialogPanel",
           "type": "View",
-          "position": [220, 130],
-          "size": [460, 300],
+          "position": [220, 100],
+          "size": [460, 396],
           "layout": { "type": "vertical", "spacing": 0 },
           "style": { "bgColor": "#1E1E2E", "borderRadius": 8 },
           "children": [
@@ -832,13 +836,15 @@
             {
               "id": "themeDialogBody",
               "type": "View",
-              "size": [460, 200],
+              "size": [460, 296],
               "layout": { "type": "vertical", "spacing": 10, "padding": [20, 24, 20, 24] },
               "children": [
                 { "id": "themeCurrentLabel", "type": "Label", "text": "当前主题：Mocha", "style": { "color": "#A6ADC8", "fontSize": 12 } },
                 { "id": "themeMochaBtn", "type": "Button", "size": [412, 36], "text": "Catppuccin Mocha（深色）", "style": { "color": "#CDD6F4", "bgColor": "#313244", "borderRadius": 4, "fontSize": 12 }, "events": { "onClick": "@onThemePickMocha" } },
                 { "id": "themeDarkBtn", "type": "Button", "size": [412, 36], "text": "Dark（通用深色）", "style": { "color": "#CDD6F4", "bgColor": "#313244", "borderRadius": 4, "fontSize": 12 }, "events": { "onClick": "@onThemePickDark" } },
-                { "id": "themeLatteBtn", "type": "Button", "size": [412, 36], "text": "Catppuccin Latte（浅色）", "style": { "color": "#4C4F69", "bgColor": "#CCD0DA", "borderRadius": 4, "fontSize": 12 }, "events": { "onClick": "@onThemePickLatte" } }
+                { "id": "themeLatteBtn", "type": "Button", "size": [412, 36], "text": "Catppuccin Latte（浅色）", "style": { "color": "#4C4F69", "bgColor": "#CCD0DA", "borderRadius": 4, "fontSize": 12 }, "events": { "onClick": "@onThemePickLatte" } },
+                { "id": "themeElementPlusBtn", "type": "Button", "size": [412, 36], "text": "Element Plus（亮色）", "style": { "color": "#606266", "bgColor": "#FFFFFF", "borderRadius": 4, "fontSize": 12 }, "events": { "onClick": "@onThemePickElementPlus" } },
+                { "id": "themeElementPlusDarkBtn", "type": "Button", "size": [412, 36], "text": "Element Plus Dark（暗色）", "style": { "color": "#CFD3DC", "bgColor": "#1D1E1F", "borderRadius": 4, "fontSize": 12 }, "events": { "onClick": "@onThemePickElementPlusDark" } }
               ]
             },
             {

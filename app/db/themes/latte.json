@@ -14,7 +14,7 @@
 
     { "selector": "Button", "style": { "bgColor": "#CCD0DA", "color": "#4C4F69", "borderRadius": 4, "fontSize": 12 } },
 
-    { "selector": "Input", "style": { "bgColor": "#FFFFFF", "color": "#4C4F69", "fontSize": 12 } },
+    { "selector": "Input", "style": { "bgColor": "#FFFFFF", "color": "#4C4F69", "fontSize": 12, "borderColor": "#CCD0DA", "focusBorderColor": "#1E66F5" } },
 
     { "selector": "Text", "style": { "color": "#4C4F69", "bgColor": "#FFFFFF", "fontSize": 13, "lineNumberBgColor": "#E6E9EF", "lineNumberColor": "#9CA0B0", "cursorColor": "#1E66F5", "selectionColor": "#ACB0BE99", "keyword": "#8839EF", "string": "#40A02B", "number": "#FE640B", "comment": "#9CA0B0", "punctuation": "#179299" } },
 
