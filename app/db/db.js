@@ -32,7 +32,9 @@ var THEME_OPTIONS = {
     dark: { label: "Dark", path: "app/lib/themes/dark.json" },
     latte: { label: "Catppuccin Latte", path: "app/lib/themes/latte.json" },
     "element-plus": { label: "Element Plus", path: "app/lib/themes/element-plus.json" },
-    "element-plus-dark": { label: "Element Plus Dark", path: "app/lib/themes/element-plus-dark.json" }
+    "element-plus-dark": { label: "Element Plus Dark", path: "app/lib/themes/element-plus-dark.json" },
+    "soft-ui": { label: "Soft UI", path: "app/lib/themes/soft-ui.json" },
+    "soft-ui-dark": { label: "Soft UI Dark", path: "app/lib/themes/soft-ui-dark.json" }
 };
 
 function loadDbConfig() {
@@ -425,6 +427,8 @@ function onPrefThemeDark() { pickPrefTheme("dark"); }
 function onPrefThemeLatte() { pickPrefTheme("latte"); }
 function onPrefThemeElementPlus() { pickPrefTheme("element-plus"); }
 function onPrefThemeElementPlusDark() { pickPrefTheme("element-plus-dark"); }
+function onPrefThemeSoftUi() { pickPrefTheme("soft-ui"); }
+function onPrefThemeSoftUiDark() { pickPrefTheme("soft-ui-dark"); }
 
 function onThemeSettings() {
     onOpenSettings();
