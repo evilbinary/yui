@@ -473,11 +473,19 @@ int list_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
     int index = -1;
     int inside = list_point_in_item(component, event->x, event->y, &index);
     int can_pan = list_can_vertical_pan(layer);
+    int in_layer = event->x >= layer->rect.x && event->x < layer->rect.x + layer->rect.w &&
+                   event->y >= layer->rect.y && event->y < layer->rect.y + layer->rect.h;
+    int tracking = component->pressed_index >= 0 || component->touch_scrolled;
+
+    /* 未在列表内且无进行中的手势时不吞事件，否则上方工具栏按钮会被 can_pan 抢走 */
+    if (!in_layer && !tracking) {
+        return 0;
+    }
 
     if (event->phase == POINTER_MOVE) {
         if (event->device == POINTER_DEVICE_TOUCH && event->finger_count > 1) {
             component->hovered_index = inside ? index : -1;
-            return inside || can_pan;
+            return inside || can_pan || tracking;
         }
         int adx = event->delta_x < 0 ? -event->delta_x : event->delta_x;
         int ady = event->delta_y < 0 ? -event->delta_y : event->delta_y;
@@ -494,7 +502,7 @@ int list_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
         if (!inside || component->pressed_index < 0) {
             if (!inside) component->pressed_index = -1;
         }
-        return inside || can_pan;
+        return inside || can_pan || tracking;
     }
 
     if (event->device == POINTER_DEVICE_MOUSE && event->button != SDL_BUTTON_LEFT) {
@@ -502,26 +510,30 @@ int list_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
     }
 
     if (event->phase == POINTER_DOWN) {
+        if (!in_layer) {
+            return 0;
+        }
         component->touch_scrolled = 0;
         component->pressed_index = inside ? index : -1;
         component->hovered_index = inside ? index : -1;
-        return inside || can_pan;
+        return 1;
     }
 
     if (event->phase == POINTER_CANCEL) {
         component->pressed_index = -1;
         component->touch_scrolled = 0;
-        return 1;
+        return tracking ? 1 : 0;
     }
 
     if (event->phase == POINTER_UP) {
         int clicked = inside && component->pressed_index == index && index >= 0;
+        int was_tracking = tracking;
         component->pressed_index = -1;
         component->touch_scrolled = 0;
         if (clicked) {
             list_dispatch_select(component, index);
         }
-        return inside || clicked;
+        return inside || clicked || was_tracking;
     }
 
     return inside;
