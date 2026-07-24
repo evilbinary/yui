@@ -17,7 +17,7 @@ void load_all_fonts(Layer* layer);
 void render_scrollbar(Layer* layer);
 void render_vertical_scrollbar(Layer* layer);
 void render_horizontal_scrollbar(Layer* layer);
-void render_clip_start(Layer* layer,Rect* prev_clip);
+int render_clip_start(Layer* layer,Rect* prev_clip);
 void render_clip_end(Layer* layer,Rect* prev_clip);
 
 Texture* render_text(Layer* layer,const char* text, Color color);

@@ -11,6 +11,8 @@ extern int yui_inspect_mode_enabled;
 extern int yui_inspect_show_bounds;
 extern int yui_inspect_show_info;
 
+static void render_rect_intersect(Rect* out, const Rect* a, const Rect* b);
+
 // ====================== 资源加载器 ======================
 void load_textures(Layer* root) {
     if (root->type==IMAGE&& strlen(root->source) > 0) {
@@ -241,6 +243,17 @@ void render_layer(Layer* layer) {
         return;
     }
 
+    /* Fully clipped layers must not render or replace the parent clip. */
+    Rect parent_clip;
+    backend_render_get_clip_rect(&parent_clip);
+    if (parent_clip.w > 0 && parent_clip.h > 0) {
+        Rect visible_rect;
+        render_rect_intersect(&visible_rect, &layer->rect, &parent_clip);
+        if (visible_rect.w <= 0 || visible_rect.h <= 0) {
+            return;
+        }
+    }
+
     int perf_on = perf_is_enabled();
     perf_layer_tree_enter(layer);
 
@@ -271,7 +284,9 @@ void render_layer(Layer* layer) {
     }
 
     Rect prev_clip;
-    render_clip_start(layer, &prev_clip);
+    if (!render_clip_start(layer, &prev_clip)) {
+        return;
+    }
 
     for (int i = 0; i < layer->child_count; i++) {
         if (!layer->children) {
@@ -466,7 +481,7 @@ static void render_rect_intersect(Rect* out, const Rect* a, const Rect* b) {
     }
 }
 
-void render_clip_start(Layer* layer,Rect* prev_clip){
+int render_clip_start(Layer* layer,Rect* prev_clip){
     backend_render_get_clip_rect(prev_clip);
     Rect clip_rect = layer->rect;
     Rect intersected;
@@ -475,8 +490,13 @@ void render_clip_start(Layer* layer,Rect* prev_clip){
         render_rect_intersect(&intersected, &clip_rect, prev_clip);
         clip_rect = intersected;
     }
-    
+
+    if (clip_rect.w <= 0 || clip_rect.h <= 0) {
+        return 0;
+    }
+
     backend_render_set_clip_rect(&clip_rect);
+    return 1;
 }
 
 void render_clip_end(Layer* layer,Rect* prev_clip){
