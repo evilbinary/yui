@@ -125,6 +125,23 @@
                     "events": {
                         "onChange": "@handleCheckboxChange"
                     }
+                },
+                {
+                    "id": "checkboxSwitch",
+                    "type": "Checkbox",
+                    "variant": "switch",
+                    "position": [10, 170],
+                    "size": [44, 24],
+                    "data": true,
+                    "label": "开关样式",
+                    "style": {
+                        "color": "#2C3E50",
+                        "borderColor": "#CBD5E1",
+                        "checkColor": "#3B82F6"
+                    },
+                    "events": {
+                        "onChange": "@handleCheckboxChange"
+                    }
                 }
             ]
         },

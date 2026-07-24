@@ -7,6 +7,41 @@
 #include <string.h>
 #include "checkbox_component.h"
 
+static int checkbox_variant_has(const Layer* layer, const char* token) {
+    if (!layer || !token || token[0] == '\0' || layer->variant[0] == '\0') {
+        return 0;
+    }
+    const char* p = layer->variant;
+    size_t n = strlen(token);
+    while (*p) {
+        while (*p == ' ') {
+            p++;
+        }
+        if (strncmp(p, token, n) == 0 && (p[n] == '\0' || p[n] == ' ')) {
+            return 1;
+        }
+        while (*p && *p != ' ') {
+            p++;
+        }
+    }
+    return 0;
+}
+
+static int checkbox_is_switch(const Layer* layer) {
+    return checkbox_variant_has(layer, "switch");
+}
+
+static void checkbox_dim_color(Color* color, int is_disabled) {
+    if (!color || !is_disabled) {
+        return;
+    }
+    int gray = (color->r * 30 + color->g * 59 + color->b * 11) / 100;
+    color->r = (uint8_t)gray;
+    color->g = (uint8_t)gray;
+    color->b = (uint8_t)gray;
+    color->a = (uint8_t)(color->a * 0.6);
+}
+
 static int checkbox_on_data_update(Layer* layer, cJSON* data) {
     if (!layer || !layer->component || !data) {
         return 0;
@@ -115,8 +150,13 @@ CheckboxComponent* checkbox_component_create_from_json(Layer* layer, cJSON* json
     }
     cJSON* size = cJSON_GetObjectItem(json_obj, "size");
     if (size == NULL) {
-      layer->rect.w = 20;
-      layer->rect.h = layer->rect.w;
+      if (checkbox_is_switch(layer)) {
+        layer->rect.w = 40;
+        layer->rect.h = 22;
+      } else {
+        layer->rect.w = 20;
+        layer->rect.h = 20;
+      }
       layer->fixed_width = layer->rect.w;
       layer->fixed_height = layer->rect.h;
     }
@@ -259,6 +299,8 @@ int checkbox_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
             layer->state &= ~LAYER_STATE_ACTIVE; // 只清除激活位，保留其他位
         }
 
+        mark_layer_dirty(layer, DIRTY_COLOR);
+
         // 如果有点击事件回调，调用它
         if (layer->event && layer->event->click) {
             EVENT_INVOKE(layer->event->click, layer);
@@ -284,26 +326,35 @@ static void checkbox_draw_tick(const Layer* layer, Color tick) {
     backend_render_line(x2, y2, x3, y3, tick);
 }
 
-// 渲染复选框
-void checkbox_component_render(Layer* layer) {
-    if (!layer || !layer->component) {
-        return;
+static void checkbox_render_switch(Layer* layer, CheckboxComponent* component, int is_disabled) {
+    Color track = component->checked ? component->check_color : component->border_color;
+    checkbox_dim_color(&track, is_disabled);
+
+    int radius = layer->rect.h / 2;
+    if (radius < 1) {
+        radius = 1;
     }
-    
-    CheckboxComponent* component = (CheckboxComponent*)layer->component;
-    
-    // 检查是否被禁用
-    int is_disabled = HAS_STATE(layer, LAYER_STATE_DISABLED);
-    
+    backend_render_rounded_rect(&layer->rect, track, radius);
+
+    int pad = layer->rect.h > 16 ? 2 : 1;
+    int thumb_d = layer->rect.h - pad * 2;
+    if (thumb_d < 4) {
+        thumb_d = layer->rect.h > 4 ? layer->rect.h - 2 : layer->rect.h;
+        pad = (layer->rect.h - thumb_d) / 2;
+    }
+    int thumb_x = component->checked
+                      ? layer->rect.x + layer->rect.w - pad - thumb_d
+                      : layer->rect.x + pad;
+    int thumb_y = layer->rect.y + pad;
+    Rect thumb = { thumb_x, thumb_y, thumb_d, thumb_d };
+    Color thumb_color = { 255, 255, 255, is_disabled ? 200 : 255 };
+    backend_render_rounded_rect(&thumb, thumb_color, thumb_d / 2);
+}
+
+static void checkbox_render_box(Layer* layer, CheckboxComponent* component, int is_disabled) {
     if (component->checked) {
         Color fill = component->check_color;
-        if (is_disabled) {
-            int gray = (fill.r * 30 + fill.g * 59 + fill.b * 11) / 100;
-            fill.r = gray;
-            fill.g = gray;
-            fill.b = gray;
-            fill.a = (uint8_t)(fill.a * 0.6);
-        }
+        checkbox_dim_color(&fill, is_disabled);
         backend_render_fill_rect_color(
             &layer->rect, fill.r, fill.g, fill.b, fill.a);
 
@@ -314,45 +365,45 @@ void checkbox_component_render(Layer* layer) {
         Color border_color = component->border_color;
         if (is_disabled) {
             bg_color.a = (uint8_t)(bg_color.a * 0.6);
-            int gray = (border_color.r * 30 + border_color.g * 59 + border_color.b * 11) / 100;
-            border_color.r = gray;
-            border_color.g = gray;
-            border_color.b = gray;
-            border_color.a = (uint8_t)(border_color.a * 0.6);
+            checkbox_dim_color(&border_color, 1);
         }
         backend_render_fill_rect_color(
             &layer->rect, bg_color.r, bg_color.g, bg_color.b, bg_color.a);
         backend_render_rect_color(
             &layer->rect, border_color.r, border_color.g, border_color.b, border_color.a);
     }
+}
+
+// 渲染复选框（variant 含 switch 时绘制为开关）
+void checkbox_component_render(Layer* layer) {
+    if (!layer || !layer->component) {
+        return;
+    }
+    
+    CheckboxComponent* component = (CheckboxComponent*)layer->component;
+    int is_disabled = HAS_STATE(layer, LAYER_STATE_DISABLED);
+
+    if (checkbox_is_switch(layer)) {
+        checkbox_render_switch(layer, component, is_disabled);
+    } else {
+        checkbox_render_box(layer, component, is_disabled);
+    }
     
     // 绘制标签文本，使用layer->label和layer->color
     const char* label_text = layer_get_label(layer);
-    if (label_text[0] != '\0' && layer->font->default_font) {
-        // 计算标签位置（在复选框右侧，垂直居中）
-        int label_x = layer->rect.x + layer->rect.w + 5;  // 5像素间距
+    if (label_text[0] != '\0' && layer->font && layer->font->default_font) {
+        int label_x = layer->rect.x + layer->rect.w + 5;
         
         Color text_color = layer->color;
-        // 禁用时降低颜色饱和度和透明度
-        if (is_disabled) {
-            int gray = (text_color.r * 30 + text_color.g * 59 + text_color.b * 11) / 100;
-            text_color.r = gray;
-            text_color.g = gray;
-            text_color.b = gray;
-            text_color.a = text_color.a * 0.6;
-        }
+        checkbox_dim_color(&text_color, is_disabled);
         
-        // 使用backend_render_texture渲染文本到纹理
         Texture* text_texture = backend_render_texture(layer->font->default_font, label_text, text_color);
         if (text_texture) {
-            // 获取文本纹理的尺寸
             int text_width, text_height;
             backend_query_texture(text_texture, NULL, NULL, &text_width, &text_height);
             
-            // 计算垂直居中的Y坐标
             int label_y = layer->rect.y + (layer->rect.h - text_height/yui_density) / 2;
             
-            // 创建目标矩形
             Rect dst_rect = {
                 .x = label_x,
                 .y = label_y,
@@ -360,10 +411,7 @@ void checkbox_component_render(Layer* layer) {
                 .h = text_height/ yui_density
             };
             
-            // 渲染文本纹理
             backend_render_text_copy(text_texture, NULL, &dst_rect);
-            
-            // 释放纹理资源
             backend_render_text_destroy(text_texture);
         }
     }

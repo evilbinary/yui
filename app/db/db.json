@@ -882,7 +882,7 @@
                               "layout": { "type": "horizontal", "align": "center", "spacing": 8 },
                               "style": { "bgColor": "transparent" },
                               "children": [
-                                { "id": "prefAutoConnect", "type": "Checkbox", "size": [20, 20], "data": true },
+                                { "id": "prefAutoConnect", "type": "Checkbox", "variant": "switch", "size": [40, 22], "data": true },
                                 { "id": "prefAutoConnectLabel", "type": "Label", "size": [420, 20], "text": "启动时自动连接数据库", "style": { "color": "#CDD6F4", "fontSize": 12 } }
                               ]
                             }

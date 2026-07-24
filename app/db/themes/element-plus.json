@@ -106,6 +106,14 @@
         "checkColor": "#409EFF"
       }
     },
+    {
+      "selector": "Checkbox.switch",
+      "style": {
+        "bgColor": "#E4E7ED",
+        "borderColor": "#DCDFE6",
+        "checkColor": "#409EFF"
+      }
+    },
 
     {
       "selector": "Menu",

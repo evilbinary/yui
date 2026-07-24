@@ -27,6 +27,7 @@
     { "selector": "Sash", "style": { "bgColor": "#313244", "hoverBgColor": "#45475A", "borderColor": "#45475A", "dotColor": "#6C7086", "hoverDotColor": "#A6ADC8", "accentColor": "#89B4FAB3" } },
 
     { "selector": "Checkbox", "style": { "bgColor": "#11111B", "borderColor": "#585B70", "checkColor": "#A6E3A1" } },
+    { "selector": "Checkbox.switch", "style": { "bgColor": "#313244", "borderColor": "#45475A", "checkColor": "#A6E3A1" } },
 
     { "selector": "Menu", "style": { "bgColor": "#1E1E2E", "textColor": "#CDD6F4", "hoverColor": "#45475A", "disabledColor": "#6C7086", "separatorColor": "#585B70", "itemHeight": 29 } },
 

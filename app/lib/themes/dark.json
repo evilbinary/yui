@@ -237,6 +237,14 @@
       }
     },
     {
+      "selector": "Checkbox.switch",
+      "style": {
+        "bgColor": "#1A2030",
+        "borderColor": "#3A4254",
+        "checkColor": "#6EE7B7"
+      }
+    },
+    {
       "selector": "View.tabBar",
       "style": {
         "bgColor": "#12161E",
