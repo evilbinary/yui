@@ -715,8 +715,9 @@ void input_component_render(Layer* layer) {
     Rect content;
     input_get_content_rect(layer, &content);
     Rect prev_clip;
-    backend_render_get_clip_rect(&prev_clip);
-    backend_render_set_clip_rect(&content);
+    if (!render_clip_push(&content, &prev_clip)) {
+        return;
+    }
 
     int line_h = input_get_line_height(layer);
     int draw_x = content.x - component->scroll_x;
@@ -765,5 +766,5 @@ void input_component_render(Layer* layer) {
         backend_render_line(cursor_x, cursor_y, cursor_x, cursor_y + cursor_height, component->cursor_color);
     }
 
-    backend_render_set_clip_rect(&prev_clip);
+    render_clip_pop(&prev_clip);
 }

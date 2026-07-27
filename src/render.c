@@ -481,31 +481,47 @@ static void render_rect_intersect(Rect* out, const Rect* a, const Rect* b) {
     }
 }
 
-int render_clip_start(Layer* layer,Rect* prev_clip){
-    backend_render_get_clip_rect(prev_clip);
-    Rect clip_rect = layer->rect;
+int render_clip_push(const Rect* local, Rect* prev_out) {
+    Rect clip;
     Rect intersected;
-    
-    if (prev_clip->w > 0 && prev_clip->h > 0) {
-        render_rect_intersect(&intersected, &clip_rect, prev_clip);
-        clip_rect = intersected;
-    }
 
-    if (clip_rect.w <= 0 || clip_rect.h <= 0) {
+    if (!local || !prev_out) {
         return 0;
     }
 
-    backend_render_set_clip_rect(&clip_rect);
+    backend_render_get_clip_rect(prev_out);
+    clip = *local;
+
+    if (prev_out->w > 0 && prev_out->h > 0) {
+        render_rect_intersect(&intersected, &clip, prev_out);
+        clip = intersected;
+    }
+
+    /* Empty must not call set_clip — that disables clipping and causes bleed. */
+    if (clip.w <= 0 || clip.h <= 0) {
+        return 0;
+    }
+
+    backend_render_set_clip_rect(&clip);
     return 1;
 }
 
-void render_clip_end(Layer* layer,Rect* prev_clip){
-    (void)layer;
-    if (!prev_clip || prev_clip->w <= 0 || prev_clip->h <= 0) {
+void render_clip_pop(const Rect* prev) {
+    if (!prev || prev->w <= 0 || prev->h <= 0) {
         backend_render_set_clip_rect(NULL);
         return;
     }
-    backend_render_set_clip_rect(prev_clip);
+    Rect restore = *prev;
+    backend_render_set_clip_rect(&restore);
+}
+
+int render_clip_start(Layer* layer, Rect* prev_clip) {
+    return render_clip_push(&layer->rect, prev_clip);
+}
+
+void render_clip_end(Layer* layer, Rect* prev_clip) {
+    (void)layer;
+    render_clip_pop(prev_clip);
 }
 
 void render_scrollbar(Layer* layer){

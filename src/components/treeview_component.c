@@ -4,6 +4,7 @@
 #include "../util.h"
 #include "../layout.h"
 #include "../layer_update.h"
+#include "../render.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -1288,22 +1289,9 @@ void treeview_component_render(Layer* layer) {
     
     // 设置裁剪区域（与父级 scroll clip 取交集，避免穿透）
     Rect prev_clip;
-    Rect clip = layer->rect;
-    backend_render_get_clip_rect(&prev_clip);
-    if (prev_clip.w > 0 && prev_clip.h > 0) {
-        int x1 = clip.x > prev_clip.x ? clip.x : prev_clip.x;
-        int y1 = clip.y > prev_clip.y ? clip.y : prev_clip.y;
-        int x2 = (clip.x + clip.w) < (prev_clip.x + prev_clip.w) ? (clip.x + clip.w) : (prev_clip.x + prev_clip.w);
-        int y2 = (clip.y + clip.h) < (prev_clip.y + prev_clip.h) ? (clip.y + clip.h) : (prev_clip.y + prev_clip.h);
-        clip.x = x1;
-        clip.y = y1;
-        clip.w = x2 > x1 ? x2 - x1 : 0;
-        clip.h = y2 > y1 ? y2 - y1 : 0;
-        if (clip.w <= 0 || clip.h <= 0) {
-            return;
-        }
+    if (!render_clip_push(&layer->rect, &prev_clip)) {
+        return;
     }
-    backend_render_set_clip_rect(&clip);
     
     // 使用纹理获取实际文本高度
     int text_height = 20; // 默认高度
@@ -1681,9 +1669,5 @@ void treeview_component_render(Layer* layer) {
     }
     
     // 恢复裁剪区域
-    if (prev_clip.w > 0 && prev_clip.h > 0) {
-        backend_render_set_clip_rect(&prev_clip);
-    } else {
-        backend_render_set_clip_rect(NULL);
-    }
+    render_clip_pop(&prev_clip);
 }

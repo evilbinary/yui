@@ -741,8 +741,9 @@ static int dialog_render_wrapped_message(Layer* text_layer, DialogComponent* com
 
     Rect clip = {dialog_rect->x, message_top, dialog_rect->w, message_area_height};
     Rect prev_clip;
-    backend_render_get_clip_rect(&prev_clip);
-    backend_render_set_clip_rect(&clip);
+    if (!render_clip_push(&clip, &prev_clip)) {
+        return 0;
+    }
 
     while (*paragraph) {
         const char* next_nl = strchr(paragraph, '\n');
@@ -812,11 +813,7 @@ static int dialog_render_wrapped_message(Layer* text_layer, DialogComponent* com
         }
     }
 
-    if (prev_clip.w > 0 && prev_clip.h > 0) {
-        backend_render_set_clip_rect(&prev_clip);
-    } else {
-        backend_render_set_clip_rect(NULL);
-    }
+    render_clip_pop(&prev_clip);
 
     return rel_y;
 }

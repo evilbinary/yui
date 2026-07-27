@@ -594,71 +594,54 @@ void tab_component_render(Layer* layer) {
       
       // 设置内容区域的裁剪
       Rect prev_clip;
-      backend_render_get_clip_rect(&prev_clip);
-      
       Rect content_clip = {
         layer->rect.x, 
         layer->rect.y + component->tab_height,
         layer->rect.w, 
         layer->rect.h - component->tab_height
       };
-      // printf("DEBUG: Content clip rect: x=%d, y=%d, w=%d, h=%d\n", 
-      //        content_clip.x, content_clip.y, content_clip.w, content_clip.h);
-      backend_render_set_clip_rect(&content_clip);
-      
-      // 保存内容层原始位置
-      int original_x = active_content->rect.x;
-      int original_y = active_content->rect.y;
-      
-      // 设置内容层到正确的位置（tab组件内的内容区域）
-      active_content->rect.x = layer->rect.x;
-      active_content->rect.y = layer->rect.y + component->tab_height;
-      active_content->rect.w = layer->rect.w;
-      active_content->rect.h = layer->rect.h - component->tab_height;
-      
-      // printf("DEBUG: After position adjustment - content rect: x=%d, y=%d, w=%d, h=%d\n", 
-      //        active_content->rect.x, active_content->rect.y, active_content->rect.w, active_content->rect.h);
-      
-      // 确保内容层及其子元素都可见
-      active_content->visible = VISIBLE;
-      for (int i = 0; i < active_content->child_count; i++) {
-        if (active_content->children[i]) {
-          active_content->children[i]->visible = VISIBLE;
-          //printf("DEBUG: Setting child %d visible to VISIBLE\n", i);
-        }
-      }
-      
-      // 手动触发布局计算
-      //printf("DEBUG: Checking layout manager: %p\n", (void*)active_content->layout_manager);
-      if (active_content->layout_manager) {
-        //printf("DEBUG: Triggering layout calculation for content layer\n");
-        layout_layer(active_content);
+      if (!render_clip_push(&content_clip, &prev_clip)) {
+        /* fully clipped by parent scroll — skip content */
       } else {
-        // printf("DEBUG: No layout manager found for content layer\n");
-        // 手动设置子元素位置作为备选方案
+        // 保存内容层原始位置
+        int original_x = active_content->rect.x;
+        int original_y = active_content->rect.y;
+        
+        // 设置内容层到正确的位置（tab组件内的内容区域）
+        active_content->rect.x = layer->rect.x;
+        active_content->rect.y = layer->rect.y + component->tab_height;
+        active_content->rect.w = layer->rect.w;
+        active_content->rect.h = layer->rect.h - component->tab_height;
+        
+        // 确保内容层及其子元素都可见
+        active_content->visible = VISIBLE;
         for (int i = 0; i < active_content->child_count; i++) {
-          Layer* child = active_content->children[i];
-          if (child) {
-            // 简单的垂直布局
-            child->rect.x = active_content->rect.x + 20;
-            child->rect.y = active_content->rect.y + 20 + i * 30;
-            child->rect.w = active_content->rect.w - 40;
-            child->rect.h = 25;
-            // printf("DEBUG: Manually positioned child %d: x=%d, y=%d, w=%d, h=%d\n", 
-            //        i, child->rect.x, child->rect.y, child->rect.w, child->rect.h);
+          if (active_content->children[i]) {
+            active_content->children[i]->visible = VISIBLE;
           }
         }
+        
+        if (active_content->layout_manager) {
+          layout_layer(active_content);
+        } else {
+          for (int i = 0; i < active_content->child_count; i++) {
+            Layer* child = active_content->children[i];
+            if (child) {
+              child->rect.x = active_content->rect.x + 20;
+              child->rect.y = active_content->rect.y + 20 + i * 30;
+              child->rect.w = active_content->rect.w - 40;
+              child->rect.h = 25;
+            }
+          }
+        }
+        
+        render_layer(active_content);
+        
+        active_content->rect.x = original_x;
+        active_content->rect.y = original_y;
+        
+        render_clip_pop(&prev_clip);
       }
-      
-      // 递归渲染内容层及其所有子元素
-      render_layer(active_content);
-      
-      // 恢复内容层的原始位置
-      active_content->rect.x = original_x;
-      active_content->rect.y = original_y;
-      
-      // 恢复裁剪区域
-      backend_render_set_clip_rect(&prev_clip);
     } else {
       printf("DEBUG: No content layer for active tab %d\n", component->active_tab);
     }

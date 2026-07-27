@@ -20,6 +20,12 @@ void render_horizontal_scrollbar(Layer* layer);
 int render_clip_start(Layer* layer,Rect* prev_clip);
 void render_clip_end(Layer* layer,Rect* prev_clip);
 
+/* Nested clip for components: always intersect with current parent clip.
+ * push returns 0 if fully clipped (clip unchanged — skip drawing).
+ * pop restores exactly (never intersect). */
+int render_clip_push(const Rect* local, Rect* prev_out);
+void render_clip_pop(const Rect* prev);
+
 Texture* render_text(Layer* layer,const char* text, Color color);
 
 /* 绘制图层阴影 + 背景（纯色或渐变）。override_bg 非空时覆盖 layer->bg_color */

@@ -3404,12 +3404,11 @@ void text_component_render(Layer* layer) {
     Rect render_rect;
     text_component_get_content_rect(component, layer, &render_rect);
     
-    // 保存当前裁剪区域
+    // 嵌套裁剪：与父级 scroll clip 取交集
     Rect prev_clip;
-    backend_render_get_clip_rect(&prev_clip);
-    
-    // 设置裁剪区域
-    backend_render_set_clip_rect(&render_rect);
+    if (!render_clip_push(&render_rect, &prev_clip)) {
+        return;
+    }
     
     // 如果文本为空且有占位符，显示占位符
     if (strlen(component->layer->text) == 0 && strlen(component->placeholder) > 0) {
@@ -3959,7 +3958,7 @@ void text_component_render(Layer* layer) {
     }
     
     // 恢复裁剪区域
-    backend_render_set_clip_rect(&prev_clip);
+    render_clip_pop(&prev_clip);
     
     // 多行滚动条：只读气泡不显示；且未启用 layer 通用垂直滚动条时才自绘
     if (component->multiline && component->editable &&

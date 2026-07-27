@@ -5,6 +5,7 @@
 #include "../layer.h"
 #include "../layer_update.h"
 #include "../popup_manager.h"
+#include "../render.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -1320,8 +1321,9 @@ void select_component_render_dropdown_only(Layer* layer) {
       // 设置裁剪区域
     Rect clip_rect = {dropdown_x, dropdown_y, content_width, dropdown_height};
     Rect prev_clip;
-    backend_render_get_clip_rect(&prev_clip);
-    backend_render_set_clip_rect(&clip_rect);
+    if (!render_clip_push(&clip_rect, &prev_clip)) {
+        return;
+    }
 
     // 绘制下拉菜单阴影
     Color shadow_color = {0, 0, 0, 120}; // 更深的阴影表示层级更高
@@ -1430,7 +1432,7 @@ void select_component_render_dropdown_only(Layer* layer) {
     }
 
     // 清除裁剪区域
-    backend_render_set_clip_rect(&prev_clip);
+    render_clip_pop(&prev_clip);
 }
 
 // 弹出层专用鼠标事件处理

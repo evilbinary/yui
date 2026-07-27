@@ -443,8 +443,9 @@ void list_component_render(Layer* layer) {
     list_component_update_content_size(component);
 
     Rect prev_clip;
-    backend_render_get_clip_rect(&prev_clip);
-    backend_render_set_clip_rect(&layer->rect);
+    if (!render_clip_push(&layer->rect, &prev_clip)) {
+        return;
+    }
 
     if (layer->bg_color.a > 0) {
         if (layer->radius > 0) {
@@ -461,7 +462,7 @@ void list_component_render(Layer* layer) {
                          component->pressed_index == i);
     }
 
-    backend_render_set_clip_rect(&prev_clip);
+    render_clip_pop(&prev_clip);
 }
 
 static int list_can_vertical_pan(const Layer* layer);

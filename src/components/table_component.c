@@ -18,7 +18,6 @@
 #define TABLE_TOOLTIP_DELAY_MS 400
 #define TABLE_TOOLTIP_ROW_NONE -2
 
-static void table_intersect_rect(Rect* out, const Rect* a, const Rect* b);
 static void table_draw_cell_text(Layer* layer, const char* text, Color color,
                                 int x, int y, int w, int h, TableColumnAlign align);
 static void table_get_cell_rect(TableComponent* component, Layer* layer,
@@ -1380,15 +1379,9 @@ static void table_render_edit_cell(TableComponent* component, Layer* layer, Rect
 
     Rect cell_clip = {cell.x, cell.y, cell.w, cell.h};
     Rect prev_clip;
-    backend_render_get_clip_rect(&prev_clip);
-    Rect clip = cell_clip;
-    if (prev_clip.w > 0 && prev_clip.h > 0) {
-        table_intersect_rect(&clip, &cell_clip, &prev_clip);
-        if (clip.w <= 0 || clip.h <= 0) {
-            return;
-        }
+    if (!render_clip_push(&cell_clip, &prev_clip)) {
+        return;
     }
-    backend_render_set_clip_rect(&clip);
 
     int draw_x = cell.x + TABLE_CELL_PAD_X - component->edit_scroll_x;
     int draw_y = cell.y;
@@ -1470,11 +1463,7 @@ static void table_render_edit_cell(TableComponent* component, Layer* layer, Rect
         backend_render_fill_rect(&cursor, text_color);
     }
 
-    if (prev_clip.w > 0 && prev_clip.h > 0) {
-        backend_render_set_clip_rect(&prev_clip);
-    } else {
-        backend_render_set_clip_rect(NULL);
-    }
+    render_clip_pop(&prev_clip);
 }
 
 static void table_dispatch_select(TableComponent* component, int index) {
@@ -1743,18 +1732,6 @@ int table_component_get_row_count(TableComponent* component) {
     return table_row_count(component);
 }
 
-static void table_intersect_rect(Rect* out, const Rect* a, const Rect* b) {
-    if (!out || !a || !b) return;
-    int x1 = a->x > b->x ? a->x : b->x;
-    int y1 = a->y > b->y ? a->y : b->y;
-    int x2 = (a->x + a->w) < (b->x + b->w) ? (a->x + a->w) : (b->x + b->w);
-    int y2 = (a->y + a->h) < (b->y + b->h) ? (a->y + a->h) : (b->y + b->h);
-    out->x = x1;
-    out->y = y1;
-    out->w = x2 > x1 ? x2 - x1 : 0;
-    out->h = y2 > y1 ? y2 - y1 : 0;
-}
-
 static void table_draw_cell_text(Layer* layer, const char* text, Color color,
                                 int x, int y, int w, int h, TableColumnAlign align) {
     if (!layer || !text || !layer->font || !layer->font->default_font) return;
@@ -1791,26 +1768,16 @@ static void table_draw_cell_text(Layer* layer, const char* text, Color color,
 
     Rect cell_clip = {x, y, w, h};
     Rect prev_clip;
-    backend_render_get_clip_rect(&prev_clip);
-    Rect clip = cell_clip;
-    if (prev_clip.w > 0 && prev_clip.h > 0) {
-        table_intersect_rect(&clip, &cell_clip, &prev_clip);
-        if (clip.w <= 0 || clip.h <= 0) {
-            backend_render_text_destroy(tex);
-            return;
-        }
+    if (!render_clip_push(&cell_clip, &prev_clip)) {
+        backend_render_text_destroy(tex);
+        return;
     }
-    backend_render_set_clip_rect(&clip);
 
     Rect dst = {draw_x, draw_y, draw_w, draw_h};
     backend_render_text_copy(tex, NULL, &dst);
     backend_render_text_destroy(tex);
 
-    if (prev_clip.w > 0 && prev_clip.h > 0) {
-        backend_render_set_clip_rect(&prev_clip);
-    } else {
-        backend_render_set_clip_rect(NULL);
-    }
+    render_clip_pop(&prev_clip);
 }
 
 static int table_point_in_header(TableComponent* component, Layer* layer, int x, int y) {
@@ -1867,15 +1834,9 @@ static void table_render_header(TableComponent* component, Layer* layer, int vie
         component->header_height
     };
     Rect prev_clip;
-    Rect header_clip = header;
-    backend_render_get_clip_rect(&prev_clip);
-    if (prev_clip.w > 0 && prev_clip.h > 0) {
-        table_intersect_rect(&header_clip, &header, &prev_clip);
-        if (header_clip.w <= 0 || header_clip.h <= 0) {
-            return;
-        }
+    if (!render_clip_push(&header, &prev_clip)) {
+        return;
     }
-    backend_render_set_clip_rect(&header_clip);
 
     backend_render_fill_rect(&header, component->header_bg_color);
 
@@ -1899,11 +1860,7 @@ static void table_render_header(TableComponent* component, Layer* layer, int vie
 
     Rect bottom = {header.x, header.y + header.h - 1, header.w, 1};
     backend_render_fill_rect(&bottom, component->grid_line_color);
-    if (prev_clip.w > 0 && prev_clip.h > 0) {
-        backend_render_set_clip_rect(&prev_clip);
-    } else {
-        backend_render_set_clip_rect(NULL);
-    }
+    render_clip_pop(&prev_clip);
 }
 
 static void table_render_rows(TableComponent* component, Layer* layer, int viewport_w) {
@@ -1912,17 +1869,14 @@ static void table_render_rows(TableComponent* component, Layer* layer, int viewp
     int body_x = layer->rect.x;
     int body_y = layer->rect.y + component->header_height;
     int body_h = layer->rect.h - component->header_height;
-    Rect body_clip = {body_x, body_y, viewport_w, body_h};
+    Rect body_local = {body_x, body_y, viewport_w, body_h};
 
     Rect prev_clip;
-    backend_render_get_clip_rect(&prev_clip);
-    if (prev_clip.w > 0 && prev_clip.h > 0) {
-        table_intersect_rect(&body_clip, &body_clip, &prev_clip);
-        if (body_clip.w <= 0 || body_clip.h <= 0) {
-            return;
-        }
+    if (!render_clip_push(&body_local, &prev_clip)) {
+        return;
     }
-    backend_render_set_clip_rect(&body_clip);
+    Rect body_clip;
+    backend_render_get_clip_rect(&body_clip);
 
     int row_count = cJSON_GetArraySize(layer->data->json);
     int first_row = layer->scroll_offset / component->row_height;
@@ -1996,11 +1950,7 @@ static void table_render_rows(TableComponent* component, Layer* layer, int viewp
         }
     }
 
-    if (prev_clip.w > 0 && prev_clip.h > 0) {
-        backend_render_set_clip_rect(&prev_clip);
-    } else {
-        backend_render_set_clip_rect(NULL);
-    }
+    render_clip_pop(&prev_clip);
 }
 
 void table_component_render(Layer* layer) {
