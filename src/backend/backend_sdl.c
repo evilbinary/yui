@@ -2784,34 +2784,15 @@ void backend_render_get_clip_rect(Rect* prev_clip){
 }
 
 void backend_render_set_clip_rect(Rect* clip){
-    if (!clip) {
+    /* Exact set/restore only. Nested intersect belongs in render_clip_start,
+       not here — auto-intersect breaks restore and can clip away scrollbars. */
+    if (!clip || clip->w <= 0 || clip->h <= 0) {
         memset(&current_clip, 0, sizeof(current_clip));
         clip_enabled = 0;
         SDL_RenderSetClipRect(renderer, NULL);
         return;
     }
-
-    Rect next = *clip;
-    if (clip_enabled) {
-        int restores_parent =
-            next.x <= current_clip.x &&
-            next.y <= current_clip.y &&
-            next.x + next.w >= current_clip.x + current_clip.w &&
-            next.y + next.h >= current_clip.y + current_clip.h;
-
-        if (!restores_parent) {
-            int left = next.x > current_clip.x ? next.x : current_clip.x;
-            int top = next.y > current_clip.y ? next.y : current_clip.y;
-            int right = next.x + next.w < current_clip.x + current_clip.w
-                ? next.x + next.w : current_clip.x + current_clip.w;
-            int bottom = next.y + next.h < current_clip.y + current_clip.h
-                ? next.y + next.h : current_clip.y + current_clip.h;
-            next = (Rect){left, top, right > left ? right - left : 0,
-                          bottom > top ? bottom - top : 0};
-        }
-    }
-
-    current_clip = next;
+    current_clip = *clip;
     clip_enabled = 1;
     SDL_RenderSetClipRect(renderer, &current_clip);
 }

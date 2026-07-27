@@ -500,9 +500,12 @@ int render_clip_start(Layer* layer,Rect* prev_clip){
 }
 
 void render_clip_end(Layer* layer,Rect* prev_clip){
-    // 恢复之前的裁剪区域
+    (void)layer;
+    if (!prev_clip || prev_clip->w <= 0 || prev_clip->h <= 0) {
+        backend_render_set_clip_rect(NULL);
+        return;
+    }
     backend_render_set_clip_rect(prev_clip);
-    
 }
 
 void render_scrollbar(Layer* layer){
