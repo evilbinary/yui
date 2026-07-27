@@ -8,6 +8,14 @@
 
 static void slider_component_apply_theme_style(Layer* layer, cJSON* style);
 
+static void slider_layer_destroy(Layer* layer) {
+    if (!layer || !layer->component) {
+        return;
+    }
+    slider_component_destroy((SliderComponent*)layer->component);
+    layer->component = NULL;
+}
+
 // 创建滑块组件
 SliderComponent* slider_component_create(Layer* layer) {
     SliderComponent* component = (SliderComponent*)malloc(sizeof(SliderComponent));
@@ -35,6 +43,7 @@ SliderComponent* slider_component_create(Layer* layer) {
     layer->handle_pointer_event = slider_component_handle_pointer_event;
     layer->handle_key_event = slider_component_handle_key_event;
     layer->set_style = slider_component_apply_theme_style;
+    layer->on_destroy = slider_layer_destroy;
     
     return component;
 }

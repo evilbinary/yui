@@ -52,6 +52,18 @@ static void dialog_get_close_button_rect(Layer* layer, Rect* out_rect);
 static void dialog_clamp_to_window(Layer* layer);
 static void dialog_component_apply_theme_style(Layer* layer, cJSON* style);
 
+static void dialog_layer_destroy(Layer* layer) {
+    if (!layer || !layer->component) {
+        return;
+    }
+    DialogComponent* component = (DialogComponent*)layer->component;
+    if (component->popup_layer && component->popup_layer->component == component) {
+        component->popup_layer->component = NULL;
+    }
+    dialog_component_destroy(component);
+    layer->component = NULL;
+}
+
 // 创建对话框组件
 DialogComponent* dialog_component_create(Layer* layer) {
     if (!layer) {
@@ -106,6 +118,7 @@ DialogComponent* dialog_component_create(Layer* layer) {
     layer->handle_pointer_event = dialog_component_handle_pointer_event;
     layer->handle_key_event = dialog_component_handle_key_event;
     layer->set_style = dialog_component_apply_theme_style;
+    layer->on_destroy = dialog_layer_destroy;
     
     return component;
 }

@@ -6,6 +6,14 @@
 #include <stdlib.h>
 #include <string.h>
 
+static void image_layer_destroy(Layer* layer) {
+    if (!layer || !layer->component) {
+        return;
+    }
+    image_component_destroy((ImageComponent*)layer->component);
+    layer->component = NULL;
+}
+
 void* image_component_create_from_json(Layer* layer, cJSON* json)
 {
     (void)json;
@@ -31,6 +39,7 @@ ImageComponent* image_component_create(Layer* layer) {
     // 设置组件指针和自定义渲染函数
     layer->component = component;
     layer->render = image_component_render;
+    layer->on_destroy = image_layer_destroy;
     
     return component;
 }

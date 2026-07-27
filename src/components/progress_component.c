@@ -14,6 +14,14 @@
 
 static void progress_component_apply_theme_style(Layer* layer, cJSON* style);
 
+static void progress_layer_destroy(Layer* layer) {
+    if (!layer || !layer->component) {
+        return;
+    }
+    progress_component_destroy((ProgressComponent*)layer->component);
+    layer->component = NULL;
+}
+
 // 辅助函数：绘制圆弧（用于圆形进度条）- 使用后端抗锯齿渲染
 static void render_circle_arc(int center_x, int center_y, int radius, int start_angle, int end_angle, Color color, int line_width) {
     backend_render_arc(center_x, center_y, radius, (float)start_angle, (float)end_angle, color, line_width);
@@ -46,6 +54,7 @@ ProgressComponent* progress_component_create(Layer* layer) {
     layer->component = component;
     layer->render = progress_component_render;
     layer->set_style = progress_component_apply_theme_style;
+    layer->on_destroy = progress_layer_destroy;
     
     return component;
 }

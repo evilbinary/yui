@@ -151,7 +151,7 @@ static void* js_module_common_event(void* data)
     if (!layer || !layer->event) {
         return NULL;
     }
-    /* 指针手势（touch / mouse drag）优先走 touch_name，传递 phase + delta */
+    /* 指针手势（touch / mouse drag）优先走 touch_name → onTouch(layerId, event) */
     if (get_current_pointer_event() && layer->event->touch_name[0] != '\0') {
         const char* name = layer->event->touch_name;
         if (js_module_trigger_event(name, layer) != 0) {

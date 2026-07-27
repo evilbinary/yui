@@ -536,6 +536,23 @@ int yui_update_from_json(Layer* root, cJSON* update_obj) {
 }
 
 /**
+ * 批量更新里是否需要扫字体（新建子节点 / 改字体）。纯 position/size/visible 不需要。
+ */
+static int change_needs_font_reload(cJSON* change)
+{
+    if (!change || !cJSON_IsObject(change)) {
+        return 0;
+    }
+    if (cJSON_GetObjectItem(change, "children")) return 1;
+    if (cJSON_GetObjectItem(change, "font")) return 1;
+    if (cJSON_GetObjectItem(change, "fontSize")) return 1;
+    if (cJSON_GetObjectItem(change, "font_size")) return 1;
+    if (cJSON_GetObjectItem(change, "variant")) return 1;
+    if (cJSON_GetObjectItem(change, "style")) return 1;
+    return 0;
+}
+
+/**
  * 应用 JSON 更新（自动识别单个或批量）
  */
 int yui_update(Layer* root, const char* update_json) {
@@ -559,9 +576,16 @@ int yui_update(Layer* root, const char* update_json) {
             s_batch_size = cJSON_GetArraySize(json);
             s_batch_prealloc_parent = NULL;
             s_batch_dirty = NULL;
+            int need_fonts = 0;
             cJSON* item = NULL;
             int index = 0;
             cJSON_ArrayForEach(item, json) {
+                if (!need_fonts) {
+                    cJSON* change = cJSON_GetObjectItem(item, "change");
+                    if (change_needs_font_reload(change)) {
+                        need_fonts = 1;
+                    }
+                }
                 int ret = yui_update_from_json(root, item);
                 if (ret != 0) {
                     LOGW("update", "batch item %d failed", index);
@@ -571,11 +595,20 @@ int yui_update(Layer* root, const char* update_json) {
             s_batch_depth = 0;
             s_batch_size = 0;
             s_batch_prealloc_parent = NULL;
-            load_all_fonts(root);
+            if (need_fonts) {
+                load_all_fonts(root);
+            }
             if (s_batch_dirty) {
-                layout_layer(s_batch_dirty);
-                if (s_batch_dirty->parent) {
-                    layout_layer(s_batch_dirty->parent);
+                Layer* parent = s_batch_dirty->parent;
+                /* Absolute 容器：一次 layout parent 即可（会按 layout_base 写回子节点） */
+                if (parent && parent->layout_manager &&
+                    parent->layout_manager->type == LAYOUT_ABSOLUTE) {
+                    layout_layer(parent);
+                } else {
+                    layout_layer(s_batch_dirty);
+                    if (parent) {
+                        layout_layer(parent);
+                    }
                 }
                 s_batch_dirty = NULL;
             } else {
