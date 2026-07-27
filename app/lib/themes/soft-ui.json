@@ -3,7 +3,7 @@
   "version": "1.0",
   "description": "Soft UI 柔和界面风（亮色）- 大圆角、低饱和、无硬边框",
   "styles": [
-    { "selector": "View", "style": { "bgColor": "#F5F6FA" } },
+    { "selector": "View", "style": { "bgColor": "#F5F6FA", "scrollbarColor": "#D1D5DB", "scrollbarTrackColor": "#E5E7EB80" } },
     { "selector": "Label", "style": { "color": "#374151", "fontSize": 14 } },
     {
       "selector": "Button",

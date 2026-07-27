@@ -3,7 +3,7 @@
   "version": "1.0",
   "description": "Catppuccin Latte",
   "styles": [
-    { "selector": "View", "style": { "bgColor": "#EFF1F5" } },
+    { "selector": "View", "style": { "bgColor": "#EFF1F5", "scrollbarColor": "#9CA0B0", "scrollbarTrackColor": "#E6E9EF80" } },
     { "selector": "Label", "style": { "color": "#4C4F69", "fontSize": 12 } },
     { "selector": "Button", "style": { "bgColor": "#CCD0DA", "color": "#4C4F69", "borderRadius": 4, "fontSize": 12 } },
     { "selector": "Button.primary", "style": { "bgColor": "#1E66F5", "color": "#FFFFFF", "borderRadius": 4, "fontWeight": "bold" } },

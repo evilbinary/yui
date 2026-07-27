@@ -5,7 +5,7 @@
   "styles": [
     {
       "selector": "View",
-      "style": { "bgColor": "#F2F3F5" }
+      "style": { "bgColor": "#F2F3F5", "scrollbarColor": "#C0C4CC", "scrollbarTrackColor": "#EBEEF580" }
     },
     {
       "selector": "Label",

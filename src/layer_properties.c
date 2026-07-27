@@ -392,6 +392,42 @@ static int handle_scrollbar(Layer* layer, cJSON* value, int is_creating) {
     return 1;
 }
 
+static int handle_scrollbar_color(Layer* layer, cJSON* value, int is_creating) {
+    Color parsed;
+    (void)is_creating;
+    if (!cJSON_IsString(value)) {
+        return 0;
+    }
+    parse_color(value->valuestring, &parsed);
+    if (!layer->scrollbar) {
+        layer->scrollbar = (Scrollbar*)malloc(sizeof(Scrollbar));
+        if (layer->scrollbar) memset(layer->scrollbar, 0, sizeof(Scrollbar));
+    }
+    if (layer->scrollbar) layer->scrollbar->color = parsed;
+    if (layer->scrollbar_v) layer->scrollbar_v->color = parsed;
+    if (layer->scrollbar_h) layer->scrollbar_h->color = parsed;
+    mark_layer_dirty(layer, DIRTY_STYLE);
+    return 1;
+}
+
+static int handle_scrollbar_track_color(Layer* layer, cJSON* value, int is_creating) {
+    Color parsed;
+    (void)is_creating;
+    if (!cJSON_IsString(value)) {
+        return 0;
+    }
+    parse_color(value->valuestring, &parsed);
+    if (!layer->scrollbar) {
+        layer->scrollbar = (Scrollbar*)malloc(sizeof(Scrollbar));
+        if (layer->scrollbar) memset(layer->scrollbar, 0, sizeof(Scrollbar));
+    }
+    if (layer->scrollbar) layer->scrollbar->track_color = parsed;
+    if (layer->scrollbar_v) layer->scrollbar_v->track_color = parsed;
+    if (layer->scrollbar_h) layer->scrollbar_h->track_color = parsed;
+    mark_layer_dirty(layer, DIRTY_STYLE);
+    return 1;
+}
+
 // 尺寸属性处理器
 static int handle_width(Layer* layer, cJSON* value, int is_creating) {
     if (!cJSON_IsNumber(value)) return 0;
@@ -539,6 +575,8 @@ static const PropertyHandlerEntry property_handlers[] = {
     {"focusable", handle_focusable},
     {"scrollable", handle_scrollable},
     {"scrollbar", handle_scrollbar},
+    {"scrollbarColor", handle_scrollbar_color},
+    {"scrollbarTrackColor", handle_scrollbar_track_color},
     
     // 结束标记
     {NULL, NULL}
