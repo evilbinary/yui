@@ -1,0 +1,152 @@
+{
+  "id": "layerPropsRoot",
+  "type": "View",
+  "size": [600, 800],
+  "autoTest": true,
+  "js": ["../lib/ytest.js", "test-layer-props.js"],
+  "style": {
+    "bgColor": "#1e1e2e"
+  },
+  "layout": {
+    "type": "vertical",
+    "spacing": 6,
+    "padding": [10, 10, 10, 10]
+  },
+  "children": [
+    {
+      "id": "lp_title",
+      "type": "Label",
+      "text": "Layer Properties Test",
+      "size": [580, 26],
+      "style": {
+        "color": "#ffffff",
+        "fontSize": 16,
+        "fontWeight": "bold"
+      }
+    },
+    {
+      "id": "lp_viewA",
+      "type": "View",
+      "size": [580, 60],
+      "position": [0, 0],
+      "style": {
+        "bgColor": "#313244",
+        "borderRadius": 8,
+        "opacity": 0.9
+      },
+      "layout": {
+        "type": "horizontal",
+        "spacing": 8,
+        "padding": [10, 10, 10, 10],
+        "align": "center"
+      },
+      "children": [
+        {
+          "id": "lp_labelA",
+          "type": "Label",
+          "text": "Label A",
+          "size": [80, 24],
+          "flex": 0,
+          "style": {
+            "color": "#cdd6f4",
+            "fontSize": 13
+          }
+        },
+        {
+          "id": "lp_btnA",
+          "type": "Button",
+          "text": "Button",
+          "size": [100, 32],
+          "style": {
+            "bgColor": "#89b4fa",
+            "color": "#1e1e2e",
+            "fontSize": 12,
+            "borderRadius": 6
+          }
+        },
+        {
+          "id": "lp_inputA",
+          "type": "Input",
+          "text": "hello input",
+          "placeholder": "Type here",
+          "size": [0, 30],
+          "flex": 1,
+          "style": {
+            "bgColor": "#1e1e2e",
+            "color": "#cdd6f4",
+            "fontSize": 12,
+            "padding": [4, 8, 4, 8],
+            "borderRadius": 4
+          },
+          "focusable": 1
+        }
+      ]
+    },
+    {
+      "id": "lp_textA",
+      "type": "Text",
+      "text": "Multi-line\ntext content\nfor testing",
+      "multiline": true,
+      "editable": false,
+      "scrollable": 1,
+      "size": [580, 80],
+      "style": {
+        "bgColor": "#11111b",
+        "color": "#cdd6f4",
+        "fontSize": 13,
+        "padding": [6, 8, 6, 8],
+        "borderRadius": 4
+      }
+    },
+    {
+      "id": "lp_loadingA",
+      "type": "Loading",
+      "size": [120, 24],
+      "variant": "dots",
+      "speed": 1.0,
+      "style": {
+        "color": "#89b4fa"
+      }
+    },
+    {
+      "id": "lp_treeviewA",
+      "type": "Treeview",
+      "size": [580, 120],
+      "scrollable": 1,
+      "style": {
+        "bgColor": "#11111b",
+        "color": "#cdd6f4",
+        "fontSize": 12
+      },
+      "data": [
+        { "text": "Root", "icon": "folder", "icon_text": "📁", "expandable": true, "children": [
+          { "text": "Child 1", "icon": "file", "icon_text": "📄" },
+          { "text": "Child 2", "icon": "file", "icon_text": "📄" }
+        ]}
+      ]
+    },
+    {
+      "id": "lp_imageA",
+      "type": "Image",
+      "source": "",
+      "size": [100, 80],
+      "style": {
+        "bgColor": "#313244",
+        "borderRadius": 4
+      }
+    },
+    {
+      "id": "lp_status",
+      "type": "Label",
+      "text": "running...",
+      "size": [580, 20],
+      "style": {
+        "color": "#a6e3a1",
+        "fontSize": 11
+      }
+    }
+  ],
+  "events": {
+    "onLoad": "@onLayerPropsLoad"
+  }
+}

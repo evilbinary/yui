@@ -1,0 +1,226 @@
+{
+  "id": "compPropsRoot",
+  "type": "View",
+  "size": [640, 900],
+  "autoTest": true,
+  "js": ["../lib/ytest.js", "test-component-props.js"],
+  "style": {
+    "bgColor": "#1e1e2e"
+  },
+  "layout": {
+    "type": "vertical",
+    "spacing": 6,
+    "padding": [10, 10, 10, 10]
+  },
+  "children": [
+    {
+      "id": "cp_title",
+      "type": "Label",
+      "text": "Component Properties Test",
+      "size": [620, 26],
+      "style": {
+        "color": "#ffffff",
+        "fontSize": 16,
+        "fontWeight": "bold"
+      }
+    },
+    {
+      "id": "cp_sectionLabel",
+      "type": "Label",
+      "text": "--- Label ---",
+      "size": [620, 20],
+      "style": { "color": "#89b4fa", "fontSize": 12 }
+    },
+    {
+      "id": "cp_label",
+      "type": "Label",
+      "text": "Hello Label",
+      "size": [620, 28],
+      "style": {
+        "color": "#cdd6f4",
+        "fontSize": 14,
+        "fontWeight": "bold",
+        "textAlign": "center",
+        "bgColor": "#313244",
+        "borderRadius": 4
+      }
+    },
+    {
+      "id": "cp_sectionButton",
+      "type": "Label",
+      "text": "--- Button ---",
+      "size": [620, 20],
+      "style": { "color": "#89b4fa", "fontSize": 12 }
+    },
+    {
+      "id": "cp_btn",
+      "type": "Button",
+      "text": "Click Me",
+      "size": [120, 36],
+      "style": {
+        "color": "#ffffff",
+        "bgColor": "#7c3aed",
+        "fontSize": 13,
+        "fontWeight": "bold",
+        "borderRadius": 8
+      }
+    },
+    {
+      "id": "cp_sectionInput",
+      "type": "Label",
+      "text": "--- Input ---",
+      "size": [620, 20],
+      "style": { "color": "#89b4fa", "fontSize": 12 }
+    },
+    {
+      "id": "cp_input",
+      "type": "Input",
+      "text": "initial value",
+      "placeholder": "Enter text",
+      "size": [620, 34],
+      "style": {
+        "bgColor": "#1e1e2e",
+        "color": "#cdd6f4",
+        "fontSize": 13,
+        "padding": [6, 10, 6, 10],
+        "borderRadius": 6
+      }
+    },
+    {
+      "id": "cp_sectionText",
+      "type": "Label",
+      "text": "--- Text (multiline) ---",
+      "size": [620, 20],
+      "style": { "color": "#89b4fa", "fontSize": 12 }
+    },
+    {
+      "id": "cp_text",
+      "type": "Text",
+      "text": "Line 1\nLine 2\nLine 3",
+      "multiline": true,
+      "editable": false,
+      "scrollable": 1,
+      "size": [620, 80],
+      "style": {
+        "bgColor": "#11111b",
+        "color": "#cdd6f4",
+        "fontSize": 13,
+        "padding": [6, 8, 6, 8],
+        "borderRadius": 4
+      }
+    },
+    {
+      "id": "cp_sectionLoading",
+      "type": "Label",
+      "text": "--- Loading ---",
+      "size": [620, 20],
+      "style": { "color": "#89b4fa", "fontSize": 12 }
+    },
+    {
+      "id": "cp_loading",
+      "type": "Loading",
+      "size": [120, 24],
+      "variant": "spinner",
+      "speed": 1.5,
+      "style": {
+        "color": "#a6e3a1"
+      }
+    },
+    {
+      "id": "cp_sectionImage",
+      "type": "Label",
+      "text": "--- Image ---",
+      "size": [620, 20],
+      "style": { "color": "#89b4fa", "fontSize": 12 }
+    },
+    {
+      "id": "cp_image",
+      "type": "Image",
+      "source": "test-icon.png",
+      "size": [64, 64],
+      "style": {
+        "bgColor": "#313244",
+        "borderRadius": 8
+      }
+    },
+    {
+      "id": "cp_sectionTreeview",
+      "type": "Label",
+      "text": "--- Treeview ---",
+      "size": [620, 20],
+      "style": { "color": "#89b4fa", "fontSize": 12 }
+    },
+    {
+      "id": "cp_treeview",
+      "type": "Treeview",
+      "size": [620, 100],
+      "scrollable": 1,
+      "style": {
+        "bgColor": "#11111b",
+        "color": "#cdd6f4",
+        "fontSize": 12
+      },
+      "data": [
+        { "text": "Folder 1", "icon": "folder", "icon_text": "📁", "expandable": true, "children": [
+          { "text": "File 1", "icon": "file", "icon_text": "📄" },
+          { "text": "File 2", "icon": "file", "icon_text": "📄" }
+        ]},
+        { "text": "Folder 2", "icon": "folder", "icon_text": "📁" }
+      ]
+    },
+    {
+      "id": "cp_sectionView",
+      "type": "Label",
+      "text": "--- View (container props) ---",
+      "size": [620, 20],
+      "style": { "color": "#89b4fa", "fontSize": 12 }
+    },
+    {
+      "id": "cp_view",
+      "type": "View",
+      "size": [620, 60],
+      "style": {
+        "bgColor": "#313244",
+        "borderRadius": 8,
+        "borderWidth": 1,
+        "borderColor": "#585b70"
+      },
+      "layout": {
+        "type": "horizontal",
+        "spacing": 8,
+        "padding": [10, 10, 10, 10],
+        "align": "center",
+        "justify": "center"
+      },
+      "children": [
+        {
+          "id": "cp_child1",
+          "type": "Label",
+          "text": "Child 1",
+          "size": [80, 24],
+          "style": { "color": "#cdd6f4", "fontSize": 12 }
+        },
+        {
+          "id": "cp_child2",
+          "type": "Label",
+          "text": "Child 2",
+          "size": [80, 24],
+          "style": { "color": "#a6e3a1", "fontSize": 12 }
+        }
+      ]
+    },
+    {
+      "id": "cp_status",
+      "type": "Label",
+      "text": "running...",
+      "size": [620, 20],
+      "style": {
+        "color": "#a6e3a1",
+        "fontSize": 11
+      }
+    }
+  ],
+  "events": {
+    "onLoad": "@onCompPropsLoad"
+  }
+}
