@@ -6,6 +6,7 @@
 #include "../backend.h"
 #include "../event.h"
 #include "../layout.h"
+#include "../layer_update.h"
 #include "../render.h"
 #include "../util.h"
 
@@ -15,6 +16,63 @@ static void tab_layer_destroy(Layer* layer) {
   }
   tab_component_destroy((TabComponent*)layer->component);
   layer->component = NULL;
+}
+
+static void tab_component_apply_theme_style(Layer* layer, cJSON* style) {
+  TabComponent* component;
+  cJSON* item;
+  Color tab_color;
+  Color active_tab_color;
+  Color text_color;
+  Color active_text_color;
+  Color border_color;
+  int has_colors = 0;
+
+  if (!layer || !layer->component || !style) return;
+  component = (TabComponent*)layer->component;
+
+  tab_color = component->tab_color;
+  active_tab_color = component->active_tab_color;
+  text_color = component->text_color;
+  active_text_color = component->active_text_color;
+  border_color = component->border_color;
+
+  item = cJSON_GetObjectItem(style, "tabColor");
+  if (item && cJSON_IsString(item) && item->valuestring) {
+    parse_color(item->valuestring, &tab_color);
+    has_colors = 1;
+  }
+  item = cJSON_GetObjectItem(style, "activeTabColor");
+  if (item && cJSON_IsString(item) && item->valuestring) {
+    parse_color(item->valuestring, &active_tab_color);
+    has_colors = 1;
+  }
+  item = cJSON_GetObjectItem(style, "textColor");
+  if (item && cJSON_IsString(item) && item->valuestring) {
+    parse_color(item->valuestring, &text_color);
+    has_colors = 1;
+  }
+  item = cJSON_GetObjectItem(style, "activeTextColor");
+  if (item && cJSON_IsString(item) && item->valuestring) {
+    parse_color(item->valuestring, &active_text_color);
+    has_colors = 1;
+  }
+  item = cJSON_GetObjectItem(style, "borderColor");
+  if (item && cJSON_IsString(item) && item->valuestring) {
+    parse_color(item->valuestring, &border_color);
+    has_colors = 1;
+  }
+  if (has_colors) {
+    tab_component_set_colors(component, tab_color, active_tab_color, text_color,
+                             active_text_color, border_color);
+  }
+
+  item = cJSON_GetObjectItem(style, "bgColor");
+  if (item && cJSON_IsString(item) && item->valuestring) {
+    parse_color(item->valuestring, &layer->bg_color);
+  }
+
+  mark_layer_dirty(layer, DIRTY_STYLE | DIRTY_COLOR);
 }
 
 // 创建选项卡组件
@@ -42,6 +100,7 @@ TabComponent* tab_component_create(Layer* layer) {
   layer->render = tab_component_render;
   layer->handle_pointer_event = tab_component_handle_pointer_event;
   layer->handle_key_event = tab_component_handle_key_event;
+  layer->set_style = tab_component_apply_theme_style;
   layer->on_destroy = tab_layer_destroy;
 
   return component;
@@ -70,35 +129,7 @@ TabComponent* tab_component_create_from_json(Layer* layer, cJSON* json_obj) {
   // 解析选项卡颜色
   cJSON* style = cJSON_GetObjectItem(json_obj, "style");
   if (style) {
-    Color tabColor = {240, 240, 240, 255};
-    Color activeTabColor = {255, 255, 255, 255};
-    Color textColor = {51, 51, 51, 255};
-    Color activeTextColor = {0, 0, 0, 255};
-    Color borderColor = {204, 204, 204, 255};
-
-    if (cJSON_HasObjectItem(style, "tabColor")) {
-      parse_color(cJSON_GetObjectItem(style, "tabColor")->valuestring,
-                  &tabColor);
-    }
-    if (cJSON_HasObjectItem(style, "activeTabColor")) {
-      parse_color(cJSON_GetObjectItem(style, "activeTabColor")->valuestring,
-                  &activeTabColor);
-    }
-    if (cJSON_HasObjectItem(style, "textColor")) {
-      parse_color(cJSON_GetObjectItem(style, "textColor")->valuestring,
-                  &textColor);
-    }
-    if (cJSON_HasObjectItem(style, "activeTextColor")) {
-      parse_color(cJSON_GetObjectItem(style, "activeTextColor")->valuestring,
-                  &activeTextColor);
-    }
-    if (cJSON_HasObjectItem(style, "borderColor")) {
-      parse_color(cJSON_GetObjectItem(style, "borderColor")->valuestring,
-                  &borderColor);
-    }
-
-    tab_component_set_colors(tabComponent, tabColor, activeTabColor, textColor,
-                             activeTextColor, borderColor);
+    tab_component_apply_theme_style(layer, style);
   }
   // 解析选项卡数组
   cJSON* tabs = cJSON_GetObjectItem(json_obj, "tabs");
@@ -115,28 +146,21 @@ TabComponent* tab_component_create_from_json(Layer* layer, cJSON* json_obj) {
       cJSON* title = cJSON_GetObjectItem(tab_json, "title");
       if (!title || !title->valuestring) continue;
 
-      // 创建内容层
+      // 创建内容层（挂到 children，主题/字体/销毁走通用树）
       Layer* content_layer = layer_create_from_json(tab_json, layer);
-      cJSON* content = tab_json;
-      if (content) {
-        if (content_layer) {
-          // 设置内容层的位置和大小
-          content_layer->rect.x = layer->rect.x;
-          content_layer->rect.y = layer->rect.y + tabComponent->tab_height;
-          content_layer->rect.w = layer->rect.w;
-          content_layer->rect.h = layer->rect.h - tabComponent->tab_height;
-          content_layer->parent = layer;
-          // 注意：不添加到父层的children中，由tab组件自己管理渲染
-        }
+      if (content_layer) {
+        content_layer->rect.x = layer->rect.x;
+        content_layer->rect.y = layer->rect.y + tabComponent->tab_height;
+        content_layer->rect.w = layer->rect.w;
+        content_layer->rect.h = layer->rect.h - tabComponent->tab_height;
       }
 
       // 添加选项卡
       int tab_index = tab_component_add_tab(tabComponent, title->valuestring,
                                             content_layer);
 
-      // 设置选项卡为不可见（只有活动选项卡的内容可见）
       if (content_layer && tab_index != tabComponent->active_tab) {
-        SET_STATE(content_layer, LAYER_STATE_DISABLED);
+        layer_hide(content_layer);
       }
     }
   }
@@ -531,7 +555,8 @@ void tab_component_render(Layer* layer) {
     layer->rect.w, 
     layer->rect.h - component->tab_height
   };
-  backend_render_fill_rect_color(&content_rect, 255, 255, 255, 255);
+  Color content_bg = layer->bg_color.a ? layer->bg_color : (Color){255, 255, 255, 255};
+  backend_render_fill_rect(&content_rect, content_bg);
 
   // 计算每个tab的宽度（使用与点击检测相同的计算方式）
   int current_x = layer->rect.x;
@@ -541,19 +566,17 @@ void tab_component_render(Layer* layer) {
     int tab_width = tab_calculate_tab_width(component, i);
     int tab_x = current_x;
     Rect tab_rect = {tab_x, layer->rect.y, tab_width, component->tab_height};
+    Color tab_bg = (i == component->active_tab)
+                       ? component->active_tab_color
+                       : component->tab_color;
+    Color text_color = (i == component->active_tab)
+                           ? component->active_text_color
+                           : component->text_color;
 
-    // 选择颜色：active tab用蓝色，其他用灰色
-    if (i == component->active_tab) {
-      backend_render_fill_rect_color(&tab_rect, 33, 150, 243, 255); // 蓝色
-    } else {
-      backend_render_fill_rect_color(&tab_rect, 240, 240, 240, 255); // 灰色
-    }
+    backend_render_fill_rect(&tab_rect, tab_bg);
 
     // 绘制tab文字
     if (layer->font && layer->font->default_font && component->tabs[i].title) {
-      Color text_color = (i == component->active_tab) ? 
-        (Color){255, 255, 255, 255} : (Color){51, 51, 51, 255}; // active用白色，其他用黑色
-      
       Texture* text_texture = backend_render_texture(
           layer->font->default_font, component->tabs[i].title, text_color);
       
@@ -575,6 +598,16 @@ void tab_component_render(Layer* layer) {
     }
     
     current_x += tab_width;  // 移动到下一个tab位置
+  }
+
+  if (component->border_color.a) {
+    Rect border_rect = {
+      layer->rect.x,
+      layer->rect.y + component->tab_height - 1,
+      layer->rect.w,
+      1
+    };
+    backend_render_fill_rect(&border_rect, component->border_color);
   }
 
   // 渲染活动tab的内容

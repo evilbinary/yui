@@ -85,6 +85,17 @@
       "style": { "bgColor": "#0A0A0A" }
     },
     {
+      "selector": "Tab",
+      "style": {
+        "bgColor": "#0A0A0A",
+        "tabColor": "#141414",
+        "activeTabColor": "#1D1E1F",
+        "textColor": "#CFD3DC",
+        "activeTextColor": "#409EFF",
+        "borderColor": "#363637"
+      }
+    },
+    {
       "selector": "View.elevated",
       "style": { "bgColor": "#141414", "borderRadius": 4 }
     },

@@ -79,6 +79,17 @@
     { "selector": "Image", "style": { "bgColor": "#0D141B", "borderRadius": 2 } },
     { "selector": "View.surface", "style": { "bgColor": "#0A0E12" } },
     {
+      "selector": "Tab",
+      "style": {
+        "bgColor": "#0A0E12",
+        "tabColor": "#0D141B",
+        "activeTabColor": "#0A0E12",
+        "textColor": "#6272A4",
+        "activeTextColor": "#4AF626",
+        "borderColor": "#1F2937"
+      }
+    },
+    {
       "selector": "View.elevated",
       "style": {
         "bgColor": "#0D141B",

@@ -77,6 +77,17 @@
     },
     { "selector": "Image", "style": { "bgColor": "#1F2937", "borderRadius": 16 } },
     { "selector": "View.surface", "style": { "bgColor": "#111827" } },
+    {
+      "selector": "Tab",
+      "style": {
+        "bgColor": "#111827",
+        "tabColor": "#1F2937",
+        "activeTabColor": "#312E81",
+        "textColor": "#9CA3AF",
+        "activeTextColor": "#C7D2FE",
+        "borderColor": "#374151"
+      }
+    },
     { "selector": "View.elevated", "style": { "bgColor": "#1F2937", "borderRadius": 20 } },
     { "selector": "View.toolbar", "style": { "bgColor": "#1F2937" } },
     {

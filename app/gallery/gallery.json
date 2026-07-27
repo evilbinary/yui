@@ -289,7 +289,7 @@
           "size": [948, 280],
           "layout": { "type": "vertical", "spacing": 10, "padding": [14, 16, 14, 16] },
           "children": [
-            { "type": "Label", "variant": "sectionTitle", "text": "Treeview / Pagination / Tabs" },
+            { "type": "Label", "variant": "sectionTitle", "text": "Treeview / Pagination / tabBar" },
             {
               "type": "View",
               "size": [900, 200],
@@ -374,6 +374,53 @@
                         { "id": "galleryNav2", "type": "Label", "variant": "navItem active", "text": "选中项" }
                       ]
                     }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "secTab",
+          "type": "View",
+          "variant": "card",
+          "size": [948, 200],
+          "layout": { "type": "vertical", "spacing": 8, "padding": [14, 16, 14, 16] },
+          "children": [
+            { "type": "Label", "variant": "sectionTitle", "text": "Tab" },
+            {
+              "id": "galleryTab",
+              "type": "Tab",
+              "size": [900, 140],
+              "tabHeight": 36,
+              "activeTab": 0,
+              "closable": false,
+              "tabs": [
+                {
+                  "title": "Overview",
+                  "type": "View",
+                  "layout": { "type": "vertical", "spacing": 8, "padding": [12, 12, 12, 12] },
+                  "children": [
+                    { "type": "Label", "variant": "heading", "text": "Overview" },
+                    { "type": "Label", "variant": "body", "text": "点击标题切换内容；主题切换后 Tab 配色会同步更新。" }
+                  ]
+                },
+                {
+                  "title": "Controls",
+                  "type": "View",
+                  "layout": { "type": "horizontal", "spacing": 12, "padding": [12, 12, 12, 12], "align": "center" },
+                  "children": [
+                    { "type": "Button", "variant": "primary", "size": [100, 32], "text": "Primary" },
+                    { "type": "Button", "variant": "secondary", "size": [100, 32], "text": "Secondary" },
+                    { "type": "Checkbox", "text": "Option", "checked": true }
+                  ]
+                },
+                {
+                  "title": "Notes",
+                  "type": "View",
+                  "layout": { "type": "vertical", "padding": [12, 12, 12, 12] },
+                  "children": [
+                    { "type": "Label", "variant": "body", "text": "Tab 内容层由组件自行管理，不走普通 children 布局。" }
                   ]
                 }
               ]
