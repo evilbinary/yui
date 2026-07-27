@@ -29,6 +29,52 @@
         "focusBorderColor": "#6366F1"
       }
     },
+    {
+      "selector": "Select",
+      "style": {
+        "bgColor": "#F3F4F6",
+        "color": "#374151",
+        "textColor": "#374151",
+        "borderColor": "transparent",
+        "borderRadius": 16,
+        "borderWidth": 0,
+        "arrowColor": "#6B7280",
+        "dropdownBgColor": "#FFFFFF",
+        "hoverBgColor": "#EEF2FF",
+        "selectedBgColor": "#E0E7FF",
+        "selectedTextColor": "#4338CA",
+        "focusBorderColor": "#6366F1",
+        "hoverBorderColor": "#C7D2FE",
+        "scrollbarColor": "#D1D5DB",
+        "scrollbarBgColor": "#F3F4F6",
+        "dividerColor": "#E5E7EB"
+      }
+    },
+    {
+      "selector": "Slider",
+      "style": {
+        "trackColor": "#E5E7EB",
+        "thumbColor": "#6366F1",
+        "activeThumbColor": "#818CF8"
+      }
+    },
+    {
+      "selector": "Progress",
+      "style": {
+        "bgColor": "#E5E7EB",
+        "fillColor": "#6366F1",
+        "borderRadius": 16,
+        "borderWidth": 0
+      }
+    },
+    {
+      "selector": "Loading",
+      "style": {
+        "color": "#6366F1",
+        "trackColor": "#E5E7EB",
+        "strokeWidth": 3
+      }
+    },
     { "selector": "Image", "style": { "bgColor": "#FFFFFF", "borderRadius": 16 } },
     { "selector": "View.surface", "style": { "bgColor": "#F5F6FA" } },
     { "selector": "View.elevated", "style": { "bgColor": "#FFFFFF", "borderRadius": 20 } },

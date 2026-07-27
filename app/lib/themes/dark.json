@@ -30,6 +30,51 @@
       }
     },
     {
+      "selector": "Select",
+      "style": {
+        "bgColor": "#1A2030",
+        "color": "#F2F4F8",
+        "textColor": "#F2F4F8",
+        "borderColor": "#2A3347",
+        "borderRadius": 10,
+        "borderWidth": 1,
+        "arrowColor": "#9AA4B2",
+        "dropdownBgColor": "#12161E",
+        "hoverBgColor": "#243044",
+        "selectedBgColor": "#7C6CFF55",
+        "selectedTextColor": "#F2F4F8",
+        "focusBorderColor": "#7C6CFF",
+        "hoverBorderColor": "#3A455C",
+        "scrollbarColor": "#3A455C",
+        "scrollbarBgColor": "#0A0D12",
+        "dividerColor": "#2A3347"
+      }
+    },
+    {
+      "selector": "Slider",
+      "style": {
+        "trackColor": "#2A3347",
+        "thumbColor": "#7C6CFF",
+        "activeThumbColor": "#9B8CFF"
+      }
+    },
+    {
+      "selector": "Progress",
+      "style": {
+        "bgColor": "#2A3347",
+        "fillColor": "#7C6CFF",
+        "borderRadius": 10
+      }
+    },
+    {
+      "selector": "Loading",
+      "style": {
+        "color": "#7C6CFF",
+        "trackColor": "#2A3347",
+        "strokeWidth": 3
+      }
+    },
+    {
       "selector": "Image",
       "style": { "bgColor": "#12161E", "borderRadius": 8 }
     },
