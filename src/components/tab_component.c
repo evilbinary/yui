@@ -8,6 +8,7 @@
 #include "../layout.h"
 #include "../layer_update.h"
 #include "../render.h"
+#include "../theme_manager.h"
 #include "../util.h"
 
 static void tab_layer_destroy(Layer* layer) {
@@ -72,6 +73,13 @@ static void tab_component_apply_theme_style(Layer* layer, cJSON* style) {
     parse_color(item->valuestring, &layer->bg_color);
   }
 
+  /* 内容层挂在 tabs[]，主题切换时由 Tab 自己下发 */
+  for (int i = 0; i < component->tab_count; i++) {
+    if (component->tabs[i].content_layer) {
+      theme_manager_apply_to_tree(component->tabs[i].content_layer);
+    }
+  }
+
   mark_layer_dirty(layer, DIRTY_STYLE | DIRTY_COLOR);
 }
 
@@ -94,6 +102,8 @@ TabComponent* tab_component_create(Layer* layer) {
   component->user_data = NULL;
   component->on_tab_changed = NULL;
   component->on_tab_close = NULL;
+  component->on_change = NULL;
+  component->change_name = NULL;
 
   // 设置组件类型和渲染函数
   layer->component = component;
@@ -101,6 +111,7 @@ TabComponent* tab_component_create(Layer* layer) {
   layer->handle_pointer_event = tab_component_handle_pointer_event;
   layer->handle_key_event = tab_component_handle_key_event;
   layer->set_style = tab_component_apply_theme_style;
+  layer->register_event = tab_component_register_event;
   layer->on_destroy = tab_layer_destroy;
 
   return component;
@@ -131,6 +142,18 @@ TabComponent* tab_component_create_from_json(Layer* layer, cJSON* json_obj) {
   if (style) {
     tab_component_apply_theme_style(layer, style);
   }
+
+  cJSON* events = cJSON_GetObjectItem(json_obj, "events");
+  if (events) {
+    cJSON* on_change = cJSON_GetObjectItem(events, "onChange");
+    if (on_change && cJSON_IsString(on_change) && on_change->valuestring) {
+      const char* name = on_change->valuestring;
+      if (name[0] == '@') name++;
+      tabComponent->change_name = strdup(name);
+      tabComponent->on_change = find_event_by_name(name);
+    }
+  }
+
   // 解析选项卡数组
   cJSON* tabs = cJSON_GetObjectItem(json_obj, "tabs");
   if(tabs==NULL){
@@ -146,19 +169,21 @@ TabComponent* tab_component_create_from_json(Layer* layer, cJSON* json_obj) {
       cJSON* title = cJSON_GetObjectItem(tab_json, "title");
       if (!title || !title->valuestring) continue;
 
-      // 创建内容层（挂到 children，主题/字体/销毁走通用树）
+      // 创建内容层（挂到 tabs[].content_layer，由 Tab 自行管理）
       Layer* content_layer = layer_create_from_json(tab_json, layer);
       if (content_layer) {
         content_layer->rect.x = layer->rect.x;
         content_layer->rect.y = layer->rect.y + tabComponent->tab_height;
         content_layer->rect.w = layer->rect.w;
         content_layer->rect.h = layer->rect.h - tabComponent->tab_height;
+        content_layer->parent = layer;
       }
 
       // 添加选项卡
       int tab_index = tab_component_add_tab(tabComponent, title->valuestring,
                                             content_layer);
 
+      // 非活动页隐藏
       if (content_layer && tab_index != tabComponent->active_tab) {
         layer_hide(content_layer);
       }
@@ -169,6 +194,7 @@ TabComponent* tab_component_create_from_json(Layer* layer, cJSON* json_obj) {
   layer->render = tab_component_render;
   layer->handle_pointer_event = tab_component_handle_pointer_event;
   layer->handle_key_event = tab_component_handle_key_event;
+  layer->register_event = tab_component_register_event;
 
   return tabComponent;
 }
@@ -177,14 +203,23 @@ TabComponent* tab_component_create_from_json(Layer* layer, cJSON* json_obj) {
 void tab_component_destroy(TabComponent* component) {
   if (!component) return;
 
-  // 释放所有选项卡
+  // 释放所有选项卡（内容层不在 children 中，需自行销毁）
   if (component->tabs) {
     for (int i = 0; i < component->tab_count; i++) {
       if (component->tabs[i].title) {
         free(component->tabs[i].title);
       }
+      if (component->tabs[i].content_layer) {
+        destroy_layer(component->tabs[i].content_layer);
+        component->tabs[i].content_layer = NULL;
+      }
     }
     free(component->tabs);
+  }
+
+  if (component->change_name) {
+    free(component->change_name);
+    component->change_name = NULL;
   }
 
   free(component);
@@ -270,21 +305,14 @@ void tab_component_remove_tab(TabComponent* component, int index) {
 
 // 设置活动选项卡
 void tab_component_set_active_tab(TabComponent* component, int index) {
-  printf("DEBUG: tab_component_set_active_tab called with index=%d (current=%d)\n", index, component->active_tab);
-  
   if (!component || index < 0 || index >= component->tab_count ||
       !component->tabs[index].enabled) {
-    printf("DEBUG: tab_component_set_active_tab rejected - invalid parameters\n");
     return;
   }
 
   int old_tab = component->active_tab;
-
-  // 设置新的活动选项卡
   component->active_tab = index;
-  printf("DEBUG: Active tab changed from %d to %d\n", old_tab, index);
 
-  // 更新内容层的可见性
   for (int i = 0; i < component->tab_count; i++) {
     if (component->tabs[i].content_layer) {
       if (i == index) {
@@ -292,14 +320,41 @@ void tab_component_set_active_tab(TabComponent* component, int index) {
       } else {
         layer_hide(component->tabs[i].content_layer);
       }
-      printf("DEBUG: Tab %d content_layer visible=%d\n", i, component->tabs[i].content_layer->visible);
     }
   }
 
-  // 调用回调函数
-  if (old_tab != index && component->on_tab_changed) {
-    component->on_tab_changed(old_tab, index, component->user_data);
+  if (old_tab != index) {
+    if (component->on_tab_changed) {
+      component->on_tab_changed(old_tab, index, component->user_data);
+    }
+    if (component->on_change == NULL && component->change_name != NULL) {
+      component->on_change = find_event_by_name(component->change_name);
+    }
+    if (component->on_change) {
+      component->on_change(component->layer);
+    }
+    mark_layer_dirty(component->layer, DIRTY_STYLE | DIRTY_CHILDREN);
   }
+}
+
+int tab_component_register_event(Layer* layer, const char* event_name,
+                                 const char* event_func_name,
+                                 EventHandler event_handler) {
+  TabComponent* component;
+  if (!layer || !layer->component || !event_name) return -1;
+  if (strcmp(event_name, "change") != 0 && strcmp(event_name, "onChange") != 0) {
+    return -1;
+  }
+
+  component = (TabComponent*)layer->component;
+  component->on_change = event_handler;
+  if (event_func_name && event_func_name[0] != '\0') {
+    const char* name = event_func_name;
+    if (name[0] == '@') name++;
+    if (component->change_name) free(component->change_name);
+    component->change_name = strdup(name);
+  }
+  return 0;
 }
 
 // 获取活动选项卡
@@ -498,23 +553,32 @@ int tab_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
 
   TabComponent* component = (TabComponent*)layer->component;
 
+  /* 标题栏：切换 / 关闭 */
   if (event->phase == POINTER_DOWN && event->button == SDL_BUTTON_LEFT) {
-    // 检查点击了哪个标签
     int tab_index = tab_get_tab_from_position(component, event->x, event->y);
     if (tab_index >= 0) {
-      // 检查是否点击了关闭按钮
       if (component->closable &&
           tab_is_close_button_clicked(component, tab_index, event->x,
                                       event->y)) {
-        // 调用关闭回调
         if (component->on_tab_close) {
           component->on_tab_close(tab_index, component->user_data);
         }
       } else {
         tab_component_set_active_tab(component, tab_index);
       }
+      return 1;
     }
   }
+
+  /* 内容挂在 tabs[]，不在 children，需自行转发指针事件 */
+  if (component->active_tab >= 0 &&
+      component->active_tab < component->tab_count) {
+    Layer* content = component->tabs[component->active_tab].content_layer;
+    if (content && content->visible == VISIBLE) {
+      return handle_pointer_event(content, event);
+    }
+  }
+
   return 0;
 }
 

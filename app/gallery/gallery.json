@@ -395,6 +395,7 @@
               "tabHeight": 36,
               "activeTab": 0,
               "closable": false,
+              "events": { "onChange": "@onGalleryTabChange" },
               "tabs": [
                 {
                   "title": "Overview",

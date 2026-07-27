@@ -270,6 +270,10 @@ function onGalleryPagerChange() {
     setStatus("分页已切换");
 }
 
+function onGalleryTabChange() {
+    setStatus("Tab 已切换");
+}
+
 function onGallerySelect() {
     setStatus("Table / Tree 选中");
 }

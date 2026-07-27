@@ -31,6 +31,8 @@ typedef struct TabComponent {
     void* user_data;
     void (*on_tab_changed)(int old_tab, int new_tab, void* user_data);
     void (*on_tab_close)(int tab_index, void* user_data);
+    EventHandler on_change;
+    char* change_name;
 } TabComponent;
 
 // 创建选项卡组件
@@ -89,6 +91,11 @@ void tab_component_set_tab_changed_callback(TabComponent* component, void (*call
 
 // 设置选项卡关闭回调
 void tab_component_set_tab_close_callback(TabComponent* component, void (*callback)(int, void*));
+
+// 注册 JSON/JS 事件（onChange）
+int tab_component_register_event(Layer* layer, const char* event_name,
+                                 const char* event_func_name,
+                                 EventHandler event_handler);
 
 // 处理鼠标事件
 int tab_component_handle_pointer_event(Layer* layer, PointerEvent* event);
