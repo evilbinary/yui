@@ -382,6 +382,7 @@ void handle_key_event(Layer* layer, KeyEvent* event) {
 // 递归检查指定位置是否有子图层可以处理点击事件
 static bool has_child_handler_at_point(Layer* layer, Point point) {
     if (!layer) return false;
+    if (!point_in_rect(point, layer->rect)) return false;
     for (int i = 0; i < layer->child_count; i++) {
         Layer* child = layer->children[i];
         if (!child) continue;
@@ -576,6 +577,9 @@ int handle_pointer_event(Layer* layer, PointerEvent* event) {
 
     for (int i = layer->child_count - 1; i >= 0; i--) {
         if (layer->children[i] && layer->children[i]->visible == VISIBLE) {
+            if (!point_in_rect(pos, layer->rect)) {
+                continue;
+            }
             int consumed = handle_pointer_event(layer->children[i], pe);
             if (consumed) return 1;
         }
@@ -603,8 +607,10 @@ int handle_pointer_event(Layer* layer, PointerEvent* event) {
     }
 
     if (layer->sub && layer->sub->visible == VISIBLE) {
-        int consumed = handle_pointer_event(layer->sub, pe);
-        if (consumed) return 1;
+        if (point_in_rect(pos, layer->rect)) {
+            int consumed = handle_pointer_event(layer->sub, pe);
+            if (consumed) return 1;
+        }
     }
 
     if (event->device == POINTER_DEVICE_MOUSE &&
