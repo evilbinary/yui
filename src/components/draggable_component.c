@@ -208,6 +208,9 @@ static int draggable_dot_overlay_handle_mouse(Layer* layer, PointerEvent* event)
         }
     }
 
+    if (parent->handle_pointer_event) {
+        return parent->handle_pointer_event(parent, event);
+    }
     return 0;
 }
 

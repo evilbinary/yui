@@ -516,6 +516,9 @@ static int default_scrollable_pointer_handler(Layer* layer, PointerEvent* event)
     }
 
     if (event->phase == POINTER_MOVE) {
+        if (!is_point_in_rect(event->x, event->y, layer->rect)) {
+            return 0;
+        }
         if (event->delta_x == 0 && event->delta_y == 0) {
             return 0;
         }
@@ -580,7 +583,9 @@ int handle_pointer_event(Layer* layer, PointerEvent* event) {
 
     for (int i = layer->child_count - 1; i >= 0; i--) {
         if (layer->children[i] && layer->children[i]->visible == VISIBLE) {
-            if (!point_in_rect(pos, layer->children[i]->rect)) {
+            /* POINTER_MOVE: don't gate on child rect — a drag may have moved outside */
+            if (pe->phase != POINTER_MOVE &&
+                !point_in_rect(pos, layer->children[i]->rect)) {
                 continue;
             }
             int consumed = handle_pointer_event(layer->children[i], pe);
