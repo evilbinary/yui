@@ -117,6 +117,7 @@ static void terminal_clear_screen(TerminalComponent* comp) {
     tsm_vte_reset(comp->vte);
     tsm_screen_erase_screen(comp->screen, false);
     tsm_screen_clear_sb(comp->screen);
+    tsm_screen_sb_reset(comp->screen);
     mark_layer_dirty(comp->layer, DIRTY_COLOR);
 }
 
@@ -158,6 +159,26 @@ static void terminal_layer_destroy(Layer* layer) {
     if (!layer || !layer->component) return;
     terminal_component_destroy((TerminalComponent*)layer->component);
     layer->component = NULL;
+}
+
+static cJSON* terminal_component_get_property(Layer* layer, const char* key) {
+    if (!layer || !key) return NULL;
+    TerminalComponent* comp = (TerminalComponent*)layer->component;
+    if (!comp) return NULL;
+
+    if (strcmp(key, "_keyType") == 0) {
+        return cJSON_CreateNumber(comp->last_key_type);
+    }
+    if (strcmp(key, "_keyCode") == 0) {
+        return cJSON_CreateNumber(comp->last_key_code);
+    }
+    if (strcmp(key, "_keyMod") == 0) {
+        return cJSON_CreateNumber(comp->last_key_mod);
+    }
+    if (strcmp(key, "_keyText") == 0) {
+        return cJSON_CreateString(comp->last_key_text);
+    }
+    return NULL;
 }
 
 TerminalComponent* terminal_component_create(Layer* layer) {
@@ -210,6 +231,7 @@ TerminalComponent* terminal_component_create(Layer* layer) {
     layer->register_event = terminal_component_register_event;
     layer->on_data_update = terminal_on_data_update;
     layer->on_destroy = terminal_layer_destroy;
+    layer->get_property = terminal_component_get_property;
     layer->focusable = 1;
 
     return comp;
@@ -261,6 +283,27 @@ static void terminal_fire_command_event(TerminalComponent* comp) {
     }
 }
 
+static void terminal_fire_key_event(TerminalComponent* comp) {
+    EventHandler handler;
+    if (!comp || !comp->layer || comp->on_key_name[0] == '\0') return;
+
+    if (!comp->layer->event) {
+        comp->layer->event = calloc(1, sizeof(Event));
+        if (!comp->layer->event) return;
+    }
+    strncpy(comp->layer->event->click_name, comp->on_key_name, MAX_PATH - 1);
+    comp->layer->event->click_name[MAX_PATH - 1] = '\0';
+
+    handler = comp->on_key;
+    if (!handler) {
+        handler = find_event_by_name(comp->on_key_name);
+        comp->on_key = handler;
+    }
+    if (handler) {
+        handler(comp->layer);
+    }
+}
+
 static void dispatch_command(TerminalComponent* comp) {
     const char* cmd;
     if (!comp || !comp->layer) return;
@@ -305,6 +348,13 @@ TerminalComponent* terminal_component_create_from_json(Layer* layer, cJSON* json
             if (name[0] == '@') name++;
             strncpy(comp->on_command_name, name, sizeof(comp->on_command_name) - 1);
             comp->on_command_name[sizeof(comp->on_command_name) - 1] = '\0';
+        }
+        cJSON* on_key = cJSON_GetObjectItem(events, "onKey");
+        if (on_key && cJSON_IsString(on_key) && on_key->valuestring) {
+            const char* name = on_key->valuestring;
+            if (name[0] == '@') name++;
+            strncpy(comp->on_key_name, name, sizeof(comp->on_key_name) - 1);
+            comp->on_key_name[sizeof(comp->on_key_name) - 1] = '\0';
         }
     }
 
@@ -473,6 +523,20 @@ int terminal_component_handle_key_event(Layer* layer, KeyEvent* event) {
     if (!layer || !event) return 0;
     TerminalComponent* comp = (TerminalComponent*)layer->component;
     if (!comp) return 0;
+
+    /* Store key event data and fire JS callback */
+    comp->last_key_type = event->type;
+    if (event->type == KEY_EVENT_TEXT_INPUT) {
+        strncpy(comp->last_key_text, event->data.text.text, sizeof(comp->last_key_text) - 1);
+        comp->last_key_text[sizeof(comp->last_key_text) - 1] = '\0';
+        comp->last_key_code = 0;
+        comp->last_key_mod = 0;
+    } else if (event->type == KEY_EVENT_DOWN) {
+        comp->last_key_code = event->data.key.key_code;
+        comp->last_key_mod = event->data.key.mod;
+        comp->last_key_text[0] = '\0';
+    }
+    terminal_fire_key_event(comp);
 
     if (event->type == KEY_EVENT_TEXT_INPUT) {
         const char* text = event->data.text.text;
@@ -671,15 +735,28 @@ int terminal_component_handle_key_event(Layer* layer, KeyEvent* event) {
 int terminal_component_register_event(Layer* layer, const char* event_name,
                                        const char* event_func_name, EventHandler event_handler) {
     if (!layer || !layer->component || !event_handler) return -1;
-    if (strcmp(event_name, "command") != 0 && strcmp(event_name, "onCommand") != 0) return -1;
 
     TerminalComponent* comp = (TerminalComponent*)layer->component;
-    comp->on_command = event_handler;
-    if (event_func_name && event_func_name[0] != '\0') {
-        const char* name = event_func_name;
-        if (name[0] == '@') name++;
-        strncpy(comp->on_command_name, name, sizeof(comp->on_command_name) - 1);
-        comp->on_command_name[sizeof(comp->on_command_name) - 1] = '\0';
+
+    if (strcmp(event_name, "command") == 0 || strcmp(event_name, "onCommand") == 0) {
+        comp->on_command = event_handler;
+        if (event_func_name && event_func_name[0] != '\0') {
+            const char* name = event_func_name;
+            if (name[0] == '@') name++;
+            strncpy(comp->on_command_name, name, sizeof(comp->on_command_name) - 1);
+            comp->on_command_name[sizeof(comp->on_command_name) - 1] = '\0';
+        }
+        return 0;
     }
-    return 0;
+    if (strcmp(event_name, "key") == 0 || strcmp(event_name, "onKey") == 0) {
+        comp->on_key = event_handler;
+        if (event_func_name && event_func_name[0] != '\0') {
+            const char* name = event_func_name;
+            if (name[0] == '@') name++;
+            strncpy(comp->on_key_name, name, sizeof(comp->on_key_name) - 1);
+            comp->on_key_name[sizeof(comp->on_key_name) - 1] = '\0';
+        }
+        return 0;
+    }
+    return -1;
 }

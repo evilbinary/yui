@@ -31,6 +31,13 @@ typedef struct {
     char prompt_text[64];
     char on_command_name[128];
     EventHandler on_command;
+    char on_key_name[128];
+    EventHandler on_key;
+
+    int last_key_type;
+    int last_key_code;
+    int last_key_mod;
+    char last_key_text[32];
 
     unsigned int cols;
     unsigned int rows;
