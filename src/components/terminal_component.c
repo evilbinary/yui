@@ -9,30 +9,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-static Color ansi_256_to_color(int code) {
-    static const Color ansi[16] = {
-        {0,0,0,255}, {128,0,0,255}, {0,128,0,255}, {128,128,0,255},
-        {0,0,128,255}, {128,0,128,255}, {0,128,128,255}, {192,192,192,255},
-        {128,128,128,255}, {255,0,0,255}, {0,255,0,255}, {255,255,0,255},
-        {0,0,255,255}, {255,0,255,255}, {0,255,255,255}, {255,255,255,255},
-    };
-    if (code >= 0 && code < 16) return ansi[code];
-    if (code >= 16 && code <= 231) {
-        int n = code - 16;
-        int r = (n / 36) * 42 + 55;
-        int g = ((n / 6) % 6) * 42 + 55;
-        int b = (n % 6) * 42 + 55;
-        Color c = { r, g, b, 255 };
-        return c;
-    }
-    if (code >= 232 && code <= 255) {
-        int v = (code - 232) * 10 + 8;
-        Color c = { v, v, v, 255 };
-        return c;
-    }
-    return (Color){205, 214, 244, 255};
-}
-
 static void terminal_write_cb(struct tsm_vte* vte, const char* u8,
                                size_t len, void* data) {
 }
@@ -51,20 +27,27 @@ static int terminal_draw_cb(struct tsm_screen* con, uint32_t id,
     x += comp->layer->rect.x;
     y += comp->layer->rect.y;
 
-    Color fg = comp->input_color;
+    unsigned int cx = tsm_screen_get_cursor_x(comp->screen);
+    unsigned int cy = tsm_screen_get_cursor_y(comp->screen);
+    int is_cursor_cell = ((unsigned int)posx == cx && (unsigned int)posy == cy);
+
+    Color fg = comp->output_color;
     Color bg = comp->output_bg_color;
 
-    if (attr->fccode >= 0) fg = ansi_256_to_color(attr->fccode);
-    else if (attr->fr != comp->input_color.r || attr->fg != comp->input_color.g ||
-             attr->fb != comp->input_color.b)
-        fg = (Color){attr->fr, attr->fg, attr->fb, 255};
+    /* Cursor row: prompt in promptColor, input in inputColor */
+    if ((unsigned int)posy == cy) {
+        if ((unsigned int)posx < strlen(comp->prompt_text))
+            fg = comp->prompt_color;
+        else
+            fg = comp->input_color;
+    }
 
-    if (attr->bccode >= 0) bg = ansi_256_to_color(attr->bccode);
-    else if (attr->br != comp->output_bg_color.r || attr->bg != comp->output_bg_color.g ||
-             attr->bb != comp->output_bg_color.b)
-        bg = (Color){attr->br, attr->bg, attr->bb, 255};
-
-    if (attr->inverse) {
+    /* Cursor cell: use cursorColor background */
+    if (is_cursor_cell) {
+        bg = comp->cursor_color;
+        if (len > 0 && ch[0] != 0 && ch[0] != ' ')
+            fg = comp->output_bg_color;
+    } else if (attr->inverse) {
         Color tmp = fg;
         fg = bg;
         bg = tmp;
@@ -195,6 +178,7 @@ TerminalComponent* terminal_component_create(Layer* layer) {
     comp->prompt_color = (Color){137, 180, 250, 255};
     comp->input_color = (Color){205, 214, 244, 255};
     comp->cursor_color = (Color){205, 214, 244, 255};
+    comp->output_color = (Color){166, 227, 161, 255};
     comp->output_bg_color = (Color){30, 30, 46, 255};
     comp->scrollback_max = 1000;
     strcpy(comp->prompt_text, "$ ");
@@ -345,6 +329,8 @@ TerminalComponent* terminal_component_create_from_json(Layer* layer, cJSON* json
                 parse_color(item->valuestring, &comp->input_color);
             } else if (strcmp(item->string, "cursorColor") == 0) {
                 parse_color(item->valuestring, &comp->cursor_color);
+            } else if (strcmp(item->string, "outputColor") == 0) {
+                parse_color(item->valuestring, &comp->output_color);
             } else if (strcmp(item->string, "outputBgColor") == 0 ||
                        strcmp(item->string, "bgColor") == 0) {
                 parse_color(item->valuestring, &comp->output_bg_color);
@@ -398,7 +384,7 @@ void terminal_component_render(Layer* layer) {
     TerminalComponent* comp = (TerminalComponent*)layer->component;
     if (!comp) return;
 
-    backend_render_fill_rect(&layer->rect, layer->bg_color);
+    backend_render_fill_rect(&layer->rect, comp->output_bg_color);
 
     if (!layer->font || !layer->font->default_font) {
         if (layer->font) load_all_fonts(layer);

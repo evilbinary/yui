@@ -26,6 +26,7 @@ typedef struct {
     Color prompt_color;
     Color input_color;
     Color cursor_color;
+    Color output_color;
     Color output_bg_color;
     char prompt_text[64];
     char on_command_name[128];
