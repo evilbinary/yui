@@ -1268,6 +1268,7 @@ static void connector_sync_pick_layer(Layer* canvas)
         pick->id[sizeof(pick->id) - 1] = '\0';
         pick->bg_color.a = 0;
         pick->focusable = 0;
+        pick->pointer_passthrough = 1;
         pick->handle_pointer_event = connector_pick_handle_mouse;
         pick->parent = canvas;
 

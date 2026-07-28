@@ -700,6 +700,8 @@ typedef struct Layer {
 
     int connectable;
 
+    int pointer_passthrough;  // 1=事件穿透，不阻挡 POINTER_DOWN/POINTER_UP
+
 } Layer;
 // 全局变量：当前拥有焦点的图层
 extern Layer* focused_layer;

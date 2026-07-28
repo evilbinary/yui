@@ -441,10 +441,13 @@ int default_layer_handle_pointer_event(Layer* layer, PointerEvent* event) {
         }
     }
     if (event->phase == POINTER_DOWN || event->phase == POINTER_UP) {
-        if (layer->child_count > 0) {
-            return 0;
+        if (point_in_rect(mouse_pos, layer->rect)) {
+            if (layer->pointer_passthrough) {
+                return 0;
+            }
+            return 1;
         }
-        return point_in_rect(mouse_pos, layer->rect) ? 1 : 0;
+        return 0;
     }
     return 0;
 }
@@ -577,7 +580,7 @@ int handle_pointer_event(Layer* layer, PointerEvent* event) {
 
     for (int i = layer->child_count - 1; i >= 0; i--) {
         if (layer->children[i] && layer->children[i]->visible == VISIBLE) {
-            if (!point_in_rect(pos, layer->rect)) {
+            if (!point_in_rect(pos, layer->children[i]->rect)) {
                 continue;
             }
             int consumed = handle_pointer_event(layer->children[i], pe);
@@ -607,10 +610,8 @@ int handle_pointer_event(Layer* layer, PointerEvent* event) {
     }
 
     if (layer->sub && layer->sub->visible == VISIBLE) {
-        if (point_in_rect(pos, layer->rect)) {
-            int consumed = handle_pointer_event(layer->sub, pe);
-            if (consumed) return 1;
-        }
+        int consumed = handle_pointer_event(layer->sub, pe);
+        if (consumed) return 1;
     }
 
     if (event->device == POINTER_DEVICE_MOUSE &&
