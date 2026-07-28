@@ -23,9 +23,11 @@
 #include "connector_component.h"
 #include "draggable_component.h"
 #include "grid_component.h"
+#include "terminal_component.h"
 
 static void scrollbar_after_create(Layer* layer, cJSON* json);
 static void table_after_create(Layer* layer, cJSON* json);
+static void terminal_after_create(Layer* layer, cJSON* json);
 
 static const struct {
     int                 type_id;
@@ -82,6 +84,8 @@ static const struct {
       YUI_COMP_NATIVE_RENDER | YUI_COMP_SKIP_CHILDREN, NULL },
     { DRAGGABLE,   "Draggable",  (YuiComponentCreateFn)draggable_component_create_from_json,
       YUI_COMP_NATIVE_RENDER, NULL },
+    { TERMINAL,    "Terminal",   (YuiComponentCreateFn)terminal_component_create_from_json,
+      YUI_COMP_NATIVE_RENDER | YUI_COMP_FOCUSABLE, terminal_after_create },
 };
 
 static void scrollbar_after_create(Layer* layer, cJSON* json)
@@ -91,6 +95,14 @@ static void scrollbar_after_create(Layer* layer, cJSON* json)
     if (layer->children) {
         free(layer->children);
         layer->children = NULL;
+    }
+}
+
+static void terminal_after_create(Layer* layer, cJSON* json)
+{
+    (void)json;
+    if (layer->data && layer->data->json && layer->on_data_update) {
+        layer->on_data_update(layer, layer->data->json);
     }
 }
 

@@ -364,6 +364,7 @@ typedef enum {
     LOADING,
     CONNECTOR,
     DRAGGABLE,
+    TERMINAL,
 
     LAYER_TYPE_BUILTIN_MAX,
     LAYER_TYPE_USER_BASE = 256,
