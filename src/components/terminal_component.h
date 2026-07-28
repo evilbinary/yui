@@ -32,13 +32,6 @@ typedef struct {
     char on_command_name[128];
     EventHandler on_command;
 
-    int draw_x;
-    int draw_y;
-    int draw_base_x;
-
-    char echo_buf[4096];
-    int echo_buf_len;
-
     unsigned int cols;
     unsigned int rows;
     unsigned int scrollback_max;
