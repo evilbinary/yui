@@ -18,6 +18,9 @@ typedef struct {
     int horizontal;      // 0=vertical (resize height), 1=horizontal (resize width)
     char on_change_name[MAX_PATH];
     EventHandler on_change;
+    int show_dots;
+    int dot_radius;
+    int dot_spacing;
     Color bg_color;
     Color hover_bg_color;
     Color border_color;

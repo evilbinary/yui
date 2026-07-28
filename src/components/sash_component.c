@@ -32,6 +32,9 @@ SashComponent* sash_component_create(Layer* layer) {
     memset(comp, 0, sizeof(SashComponent));
     comp->layer = layer;
     comp->min_size = 60;
+    comp->show_dots = 0;
+    comp->dot_radius = 2;
+    comp->dot_spacing = 10;
     comp->target_id[0] = '\0';
     comp->on_change_name[0] = '\0';
     comp->bg_color = (Color){49, 50, 68, 255};
@@ -71,6 +74,21 @@ SashComponent* sash_component_create_from_json(Layer* layer, cJSON* json_obj) {
         if (strcmp(orientation_json->valuestring, "horizontal") == 0) {
             comp->horizontal = 1;
         }
+    }
+
+    cJSON* show_dots = cJSON_GetObjectItem(json_obj, "showDots");
+    if (show_dots && cJSON_IsBool(show_dots)) {
+        comp->show_dots = cJSON_IsTrue(show_dots) ? 1 : 0;
+    }
+
+    cJSON* dot_radius = cJSON_GetObjectItem(json_obj, "dotRadius");
+    if (dot_radius && cJSON_IsNumber(dot_radius)) {
+        comp->dot_radius = dot_radius->valueint;
+    }
+
+    cJSON* dot_spacing = cJSON_GetObjectItem(json_obj, "dotSpacing");
+    if (dot_spacing && cJSON_IsNumber(dot_spacing)) {
+        comp->dot_spacing = dot_spacing->valueint;
     }
 
     cJSON* events = cJSON_GetObjectItem(json_obj, "events");
@@ -259,8 +277,8 @@ void sash_component_render(Layer* layer) {
 
     if (!comp) return;
 
-    int dot_r = 2;
-    int dot_spacing = 10;
+    int dot_r = comp->dot_radius;
+    int spacing = comp->dot_spacing;
     int center_x = layer->rect.x + layer->rect.w / 2;
     int center_y = layer->rect.y + layer->rect.h / 2;
     Color border_color = comp->border_color;
@@ -270,9 +288,11 @@ void sash_component_render(Layer* layer) {
         Rect left_line = {layer->rect.x, layer->rect.y, 1, layer->rect.h};
         backend_render_fill_rect(&left_line, border_color);
 
-        for (int i = -1; i <= 1; i++) {
-            Rect dot = {center_x - dot_r, center_y + i * dot_spacing - dot_r, dot_r * 2, dot_r * 2};
-            backend_render_fill_rect(&dot, dot_color);
+        if (comp->show_dots) {
+            for (int i = -1; i <= 1; i++) {
+                Rect dot = {center_x - dot_r, center_y + i * spacing - dot_r, dot_r * 2, dot_r * 2};
+                backend_render_fill_rect(&dot, dot_color);
+            }
         }
 
         if (comp->hover) {
@@ -283,9 +303,11 @@ void sash_component_render(Layer* layer) {
         Rect top_line = {layer->rect.x, layer->rect.y, layer->rect.w, 1};
         backend_render_fill_rect(&top_line, border_color);
 
-        for (int i = -1; i <= 1; i++) {
-            Rect dot = {center_x + i * dot_spacing - dot_r, center_y - dot_r, dot_r * 2, dot_r * 2};
-            backend_render_fill_rect(&dot, dot_color);
+        if (comp->show_dots) {
+            for (int i = -1; i <= 1; i++) {
+                Rect dot = {center_x + i * spacing - dot_r, center_y - dot_r, dot_r * 2, dot_r * 2};
+                backend_render_fill_rect(&dot, dot_color);
+            }
         }
 
         if (comp->hover) {
