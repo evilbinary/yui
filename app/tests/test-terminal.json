@@ -29,7 +29,8 @@
         {"text": "Available commands: help, echo, date, clear"}
       ],
       "events": {
-        "onCommand": "@onTermCommand"
+        "onCommand": "@onTermCommand",
+        "onKey": "@onTermKey"
       }
     },
     {

@@ -118,6 +118,7 @@ static void terminal_clear_screen(TerminalComponent* comp) {
     tsm_screen_erase_screen(comp->screen, false);
     tsm_screen_clear_sb(comp->screen);
     tsm_screen_sb_reset(comp->screen);
+    tsm_screen_move_to(comp->screen, 0, 0);
     mark_layer_dirty(comp->layer, DIRTY_COLOR);
 }
 
@@ -496,13 +497,31 @@ int terminal_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
     int inside = event->x >= layer->rect.x && event->x < layer->rect.x + layer->rect.w &&
                  event->y >= layer->rect.y && event->y < layer->rect.y + layer->rect.h;
 
+    int out_x = layer->rect.x + comp->input_padding;
+    int out_y = layer->rect.y + comp->input_padding;
+    int cell_x = (event->x - out_x) / comp->cell_width;
+    int cell_y = (event->y - out_y) / comp->line_height;
+    if (cell_x < 0) cell_x = 0;
+    if (cell_y < 0) cell_y = 0;
+
     if (event->phase == POINTER_DOWN && inside) {
-        /* Always start text input — event system sets focused_layer before
-         * calling custom handlers, so checking LAYER_STATE_FOCUSED here
-         * would miss the first activation. */
         backend_start_text_input();
         Rect r = { layer->rect.x, layer->rect.y, layer->rect.w, layer->rect.h };
         backend_set_text_input_rect(&r);
+        comp->selecting = 1;
+        tsm_screen_selection_reset(comp->screen);
+        tsm_screen_selection_start(comp->screen, (unsigned int)cell_x, (unsigned int)cell_y);
+        return 1;
+    }
+
+    if (event->phase == POINTER_MOVE && comp->selecting) {
+        tsm_screen_selection_target(comp->screen, (unsigned int)cell_x, (unsigned int)cell_y);
+        mark_layer_dirty(layer, DIRTY_COLOR);
+        return 1;
+    }
+
+    if (event->phase == POINTER_UP && comp->selecting) {
+        comp->selecting = 0;
         return 1;
     }
 
@@ -725,6 +744,43 @@ int terminal_component_handle_key_event(Layer* layer, KeyEvent* event) {
             comp->cursor_pos += 4;
             terminal_redraw_input(comp);
             mark_layer_dirty(layer, DIRTY_COLOR);
+            return 1;
+        }
+
+        /* Ctrl+C: copy selection */
+        if (key == SDLK_c && (mod & KMOD_CTRL)) {
+            char* sel_text = NULL;
+            if (tsm_screen_selection_copy(comp->screen, &sel_text) > 0 && sel_text) {
+                backend_set_clipboard_text(sel_text);
+                free(sel_text);
+            }
+            return 1;
+        }
+
+        /* Ctrl+V: paste */
+        if (key == SDLK_v && (mod & KMOD_CTRL)) {
+            char* clip = backend_get_clipboard_text();
+            if (clip && clip[0]) {
+                size_t clip_len = strlen(clip);
+                char* buf = layer->text;
+                int len = buf ? (int)strlen(buf) : 0;
+                char* new_buf = malloc((size_t)(len + (int)clip_len + 1));
+                if (new_buf) {
+                    if (buf && comp->cursor_pos > 0)
+                        memcpy(new_buf, buf, (size_t)comp->cursor_pos);
+                    memcpy(new_buf + comp->cursor_pos, clip, clip_len);
+                    if (buf && comp->cursor_pos < len)
+                        memcpy(new_buf + comp->cursor_pos + (int)clip_len,
+                               buf + comp->cursor_pos, (size_t)(len - comp->cursor_pos));
+                    new_buf[len + (int)clip_len] = '\0';
+                    layer_set_text(layer, new_buf);
+                    free(new_buf);
+                    comp->cursor_pos += (int)clip_len;
+                    terminal_redraw_input(comp);
+                    mark_layer_dirty(layer, DIRTY_COLOR);
+                }
+            }
+            if (clip) free(clip);
             return 1;
         }
     }

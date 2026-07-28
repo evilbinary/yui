@@ -47,3 +47,11 @@ function onTermCommand(layerId) {
   }
   if (status) status.text = text;
 }
+
+function onTermKey(layerId) {
+  var id = typeof layerId === "string" ? layerId : "term";
+  var keyType = YUI.getProperty(id, "_keyType");
+  var keyCode = YUI.getProperty(id, "_keyCode");
+  var keyText = YUI.getProperty(id, "_keyText");
+  YUI.log("Terminal key - type:" + JSON.stringify(keyType) + " code:" + JSON.stringify(keyCode) + " text:" + JSON.stringify(keyText));
+}
