@@ -11,7 +11,7 @@
     "pageSize": 500,
     "fontSize": 13
   },
-  "theme": "soft-ui-dark",
+  "theme": "element-plus-dark",
   "windowWidth": 1197,
   "windowHeight": 879,
   "sqlEditorContainer": 367

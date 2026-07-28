@@ -33,30 +33,6 @@ static Color ansi_256_to_color(int code) {
     return (Color){205, 214, 244, 255};
 }
 
-static Color attr_to_fg(const struct tsm_screen_attr* attr, Color def) {
-    if (attr->inverse) {
-        if (attr->bccode >= 0) return ansi_256_to_color(attr->bccode);
-        return (Color){attr->br, attr->bg, attr->bb, 255};
-    }
-    if (attr->fccode >= 0) {
-        Color c = ansi_256_to_color(attr->fccode);
-        if (attr->bold && attr->fccode < 8) {
-            c = ansi_256_to_color(attr->fccode + 8);
-        }
-        return c;
-    }
-    return (Color){attr->fr, attr->fg, attr->fb, 255};
-}
-
-static Color attr_to_bg(const struct tsm_screen_attr* attr, Color def) {
-    if (attr->inverse) {
-        if (attr->fccode >= 0) return ansi_256_to_color(attr->fccode);
-        return (Color){attr->fr, attr->fg, attr->fb, 255};
-    }
-    if (attr->bccode >= 0) return ansi_256_to_color(attr->bccode);
-    return (Color){attr->br, attr->bg, attr->bb, 255};
-}
-
 static void terminal_write_cb(struct tsm_vte* vte, const char* u8,
                                size_t len, void* data) {
 }
@@ -75,18 +51,32 @@ static int terminal_draw_cb(struct tsm_screen* con, uint32_t id,
     x += comp->layer->rect.x;
     y += comp->layer->rect.y;
 
-    Color bg = attr_to_bg(attr, comp->output_bg_color);
-    if (bg.r != comp->output_bg_color.r || bg.g != comp->output_bg_color.g ||
-        bg.b != comp->output_bg_color.b) {
-        Rect bg_rect = { x, y, (int)width * comp->cell_width, comp->line_height };
-        backend_render_fill_rect(&bg_rect, bg);
+    Color fg = comp->input_color;
+    Color bg = comp->output_bg_color;
+
+    if (attr->fccode >= 0) fg = ansi_256_to_color(attr->fccode);
+    else if (attr->fr != comp->input_color.r || attr->fg != comp->input_color.g ||
+             attr->fb != comp->input_color.b)
+        fg = (Color){attr->fr, attr->fg, attr->fb, 255};
+
+    if (attr->bccode >= 0) bg = ansi_256_to_color(attr->bccode);
+    else if (attr->br != comp->output_bg_color.r || attr->bg != comp->output_bg_color.g ||
+             attr->bb != comp->output_bg_color.b)
+        bg = (Color){attr->br, attr->bg, attr->bb, 255};
+
+    if (attr->inverse) {
+        Color tmp = fg;
+        fg = bg;
+        bg = tmp;
     }
+
+    Rect bg_rect = { x, y, (int)width * comp->cell_width, comp->line_height };
+    backend_render_fill_rect(&bg_rect, bg);
 
     if (len > 0 && ch[0] != 0 && ch[0] != ' ') {
         size_t utf8_len;
         char* utf8 = tsm_ucs4_to_utf8_alloc(ch, len, &utf8_len);
         if (utf8) {
-            Color fg = attr_to_fg(attr, comp->input_color);
             Texture* tex = render_text(comp->layer, utf8, fg);
             if (tex) {
                 int tw, th;
@@ -103,7 +93,6 @@ static int terminal_draw_cb(struct tsm_screen* con, uint32_t id,
     if (attr->underline) {
         int uy = y + comp->line_height - 2;
         Rect uline = { x, uy, (int)width * comp->cell_width, 1 };
-        Color fg = attr_to_fg(attr, comp->input_color);
         backend_render_fill_rect(&uline, fg);
     }
 
@@ -126,6 +115,16 @@ static void terminal_clear_screen(TerminalComponent* comp) {
     mark_layer_dirty(comp->layer, DIRTY_COLOR);
 }
 
+static void redraw_input_line(TerminalComponent* comp) {
+    const char* buf = comp->layer->text ? comp->layer->text : "";
+    char line[MAX_TEXT + 64];
+    int len = snprintf(line, sizeof(line), "\r\x1b[K%s%s",
+                       comp->prompt_text, buf);
+    if (len > 0 && (size_t)len < sizeof(line)) {
+        tsm_vte_input(comp->vte, line, (size_t)len);
+    }
+}
+
 static int terminal_on_data_update(Layer* layer, cJSON* json) {
     if (!layer || !json) return 0;
     TerminalComponent* comp = (TerminalComponent*)layer->component;
@@ -141,6 +140,7 @@ static int terminal_on_data_update(Layer* layer, cJSON* json) {
     int n = cJSON_GetArraySize(json);
     if (n == 0) {
         terminal_clear_screen(comp);
+        comp->needs_prompt = 1;
         return 1;
     }
     for (int i = 0; i < n; i++) {
@@ -154,6 +154,7 @@ static int terminal_on_data_update(Layer* layer, cJSON* json) {
             }
         }
     }
+    comp->needs_prompt = 1;
     mark_layer_dirty(layer, DIRTY_COLOR);
     return 1;
 }
@@ -207,15 +208,18 @@ TerminalComponent* terminal_component_create(Layer* layer) {
     memset(&def_attr, 0, sizeof(def_attr));
     def_attr.fccode = -1;
     def_attr.bccode = -1;
-    def_attr.fr = 205;
-    def_attr.fg = 214;
-    def_attr.fb = 244;
-    def_attr.br = 30;
-    def_attr.bg = 30;
-    def_attr.bb = 46;
+    def_attr.fr = comp->input_color.r;
+    def_attr.fg = comp->input_color.g;
+    def_attr.fb = comp->input_color.b;
+    def_attr.br = comp->output_bg_color.r;
+    def_attr.bg = comp->output_bg_color.g;
+    def_attr.bb = comp->output_bg_color.b;
     tsm_screen_set_def_attr(comp->screen, &def_attr);
     tsm_screen_set_max_sb(comp->screen, comp->scrollback_max);
-    tsm_screen_set_flags(comp->screen, TSM_SCREEN_HIDE_CURSOR);
+
+    /* Set a default size so data fed before first render is not lost */
+    tsm_screen_resize(comp->screen, 80, 24);
+    comp->needs_prompt = 1;
 
     layer->component = comp;
     layer->render = terminal_component_render;
@@ -276,15 +280,13 @@ static void terminal_fire_command_event(TerminalComponent* comp) {
 }
 
 static void dispatch_command(TerminalComponent* comp) {
-    char line[MAX_TEXT + 64];
     const char* cmd;
     if (!comp || !comp->layer) return;
 
     cmd = comp->layer->text ? comp->layer->text : "";
 
-    /* 回显：prompt + 命令写入输出区，再交给 JS 处理 */
-    snprintf(line, sizeof(line), "%s%s", comp->prompt_text, cmd);
-    terminal_write_line(comp, line);
+    /* Input line is already visible in VTE; just move to next line */
+    tsm_vte_input(comp->vte, "\r\n", 2);
 
     add_history(comp, cmd);
     terminal_fire_command_event(comp);
@@ -292,6 +294,7 @@ static void dispatch_command(TerminalComponent* comp) {
     layer_set_text(comp->layer, "");
     comp->cursor_pos = 0;
     comp->scroll_x = 0;
+    comp->needs_prompt = 1;
     mark_layer_dirty(comp->layer, DIRTY_COLOR);
 }
 
@@ -353,6 +356,21 @@ TerminalComponent* terminal_component_create_from_json(Layer* layer, cJSON* json
         }
     }
 
+    /* Sync VTE default attributes with parsed colors */
+    {
+        struct tsm_screen_attr def_attr;
+        memset(&def_attr, 0, sizeof(def_attr));
+        def_attr.fccode = -1;
+        def_attr.bccode = -1;
+        def_attr.fr = comp->input_color.r;
+        def_attr.fg = comp->input_color.g;
+        def_attr.fb = comp->input_color.b;
+        def_attr.br = comp->output_bg_color.r;
+        def_attr.bg = comp->output_bg_color.g;
+        def_attr.bb = comp->output_bg_color.b;
+        tsm_screen_set_def_attr(comp->screen, &def_attr);
+    }
+
     return comp;
 }
 
@@ -373,17 +391,6 @@ void terminal_component_destroy(TerminalComponent* comp) {
     }
     free(comp->history);
     free(comp);
-}
-
-static void render_text_at(Layer* layer, int x, int y, const char* text, Color color) {
-    if (!text || text[0] == '\0') return;
-    Texture* tex = render_text(layer, text, color);
-    if (!tex) return;
-    int tw = 0, th = 0;
-    backend_query_texture(tex, NULL, NULL, &tw, &th);
-    Rect dst = { x, y, tw / yui_density, th / yui_density };
-    backend_render_text_copy(tex, NULL, &dst);
-    backend_render_text_destroy(tex);
 }
 
 void terminal_component_render(Layer* layer) {
@@ -415,10 +422,9 @@ void terminal_component_render(Layer* layer) {
 
     int w = layer->rect.w;
     int h = layer->rect.h;
-    int input_area_top = h - comp->input_height - comp->input_padding;
 
     int output_w = w - comp->input_padding * 2;
-    int output_h = input_area_top - comp->input_padding;
+    int output_h = h - comp->input_padding * 2;
     if (output_w < 1) output_w = 1;
     if (output_h < 1) output_h = 1;
 
@@ -431,6 +437,13 @@ void terminal_component_render(Layer* layer) {
         comp->cols = new_cols;
         comp->rows = new_rows;
         tsm_screen_resize(comp->screen, comp->cols, comp->rows);
+        comp->needs_prompt = 1;
+    }
+
+    /* Feed prompt to VTE if needed (after resize or after command) */
+    if (comp->needs_prompt) {
+        tsm_vte_input(comp->vte, comp->prompt_text, strlen(comp->prompt_text));
+        comp->needs_prompt = 0;
     }
 
     Rect prev_clip;
@@ -448,57 +461,6 @@ void terminal_component_render(Layer* layer) {
         if (render_clip_push(&out_rect, &out_prev)) {
             tsm_screen_draw(comp->screen, terminal_draw_cb, comp);
             render_clip_pop(&out_prev);
-        }
-    }
-
-    {
-        int input_y = layer->rect.y + input_area_top;
-        {
-            Rect input_bg = { layer->rect.x, input_y, w, h - input_area_top };
-            backend_render_fill_rect(&input_bg, comp->output_bg_color);
-        }
-
-        int prompt_x = layer->rect.x + comp->input_padding;
-        int prompt_w = 0;
-        {
-            Texture* pt = render_text(layer, comp->prompt_text, comp->prompt_color);
-            if (pt) {
-                int pw;
-                backend_query_texture(pt, NULL, NULL, &pw, NULL);
-                prompt_w = pw / yui_density;
-                backend_render_text_destroy(pt);
-            }
-        }
-        /* 与行高对齐，避免 prompt / 输入 / 光标基线不一致 */
-        int prompt_y = input_y + (comp->input_height - comp->line_height) / 2;
-        if (prompt_y < input_y) prompt_y = input_y;
-        render_text_at(layer, prompt_x, prompt_y, comp->prompt_text, comp->prompt_color);
-
-        int input_x = prompt_x + prompt_w;
-        const char* input_text = layer->text ? layer->text : "";
-        render_text_at(layer, input_x, prompt_y, input_text, comp->input_color);
-
-        if (layer->state & LAYER_STATE_FOCUSED) {
-            int cursor_x = input_x;
-            if (comp->cursor_pos > 0 && input_text[0] != '\0') {
-                int before_len = comp->cursor_pos;
-                char* before = malloc((size_t)before_len + 1);
-                if (before) {
-                    memcpy(before, input_text, (size_t)before_len);
-                    before[before_len] = '\0';
-                    Texture* bt = render_text(layer, before, comp->input_color);
-                    if (bt) {
-                        int bw;
-                        backend_query_texture(bt, NULL, NULL, &bw, NULL);
-                        cursor_x = input_x + (bw / yui_density) - comp->scroll_x;
-                        backend_render_text_destroy(bt);
-                    }
-                    free(before);
-                }
-            }
-
-            Rect cursor = { cursor_x, prompt_y, 2, comp->line_height };
-            backend_render_fill_rect(&cursor, comp->cursor_color);
         }
     }
 
@@ -564,6 +526,7 @@ int terminal_component_handle_key_event(Layer* layer, KeyEvent* event) {
         layer_set_text(layer, new_buf);
         free(new_buf);
         comp->cursor_pos += input_len;
+        redraw_input_line(comp);
         mark_layer_dirty(layer, DIRTY_COLOR);
         return 1;
     }
@@ -601,6 +564,7 @@ int terminal_component_handle_key_event(Layer* layer, KeyEvent* event) {
                 comp->cursor_pos -= remove;
                 layer_set_text(layer, new_buf);
                 free(new_buf);
+                redraw_input_line(comp);
                 mark_layer_dirty(layer, DIRTY_COLOR);
             }
             return 1;
@@ -629,6 +593,7 @@ int terminal_component_handle_key_event(Layer* layer, KeyEvent* event) {
                 new_buf[new_len] = '\0';
                 layer_set_text(layer, new_buf);
                 free(new_buf);
+                redraw_input_line(comp);
                 mark_layer_dirty(layer, DIRTY_COLOR);
             }
             return 1;
@@ -694,6 +659,7 @@ int terminal_component_handle_key_event(Layer* layer, KeyEvent* event) {
                 layer_set_text(layer, comp->history[comp->history_index]);
                 comp->cursor_pos = (int)strlen(comp->history[comp->history_index]);
                 comp->scroll_x = 0;
+                redraw_input_line(comp);
                 mark_layer_dirty(layer, DIRTY_COLOR);
             }
             return 1;
@@ -710,6 +676,7 @@ int terminal_component_handle_key_event(Layer* layer, KeyEvent* event) {
                 }
                 comp->cursor_pos = layer->text ? (int)strlen(layer->text) : 0;
                 comp->scroll_x = 0;
+                redraw_input_line(comp);
                 mark_layer_dirty(layer, DIRTY_COLOR);
             }
             return 1;
@@ -731,6 +698,7 @@ int terminal_component_handle_key_event(Layer* layer, KeyEvent* event) {
             layer_set_text(layer, new_buf);
             free(new_buf);
             comp->cursor_pos += 4;
+            redraw_input_line(comp);
             mark_layer_dirty(layer, DIRTY_COLOR);
             return 1;
         }

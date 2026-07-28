@@ -16,11 +16,13 @@
       "size": [760, 500],
       "prompt": "$ ",
       "inputHeight": 30,
-      "promptColor": "#89B4FA",
-      "inputColor": "#CDD6F4",
-      "cursorColor": "#F5C2E7",
-      "outputColor": "#A6E3A1",
-      "bgColor": "#11111B",
+      "style": {
+        "promptColor": "#89B4FA",
+        "inputColor": "#CDD6F4",
+        "cursorColor": "#F5C2E7",
+        "outputColor": "#A6E3A1",
+        "bgColor": "#11111B"
+      },
       "data": [
         "Welcome to YUI Terminal v1.0",
         {"text": "Type a command and press Enter"},

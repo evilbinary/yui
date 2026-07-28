@@ -34,6 +34,7 @@ typedef struct {
     unsigned int cols;
     unsigned int rows;
     unsigned int scrollback_max;
+    int needs_prompt;
 } TerminalComponent;
 
 TerminalComponent* terminal_component_create(Layer* layer);
