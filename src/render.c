@@ -243,14 +243,18 @@ void render_layer(Layer* layer) {
         return;
     }
 
-    /* Fully clipped layers must not render or replace the parent clip. */
-    Rect parent_clip;
-    backend_render_get_clip_rect(&parent_clip);
-    if (parent_clip.w > 0 && parent_clip.h > 0) {
-        Rect visible_rect;
-        render_rect_intersect(&visible_rect, &layer->rect, &parent_clip);
-        if (visible_rect.w <= 0 || visible_rect.h <= 0) {
-            return;
+    /* Fully clipped layers must not render or replace the parent clip.
+     * Layers with a custom render function may draw outside their own rect
+     * (e.g. CONNECTOR draws bezier curves at absolute coords). */
+    if (layer->render == NULL) {
+        Rect parent_clip;
+        backend_render_get_clip_rect(&parent_clip);
+        if (parent_clip.w > 0 && parent_clip.h > 0) {
+            Rect visible_rect;
+            render_rect_intersect(&visible_rect, &layer->rect, &parent_clip);
+            if (visible_rect.w <= 0 || visible_rect.h <= 0) {
+                return;
+            }
         }
     }
 
