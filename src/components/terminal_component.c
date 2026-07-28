@@ -5,6 +5,7 @@
 #include "../util.h"
 #include "../layer_update.h"
 #include "cJSON.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -109,27 +110,47 @@ static int terminal_draw_cb(struct tsm_screen* con, uint32_t id,
     return 0;
 }
 
+static void terminal_write_line(TerminalComponent* comp, const char* text) {
+    if (!comp || !comp->vte) return;
+    if (text && text[0] != '\0') {
+        tsm_vte_input(comp->vte, text, strlen(text));
+    }
+    tsm_vte_input(comp->vte, "\r\n", 2);
+}
+
+static void terminal_clear_screen(TerminalComponent* comp) {
+    if (!comp || !comp->vte || !comp->screen) return;
+    tsm_vte_reset(comp->vte);
+    tsm_screen_erase_screen(comp->screen, false);
+    tsm_screen_clear_sb(comp->screen);
+    mark_layer_dirty(comp->layer, DIRTY_COLOR);
+}
+
 static int terminal_on_data_update(Layer* layer, cJSON* json) {
     if (!layer || !json) return 0;
     TerminalComponent* comp = (TerminalComponent*)layer->component;
     if (!comp || !comp->vte) return 0;
     if (!cJSON_IsArray(json)) {
         if (cJSON_IsString(json)) {
-            tsm_vte_input(comp->vte, json->valuestring, strlen(json->valuestring));
+            terminal_write_line(comp, json->valuestring);
             mark_layer_dirty(layer, DIRTY_COLOR);
             return 1;
         }
         return 0;
     }
     int n = cJSON_GetArraySize(json);
+    if (n == 0) {
+        terminal_clear_screen(comp);
+        return 1;
+    }
     for (int i = 0; i < n; i++) {
         cJSON* item = cJSON_GetArrayItem(json, i);
         if (cJSON_IsString(item)) {
-            tsm_vte_input(comp->vte, item->valuestring, strlen(item->valuestring));
+            terminal_write_line(comp, item->valuestring);
         } else if (cJSON_IsObject(item)) {
             cJSON* text = cJSON_GetObjectItem(item, "text");
             if (text && cJSON_IsString(text)) {
-                tsm_vte_input(comp->vte, text->valuestring, strlen(text->valuestring));
+                terminal_write_line(comp, text->valuestring);
             }
         }
     }
@@ -194,6 +215,7 @@ TerminalComponent* terminal_component_create(Layer* layer) {
     def_attr.bb = 46;
     tsm_screen_set_def_attr(comp->screen, &def_attr);
     tsm_screen_set_max_sb(comp->screen, comp->scrollback_max);
+    tsm_screen_set_flags(comp->screen, TSM_SCREEN_HIDE_CURSOR);
 
     layer->component = comp;
     layer->render = terminal_component_render;
@@ -222,7 +244,7 @@ static void add_history(TerminalComponent* comp, const char* text) {
 
 void terminal_component_append_output(TerminalComponent* comp, const char* text) {
     if (!comp || !comp->vte || !text) return;
-    tsm_vte_input(comp->vte, text, strlen(text));
+    terminal_write_line(comp, text);
     mark_layer_dirty(comp->layer, DIRTY_COLOR);
 }
 
@@ -232,19 +254,40 @@ void terminal_component_set_prompt(TerminalComponent* comp, const char* prompt) 
     comp->prompt_text[sizeof(comp->prompt_text) - 1] = '\0';
 }
 
+static void terminal_fire_command_event(TerminalComponent* comp) {
+    EventHandler handler;
+    if (!comp || !comp->layer || comp->on_command_name[0] == '\0') return;
+
+    if (!comp->layer->event) {
+        comp->layer->event = calloc(1, sizeof(Event));
+        if (!comp->layer->event) return;
+    }
+    strncpy(comp->layer->event->click_name, comp->on_command_name, MAX_PATH - 1);
+    comp->layer->event->click_name[MAX_PATH - 1] = '\0';
+
+    handler = comp->on_command;
+    if (!handler) {
+        handler = find_event_by_name(comp->on_command_name);
+        comp->on_command = handler;
+    }
+    if (handler) {
+        handler(comp->layer);
+    }
+}
+
 static void dispatch_command(TerminalComponent* comp) {
-    if (!comp) return;
-    char* cmd = comp->layer->text;
-    if (!cmd) cmd = "";
+    char line[MAX_TEXT + 64];
+    const char* cmd;
+    if (!comp || !comp->layer) return;
+
+    cmd = comp->layer->text ? comp->layer->text : "";
+
+    /* 回显：prompt + 命令写入输出区，再交给 JS 处理 */
+    snprintf(line, sizeof(line), "%s%s", comp->prompt_text, cmd);
+    terminal_write_line(comp, line);
 
     add_history(comp, cmd);
-
-    if (comp->on_command == NULL && comp->on_command_name[0] != '\0') {
-        comp->on_command = find_event_by_name(comp->on_command_name);
-    }
-    if (comp->on_command) {
-        comp->on_command(comp->layer);
-    }
+    terminal_fire_command_event(comp);
 
     layer_set_text(comp->layer, "");
     comp->cursor_pos = 0;
@@ -285,6 +328,7 @@ TerminalComponent* terminal_component_create_from_json(Layer* layer, cJSON* json
     }
 
     cJSON* style = cJSON_GetObjectItem(json_obj, "style");
+    if (!style) style = json_obj;
     if (style) {
         cJSON* item = style->child;
         while (item) {
@@ -298,11 +342,12 @@ TerminalComponent* terminal_component_create_from_json(Layer* layer, cJSON* json
                 parse_color(item->valuestring, &comp->input_color);
             } else if (strcmp(item->string, "cursorColor") == 0) {
                 parse_color(item->valuestring, &comp->cursor_color);
-            } else if (strcmp(item->string, "outputBgColor") == 0) {
+            } else if (strcmp(item->string, "outputBgColor") == 0 ||
+                       strcmp(item->string, "bgColor") == 0) {
                 parse_color(item->valuestring, &comp->output_bg_color);
-            } else if (strcmp(item->string, "bgColor") == 0) {
-                parse_color(item->valuestring, &layer->bg_color);
-                parse_color(item->valuestring, &comp->output_bg_color);
+                if (strcmp(item->string, "bgColor") == 0) {
+                    parse_color(item->valuestring, &layer->bg_color);
+                }
             }
             item = item->next;
         }
@@ -399,21 +444,21 @@ void terminal_component_render(Layer* layer) {
     backend_render_fill_rect(&out_rect, comp->output_bg_color);
 
     if (comp->screen) {
-        tsm_screen_draw(comp->screen, terminal_draw_cb, comp);
+        Rect out_prev;
+        if (render_clip_push(&out_rect, &out_prev)) {
+            tsm_screen_draw(comp->screen, terminal_draw_cb, comp);
+            render_clip_pop(&out_prev);
+        }
     }
 
     {
         int input_y = layer->rect.y + input_area_top;
         {
-            Rect input_bg = { layer->rect.x, input_y, w, comp->input_height + comp->input_padding };
-            Color ibg = { 30, 30, 46, 255 };
-            backend_render_fill_rect(&input_bg, ibg);
+            Rect input_bg = { layer->rect.x, input_y, w, h - input_area_top };
+            backend_render_fill_rect(&input_bg, comp->output_bg_color);
         }
 
         int prompt_x = layer->rect.x + comp->input_padding;
-        int prompt_y = input_y + (comp->input_height - comp->line_height) / 2 + 2;
-        render_text_at(layer, prompt_x, prompt_y, comp->prompt_text, comp->prompt_color);
-
         int prompt_w = 0;
         {
             Texture* pt = render_text(layer, comp->prompt_text, comp->prompt_color);
@@ -424,29 +469,31 @@ void terminal_component_render(Layer* layer) {
                 backend_render_text_destroy(pt);
             }
         }
+        /* 与行高对齐，避免 prompt / 输入 / 光标基线不一致 */
+        int prompt_y = input_y + (comp->input_height - comp->line_height) / 2;
+        if (prompt_y < input_y) prompt_y = input_y;
+        render_text_at(layer, prompt_x, prompt_y, comp->prompt_text, comp->prompt_color);
 
         int input_x = prompt_x + prompt_w;
         const char* input_text = layer->text ? layer->text : "";
         render_text_at(layer, input_x, prompt_y, input_text, comp->input_color);
 
         if (layer->state & LAYER_STATE_FOCUSED) {
-            int cursor_x = input_x + comp->scroll_x;
-            {
-                if (comp->cursor_pos > 0) {
-                    int before_len = comp->cursor_pos;
-                    char* before = malloc(before_len + 1);
-                    if (before) {
-                        memcpy(before, input_text, before_len);
-                        before[before_len] = '\0';
-                        Texture* bt = render_text(layer, before, comp->input_color);
-                        if (bt) {
-                            int bw;
-                            backend_query_texture(bt, NULL, NULL, &bw, NULL);
-                            cursor_x = input_x + (bw / yui_density) - comp->scroll_x;
-                            backend_render_text_destroy(bt);
-                        }
-                        free(before);
+            int cursor_x = input_x;
+            if (comp->cursor_pos > 0 && input_text[0] != '\0') {
+                int before_len = comp->cursor_pos;
+                char* before = malloc((size_t)before_len + 1);
+                if (before) {
+                    memcpy(before, input_text, (size_t)before_len);
+                    before[before_len] = '\0';
+                    Texture* bt = render_text(layer, before, comp->input_color);
+                    if (bt) {
+                        int bw;
+                        backend_query_texture(bt, NULL, NULL, &bw, NULL);
+                        cursor_x = input_x + (bw / yui_density) - comp->scroll_x;
+                        backend_render_text_destroy(bt);
                     }
+                    free(before);
                 }
             }
 

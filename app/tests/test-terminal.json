@@ -2,6 +2,7 @@
   "id": "terminalTest",
   "type": "View",
   "size": [800, 600],
+  "js": ["test-terminal.js"],
   "layout": { "type": "absolute" },
   "style": {
     "bgColor": "#1E1E2E",
