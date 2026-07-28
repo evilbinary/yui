@@ -7,7 +7,8 @@
 
 target('yui')
 add_deps("cjson")
-add_includedirs('.', 'components', public=True)
+add_deps("tsm")
+add_includedirs('.', 'components', '../lib/libtsm/src', public=True)
 add_flags()
 set_kind('static')
 add_files("*.c")

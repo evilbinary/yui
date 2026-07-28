@@ -1,0 +1,40 @@
+{
+  "id": "terminalTest",
+  "type": "View",
+  "size": [800, 600],
+  "layout": { "type": "absolute" },
+  "style": {
+    "bgColor": "#1E1E2E",
+    "color": "#CDD6F4"
+  },
+  "children": [
+    {
+      "id": "term",
+      "type": "Terminal",
+      "position": [20, 20],
+      "size": [760, 500],
+      "prompt": "$ ",
+      "inputHeight": 30,
+      "promptColor": "#89B4FA",
+      "inputColor": "#CDD6F4",
+      "cursorColor": "#F5C2E7",
+      "outputColor": "#A6E3A1",
+      "bgColor": "#11111B",
+      "data": [
+        "Welcome to YUI Terminal v1.0",
+        {"text": "Type a command and press Enter"},
+        {"text": "Available commands: help, echo, date, clear"}
+      ],
+      "events": {
+        "onCommand": "@onTermCommand"
+      }
+    },
+    {
+      "id": "status",
+      "type": "Label",
+      "position": [20, 540],
+      "text": "Focus the terminal and type",
+      "style": { "color": "#6C7086", "fontSize": 12 }
+    }
+  ]
+}
