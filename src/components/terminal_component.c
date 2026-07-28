@@ -216,8 +216,8 @@ TerminalComponent* terminal_component_create(Layer* layer) {
     comp->scrollback_max = 1000;
     strcpy(comp->prompt_text, "$ ");
 
-    comp->line_height = 0;
-    comp->cell_width = 0;
+    comp->line_height = 18;
+    comp->cell_width = 8;
     comp->cols = 0;
     comp->rows = 0;
 
@@ -421,13 +421,17 @@ void terminal_component_render(Layer* layer) {
         if (!layer->font || !layer->font->default_font) return;
     }
 
-    if (comp->line_height <= 0) {
-        int fh = layer->font->size > 0 ? layer->font->size : 14;
-        comp->line_height = fh + 4;
+    int fh = layer->font->size > 0 ? layer->font->size : 14;
+    int desired_line_height = fh + 4;
+    if (desired_line_height < 1) desired_line_height = 18;
+    if (comp->line_height != desired_line_height) {
+        comp->line_height = desired_line_height;
     }
-    if (comp->cell_width <= 0) {
-        comp->cell_width = (int)(comp->line_height * 0.6f);
-        if (comp->cell_width < 1) comp->cell_width = 8;
+
+    int desired_cell_width = (int)(comp->line_height * 0.6f);
+    if (desired_cell_width < 1) desired_cell_width = 8;
+    if (comp->cell_width != desired_cell_width) {
+        comp->cell_width = desired_cell_width;
     }
 
     int w = layer->rect.w;
