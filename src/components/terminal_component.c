@@ -749,10 +749,23 @@ int terminal_component_handle_key_event(Layer* layer, KeyEvent* event) {
 
         /* Ctrl+C: copy selection */
         if (key == SDLK_c && (mod & KMOD_CTRL)) {
-            char* sel_text = NULL;
-            if (tsm_screen_selection_copy(comp->screen, &sel_text) > 0 && sel_text) {
-                backend_set_clipboard_text(sel_text);
-                free(sel_text);
+            char* raw = NULL;
+            int raw_len = tsm_screen_selection_copy(comp->screen, &raw);
+            if (raw_len > 0 && raw) {
+                /* libtsm copy_line writes \0 for empty cells, which
+                 * truncates C strings. Rebuild a clean copy. */
+                char* clean = malloc((size_t)(raw_len + 1));
+                if (clean) {
+                    int w = 0;
+                    for (int r = 0; r < raw_len; r++) {
+                        if (raw[r] != '\0')
+                            clean[w++] = raw[r];
+                    }
+                    clean[w] = '\0';
+                    backend_set_clipboard_text(clean);
+                    free(clean);
+                }
+                free(raw);
             }
             return 1;
         }
