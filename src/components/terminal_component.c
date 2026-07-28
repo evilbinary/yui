@@ -21,12 +21,11 @@
 
 static void terminal_write_cb(struct tsm_vte* vte, const char* u8,
                                size_t len, void* data) {
-    /* VTE has built-in local echo. We don't have a PTY/shell so
-     * the write callback is a no-op. */
-    (void)vte;
-    (void)u8;
-    (void)len;
-    (void)data;
+    /* Echo data back to VTE so keyboard input appears on screen.
+     * We don't have a PTY/shell, so the "send" is just local echo. */
+    TerminalComponent* comp = (TerminalComponent*)data;
+    if (!comp || !comp->vte) return;
+    tsm_vte_input(comp->vte, u8, len);
 }
 
 static int terminal_draw_cb(struct tsm_screen* con, uint32_t id,
@@ -65,24 +64,18 @@ static int terminal_draw_cb(struct tsm_screen* con, uint32_t id,
 
     /* Render character if there is one */
     if (len > 0 && ch[0] != 0 && ch[0] != ' ') {
-        size_t utf8_len;
-        char* utf8 = tsm_ucs4_to_utf8_alloc(ch, len, &utf8_len);
-        if (utf8) {
-            Texture* tex = render_text(comp->layer, utf8, fg);
-            if (tex) {
-                int tw, th;
-                backend_query_texture(tex, NULL, NULL, &tw, &th);
-                int dst_w = tw / yui_density;
-                int dst_h = th / yui_density;
-                int dst_x = x;
-                int dst_y = y + (comp->line_height - dst_h) / 2;
-                /* Clamp to cell width for single-width chars */
-                if (width <= 1 && dst_w > cell_w) dst_w = cell_w;
-                Rect dst = { dst_x, dst_y, dst_w, dst_h };
-                backend_render_text_copy(tex, NULL, &dst);
-                backend_render_text_destroy(tex);
-            }
-            free(utf8);
+                Texture* tex = render_text(comp->layer, ch, fg);
+        if (tex) {
+            int tw, th;
+            backend_query_texture(tex, NULL, NULL, &tw, &th);
+            int dst_w = tw / yui_density;
+            int dst_h = th / yui_density;
+            int dst_x = x;
+            int dst_y = y + (comp->line_height - dst_h) / 2;
+            if (width <= 1 && dst_w > cell_w) dst_w = cell_w;
+            Rect dst = { dst_x, dst_y, dst_w, dst_h };
+            backend_render_text_copy(tex, NULL, &dst);
+            backend_render_text_destroy(tex);
         }
     }
 
@@ -360,14 +353,8 @@ void terminal_component_render(Layer* layer) {
         comp->line_height = fh + 4;
     }
     if (comp->cell_width <= 0) {
-        Texture* m = render_text(layer, "M", comp->input_color);
-        if (m) {
-            int mw;
-            backend_query_texture(m, NULL, NULL, &mw, NULL);
-            comp->cell_width = mw / yui_density;
-            backend_render_text_destroy(m);
-        }
-        if (comp->cell_width <= 0) comp->cell_width = comp->line_height * 3 / 5;
+        comp->cell_width = (int)(comp->line_height * 0.6f);
+        if (comp->cell_width < 1) comp->cell_width = 8;
     }
 
     int w = layer->rect.w;
@@ -413,6 +400,19 @@ void terminal_component_render(Layer* layer) {
         }
     }
 
+    /* Draw cursor block at VTE cursor position */
+    if (comp->screen && (layer->state & LAYER_STATE_FOCUSED)) {
+        unsigned int cx = tsm_screen_get_cursor_x(comp->screen);
+        unsigned int cy = tsm_screen_get_cursor_y(comp->screen);
+        int cursor_x = out_x + (int)cx * comp->cell_width;
+        int cursor_y = out_y + (int)cy * comp->line_height;
+        Rect cursor_rect = { cursor_x, cursor_y, comp->cell_width, comp->line_height };
+        /* Semi-transparent cursor block */
+        Color cursor_col = comp->cursor_color;
+        cursor_col.a = 80;
+        backend_render_fill_rect(&cursor_rect, cursor_col);
+    }
+
     render_clip_pop(&prev_clip);
 }
 
@@ -425,16 +425,12 @@ int terminal_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
                  event->y >= layer->rect.y && event->y < layer->rect.y + layer->rect.h;
 
     if (event->phase == POINTER_DOWN && inside) {
-        if (!(layer->state & LAYER_STATE_FOCUSED)) {
-            if (focused_layer && focused_layer != layer) {
-                focused_layer->state = LAYER_STATE_NORMAL;
-            }
-            focused_layer = layer;
-            layer->state = LAYER_STATE_FOCUSED;
-            backend_start_text_input();
-            Rect r = { layer->rect.x, layer->rect.y, layer->rect.w, layer->rect.h };
-            backend_set_text_input_rect(&r);
-        }
+        /* Always start text input — event system sets focused_layer before
+         * calling custom handlers, so checking LAYER_STATE_FOCUSED here
+         * would miss the first activation. */
+        backend_start_text_input();
+        Rect r = { layer->rect.x, layer->rect.y, layer->rect.w, layer->rect.h };
+        backend_set_text_input_rect(&r);
         return 1;
     }
 
@@ -472,11 +468,7 @@ int terminal_component_handle_key_event(Layer* layer, KeyEvent* event) {
         free(new_buf);
         comp->cursor_pos = len + (int)input_len;
 
-        for (size_t i = 0; i < input_len; i++) {
-            uint32_t cp = (unsigned char)text[i];
-            tsm_vte_handle_keyboard(comp->vte, 0, cp, 0, cp);
-        }
-
+        tsm_vte_input(comp->vte, text, input_len);
         mark_layer_dirty(layer, DIRTY_COLOR);
         return 1;
     }

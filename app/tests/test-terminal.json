@@ -15,7 +15,7 @@
       "position": [20, 20],
       "size": [760, 500],
       "prompt": "$ ",
-      "inputHeight": 30,
+      "inputHeight": 20,
       "style": {
         "promptColor": "#89B4FA",
         "inputColor": "#CDD6F4",
