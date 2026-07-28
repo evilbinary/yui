@@ -9,8 +9,30 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* XKB keysym constants (from xkbcommon-keysyms.h) */
+#define XKB_KEY_BackSpace  0xff08
+#define XKB_KEY_Return     0xff0d
+#define XKB_KEY_Home       0xff50
+#define XKB_KEY_Left       0xff51
+#define XKB_KEY_Up         0xff52
+#define XKB_KEY_Right      0xff53
+#define XKB_KEY_Down       0xff54
+#define XKB_KEY_End        0xff57
+
 static void terminal_write_cb(struct tsm_vte* vte, const char* u8,
                                size_t len, void* data) {
+    TerminalComponent* comp = (TerminalComponent*)data;
+    if (!comp || !comp->vte) return;
+    if (comp->echo_buf_len + (int)len < (int)sizeof(comp->echo_buf)) {
+        memcpy(comp->echo_buf + comp->echo_buf_len, u8, len);
+        comp->echo_buf_len += (int)len;
+    }
+}
+
+static void terminal_flush_echo(TerminalComponent* comp) {
+    if (!comp || !comp->vte || comp->echo_buf_len <= 0) return;
+    tsm_vte_input(comp->vte, comp->echo_buf, (size_t)comp->echo_buf_len);
+    comp->echo_buf_len = 0;
 }
 
 static int terminal_draw_cb(struct tsm_screen* con, uint32_t id,
@@ -22,19 +44,12 @@ static int terminal_draw_cb(struct tsm_screen* con, uint32_t id,
     TerminalComponent* comp = (TerminalComponent*)data;
     if (!comp) return 0;
 
-    int x = comp->input_padding + (int)posx * comp->cell_width;
-    int y = comp->input_padding + (int)posy * comp->line_height;
-    x += comp->layer->rect.x;
-    y += comp->layer->rect.y;
-
-    unsigned int cx = tsm_screen_get_cursor_x(comp->screen);
+    int cell_w = (int)width * comp->cell_width;
     unsigned int cy = tsm_screen_get_cursor_y(comp->screen);
-    int is_cursor_cell = ((unsigned int)posx == cx && (unsigned int)posy == cy);
 
     Color fg = comp->output_color;
     Color bg = comp->output_bg_color;
 
-    /* Cursor row: prompt in promptColor, input in inputColor */
     if ((unsigned int)posy == cy) {
         if ((unsigned int)posx < strlen(comp->prompt_text))
             fg = comp->prompt_color;
@@ -42,18 +57,13 @@ static int terminal_draw_cb(struct tsm_screen* con, uint32_t id,
             fg = comp->input_color;
     }
 
-    /* Cursor cell: use cursorColor background */
-    if (is_cursor_cell) {
-        bg = comp->cursor_color;
-        if (len > 0 && ch[0] != 0 && ch[0] != ' ')
-            fg = comp->output_bg_color;
-    } else if (attr->inverse) {
+    if (attr->inverse) {
         Color tmp = fg;
         fg = bg;
         bg = tmp;
     }
 
-    Rect bg_rect = { x, y, (int)width * comp->cell_width, comp->line_height };
+    Rect bg_rect = { comp->draw_x, comp->draw_y, cell_w, comp->line_height };
     backend_render_fill_rect(&bg_rect, bg);
 
     if (len > 0 && ch[0] != 0 && ch[0] != ' ') {
@@ -64,7 +74,8 @@ static int terminal_draw_cb(struct tsm_screen* con, uint32_t id,
             if (tex) {
                 int tw, th;
                 backend_query_texture(tex, NULL, NULL, &tw, &th);
-                Rect dst = { x, y + (comp->line_height - th / yui_density) / 2,
+                Rect dst = { comp->draw_x,
+                             comp->draw_y + (comp->line_height - th / yui_density) / 2,
                              tw / yui_density, th / yui_density };
                 backend_render_text_copy(tex, NULL, &dst);
                 backend_render_text_destroy(tex);
@@ -73,10 +84,10 @@ static int terminal_draw_cb(struct tsm_screen* con, uint32_t id,
         }
     }
 
-    if (attr->underline) {
-        int uy = y + comp->line_height - 2;
-        Rect uline = { x, uy, (int)width * comp->cell_width, 1 };
-        backend_render_fill_rect(&uline, fg);
+    comp->draw_x += cell_w;
+    if (posx >= comp->cols - 1) {
+        comp->draw_x = comp->draw_base_x;
+        comp->draw_y += comp->line_height;
     }
 
     return 0;
@@ -96,16 +107,6 @@ static void terminal_clear_screen(TerminalComponent* comp) {
     tsm_screen_erase_screen(comp->screen, false);
     tsm_screen_clear_sb(comp->screen);
     mark_layer_dirty(comp->layer, DIRTY_COLOR);
-}
-
-static void redraw_input_line(TerminalComponent* comp) {
-    const char* buf = comp->layer->text ? comp->layer->text : "";
-    char line[MAX_TEXT + 64];
-    int len = snprintf(line, sizeof(line), "\r\x1b[K%s%s",
-                       comp->prompt_text, buf);
-    if (len > 0 && (size_t)len < sizeof(line)) {
-        tsm_vte_input(comp->vte, line, (size_t)len);
-    }
 }
 
 static int terminal_on_data_update(Layer* layer, cJSON* json) {
@@ -169,7 +170,6 @@ TerminalComponent* terminal_component_create(Layer* layer) {
 
     comp->layer = layer;
     comp->cursor_pos = 0;
-    comp->scroll_x = 0;
     comp->history_index = -1;
     comp->history_capacity = 32;
     comp->history = malloc(comp->history_capacity * sizeof(char*));
@@ -188,20 +188,7 @@ TerminalComponent* terminal_component_create(Layer* layer) {
     comp->cols = 0;
     comp->rows = 0;
 
-    struct tsm_screen_attr def_attr;
-    memset(&def_attr, 0, sizeof(def_attr));
-    def_attr.fccode = -1;
-    def_attr.bccode = -1;
-    def_attr.fr = comp->input_color.r;
-    def_attr.fg = comp->input_color.g;
-    def_attr.fb = comp->input_color.b;
-    def_attr.br = comp->output_bg_color.r;
-    def_attr.bg = comp->output_bg_color.g;
-    def_attr.bb = comp->output_bg_color.b;
-    tsm_screen_set_def_attr(comp->screen, &def_attr);
     tsm_screen_set_max_sb(comp->screen, comp->scrollback_max);
-
-    /* Set a default size so data fed before first render is not lost */
     tsm_screen_resize(comp->screen, 80, 24);
     comp->needs_prompt = 1;
 
@@ -269,15 +256,11 @@ static void dispatch_command(TerminalComponent* comp) {
 
     cmd = comp->layer->text ? comp->layer->text : "";
 
-    /* Input line is already visible in VTE; just move to next line */
-    tsm_vte_input(comp->vte, "\r\n", 2);
-
     add_history(comp, cmd);
     terminal_fire_command_event(comp);
 
     layer_set_text(comp->layer, "");
     comp->cursor_pos = 0;
-    comp->scroll_x = 0;
     comp->needs_prompt = 1;
     mark_layer_dirty(comp->layer, DIRTY_COLOR);
 }
@@ -340,21 +323,6 @@ TerminalComponent* terminal_component_create_from_json(Layer* layer, cJSON* json
             }
             item = item->next;
         }
-    }
-
-    /* Sync VTE default attributes with parsed colors */
-    {
-        struct tsm_screen_attr def_attr;
-        memset(&def_attr, 0, sizeof(def_attr));
-        def_attr.fccode = -1;
-        def_attr.bccode = -1;
-        def_attr.fr = comp->input_color.r;
-        def_attr.fg = comp->input_color.g;
-        def_attr.fb = comp->input_color.b;
-        def_attr.br = comp->output_bg_color.r;
-        def_attr.bg = comp->output_bg_color.g;
-        def_attr.bb = comp->output_bg_color.b;
-        tsm_screen_set_def_attr(comp->screen, &def_attr);
     }
 
     return comp;
@@ -426,7 +394,6 @@ void terminal_component_render(Layer* layer) {
         comp->needs_prompt = 1;
     }
 
-    /* Feed prompt to VTE if needed (after resize or after command) */
     if (comp->needs_prompt) {
         tsm_vte_input(comp->vte, comp->prompt_text, strlen(comp->prompt_text));
         comp->needs_prompt = 0;
@@ -445,6 +412,9 @@ void terminal_component_render(Layer* layer) {
     if (comp->screen) {
         Rect out_prev;
         if (render_clip_push(&out_rect, &out_prev)) {
+            comp->draw_base_x = out_x;
+            comp->draw_x = out_x;
+            comp->draw_y = out_y;
             tsm_screen_draw(comp->screen, terminal_draw_cb, comp);
             render_clip_pop(&out_prev);
         }
@@ -495,24 +465,26 @@ int terminal_component_handle_key_event(Layer* layer, KeyEvent* event) {
 
     if (event->type == KEY_EVENT_TEXT_INPUT) {
         const char* text = event->data.text.text;
+        size_t input_len = strlen(text);
+        if (input_len == 0) return 0;
+
         char* buf = layer->text;
         int len = buf ? (int)strlen(buf) : 0;
-        int input_len = (int)strlen(text);
-        if (len + input_len >= MAX_TEXT - 1) return 1;
-        char* new_buf = malloc(len + input_len + 1);
+        char* new_buf = malloc((size_t)(len + (int)input_len + 1));
         if (!new_buf) return 1;
-        if (buf && comp->cursor_pos > 0) {
-            memcpy(new_buf, buf, comp->cursor_pos);
-        }
-        memcpy(new_buf + comp->cursor_pos, text, input_len);
-        if (buf && comp->cursor_pos < len) {
-            memcpy(new_buf + comp->cursor_pos + input_len, buf + comp->cursor_pos, len - comp->cursor_pos);
-        }
-        new_buf[len + input_len] = '\0';
+        if (buf) memcpy(new_buf, buf, (size_t)len);
+        memcpy(new_buf + len, text, input_len);
+        new_buf[len + (int)input_len] = '\0';
         layer_set_text(layer, new_buf);
         free(new_buf);
-        comp->cursor_pos += input_len;
-        redraw_input_line(comp);
+        comp->cursor_pos = len + (int)input_len;
+
+        for (size_t i = 0; i < input_len; i++) {
+            uint32_t cp = (unsigned char)text[i];
+            tsm_vte_handle_keyboard(comp->vte, 0, cp, 0, cp);
+        }
+        terminal_flush_echo(comp);
+
         mark_layer_dirty(layer, DIRTY_COLOR);
         return 1;
     }
@@ -521,7 +493,15 @@ int terminal_component_handle_key_event(Layer* layer, KeyEvent* event) {
         int key = event->data.key.key_code;
         int mod = event->data.key.mod;
 
+        unsigned int tsm_mod = 0;
+        if (mod & KMOD_CTRL) tsm_mod |= TSM_CONTROL_MASK;
+        if (mod & KMOD_SHIFT) tsm_mod |= TSM_SHIFT_MASK;
+        if (mod & KMOD_ALT) tsm_mod |= TSM_ALT_MASK;
+
         if (key == SDLK_RETURN || key == SDLK_KP_ENTER) {
+            tsm_vte_handle_keyboard(comp->vte, XKB_KEY_Return, '\r', tsm_mod, '\r');
+            terminal_flush_echo(comp);
+            tsm_vte_input(comp->vte, "\n", 1);
             dispatch_command(comp);
             return 1;
         }
@@ -532,122 +512,74 @@ int terminal_component_handle_key_event(Layer* layer, KeyEvent* event) {
             if (comp->cursor_pos > 0 && len > 0) {
                 int remove = 1;
                 if (comp->cursor_pos > 1 && (unsigned char)buf[comp->cursor_pos - 1] >= 0x80) {
-                    while (remove < comp->cursor_pos && (unsigned char)buf[comp->cursor_pos - remove] >= 0x80 &&
-                           (unsigned char)buf[comp->cursor_pos - remove] < 0xC0) {
+                    while (remove < comp->cursor_pos &&
+                           (unsigned char)buf[comp->cursor_pos - remove] >= 0x80 &&
+                           (unsigned char)buf[comp->cursor_pos - remove] < 0xC0)
                         remove++;
-                    }
                 }
                 int new_len = len - remove;
-                char* new_buf = malloc(new_len + 1);
+                char* new_buf = malloc((size_t)new_len + 1);
                 if (!new_buf) return 1;
-                if (comp->cursor_pos - remove > 0) {
-                    memcpy(new_buf, buf, comp->cursor_pos - remove);
-                }
-                if (comp->cursor_pos < len) {
-                    memcpy(new_buf + comp->cursor_pos - remove, buf + comp->cursor_pos, len - comp->cursor_pos);
-                }
+                if (comp->cursor_pos - remove > 0)
+                    memcpy(new_buf, buf, (size_t)(comp->cursor_pos - remove));
+                if (comp->cursor_pos < len)
+                    memcpy(new_buf + comp->cursor_pos - remove,
+                           buf + comp->cursor_pos, (size_t)(len - comp->cursor_pos));
                 new_buf[new_len] = '\0';
                 comp->cursor_pos -= remove;
                 layer_set_text(layer, new_buf);
                 free(new_buf);
-                redraw_input_line(comp);
-                mark_layer_dirty(layer, DIRTY_COLOR);
-            }
-            return 1;
-        }
 
-        if (key == SDLK_DELETE) {
-            char* buf = layer->text;
-            int len = buf ? (int)strlen(buf) : 0;
-            if (comp->cursor_pos < len) {
-                int remove = 1;
-                if (comp->cursor_pos + 1 < len && (unsigned char)buf[comp->cursor_pos] >= 0x80) {
-                    while (comp->cursor_pos + remove < len && (unsigned char)buf[comp->cursor_pos + remove] >= 0x80 &&
-                           (unsigned char)buf[comp->cursor_pos + remove] < 0xC0) {
-                        remove++;
-                    }
-                }
-                int new_len = len - remove;
-                char* new_buf = malloc(new_len + 1);
-                if (!new_buf) return 1;
-                if (comp->cursor_pos > 0) {
-                    memcpy(new_buf, buf, comp->cursor_pos);
-                }
-                if (comp->cursor_pos + remove < len) {
-                    memcpy(new_buf + comp->cursor_pos, buf + comp->cursor_pos + remove, len - comp->cursor_pos - remove);
-                }
-                new_buf[new_len] = '\0';
-                layer_set_text(layer, new_buf);
-                free(new_buf);
-                redraw_input_line(comp);
-                mark_layer_dirty(layer, DIRTY_COLOR);
+                tsm_vte_handle_keyboard(comp->vte, XKB_KEY_BackSpace, '\b', tsm_mod, '\b');
+                terminal_flush_echo(comp);
             }
+            mark_layer_dirty(layer, DIRTY_COLOR);
             return 1;
         }
 
         if (key == SDLK_LEFT) {
-            if ((mod & KMOD_CTRL) && comp->cursor_pos > 0) {
-                char* buf = layer->text;
-                int pos = comp->cursor_pos - 1;
-                while (pos > 0 && buf[pos] != ' ') pos--;
-                comp->cursor_pos = pos;
-            } else if (comp->cursor_pos > 0) {
+            if (comp->cursor_pos > 0) {
                 comp->cursor_pos--;
-                while (comp->cursor_pos > 0 &&
-                       (unsigned char)layer->text[comp->cursor_pos] >= 0x80 &&
-                       (unsigned char)layer->text[comp->cursor_pos] < 0xC0) {
-                    comp->cursor_pos--;
-                }
+                tsm_vte_handle_keyboard(comp->vte, XKB_KEY_Left, 0, tsm_mod, 0);
+                terminal_flush_echo(comp);
             }
-            mark_layer_dirty(layer, DIRTY_COLOR);
             return 1;
         }
 
         if (key == SDLK_RIGHT) {
             int len = layer->text ? (int)strlen(layer->text) : 0;
-            if ((mod & KMOD_CTRL)) {
-                char* buf = layer->text;
-                int pos = comp->cursor_pos;
-                while (pos < len && buf[pos] == ' ') pos++;
-                while (pos < len && buf[pos] != ' ') pos++;
-                comp->cursor_pos = pos;
-            } else if (comp->cursor_pos < len) {
+            if (comp->cursor_pos < len) {
                 comp->cursor_pos++;
-                while (comp->cursor_pos < len &&
-                       (unsigned char)layer->text[comp->cursor_pos] >= 0x80 &&
-                       (unsigned char)layer->text[comp->cursor_pos] < 0xC0) {
-                    comp->cursor_pos++;
-                }
+                tsm_vte_handle_keyboard(comp->vte, XKB_KEY_Right, 0, tsm_mod, 0);
+                terminal_flush_echo(comp);
             }
-            mark_layer_dirty(layer, DIRTY_COLOR);
             return 1;
         }
 
         if (key == SDLK_HOME) {
             comp->cursor_pos = 0;
-            mark_layer_dirty(layer, DIRTY_COLOR);
+            tsm_vte_handle_keyboard(comp->vte, XKB_KEY_Home, 0, tsm_mod, 0);
+            terminal_flush_echo(comp);
             return 1;
         }
 
         if (key == SDLK_END) {
             comp->cursor_pos = layer->text ? (int)strlen(layer->text) : 0;
-            mark_layer_dirty(layer, DIRTY_COLOR);
+            tsm_vte_handle_keyboard(comp->vte, XKB_KEY_End, 0, tsm_mod, 0);
+            terminal_flush_echo(comp);
             return 1;
         }
 
         if (key == SDLK_UP) {
             if (comp->history_count > 0) {
-                if (comp->history_index < 0) {
+                if (comp->history_index < 0)
                     comp->history_index = comp->history_count - 1;
-                } else if (comp->history_index > 0) {
+                else if (comp->history_index > 0)
                     comp->history_index--;
-                }
                 layer_set_text(layer, comp->history[comp->history_index]);
                 comp->cursor_pos = (int)strlen(comp->history[comp->history_index]);
-                comp->scroll_x = 0;
-                redraw_input_line(comp);
-                mark_layer_dirty(layer, DIRTY_COLOR);
             }
+            mark_layer_dirty(layer, DIRTY_COLOR);
             return 1;
         }
 
@@ -661,30 +593,23 @@ int terminal_component_handle_key_event(Layer* layer, KeyEvent* event) {
                     layer_set_text(layer, comp->history[comp->history_index]);
                 }
                 comp->cursor_pos = layer->text ? (int)strlen(layer->text) : 0;
-                comp->scroll_x = 0;
-                redraw_input_line(comp);
-                mark_layer_dirty(layer, DIRTY_COLOR);
             }
+            mark_layer_dirty(layer, DIRTY_COLOR);
             return 1;
         }
 
         if (key == SDLK_TAB) {
             char* buf = layer->text;
             int len = buf ? (int)strlen(buf) : 0;
-            char* new_buf = malloc(len + 5);
+            char* new_buf = malloc((size_t)(len + 5));
             if (!new_buf) return 1;
-            if (buf && comp->cursor_pos > 0) {
-                memcpy(new_buf, buf, comp->cursor_pos);
-            }
-            memset(new_buf + comp->cursor_pos, ' ', 4);
-            if (buf && comp->cursor_pos < len) {
-                memcpy(new_buf + comp->cursor_pos + 4, buf + comp->cursor_pos, len - comp->cursor_pos);
-            }
+            if (buf) memcpy(new_buf, buf, (size_t)len);
+            memset(new_buf + len, ' ', 4);
             new_buf[len + 4] = '\0';
             layer_set_text(layer, new_buf);
             free(new_buf);
-            comp->cursor_pos += 4;
-            redraw_input_line(comp);
+            comp->cursor_pos = len + 4;
+            tsm_vte_input(comp->vte, "    ", 4);
             mark_layer_dirty(layer, DIRTY_COLOR);
             return 1;
         }
