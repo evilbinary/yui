@@ -1509,6 +1509,21 @@ int backend_init(){
                                         SDL_WINDOWPOS_CENTERED,
                                         800, 600, window_flags);
 
+    /* 平台视频驱动可能不支持 OpenGL（如 YiYiYa DUMMY 驱动无 GL_CreateContext），
+       此时 SDL_CreateWindow 会因 SDL_WINDOW_OPENGL 失败返回 NULL。去掉 OpenGL
+       标志重试，回退到纯软件/帧缓冲渲染。 */
+    if (!window && (window_flags & SDL_WINDOW_OPENGL)) {
+        window_flags &= ~SDL_WINDOW_OPENGL;
+        window = SDL_CreateWindow("YUI",
+                                            SDL_WINDOWPOS_CENTERED,
+                                            SDL_WINDOWPOS_CENTERED,
+                                            800, 600, window_flags);
+    }
+
+    if (!window) {
+        printf("Error: Failed to create window: %s\n", SDL_GetError());
+        return -1;
+    }
     if (window && backend_is_headless()) {
         SDL_HideWindow(window);
     }
