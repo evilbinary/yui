@@ -75,17 +75,8 @@ int game_audio_play_sfx(const char* path)
     if (!g_engine_ok || !path || !path[0]) {
         return 0;
     }
-    // 短音效：超时不超过 3 秒
-    ma_uint64 flags = MA_SOUND_FLAG_DECODE | MA_SOUND_FLAG_ASYNC | MA_SOUND_FLAG_NO_SPATIALIZATION;
-    ma_sound sfx;
-    r = ma_sound_init_from_file(&g_engine, path, flags, NULL, NULL, &sfx);
-    if (r != MA_SUCCESS) {
-        return 0;
-    }
-    ma_sound_start(&sfx);
-    // 音效播完后自动清理
-    ma_sound_set_end_callback(&sfx, game_audio_sfx_ended, NULL);
-    return 1;
+    r = ma_engine_play_sound(&g_engine, path, NULL);
+    return r == MA_SUCCESS ? 1 : 0;
 #else
     (void)path;
     return 0;
@@ -108,17 +99,19 @@ int game_audio_play_bgm(const char* path, int loop)
         return 0;
     }
     if (g_bgm_active) {
-        ma_sound_stop(&g_bgm);
         ma_sound_uninit(&g_bgm);
         g_bgm_active = 0;
     }
-    ma_uint32 flags = MA_SOUND_FLAG_DECODE | MA_SOUND_FLAG_ASYNC | MA_SOUND_FLAG_NO_SPATIALIZATION;
-    r = ma_sound_init_from_file(&g_engine, path, flags, NULL, NULL, &g_bgm);
+    r = ma_sound_init_from_file(&g_engine, path, 0, NULL, NULL, &g_bgm);
     if (r != MA_SUCCESS) {
         return 0;
     }
     ma_sound_set_looping(&g_bgm, loop ? MA_TRUE : MA_FALSE);
-    ma_sound_start(&g_bgm);
+    r = ma_sound_start(&g_bgm);
+    if (r != MA_SUCCESS) {
+        ma_sound_uninit(&g_bgm);
+        return 0;
+    }
     g_bgm_active = 1;
     return 1;
 #else
