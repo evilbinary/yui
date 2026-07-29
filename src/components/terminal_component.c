@@ -122,6 +122,9 @@ static void terminal_clear_screen(TerminalComponent* comp) {
     mark_layer_dirty(comp->layer, DIRTY_COLOR);
 }
 
+// 终端组件不接管 data 指针：仅从中读取文本写入屏幕。
+// 按约定返回 0 表示"未接管所有权"，由 handle_data 释放复制出的 cJSON；
+// 返回非零会被 layer_set_data 视为"已接管"，导致 handle_data 跳过释放（泄漏）。
 static int terminal_on_data_update(Layer* layer, cJSON* json) {
     if (!layer || !json) return 0;
     TerminalComponent* comp = (TerminalComponent*)layer->component;
@@ -130,7 +133,7 @@ static int terminal_on_data_update(Layer* layer, cJSON* json) {
         if (cJSON_IsString(json)) {
             terminal_write_line(comp, json->valuestring);
             mark_layer_dirty(layer, DIRTY_COLOR);
-            return 1;
+            return 0;
         }
         return 0;
     }
@@ -138,7 +141,7 @@ static int terminal_on_data_update(Layer* layer, cJSON* json) {
     if (n == 0) {
         terminal_clear_screen(comp);
         comp->needs_prompt = 1;
-        return 1;
+        return 0;
     }
     for (int i = 0; i < n; i++) {
         cJSON* item = cJSON_GetArrayItem(json, i);
@@ -153,7 +156,7 @@ static int terminal_on_data_update(Layer* layer, cJSON* json) {
     }
     comp->needs_prompt = 1;
     mark_layer_dirty(layer, DIRTY_COLOR);
-    return 1;
+    return 0;
 }
 
 static void terminal_layer_destroy(Layer* layer) {

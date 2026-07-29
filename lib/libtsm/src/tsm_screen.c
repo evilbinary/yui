@@ -607,6 +607,11 @@ void tsm_screen_unref(struct tsm_screen *con)
 
 	llog_debug(con, "destroying screen");
 
+	/* Free the scrollback buffer: lines scrolled off-screen are linked into
+	 * sb_first/sb_last (see link_to_scrollback) and are NOT covered by the
+	 * main_lines/alt_lines loop below. Without this they leak at destroy. */
+	tsm_screen_clear_sb(con);
+
 	for (i = 0; i < con->line_num; ++i) {
 		line_free(con->main_lines[i]);
 		line_free(con->alt_lines[i]);

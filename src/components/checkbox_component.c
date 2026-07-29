@@ -47,9 +47,10 @@ static int checkbox_on_data_update(Layer* layer, cJSON* data) {
         return 0;
     }
     if (cJSON_IsBool(data)) {
+        // 仅读取布尔值，不接管 data 指针；返回 0 由 handle_data 释放复制出的 cJSON。
         checkbox_component_set_checked((CheckboxComponent*)layer->component,
                                        cJSON_IsTrue(data));
-        return 1;
+        return 0;
     }
     return 0;
 }
