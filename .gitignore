@@ -39,3 +39,5 @@ tests/visual/output/
 smoke-test-temp.txt
 scripts/compare_gallery_perf.py
 scripts/gallery_perf_compare.json
+trace.etl
+profile.md

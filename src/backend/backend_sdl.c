@@ -1182,6 +1182,108 @@ typedef struct {
 BlurCacheEntry blur_cache[MAX_BLUR_CACHE_ENTRIES] = {0};
 int blur_cache_initialized = 0;
 
+// ====================== 圆弧纹理缓存 ======================
+// 用于缓存 Progress/Loading 组件的圆弧渲染结果
+#define MAX_ARC_CACHE_ENTRIES 32
+
+typedef struct {
+    SDL_Texture* texture;
+    int radius;
+    int line_width;
+    float start_angle;
+    float end_angle;
+    Color color;
+    Uint32 last_used;
+    int in_use;
+    int texture_size;  // 纹理尺寸 (radius * 2 + padding)
+} ArcCacheEntry;
+
+static ArcCacheEntry arc_cache[MAX_ARC_CACHE_ENTRIES] = {0};
+static int arc_cache_initialized = 0;
+static Uint32 arc_cache_frame = 0;
+
+// 初始化圆弧缓存
+static void init_arc_cache(void) {
+    if (arc_cache_initialized) return;
+    memset(arc_cache, 0, sizeof(arc_cache));
+    arc_cache_initialized = 1;
+}
+
+// 清理圆弧缓存
+void cleanup_arc_cache(void) {
+    for (int i = 0; i < MAX_ARC_CACHE_ENTRIES; i++) {
+        if (arc_cache[i].texture) {
+            SDL_DestroyTexture(arc_cache[i].texture);
+            arc_cache[i].texture = NULL;
+        }
+        arc_cache[i].in_use = 0;
+    }
+}
+
+// 计算圆弧缓存的哈希键
+static uint64_t arc_cache_hash(int radius, int line_width, float start_angle, float end_angle, Color color) {
+    uint64_t h = 14695981039346656037ULL;
+    h ^= (uint64_t)radius;
+    h *= 1099511628211ULL;
+    h ^= (uint64_t)line_width;
+    h *= 1099511628211ULL;
+    // 角度离散化到 0.5 度精度
+    h ^= (uint64_t)(int)(start_angle * 2);
+    h *= 1099511628211ULL;
+    h ^= (uint64_t)(int)(end_angle * 2);
+    h *= 1099511628211ULL;
+    h ^= color.r;
+    h *= 1099511628211ULL;
+    h ^= color.g;
+    h *= 1099511628211ULL;
+    h ^= color.b;
+    h *= 1099511628211ULL;
+    h ^= color.a;
+    return h;
+}
+
+// 查找匹配的缓存条目
+static int find_arc_cache_entry(int radius, int line_width, float start_angle, float end_angle, Color color) {
+    uint64_t target_hash = arc_cache_hash(radius, line_width, start_angle, end_angle, color);
+    for (int i = 0; i < MAX_ARC_CACHE_ENTRIES; i++) {
+        if (arc_cache[i].in_use && arc_cache[i].texture) {
+            uint64_t entry_hash = arc_cache_hash(arc_cache[i].radius, arc_cache[i].line_width,
+                                                  arc_cache[i].start_angle, arc_cache[i].end_angle,
+                                                  arc_cache[i].color);
+            if (entry_hash == target_hash) {
+                arc_cache[i].last_used = arc_cache_frame;
+                return i;
+            }
+        }
+    }
+    return -1;
+}
+
+// 查找可用的缓存条目（LRU 策略）
+static int find_available_arc_cache_entry(void) {
+    // 首先查找未使用的条目
+    for (int i = 0; i < MAX_ARC_CACHE_ENTRIES; i++) {
+        if (!arc_cache[i].in_use || !arc_cache[i].texture) {
+            return i;
+        }
+    }
+    // 查找最久未使用的条目
+    int lru_idx = 0;
+    Uint32 oldest = arc_cache[0].last_used;
+    for (int i = 1; i < MAX_ARC_CACHE_ENTRIES; i++) {
+        if (arc_cache[i].last_used < oldest) {
+            oldest = arc_cache[i].last_used;
+            lru_idx = i;
+        }
+    }
+    // 释放最久未使用的条目
+    if (arc_cache[lru_idx].texture) {
+        SDL_DestroyTexture(arc_cache[lru_idx].texture);
+        arc_cache[lru_idx].texture = NULL;
+    }
+    return lru_idx;
+}
+
 // 触屏事件状态
 typedef struct {
     int fingerCount;          // 当前触摸点数量
@@ -1953,6 +2055,8 @@ int find_available_cache_entry();
 void backend_quit(){
       // 清理毛玻璃缓存
       cleanup_blur_cache();
+      // 清理圆弧纹理缓存
+      cleanup_arc_cache();
       yui_style_fx_cleanup();
       yui_aa_circle_cache_free();
       cleanup_font_cache();
@@ -3803,7 +3907,7 @@ void backend_render_line(int x1, int y1, int x2, int y2, Color color) {
     }
 }
 
-// 绘制抗锯齿圆弧（逐像素渲染，无锯齿）
+// 绘制抗锯齿圆弧（优化版本：纹理缓存 + 批量绘制）
 // center_x, center_y: 圆心坐标
 // radius: 圆弧半径（到弧线中心的距离）
 // start_angle, end_angle: 起止角度（度数，0度在顶部，顺时针）
@@ -3811,87 +3915,194 @@ void backend_render_line(int x1, int y1, int x2, int y2, Color color) {
 // line_width: 弧线宽度
 void backend_render_arc(int center_x, int center_y, int radius, float start_angle, float end_angle, Color color, int line_width) {
     if (radius <= 0 || line_width <= 0) return;
-    
+
+    arc_cache_frame++;
+
+    // 尝试使用缓存（仅对完整圆或大角度圆弧有效）
+    // Progress 组件的 end_angle 会频繁变化，缓存效果差，使用批量绘制优化
+    float sweep_deg = end_angle - start_angle;
+    while (sweep_deg <= 0.0f) sweep_deg += 360.0f;
+
+    // 对于完整圆或大角度圆弧（如 Loading 组件），使用纹理缓存
+    int use_cache = (sweep_deg >= 359.0f);
+
+    if (use_cache) {
+        init_arc_cache();
+        int cache_idx = find_arc_cache_entry(radius, line_width, start_angle, end_angle, color);
+        if (cache_idx >= 0) {
+            // 使用缓存的纹理
+            SDL_Texture* tex = arc_cache[cache_idx].texture;
+            int size = arc_cache[cache_idx].texture_size;
+            SDL_Rect dst = {center_x - size/2, center_y - size/2, size, size};
+            SDL_RenderCopy(renderer, tex, NULL, &dst);
+            return;
+        }
+    }
+
     float half_w = line_width / 2.0f;
     float r_inner = radius - half_w;
     float r_outer = radius + half_w;
     if (r_inner < 0) r_inner = 0;
-    
+
     // 将角度转换为弧度（0度在顶部，顺时针）
     float start_rad = (start_angle - 90.0f) * M_PI / 180.0f;
     float end_rad = (end_angle - 90.0f) * M_PI / 180.0f;
-    
-    // 确保 end > start
-    while (end_rad < start_rad) {
-        end_rad += 2.0f * M_PI;
-    }
 
-    float sweep_deg = end_angle - start_angle;
-    while (sweep_deg <= 0.0f) {
-        sweep_deg += 360.0f;
-    }
+    // 确保 end > start
+    while (end_rad < start_rad) end_rad += 2.0f * M_PI;
+
     int is_full_circle = (sweep_deg >= 359.0f);
-    
-    // 遍历圆弧的边界框
+
+    // 边界框
     int extent = (int)(r_outer + 2);
-    int min_x = center_x - extent;
-    int min_y = center_y - extent;
-    int max_x = center_x + extent;
-    int max_y = center_y + extent;
-    
+
+    // 批量绘制：收集所有需要绘制的点
+    // 使用静态缓冲区避免频繁分配
+    #define MAX_ARC_POINTS 8192
+    static SDL_Point points[MAX_ARC_POINTS];
+    static Uint8 point_alphas[MAX_ARC_POINTS];
+    int point_count = 0;
+
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-    
-    for (int py = min_y; py <= max_y; py++) {
-        for (int px = min_x; px <= max_x; px++) {
-            float dx = px - center_x + 0.5f;
-            float dy = py - center_y + 0.5f;
-            float dist = sqrtf(dx * dx + dy * dy);
-            
+
+    // 遍历边界框，收集需要绘制的点
+    for (int py = -extent; py <= extent; py++) {
+        for (int px = -extent; px <= extent; px++) {
+            float dx = px + 0.5f;
+            float dy = py + 0.5f;
+            float dist_sq = dx * dx + dy * dy;
+
+            // 快速跳过：使用平方距离避免 sqrt
+            float r_inner_minus = r_inner - 1.0f;
+            float r_outer_plus = r_outer + 1.0f;
+            if (dist_sq < r_inner_minus * r_inner_minus ||
+                dist_sq > r_outer_plus * r_outer_plus) continue;
+
+            float dist = sqrtf(dist_sq);
+
             // 快速跳过：距离太远或太近
             if (dist < r_inner - 1.0f || dist > r_outer + 1.0f) continue;
-            
+
             // 检查角度是否在弧线范围内
             float angle = atan2f(dy, dx);
-            
+
             // 归一化角度到 [start_rad, start_rad + 2π) 范围
             while (angle < start_rad) angle += 2.0f * M_PI;
             while (angle > start_rad + 2.0f * M_PI) angle -= 2.0f * M_PI;
-            
-            // 角度边缘的抗锯齿（约1像素的平滑过渡）；整圆不淡化端点，避免顶部接缝缺口
+
+            // 角度边缘的抗锯齿
             float angle_aa = 1.0f;
             if (!is_full_circle) {
-                float pixel_angle = 1.0f / (dist > 0 ? dist : 1.0f); // 1像素对应的角度
+                float pixel_angle = 1.0f / (dist > 0 ? dist : 1.0f);
 
                 if (angle < start_rad + pixel_angle) {
                     angle_aa = (angle - start_rad) / pixel_angle;
                 } else if (angle > end_rad - pixel_angle) {
                     angle_aa = (end_rad - angle) / pixel_angle;
                 } else if (angle > end_rad) {
-                    continue; // 完全超出角度范围
+                    continue;
                 }
                 if (angle_aa <= 0.0f) continue;
                 if (angle_aa > 1.0f) angle_aa = 1.0f;
             } else if (angle > end_rad) {
                 continue;
             }
-            
-            // 径向抗锯齿：根据像素到弧线内外边缘的距离计算alpha
+
+            // 径向抗锯齿
             float radial_aa = 1.0f;
             if (dist < r_inner) {
-                radial_aa = 1.0f - (r_inner - dist); // 内边缘平滑
+                radial_aa = 1.0f - (r_inner - dist);
             } else if (dist > r_outer) {
-                radial_aa = 1.0f - (dist - r_outer); // 外边缘平滑
+                radial_aa = 1.0f - (dist - r_outer);
             }
             if (radial_aa <= 0.0f) continue;
             if (radial_aa > 1.0f) radial_aa = 1.0f;
-            
+
             // 组合alpha
             float final_alpha = angle_aa * radial_aa;
             Uint8 a = (Uint8)(final_alpha * color.a);
             if (a == 0) continue;
-            
-            SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, a);
-            SDL_RenderDrawPoint(renderer, px, py);
+
+            // 收集点
+            if (point_count < MAX_ARC_POINTS) {
+                points[point_count].x = center_x + px;
+                points[point_count].y = center_y + py;
+                point_alphas[point_count] = a;
+                point_count++;
+            }
+        }
+    }
+
+    // 批量绘制：按 alpha 分组绘制，减少 SDL_SetRenderDrawColor 调用
+    // 使用简单的分组策略：将 alpha 相同的点一起绘制
+    for (int alpha_group = 255; alpha_group > 0; alpha_group -= 8) {
+        SDL_Point group_points[MAX_ARC_POINTS];
+        int group_count = 0;
+
+        for (int i = 0; i < point_count; i++) {
+            if (abs(point_alphas[i] - alpha_group) <= 4) {
+                group_points[group_count++] = points[i];
+            }
+        }
+
+        if (group_count > 0) {
+            SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, alpha_group);
+            SDL_RenderDrawPoints(renderer, group_points, group_count);
+        }
+    }
+
+    // 如果需要缓存，创建纹理并缓存
+    if (use_cache && point_count > 0) {
+        int size = extent * 2 + 4;
+        SDL_Texture* tex = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888,
+                                             SDL_TEXTUREACCESS_TARGET, size, size);
+        if (tex) {
+            SDL_SetTextureBlendMode(tex, SDL_BLENDMODE_BLEND);
+            SDL_SetRenderTarget(renderer, tex);
+            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
+            SDL_RenderClear(renderer);
+
+            // 在纹理上绘制圆弧（以纹理中心为原点）
+            int tex_center = size / 2;
+            for (int i = 0; i < point_count; i++) {
+                points[i].x = points[i].x - center_x + tex_center;
+                points[i].y = points[i].y - center_y + tex_center;
+            }
+
+            // 批量绘制到纹理
+            for (int alpha_group = 255; alpha_group > 0; alpha_group -= 8) {
+                SDL_Point group_points[MAX_ARC_POINTS];
+                int group_count = 0;
+
+                for (int i = 0; i < point_count; i++) {
+                    if (abs(point_alphas[i] - alpha_group) <= 4) {
+                        group_points[group_count++] = points[i];
+                    }
+                }
+
+                if (group_count > 0) {
+                    SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, alpha_group);
+                    SDL_RenderDrawPoints(renderer, group_points, group_count);
+                }
+            }
+
+            SDL_SetRenderTarget(renderer, NULL);
+
+            // 存入缓存
+            int cache_idx = find_available_arc_cache_entry();
+            if (cache_idx >= 0) {
+                arc_cache[cache_idx].texture = tex;
+                arc_cache[cache_idx].radius = radius;
+                arc_cache[cache_idx].line_width = line_width;
+                arc_cache[cache_idx].start_angle = start_angle;
+                arc_cache[cache_idx].end_angle = end_angle;
+                arc_cache[cache_idx].color = color;
+                arc_cache[cache_idx].texture_size = size;
+                arc_cache[cache_idx].in_use = 1;
+                arc_cache[cache_idx].last_used = arc_cache_frame;
+            } else {
+                SDL_DestroyTexture(tex);
+            }
         }
     }
 }
