@@ -5,6 +5,7 @@
 #include "../../src/layout.h"
 #include "../../src/render.h"
 #include "../../src/theme_manager.h"
+#include "../../src/backend.h"
 #include "event.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -174,6 +175,17 @@ static var_t* mario_show(vm_t* vm, var_t* env, void* data)
     }
 
     return var_new_null(vm);
+}
+
+// 获取窗口大小
+static var_t* mario_get_window_size(vm_t* vm, var_t* env, void* data)
+{
+    int w = 0, h = 0;
+    backend_get_windowsize(&w, &h);
+    var_t* obj = var_new_block(vm);
+    var_add(obj, "width", var_new_int(vm, w));
+    var_add(obj, "height", var_new_int(vm, h));
+    return obj;
 }
 
 // 打印日志
@@ -687,6 +699,7 @@ void js_module_register_api(void)
     vm_reg_native(g_vm, yui_cls, "setBgColor(layerId, color)", mario_set_bg_color, NULL);
     vm_reg_native(g_vm, yui_cls, "hide(layerId)", mario_hide, NULL);
     vm_reg_native(g_vm, yui_cls, "show(layerId)", mario_show, NULL);
+    vm_reg_native(g_vm, yui_cls, "getWindowSize()", mario_get_window_size, NULL);
     vm_reg_native(g_vm, yui_cls, "renderFromJson(layerId, json)", mario_render_from_json, NULL);
     vm_reg_native(g_vm, yui_cls, "update(jsonString)", mario_update, NULL);
     vm_reg_native(g_vm, yui_cls, "log(...)", mario_log, NULL);
