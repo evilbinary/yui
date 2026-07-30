@@ -9,13 +9,86 @@
     "onResize": "@onWindowResize"
   },
   "icon": "app/db/icon.png",
-  "layout": { "type": "absolute" },
+  "layout": { "type": "vertical" },
   "style": {
     "titleBarBgColor": "#1E1E2E",
     "color": "#CDD6F4",
     "bgColor": "#1E1E2E"
   },
   "children": [
+    {
+      "id": "MenuBar",
+      "type": "View",
+      "size": [900, 36],
+      "style": {
+        "bgColor": "#1E1E2E"
+      },
+      "layout": {
+        "type": "horizontal"
+      },
+      "children": [
+       {
+        "id": "fileMenuPopup",
+        "type": "Menu",
+        "size": [40, 204],
+        "text": "文件",
+        "fontSize": 12,
+        "style": {
+          "itemHeight": 29
+        },
+        "items": [
+          { "text": "新建查询", "onClick": "@onNewTab" },
+          { "text": "打开文件", "onClick": "@onOpen" },
+          { "text": "保存文件", "onClick": "@onSave" },
+          { "text": "导出 CSV", "onClick": "@onExportCsv" },
+          { "separator": true },
+          { "text": "退出", "onClick": "onExit" }
+        ],
+        "events": {
+              "onSelect": "@handleMenuClick"
+          }
+      },
+      {
+        "id": "dbMenuPopup",
+        "type": "Menu",
+        "size": [40, 175],
+        "text": "数据库",
+        "fontSize": 12,
+        "style": {
+          "itemHeight": 29
+        },
+        "items": [
+          { "text": "新建连接", "onClick": "onNewConnection" },
+          { "text": "连接数据库", "onClick": "connectDb" },
+          { "text": "断开连接", "onClick": "disconnectDb" },
+          { "separator": true },
+          { "text": "导入数据库", "onClick": "onImportDb" }
+        ],
+        "events": {
+              "onSelect": "@handleMenuClick"
+          }
+      },
+      {
+        "id": "settingsMenuPopup",
+        "type": "Menu",
+        "size": [40, 88],
+        "text": "设置",
+        "fontSize": 12,
+        "style": {
+          "itemHeight": 29
+        },
+        "items": [
+          { "text": "偏好设置", "onClick": "onOpenSettings" },
+          { "separator": true },
+          { "text": "关于", "onClick": "onAbout" }
+        ],
+        "events": {
+              "onSelect": "@handleMenuClick"
+          }
+      }
+      ]
+    },
+
         {
           "id": "mainContent",
         "type": "View",
@@ -418,68 +491,6 @@
             ]
           }
       ]
-    },
-    {
-      "id": "fileMenuPopup",
-      "type": "Menu",
-      "position": [0, 0],
-      "size": [40, 204],
-      "text": "文件",
-      "fontSize": 12,
-      "style": {
-        "itemHeight": 29
-      },
-      "items": [
-        { "text": "新建查询", "onClick": "@onNewTab" },
-        { "text": "打开文件", "onClick": "@onOpen" },
-        { "text": "保存文件", "onClick": "@onSave" },
-        { "text": "导出 CSV", "onClick": "@onExportCsv" },
-        { "separator": true },
-        { "text": "退出", "onClick": "onExit" }
-      ],
-      "events": {
-            "onSelect": "@handleMenuClick"
-        }
-    },
-    {
-      "id": "dbMenuPopup",
-      "type": "Menu",
-      "position": [80, 0],
-      "size": [40, 175],
-      "text": "数据库",
-      "fontSize": 12,
-      "style": {
-        "itemHeight": 29
-      },
-      "items": [
-        { "text": "新建连接", "onClick": "onNewConnection" },
-        { "text": "连接数据库", "onClick": "connectDb" },
-        { "text": "断开连接", "onClick": "disconnectDb" },
-        { "separator": true },
-        { "text": "导入数据库", "onClick": "onImportDb" }
-      ],
-      "events": {
-            "onSelect": "@handleMenuClick"
-        }
-    },
-    {
-      "id": "settingsMenuPopup",
-      "type": "Menu",
-      "position": [164, 0],
-      "size": [40, 88],
-      "text": "设置",
-      "fontSize": 12,
-      "style": {
-        "itemHeight": 29
-      },
-      "items": [
-        { "text": "偏好设置", "onClick": "onOpenSettings" },
-        { "separator": true },
-        { "text": "关于", "onClick": "onAbout" }
-      ],
-      "events": {
-            "onSelect": "@handleMenuClick"
-        }
     },
     {
       "id": "statusBar",
