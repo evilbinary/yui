@@ -256,6 +256,7 @@ function onToggleDebugBoxes() {
 
 var _gameOrigThemeApply = null;
 var _gameIsRunning = false;
+var _prevThemeName = null;
 
 function onGameDemoLoad() {
     gScore = 0;
@@ -266,6 +267,16 @@ function onGameDemoLoad() {
         print("Game API missing");
         return;
     }
+
+    // 保存当前主题，切换到游戏主题（View背景透明）
+    if (typeof Theme !== "undefined") {
+        var cur = Theme.getCurrent();
+        _prevThemeName = cur ? cur.name : "developer-terminal";
+        Theme.load("app/lib/themes/game.json", "game");
+        Theme.setCurrent("game");
+        Theme.apply();
+    }
+
     Game.onTrigger = onTrigger;
     if (Game.debug && Game.debug.setBoxes) {
         Game.debug.setBoxes(0);

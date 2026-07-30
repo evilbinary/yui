@@ -187,6 +187,11 @@ function onDemoClick(layerId) {
 
 function onBackClick() {
     if (typeof _gameIsRunning !== "undefined") _gameIsRunning = false;
+    // 恢复之前的主题
+    if (typeof _prevThemeName !== "undefined" && _prevThemeName && typeof Theme !== "undefined") {
+        Theme.setCurrent(_prevThemeName);
+        Theme.apply();
+    }
     if (currentAppId) YUI.hide(currentAppId);
     YUI.update({ target: "page_outlet", change: { children: null } });
     YUI.hide("page_outlet");

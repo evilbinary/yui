@@ -582,7 +582,7 @@ void theme_merge_style(ThemeRule* rule, Layer* layer) {
     }
     
     // 背景颜色（主题总是覆盖图层背景色）
-    if (rule->bg_color.a > 0) {
+    {
         printf("[Theme] Applying bg_color to layer id='%s' (rule bg_color RGBA=%d,%d,%d,%d, old bg_color RGBA=%d,%d,%d,%d)\n", 
                layer->id, rule->bg_color.r, rule->bg_color.g, rule->bg_color.b, rule->bg_color.a,
                layer->bg_color.r, layer->bg_color.g, layer->bg_color.b, layer->bg_color.a);
