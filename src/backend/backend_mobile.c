@@ -327,104 +327,76 @@ static void mobile_draw_arc_phys(int center_x, int center_y, int radius,
     float half_w = (float)line_width * 0.5f;
     float r_inner = (float)radius - half_w;
     float r_outer = (float)radius + half_w;
-    float start_rad = (start_angle - 90.0f) * (float)M_PI / 180.0f;
-    float end_rad = (end_angle - 90.0f) * (float)M_PI / 180.0f;
     float sweep_deg = end_angle - start_angle;
-    int extent;
-    int min_x;
-    int min_y;
-    int max_x;
-    int max_y;
-    int py;
-    int is_full_circle;
+    int segments;
+    float step_rad;
+    float start_rad;
+    int vert_count;
+    float* verts;
+    GLint offset_loc;
+    GLint scale_loc;
+    GLint color_loc;
+    GLint pos_loc;
 
-    if (radius <= 0 || line_width <= 0) {
+    if (radius <= 0 || line_width <= 0 || !g_egl_ready) {
         return;
     }
     if (r_inner < 0.0f) {
         r_inner = 0.0f;
     }
 
-    while (end_rad < start_rad) {
-        end_rad += 2.0f * (float)M_PI;
-    }
     while (sweep_deg <= 0.0f) {
         sweep_deg += 360.0f;
     }
-    is_full_circle = sweep_deg >= 359.0f;
 
-    extent = (int)(r_outer + 2.0f);
-    min_x = center_x - extent;
-    min_y = center_y - extent;
-    max_x = center_x + extent;
-    max_y = center_y + extent;
+    /* ~2 degree segments for smoothness */
+    segments = (int)(sweep_deg * 0.5f) + 1;
+    if (segments < 4) segments = 4;
+    if (segments > 360) segments = 360;
 
+    step_rad = sweep_deg * (float)M_PI / 180.0f / (float)(segments - 1);
+    start_rad = (start_angle - 90.0f) * (float)M_PI / 180.0f;
+
+    /* Build triangle strip (outer, inner pairs) pre-transformed to clip space */
+    vert_count = segments * 2;
+    verts = (float*)malloc((size_t)(vert_count * 2) * sizeof(float));
+    if (!verts) return;
+
+    for (int i = 0; i < segments; i++) {
+        float a = start_rad + step_rad * (float)i;
+        float cos_a = cosf(a);
+        float sin_a = sinf(a);
+        float ox = (float)center_x + r_outer * cos_a;
+        float oy = (float)center_y + r_outer * sin_a;
+        float ix = (float)center_x + r_inner * cos_a;
+        float iy = (float)center_y + r_inner * sin_a;
+
+        verts[i * 4 + 0] = -1.0f + 2.0f * ox / (float)g_window_w;
+        verts[i * 4 + 1] =  1.0f - 2.0f * oy / (float)g_window_h;
+        verts[i * 4 + 2] = -1.0f + 2.0f * ix / (float)g_window_w;
+        verts[i * 4 + 3] =  1.0f - 2.0f * iy / (float)g_window_h;
+    }
+
+    /* Single draw call for the entire arc */
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    for (py = min_y; py <= max_y; py++) {
-        int px;
-        for (px = min_x; px <= max_x; px++) {
-            float dx = (float)px - (float)center_x + 0.5f;
-            float dy = (float)py - (float)center_y + 0.5f;
-            float dist = sqrtf(dx * dx + dy * dy);
-            float angle;
-            float angle_aa = 1.0f;
-            float radial_aa = 1.0f;
-            float final_alpha;
-            unsigned char a;
+    offset_loc = glGetUniformLocation(g_color_program, "uOffset");
+    scale_loc = glGetUniformLocation(g_color_program, "uScale");
+    color_loc = glGetUniformLocation(g_color_program, "uColor");
+    pos_loc = glGetAttribLocation(g_color_program, "aPos");
 
-            if (dist < r_inner - 1.0f || dist > r_outer + 1.0f) {
-                continue;
-            }
+    glUseProgram(g_color_program);
+    glUniform2f(offset_loc, 0.0f, 0.0f);
+    glUniform2f(scale_loc, 1.0f, 1.0f);
+    glUniform4f(color_loc, color.r / 255.0f, color.g / 255.0f,
+                color.b / 255.0f, color.a / 255.0f);
+    glEnableVertexAttribArray((GLuint)pos_loc);
+    glVertexAttribPointer((GLuint)pos_loc, 2, GL_FLOAT, GL_FALSE, 0, verts);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, vert_count);
+    glDisableVertexAttribArray((GLuint)pos_loc);
 
-            angle = atan2f(dy, dx);
-            while (angle < start_rad) {
-                angle += 2.0f * (float)M_PI;
-            }
-            while (angle > start_rad + 2.0f * (float)M_PI) {
-                angle -= 2.0f * (float)M_PI;
-            }
-
-            if (!is_full_circle) {
-                float pixel_angle = 1.0f / (dist > 0.0f ? dist : 1.0f);
-                if (angle < start_rad + pixel_angle) {
-                    angle_aa = (angle - start_rad) / pixel_angle;
-                } else if (angle > end_rad - pixel_angle) {
-                    angle_aa = (end_rad - angle) / pixel_angle;
-                } else if (angle > end_rad) {
-                    continue;
-                }
-                if (angle_aa <= 0.0f) {
-                    continue;
-                }
-                if (angle_aa > 1.0f) {
-                    angle_aa = 1.0f;
-                }
-            } else if (angle > end_rad) {
-                continue;
-            }
-
-            if (dist < r_inner) {
-                radial_aa = 1.0f - (r_inner - dist);
-            } else if (dist > r_outer) {
-                radial_aa = 1.0f - (dist - r_outer);
-            }
-            if (radial_aa <= 0.0f) {
-                continue;
-            }
-            if (radial_aa > 1.0f) {
-                radial_aa = 1.0f;
-            }
-
-            final_alpha = angle_aa * radial_aa;
-            a = (unsigned char)(final_alpha * (float)color.a);
-            if (a == 0) {
-                continue;
-            }
-            mobile_draw_pixel_phys(px, py, color.r, color.g, color.b, a);
-        }
-    }
+    free(verts);
 }
 
 static void mobile_flip_rows(unsigned char* pixels, int w, int h, int stride) {
