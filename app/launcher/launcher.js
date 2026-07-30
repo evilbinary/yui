@@ -105,18 +105,17 @@ function buildGrid(gridId, demos) {
         var d = demos[i];
         var key = "dm_" + i + "_" + d._cat;
         DemoMap[key] = d;
-        var icon = d.icon || d.title.charAt(0).toUpperCase();
         YUI.renderFromJson(gridId, JSON.stringify({
             id: key,
-            type: "View",
+            type: "Button",
             size: [CELL_SIZE, CELL_SIZE],
             style: { bgColor: "#2a2a3a", borderRadius: 8 },
-            layout: { type: "vertical", spacing: 2, padding: [6,4,4,4], align: "center", justifyContent: "center" },
-            events: { onClick: "@onDemoClick" },
-            children: [
-                { id: key + "_ic", type: "Label", text: icon, fontSize: 32, textAlign: "center" },
-                { id: key + "_lb", type: "Label", text: d.title, fontSize: 10, textAlign: "center" }
-            ]
+            icon: d.icon || d.title.charAt(0).toUpperCase(),
+            text: d.title,
+            iconAlign: "center",
+            iconSize: 52,
+            fontSize: 20,
+            events: { onClick: "@onDemoClick" }
         }), true);
         YUI.show(key);
     }
