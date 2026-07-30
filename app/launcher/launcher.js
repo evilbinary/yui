@@ -113,8 +113,9 @@ function buildGrid(gridId, demos) {
             icon: d.icon || d.title.charAt(0).toUpperCase(),
             text: d.title,
             iconAlign: "center",
-            iconSize: 52,
-            fontSize: 20,
+            iconSize: 42,
+            iconGap:18,
+            fontSize: 18,
             events: { onClick: "@onDemoClick" }
         }), true);
         YUI.show(key);
