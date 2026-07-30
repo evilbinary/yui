@@ -9,7 +9,7 @@
     "onResize": "@onWindowResize"
   },
   "icon": "app/db/icon.png",
-  "layout": { "type": "vertical"},
+  "layout": { "type": "absolute" },
   "style": {
     "titleBarBgColor": "#1E1E2E",
     "color": "#CDD6F4",

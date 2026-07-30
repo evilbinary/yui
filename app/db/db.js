@@ -655,6 +655,7 @@ function onPrefNavResults() { setPrefNav("results"); }
 function onPrefNavConnection() { setPrefNav("connection"); }
 
 function onOpenSettings() {
+    YUI.log('onOpenSettings');
     themeBeforePrefs = currentTheme;
     pendingPrefTheme = currentTheme;
     var auto = yui.find("prefAutoConnect");
