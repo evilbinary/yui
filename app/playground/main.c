@@ -75,7 +75,7 @@ int main(int argc, char* argv[]) {
     int auto_test = 0;
     int auto_frames = 90;
     int headless = -1; /* -1 unset, 0 show, 1 hide */
-    char* json_path = "app/playground/app.json";
+    char* json_path = "app/launcher/app.json";
     const char* auto_env;
     const char* frames_env;
     const char* headless_env;

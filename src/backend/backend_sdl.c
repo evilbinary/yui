@@ -1525,7 +1525,7 @@ int backend_init(){
         return -1;
     }
 
-    SDL_SetWindowMinimumSize(window, 360, 640);
+    SDL_SetWindowMinimumSize(window, 900, 720);
 
     if (window && backend_is_headless()) {
         SDL_HideWindow(window);
