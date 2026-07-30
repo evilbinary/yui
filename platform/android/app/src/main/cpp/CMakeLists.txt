@@ -26,6 +26,7 @@ import_yui_static(yaml2json "libyaml2json.a")
 import_yui_static(quickjs "libquickjs.a")
 import_yui_static(jsmodule "libjsmodule-quickjs.a")
 import_yui_static(socket "libsocket.a")
+import_yui_static(tsm "libtsm.a")
 
 add_library(yui_android_jni SHARED
     "${YUI_REPO_ROOT}/platform/android/jni/yui_bridge.cpp"
@@ -57,6 +58,7 @@ target_link_libraries(yui_android_jni
     jsmodule
     quickjs
     socket
+    tsm
     yaml2json
     yaml
     cjson
