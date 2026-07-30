@@ -12,8 +12,11 @@ var debugMode = false;
 function init() {
     YUI.log("Reader app initializing...");
     
-    // 应用初始主题
-    applyTheme("light");
+    // 加载主题
+    Theme.load("app/lib/themes/light.json");
+    Theme.load("app/lib/themes/dark.json");
+    Theme.setCurrent("light");
+    Theme.apply();
     
     // 加载初始书籍
     loadBook("book1.txt", 1);
@@ -357,11 +360,8 @@ function toggleTheme() {
 function applyTheme(themeName) {
     YUI.log("Applying theme: " + themeName);
     
-    // 使用YUI的主题API
-    const themePath = "app/reader/reader-theme-" + themeName + ".json";
-    YUI.themeLoad(themePath);
-    YUI.themeSetCurrent(themeName);
-    YUI.themeApplyToTree();
+    Theme.setCurrent(themeName);
+    Theme.apply();
     
     YUI.log("Theme applied: " + themeName);
 }
