@@ -1,5 +1,6 @@
 {
     "id": "readerApp",
+    "icon": "📖",
     "title": "Reader",
     "type": "View",
     "size": [800, 600],

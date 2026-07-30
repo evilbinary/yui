@@ -1,5 +1,6 @@
 {
   "id": "dbEditor",
+  "icon": "🗄️",
   "text": "DB",
   "type": "View",
   "size": [900, 600],

@@ -1,5 +1,6 @@
 {
     "id": "cameraApp",
+    "icon": "📷",
     "type": "View",
     "size": [480, 640],
     "style": {

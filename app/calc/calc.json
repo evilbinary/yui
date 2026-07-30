@@ -1,5 +1,6 @@
 {
     "id": "calculatorApp",
+    "icon": "🧮",
     "type": "View",
     "theme": "dark",
     "js": ["calc.js"],
