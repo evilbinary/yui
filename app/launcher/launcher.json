@@ -34,17 +34,16 @@
           "id": "theme_select",
           "type": "Select",
           "size": [100, 28],
-          "items": [
-            { "value": "developer-terminal", "text": "Terminal" },
-            { "value": "dark", "text": "Dark" },
-            { "value": "light", "text": "Light" },
-            { "value": "mocha", "text": "Mocha" }
-          ],
-          "value": "developer-terminal",
           "selectConfig": {
             "fontSize": 11,
             "itemHeight": 24,
-            "maxVisibleItems": 8
+            "maxVisibleItems": 8,
+            "items": [
+              { "value": "developer-terminal", "text": "Terminal" },
+              { "value": "dark", "text": "Dark" },
+              { "value": "light", "text": "Light" },
+              { "value": "mocha", "text": "Mocha" }
+            ]
           },
           "events": {
             "onChange": "@onThemeSelect"
