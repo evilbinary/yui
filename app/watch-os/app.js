@@ -109,7 +109,7 @@ function onWatchLoad() {
     initWatchThemes();
 
     Router.init({
-        outlet: "page_outlet",
+        outlet: "watch_page_outlet",
         routes: initWatchApps()
     });
 
@@ -383,7 +383,7 @@ function swipeNavigate(path, direction) {
     YUI.update({
         target: layerId,
         change: {
-            position: [startX, 24],
+            position: [startX, 0],
             animation: {
                 duration: 0.28,
                 easing: "easeOut",
