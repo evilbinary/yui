@@ -127,6 +127,7 @@ function readConnectionForm() {
     dbConfig.database = getInputText("connDatabaseInput");
     var checkbox = yui.find("connSSLCheckbox");
     dbConfig.ssl = checkbox ? checkbox.data : false;
+    print("SSL checkbox data: " + (checkbox ? checkbox.data : "null") + ", ssl=" + dbConfig.ssl);
 }
 
 function connectDb() {

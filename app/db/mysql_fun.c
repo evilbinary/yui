@@ -68,6 +68,9 @@ static void* handle_mysql_connect(void* data) {
     int port = json_get_int(json, "port", 3306);
     int ssl  = json_get_bool(json, "ssl", 0);  // 默认禁用 SSL
 
+    printf("MySQL connect params: host=%s, port=%d, user=%s, db=%s, ssl=%d\n",
+           host, port, user, db ? db : "(null)", ssl);
+
     // 数据库可以为空（连接后再选择）
     if (!host || !user || !pass) {
         cJSON_Delete(json);
@@ -83,13 +86,19 @@ static void* handle_mysql_connect(void* data) {
     }
 
     // 根据配置决定是否启用 SSL
-    // MySQL 5.7+ 默认尝试 SSL，如果服务器不支持会回退到非 SSL
-    // ssl=true 时调用 mysql_ssl_set 明确启用 SSL
-    if (ssl) {
-        // 启用 SSL（使用默认证书验证）
+    // MariaDB Connector/C 3.4.0+ 默认启用 MYSQL_OPT_SSL_VERIFY_SERVER_CERT
+    // 需要显式禁用 SSL 验证才能连接不支持 SSL 的服务器
+    if (!ssl) {
+        // 禁用 SSL
+        printf("SSL disabled: disabling SSL verification\n");
+        my_bool verify_off = 0;
+        mysql_options(g_mysql_conn, MYSQL_OPT_SSL_VERIFY_SERVER_CERT, &verify_off);
+        // 对于 MariaDB 3.4.1+，可以使用环境变量 MARIADB_TLS_DISABLE_PEER_VERIFICATION=1
+    } else {
+        // 启用 SSL
+        printf("SSL enabled: calling mysql_ssl_set\n");
         mysql_ssl_set(g_mysql_conn, NULL, NULL, NULL, NULL, NULL);
     }
-    // ssl=false 时不调用 mysql_ssl_set，让 MySQL 使用默认行为
 
     // 连接数据库（db 可以为 NULL）
     MYSQL* ret = mysql_real_connect(g_mysql_conn, host, user, pass, db && db[0] ? db : NULL, port, NULL, 0);
