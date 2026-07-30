@@ -1,29 +1,37 @@
 #ifndef YUI_TEXT_SYNTAX_H
 #define YUI_TEXT_SYNTAX_H
 
-#if !defined(YUI_TYPE_H) && !defined(YUI_BACKEND_MOBILE)
-#ifdef D_SDL
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_ttf.h>
-#else
-#include <SDL.h>
-#include <SDL_ttf.h>
-#endif
-
+#if !defined(YUI_TYPE_H)
+// 定义 Color 和 DFont 类型（如果尚未定义）
+#ifdef YUI_BACKEND_MOBILE
+// Mobile 后端：自定义 Color 类型
 #ifndef SDL2
 #define SDL2 1
 #endif
-#if SDL2
-#define Color SDL_Color
-#else
 typedef struct Color {
     unsigned char r;
     unsigned char g;
     unsigned char b;
     unsigned char a;
 } Color;
+#define DFont void  // Mobile 后端使用自己的字体实现
+#elif defined(D_SDL)
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_ttf.h>
+#ifndef SDL2
+#define SDL2 1
 #endif
+#define Color SDL_Color
 #define DFont TTF_Font
+#else
+#include <SDL.h>
+#include <SDL_ttf.h>
+#ifndef SDL2
+#define SDL2 1
+#endif
+#define Color SDL_Color
+#define DFont TTF_Font
+#endif
 #endif /* !YUI_TYPE_H */
 
 #ifdef __cplusplus

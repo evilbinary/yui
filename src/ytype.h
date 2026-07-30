@@ -307,6 +307,13 @@ typedef struct Rect {
 #define MAX_PATH 1024
 #define MAX_TEXT 256
 
+// 图标对齐常量（用于 Label/Button/Input 等组件）
+#define ICON_ALIGN_LEFT    0
+#define ICON_ALIGN_RIGHT   1
+#define ICON_ALIGN_TOP     2
+#define ICON_ALIGN_BOTTOM  3
+#define ICON_ALIGN_CENTER  4
+
 // ====================== 图层数据结构 ======================
 typedef enum {
     LAYOUT_ABSOLUTE,
@@ -333,6 +340,7 @@ typedef enum {
 typedef enum {
     VISIBLE,
     IN_VISIBLE,
+    VISIBLE_ALL,
 } VisibleType;
 
 

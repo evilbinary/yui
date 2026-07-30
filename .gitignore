@@ -41,3 +41,7 @@ scripts/compare_gallery_perf.py
 scripts/gallery_perf_compare.json
 trace.etl
 profile.md
+profile.txt
+profile1.txt
+perf.txt
+app/db/db-config.json

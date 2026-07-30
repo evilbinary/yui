@@ -1,12 +1,10 @@
 {
     "id": "readerApp",
+    "icon": "📖",
     "title": "Reader",
     "type": "View",
-    "size": [800, 600],
-    "style": {
-        "bgColor": "#FFFFFF"
-    },
-    "js": ["./reader.js"],
+    "size": [0, 0],
+    "js": ["../lib/theme.js", "./reader.js"],
     "initialize": "initialize",
     "layout": {
         "type": "vertical",
@@ -16,17 +14,12 @@
         {
             "id": "toolbar",
             "type": "View",
-            "size": [800, 60],
+            "height": 60,
             "layout": {
                 "type": "horizontal",
                 "spacing": 10,
                 "padding": [15, 10, 15, 10],
                 "justifyContent": "space-between"
-            },
-            "style": {
-                "bgColor": "#F5F5F5",
-                "borderBottomWidth": 1,
-                "borderBottomColor": "#E0E0E0"
             },
             "children": [
                 {
@@ -39,15 +32,8 @@
                         { "value": "book3.txt", "text": "第三章：高潮" }
                     ],
                     "value": "book1.txt",
-                    "style": {
-                        "fontSize": 14,
-                        "borderRadius": 4,
-                        "borderWidth": 1,
-                        "borderColor": "#CCCCCC"
-                    },
                     "events":{
                         "onChange": "@loadBookClick"
-
                     }
                 },
                 {
@@ -68,7 +54,6 @@
                     "size": [50, 30],
                     "style": {
                         "fontSize": 12,
-                        "bgColor": "#E0E0E0",
                         "borderRadius": 4
                     },
                     "events": {
@@ -82,7 +67,6 @@
                     "size": [40, 30],
                     "style": {
                         "fontSize": 12,
-                        "bgColor": "#E0E0E0",
                         "borderRadius": 4
                     },
                     "events": {
@@ -94,20 +78,17 @@
         {
             "id": "contentArea",
             "type": "View",
-            "size": [800, 490],
+            "flex": 1,
             "layout": {
                 "type": "vertical",
                 "padding": [20, 0, 40, 80]
-            },
-            "style": {
-                "bgColor": "#FFFFFF"
             },
             "children": [
                 {
                     "id": "chapterTitle",
                     "type": "Label",
                     "text": "第一章：开始",
-                    "size": [720, 30],
+                    "height": 30,
                     "style": {
                         "fontSize": 24,
                         "fontWeight": "bold",
@@ -118,7 +99,7 @@
                 {
                     "id": "contentScroll",
                     "type": "Scroll",
-                    "size": [720, 380],
+                    "flex": 1,
                     "layout": {
                         "type": "vertical",
                         "padding": [0, 0, 0, 0]
@@ -128,7 +109,6 @@
                             "id": "contentText",
                             "type": "Text",
                             "text": "正在加载书籍内容...",
-                            "size": [720, 360],
                             "multiline": true,
                             "scrollable": 1,
                             "editable": false,
@@ -144,10 +124,9 @@
                     "id": "pageIndicator",
                     "type": "Label",
                     "text": "第 1 页，共 1 页",
-                    "size": [720, 20],
+                    "height": 20,
                     "style": {
                         "fontSize": 14,
-                        "color": "#666666",
                         "textAlign": "center",
                         "marginTop": 20
                     }
@@ -157,17 +136,12 @@
         {
             "id": "bottomBar",
             "type": "View",
-            "size": [800, 50],
+            "height": 50,
             "layout": {
                 "type": "horizontal",
                 "spacing": 20,
                 "padding": [15, 5, 15, 5],
                 "justifyContent": "space-between"
-            },
-            "style": {
-                "bgColor": "#F5F5F5",
-                "borderTopWidth": 1,
-                "borderTopColor": "#E0E0E0"
             },
             "children": [
                 {
@@ -188,8 +162,7 @@
                             "size": [60, 25],
                             "style": {
                                 "fontSize": 13,
-                                "borderRadius": 4,
-                                "bgColor": "#E0E0E0"
+                                "borderRadius": 4
                             },
                             "events": {
                                 "onClick": "@goToPrevPage"
@@ -202,7 +175,6 @@
                             "size": [40, 20],
                             "style": {
                                 "fontSize": 13,
-                                "color": "#666666",
                                 "textAlign": "center"
                             }
                         },
@@ -213,8 +185,7 @@
                             "size": [60, 25],
                             "style": {
                                 "fontSize": 14,
-                                "borderRadius": 4,
-                                "bgColor": "#E0E0E0"
+                                "borderRadius": 4
                             },
                             "events": {
                                 "onClick": "@goToNextPage"
@@ -242,7 +213,6 @@
                                 "fontSize": 14,
                                 "fontWeight": "bold",
                                 "borderRadius": 12,
-                                "bgColor": "#E0E0E0",
                                 "textAlign": "center"
                             },
                             "events": {
@@ -256,7 +226,6 @@
                             "size": [40, 20],
                             "style": {
                                 "fontSize": 13,
-                                "color": "#666666",
                                 "textAlign": "center"
                             }
                         },
@@ -269,7 +238,6 @@
                                 "fontSize": 16,
                                 "fontWeight": "bold",
                                 "borderRadius": 15,
-                                "bgColor": "#E0E0E0",
                                 "textAlign": "center"
                             },
                             "events": {
@@ -281,41 +249,11 @@
                 {
                     "id": "progressBar",
                     "type": "Progress",
-                    "size": [200, 40],
-                    "value": 0,
-                    "style": {
-                        "bgColor": "#E0E0E0",
-                        "fillColor": "#1DB954",
-                        "borderRadius": 3
-                    }
+                    "width": 200,
+                    "height": 40,
+                    "value": 0
                 }
             ]
         }
-    ],
-    "themes": {
-        "light": {
-            "bgColor": "#FFFFFF",
-            "contentBgColor": "#FFFFFF",
-            "toolbarBgColor": "#F5F5F5",
-            "bottomBarBgColor": "#F5F5F5",
-            "textColor": "#333333",
-            "secondaryTextColor": "#666666",
-            "borderColor": "#E0E0E0",
-            "buttonBgColor": "#E0E0E0",
-            "buttonTextColor": "#333333",
-            "progressColor": "#1DB954"
-        },
-        "dark": {
-            "bgColor": "#121212",
-            "contentBgColor": "#121212",
-            "toolbarBgColor": "#1E1E1E",
-            "bottomBarBgColor": "#1E1E1E",
-            "textColor": "#E0E0E0",
-            "secondaryTextColor": "#AAAAAA",
-            "borderColor": "#333333",
-            "buttonBgColor": "#333333",
-            "buttonTextColor": "#E0E0E0",
-            "progressColor": "#4CAF50"
-        }
-    }
+    ]
 }

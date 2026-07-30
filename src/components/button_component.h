@@ -12,6 +12,8 @@ typedef struct {
     char* icon_text;       // 图标文本 (emoji等)
     struct Texture* icon_tex;  // 缓存的图标纹理
     int icon_size;         // 图标最大尺寸 (0 = 自动)
+    int icon_align;        // 图标对齐方式: ICON_ALIGN_*
+    int icon_gap;          // 图标与文字间距
     int bg_transparent;    // bgColor 显式设为 transparent
     Color hover_text_color; /* a==0 表示未设置 */
     int press_x;           // 按下/触摸起点

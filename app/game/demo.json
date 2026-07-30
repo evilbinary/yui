@@ -1,5 +1,6 @@
 {
   "id": "game_demo_root",
+  "icon": "🎮",
   "type": "View",
   "size": [800, 480],
   "autoTest": false,

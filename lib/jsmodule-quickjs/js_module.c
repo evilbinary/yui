@@ -276,16 +276,31 @@ static JSValue js_show(JSContext *ctx, JSValueConst this_val, int argc, JSValueC
 
     size_t len;
     const char* layer_id = JS_ToCStringLen(ctx, &len, argv[0]);
+    int recursive = 0;
+    if (argc >= 2) {
+        recursive = JS_ToBool(ctx, argv[1]);
+    }
 
     if (layer_id && g_layer_root) {
         struct Layer* layer = find_layer_by_id(g_layer_root, layer_id);
         if (layer) {
-            layer_show(layer);
+            layer_show(layer, recursive);
         }
     }
 
     JS_FreeCString(ctx, layer_id);
     return JS_UNDEFINED;
+}
+
+// 获取窗口大小
+static JSValue js_get_window_size(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    int w = 0, h = 0;
+    backend_get_windowsize(&w, &h);
+    JSValue obj = JS_NewObject(ctx);
+    JS_DefinePropertyValueStr(ctx, obj, "width", JS_NewInt32(ctx, w), JS_PROP_ENUMERABLE);
+    JS_DefinePropertyValueStr(ctx, obj, "height", JS_NewInt32(ctx, h), JS_PROP_ENUMERABLE);
+    return obj;
 }
 
 // 打印日志
@@ -1392,6 +1407,7 @@ void js_module_register_api(void)
     JS_SetPropertyStr(g_js_ctx, yui_obj, "setBgColor", JS_NewCFunction(g_js_ctx, js_set_bg_color, "setBgColor", 2));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "hide", JS_NewCFunction(g_js_ctx, js_hide, "hide", 1));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "show", JS_NewCFunction(g_js_ctx, js_show, "show", 1));
+    JS_SetPropertyStr(g_js_ctx, yui_obj, "getWindowSize", JS_NewCFunction(g_js_ctx, js_get_window_size, "getWindowSize", 0));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "renderFromJson", JS_NewCFunction(g_js_ctx, js_render_from_json, "renderFromJson", 3));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "update", JS_NewCFunction(g_js_ctx, js_update, "update", 1));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "dump", JS_NewCFunction(g_js_ctx, js_dump, "dump", 1));

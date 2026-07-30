@@ -1,0 +1,104 @@
+{
+  "id": "launcher_root",
+  "type": "View",
+  "size": [0, 0],
+  "assets": "app/assets",
+  "font": "Roboto-Regular.ttf",
+  "fontFallback": "NotoColorEmoji.ttf",
+  "js": ["../lib/theme.js", "launcher.js"],
+  "layout": { "type": "vertical", "spacing": 0, "padding": [0,0,0,0] },
+  "events": { "onLoad": "@onLauncherLoad" },
+  "children": [
+    {
+      "id": "launcher_toolbar",
+      "type": "View",
+      "height": 44,
+      "layout": { "type": "horizontal", "spacing": 6, "padding": [4, 12, 4, 12], "align": "center" },
+      "children": [
+        {
+          "id": "btn_back",
+          "type": "Button",
+          "text": "← Back",
+          "size": [64, 28],
+          "visible": false,
+          "events": { "onClick": "@onBackClick" }
+        },
+        {
+          "id": "launcher_title",
+          "type": "Label",
+          "text": "YUI Demo Launcher",
+          "flex": 1,
+          "fontSize": 16
+        },
+        {
+          "id": "theme_select",
+          "type": "Select",
+          "size": [100, 28],
+          "selectConfig": {
+            "fontSize": 11,
+            "itemHeight": 24,
+            "maxVisibleItems": 8,
+            "items": [
+              { "value": "developer-terminal", "text": "Terminal" },
+              { "value": "dark", "text": "Dark" },
+              { "value": "light", "text": "Light" },
+              { "value": "mocha", "text": "Mocha" }
+            ]
+          },
+          "events": {
+            "onChange": "@onThemeSelect"
+          }
+        }
+      ]
+    },
+    {
+      "id": "launcher_content",
+      "type": "View",
+      "scrollable": 1,
+      "flex": 1,
+      "layout": { "type": "vertical", "spacing": 8, "padding": [8, 12, 8, 12] },
+      "children": [
+        {
+          "id": "section_apps_title",
+          "type": "Label",
+          "text": "— Apps —",
+          "height": 20,
+          "fontSize": 13,
+          "bold": true
+        },
+        {
+          "id": "grid_apps",
+          "type": "Grid",
+          "width": 0,
+          "height": 0,
+          "layout": { "columns": 5, "gap": 8 },
+          "children": []
+        },
+        {
+          "id": "section_tests_title",
+          "type": "Label",
+          "text": "— Tests —",
+          "height": 20,
+          "fontSize": 13,
+          "bold": true
+        },
+        {
+          "id": "grid_tests",
+          "type": "Grid",
+          "width": 0,
+          "height": 0,
+          "layout": { "columns": 5, "gap": 8 },
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "page_outlet",
+      "type": "View",
+      "visible": false,
+      "flex": 1,
+      "layout": { "type": "vertical", "align": "center" },
+      "children": []
+    }
+  ]
+}

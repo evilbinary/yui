@@ -1,5 +1,6 @@
 {
   "id": "photoApp",
+  "icon": "📸",
   "text": "Photo AI",
   "type": "View",
   "size": [390, 844],

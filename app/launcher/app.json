@@ -1,0 +1,10 @@
+{
+  "type": "main",
+  "assets": "app/assets",
+  "font": "Roboto-Regular.ttf",
+  "fontFallback": "NotoColorEmoji.ttf",
+  "fontSize": "14",
+  "text": "YUI Launcher",
+  "size": [0, 0],
+  "source": "app/launcher/launcher.json"
+}

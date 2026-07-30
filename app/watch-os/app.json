@@ -1,5 +1,6 @@
 {
     "id": "watch_os",
+    "icon": "⌚",
     "type": "View",
     "variant": "watch-bezel",
     "assets": "app/assets",

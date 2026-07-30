@@ -276,10 +276,15 @@ void yui_resize(int width, int height) {
     if (!g_root) {
         return;
     }
+
+    g_root->rect.w = (int)(width / d);
+    g_root->rect.h = (int)(height / d);
+    layout_layer(g_root);
+
     memset(&we, 0, sizeof(we));
     we.type = WINDOW_RESIZED;
-    we.width = (int)(width / d);
-    we.height = (int)(height / d);
+    we.width = g_root->rect.w;
+    we.height = g_root->rect.h;
     handle_window_event(g_root, &we);
 }
 

@@ -1,5 +1,6 @@
 {
     "id": "shopping_app",
+    "icon": "🛒",
     "type": "View",
     "variant": "surface",
     "size": [390, 844],

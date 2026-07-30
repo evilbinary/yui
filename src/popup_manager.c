@@ -210,23 +210,76 @@ bool popup_manager_handle_pointer_event(PointerEvent* event) {
     if (!g_popup_manager || !event) {
         return false;
     }
-    
+
     if (!g_popup_manager->active_popups) {
         return false;
     }
-    
+
+    // 只在按下事件时检查是否需要关闭
+    bool should_check_close = (event->phase == POINTER_DOWN);
+
     PopupLayer* current = g_popup_manager->active_popups;
     bool block_main = false;
-    
+
+    // 先检查是否点击在所有 popup 外部
+    bool clicked_outside = should_check_close && event->button == SDL_BUTTON_LEFT;
+    if (clicked_outside) {
+        PopupLayer* check = g_popup_manager->active_popups;
+        while (check) {
+            if ((uintptr_t)check == 0xabababababababab ||
+                (uintptr_t)check == 0xfeeefeeefeeefeee) {
+                break;
+            }
+            Layer* popup_layer = check->layer;
+            if (popup_layer && popup_point_inside(popup_layer, event)) {
+                clicked_outside = false;
+                break;
+            }
+            check = check->next;
+        }
+    }
+
+    // 如果点击在外部，关闭所有 auto_close 的 popup
+    if (clicked_outside) {
+        PopupLayer* to_close[32];  // 最多关闭32个popup
+        int close_count = 0;
+
+        current = g_popup_manager->active_popups;
+        while (current && close_count < 32) {
+            if ((uintptr_t)current == 0xabababababababab ||
+                (uintptr_t)current == 0xfeeefeeefeeefeee) {
+                break;
+            }
+
+            if (current->auto_close) {
+                to_close[close_count++] = current;
+            }
+            current = current->next;
+        }
+
+        // 关闭这些 popup
+        for (int i = 0; i < close_count; i++) {
+            if (to_close[i]->close_callback) {
+                to_close[i]->close_callback(to_close[i]);
+            }
+            popup_manager_remove(to_close[i]->layer);
+        }
+
+        return false;  // 不阻止主界面处理事件
+    }
+
+    // 正常处理 popup 内的事件
+    current = g_popup_manager->active_popups;
+
     while (current) {
-        if ((uintptr_t)current == 0xabababababababab || 
+        if ((uintptr_t)current == 0xabababababababab ||
             (uintptr_t)current == 0xfeeefeeefeeefeee) {
             printf("ERROR: popup_manager_handle_pointer_event - detected freed memory pointer, clearing list\n");
             g_popup_manager->active_popups = NULL;
             g_popup_manager->top_popup = NULL;
             return false;
         }
-        
+
         PopupLayer* next = current->next;
         Layer* popup_layer = current->layer;
         PopupType popup_type = current->type;
@@ -246,10 +299,10 @@ bool popup_manager_handle_pointer_event(PointerEvent* event) {
                 block_main = true;
             }
         }
-        
+
         current = next;
     }
-    
+
     return block_main;
 }
 

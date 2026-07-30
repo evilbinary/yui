@@ -41,7 +41,7 @@ const char* layer_get_text(const Layer* layer) {
     return "";
 }
 
-int layer_show(Layer* layer) {
+int layer_show(Layer* layer, int recursive) {
     return 0;
 }
 

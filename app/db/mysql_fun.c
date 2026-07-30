@@ -19,6 +19,12 @@ static int json_get_int(cJSON* json, const char* key, int def) {
     return (item && cJSON_IsNumber(item)) ? item->valueint : def;
 }
 
+static int json_get_bool(cJSON* json, const char* key, int def) {
+    cJSON* item = cJSON_GetObjectItem(json, key);
+    if (item && cJSON_IsBool(item)) return cJSON_IsTrue(item);
+    return def;
+}
+
 static char* result_to_json(MYSQL_RES* result) {
     if (!result) return strdup("[]");
 
@@ -60,10 +66,15 @@ static void* handle_mysql_connect(void* data) {
     const char* pass = json_get_string(json, "password");
     const char* db   = json_get_string(json, "database");
     int port = json_get_int(json, "port", 3306);
+    int ssl  = json_get_bool(json, "ssl", 0);  // 默认禁用 SSL
 
-    if (!host || !user || !pass || !db) {
+    printf("MySQL connect params: host=%s, port=%d, user=%s, db=%s, ssl=%d\n",
+           host, port, user, db ? db : "(null)", ssl);
+
+    // 数据库可以为空（连接后再选择）
+    if (!host || !user || !pass) {
         cJSON_Delete(json);
-        return strdup("{\"success\":false,\"error\":\"Missing required fields\"}");
+        return strdup("{\"success\":false,\"error\":\"Missing required fields (host, user, password)\"}");
     }
 
     if (g_mysql_conn) { mysql_close(g_mysql_conn); g_mysql_conn = NULL; g_mysql_connected = 0; }
@@ -74,12 +85,28 @@ static void* handle_mysql_connect(void* data) {
         return strdup("{\"success\":false,\"error\":\"mysql_init failed\"}");
     }
 
-    MYSQL* ret = mysql_real_connect(g_mysql_conn, host, user, pass, db, port, NULL, 0);
+    // 根据配置决定是否启用 SSL
+    // MariaDB Connector/C 3.4.0+ 默认启用 MYSQL_OPT_SSL_VERIFY_SERVER_CERT
+    // 需要显式禁用 SSL 验证才能连接不支持 SSL 的服务器
+    if (!ssl) {
+        // 禁用 SSL
+        printf("SSL disabled: disabling SSL verification\n");
+        my_bool verify_off = 0;
+        mysql_options(g_mysql_conn, MYSQL_OPT_SSL_VERIFY_SERVER_CERT, &verify_off);
+        // 对于 MariaDB 3.4.1+，可以使用环境变量 MARIADB_TLS_DISABLE_PEER_VERIFICATION=1
+    } else {
+        // 启用 SSL
+        printf("SSL enabled: calling mysql_ssl_set\n");
+        mysql_ssl_set(g_mysql_conn, NULL, NULL, NULL, NULL, NULL);
+    }
+
+    // 连接数据库（db 可以为 NULL）
+    MYSQL* ret = mysql_real_connect(g_mysql_conn, host, user, pass, db && db[0] ? db : NULL, port, NULL, 0);
     if (ret) {
         cJSON_Delete(json);
         g_mysql_connected = 1;
         mysql_set_character_set(g_mysql_conn, "utf8mb4");
-        printf("MySQL: Connected to %s:%d db=%s\n", host, port, db);
+        printf("MySQL: Connected to %s:%d db=%s ssl=%s\n", host, port, db ? db : "(none)", ssl ? "true" : "false");
         return strdup("{\"success\":true}");
     } else {
         cJSON_Delete(json);

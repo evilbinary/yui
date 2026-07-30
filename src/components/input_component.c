@@ -330,6 +330,16 @@ InputComponent* input_component_create_from_json(Layer* layer, cJSON* json_obj) 
         input_component_set_max_length(layer->component, cJSON_GetObjectItem(json_obj, "maxLength")->valueint);
     }
 
+    // 解析password属性
+    if (cJSON_HasObjectItem(json_obj, "password")) {
+        cJSON* password_item = cJSON_GetObjectItem(json_obj, "password");
+        if (cJSON_IsBool(password_item)) {
+            component->password_mode = cJSON_IsTrue(password_item) ? 1 : 0;
+        } else if (cJSON_IsNumber(password_item)) {
+            component->password_mode = password_item->valueint != 0 ? 1 : 0;
+        }
+    }
+
     cJSON* events = cJSON_GetObjectItem(json_obj, "events");
     if (events && cJSON_HasObjectItem(events, "onChange")) {
         cJSON* on_change_obj = cJSON_GetObjectItem(events, "onChange");
@@ -476,8 +486,101 @@ int input_component_handle_key_event(Layer* layer,  KeyEvent* event) {
 
         case KEY_EVENT_DOWN: {
             int shift = event->data.key.mod & KMOD_SHIFT;
+            int ctrl = event->data.key.mod & (KMOD_CTRL
+#ifdef KMOD_GUI
+                | KMOD_GUI
+#endif
+            );
             int old_cursor = component->cursor_pos;
             switch (event->data.key.key_code) {
+                case SDLK_a:
+                    // Ctrl+A 全选
+                    if (ctrl) {
+                        component->selection_start = 0;
+                        component->selection_end = current_length;
+                        component->cursor_pos = current_length;
+                        view_changed = 1;
+                    }
+                    break;
+
+                case SDLK_c:
+                    // Ctrl+C 复制选中内容到剪贴板
+                    if (ctrl && component->selection_start != component->selection_end) {
+                        int start = component->selection_start < component->selection_end ?
+                                    component->selection_start : component->selection_end;
+                        int end = component->selection_start > component->selection_end ?
+                                  component->selection_start : component->selection_end;
+                        int len = end - start;
+                        char* selected_text = (char*)malloc(len + 1);
+                        if (selected_text) {
+                            strncpy(selected_text, buf + start, len);
+                            selected_text[len] = '\0';
+                            backend_set_clipboard_text(selected_text);
+                            free(selected_text);
+                        }
+                    }
+                    break;
+
+                case SDLK_v:
+                    // Ctrl+V 粘贴
+                    if (ctrl) {
+                        char* clipboard_text = backend_get_clipboard_text();
+                        if (clipboard_text) {
+                            // 如果有选中内容，先删除
+                            if (component->selection_start != component->selection_end) {
+                                int start = component->selection_start < component->selection_end ?
+                                            component->selection_start : component->selection_end;
+                                int end = component->selection_start > component->selection_end ?
+                                          component->selection_start : component->selection_end;
+
+                                memmove(buf + start, buf + end, current_length - end + 1);
+                                current_length -= (end - start);
+                                component->cursor_pos = start;
+                            }
+
+                            // 插入剪贴板内容
+                            int paste_len = strlen(clipboard_text);
+                            int available_space = component->max_length - current_length;
+                            int copy_len = paste_len < available_space ? paste_len : available_space;
+
+                            if (copy_len > 0) {
+                                memmove(buf + component->cursor_pos + copy_len,
+                                       buf + component->cursor_pos,
+                                       current_length - component->cursor_pos + 1);
+                                memcpy(buf + component->cursor_pos, clipboard_text, copy_len);
+                                component->cursor_pos += copy_len;
+                                text_changed = 1;
+                            }
+                            free(clipboard_text);
+                        }
+                    }
+                    break;
+
+                case SDLK_x:
+                    // Ctrl+X 剪切
+                    if (ctrl && component->selection_start != component->selection_end) {
+                        int start = component->selection_start < component->selection_end ?
+                                    component->selection_start : component->selection_end;
+                        int end = component->selection_start > component->selection_end ?
+                                  component->selection_start : component->selection_end;
+                        int len = end - start;
+
+                        // 复制到剪贴板
+                        char* selected_text = (char*)malloc(len + 1);
+                        if (selected_text) {
+                            strncpy(selected_text, buf + start, len);
+                            selected_text[len] = '\0';
+                            backend_set_clipboard_text(selected_text);
+                            free(selected_text);
+                        }
+
+                        // 删除选中内容
+                        memmove(buf + start, buf + end, current_length - end + 1);
+                        component->cursor_pos = start;
+                        text_changed = 1;
+                    }
+                    break;
+
                 case SDLK_BACKSPACE:
                     if (component->selection_start != component->selection_end) {
                         int start = component->selection_start < component->selection_end ?
@@ -562,10 +665,15 @@ int input_component_handle_key_event(Layer* layer,  KeyEvent* event) {
                 }
                 component->selection_start = component->cursor_pos;
                 component->selection_end = component->cursor_pos;
-            } else {
-                component->selection_start = component->cursor_pos;
-                component->selection_end = component->cursor_pos;
+            } else if (event->data.key.key_code == SDLK_BACKSPACE ||
+                       event->data.key.key_code == SDLK_DELETE) {
+                // 只有删除键才清除选区（复制/剪切/粘贴已经处理了）
+                if (!ctrl) {
+                    component->selection_start = component->cursor_pos;
+                    component->selection_end = component->cursor_pos;
+                }
             }
+            // 注意：Ctrl+A/C/V/X 不清除选区，保持选中状态
             view_changed = 1;
             break;
         }
@@ -705,6 +813,18 @@ void input_component_render(Layer* layer) {
     Color text_color = layer->color;
     const char* display_text = layer->text ? layer->text : "";
     int is_placeholder = 0;
+
+    // 密码遮罩：生成 • 字符串
+    char masked_text[256] = {0};
+    if (component->password_mode && display_text[0] != '\0' && strlen(display_text) < sizeof(masked_text)) {
+        size_t len = strlen(display_text);
+        for (size_t i = 0; i < len; i++) {
+            masked_text[i] = '*';  // 使用 • 字符作为遮罩
+        }
+        masked_text[len] = '\0';
+        display_text = masked_text;
+    }
+
     if ((!layer->text || layer->text[0] == '\0') && !HAS_STATE(layer, LAYER_STATE_FOCUSED) &&
         strlen(component->placeholder) > 0) {
         display_text = component->placeholder;

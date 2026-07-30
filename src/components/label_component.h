@@ -12,6 +12,10 @@ typedef struct {
     Uint32 hover_start;    // 鼠标进入的时间戳
     int hovering;          // 鼠标是否在组件上
     void* tooltip_popup;   // tooltip popup 引用 (PopupLayer*)
+    char* icon_text;       // 图标文本 (emoji等)
+    int icon_align;        // 图标对齐方式: ICON_ALIGN_*
+    int icon_size;         // 图标最大尺寸 (0 = 自动)
+    int icon_gap;          // 图标与文字间距
 } LabelComponent;
 
 // 函数声明
