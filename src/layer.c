@@ -9,6 +9,7 @@
 #include "backend.h"
 #include "component_registry.h"
 #include "log.h"
+#include "perf/perf.h"
 
 Layer* focused_layer = NULL;
 
@@ -1185,6 +1186,7 @@ void destroy_layer(Layer* layer) {
     }
 
     layer_free_strings(layer);
+    perf_layer_destroyed(layer);
     free(layer);
 }
 
