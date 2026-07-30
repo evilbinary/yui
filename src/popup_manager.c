@@ -222,7 +222,7 @@ bool popup_manager_handle_pointer_event(PointerEvent* event) {
     bool block_main = false;
 
     // 先检查是否点击在所有 popup 外部
-    bool clicked_outside = should_check_close && event->button == SDL_BUTTON_LEFT;
+    bool clicked_outside = should_check_close && (event->device == POINTER_DEVICE_TOUCH || event->button == SDL_BUTTON_LEFT);
     if (clicked_outside) {
         PopupLayer* check = g_popup_manager->active_popups;
         while (check) {
