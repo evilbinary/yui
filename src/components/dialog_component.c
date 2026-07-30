@@ -858,6 +858,17 @@ int dialog_component_handle_key_event(Layer* layer, KeyEvent* event) {
     }
 
     if (event->type == KEY_EVENT_DOWN) {
+        // 先转发给 template 的子图层
+        Layer* tmpl = component->layer;
+        if (tmpl && tmpl->children) {
+            for (int i = tmpl->child_count - 1; i >= 0; i--) {
+                Layer* child = tmpl->children[i];
+                if (child && child->handle_key_event) {
+                    if (child->handle_key_event(child, event)) return 1;
+                }
+            }
+        }
+
         switch (event->data.key.key_code) {
             case 13: // 回车键
                 // 触发默认按钮
@@ -925,6 +936,33 @@ int dialog_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
     DialogComponent* component = (DialogComponent*)layer->component;
     if (!component || !component->is_opened || !event) {
         return 0;
+    }
+
+    // 先检查 template 的子图层（偏移到内容区域，带边距）
+    Layer* tmpl = component->layer;
+    if (tmpl && tmpl->children) {
+        int message_top = 0, message_area_height = 0;
+        dialog_get_message_area(component, layer, &message_top, &message_area_height);
+        int content_x = layer->rect.x + 20;
+        int content_y = message_top;
+        int dx = content_x - tmpl->rect.x;
+        int dy = content_y - tmpl->rect.y;
+        for (int i = tmpl->child_count - 1; i >= 0; i--) {
+            Layer* child = tmpl->children[i];
+            if (child && child->handle_pointer_event &&
+                event->x >= child->rect.x + dx && event->x < child->rect.x + dx + child->rect.w &&
+                event->y >= child->rect.y + dy && event->y < child->rect.y + dy + child->rect.h) {
+                // 临时偏移子图层位置
+                int orig_x = child->rect.x;
+                int orig_y = child->rect.y;
+                child->rect.x += dx;
+                child->rect.y += dy;
+                child->handle_pointer_event(child, event);
+                child->rect.x = orig_x;
+                child->rect.y = orig_y;
+                return 1;
+            }
+        }
     }
 
     Rect thumb = {0};
@@ -1180,6 +1218,36 @@ void dialog_component_render(Layer* layer) {
             }
         }
     }
+
+    // 渲染 template layer 的子图层（偏移到内容区域，带边距）
+    Layer* tmpl = component->layer;
+    if (tmpl && tmpl->children) {
+        int content_x = layer->rect.x + 20;
+        int content_y = message_top;
+        int content_w = layer->rect.w - 20 - 16;
+        int content_h = message_area_height;
+        int dx = content_x - tmpl->rect.x;
+        int dy = content_y - tmpl->rect.y;
+
+        // 裁剪到内容区域
+        Rect clip = {content_x, content_y, content_w, content_h};
+        Rect prev_clip;
+        render_clip_push(&clip, &prev_clip);
+
+        for (int i = 0; i < tmpl->child_count; i++) {
+            Layer* child = tmpl->children[i];
+            if (child && child->render) {
+                int orig_x = child->rect.x;
+                int orig_y = child->rect.y;
+                child->rect.x += dx;
+                child->rect.y += dy;
+                child->render(child);
+                child->rect.x = orig_x;
+                child->rect.y = orig_y;
+            }
+        }
+        render_clip_pop(&prev_clip);
+    }
 }
 
 // 便捷函数实现
@@ -1301,6 +1369,8 @@ DialogComponent* dialog_component_create_from_json(Layer* layer, cJSON* json) {
             }
         }
     }
+
+    // 解析子组件 (children) - 无需额外处理，layer 本身支持 children
     
     // 解析样式
     cJSON* style = cJSON_GetObjectItem(json, "style");
