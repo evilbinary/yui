@@ -486,7 +486,11 @@ int input_component_handle_key_event(Layer* layer,  KeyEvent* event) {
 
         case KEY_EVENT_DOWN: {
             int shift = event->data.key.mod & KMOD_SHIFT;
-            int ctrl = event->data.key.mod & (KMOD_CTRL | KMOD_GUI);
+            int ctrl = event->data.key.mod & (KMOD_CTRL
+#ifdef KMOD_GUI
+                | KMOD_GUI
+#endif
+            );
             int old_cursor = component->cursor_pos;
             switch (event->data.key.key_code) {
                 case SDLK_a:
