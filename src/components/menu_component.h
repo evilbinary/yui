@@ -5,6 +5,13 @@
 
 // DPI 缩放见 backend.h: extern float yui_density;
 
+// 文本对齐方式
+typedef enum {
+    TEXT_ALIGN_LEFT = 0,
+    TEXT_ALIGN_CENTER = 1,
+    TEXT_ALIGN_RIGHT = 2
+} TextAlign;
+
 // 前向声明
 typedef struct PopupLayer PopupLayer;
 typedef struct MenuComponent MenuComponent;
@@ -45,6 +52,7 @@ struct MenuComponent {
     char on_select_name[128]; // onSelect 事件处理函数名称
     int content_width;         // 根据内容自动计算的宽度(0=使用默认宽度)
     int show_arrow;            // 是否显示展开/收起箭头(默认不显示)
+    TextAlign text_align;      // 文本对齐方式(默认居中)
 };
 
 // 函数声明

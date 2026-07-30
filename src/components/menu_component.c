@@ -44,6 +44,7 @@ MenuComponent* menu_component_create(Layer* layer) {
     component->min_width = 80;
     component->content_width = 0;
     component->show_arrow = 0;
+    component->text_align = TEXT_ALIGN_CENTER;  // 默认居中对齐
     component->user_data = NULL;
     component->on_popup_closed = NULL;
     
@@ -327,6 +328,16 @@ static void menu_component_apply_theme_style(Layer* layer, cJSON* style) {
     }
     if (cJSON_HasObjectItem(style, "showArrow")) {
         component->show_arrow = cJSON_IsTrue(cJSON_GetObjectItem(style, "showArrow"));
+    }
+    if (cJSON_HasObjectItem(style, "textAlign")) {
+        const char* align_str = cJSON_GetObjectItem(style, "textAlign")->valuestring;
+        if (strcmp(align_str, "left") == 0) {
+            component->text_align = TEXT_ALIGN_LEFT;
+        } else if (strcmp(align_str, "right") == 0) {
+            component->text_align = TEXT_ALIGN_RIGHT;
+        } else {
+            component->text_align = TEXT_ALIGN_CENTER;
+        }
     }
 
     mark_layer_dirty(layer, DIRTY_COLOR | DIRTY_TEXT | DIRTY_LAYOUT);
@@ -842,14 +853,24 @@ void menu_component_render(Layer* layer) {
         if (title_texture) {
             int title_width, title_height;
             backend_query_texture(title_texture, NULL, NULL, &title_width, &title_height);
-            
+
+            // 根据 text_align 计算文本位置
+            int text_x;
+            if (component->text_align == TEXT_ALIGN_LEFT) {
+                text_x = rect->x + 12;
+            } else if (component->text_align == TEXT_ALIGN_RIGHT) {
+                text_x = rect->x + rect->w - title_width / yui_density - 12;
+            } else {  // TEXT_ALIGN_CENTER
+                text_x = rect->x + (rect->w - title_width / yui_density) / 2;
+            }
+
             Rect title_rect = {
-                rect->x + 12,
+                text_x,
                 rect->y + (component->item_height - title_height / yui_density) / 2,
                 title_width / yui_density,
                 title_height / yui_density
             };
-            
+
             backend_render_text_copy(title_texture, NULL, &title_rect);
             backend_render_text_destroy(title_texture);
         }

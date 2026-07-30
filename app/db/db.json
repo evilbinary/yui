@@ -9,7 +9,7 @@
     "onResize": "@onWindowResize"
   },
   "icon": "app/db/icon.png",
-  "layout": { "type": "vertical" },
+  "layout": { "type": "vertical"},
   "style": {
     "titleBarBgColor": "#1E1E2E",
     "color": "#CDD6F4",
@@ -34,6 +34,7 @@
         "text": "文件",
         "fontSize": 12,
         "style": {
+          "textAlign": "center",
           "itemHeight": 29
         },
         "items": [
