@@ -160,12 +160,16 @@ static var_t* mario_show(vm_t* vm, var_t* env, void* data)
     if (argc < 1) return var_new_null(vm);
 
     const char* layer_id = get_func_arg_str(env, 0);
+    int recursive = 0;
+    if (argc >= 2) {
+        recursive = get_func_arg_int(env, 1);
+    }
 
     if (layer_id && g_layer_root) {
         struct Layer* layer = find_layer_by_id(g_layer_root, layer_id);
         if (layer) {
-            layer_show(layer);
-            printf("JS(Mario): Show layer '%s'\n", layer_id);
+            layer_show(layer, recursive);
+            printf("JS(Mario): Show layer '%s'%s\n", layer_id, recursive ? " (recursive)" : "");
         }
     }
 

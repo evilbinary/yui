@@ -316,7 +316,7 @@ void tab_component_set_active_tab(TabComponent* component, int index) {
   for (int i = 0; i < component->tab_count; i++) {
     if (component->tabs[i].content_layer) {
       if (i == index) {
-        layer_show(component->tabs[i].content_layer);
+        layer_show(component->tabs[i].content_layer, 0);
       } else {
         layer_hide(component->tabs[i].content_layer);
       }

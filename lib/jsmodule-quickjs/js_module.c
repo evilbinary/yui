@@ -276,11 +276,15 @@ static JSValue js_show(JSContext *ctx, JSValueConst this_val, int argc, JSValueC
 
     size_t len;
     const char* layer_id = JS_ToCStringLen(ctx, &len, argv[0]);
+    int recursive = 0;
+    if (argc >= 2) {
+        recursive = JS_ToBool(ctx, argv[1]);
+    }
 
     if (layer_id && g_layer_root) {
         struct Layer* layer = find_layer_by_id(g_layer_root, layer_id);
         if (layer) {
-            layer_show(layer);
+            layer_show(layer, recursive);
         }
     }
 

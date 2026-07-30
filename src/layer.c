@@ -1261,15 +1261,15 @@ Layer* layer_resolve_path(Layer* root, const char* path)
     return root;
 }
 
-int layer_show(Layer* layer) {
+int layer_show(Layer* layer, int recursive) {
     if (!layer) {
         return 0;
     }
-    if (layer->visible == VISIBLE) {
+    if (!recursive && layer->visible == VISIBLE) {
         return 0;
     }
 
-    layer_set_visible(layer, VISIBLE);
+    layer_set_visible(layer, recursive ? VISIBLE_ALL : VISIBLE);
     return 1;
 }
 

@@ -305,12 +305,16 @@ static JSValue js_show(JSContext *ctx, JSValue *this_val, int argc, JSValue *arg
 
     JSCStringBuf buf;
     const char* layer_id = JS_ToCString(ctx, argv[0], &buf);
+    int recursive = 0;
+    if (argc >= 2) {
+        recursive = JS_ToBool(ctx, argv[1]);
+    }
 
     if (layer_id && g_layer_root ) {
         Layer* layer = find_layer_by_id(g_layer_root, layer_id);
         if (layer) {
-            layer_show(layer);
-            printf("YUI: Show layer '%s'\n", layer_id);
+            layer_show(layer, recursive);
+            printf("YUI: Show layer '%s'%s\n", layer_id, recursive ? " (recursive)" : "");
         }
     }
 
