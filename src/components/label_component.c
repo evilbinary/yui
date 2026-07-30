@@ -240,8 +240,13 @@ void label_component_render(Layer* layer) {
 
     Color text_color = layer->color;
     int density = yui_density;
-    const int pad_h = 6;
-    const int pad_v = 4;
+    int pad_top = layer_padding_get(layer, 0);
+    int pad_right = layer_padding_get(layer, 1);
+    int pad_bottom = layer_padding_get(layer, 2);
+    int pad_left = layer_padding_get(layer, 3);
+    if (pad_top == 0 && pad_bottom == 0 && pad_left == 0 && pad_right == 0) {
+        pad_top = 4; pad_bottom = 4; pad_left = 6; pad_right = 6;
+    }
 
     // --- 测量图标 ---
     Texture* icon_tex = NULL;
@@ -254,7 +259,7 @@ void label_component_render(Layer* layer) {
             icon_w = iw / density;
             icon_h = ih / density;
             int icon_max = component->icon_size > 0 ? component->icon_size
-                : (has_text ? (icon_h > 0 ? icon_h : 16) : (layer->rect.h - pad_v * 2));
+                : (has_text ? (icon_h > 0 ? icon_h : 16) : (layer->rect.h - pad_top - pad_bottom));
             if (icon_max < 4) icon_max = 4;
             if (icon_w > icon_max || icon_h > icon_max) {
                 float ratio = (float)icon_w / icon_h;
@@ -396,61 +401,110 @@ void label_component_render(Layer* layer) {
         return;
     }
 
-    // --- 图标 + 文本 ---
+    // --- 图标 + 文本（使用 layer 原生 padding，支持 ... 截断） ---
     int gap = component->icon_gap;
-    int content_w = layer->rect.w - pad_h * 2;
+    int content_w = layer->rect.w - pad_left - pad_right;
     if (content_w < 1) content_w = 1;
-    int content_h = layer->rect.h - pad_v * 2;
+    int content_h = layer->rect.h - pad_top - pad_bottom;
     if (content_h < 1) content_h = 1;
 
-    Texture* text_tex = render_text(layer, original_text, text_color);
+    // 截断用辅助函数：测量带 "..." 的文本宽度密度像素
+    int avail_text_w = 0;
+
+    // 准备渲染文本（可能带 "..." 截断）
+    Texture* text_tex = NULL;
     int draw_w = 0, draw_h = 0;
-    if (text_tex) {
-        int tw, th;
-        backend_query_texture(text_tex, NULL, NULL, &tw, &th);
-        draw_w = tw / density;
-        draw_h = th / density;
-        if (draw_w < 1) draw_w = 1;
-        if (draw_h < 1) draw_h = 1;
+
+    // 先测量原始文本，确定是否需要截断（水平模式）
+    if (component->icon_align == ICON_ALIGN_LEFT)
+        avail_text_w = content_w - icon_w - gap;
+    else if (component->icon_align == ICON_ALIGN_RIGHT)
+        avail_text_w = content_w - icon_w - gap;
+    else
+        avail_text_w = content_w;
+
+    if (avail_text_w < 8) avail_text_w = 8;
+
+    {
+        int need_trunc = 0;
+        if (layer->font && layer->font->default_font) {
+            Texture* mt = backend_render_texture(layer->font->default_font, original_text, (Color){0,0,0,255});
+            if (mt) {
+                int mw;
+                backend_query_texture(mt, NULL, NULL, &mw, NULL);
+                backend_render_text_destroy(mt);
+                if (mw / density > avail_text_w) {
+                    need_trunc = 1;
+                }
+            }
+        }
+
+        if (need_trunc) {
+            int byte_len = (int)strlen(original_text);
+            char* truncated = malloc((size_t)byte_len + 4);
+            while (byte_len > 0) {
+                int safe_len = utf8_safe_prefix_bytes(original_text, byte_len);
+                if (safe_len <= 0) break;
+                memcpy(truncated, original_text, (size_t)safe_len);
+                truncated[safe_len] = '\0';
+                strcat(truncated, "...");
+                Texture* st = backend_render_texture(layer->font->default_font, truncated, (Color){0,0,0,255});
+                if (st) {
+                    int sw;
+                    backend_query_texture(st, NULL, NULL, &sw, NULL);
+                    backend_render_text_destroy(st);
+                    if (sw / density <= avail_text_w) break;
+                }
+                byte_len = utf8_prev_prefix_bytes(original_text, safe_len);
+            }
+            if (byte_len > 0) {
+                text_tex = render_text(layer, truncated, text_color);
+                if (text_tex) {
+                    int tw, th;
+                    backend_query_texture(text_tex, NULL, NULL, &tw, &th);
+                    draw_w = tw / density;
+                    draw_h = th / density;
+                    if (draw_w < 1) draw_w = 1;
+                    if (draw_h < 1) draw_h = 1;
+                }
+            }
+            free(truncated);
+        } else {
+            text_tex = render_text(layer, original_text, text_color);
+            if (text_tex) {
+                int tw, th;
+                backend_query_texture(text_tex, NULL, NULL, &tw, &th);
+                draw_w = tw / density;
+                draw_h = th / density;
+                if (draw_w < 1) draw_w = 1;
+                if (draw_h < 1) draw_h = 1;
+            }
+        }
     }
 
     switch (component->icon_align) {
         case ICON_ALIGN_LEFT: {
-            int total_w = icon_w + gap + draw_w;
-            if (total_w > content_w) {
-                float s = (float)(content_w - icon_w - gap) / draw_w;
-                if (s < 0.3f) s = 0.3f;
-                draw_w = (int)(draw_w * s);
-                draw_h = (int)(draw_h * s);
-                if (draw_w < 1) draw_w = 1;
-                if (draw_h < 1) draw_h = 1;
-            }
             int block_w = icon_w + gap + draw_w;
             int block_h = label_max_int(icon_h, draw_h);
-            int start_x = layer->rect.x + pad_h + (content_w - block_w) / 2;
-            int start_y = layer->rect.y + pad_v + (content_h - block_h) / 2;
+            int start_x = layer->rect.x + pad_left + (content_w - block_w) / 2;
+            int start_y = layer->rect.y + pad_top + (content_h - block_h) / 2;
             Rect ir = {start_x, start_y + (block_h - icon_h) / 2, icon_w, icon_h};
             backend_render_text_copy(icon_tex, NULL, &ir);
-            Rect tr = {start_x + icon_w + gap, start_y + (block_h - draw_h) / 2, draw_w, draw_h};
-            backend_render_text_copy(text_tex, NULL, &tr);
+            if (text_tex) {
+                Rect tr = {start_x + icon_w + gap, start_y + (block_h - draw_h) / 2, draw_w, draw_h};
+                backend_render_text_copy(text_tex, NULL, &tr);
+            }
             break;
         }
         case ICON_ALIGN_RIGHT: {
-            int total_w = draw_w + gap + icon_w;
-            if (total_w > content_w) {
-                float s = (float)(content_w - icon_w - gap) / draw_w;
-                if (s < 0.3f) s = 0.3f;
-                draw_w = (int)(draw_w * s);
-                draw_h = (int)(draw_h * s);
-                if (draw_w < 1) draw_w = 1;
-                if (draw_h < 1) draw_h = 1;
-            }
             int block_w = draw_w + gap + icon_w;
             int block_h = label_max_int(icon_h, draw_h);
-            int start_x = layer->rect.x + pad_h + (content_w - block_w) / 2;
-            int start_y = layer->rect.y + pad_v + (content_h - block_h) / 2;
-            Rect tr = {start_x, start_y + (block_h - draw_h) / 2, draw_w, draw_h};
-            backend_render_text_copy(text_tex, NULL, &tr);
+            int start_x = layer->rect.x + pad_left + (content_w - block_w) / 2;
+            int start_y = layer->rect.y + pad_top + (content_h - block_h) / 2;
+            if (text_tex) {
+                Rect tr = {start_x, start_y + (block_h - draw_h) / 2, draw_w, draw_h};
+                backend_render_text_copy(text_tex, NULL, &tr);
+            }
             Rect ir = {start_x + draw_w + gap, start_y + (block_h - icon_h) / 2, icon_w, icon_h};
             backend_render_text_copy(icon_tex, NULL, &ir);
             break;
@@ -466,7 +520,7 @@ void label_component_render(Layer* layer) {
                 if (use_icon_w < 1) use_icon_w = 1;
             }
             int total_h = use_icon_h + gap + draw_h;
-            if (total_h > content_h) {
+            if (total_h > content_h && draw_h > 0) {
                 float s = (float)(content_h - use_icon_h - gap) / draw_h;
                 if (s < 0.3f) s = 0.3f;
                 draw_w = (int)(draw_w * s);
@@ -475,16 +529,18 @@ void label_component_render(Layer* layer) {
                 if (draw_h < 1) draw_h = 1;
             }
             total_h = use_icon_h + gap + draw_h;
-            int start_y = layer->rect.y + pad_v + (content_h - total_h) / 2;
+            int start_y = layer->rect.y + pad_top + (content_h - total_h) / 2;
             Rect ir = {layer->rect.x + (layer->rect.w - use_icon_w) / 2, start_y, use_icon_w, use_icon_h};
             backend_render_text_copy(icon_tex, NULL, &ir);
-            Rect tr = {layer->rect.x + (layer->rect.w - draw_w) / 2, start_y + use_icon_h + gap, draw_w, draw_h};
-            backend_render_text_copy(text_tex, NULL, &tr);
+            if (text_tex) {
+                Rect tr = {layer->rect.x + (layer->rect.w - draw_w) / 2, start_y + use_icon_h + gap, draw_w, draw_h};
+                backend_render_text_copy(text_tex, NULL, &tr);
+            }
             break;
         }
         case ICON_ALIGN_BOTTOM: {
             int total_h = draw_h + gap + icon_h;
-            if (total_h > content_h) {
+            if (total_h > content_h && draw_h > 0) {
                 float s = (float)(content_h - icon_h - gap) / draw_h;
                 if (s < 0.3f) s = 0.3f;
                 draw_w = (int)(draw_w * s);
@@ -493,9 +549,11 @@ void label_component_render(Layer* layer) {
                 if (draw_h < 1) draw_h = 1;
             }
             total_h = draw_h + gap + icon_h;
-            int start_y = layer->rect.y + pad_v + (content_h - total_h) / 2;
-            Rect tr = {layer->rect.x + (layer->rect.w - draw_w) / 2, start_y, draw_w, draw_h};
-            backend_render_text_copy(text_tex, NULL, &tr);
+            int start_y = layer->rect.y + pad_top + (content_h - total_h) / 2;
+            if (text_tex) {
+                Rect tr = {layer->rect.x + (layer->rect.w - draw_w) / 2, start_y, draw_w, draw_h};
+                backend_render_text_copy(text_tex, NULL, &tr);
+            }
             Rect ir = {layer->rect.x + (layer->rect.w - icon_w) / 2, start_y + draw_h + gap, icon_w, icon_h};
             backend_render_text_copy(icon_tex, NULL, &ir);
             break;

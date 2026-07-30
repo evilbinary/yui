@@ -496,8 +496,13 @@ void button_component_render(Layer* layer) {
         text_color = component->hover_text_color;
     }
 
-    const int pad_h = 6;
-    const int pad_v = 4;
+    int pad_top = layer_padding_get(layer, 0);
+    int pad_right = layer_padding_get(layer, 1);
+    int pad_bottom = layer_padding_get(layer, 2);
+    int pad_left = layer_padding_get(layer, 3);
+    if (pad_top == 0 && pad_bottom == 0 && pad_left == 0 && pad_right == 0) {
+        pad_top = 4; pad_bottom = 4; pad_left = 6; pad_right = 6;
+    }
     int density = yui_density;
 
     // --- 测量文本 ---
@@ -537,7 +542,7 @@ void button_component_render(Layer* layer) {
         icon_w = iw / density;
         icon_h = ih / density;
         int icon_max = component->icon_size > 0 ? component->icon_size
-            : (has_text ? (icon_h > 0 ? icon_h : 16) : (layer->rect.h - pad_v * 2));
+            : (has_text ? (icon_h > 0 ? icon_h : 16) : (layer->rect.h - pad_top - pad_bottom));
         if (icon_max < 4) icon_max = 4;
         if (icon_w > icon_max || icon_h > icon_max) {
             float ratio = (float)icon_w / icon_h;
@@ -570,8 +575,8 @@ void button_component_render(Layer* layer) {
     // --- 仅有文本（保持原位置逻辑） ---
     if (!has_icon) {
         if (text_tex) {
-            int avail_w = layer->rect.w - pad_h * 2;
-            int avail_h = layer->rect.h - pad_v * 2;
+            int avail_w = layer->rect.w - pad_left - pad_right;
+            int avail_h = layer->rect.h - pad_top - pad_bottom;
             if (avail_w < 1) avail_w = 1;
             if (avail_h < 1) avail_h = 1;
             if (text_w > avail_w || text_h > avail_h) {
@@ -593,28 +598,86 @@ void button_component_render(Layer* layer) {
         return;
     }
 
-    // --- 图标 + 文本：按 iconAlign 布局 ---
+    // --- 图标 + 文本（使用 layer 原生 padding，支持 ... 截断） ---
     int gap = component->icon_gap;
-    int content_w = layer->rect.w - pad_h * 2;
+    int content_w = layer->rect.w - pad_left - pad_right;
     if (content_w < 1) content_w = 1;
-    int content_h = layer->rect.h - pad_v * 2;
+    int content_h = layer->rect.h - pad_top - pad_bottom;
     if (content_h < 1) content_h = 1;
 
-    switch (component->icon_align) {
-        case ICON_ALIGN_LEFT: {
-            int total_w = icon_w + gap + text_w;
-            if (total_w > content_w) {
-                float s = (float)(content_w - icon_w - gap) / text_w;
-                if (s < 0.3f) s = 0.3f;
-                text_w = (int)(text_w * s);
-                text_h = (int)(text_h * s);
+    // 确定可用文本宽度（水平模式），并对 text 做 "..." 截断
+    int avail_text_w = 0;
+    if (component->icon_align == ICON_ALIGN_LEFT || component->icon_align == ICON_ALIGN_RIGHT)
+        avail_text_w = content_w - icon_w - gap;
+    else
+        avail_text_w = content_w;
+    if (avail_text_w < 8) avail_text_w = 8;
+
+    if (text_tex) backend_render_text_destroy(text_tex);
+    text_tex = NULL;
+    text_w = 0; text_h = 0;
+
+    {
+        int need_trunc = 0;
+        if (layer->font && layer->font->default_font) {
+            Texture* mt = backend_render_texture(layer->font->default_font, layer_text, (Color){0,0,0,255});
+            if (mt) {
+                int mw;
+                backend_query_texture(mt, NULL, NULL, &mw, NULL);
+                backend_render_text_destroy(mt);
+                if (mw / density > avail_text_w) need_trunc = 1;
+            }
+        }
+
+        if (need_trunc) {
+            int byte_len = (int)strlen(layer_text);
+            char* truncated = malloc((size_t)byte_len + 4);
+            while (byte_len > 0) {
+                int safe_len = utf8_safe_prefix_bytes(layer_text, byte_len);
+                if (safe_len <= 0) break;
+                memcpy(truncated, layer_text, (size_t)safe_len);
+                truncated[safe_len] = '\0';
+                strcat(truncated, "...");
+                Texture* st = backend_render_texture(layer->font->default_font, truncated, (Color){0,0,0,255});
+                if (st) {
+                    int sw;
+                    backend_query_texture(st, NULL, NULL, &sw, NULL);
+                    backend_render_text_destroy(st);
+                    if (sw / density <= avail_text_w) break;
+                }
+                byte_len = utf8_prev_prefix_bytes(layer_text, safe_len);
+            }
+            if (byte_len > 0) {
+                text_tex = render_text(layer, truncated, text_color);
+                if (text_tex) {
+                    int tw, th;
+                    backend_query_texture(text_tex, NULL, NULL, &tw, &th);
+                    text_w = tw / density;
+                    text_h = th / density;
+                    if (text_w < 1) text_w = 1;
+                    if (text_h < 1) text_h = 1;
+                }
+            }
+            free(truncated);
+        } else {
+            text_tex = render_text(layer, layer_text, text_color);
+            if (text_tex) {
+                int tw, th;
+                backend_query_texture(text_tex, NULL, NULL, &tw, &th);
+                text_w = tw / density;
+                text_h = th / density;
                 if (text_w < 1) text_w = 1;
                 if (text_h < 1) text_h = 1;
             }
+        }
+    }
+
+    switch (component->icon_align) {
+        case ICON_ALIGN_LEFT: {
             int block_w = icon_w + gap + text_w;
             int block_h = button_max_int(icon_h, text_h);
-            int start_x = layer->rect.x + pad_h + (content_w - block_w) / 2;
-            int start_y = layer->rect.y + pad_v + (content_h - block_h) / 2;
+            int start_x = layer->rect.x + pad_left + (content_w - block_w) / 2;
+            int start_y = layer->rect.y + pad_top + (content_h - block_h) / 2;
             Rect ir = {start_x, start_y + (block_h - icon_h) / 2, icon_w, icon_h};
             Rect tr = {start_x + icon_w + gap, start_y + (block_h - text_h) / 2, text_w, text_h};
             if (icon_is_path) backend_render_texture_tinted(icon_tex, NULL, &ir, text_color);
@@ -623,19 +686,10 @@ void button_component_render(Layer* layer) {
             break;
         }
         case ICON_ALIGN_RIGHT: {
-            int total_w = text_w + gap + icon_w;
-            if (total_w > content_w) {
-                float s = (float)(content_w - icon_w - gap) / text_w;
-                if (s < 0.3f) s = 0.3f;
-                text_w = (int)(text_w * s);
-                text_h = (int)(text_h * s);
-                if (text_w < 1) text_w = 1;
-                if (text_h < 1) text_h = 1;
-            }
             int block_w = text_w + gap + icon_w;
             int block_h = button_max_int(icon_h, text_h);
-            int start_x = layer->rect.x + pad_h + (content_w - block_w) / 2;
-            int start_y = layer->rect.y + pad_v + (content_h - block_h) / 2;
+            int start_x = layer->rect.x + pad_left + (content_w - block_w) / 2;
+            int start_y = layer->rect.y + pad_top + (content_h - block_h) / 2;
             Rect tr = {start_x, start_y + (block_h - text_h) / 2, text_w, text_h};
             Rect ir = {start_x + text_w + gap, start_y + (block_h - icon_h) / 2, icon_w, icon_h};
             if (text_tex) { backend_render_text_copy(text_tex, NULL, &tr); backend_render_text_destroy(text_tex); }
@@ -654,7 +708,7 @@ void button_component_render(Layer* layer) {
                 if (use_icon_w < 1) use_icon_w = 1;
             }
             int total_h = use_icon_h + gap + text_h;
-            if (total_h > content_h) {
+            if (total_h > content_h && text_h > 0) {
                 float s = (float)(content_h - use_icon_h - gap) / text_h;
                 if (s < 0.3f) s = 0.3f;
                 text_w = (int)(text_w * s);
@@ -663,7 +717,7 @@ void button_component_render(Layer* layer) {
                 if (text_h < 1) text_h = 1;
             }
             total_h = use_icon_h + gap + text_h;
-            int start_y = layer->rect.y + pad_v + (content_h - total_h) / 2;
+            int start_y = layer->rect.y + pad_top + (content_h - total_h) / 2;
             Rect ir = {layer->rect.x + (layer->rect.w - use_icon_w) / 2, start_y, use_icon_w, use_icon_h};
             Rect tr = {layer->rect.x + (layer->rect.w - text_w) / 2, start_y + use_icon_h + gap, text_w, text_h};
             if (icon_is_path) backend_render_texture_tinted(icon_tex, NULL, &ir, text_color);
@@ -673,7 +727,7 @@ void button_component_render(Layer* layer) {
         }
         case ICON_ALIGN_BOTTOM: {
             int total_h = text_h + gap + icon_h;
-            if (total_h > content_h) {
+            if (total_h > content_h && text_h > 0) {
                 float s = (float)(content_h - icon_h - gap) / text_h;
                 if (s < 0.3f) s = 0.3f;
                 text_w = (int)(text_w * s);
@@ -682,7 +736,7 @@ void button_component_render(Layer* layer) {
                 if (text_h < 1) text_h = 1;
             }
             total_h = text_h + gap + icon_h;
-            int start_y = layer->rect.y + pad_v + (content_h - total_h) / 2;
+            int start_y = layer->rect.y + pad_top + (content_h - total_h) / 2;
             Rect tr = {layer->rect.x + (layer->rect.w - text_w) / 2, start_y, text_w, text_h};
             if (text_tex) { backend_render_text_copy(text_tex, NULL, &tr); backend_render_text_destroy(text_tex); }
             Rect ir = {layer->rect.x + (layer->rect.w - icon_w) / 2, start_y + text_h + gap, icon_w, icon_h};
