@@ -97,7 +97,7 @@
       "type": "View",
       "visible": false,
       "flex": 1,
-      "layout": { "type": "vertical", "align": "center" },
+      "layout": { "type": "center", "align": "center" },
       "children": []
     }
   ]
