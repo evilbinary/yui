@@ -10,13 +10,38 @@ var GRID_SPACING = 8;
 var CELL_SIZE = 140;
 var GRID_WIDTH = GRID_COLS * CELL_SIZE + (GRID_COLS - 1) * GRID_SPACING;
 
+var THEMES = [
+    { id: "developer-terminal", path: "app/lib/themes/developer-terminal.json" },
+    { id: "dark",               path: "app/lib/themes/dark.json" },
+    { id: "light",              path: "app/lib/themes/light.json" },
+    { id: "mocha",              path: "app/lib/themes/mocha.json" },
+];
+
 function onLauncherLoad() {
+    initThemes();
     var apps = scanApps();
     var tests = scanTests();
     buildGrid("grid_apps", apps);
     buildGrid("grid_tests", tests);
     var total = apps.length + tests.length;
     YUI.setText("launcher_title", "YUI Demo Launcher (" + total + ")");
+}
+
+// ---------- Theming ----------
+
+function initThemes() {
+    for (var i = 0; i < THEMES.length; i++) {
+        Theme.load(THEMES[i].path);
+    }
+    Theme.setCurrent("developer-terminal");
+    Theme.apply();
+}
+
+function onThemeSelect() {
+    var val = YUI.getProperty("theme_select", "value");
+    if (!val) return;
+    Theme.setCurrent(val);
+    Theme.apply();
 }
 
 // ---------- Scanning ----------

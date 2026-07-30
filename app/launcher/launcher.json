@@ -5,7 +5,7 @@
   "assets": "app/assets",
   "font": "Roboto-Regular.ttf",
   "fontFallback": "NotoColorEmoji.ttf",
-  "js": ["launcher.js"],
+  "js": ["../lib/theme.js", "launcher.js"],
   "layout": { "type": "vertical", "spacing": 0, "padding": [0,0,0,0] },
   "events": { "onLoad": "@onLauncherLoad" },
   "children": [
@@ -29,6 +29,26 @@
           "text": "YUI Demo Launcher",
           "flex": 1,
           "fontSize": 16
+        },
+        {
+          "id": "theme_select",
+          "type": "Select",
+          "size": [100, 28],
+          "items": [
+            { "value": "developer-terminal", "text": "Terminal" },
+            { "value": "dark", "text": "Dark" },
+            { "value": "light", "text": "Light" },
+            { "value": "mocha", "text": "Mocha" }
+          ],
+          "value": "developer-terminal",
+          "selectConfig": {
+            "fontSize": 11,
+            "itemHeight": 24,
+            "maxVisibleItems": 8
+          },
+          "events": {
+            "onChange": "@onThemeSelect"
+          }
         }
       ]
     },
