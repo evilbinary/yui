@@ -123,7 +123,9 @@ function readMeta(path, fallback) {
 
 function buildGrid(gridId, demos) {
     if (demos.length === 0) return;
-    var contentW = YUI.getProperty("launcher_content", "width") || 600;
+    var win = YUI.getWindowSize();
+    var contentW = YUI.getProperty("launcher_content", "width") || win.width || 600;
+    YUI.log('contentW = ' + contentW);
     var pad = 24;
     var availW = Math.max(200, contentW - pad);
     var cols = Math.max(2, Math.min(8, Math.floor(availW / CELL_MIN)));

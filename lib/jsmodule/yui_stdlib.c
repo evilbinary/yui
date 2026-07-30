@@ -321,6 +321,18 @@ static JSValue js_show(JSContext *ctx, JSValue *this_val, int argc, JSValue *arg
     return JS_UNDEFINED;
 }
 
+// 获取窗口大小
+static JSValue js_get_window_size(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+{
+    extern void backend_get_windowsize(int* width, int* height);
+    int w = 0, h = 0;
+    backend_get_windowsize(&w, &h);
+    JSValue obj = JS_NewObject(ctx);
+    JS_SetPropertyStr(ctx, obj, "width", JS_NewInt32(ctx, w));
+    JS_SetPropertyStr(ctx, obj, "height", JS_NewInt32(ctx, h));
+    return obj;
+}
+
 // 打印日志（YUI 版本）
 static JSValue js_yui_log(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
 {
@@ -532,6 +544,7 @@ static const JSPropDef js_yui[] = {
     JS_CFUNC_DEF("setBgColor", 1, js_set_bg_color ),
     JS_CFUNC_DEF("hide", 1, js_hide ),
     JS_CFUNC_DEF("show", 1, js_show ),
+    JS_CFUNC_DEF("getWindowSize", 0, js_get_window_size ),
     JS_CFUNC_DEF("renderFromJson", 3, js_render_from_json ),
     JS_CFUNC_DEF("readFile", 1, js_read_file ),
     JS_CFUNC_DEF("resizeRoot", 2, js_resize_root ),
