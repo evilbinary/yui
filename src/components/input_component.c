@@ -330,6 +330,16 @@ InputComponent* input_component_create_from_json(Layer* layer, cJSON* json_obj) 
         input_component_set_max_length(layer->component, cJSON_GetObjectItem(json_obj, "maxLength")->valueint);
     }
 
+    // 解析password属性
+    if (cJSON_HasObjectItem(json_obj, "password")) {
+        cJSON* password_item = cJSON_GetObjectItem(json_obj, "password");
+        if (cJSON_IsBool(password_item)) {
+            component->password_mode = cJSON_IsTrue(password_item) ? 1 : 0;
+        } else if (cJSON_IsNumber(password_item)) {
+            component->password_mode = password_item->valueint != 0 ? 1 : 0;
+        }
+    }
+
     cJSON* events = cJSON_GetObjectItem(json_obj, "events");
     if (events && cJSON_HasObjectItem(events, "onChange")) {
         cJSON* on_change_obj = cJSON_GetObjectItem(events, "onChange");
@@ -799,6 +809,18 @@ void input_component_render(Layer* layer) {
     Color text_color = layer->color;
     const char* display_text = layer->text ? layer->text : "";
     int is_placeholder = 0;
+
+    // 密码遮罩：生成 • 字符串
+    char masked_text[256] = {0};
+    if (component->password_mode && display_text[0] != '\0' && strlen(display_text) < sizeof(masked_text)) {
+        size_t len = strlen(display_text);
+        for (size_t i = 0; i < len; i++) {
+            masked_text[i] = '*';  // 使用 • 字符作为遮罩
+        }
+        masked_text[len] = '\0';
+        display_text = masked_text;
+    }
+
     if ((!layer->text || layer->text[0] == '\0') && !HAS_STATE(layer, LAYER_STATE_FOCUSED) &&
         strlen(component->placeholder) > 0) {
         display_text = component->placeholder;
