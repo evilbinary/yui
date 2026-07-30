@@ -707,7 +707,18 @@
                 { "id": "connPasswordLabel", "type": "Label", "text": "密码", "style": { "color": "#A6ADC8", "fontSize": 11 } },
                 { "id": "connPasswordInput", "type": "Input", "size": [460, 28], "text": "", "password": true, "style": { "color": "#CDD6F4", "bgColor": "#11111B", "fontSize": 12, "padding": [6, 10, 6, 10] } },
                 { "id": "connDatabaseLabel", "type": "Label", "text": "默认数据库（可选）", "style": { "color": "#A6ADC8", "fontSize": 11 } },
-                { "id": "connDatabaseInput", "type": "Input", "size": [460, 28], "text": "", "style": { "color": "#CDD6F4", "bgColor": "#11111B", "fontSize": 12, "padding": [6, 10, 6, 10] } }
+                { "id": "connDatabaseInput", "type": "Input", "size": [460, 28], "text": "", "style": { "color": "#CDD6F4", "bgColor": "#11111B", "fontSize": 12, "padding": [6, 10, 6, 10] } },
+                { "id": "connSSLCheckbox", "type": "Checkbox", "size": [20, 20], "label": "启用 SSL", "data": false, "style": { "color": "#89B4FA", "bgColor": "#11111B", "borderColor": "#45475A", "radius": 3 } }
+              ]
+            },
+            {
+              "id": "connTestResultRow",
+              "type": "View",
+              "size": [500, 24],
+              "layout": { "type": "horizontal", "spacing": 10, "padding": [0, 20, 0, 20] },
+              "style": { "bgColor": "#181825" },
+              "children": [
+                { "id": "connTestResult", "type": "Label", "size": [460, 24], "text": "", "style": { "fontSize": 12, "color": "#CDD6F4" } }
               ]
             },
             {

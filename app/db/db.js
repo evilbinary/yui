@@ -111,6 +111,12 @@ function fillConnectionForm() {
     setInputText("connUserInput", dbConfig.user);
     setInputText("connPasswordInput", dbConfig.password);
     setInputText("connDatabaseInput", dbConfig.database || "");
+    var checkbox = yui.find("connSSLCheckbox");
+    if (checkbox) checkbox.data = dbConfig.ssl || false;
+}
+
+function onSSLToggle() {
+    // Checkbox 组件自动切换状态，这里不需要手动处理
 }
 
 function readConnectionForm() {
@@ -119,6 +125,8 @@ function readConnectionForm() {
     dbConfig.user = getInputText("connUserInput") || "root";
     dbConfig.password = getInputText("connPasswordInput");
     dbConfig.database = getInputText("connDatabaseInput");
+    var checkbox = yui.find("connSSLCheckbox");
+    dbConfig.ssl = checkbox ? checkbox.data : false;
 }
 
 function connectDb() {
@@ -294,16 +302,54 @@ function onNewConnection() {
 function onConnectionTest() {
     readConnectionForm();
     updateStatus("正在测试连接...", "#F9E2AF");
+
+    // 显示测试中的提示
+    var testBtn = yui.find("connTestBtn");
+    var resultLabel = yui.find("connTestResult");
+    if (testBtn) {
+        testBtn.text = "测试中...";
+        testBtn.enabled = false;
+    }
+    if (resultLabel) {
+        resultLabel.text = "测试中...";
+        resultLabel.style = { color: "#F9E2AF" };
+    }
+
     var result = YUI.call("mysql_connect", JSON.stringify(dbConfig));
+
+    // 恢复按钮状态
+    if (testBtn) {
+        testBtn.text = "测试连接";
+        testBtn.enabled = true;
+    }
+
     if (!result) {
         updateStatus("测试失败: 无返回", "#F38BA8");
+        if (resultLabel) {
+            resultLabel.text = "✗ 无响应";
+            resultLabel.style = { color: "#F38BA8" };
+        }
+        print("连接测试失败：服务器无响应");
         return;
     }
+
     var info = JSON.parse(result);
     if (info.success) {
         updateStatus("连接测试成功", "#A6E3A1");
+        // 成功后断开测试连接
+        YUI.call("mysql_close");
+        if (resultLabel) {
+            resultLabel.text = "✓ 成功";
+            resultLabel.style = { color: "#A6E3A1" };
+        }
+        print("连接测试成功");
     } else {
         updateStatus("连接测试失败: " + (info.error || "未知错误"), "#F38BA8");
+        if (resultLabel) {
+            resultLabel.text = "✗ " + (info.error || "失败");
+            resultLabel.style = { color: "#F38BA8" };
+        }
+        print("连接测试失败：" + (info.error || "未知错误"));
     }
 }
 

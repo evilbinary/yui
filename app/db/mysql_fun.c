@@ -19,6 +19,12 @@ static int json_get_int(cJSON* json, const char* key, int def) {
     return (item && cJSON_IsNumber(item)) ? item->valueint : def;
 }
 
+static int json_get_bool(cJSON* json, const char* key, int def) {
+    cJSON* item = cJSON_GetObjectItem(json, key);
+    if (item && cJSON_IsBool(item)) return cJSON_IsTrue(item);
+    return def;
+}
+
 static char* result_to_json(MYSQL_RES* result) {
     if (!result) return strdup("[]");
 
@@ -60,10 +66,12 @@ static void* handle_mysql_connect(void* data) {
     const char* pass = json_get_string(json, "password");
     const char* db   = json_get_string(json, "database");
     int port = json_get_int(json, "port", 3306);
+    int ssl  = json_get_bool(json, "ssl", 0);  // 默认禁用 SSL
 
-    if (!host || !user || !pass || !db) {
+    // 数据库可以为空（连接后再选择）
+    if (!host || !user || !pass) {
         cJSON_Delete(json);
-        return strdup("{\"success\":false,\"error\":\"Missing required fields\"}");
+        return strdup("{\"success\":false,\"error\":\"Missing required fields (host, user, password)\"}");
     }
 
     if (g_mysql_conn) { mysql_close(g_mysql_conn); g_mysql_conn = NULL; g_mysql_connected = 0; }
@@ -74,12 +82,22 @@ static void* handle_mysql_connect(void* data) {
         return strdup("{\"success\":false,\"error\":\"mysql_init failed\"}");
     }
 
-    MYSQL* ret = mysql_real_connect(g_mysql_conn, host, user, pass, db, port, NULL, 0);
+    // 根据配置决定是否启用 SSL
+    // MySQL 5.7+ 默认尝试 SSL，如果服务器不支持会回退到非 SSL
+    // ssl=true 时调用 mysql_ssl_set 明确启用 SSL
+    if (ssl) {
+        // 启用 SSL（使用默认证书验证）
+        mysql_ssl_set(g_mysql_conn, NULL, NULL, NULL, NULL, NULL);
+    }
+    // ssl=false 时不调用 mysql_ssl_set，让 MySQL 使用默认行为
+
+    // 连接数据库（db 可以为 NULL）
+    MYSQL* ret = mysql_real_connect(g_mysql_conn, host, user, pass, db && db[0] ? db : NULL, port, NULL, 0);
     if (ret) {
         cJSON_Delete(json);
         g_mysql_connected = 1;
         mysql_set_character_set(g_mysql_conn, "utf8mb4");
-        printf("MySQL: Connected to %s:%d db=%s\n", host, port, db);
+        printf("MySQL: Connected to %s:%d db=%s ssl=%s\n", host, port, db ? db : "(none)", ssl ? "true" : "false");
         return strdup("{\"success\":true}");
     } else {
         cJSON_Delete(json);
