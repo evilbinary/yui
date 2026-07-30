@@ -278,34 +278,51 @@ static void mobile_draw_rect_norm(float x, float y, float w, float h,
 static void mobile_fill_corner_phys(int cx, int cy, int radius, int quadrant,
                                     unsigned char r, unsigned char g,
                                     unsigned char b, unsigned char a) {
-    int dy;
+    float verts[262];
+    int segments, vert_count;
 
-    if (!g_egl_ready) return;
+    if (radius <= 0 || !g_egl_ready) return;
 
-    for (dy = 0; dy <= radius; dy++) {
-        int dx = 0;
-        if (radius > 0) {
-            dx = (int)(sqrtf((float)radius * (float)radius - (float)dy * (float)dy) + 0.999f);
-        }
+    segments = radius < 4 ? 4 : radius;
+    if (segments > 128) segments = 128;
+    vert_count = segments + 2;
+    if (vert_count * 2 > 262) return;
+
+    /* Center of fan = corner center */
+    verts[0] = -1.0f + 2.0f * (float)cx / (float)g_window_w;
+    verts[1] =  1.0f - 2.0f * (float)cy / (float)g_window_h;
+
+    /* Arc vertices as triangle fan around the corner center.
+     * Angles in screen coords: 0=right, π/2=down, π=left, 3π/2=up */
+    for (int i = 0; i <= segments; i++) {
+        float frac = (float)i / (float)segments;
+        float a;
         switch (quadrant) {
-        case 0:
-            mobile_draw_rect_norm((float)(cx - dx), (float)(cy - dy),
-                                  (float)(dx + 1), 1.0f, r, g, b, a);
-            break;
-        case 1:
-            mobile_draw_rect_norm((float)cx, (float)(cy - dy),
-                                  (float)(dx + 1), 1.0f, r, g, b, a);
-            break;
-        case 2:
-            mobile_draw_rect_norm((float)(cx - dx), (float)(cy + dy),
-                                  (float)(dx + 1), 1.0f, r, g, b, a);
-            break;
-        default:
-            mobile_draw_rect_norm((float)cx, (float)(cy + dy),
-                                  (float)(dx + 1), 1.0f, r, g, b, a);
-            break;
+        case 0: /* top-left:  left(π) → up(3π/2)   increasing */
+            a = (float)M_PI + (float)M_PI * 0.5f * frac; break;
+        case 1: /* top-right: up(3π/2) → right(2π)  increasing */
+            a = (float)M_PI * 1.5f + (float)M_PI * 0.5f * frac; break;
+        case 2: /* bottom-left: left(π) → down(π/2) decreasing */
+            a = (float)M_PI - (float)M_PI * 0.5f * frac; break;
+        default: /* bottom-right: down(π/2) → right(0) decreasing */
+            a = (float)M_PI * 0.5f - (float)M_PI * 0.5f * frac; break;
         }
+        float px = (float)cx + (float)radius * cosf(a);
+        float py = (float)cy + (float)radius * sinf(a);
+        verts[(i + 1) * 2 + 0] = -1.0f + 2.0f * px / (float)g_window_w;
+        verts[(i + 1) * 2 + 1] =  1.0f - 2.0f * py / (float)g_window_h;
     }
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glUseProgram(g_color_program);
+    glUniform2f(g_u_offset_loc, 0.0f, 0.0f);
+    glUniform2f(g_u_scale_loc, 1.0f, 1.0f);
+    glUniform4f(g_u_color_loc, r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f);
+    glEnableVertexAttribArray((GLuint)g_a_pos_loc);
+    glVertexAttribPointer((GLuint)g_a_pos_loc, 2, GL_FLOAT, GL_FALSE, 0, verts);
+    glDrawArrays(GL_TRIANGLE_FAN, 0, vert_count);
+    glDisableVertexAttribArray((GLuint)g_a_pos_loc);
 }
 
 static void mobile_draw_rounded_rect_phys(float x, float y, float w, float h,
