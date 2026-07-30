@@ -4,6 +4,7 @@
  */
 
 var DemoMap = {};
+var currentAppId = null;
 
 var GRID_SPACING = 8;
 var CELL_MIN = 80;
@@ -161,14 +162,19 @@ function onDemoClick(layerId) {
     var raw;
     try { raw = YUI.readFile(demo.jsonPath); } catch (e) { return; }
     if (!raw) return;
+    var json;
+    try { json = JSON.parse(raw); } catch (e) { return; }
+    var appId = json.id || "page_outlet";
     YUI.hide("launcher_content");
     YUI.show("btn_back");
     YUI.renderFromJson("page_outlet", raw, false, demo.jsonPath);
-    YUI.show("page_outlet");
+    YUI.show(appId, true);
+    currentAppId = appId;
     YUI.setText("launcher_title", demo.title);
 }
 
 function onBackClick() {
+    if (currentAppId) YUI.hide(currentAppId);
     YUI.update({ target: "page_outlet", change: { children: null } });
     YUI.hide("page_outlet");
     YUI.hide("btn_back");
