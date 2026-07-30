@@ -676,71 +676,111 @@
         {
           "id": "connectionDialogPanel",
           "type": "View",
-          "position": [200, 100],
-          "size": [500, 380],
-          "layout": { "type": "vertical", "spacing": 0 },
+          "position": [150, 80],
+          "size": [600, 420],
+          "layout": { "type": "horizontal", "spacing": 0 },
           "style": { "bgColor": "#1E1E2E", "borderRadius": 8 },
           "children": [
             {
-              "id": "connectionDialogTitleBar",
+              "id": "connectionListPanel",
               "type": "View",
-              "size": [500, 40],
-              "layout": { "type": "horizontal", "align": "center", "justify": "space-between", "padding": [0, 12, 0, 12] },
-              "style": { "bgColor": "#181825", "borderBottomWidth": 1, "borderBottomColor": "#313244" },
+              "size": [160, 420],
+              "layout": { "type": "vertical", "spacing": 0 },
+              "style": { "bgColor": "#181825", "borderRightWidth": 1, "borderRightColor": "#313244" },
               "children": [
-                { "id": "connectionDialogTitle", "type": "Label", "size": [400, 24], "text": "新建连接", "style": { "color": "#CDD6F4", "fontSize": 14, "fontWeight": "bold" } },
-                { "id": "connectionDialogCloseBtn", "type": "Button", "size": [28, 28], "text": "×", "style": { "color": "#A6ADC8", "bgColor": "transparent", "fontSize": 16 }, "events": { "onClick": "@onConnectionCancel" } }
+                {
+                  "id": "connectionListHeader",
+                  "type": "View",
+                  "size": [160, 40],
+                  "layout": { "type": "horizontal", "align": "center", "justify": "space-between", "padding": [0, 12, 0, 12] },
+                  "children": [
+                    { "id": "connectionListTitle", "type": "Label", "size": [120, 24], "text": "连接列表", "style": { "color": "#CDD6F4", "fontSize": 12, "fontWeight": "bold" } }
+                  ]
+                },
+                {
+                  "id": "connectionList",
+                  "type": "Treeview",
+                  "size": [160, 380],
+                  "scrollable": 1,
+                  "style": { "color": "#CDD6F4", "bgColor": "#181825", "fontSize": 12 },
+                  "events": { "onSelect": "@onConnectionSelect" }
+                }
               ]
             },
             {
-              "id": "connectionDialogBody",
+              "id": "connectionFormPanel",
               "type": "View",
-              "size": [500, 280],
-              "layout": { "type": "vertical", "spacing": 10, "padding": [16, 20, 16, 20] },
+              "size": [440, 420],
+              "layout": { "type": "vertical", "spacing": 0 },
               "children": [
-                { "id": "connHostRow", "type": "View", "size": [460, 28], "layout": { "type": "horizontal", "spacing": 10 }, "children": [
-                  { "id": "connHostLabel", "type": "Label", "size": [80, 28], "text": "主机", "style": { "color": "#A6ADC8", "fontSize": 12 } },
-                  { "id": "connHostInput", "type": "Input", "size": [370, 28], "text": "localhost", "style": { "color": "#CDD6F4", "bgColor": "#11111B", "fontSize": 12, "padding": [6, 10, 6, 10] } }
-                ]},
-                { "id": "connPortRow", "type": "View", "size": [460, 28], "layout": { "type": "horizontal", "spacing": 10 }, "children": [
-                  { "id": "connPortLabel", "type": "Label", "size": [80, 28], "text": "端口", "style": { "color": "#A6ADC8", "fontSize": 12 } },
-                  { "id": "connPortInput", "type": "Input", "size": [370, 28], "text": "3306", "style": { "color": "#CDD6F4", "bgColor": "#11111B", "fontSize": 12, "padding": [6, 10, 6, 10] } }
-                ]},
-                { "id": "connUserRow", "type": "View", "size": [460, 28], "layout": { "type": "horizontal", "spacing": 10 }, "children": [
-                  { "id": "connUserLabel", "type": "Label", "size": [80, 28], "text": "用户名", "style": { "color": "#A6ADC8", "fontSize": 12 } },
-                  { "id": "connUserInput", "type": "Input", "size": [370, 28], "text": "root", "style": { "color": "#CDD6F4", "bgColor": "#11111B", "fontSize": 12, "padding": [6, 10, 6, 10] } }
-                ]},
-                { "id": "connPasswordRow", "type": "View", "size": [460, 28], "layout": { "type": "horizontal", "spacing": 10 }, "children": [
-                  { "id": "connPasswordLabel", "type": "Label", "size": [80, 28], "text": "密码", "style": { "color": "#A6ADC8", "fontSize": 12 } },
-                  { "id": "connPasswordInput", "type": "Input", "size": [370, 28], "text": "", "password": true, "style": { "color": "#CDD6F4", "bgColor": "#11111B", "fontSize": 12, "padding": [6, 10, 6, 10] } }
-                ]},
-                { "id": "connDatabaseRow", "type": "View", "size": [460, 28], "layout": { "type": "horizontal", "spacing": 10 }, "children": [
-                  { "id": "connDatabaseLabel", "type": "Label", "size": [80, 28], "text": "数据库", "style": { "color": "#A6ADC8", "fontSize": 12 } },
-                  { "id": "connDatabaseInput", "type": "Input", "size": [370, 28], "text": "", "style": { "color": "#CDD6F4", "bgColor": "#11111B", "fontSize": 12, "padding": [6, 10, 6, 10] } }
-                ]},
-                { "id": "connSSLCheckbox", "type": "Checkbox", "size": [20, 20], "label": "启用 SSL", "data": false, "style": { "color": "#89B4FA", "bgColor": "#11111B", "borderColor": "#45475A", "radius": 3 } }
-              ]
-            },
-            {
-              "id": "connTestResultRow",
-              "type": "View",
-              "size": [500, 24],
-              "layout": { "type": "horizontal", "spacing": 10, "padding": [0, 20, 0, 20] },
-              "style": { "bgColor": "#181825" },
-              "children": [
-                { "id": "connTestResult", "type": "Label", "size": [460, 24], "text": "", "style": { "fontSize": 12, "color": "#CDD6F4" } }
-              ]
-            },
-            {
-              "id": "connectionDialogButtons",
-              "type": "View",
-              "size": [500, 60],
-              "layout": { "type": "horizontal", "spacing": 10, "padding": [12, 20, 12, 20] },
-              "style": { "bgColor": "#181825", "borderTopWidth": 1, "borderTopColor": "#313244" },
-              "children": [
-                { "id": "connTestBtn", "type": "Button", "size": [88, 30], "text": "测试连接", "style": { "color": "#89B4FA", "bgColor": "#313244", "borderRadius": 4, "fontSize": 12 }, "events": { "onClick": "@onConnectionTest" } },
-                { "id": "connOkBtn", "type": "Button", "size": [88, 30], "text": "连接", "style": { "color": "#A6E3A1", "bgColor": "#313244", "borderRadius": 4, "fontSize": 12 }, "events": { "onClick": "@onConnectionOk" } },
-                { "id": "connCancelBtn", "type": "Button", "size": [88, 30], "text": "取消", "style": { "color": "#F38BA8", "bgColor": "#313244", "borderRadius": 4, "fontSize": 12 }, "events": { "onClick": "@onConnectionCancel" } }
+                {
+                  "id": "connectionDialogTitleBar",
+                  "type": "View",
+                  "size": [440, 40],
+                  "layout": { "type": "horizontal", "align": "center", "justify": "space-between", "padding": [0, 12, 0, 12] },
+                  "style": { "bgColor": "#181825", "borderBottomWidth": 1, "borderBottomColor": "#313244" },
+                  "children": [
+                    { "id": "connectionDialogTitle", "type": "Label", "size": [350, 24], "text": "连接配置", "style": { "color": "#CDD6F4", "fontSize": 14, "fontWeight": "bold" } },
+                    { "id": "connectionDialogCloseBtn", "type": "Button", "size": [28, 28], "text": "×", "style": { "color": "#A6ADC8", "bgColor": "transparent", "fontSize": 16 }, "events": { "onClick": "@onConnectionCancel" } }
+                  ]
+                },
+                {
+                  "id": "connectionDialogBody",
+                  "type": "View",
+                  "size": [440, 296],
+                  "layout": { "type": "vertical", "spacing": 10, "padding": [16, 20, 16, 20] },
+                  "children": [
+                    { "id": "connNameRow", "type": "View", "size": [400, 28], "layout": { "type": "horizontal", "spacing": 10 }, "children": [
+                      { "id": "connNameLabel", "type": "Label", "size": [80, 28], "text": "名称", "style": { "color": "#A6ADC8", "fontSize": 12 } },
+                      { "id": "connNameInput", "type": "Input", "size": [310, 28], "text": "", "placeholder": "连接名称", "style": { "color": "#CDD6F4", "bgColor": "#11111B", "fontSize": 12, "padding": [6, 10, 6, 10] } }
+                    ]},
+                    { "id": "connHostRow", "type": "View", "size": [400, 28], "layout": { "type": "horizontal", "spacing": 10 }, "children": [
+                      { "id": "connHostLabel", "type": "Label", "size": [80, 28], "text": "主机", "style": { "color": "#A6ADC8", "fontSize": 12 } },
+                      { "id": "connHostInput", "type": "Input", "size": [310, 28], "text": "localhost", "style": { "color": "#CDD6F4", "bgColor": "#11111B", "fontSize": 12, "padding": [6, 10, 6, 10] } }
+                    ]},
+                    { "id": "connPortRow", "type": "View", "size": [400, 28], "layout": { "type": "horizontal", "spacing": 10 }, "children": [
+                      { "id": "connPortLabel", "type": "Label", "size": [80, 28], "text": "端口", "style": { "color": "#A6ADC8", "fontSize": 12 } },
+                      { "id": "connPortInput", "type": "Input", "size": [310, 28], "text": "3306", "style": { "color": "#CDD6F4", "bgColor": "#11111B", "fontSize": 12, "padding": [6, 10, 6, 10] } }
+                    ]},
+                    { "id": "connUserRow", "type": "View", "size": [400, 28], "layout": { "type": "horizontal", "spacing": 10 }, "children": [
+                      { "id": "connUserLabel", "type": "Label", "size": [80, 28], "text": "用户名", "style": { "color": "#A6ADC8", "fontSize": 12 } },
+                      { "id": "connUserInput", "type": "Input", "size": [310, 28], "text": "root", "style": { "color": "#CDD6F4", "bgColor": "#11111B", "fontSize": 12, "padding": [6, 10, 6, 10] } }
+                    ]},
+                    { "id": "connPasswordRow", "type": "View", "size": [400, 28], "layout": { "type": "horizontal", "spacing": 10 }, "children": [
+                      { "id": "connPasswordLabel", "type": "Label", "size": [80, 28], "text": "密码", "style": { "color": "#A6ADC8", "fontSize": 12 } },
+                      { "id": "connPasswordInput", "type": "Input", "size": [310, 28], "text": "", "password": true, "style": { "color": "#CDD6F4", "bgColor": "#11111B", "fontSize": 12, "padding": [6, 10, 6, 10] } }
+                    ]},
+                    { "id": "connDatabaseRow", "type": "View", "size": [400, 28], "layout": { "type": "horizontal", "spacing": 10 }, "children": [
+                      { "id": "connDatabaseLabel", "type": "Label", "size": [80, 28], "text": "数据库", "style": { "color": "#A6ADC8", "fontSize": 12 } },
+                      { "id": "connDatabaseInput", "type": "Input", "size": [310, 28], "text": "", "style": { "color": "#CDD6F4", "bgColor": "#11111B", "fontSize": 12, "padding": [6, 10, 6, 10] } }
+                    ]},
+                    { "id": "connSSLCheckbox", "type": "Checkbox", "size": [20, 20], "label": "启用 SSL", "data": false, "style": { "color": "#89B4FA", "bgColor": "#11111B", "borderColor": "#45475A", "radius": 3 } }
+                  ]
+                },
+                {
+                  "id": "connTestResultRow",
+                  "type": "View",
+                  "size": [440, 24],
+                  "layout": { "type": "horizontal", "spacing": 10, "padding": [0, 20, 0, 20] },
+                  "style": { "bgColor": "#181825" },
+                  "children": [
+                    { "id": "connTestResult", "type": "Label", "size": [400, 24], "text": "", "style": { "fontSize": 12, "color": "#CDD6F4" } }
+                  ]
+                },
+                {
+                  "id": "connectionDialogButtons",
+                  "type": "View",
+                  "size": [440, 60],
+                  "layout": { "type": "horizontal", "spacing": 10, "padding": [12, 20, 12, 20] },
+                  "style": { "bgColor": "#181825", "borderTopWidth": 1, "borderTopColor": "#313244" },
+                  "children": [
+                    { "id": "connNewBtn", "type": "Button", "size": [68, 30], "text": "新建", "style": { "color": "#89B4FA", "bgColor": "#313244", "borderRadius": 4, "fontSize": 12 }, "events": { "onClick": "@onNewConnection" } },
+                    { "id": "connSaveBtn", "type": "Button", "size": [68, 30], "text": "保存", "style": { "color": "#F9E2AF", "bgColor": "#313244", "borderRadius": 4, "fontSize": 12 }, "events": { "onClick": "@onSaveConnection" } },
+                    { "id": "connDeleteBtn", "type": "Button", "size": [68, 30], "text": "删除", "style": { "color": "#F38BA8", "bgColor": "#313244", "borderRadius": 4, "fontSize": 12 }, "events": { "onClick": "@onDeleteConnection" } },
+                    { "id": "connTestBtn", "type": "Button", "size": [88, 30], "text": "测试连接", "style": { "color": "#89B4FA", "bgColor": "#313244", "borderRadius": 4, "fontSize": 12 }, "events": { "onClick": "@onConnectionTest" } },
+                    { "id": "connOkBtn", "type": "Button", "size": [68, 30], "text": "连接", "style": { "color": "#A6E3A1", "bgColor": "#313244", "borderRadius": 4, "fontSize": 12 }, "events": { "onClick": "@onConnectionOk" } }
+                  ]
+                }
               ]
             }
           ]

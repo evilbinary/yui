@@ -9,18 +9,16 @@ var tabCounter = 1;
 
 // ====================== 连接管理 ======================
 
-var dbConfig = {
-    host: "localhost",
-    user: "root",
-    password: "root",
-    database: "",
-    port: 3306
-};
+var connections = [];  // 所有连接配置
+var activeConnectionId = null;  // 当前活跃的连接 ID
+var currentConnection = null;  // 当前连接对象
+var editingConnectionId = null;  // 正在编辑的连接 ID
 
 var appPreferences = {
     autoConnect: true,
     pageSize: 500,
-    fontSize: 13
+    fontSize: 13,
+    lastConnectionId: null  // 上次使用的连接 ID
 };
 
 var currentTheme = "mocha";
@@ -40,17 +38,54 @@ var THEME_OPTIONS = {
 
 function loadDbConfig() {
     var cfg = readAppConfig();
-    if (cfg.connection) {
-        if (cfg.connection.host) dbConfig.host = cfg.connection.host;
-        if (cfg.connection.user) dbConfig.user = cfg.connection.user;
-        if (cfg.connection.password !== undefined) dbConfig.password = cfg.connection.password;
-        if (cfg.connection.database !== undefined) dbConfig.database = cfg.connection.database;
-        if (cfg.connection.port) dbConfig.port = cfg.connection.port;
+    
+    // 加载连接配置列表
+    if (cfg.connections && Array.isArray(cfg.connections)) {
+        connections = cfg.connections;
+    } else if (cfg.connection) {
+        // 兼容旧版本的单连接配置
+        connections = [{
+            id: "default",
+            name: "默认连接",
+            host: cfg.connection.host || "localhost",
+            user: cfg.connection.user || "root",
+            password: cfg.connection.password || "",
+            database: cfg.connection.database || "",
+            port: cfg.connection.port || 3306,
+            ssl: cfg.connection.ssl || false
+        }];
+    } else {
+        // 默认连接
+        connections = [{
+            id: "default",
+            name: "默认连接",
+            host: "localhost",
+            user: "root",
+            password: "",
+            database: "",
+            port: 3306,
+            ssl: false
+        }];
     }
+    
+    // 设置活跃连接
+    if (cfg.activeConnectionId) {
+        activeConnectionId = cfg.activeConnectionId;
+        currentConnection = findConnection(activeConnectionId);
+    } else if (cfg.preferences && cfg.preferences.lastConnectionId) {
+        activeConnectionId = cfg.preferences.lastConnectionId;
+        currentConnection = findConnection(activeConnectionId);
+    } else if (connections.length > 0) {
+        activeConnectionId = connections[0].id;
+        currentConnection = connections[0];
+    }
+    
+    // 加载偏好设置
     if (cfg.preferences) {
         if (cfg.preferences.autoConnect !== undefined) appPreferences.autoConnect = cfg.preferences.autoConnect;
         if (cfg.preferences.pageSize) appPreferences.pageSize = cfg.preferences.pageSize;
         if (cfg.preferences.fontSize) appPreferences.fontSize = cfg.preferences.fontSize;
+        if (cfg.preferences.lastConnectionId) appPreferences.lastConnectionId = cfg.preferences.lastConnectionId;
     }
     if (cfg.theme) currentTheme = cfg.theme;
     RESULT_PAGE_SIZE = appPreferences.pageSize || 500;
@@ -60,20 +95,29 @@ function loadDbConfig() {
 
 function saveDbConfig() {
     var cfg = readAppConfig();
-    cfg.connection = {
-        host: dbConfig.host,
-        user: dbConfig.user,
-        password: dbConfig.password,
-        database: dbConfig.database || "",
-        port: dbConfig.port
-    };
+    cfg.connections = connections;
+    cfg.activeConnectionId = activeConnectionId;
     cfg.preferences = {
         autoConnect: appPreferences.autoConnect,
         pageSize: appPreferences.pageSize,
-        fontSize: appPreferences.fontSize
+        fontSize: appPreferences.fontSize,
+        lastConnectionId: activeConnectionId
     };
     cfg.theme = currentTheme;
     writeAppConfig(cfg);
+}
+
+function findConnection(id) {
+    for (var i = 0; i < connections.length; i++) {
+        if (connections[i].id === id) {
+            return connections[i];
+        }
+    }
+    return null;
+}
+
+function generateConnectionId() {
+    return "conn_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
 }
 
 function applyPreferencesToUi() {
@@ -105,51 +149,259 @@ function setInputText(id, value) {
     if (input) input.text = value != null ? String(value) : "";
 }
 
-function fillConnectionForm() {
-    setInputText("connHostInput", dbConfig.host);
-    setInputText("connPortInput", dbConfig.port);
-    setInputText("connUserInput", dbConfig.user);
-    setInputText("connPasswordInput", dbConfig.password);
-    setInputText("connDatabaseInput", dbConfig.database || "");
+function fillConnectionForm(conn) {
+    if (!conn) conn = currentConnection || connections[0];
+    if (!conn) return;
+    
+    setInputText("connHostInput", conn.host || "localhost");
+    setInputText("connPortInput", conn.port || 3306);
+    setInputText("connUserInput", conn.user || "root");
+    setInputText("connPasswordInput", conn.password || "");
+    setInputText("connDatabaseInput", conn.database || "");
     var checkbox = yui.find("connSSLCheckbox");
-    if (checkbox) checkbox.data = dbConfig.ssl || false;
-}
-
-function onSSLToggle() {
-    // Checkbox 组件自动切换状态，这里不需要手动处理
+    if (checkbox) checkbox.data = conn.ssl || false;
+    var nameInput = yui.find("connNameInput");
+    if (nameInput) setInputText("connNameInput", conn.name || "");
+    
+    editingConnectionId = conn.id;
+    updateConnectionList();
 }
 
 function readConnectionForm() {
-    dbConfig.host = getInputText("connHostInput") || "localhost";
-    dbConfig.port = parseInt(getInputText("connPortInput"), 10) || 3306;
-    dbConfig.user = getInputText("connUserInput") || "root";
-    dbConfig.password = getInputText("connPasswordInput");
-    dbConfig.database = getInputText("connDatabaseInput");
+    var conn = editingConnectionId ? findConnection(editingConnectionId) : null;
+    if (!conn) {
+        conn = {
+            id: generateConnectionId(),
+            name: ""
+        };
+    }
+    
+    conn.host = getInputText("connHostInput") || "localhost";
+    conn.port = parseInt(getInputText("connPortInput"), 10) || 3306;
+    conn.user = getInputText("connUserInput") || "root";
+    conn.password = getInputText("connPasswordInput");
+    conn.database = getInputText("connDatabaseInput");
+    conn.name = getInputText("connNameInput") || (conn.host + ":" + conn.port);
+    
     var checkbox = yui.find("connSSLCheckbox");
-    dbConfig.ssl = checkbox ? checkbox.data : false;
-    print("SSL checkbox data: " + (checkbox ? checkbox.data : "null") + ", ssl=" + dbConfig.ssl);
+    conn.ssl = checkbox ? checkbox.data : false;
+    
+    return conn;
 }
 
-function connectDb() {
-    print("Connecting to MySQL...");
+function updateConnectionList() {
+    print("=== updateConnectionList called ===");
+
+    var list = yui.find("connectionList");
+    if (!list) {
+        print("ERROR: connectionList not found!");
+        return;
+    }
+
+    print("connectionList found, connections count: " + connections.length);
+
+    var data = [];
+    for (var i = 0; i < connections.length; i++) {
+        var conn = connections[i];
+        var isActive = conn.id === activeConnectionId;
+
+        // Treeview 需要完整的节点对象，text 字段会被 JSON 序列化
+        var node = {
+            id: conn.id,
+            text: conn.name,  // 只显示连接名称
+            icon_text: isActive ? "●" : "",  // 活跃连接显示 ● 符号
+            expandable: false,
+            // 添加连接的完整信息，供 onSelect 使用
+            _connection: conn
+        };
+
+        data.push(node);
+        print("  [" + i + "] " + conn.name + " (id: " + conn.id + ", active: " + isActive + ")");
+    }
+
+    list.data = data;
+    print("Set list.data to array with " + data.length + " items");
+
+    // 验证数据是否设置成功
+    var verifyData = list.data;
+    if (verifyData) {
+        print("Verification: list.data has " + (verifyData.length || 0) + " items");
+    }
+
+    print("=== updateConnectionList done ===");
+}
+
+function onConnectionSelect(layerId) {
+    print("=== onConnectionSelect called with layerId: " + layerId + " ===");
+
+    if (!layerId) {
+        print("ERROR: layerId is null or empty");
+        return;
+    }
+
+    var layer = yui.find(layerId);
+    if (!layer) {
+        print("ERROR: layer not found for id: " + layerId);
+        return;
+    }
+
+    print("Layer found, layer.text: " + layer.text);
+
+    var nodeText = layer.text;
+    if (!nodeText) {
+        print("ERROR: layer.text is empty");
+        return;
+    }
+
+    try {
+        var node = JSON.parse(nodeText);
+        print("Parsed node: " + JSON.stringify(node));
+
+        // 从节点中获取连接对象
+        var conn = node._connection;
+        if (conn) {
+            fillConnectionForm(conn);
+            print("Connection form filled for: " + conn.name);
+        } else {
+            // 如果没有 _connection，尝试用 id 查找
+            var connId = node.id;
+            if (connId) {
+                conn = findConnection(connId);
+                if (conn) {
+                    fillConnectionForm(conn);
+                    print("Connection found by id: " + conn.name);
+                } else {
+                    print("ERROR: Connection not found for id: " + connId);
+                }
+            } else {
+                print("ERROR: No connection id in node");
+            }
+        }
+    } catch (e) {
+        print("ERROR: Failed to parse node text: " + e.message);
+    }
+
+    print("=== onConnectionSelect done ===");
+}
+
+function onNewConnection() {
+    print("=== onNewConnection called ===");
+
+    var newConn = {
+        id: generateConnectionId(),
+        name: "新连接",
+        host: "localhost",
+        port: 3306,
+        user: "root",
+        password: "",
+        database: "",
+        ssl: false
+    };
+
+    print("New connection created with id: " + newConn.id);
+
+    // 添加到列表
+    connections.push(newConn);
+    editingConnectionId = newConn.id;
+
+    print("Connections array length: " + connections.length);
+    print("Connection names: " + connections.map(function(c) { return c.name; }).join(", "));
+
+    // 先显示对话框
+    showOverlay("connectionDialogOverlay");
+
+    // 再更新表单和列表
+    fillConnectionForm(newConn);
+    updateConnectionList();
+
+    print("=== onNewConnection done ===");
+
+    // 聚焦名称输入框
+    YUI.focus("connNameInput");
+}
+
+function onDeleteConnection() {
+    if (!editingConnectionId) return;
+    if (connections.length <= 1) {
+        updateStatus("至少保留一个连接配置", "#F38BA8");
+        return;
+    }
+    
+    // 找到并删除
+    for (var i = 0; i < connections.length; i++) {
+        if (connections[i].id === editingConnectionId) {
+            connections.splice(i, 1);
+            break;
+        }
+    }
+    
+    // 如果删除的是当前活跃连接，切换到第一个
+    if (editingConnectionId === activeConnectionId) {
+        activeConnectionId = connections[0].id;
+        currentConnection = connections[0];
+    }
+    
+    editingConnectionId = connections[0].id;
+    fillConnectionForm(connections[0]);
+    updateConnectionList();
+    saveDbConfig();
+    updateStatus("已删除连接配置", "#A6E3A1");
+}
+
+function onSaveConnection() {
+    var conn = readConnectionForm();
+    
+    // 检查是否已存在（更新）还是新建
+    var existingIndex = -1;
+    for (var i = 0; i < connections.length; i++) {
+        if (connections[i].id === conn.id) {
+            existingIndex = i;
+            break;
+        }
+    }
+    
+    if (existingIndex >= 0) {
+        connections[existingIndex] = conn;
+    } else {
+        connections.push(conn);
+    }
+    
+    editingConnectionId = conn.id;
+    updateConnectionList();
+    saveDbConfig();
+    updateStatus("已保存连接配置: " + conn.name, "#A6E3A1");
+}
+
+function connectDb(conn) {
+    if (!conn) conn = currentConnection;
+    if (!conn) {
+        updateStatus("没有可用的连接配置", "#F38BA8");
+        return;
+    }
+    
+    print("Connecting to MySQL: " + conn.name);
     updateStatus("连接中...", "#F9E2AF");
 
-    var result = YUI.call("mysql_connect", JSON.stringify(dbConfig));
+    var result = YUI.call("mysql_connect", JSON.stringify(conn));
     if (!result) {
         updateStatus("连接失败: 无返回", "#F38BA8");
         return;
     }
     var info = JSON.parse(result);
     if (info.success) {
+        currentConnection = conn;
+        activeConnectionId = conn.id;
         updateStatus("已连接", "#A6E3A1");
         var statusText = yui.find("statusText");
         var statusIcon = yui.find("statusIcon");
         if (statusText) {
-            statusText.text = "已连接 " + dbConfig.host + ":" + dbConfig.port;
+            statusText.text = "已连接 " + conn.name + " (" + conn.host + ":" + conn.port + ")";
             statusText.style = { color: "#A6E3A1" };
         }
         if (statusIcon) statusIcon.style = { color: "#A6E3A1" };
         loadDatabases();
+        updateConnectionList();
+        saveDbConfig();
     } else {
         updateStatus("连接失败: " + (info.error || "未知错误"), "#F38BA8");
     }
@@ -294,15 +546,9 @@ function onSettingsMenuClick(itemText) {
     }
 }
 
-function onNewConnection() {
-    fillConnectionForm();
-    showOverlay("connectionDialogOverlay");
-    YUI.focus("connHostInput");
-}
-
 function onConnectionTest() {
-    readConnectionForm();
-    updateStatus("正在测试连接...", "#F9E2AF");
+    var conn = readConnectionForm();
+    updateStatus("正在测试连接: " + conn.name, "#F9E2AF");
 
     // 显示测试中的提示
     var testBtn = yui.find("connTestBtn");
@@ -316,7 +562,7 @@ function onConnectionTest() {
         resultLabel.style = { color: "#F9E2AF" };
     }
 
-    var result = YUI.call("mysql_connect", JSON.stringify(dbConfig));
+    var result = YUI.call("mysql_connect", JSON.stringify(conn));
 
     // 恢复按钮状态
     if (testBtn) {
@@ -355,15 +601,37 @@ function onConnectionTest() {
 }
 
 function onConnectionOk() {
-    readConnectionForm();
+    var conn = readConnectionForm();
+    
+    // 保存到连接列表
+    var existingIndex = -1;
+    for (var i = 0; i < connections.length; i++) {
+        if (connections[i].id === conn.id) {
+            existingIndex = i;
+            break;
+        }
+    }
+    
+    if (existingIndex >= 0) {
+        connections[existingIndex] = conn;
+    } else {
+        connections.push(conn);
+    }
+    
+    // 设置为当前连接并连接
+    currentConnection = conn;
+    activeConnectionId = conn.id;
+    editingConnectionId = conn.id;
+    
     saveDbConfig();
     hideOverlay("connectionDialogOverlay");
     disconnectDb();
-    connectDb();
+    connectDb(conn);
 }
 
 function onConnectionCancel() {
     hideOverlay("connectionDialogOverlay");
+    editingConnectionId = null;
 }
 
 function setPrefNav(section) {
@@ -1226,8 +1494,10 @@ function onLoad() {
   YUI.log('onLoad');
   loadDbConfig();
   loadAppLayout();
-  if (appPreferences.autoConnect !== false) {
-    connectDb();
+  updateConnectionList();  // 初始化连接列表显示
+  
+  if (appPreferences.autoConnect !== false && currentConnection) {
+    connectDb(currentConnection);
   } else {
     updateStatus("未连接", "#F38BA8");
   }
