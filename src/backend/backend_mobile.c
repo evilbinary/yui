@@ -132,6 +132,8 @@ static int mobile_egl_init(ANativeWindow* window) {
         return 0;
     }
 
+    eglSwapInterval(g_egl_display, 1);
+
     g_egl_window = window;
     g_window_w = ANativeWindow_getWidth(window);
     g_window_h = ANativeWindow_getHeight(window);
@@ -1179,12 +1181,6 @@ void backend_tick(Layer* ui_root) {
     }
 
     g_ui_root = ui_root;
-
-#ifdef __ANDROID__
-    if (g_egl_ready && g_egl_display != EGL_NO_DISPLAY) {
-        eglMakeCurrent(g_egl_display, g_egl_surface, g_egl_surface, g_egl_context);
-    }
-#endif
 
     for (i = 0; i < g_update_callback_count; i++) {
         if (g_update_callbacks[i]) {

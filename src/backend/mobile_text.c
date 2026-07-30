@@ -32,7 +32,7 @@ typedef struct {
     int size;
 } MobileFont;
 
-#define MOBILE_TEXT_CACHE_MAX 128
+#define MOBILE_TEXT_CACHE_MAX 512
 
 typedef struct {
     DFont* font;
