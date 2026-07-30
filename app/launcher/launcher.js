@@ -186,6 +186,7 @@ function onDemoClick(layerId) {
 }
 
 function onBackClick() {
+    if (typeof _gameIsRunning !== "undefined") _gameIsRunning = false;
     if (currentAppId) YUI.hide(currentAppId);
     YUI.update({ target: "page_outlet", change: { children: null } });
     YUI.hide("page_outlet");

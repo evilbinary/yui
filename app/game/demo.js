@@ -255,11 +255,13 @@ function onToggleDebugBoxes() {
 }
 
 var _gameOrigThemeApply = null;
+var _gameIsRunning = false;
 
 function onGameDemoLoad() {
     gScore = 0;
     gVictory = false;
     gBulletSeq = 0;
+    _gameIsRunning = true;
     if (typeof Game === "undefined") {
         print("Game API missing");
         return;
@@ -276,11 +278,8 @@ function onGameDemoLoad() {
         _gameOrigThemeApply = Theme.apply;
         Theme.apply = function() {
             _gameOrigThemeApply.apply(this, arguments);
-            if (typeof YUI !== "undefined" && typeof YUI.find === "function" && YUI.find("game_demo_root") !== null) {
+            if (_gameIsRunning) {
                 keepRootTransparent();
-            } else {
-                Theme.apply = _gameOrigThemeApply;
-                _gameOrigThemeApply = null;
             }
         };
     }
