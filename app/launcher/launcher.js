@@ -17,6 +17,8 @@ var THEMES = [
     { id: "mocha",              path: "app/lib/themes/mocha.json" },
 ];
 
+var perfVisible = false;
+
 function onLauncherLoad() {
     initThemes();
     var apps = scanApps();
@@ -42,6 +44,13 @@ function onThemeSelect() {
     if (!val) return;
     Theme.setCurrent(val);
     Theme.apply();
+}
+
+function onPerfToggle() {
+    perfVisible = !perfVisible;
+    YUI.perf.enable();
+    YUI.perf.setOverlay(perfVisible);
+    YUI.setText("btn_perf", perfVisible ? "Perf: ON" : "Perf: OFF");
 }
 
 // ---------- Scanning ----------
