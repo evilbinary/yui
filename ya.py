@@ -419,6 +419,7 @@ def add_flags():
             '-Wl,--end-group'
             ),
     elif is_plat("android"):
+        set_toolchain('gcc')
         configure_android_toolchain()
         _add_android_compile_flags()
         before_build(configure_android_toolchain)
