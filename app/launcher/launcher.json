@@ -76,7 +76,7 @@
       "type": "View",
       "visible": false,
       "flex": 1,
-      "layout": { "type": "vertical" },
+      "layout": { "type": "vertical", "align": "center" },
       "children": []
     }
   ]
