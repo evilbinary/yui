@@ -168,7 +168,8 @@ function onDemoClick(layerId) {
     YUI.hide("launcher_content");
     YUI.show("btn_back");
     YUI.renderFromJson("page_outlet", raw, false, demo.jsonPath);
-    YUI.show(appId, true);
+    YUI.show("page_outlet");
+    YUI.show(appId);
     currentAppId = appId;
     YUI.setText("launcher_title", demo.title);
 }
