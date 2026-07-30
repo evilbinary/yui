@@ -5,10 +5,9 @@
 
 var DemoMap = {};
 
-var GRID_COLS = 5;
 var GRID_SPACING = 8;
-var CELL_SIZE = 140;
-var GRID_WIDTH = GRID_COLS * CELL_SIZE + (GRID_COLS - 1) * GRID_SPACING;
+var CELL_MIN = 80;
+var CELL_MAX = 140;
 
 var THEMES = [
     { id: "developer-terminal", path: "app/lib/themes/developer-terminal.json" },
@@ -123,9 +122,16 @@ function readMeta(path, fallback) {
 
 function buildGrid(gridId, demos) {
     if (demos.length === 0) return;
-    var rows = Math.ceil(demos.length / GRID_COLS);
-    var gridH = rows * CELL_SIZE + (rows - 1) * GRID_SPACING;
-    YUI.update({ target: gridId, change: { width: GRID_WIDTH, height: gridH, children: null } });
+    var contentW = YUI.getProperty("launcher_content", "width") || 600;
+    var pad = 24;
+    var availW = Math.max(200, contentW - pad);
+    var cols = Math.max(2, Math.min(8, Math.floor(availW / CELL_MIN)));
+    var cell = Math.floor((availW - GRID_SPACING * (cols - 1)) / cols);
+    cell = Math.min(cell, CELL_MAX);
+    var gridW = cols * cell + (cols - 1) * GRID_SPACING;
+    var rows = Math.ceil(demos.length / cols);
+    var gridH = rows * cell + (rows - 1) * GRID_SPACING;
+    YUI.update({ target: gridId, change: { width: gridW, height: gridH, children: null } });
     for (var i = 0; i < demos.length; i++) {
         var d = demos[i];
         var key = "dm_" + i + "_" + d._cat;
@@ -133,14 +139,14 @@ function buildGrid(gridId, demos) {
         YUI.renderFromJson(gridId, JSON.stringify({
             id: key,
             type: "Button",
-            size: [CELL_SIZE, CELL_SIZE],
+            size: [cell, cell],
             style: { bgColor: "#2a2a3a", borderRadius: 8 },
             icon: d.icon || d.title.charAt(0).toUpperCase(),
             text: d.title,
             iconAlign: "center",
-            iconSize: 42,
-            iconGap:18,
-            fontSize: 18,
+            iconSize: Math.floor(cell * 0.3),
+            iconGap: Math.floor(cell * 0.12),
+            fontSize: Math.floor(cell * 0.13),
             events: { onClick: "@onDemoClick" }
         }), true);
         YUI.show(key);

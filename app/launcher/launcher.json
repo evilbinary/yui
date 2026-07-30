@@ -1,7 +1,7 @@
 {
   "id": "launcher_root",
   "type": "View",
-  "size": [800, 600],
+  "size": [0, 0],
   "assets": "app/assets",
   "font": "Roboto-Regular.ttf",
   "fontFallback": "NotoColorEmoji.ttf",
@@ -12,7 +12,7 @@
     {
       "id": "launcher_toolbar",
       "type": "View",
-      "size": [800, 44],
+      "height": 44,
       "layout": { "type": "horizontal", "spacing": 6, "padding": [4, 12, 4, 12], "align": "center" },
       "children": [
         {
@@ -62,14 +62,15 @@
           "id": "section_apps_title",
           "type": "Label",
           "text": "— Apps —",
-          "size": [776, 20],
+          "height": 20,
           "fontSize": 13,
           "bold": true
         },
         {
           "id": "grid_apps",
           "type": "Grid",
-          "width": 776,
+          "width": 0,
+          "height": 0,
           "layout": { "columns": 5, "gap": 8 },
           "children": []
         },
@@ -77,14 +78,15 @@
           "id": "section_tests_title",
           "type": "Label",
           "text": "— Tests —",
-          "size": [776, 20],
+          "height": 20,
           "fontSize": 13,
           "bold": true
         },
         {
           "id": "grid_tests",
           "type": "Grid",
-          "width": 776,
+          "width": 0,
+          "height": 0,
           "layout": { "columns": 5, "gap": 8 },
           "children": []
         }

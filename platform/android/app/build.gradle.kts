@@ -12,17 +12,9 @@ fun resolveNdkPath(): String? = sequenceOf(
 ).firstOrNull { !it.isNullOrBlank() }
 
 val copyYuiAssets = tasks.register<Copy>("copyYuiAssets") {
-    from(yuiRepoRoot.resolve("app/assets")) {
-        into("app/assets")
-    }
-    from(yuiRepoRoot.resolve("app/watch-os")) {
-        into("app/watch-os")
-    }
-    from(yuiRepoRoot.resolve("app/lib")) {
-        into("app/lib")
-    }
-    from(yuiRepoRoot.resolve("app/tests/login.json")) {
-        into("app/tests")
+    from(yuiRepoRoot.resolve("app")) {
+        exclude("**/__pycache__/**", "**/*.py", "main.c", "ya.py", "lvgl")
+        into("app")
     }
     into(yuiAssetsDir)
 }
