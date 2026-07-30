@@ -186,7 +186,7 @@ static void yui_apply_root_layout(Layer* root) {
     }
 
     if (root->text != NULL) {
-        backend_set_window_size(root->text);
+        backend_set_window_title(root->text);
     }
 
     load_textures(root);

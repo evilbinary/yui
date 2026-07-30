@@ -178,7 +178,7 @@ int main(int argc, char* argv[])
     lvgl_module_init_layer(ui_root);
 
     if (ui_root->text) {
-        backend_set_window_size(ui_root->text);
+        backend_set_window_title(ui_root->text);
     }
 
     cJSON_Delete(root_json);

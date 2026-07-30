@@ -2493,7 +2493,7 @@ void backend_set_windowsize(int width,int  height){
     backend_apply_display_scale();
 }
 
-void backend_set_window_size(char* title){
+void backend_set_window_title(char* title){
     SDL_SetWindowTitle(window,title);
 }
 
