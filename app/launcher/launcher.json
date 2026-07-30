@@ -12,6 +12,7 @@
     {
       "id": "launcher_toolbar",
       "type": "View",
+      "style": { "bgColor": "#0D141B" },
       "height": 44,
       "layout": { "type": "horizontal", "spacing": 6, "padding": [4, 12, 4, 12], "align": "center" },
       "children": [
@@ -62,6 +63,7 @@
     {
       "id": "launcher_content",
       "type": "View",
+      "style": { "bgColor": "#0A0E12" },
       "scrollable": 1,
       "flex": 1,
       "layout": { "type": "vertical", "spacing": 8, "padding": [8, 12, 8, 12] },

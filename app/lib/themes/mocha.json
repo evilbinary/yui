@@ -3,7 +3,7 @@
   "version": "1.0",
   "description": "Catppuccin Mocha",
   "styles": [
-    { "selector": "View", "style": { "bgColor": "#1E1E2E", "scrollbarColor": "#585B70", "scrollbarTrackColor": "#11111B80" } },
+    { "selector": "View", "style": { "scrollbarColor": "#585B70", "scrollbarTrackColor": "#11111B80" } },
     { "selector": "Label", "style": { "color": "#CDD6F4", "fontSize": 12 } },
     { "selector": "Button", "style": { "bgColor": "#313244", "color": "#CDD6F4", "borderRadius": 4, "fontSize": 12 } },
     { "selector": "Button.primary", "style": { "bgColor": "#89B4FA", "color": "#1E1E2E", "borderRadius": 4, "fontWeight": "bold" } },

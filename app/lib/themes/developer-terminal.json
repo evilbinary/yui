@@ -3,7 +3,7 @@
   "version": "1.0",
   "description": "Developer Terminal 终端风 — 近黑底、荧光绿 mono、无阴影无渐变、小圆角硬边框",
   "styles": [
-    { "selector": "View", "style": { "bgColor": "#0A0E12", "scrollbarColor": "#4AF626", "scrollbarTrackColor": "#1F2937" } },
+    { "selector": "View", "style": { "scrollbarColor": "#4AF626", "scrollbarTrackColor": "#1F2937" } },
     { "selector": "Label", "style": { "color": "#4AF626", "fontSize": 13 } },
     {
       "selector": "Button",

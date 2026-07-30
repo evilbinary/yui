@@ -212,18 +212,24 @@ function onTrigger(a, b, phase) {
 
 var gDebugUi = -1;
 
+function keepRootTransparent() {
+    YUI.update({ target: "launcher_root", change: { bgColor: "transparent" } });
+    YUI.update({ target: "page_outlet", change: { bgColor: "transparent" } });
+    YUI.update({ target: "game_demo_root", change: { bgColor: "transparent" } });
+}
+
 function updateDebugButton() {
-  var on = 0;
-  if (Game.debug && Game.debug.boxes) {
-    on = Game.debug.boxes() ? 1 : 0;
-  }
-  gDebugUi = on;
-  setHudText("btnDebugBoxes", on ? "Debug On" : "Debug Off");
-  if (typeof YUI !== "undefined" && YUI.setStyle) {
-    YUI.setStyle("btnDebugBoxes", {
-      bgColor: on ? "#2f9e44" : "#495057"
-    });
-  }
+    var on = 0;
+    if (Game.debug && Game.debug.boxes) {
+        on = Game.debug.boxes() ? 1 : 0;
+    }
+    gDebugUi = on;
+    setHudText("btnDebugBoxes", on ? "Debug On" : "Debug Off");
+    if (typeof YUI !== "undefined") {
+        YUI.update({ target: "btnDebugBoxes", change: {
+            bgColor: on ? "#2f9e44" : "#495057"
+        }});
+    }
 }
 
 function syncDebugButtonIfNeeded() {
@@ -248,21 +254,36 @@ function onToggleDebugBoxes() {
   updateDebugButton();
 }
 
+var _gameOrigThemeApply = null;
+
 function onGameDemoLoad() {
-  gScore = 0;
-  gVictory = false;
-  gBulletSeq = 0;
-  if (typeof Game === "undefined") {
-    print("Game API missing");
-    return;
-  }
-  Game.onTrigger = onTrigger;
-  if (Game.debug && Game.debug.setBoxes) {
-    Game.debug.setBoxes(0);
-  }
-  updateDebugButton();
-  loadLevel(0);
-  print("A/D move, Space jump, Click/F shoot. Debug button or F3 toggles collider boxes.");
+    gScore = 0;
+    gVictory = false;
+    gBulletSeq = 0;
+    if (typeof Game === "undefined") {
+        print("Game API missing");
+        return;
+    }
+    Game.onTrigger = onTrigger;
+    if (Game.debug && Game.debug.setBoxes) {
+        Game.debug.setBoxes(0);
+    }
+    updateDebugButton();
+    loadLevel(0);
+    print("A/D move, Space jump, Click/F shoot. Debug button or F3 toggles collider boxes.");
+    keepRootTransparent();
+    if (typeof Theme !== "undefined" && !_gameOrigThemeApply) {
+        _gameOrigThemeApply = Theme.apply;
+        Theme.apply = function() {
+            _gameOrigThemeApply.apply(this, arguments);
+            if (typeof YUI !== "undefined" && typeof YUI.find === "function" && YUI.find("game_demo_root") !== null) {
+                keepRootTransparent();
+            } else {
+                Theme.apply = _gameOrigThemeApply;
+                _gameOrigThemeApply = null;
+            }
+        };
+    }
 }
 
 function playerUpdate(entity, dt) {

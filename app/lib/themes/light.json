@@ -5,7 +5,7 @@
   "styles": [
     {
       "selector": "View",
-      "style": { "bgColor": "#F5F6FA" }
+      "style": {}
     },
     {
       "selector": "Label",
