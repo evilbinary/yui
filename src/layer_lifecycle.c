@@ -153,6 +153,21 @@ void layer_lifecycle_init_tree(Layer* root) {
 void layer_set_visible(Layer* layer, int visible) {
     if (!layer) return;
 
+    if (visible == VISIBLE_ALL) {
+        layer_set_visible(layer, VISIBLE);
+        if (layer->children) {
+            for (int i = 0; i < layer->child_count; i++) {
+                if (layer->children[i]) {
+                    layer_set_visible(layer->children[i], VISIBLE_ALL);
+                }
+            }
+        }
+        if (layer->sub && layer->sub->parent == layer) {
+            layer_set_visible(layer->sub, VISIBLE_ALL);
+        }
+        return;
+    }
+
     VisibleType new_visible = (VisibleType)visible;
 
     if (layer->visible == new_visible) {

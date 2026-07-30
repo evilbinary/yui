@@ -132,12 +132,7 @@ function onDemoClick(layerId) {
     if (!raw) return;
     YUI.hide("launcher_content");
     YUI.show("btn_back");
-
-    // renderFromJson creates layers hidden; extract JSON root id to show it
-    var pageId = null;
-    try { pageId = JSON.parse(raw).id; } catch (e) {}
     YUI.renderFromJson("page_outlet", raw, false, demo.jsonPath);
-    if (pageId) YUI.show(pageId);
     YUI.show("page_outlet");
     YUI.setText("launcher_title", demo.title);
 }

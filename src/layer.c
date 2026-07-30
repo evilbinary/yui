@@ -1269,7 +1269,7 @@ int layer_show(Layer* layer) {
         return 0;
     }
 
-    layer_set_visible(layer, VISIBLE);
+    layer_set_visible(layer, VISIBLE_ALL);
     return 1;
 }
 

@@ -340,6 +340,7 @@ typedef enum {
 typedef enum {
     VISIBLE,
     IN_VISIBLE,
+    VISIBLE_ALL,
 } VisibleType;
 
 
