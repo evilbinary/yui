@@ -10,14 +10,18 @@
 #define YUI_WITH_GAME_AUDIO 1
 #endif
 
+// macOS 支持 miniaudio，iOS 不支持（需要 AVFoundation/Objective-C）
+#if YUI_WITH_GAME_AUDIO && defined(__APPLE__)
+#include <TargetConditionals.h>
+#if TARGET_OS_IPHONE
+#undef YUI_WITH_GAME_AUDIO
+#define YUI_WITH_GAME_AUDIO 0
+#endif
+#endif
+
 #if YUI_WITH_GAME_AUDIO
 #define MA_NO_ENCODING
 #define MA_NO_GENERATION
-#ifdef __APPLE__
-// iOS 设备默认使用 AVFoundation（需要 Objective-C）
-// 强制使用 CoreAudio 来支持纯 C 编译
-#define MA_APPLE_DESKTOP
-#endif
 #define MINIAUDIO_IMPLEMENTATION
 #include "../../lib/miniaudio/miniaudio.h"
 
