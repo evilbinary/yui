@@ -336,7 +336,7 @@ static PerfCase g_cases[] = {
     {"line", op_line, 1800.0, 0},
     {"bezier_cubic", op_bezier, 1800.0, 0},
     {"arc", op_arc, 900.0, 0},
-    {"arc_partial", op_arc_partial, 3000.0, 0},
+    {"arc_partial", op_arc_partial, 300.0, 0},
     {"shadow", op_shadow, 1500.0, 0},
     {"backdrop_filter", op_backdrop_filter, 25000.0, 0},
     {"text_copy", op_text_copy, 100.0, 1},
