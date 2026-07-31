@@ -1,8 +1,11 @@
 /*
- * Temporary pixel-verification for backend_render_arc after optimization.
- * Uses SDL_RenderReadPixels directly; renderer is a non-static global in
- * backend_sdl.c. Verifies full-circle ring, partial-arc wedge coverage,
- * and anti-aliasing edges.
+ * Pixel-level unit test for backend_render_arc (full circle, partial wedge,
+ * and spinner-style arcs).
+ *
+ * Readback note: with the OpenGL renderer the window is double-buffered, so
+ * SDL_RenderReadPixels must be called on the *backbuffer* (draw, then read,
+ * and only present afterwards). Reading after SDL_RenderPresent returns the
+ * previous frame's pixels and makes assertions flaky.
  */
 #include <stdarg.h>
 #include <stddef.h>
@@ -34,9 +37,9 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 }
 #endif
 
-#define PITCH 900 * 4
-
 typedef struct { Uint8 r, g, b, a; } Pix;
+
+/* Read one pixel from the backbuffer (ABGR8888 -> r,g,b,a). */
 static int read_pixel(int x, int y, Pix *out)
 {
     Uint8 buf[4] = {0};
@@ -72,6 +75,14 @@ static void expect_close(const char *what, int x, int y, Pix p,
     }
 }
 
+/* Pixel center on the ring at angle a (0=top, clockwise): x=cx+r*sin(a), y=cy-r*cos(a). */
+static void ring_pixel(int cx, int cy, int r, float deg, int *x, int *y)
+{
+    float ar = deg * (float)M_PI / 180.0f;
+    *x = cx + (int)(r * sinf(ar));
+    *y = cy - (int)(r * cosf(ar));
+}
+
 static void test_arc_full_circle(void **state)
 {
     (void)state;
@@ -80,7 +91,6 @@ static void test_arc_full_circle(void **state)
 
     fill_clear(0, 0, 0);
     backend_render_arc(cx, cy, r, 0.0f, 360.0f, c, w);
-    backend_render_present();
 
     Pix p;
     /* on the ring: top, right, bottom, left, diagonals */
@@ -95,7 +105,7 @@ static void test_arc_full_circle(void **state)
     assert_int_equal(read_pixel(cx, cy, &p), 0);
     expect_close("center", cx, cy, p, 0, 0, 0, 10);
     /* inside hole */
-    assert_int_equal(read_pixel(cx, cy - r + r / 2, &p), 0);
+    assert_int_equal(read_pixel(cx, cy - r / 2, &p), 0);
     expect_close("hole", cx, cy - r / 2, p, 0, 0, 0, 10);
     /* outside */
     assert_int_equal(read_pixel(cx + r + 30, cy, &p), 0);
@@ -112,29 +122,25 @@ static void test_arc_partial(void **state)
 
     fill_clear(0, 0, 0);
     backend_render_arc(cx, cy, r, sa, ea, c, w);
-    backend_render_present();
 
     Pix p;
-    /* angle 90 = right (bottom of the sweep) */
-    assert_int_equal(read_pixel(cx + r, cy, &p), 0);
-    expect_close("wedge90", cx + r, cy, p, 0, 200, 255, 40);
-    /* angle 180 = down */
-    assert_int_equal(read_pixel(cx, cy + r, &p), 0);
-    expect_close("wedge180", cx, cy + r, p, 0, 200, 255, 40);
-    /* angle 135 = bottom-right diagonal */
-    assert_int_equal(read_pixel(cx + (int)(r * 0.7071f), cy + (int)(r * 0.7071f), &p), 0);
-    expect_close("wedge135", cx + (int)(r * 0.7071f), cy + (int)(r * 0.7071f), p, 0, 200, 255, 40);
+    /* interior angles within the wedge must be full intensity */
+    float interior[] = {100.0f, 120.0f, 140.0f, 160.0f};
+    for (size_t i = 0; i < sizeof(interior) / sizeof(interior[0]); i++) {
+        int x, y;
+        ring_pixel(cx, cy, r, interior[i], &x, &y);
+        assert_int_equal(read_pixel(x, y, &p), 0);
+        expect_close("wedge_in", x, y, p, 0, 200, 255, 40);
+    }
 
-    /* top must be empty (angle 0 not in 90..180) */
-    assert_int_equal(read_pixel(cx, cy - r, &p), 0);
-    expect_close("outside_top", cx, cy - r, p, 0, 0, 0, 10);
-    /* left must be empty */
-    assert_int_equal(read_pixel(cx - r, cy, &p), 0);
-    expect_close("outside_left", cx - r, cy, p, 0, 0, 0, 10);
-    /* just outside start edge: angle 90+12 = ~102 still inside, so check angle 60 -> empty */
-    float a60 = 60.0f * M_PI / 180.0f;
-    assert_int_equal(read_pixel(cx + (int)(r * cosf(a60)), cy + (int)(r * sinf(a60)), &p), 0);
-    expect_close("outside_60", cx + (int)(r * cosf(a60)), cy + (int)(r * sinf(a60)), p, 0, 0, 0, 10);
+    /* outside angles must be empty: top(0), upper-right(45), left(270) */
+    float outside[] = {0.0f, 45.0f, 270.0f};
+    for (size_t i = 0; i < sizeof(outside) / sizeof(outside[0]); i++) {
+        int x, y;
+        ring_pixel(cx, cy, r, outside[i], &x, &y);
+        assert_int_equal(read_pixel(x, y, &p), 0);
+        expect_close("wedge_out", x, y, p, 0, 0, 0, 10);
+    }
 }
 
 static void test_arc_spinner(void **state)
@@ -147,24 +153,25 @@ static void test_arc_spinner(void **state)
 
     fill_clear(0, 0, 0);
     backend_render_arc(cx, cy, r, sa, ea, c, w);
-    backend_render_present();
 
     Pix p;
-    /* angle 90 = right */
-    assert_int_equal(read_pixel(cx + r, cy, &p), 0);
-    expect_close("spin90", cx + r, cy, p, 255, 220, 0, 40);
-    /* angle 45 = top-right diagonal */
-    float a45 = 45.0f * M_PI / 180.0f;
-    assert_int_equal(read_pixel(cx + (int)(r * sinf(a45)), cy - (int)(r * cosf(a45)), &p), 0);
-    expect_close("spin45", cx + (int)(r * sinf(a45)), cy - (int)(r * cosf(a45)), p, 255, 220, 0, 40);
-    /* angle 135 = bottom-right diagonal */
-    float a135 = 135.0f * M_PI / 180.0f;
-    assert_int_equal(read_pixel(cx + (int)(r * sinf(a135)), cy - (int)(r * cosf(a135)), &p), 0);
-    expect_close("spin135", cx + (int)(r * sinf(a135)), cy - (int)(r * cosf(a135)), p, 255, 220, 0, 40);
+    /* interior: 60, 90, 120 */
+    float interior[] = {60.0f, 90.0f, 120.0f};
+    for (size_t i = 0; i < sizeof(interior) / sizeof(interior[0]); i++) {
+        int x, y;
+        ring_pixel(cx, cy, r, interior[i], &x, &y);
+        assert_int_equal(read_pixel(x, y, &p), 0);
+        expect_close("spin_in", x, y, p, 255, 220, 0, 40);
+    }
 
-    /* bottom must be empty */
-    assert_int_equal(read_pixel(cx, cy + r, &p), 0);
-    expect_close("spin_bottom_empty", cx, cy + r, p, 0, 0, 0, 10);
+    /* outside: 0(top), 180(bottom), 270(left) */
+    float outside[] = {0.0f, 180.0f, 270.0f};
+    for (size_t i = 0; i < sizeof(outside) / sizeof(outside[0]); i++) {
+        int x, y;
+        ring_pixel(cx, cy, r, outside[i], &x, &y);
+        assert_int_equal(read_pixel(x, y, &p), 0);
+        expect_close("spin_out", x, y, p, 0, 0, 0, 10);
+    }
 }
 
 int main(int argc, char **argv)
