@@ -2981,17 +2981,53 @@ void draw_rect(SDL_Renderer* renderer, int x, int y, int w, int h, SDL_Color col
     SDL_RenderFillRect(renderer, &rect);
 }
 
-// 绘制带透明度的圆形
+// 绘制带透明度的圆形（带抗锯齿：内部实心 + 边缘 alpha 渐变）
+#define MAX_ARC_POINTS 8192
+static void arc_draw_bucketed(SDL_Point* points, const Uint8* alphas, int count, Color color);
 void draw_circle(SDL_Renderer* renderer, int center_x, int center_y, int radius, SDL_Color color) {
-    SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
-    
-    for (int x = -radius; x <= radius; x++) {
-        for (int y = -radius; y <= radius; y++) {
-            if (x*x + y*y <= radius*radius) {
-                SDL_RenderDrawPoint(renderer, center_x + x, center_y + y);
+    if (radius <= 0 || color.a == 0) return;
+
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+
+    // 收集像素：圆内实心点 + 边缘抗锯齿点
+    static SDL_Point points[MAX_ARC_POINTS];
+    static Uint8 alphas[MAX_ARC_POINTS];
+    int count = 0;
+
+    float r_outer = radius + 0.5f;
+    float r_inner = radius - 0.5f;
+    float r_outer_sq = r_outer * r_outer;
+    float r_inner_sq = r_inner * r_inner;
+
+    for (int y = -radius - 1; y <= radius + 1; y++) {
+        for (int x = -radius - 1; x <= radius + 1; x++) {
+            float dx = x + 0.5f;
+            float dy = y + 0.5f;
+            float dist_sq = dx * dx + dy * dy;
+
+            if (dist_sq > r_outer_sq) continue;
+
+            // 边缘区域：按像素中心到圆的距离计算覆盖率
+            float alpha = 1.0f;
+            if (dist_sq >= r_inner_sq) {
+                float dist = sqrtf(dist_sq);
+                alpha = r_outer - dist;
+                if (alpha > 1.0f) alpha = 1.0f;
+                if (alpha <= 0.0f) continue;
+            }
+
+            Uint8 a = (Uint8)(alpha * color.a);
+            if (a < 3) continue;
+            if (count < MAX_ARC_POINTS) {
+                points[count].x = center_x + x;
+                points[count].y = center_y + y;
+                alphas[count] = a;
+                count++;
             }
         }
     }
+
+    arc_draw_bucketed(points, alphas, count, color);
 }
 
 // // 绘制带透明度的多边形
@@ -4123,7 +4159,6 @@ void backend_render_line(int x1, int y1, int x2, int y2, Color color) {
 }
 
 // 按 alpha 分桶批量绘制圆弧点（单次遍历 + 计数排序，替代 O(32*N) 逐桶扫描）
-#define MAX_ARC_POINTS 8192
 static void arc_draw_bucketed(SDL_Point* points, const Uint8* alphas, int count, Color color) {
     if (count <= 0) return;
     #define ARC_BUCKETS 32
@@ -4262,9 +4297,11 @@ void backend_render_arc(int center_x, int center_y, int radius, float start_angl
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 
     // 遍历包围盒，收集需要绘制的点
-    // 预计算边界区域的平方距离
-    float r_inner_sq = r_inner * r_inner;
-    float r_outer_sq = r_outer * r_outer;
+    // 预计算边界区域的平方距离（AA 带向外扩 1px，边缘像素按覆盖率渐变）
+    float r_inner_skip = r_inner - 1.0f;
+    float r_outer_skip = r_outer + 1.0f;
+    float r_inner_skip_sq = r_inner_skip * r_inner_skip;
+    float r_outer_skip_sq = r_outer_skip * r_outer_skip;
     float r_inner_plus_sq = (r_inner + 1.0f) * (r_inner + 1.0f);
     float r_outer_minus_sq = (r_outer - 1.0f) * (r_outer - 1.0f);
     
@@ -4274,8 +4311,8 @@ void backend_render_arc(int center_x, int center_y, int radius, float start_angl
             float dy = py + 0.5f;
             float dist_sq = dx * dx + dy * dy;
 
-            // 快速跳过：使用平方距离避免 sqrt
-            if (dist_sq < r_inner_sq || dist_sq > r_outer_sq) continue;
+            // 快速跳过：只跳过完全在 AA 带之外的像素
+            if (dist_sq < r_inner_skip_sq || dist_sq > r_outer_skip_sq) continue;
 
             // 角度判断（叉积）与角度边缘抗锯齿（替代 atan2f + 归一化循环）
             float angle_aa = 1.0f;
