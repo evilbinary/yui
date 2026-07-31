@@ -357,7 +357,7 @@ static int setup_backend(void **state)
         g_backdrop_rects[i] = (Rect){30 + i * 12, 40 + i * 8, 160, 120};
     }
 
-    DFont *font = backend_load_font("Roboto-Regular.ttf", 14);
+    DFont *font = backend_load_font("app/assets/Roboto-Regular.ttf", 14);
     if (font) {
         g_ctx.texture = backend_render_texture(font, "PerfGate", g_ctx.color);
     }
