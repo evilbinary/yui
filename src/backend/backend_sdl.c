@@ -4278,10 +4278,14 @@ void backend_render_arc(int center_x, int center_y, int radius, float start_angl
         if (d < 0.0f) d += 2.0f * (float)M_PI;
         if (d <= sweep_rad) sinmin = -1.0f;
 
-        px_lo = (int)floorf(r_max * cosmin) - 1;
-        px_hi = (int)ceilf(r_max * cosmax) + 1;
-        py_lo = (int)floorf(r_max * sinmin) - 1;
-        py_hi = (int)ceilf(r_max * sinmax) + 1;
+        // 包围盒需同时考虑内外半径：
+        // 扇形的角点有 4 个（内/外半径 × 起/止角度），且 cos/sin 为负时
+        // 极值来自内半径角点（如 9 点钟方向的小扇形，其最右端在内半径处）
+        float r_min = r_inner - 1.0f;   // 内半径向外扩 1px（含 AA 带）
+        px_lo = (int)floorf((cosmin >= 0.0f ? r_min : r_max) * cosmin) - 1;
+        px_hi = (int)ceilf((cosmax >= 0.0f ? r_max : r_min) * cosmax) + 1;
+        py_lo = (int)floorf((sinmin >= 0.0f ? r_min : r_max) * sinmin) - 1;
+        py_hi = (int)ceilf((sinmax >= 0.0f ? r_max : r_min) * sinmax) + 1;
         if (px_lo < -extent) px_lo = -extent;
         if (px_hi > extent) px_hi = extent;
         if (py_lo < -extent) py_lo = -extent;
@@ -4310,6 +4314,7 @@ void backend_render_arc(int center_x, int center_y, int radius, float start_angl
             float dx = px + 0.5f;
             float dy = py + 0.5f;
             float dist_sq = dx * dx + dy * dy;
+            float c1 = 0.0f, c2 = 0.0f, dot_s = 0.0f, dot_e = 0.0f;
 
             // 快速跳过：只跳过完全在 AA 带之外的像素
             if (dist_sq < r_inner_skip_sq || dist_sq > r_outer_skip_sq) continue;
@@ -4318,24 +4323,27 @@ void backend_render_arc(int center_x, int center_y, int radius, float start_angl
             float angle_aa = 1.0f;
             if (!is_full_circle) {
                 // c1 = |p|*sin(angle-start)，c2 = |p|*sin(end-angle)
-                float c1 = ux_s * dy - uy_s * dx;
-                float c2 = dx * uy_e - dy * ux_e;
+                c1 = ux_s * dy - uy_s * dx;
+                c2 = dx * uy_e - dy * ux_e;
 
                 // 判断像素角度是否落在 [start, end] 扇形内
+                // （放宽 0.5px：像素中心在扇形外但像素与边缘重叠时仍参与 AA）
                 if (sweep_le_pi) {
-                    if (c1 < 0.0f || c2 < 0.0f) continue;
+                    if (c1 < -0.5f || c2 < -0.5f) continue;
                 } else {
-                    if (c1 < 0.0f && c2 < 0.0f) continue;
+                    if (c1 < -0.5f && c2 < -0.5f) continue;
                 }
 
-                // 角度边缘抗锯齿：靠近起止边缘时 alpha 线性衰减
-                // c ≈ dist*Δangle，配合点积符号排除 sin 在 π 附近的歧义
-                float dot_s = ux_s * dx + uy_s * dy;   // dist*cos(angle-start)
-                float dot_e = ux_e * dx + uy_e * dy;   // dist*cos(end-angle)
-                if (c1 < 1.0f && dot_s > 0.0f) {
-                    angle_aa = c1;
-                } else if (c2 < 1.0f && dot_e > 0.0f) {
-                    angle_aa = c2;
+                // 角度边缘抗锯齿：alpha 按像素对边缘线的覆盖率衰减
+                // c 为像素中心到边缘线的有符号距离（正=扇形内侧），
+                // 像素跨 ±0.5px，覆盖率 = clamp(0.5 + c)，
+                // 否则边缘恰好落在像素边界时会产生半透明横条
+                dot_s = ux_s * dx + uy_s * dy;   // dist*cos(angle-start)
+                dot_e = ux_e * dx + uy_e * dy;   // dist*cos(end-angle)
+                if (c1 < 0.5f && dot_s > 0.0f) {
+                    angle_aa = 0.5f + c1;
+                } else if (c2 < 0.5f && dot_e > 0.0f) {
+                    angle_aa = 0.5f + c2;
                 }
                 if (angle_aa <= 0.0f) continue;
                 if (angle_aa > 1.0f) angle_aa = 1.0f;
