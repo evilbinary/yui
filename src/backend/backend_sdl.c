@@ -4076,6 +4076,46 @@ void backend_render_line(int x1, int y1, int x2, int y2, Color color) {
     }
 }
 
+// 按 alpha 分桶批量绘制圆弧点（单次遍历 + 计数排序，替代 O(32*N) 逐桶扫描）
+#define MAX_ARC_POINTS 8192
+static void arc_draw_bucketed(SDL_Point* points, const Uint8* alphas, int count, Color color) {
+    if (count <= 0) return;
+    #define ARC_BUCKETS 32
+    static SDL_Point bucket_pts[MAX_ARC_POINTS];
+    static int bucket_off[ARC_BUCKETS + 1];
+    static int bucket_cnt[ARC_BUCKETS];
+    int i;
+
+    for (i = 0; i < ARC_BUCKETS; i++) bucket_cnt[i] = 0;
+    for (i = 0; i < count; i++) {
+        int b = (255 - alphas[i] + 3) / 8;
+        if (b < 0) b = 0;
+        if (b >= ARC_BUCKETS) b = ARC_BUCKETS - 1;
+        bucket_cnt[b]++;
+    }
+    bucket_off[0] = 0;
+    for (i = 0; i < ARC_BUCKETS; i++) bucket_off[i + 1] = bucket_off[i] + bucket_cnt[i];
+
+    // 二遍：拷贝到每个桶的连续区间
+    static int cursor[ARC_BUCKETS];
+    for (i = 0; i < ARC_BUCKETS; i++) cursor[i] = bucket_off[i];
+    for (i = 0; i < count; i++) {
+        int b = (255 - alphas[i] + 3) / 8;
+        if (b < 0) b = 0;
+        if (b >= ARC_BUCKETS) b = ARC_BUCKETS - 1;
+        bucket_pts[cursor[b]++] = points[i];
+    }
+
+    // 逐桶提交（仅非空桶触发 SDL 调用）
+    for (i = 0; i < ARC_BUCKETS; i++) {
+        if (bucket_cnt[i] > 0) {
+            int alpha = 255 - i * 8;
+            SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, (Uint8)alpha);
+            SDL_RenderDrawPoints(renderer, bucket_pts + bucket_off[i], bucket_cnt[i]);
+        }
+    }
+}
+
 // 绘制抗锯齿圆弧（优化版本：纹理缓存 + 批量绘制）
 // center_x, center_y: 圆心坐标
 // radius: 圆弧半径（到弧线中心的距离）
@@ -4125,18 +4165,59 @@ void backend_render_arc(int center_x, int center_y, int radius, float start_angl
     // 边界框
     int extent = (int)(r_outer + 2);
 
+    // 圆弧边界单位向量（用于叉积角度判断，替代逐像素 atan2f + 归一化循环）
+    float ux_s = cosf(start_rad), uy_s = sinf(start_rad);
+    float ux_e = cosf(end_rad), uy_e = sinf(end_rad);
+    float sweep_rad = end_rad - start_rad;
+    int sweep_le_pi = (sweep_rad <= (float)M_PI);
+
+    // 非完整圆弧：把扫描范围缩小到扇形的轴对齐包围盒，
+    // 避免扫描整个 (2*extent)² 外接正方形
+    int px_lo = -extent, px_hi = extent, py_lo = -extent, py_hi = extent;
+    if (!is_full_circle) {
+        float r_max = r_outer + 1.0f;
+        float c_s = cosf(start_rad), s_s = sinf(start_rad);
+        float c_e = cosf(end_rad), s_e = sinf(end_rad);
+        float cosmax = c_s > c_e ? c_s : c_e;
+        float cosmin = c_s < c_e ? c_s : c_e;
+        float sinmax = s_s > s_e ? s_s : s_e;
+        float sinmin = s_s < s_e ? s_s : s_e;
+
+        // 临界角度（cos 在 0/π 取 ±1，sin 在 π/2/3π/2 取 ±1）若落在扇形内则取极值
+        float d = fmodf(-start_rad, 2.0f * (float)M_PI);
+        if (d < 0.0f) d += 2.0f * (float)M_PI;
+        if (d <= sweep_rad) cosmax = 1.0f;
+        d = fmodf((float)M_PI - start_rad, 2.0f * (float)M_PI);
+        if (d < 0.0f) d += 2.0f * (float)M_PI;
+        if (d <= sweep_rad) cosmin = -1.0f;
+        d = fmodf((float)(M_PI * 0.5) - start_rad, 2.0f * (float)M_PI);
+        if (d < 0.0f) d += 2.0f * (float)M_PI;
+        if (d <= sweep_rad) sinmax = 1.0f;
+        d = fmodf((float)(M_PI * 1.5) - start_rad, 2.0f * (float)M_PI);
+        if (d < 0.0f) d += 2.0f * (float)M_PI;
+        if (d <= sweep_rad) sinmin = -1.0f;
+
+        px_lo = (int)floorf(r_max * cosmin) - 1;
+        px_hi = (int)ceilf(r_max * cosmax) + 1;
+        py_lo = (int)floorf(r_max * sinmin) - 1;
+        py_hi = (int)ceilf(r_max * sinmax) + 1;
+        if (px_lo < -extent) px_lo = -extent;
+        if (px_hi > extent) px_hi = extent;
+        if (py_lo < -extent) py_lo = -extent;
+        if (py_hi > extent) py_hi = extent;
+    }
+
     // 批量绘制：收集所有需要绘制的点
     // 使用静态缓冲区避免频繁分配
-    #define MAX_ARC_POINTS 8192
     static SDL_Point points[MAX_ARC_POINTS];
     static Uint8 point_alphas[MAX_ARC_POINTS];
     int point_count = 0;
 
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 
-    // 遍历边界框，收集需要绘制的点
-    for (int py = -extent; py <= extent; py++) {
-        for (int px = -extent; px <= extent; px++) {
+    // 遍历包围盒，收集需要绘制的点
+    for (int py = py_lo; py <= py_hi; py++) {
+        for (int px = px_lo; px <= px_hi; px++) {
             float dx = px + 0.5f;
             float dy = py + 0.5f;
             float dist_sq = dx * dx + dy * dy;
@@ -4152,29 +4233,31 @@ void backend_render_arc(int center_x, int center_y, int radius, float start_angl
             // 快速跳过：距离太远或太近
             if (dist < r_inner - 1.0f || dist > r_outer + 1.0f) continue;
 
-            // 检查角度是否在弧线范围内
-            float angle = atan2f(dy, dx);
-
-            // 归一化角度到 [start_rad, start_rad + 2π) 范围
-            while (angle < start_rad) angle += 2.0f * M_PI;
-            while (angle > start_rad + 2.0f * M_PI) angle -= 2.0f * M_PI;
-
-            // 角度边缘的抗锯齿
+            // 角度判断（叉积）与角度边缘抗锯齿（替代 atan2f + 归一化循环）
             float angle_aa = 1.0f;
             if (!is_full_circle) {
-                float pixel_angle = 1.0f / (dist > 0 ? dist : 1.0f);
+                // c1 = |p|*sin(angle-start)，c2 = |p|*sin(end-angle)
+                float c1 = ux_s * dy - uy_s * dx;
+                float c2 = dx * uy_e - dy * ux_e;
 
-                if (angle < start_rad + pixel_angle) {
-                    angle_aa = (angle - start_rad) / pixel_angle;
-                } else if (angle > end_rad - pixel_angle) {
-                    angle_aa = (end_rad - angle) / pixel_angle;
-                } else if (angle > end_rad) {
-                    continue;
+                // 判断像素角度是否落在 [start, end] 扇形内
+                if (sweep_le_pi) {
+                    if (c1 < 0.0f || c2 < 0.0f) continue;
+                } else {
+                    if (c1 < 0.0f && c2 < 0.0f) continue;
+                }
+
+                // 角度边缘抗锯齿：靠近起止边缘时 alpha 线性衰减
+                // c ≈ dist*Δangle，配合点积符号排除 sin 在 π 附近的歧义
+                float dot_s = ux_s * dx + uy_s * dy;   // dist*cos(angle-start)
+                float dot_e = ux_e * dx + uy_e * dy;   // dist*cos(end-angle)
+                if (c1 < 1.0f && dot_s > 0.0f) {
+                    angle_aa = c1;
+                } else if (c2 < 1.0f && dot_e > 0.0f) {
+                    angle_aa = c2;
                 }
                 if (angle_aa <= 0.0f) continue;
                 if (angle_aa > 1.0f) angle_aa = 1.0f;
-            } else if (angle > end_rad) {
-                continue;
             }
 
             // 径向抗锯齿
@@ -4190,7 +4273,7 @@ void backend_render_arc(int center_x, int center_y, int radius, float start_angl
             // 组合alpha
             float final_alpha = angle_aa * radial_aa;
             Uint8 a = (Uint8)(final_alpha * color.a);
-            if (a == 0) continue;
+            if (a < 3) continue;   // 原分组循环最小 alpha 组为 7（|a-7|<=4）
 
             // 收集点
             if (point_count < MAX_ARC_POINTS) {
@@ -4202,23 +4285,8 @@ void backend_render_arc(int center_x, int center_y, int radius, float start_angl
         }
     }
 
-    // 批量绘制：按 alpha 分组绘制，减少 SDL_SetRenderDrawColor 调用
-    // 使用简单的分组策略：将 alpha 相同的点一起绘制
-    for (int alpha_group = 255; alpha_group > 0; alpha_group -= 8) {
-        SDL_Point group_points[MAX_ARC_POINTS];
-        int group_count = 0;
-
-        for (int i = 0; i < point_count; i++) {
-            if (abs(point_alphas[i] - alpha_group) <= 4) {
-                group_points[group_count++] = points[i];
-            }
-        }
-
-        if (group_count > 0) {
-            SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, alpha_group);
-            SDL_RenderDrawPoints(renderer, group_points, group_count);
-        }
-    }
+    // 批量绘制：按 alpha 分桶一次性提交
+    arc_draw_bucketed(points, point_alphas, point_count, color);
 
     // 如果需要缓存，创建纹理并缓存
     if (use_cache && point_count > 0) {
@@ -4239,21 +4307,7 @@ void backend_render_arc(int center_x, int center_y, int radius, float start_angl
             }
 
             // 批量绘制到纹理
-            for (int alpha_group = 255; alpha_group > 0; alpha_group -= 8) {
-                SDL_Point group_points[MAX_ARC_POINTS];
-                int group_count = 0;
-
-                for (int i = 0; i < point_count; i++) {
-                    if (abs(point_alphas[i] - alpha_group) <= 4) {
-                        group_points[group_count++] = points[i];
-                    }
-                }
-
-                if (group_count > 0) {
-                    SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, alpha_group);
-                    SDL_RenderDrawPoints(renderer, group_points, group_count);
-                }
-            }
+            arc_draw_bucketed(points, point_alphas, point_count, color);
 
             SDL_SetRenderTarget(renderer, NULL);
 

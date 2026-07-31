@@ -263,7 +263,13 @@ static void op_bezier(void *ctx)
 static void op_arc(void *ctx)
 {
     PerfCtx *c = ctx;
-    backend_render_arc(100, 80, 60, 0.0f, 6.28f, c->color, 3);
+    backend_render_arc(100, 80, 60, 0.0f, 360.0f, c->color, 3);
+}
+
+static void op_arc_partial(void *ctx)
+{
+    PerfCtx *c = ctx;
+    backend_render_arc(100, 80, 60, 45.0f, 135.0f, c->color, 3);
 }
 
 static void op_shadow(void *ctx)
@@ -330,6 +336,7 @@ static PerfCase g_cases[] = {
     {"line", op_line, 1800.0, 0},
     {"bezier_cubic", op_bezier, 1800.0, 0},
     {"arc", op_arc, 900.0, 0},
+    {"arc_partial", op_arc_partial, 3000.0, 0},
     {"shadow", op_shadow, 1500.0, 0},
     {"backdrop_filter", op_backdrop_filter, 25000.0, 0},
     {"text_copy", op_text_copy, 100.0, 1},
