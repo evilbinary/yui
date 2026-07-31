@@ -3207,25 +3207,30 @@ yui_aa_build_done:
 
 static YuiRadiusAA *yui_aa_circle_get(int radius)
 {
-    int i;
-    int slot = -1;
-
     if (radius <= 0) {
         return NULL;
     }
 
-    for (i = 0; i < YUI_AA_CIRCLE_CACHE_SIZE; i++) {
-        if (yui_aa_circle_cache[i].radius == radius && yui_aa_circle_cache[i].buf) {
-            return &yui_aa_circle_cache[i];
+    // 使用开放寻址哈希表：radius % SIZE 作为起始位置
+    int start = radius % YUI_AA_CIRCLE_CACHE_SIZE;
+    int probe = start;
+    int empty_slot = -1;
+    int probes = 0;
+    
+    while (probes < YUI_AA_CIRCLE_CACHE_SIZE) {
+        if (yui_aa_circle_cache[probe].radius == radius && yui_aa_circle_cache[probe].buf) {
+            return &yui_aa_circle_cache[probe];
         }
-        if (slot < 0 && yui_aa_circle_cache[i].radius == 0) {
-            slot = i;
+        if (yui_aa_circle_cache[probe].radius == 0 && empty_slot < 0) {
+            empty_slot = probe;
         }
+        probe = (probe + 1) % YUI_AA_CIRCLE_CACHE_SIZE;
+        probes++;
     }
-    if (slot < 0) {
-        slot = 0;
-    }
-
+    
+    // 使用找到的空槽或起始位置
+    int slot = (empty_slot >= 0) ? empty_slot : start;
+    
     yui_aa_circle_build(&yui_aa_circle_cache[slot], radius);
     return yui_aa_circle_cache[slot].buf ? &yui_aa_circle_cache[slot] : NULL;
 }
@@ -4257,6 +4262,12 @@ void backend_render_arc(int center_x, int center_y, int radius, float start_angl
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 
     // 遍历包围盒，收集需要绘制的点
+    // 预计算边界区域的平方距离
+    float r_inner_sq = r_inner * r_inner;
+    float r_outer_sq = r_outer * r_outer;
+    float r_inner_plus_sq = (r_inner + 1.0f) * (r_inner + 1.0f);
+    float r_outer_minus_sq = (r_outer - 1.0f) * (r_outer - 1.0f);
+    
     for (int py = py_lo; py <= py_hi; py++) {
         for (int px = px_lo; px <= px_hi; px++) {
             float dx = px + 0.5f;
@@ -4264,15 +4275,7 @@ void backend_render_arc(int center_x, int center_y, int radius, float start_angl
             float dist_sq = dx * dx + dy * dy;
 
             // 快速跳过：使用平方距离避免 sqrt
-            float r_inner_minus = r_inner - 1.0f;
-            float r_outer_plus = r_outer + 1.0f;
-            if (dist_sq < r_inner_minus * r_inner_minus ||
-                dist_sq > r_outer_plus * r_outer_plus) continue;
-
-            float dist = sqrtf(dist_sq);
-
-            // 快速跳过：距离太远或太近
-            if (dist < r_inner - 1.0f || dist > r_outer + 1.0f) continue;
+            if (dist_sq < r_inner_sq || dist_sq > r_outer_sq) continue;
 
             // 角度判断（叉积）与角度边缘抗锯齿（替代 atan2f + 归一化循环）
             float angle_aa = 1.0f;
@@ -4301,15 +4304,19 @@ void backend_render_arc(int center_x, int center_y, int radius, float start_angl
                 if (angle_aa > 1.0f) angle_aa = 1.0f;
             }
 
-            // 径向抗锯齿
+            // 径向抗锯齿：只在边界区域计算 sqrtf
             float radial_aa = 1.0f;
-            if (dist < r_inner) {
-                radial_aa = 1.0f - (r_inner - dist);
-            } else if (dist > r_outer) {
-                radial_aa = 1.0f - (dist - r_outer);
+            if (dist_sq < r_inner_plus_sq || dist_sq > r_outer_minus_sq) {
+                // 边界区域：需要精确距离做抗锯齿
+                float dist = sqrtf(dist_sq);
+                if (dist < r_inner) {
+                    radial_aa = 1.0f - (r_inner - dist);
+                } else if (dist > r_outer) {
+                    radial_aa = 1.0f - (dist - r_outer);
+                }
+                if (radial_aa <= 0.0f) continue;
+                if (radial_aa > 1.0f) radial_aa = 1.0f;
             }
-            if (radial_aa <= 0.0f) continue;
-            if (radial_aa > 1.0f) radial_aa = 1.0f;
 
             // 组合alpha
             float final_alpha = angle_aa * radial_aa;
