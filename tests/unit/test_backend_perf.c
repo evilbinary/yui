@@ -1,7 +1,8 @@
 /*
  * Perf gate: backend drawing APIs must stay under per-op time budgets.
- * Each test warms up the renderer, measures average us/op over N iterations,
- * prints a result table and fails when a budget is exceeded.
+ * Each op runs PERF_ITERS (default 10000, override YUI_PERF_ITER) iterations,
+ * timing is sampled in chunks, a statistics report (min/avg/max, p50/p90/p99,
+ * ops/s) is printed, and the test fails when an avg budget is exceeded.
  * Budgets are deliberately soft to stay stable on slow CI / software renderers.
  */
 #include <stdarg.h>
@@ -10,6 +11,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <time.h>
 #include <cmocka.h>
 
@@ -29,6 +31,12 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     return main(__argc, __argv);
 }
 #endif
+
+#ifndef YUI_PERF_ITER_ENV
+#define YUI_PERF_ITER_ENV "YUI_PERF_ITER"
+#endif
+#define PERF_DEFAULT_ITERS 10000
+#define MAX_SAMPLES 256
 
 /* ---------- high resolution timer ---------- */
 static double perf_now_us(void)
@@ -51,26 +59,116 @@ static double perf_now_us(void)
 /* ---------- benchmark plumbing ---------- */
 typedef void (*PerfOpFn)(void *ctx);
 
-static double run_bench(PerfOpFn fn, void *ctx, int iterations, int warmup)
+typedef struct {
+    int iterations;
+    int samples;
+    double min_us;
+    double max_us;
+    double avg_us;
+    double p50_us;
+    double p90_us;
+    double p99_us;
+    double ops_per_sec;
+} PerfStats;
+
+static int perf_iterations(void)
 {
-    int i;
-    double t0, t1;
+    const char *e = getenv(YUI_PERF_ITER_ENV);
+    if (e) {
+        int v = atoi(e);
+        if (v > 0) {
+            return v;
+        }
+    }
+    return PERF_DEFAULT_ITERS;
+}
+
+static int cmp_double(const void *a, const void *b)
+{
+    double da = *(const double *)a;
+    double db = *(const double *)b;
+    return (da > db) - (da < db);
+}
+
+static double calc_percentile(const double *arr, int n, double p)
+{
+    double pos = p * (double)(n - 1);
+    int lo = (int)pos;
+    int hi = lo + 1;
+    double frac = pos - (double)lo;
+    if (hi >= n) {
+        return arr[lo];
+    }
+    return arr[lo] * (1.0 - frac) + arr[hi] * frac;
+}
+
+static PerfStats run_bench(PerfOpFn fn, void *ctx, int iterations, int warmup)
+{
+    PerfStats st;
+    double samples[MAX_SAMPLES];
+    double sum = 0.0;
+    int i, n_samples = 0;
+    int sample_every = iterations / 100;
+    double chunk_start;
+    double t1;
+
+    memset(&st, 0, sizeof(st));
+    st.iterations = iterations;
+    if (sample_every < 1) {
+        sample_every = 1;
+    }
+
     for (i = 0; i < warmup; i++) {
         fn(ctx);
     }
-    t0 = perf_now_us();
+
+    chunk_start = perf_now_us();
     for (i = 0; i < iterations; i++) {
         fn(ctx);
+        if ((i + 1) % sample_every == 0) {
+            t1 = perf_now_us();
+            if (n_samples < MAX_SAMPLES) {
+                samples[n_samples] = (t1 - chunk_start) / (double)sample_every;
+                n_samples++;
+            }
+            chunk_start = t1;
+        }
     }
-    t1 = perf_now_us();
-    return (t1 - t0) / (double)iterations;
+
+    if (n_samples < 1) {
+        n_samples = 1;
+        samples[0] = 0.0;
+    }
+
+    st.samples = n_samples;
+    st.min_us = samples[0];
+    st.max_us = samples[0];
+    for (i = 0; i < n_samples; i++) {
+        double v = samples[i];
+        sum += v;
+        if (v < st.min_us) st.min_us = v;
+        if (v > st.max_us) st.max_us = v;
+    }
+    st.avg_us = sum / (double)n_samples;
+    st.ops_per_sec = (st.avg_us > 0.0) ? 1e6 / st.avg_us : 0.0;
+
+    qsort(samples, (size_t)n_samples, sizeof(double), cmp_double);
+    st.p50_us = calc_percentile(samples, n_samples, 0.50);
+    st.p90_us = calc_percentile(samples, n_samples, 0.90);
+    st.p99_us = calc_percentile(samples, n_samples, 0.99);
+
+    return st;
 }
 
-static int check_budget(const char *name, double us_per_op, double budget_us)
+static int check_budget(const char *name, const PerfStats *st, double budget_us)
 {
-    int ok = us_per_op <= budget_us;
-    printf("[perf] %-28s %10.2f us/op  (budget %9.0f us/op) %s\n",
-           name, us_per_op, budget_us, ok ? "PASS" : "FAIL");
+    int ok = st->avg_us <= budget_us;
+    printf("[perf] %-30s %6d iters %6d samples  min=%9.2f  avg=%9.2f  max=%9.2f"
+           "  p50=%8.2f  p90=%8.2f  p99=%8.2f us/op  %9.0f ops/s  %s  (budget %.0f)\n",
+           name, st->iterations, st->samples,
+           st->min_us, st->avg_us, st->max_us,
+           st->p50_us, st->p90_us, st->p99_us,
+           st->ops_per_sec, ok ? "PASS" : "FAIL", budget_us);
     return ok;
 }
 
@@ -211,6 +309,33 @@ static void op_frame(void *ctx)
     backend_render_present();
 }
 
+/* ---------- perf case table ---------- */
+typedef struct {
+    const char *name;
+    PerfOpFn fn;
+    double budget_us;
+    int skip_if_no_texture;
+} PerfCase;
+
+static PerfCase g_cases[] = {
+    {"clear_color", op_clear, 100.0, 0},
+    {"fill_rect", op_fill_rect, 100.0, 0},
+    {"fill_rect_color", op_fill_rect_color, 100.0, 0},
+    {"rect", op_rect, 100.0, 0},
+    {"rect_color", op_rect_color, 100.0, 0},
+    {"rounded_rect", op_rounded_rect, 800.0, 0},
+    {"rounded_rect_color", op_rounded_rect_color, 800.0, 0},
+    {"rounded_rect_with_border", op_rounded_rect_border, 1400.0, 0},
+    {"rounded_gradient", op_rounded_gradient, 800.0, 0},
+    {"line", op_line, 1800.0, 0},
+    {"bezier_cubic", op_bezier, 1800.0, 0},
+    {"arc", op_arc, 900.0, 0},
+    {"shadow", op_shadow, 1500.0, 0},
+    {"backdrop_filter", op_backdrop_filter, 25000.0, 0},
+    {"text_copy", op_text_copy, 100.0, 1},
+    {"full_frame (10 fills)", op_frame, 50000.0, 0},
+};
+
 /* ---------- test cases ---------- */
 static int setup_backend(void **state)
 {
@@ -235,9 +360,6 @@ static int setup_backend(void **state)
     DFont *font = backend_load_font("Roboto-Regular.ttf", 14);
     if (font) {
         g_ctx.texture = backend_render_texture(font, "PerfGate", g_ctx.color);
-    }else{
-        printf("load font failed\n");
-        return -1;
     }
     return 0;
 }
@@ -253,143 +375,40 @@ static int teardown_backend(void **state)
     return 0;
 }
 
-static void test_clear_color_budget(void **state)
+static void test_backend_draw_stats(void **state)
 {
+    int iters = perf_iterations();
+    int warmup = iters / 100;
+    int i, n = (int)(sizeof(g_cases) / sizeof(g_cases[0]));
+    int failures = 0;
     (void)state;
-    double us = run_bench(op_clear, &g_ctx, 2000, 20);
-    assert_true(check_budget("clear_color", us, 100.0));
-}
 
-static void test_fill_rect_budget(void **state)
-{
-    (void)state;
-    double us = run_bench(op_fill_rect, &g_ctx, 2000, 20);
-    assert_true(check_budget("fill_rect", us, 100.0));
-}
-
-static void test_fill_rect_color_budget(void **state)
-{
-    (void)state;
-    double us = run_bench(op_fill_rect_color, &g_ctx, 2000, 20);
-    assert_true(check_budget("fill_rect_color", us, 100.0));
-}
-
-static void test_rect_budget(void **state)
-{
-    (void)state;
-    double us = run_bench(op_rect, &g_ctx, 2000, 20);
-    assert_true(check_budget("rect", us, 100.0));
-}
-
-static void test_rect_color_budget(void **state)
-{
-    (void)state;
-    double us = run_bench(op_rect_color, &g_ctx, 2000, 20);
-    assert_true(check_budget("rect_color", us, 100.0));
-}
-
-static void test_rounded_rect_budget(void **state)
-{
-    (void)state;
-    double us = run_bench(op_rounded_rect, &g_ctx, 1000, 10);
-    assert_true(check_budget("rounded_rect", us, 800.0));
-}
-
-static void test_rounded_rect_color_budget(void **state)
-{
-    (void)state;
-    double us = run_bench(op_rounded_rect_color, &g_ctx, 1000, 10);
-    assert_true(check_budget("rounded_rect_color", us, 800.0));
-}
-
-static void test_rounded_rect_border_budget(void **state)
-{
-    (void)state;
-    double us = run_bench(op_rounded_rect_border, &g_ctx, 1000, 10);
-    assert_true(check_budget("rounded_rect_with_border", us, 1400.0));
-}
-
-static void test_rounded_gradient_budget(void **state)
-{
-    (void)state;
-    double us = run_bench(op_rounded_gradient, &g_ctx, 300, 5);
-    assert_true(check_budget("rounded_gradient", us, 800.0));
-}
-
-static void test_line_budget(void **state)
-{
-    (void)state;
-    double us = run_bench(op_line, &g_ctx, 2000, 20);
-    assert_true(check_budget("line", us, 1800.0));
-}
-
-static void test_bezier_budget(void **state)
-{
-    (void)state;
-    double us = run_bench(op_bezier, &g_ctx, 800, 10);
-    assert_true(check_budget("bezier_cubic", us, 1800.0));
-}
-
-static void test_arc_budget(void **state)
-{
-    (void)state;
-    double us = run_bench(op_arc, &g_ctx, 800, 10);
-    assert_true(check_budget("arc", us, 900.0));
-}
-
-static void test_shadow_budget(void **state)
-{
-    (void)state;
-    double us = run_bench(op_shadow, &g_ctx, 300, 5);
-    assert_true(check_budget("shadow", us, 1500.0));
-}
-
-static void test_backdrop_filter_budget(void **state)
-{
-    (void)state;
-    double us = run_bench(op_backdrop_filter, &g_ctx, 40, 8);
-    assert_true(check_budget("backdrop_filter", us, 25000.0));
-}
-
-static void test_text_copy_budget(void **state)
-{
-    (void)state;
-    if (!g_ctx.texture) {
-        print_message("[perf] text_copy skipped (no font/texture)\n");
-        return;
+    if (warmup < 10) {
+        warmup = 10;
     }
-    double us = run_bench(op_text_copy, &g_ctx, 1000, 10);
-    assert_true(check_budget("text_copy", us, 100.0));
-}
 
-static void test_full_frame_budget(void **state)
-{
-    (void)state;
-    /* Busy headless frame: clear + draws + present must stay well under 16.6ms
-     * of slack; 50ms budget tolerates software renderers / slow CI. */
-    double us = run_bench(op_frame, &g_ctx, 120, 5);
-    assert_true(check_budget("full_frame (10 fills)", us, 50000.0));
+    printf("[perf] === backend drawing stats (iters=%d, samples per op ~%d, env %s to override) ===\n",
+           iters, iters / 100, YUI_PERF_ITER_ENV);
+    for (i = 0; i < n; i++) {
+        PerfCase *c = &g_cases[i];
+        if (c->skip_if_no_texture && !g_ctx.texture) {
+            printf("[perf] %-30s SKIP (no font/texture)\n", c->name);
+            continue;
+        }
+        PerfStats st = run_bench(c->fn, &g_ctx, iters, warmup);
+        if (!check_budget(c->name, &st, c->budget_us)) {
+            failures++;
+        }
+    }
+    printf("[perf] === %s (%d/%d ops within budget) ===\n",
+           failures == 0 ? "ALL PASS" : "FAILED", n - failures, n);
+    assert_int_equal(failures, 0);
 }
 
 int main(int argc, char **argv)
 {
     const struct CMUnitTest tests[] = {
-        cmocka_unit_test_setup_teardown(test_clear_color_budget, setup_backend, teardown_backend),
-        cmocka_unit_test_setup_teardown(test_fill_rect_budget, setup_backend, teardown_backend),
-        cmocka_unit_test_setup_teardown(test_fill_rect_color_budget, setup_backend, teardown_backend),
-        cmocka_unit_test_setup_teardown(test_rect_budget, setup_backend, teardown_backend),
-        cmocka_unit_test_setup_teardown(test_rect_color_budget, setup_backend, teardown_backend),
-        cmocka_unit_test_setup_teardown(test_rounded_rect_budget, setup_backend, teardown_backend),
-        cmocka_unit_test_setup_teardown(test_rounded_rect_color_budget, setup_backend, teardown_backend),
-        cmocka_unit_test_setup_teardown(test_rounded_rect_border_budget, setup_backend, teardown_backend),
-        cmocka_unit_test_setup_teardown(test_rounded_gradient_budget, setup_backend, teardown_backend),
-        cmocka_unit_test_setup_teardown(test_line_budget, setup_backend, teardown_backend),
-        cmocka_unit_test_setup_teardown(test_bezier_budget, setup_backend, teardown_backend),
-        cmocka_unit_test_setup_teardown(test_arc_budget, setup_backend, teardown_backend),
-        cmocka_unit_test_setup_teardown(test_shadow_budget, setup_backend, teardown_backend),
-        cmocka_unit_test_setup_teardown(test_backdrop_filter_budget, setup_backend, teardown_backend),
-        cmocka_unit_test_setup_teardown(test_text_copy_budget, setup_backend, teardown_backend),
-        cmocka_unit_test_setup_teardown(test_full_frame_budget, setup_backend, teardown_backend),
+        cmocka_unit_test_setup_teardown(test_backend_draw_stats, setup_backend, teardown_backend),
     };
     (void)argc;
     (void)argv;

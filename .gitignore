@@ -45,3 +45,5 @@ profile.txt
 profile1.txt
 perf.txt
 app/db/db-config.json
+.trae/
+platform/android/local.properties
