@@ -3882,7 +3882,25 @@ static void plot_aa_pixel(int x, int y, float alpha, Color color) {
     SDL_RenderDrawPoint(renderer, x, y);
 }
 
-// 绘制抗锯齿线段
+/* 批量提交像素点：每批一次 SDL_RenderDrawPoints，避免逐像素驱动调用。
+   与 arc 的批量绘制一致，分批防止个别驱动对单次点数的限制。 */
+#define MAX_LINE_POINTS 8192
+#define LINE_POINTS_CHUNK 2048
+static SDL_Point line_main_pts[MAX_LINE_POINTS];
+static SDL_Point line_aa_pts[MAX_LINE_POINTS * 2];
+
+static void line_flush_points(const SDL_Point *pts, int count, Uint8 r, Uint8 g, Uint8 b, Uint8 a) {
+    int i = 0;
+    SDL_SetRenderDrawColor(renderer, r, g, b, a);
+    while (i < count) {
+        int n = count - i;
+        if (n > LINE_POINTS_CHUNK) n = LINE_POINTS_CHUNK;
+        SDL_RenderDrawPoints(renderer, &pts[i], n);
+        i += n;
+    }
+}
+
+// 绘制抗锯齿线段（批量版：先收集再提交，斜线不再逐像素绘制）
 void backend_render_line(int x1, int y1, int x2, int y2, Color color) {
     // 对于水平或垂直线，使用SDL原生绘制（更快）
     if (x1 == x2 || y1 == y2) {
@@ -3890,45 +3908,83 @@ void backend_render_line(int x1, int y1, int x2, int y2, Color color) {
         SDL_RenderDrawLine(renderer, x1, y1, x2, y2);
         return;
     }
-    
-    // 对于斜线，使用简化的抗锯齿算法
-    // 使用Bresenham算法的改进版本
+
     int dx = abs(x2 - x1);
     int dy = abs(y2 - y1);
+    int steps = (dx > dy) ? dx : dy;
+
+    // 超长线（极少数情况）回退到逐像素绘制
+    if (steps >= MAX_LINE_POINTS) {
+        int sx0 = (x1 < x2) ? 1 : -1;
+        int sy0 = (y1 < y2) ? 1 : -1;
+        int err0 = dx - dy;
+        int px = x1, py = y1;
+        while (1) {
+            SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
+            SDL_RenderDrawPoint(renderer, px, py);
+            int err2 = 2 * err0;
+            if (err2 > -dy) {
+                if (py + sy0 >= 0) {
+                    plot_aa_pixel(px, py + sy0, 0.3f, color);
+                }
+                err0 -= dy;
+                px += sx0;
+            }
+            if (err2 < dx) {
+                if (px + sx0 >= 0) {
+                    plot_aa_pixel(px + sx0, py, 0.3f, color);
+                }
+                err0 += dx;
+                py += sy0;
+            }
+            if (px == x2 && py == y2) break;
+        }
+        return;
+    }
+
+    // 对于斜线，使用简化的抗锯齿算法（Bresenham 改进版）
     int sx = (x1 < x2) ? 1 : -1;
     int sy = (y1 < y2) ? 1 : -1;
     int err = dx - dy;
-    
     int x = x1, y = y1;
-    
+    int main_count = 0;
+    int aa_count = 0;
+
+    // 第一遍：收集主像素与抗锯齿像素（不提交，避免逐像素驱动调用）
     while (1) {
-        // 绘制主像素
-        SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
-        SDL_RenderDrawPoint(renderer, x, y);
-        
-        // 计算误差来决定是否绘制周围的像素进行抗锯齿
+        line_main_pts[main_count].x = x;
+        line_main_pts[main_count].y = y;
+        main_count++;
+
         int err2 = 2 * err;
-        float alpha_factor = 0.3f; // 抗锯齿强度
-        
         if (err2 > -dy) {
-            // 绘制旁边像素进行抗锯齿
             if (y + sy >= 0) {
-                plot_aa_pixel(x, y + sy, alpha_factor, color);
+                line_aa_pts[aa_count].x = x;
+                line_aa_pts[aa_count].y = y + sy;
+                aa_count++;
             }
             err -= dy;
             x += sx;
         }
-        
         if (err2 < dx) {
-            // 绘制旁边像素进行抗锯齿
             if (x + sx >= 0) {
-                plot_aa_pixel(x + sx, y, alpha_factor, color);
+                line_aa_pts[aa_count].x = x + sx;
+                line_aa_pts[aa_count].y = y;
+                aa_count++;
             }
             err += dx;
             y += sy;
         }
-        
         if (x == x2 && y == y2) break;
+    }
+
+    // 主像素（不透明）：单次批量提交
+    line_flush_points(line_main_pts, main_count, color.r, color.g, color.b, color.a);
+
+    // 抗锯齿像素（半透明）：单次批量提交
+    Uint8 aa_a = (Uint8)(0.3f * color.a);
+    if (aa_count > 0 && aa_a > 0) {
+        line_flush_points(line_aa_pts, aa_count, color.r, color.g, color.b, aa_a);
     }
 }
 
