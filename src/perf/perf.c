@@ -76,6 +76,17 @@ void perf_enable(int on)
     }
 }
 
+void perf_layer_destroyed(Layer* layer)
+{
+    if (!layer) return;
+    for (int i = 0; i < g_slot_count; i++) {
+        if (g_slots[i].layer == layer) {
+            g_slots[i].layer = NULL;
+            return;
+        }
+    }
+}
+
 void perf_reset(void)
 {
     g_slot_count = 0;

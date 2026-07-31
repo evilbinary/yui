@@ -75,7 +75,7 @@ int main(int argc, char* argv[]) {
     int auto_test = 0;
     int auto_frames = 90;
     int headless = -1; /* -1 unset, 0 show, 1 hide */
-    char* json_path = "app/playground/app.json";
+    char* json_path = "app/launcher/app.json";
     const char* auto_env;
     const char* frames_env;
     const char* headless_env;
@@ -199,7 +199,7 @@ int main(int argc, char* argv[]) {
         backend_set_windowsize(ui_root->rect.w,ui_root->rect.h);
     }
     if(ui_root->text!=NULL){
-        backend_set_window_size(ui_root->text);
+        backend_set_window_title(ui_root->text);
     }
 
     // 设置窗口标题栏颜色（从 style 中读取）

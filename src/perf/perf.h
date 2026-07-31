@@ -49,6 +49,7 @@ void perf_layer_tree_enter(Layer* layer);
 void perf_layer_add_self_ns(Layer* layer, uint64_t ns);
 uint64_t perf_now_ns(void);
 
+void perf_layer_destroyed(Layer* layer);
 void perf_draw_overlay(Layer* root);
 
 const PerfFrameStats* perf_get_frame_stats(void);

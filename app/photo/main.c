@@ -103,7 +103,7 @@ int main(int argc, char* argv[]) {
         if (ui_root->rect.h <= 0) ui_root->rect.h = window_height;
     }
     if (ui_root->text != NULL) {
-        backend_set_window_size(ui_root->text);
+        backend_set_window_title(ui_root->text);
     }
 
     cJSON* root_style = cJSON_GetObjectItem(root_json, "style");

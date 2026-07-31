@@ -11,6 +11,16 @@ fun resolveNdkPath(): String? = sequenceOf(
     System.getenv("ANDROID_NDK_ROOT"),
 ).firstOrNull { !it.isNullOrBlank() }
 
+fun resolveNdkVersion(): String? {
+    val ndkDir = resolveNdkPath() ?: return null
+    val propsFile = file("$ndkDir/source.properties")
+    if (!propsFile.exists()) return null
+    return propsFile.readLines()
+        .firstOrNull { it.startsWith("Pkg.Revision") }
+        ?.substringAfter("=")
+        ?.trim()
+}
+
 val copyYuiAssets = tasks.register<Copy>("copyYuiAssets") {
     from(yuiRepoRoot.resolve("app")) {
         exclude("**/__pycache__/**", "**/*.py", "main.c", "ya.py", "lvgl")
@@ -22,7 +32,7 @@ val copyYuiAssets = tasks.register<Copy>("copyYuiAssets") {
 android {
     namespace = "com.yui"
     compileSdk = 34
-    ndkVersion = "27.3.13750724"
+    resolveNdkVersion()?.let { ndkVersion = it }
     resolveNdkPath()?.let { ndkPath = it }
 
     sourceSets {

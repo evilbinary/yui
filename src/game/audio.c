@@ -29,6 +29,8 @@ static ma_engine g_engine;
 static int g_engine_ok;
 static ma_sound g_bgm;
 static int g_bgm_active;
+
+static void game_audio_sfx_ended(void* pUserData, ma_sound* pSound);
 #endif
 
 void game_audio_init(void)
@@ -38,7 +40,16 @@ void game_audio_init(void)
     if (g_engine_ok) {
         return;
     }
+    printf("Game audio: initializing miniaudio\n");
+#if defined(__YIYIYA__)
+    /* YiYiYa 无实际音频后端，用 noDevice 模式跳过设备初始化 */
+    ma_engine_config engine_config = ma_engine_config_init();
+    engine_config.noDevice = MA_TRUE;
+    r = ma_engine_init(&engine_config, &g_engine);
+#else
     r = ma_engine_init(NULL, &g_engine);
+#endif
+    printf("Game audio: ma_engine_init result = %d\n", (int)r);
     if (r != MA_SUCCESS) {
         printf("Game audio: ma_engine_init failed (%d), audio disabled\n", (int)r);
         g_engine_ok = 0;
@@ -81,6 +92,14 @@ int game_audio_play_sfx(const char* path)
 #endif
 }
 
+static void game_audio_sfx_ended(void* pUserData, ma_sound* pSound)
+{
+    (void)pUserData;
+    if (pSound) {
+        ma_sound_uninit(pSound);
+    }
+}
+
 int game_audio_play_bgm(const char* path, int loop)
 {
 #if YUI_WITH_GAME_AUDIO
@@ -118,8 +137,19 @@ void game_audio_stop_bgm(void)
         ma_sound_stop(&g_bgm);
         ma_sound_uninit(&g_bgm);
         g_bgm_active = 0;
+        printf("Game audio: BGM stopped\n");
     }
 #endif
 }
 
-#endif /* YUI_WITH_GAME */
+void game_audio_set_volume(float volume)
+{
+#if YUI_WITH_GAME_AUDIO
+    if (g_engine_ok) {
+        ma_engine_set_volume(&g_engine, volume);
+    }
+#else
+    (void)volume;
+#endif
+}
+#endif

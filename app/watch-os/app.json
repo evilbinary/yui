@@ -75,7 +75,7 @@
             ]
         },
         {
-            "id": "page_outlet",
+            "id": "watch_page_outlet",
             "type": "View",
             "variant": "surface",
             "flex": 1,

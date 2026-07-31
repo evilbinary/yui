@@ -81,7 +81,7 @@ static void show_tooltip(LabelComponent* comp, int mouse_x, int mouse_y) {
 
     PopupLayer* popup = popup_layer_create(tl, POPUP_TYPE_TOOLTIP, 100);
     if (popup && popup_manager_add(popup)) {
-        comp->tooltip_popup = popup;
+        comp->tooltip_popup = tl;
     } else {
         if (tl->text) free(tl->text);
         free(tl);
@@ -90,11 +90,11 @@ static void show_tooltip(LabelComponent* comp, int mouse_x, int mouse_y) {
 
 static void hide_tooltip(LabelComponent* comp) {
     if (comp->tooltip_popup) {
-        Layer* tl = ((PopupLayer*)comp->tooltip_popup)->layer;
+        Layer* tl = (Layer*)comp->tooltip_popup;
+        comp->tooltip_popup = NULL;
         popup_manager_remove(tl);
         if (tl->text) free(tl->text);
         free(tl);
-        comp->tooltip_popup = NULL;
     }
 }
 

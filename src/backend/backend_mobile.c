@@ -47,6 +47,22 @@ static ANativeWindow* g_egl_window = NULL;
 static GLuint g_color_program = 0;
 static int g_egl_ready = 0;
 
+/* Cached GL locations (set once after shader link) */
+static GLint g_u_offset_loc = -1;
+static GLint g_u_scale_loc = -1;
+static GLint g_u_color_loc = -1;
+static GLint g_a_pos_loc = -1;
+
+/* Arc shader (GPU-based per-pixel distance field AA) */
+static GLuint g_arc_program = 0;
+static GLint g_arc_a_pos_loc = -1;
+static GLint g_arc_u_center_loc = -1;
+static GLint g_arc_u_inner_r_sq_loc = -1;
+static GLint g_arc_u_outer_r_sq_loc = -1;
+static GLint g_arc_u_start_angle_loc = -1;
+static GLint g_arc_u_sweep_loc = -1;
+static GLint g_arc_u_color_loc = -1;
+
 static GLuint mobile_compile_shader(GLenum type, const char* source) {
     GLuint shader = glCreateShader(type);
     GLint status = 0;
@@ -86,7 +102,72 @@ static int mobile_init_gl(void) {
     glGetProgramiv(g_color_program, GL_LINK_STATUS, &linked);
     glDeleteShader(vsh);
     glDeleteShader(fsh);
-    return linked ? 1 : 0;
+    if (linked) {
+        g_u_offset_loc = glGetUniformLocation(g_color_program, "uOffset");
+        g_u_scale_loc  = glGetUniformLocation(g_color_program, "uScale");
+        g_u_color_loc  = glGetUniformLocation(g_color_program, "uColor");
+        g_a_pos_loc    = glGetAttribLocation(g_color_program, "aPos");
+    }
+
+    /* Arc shader: bounding-box quad + per-pixel signed-distance AA */
+    const char* arc_vs =
+        "attribute vec2 aPos;\n"
+        "void main() {\n"
+        "  gl_Position = vec4(aPos, 0.0, 1.0);\n"
+        "}\n";
+    const char* arc_fs =
+        "precision mediump float;\n"
+        "uniform vec2  uCenter;\n"
+        "uniform float uInnerRSq;\n"
+        "uniform float uOuterRSq;\n"
+        "uniform float uStartRad;\n"
+        "uniform float uSweepRad;\n"
+        "uniform vec4  uColor;\n"
+        "void main() {\n"
+        "  vec2 d = gl_FragCoord.xy - uCenter;\n"
+        "  float distSq = dot(d, d);\n"
+        "  if (distSq < uInnerRSq - 1.5 || distSq > uOuterRSq + 1.5) discard;\n"
+        "  float dist = sqrt(distSq);\n"
+        "  float inner = sqrt(uInnerRSq);\n"
+        "  float outer = sqrt(uOuterRSq);\n"
+        "  float alpha = 1.0;\n"
+        "  alpha *= clamp(dist - (inner - 1.0), 0.0, 1.0);\n"
+        "  alpha *= clamp((outer + 1.0) - dist, 0.0, 1.0);\n"
+        "  if (uSweepRad < 6.265) {\n"
+        "    float angle = atan(d.y, d.x);\n"
+        "    float da = mod(angle - uStartRad + 6.2832, 6.2832);\n"
+        "    if (da > uSweepRad) discard;\n"
+        "    float pixel_a = atan(1.0, max(dist, 1.0));\n"
+        "    alpha *= clamp(da / pixel_a, 0.0, 1.0);\n"
+        "    alpha *= clamp((uSweepRad - da) / pixel_a, 0.0, 1.0);\n"
+        "  }\n"
+        "  gl_FragColor = vec4(uColor.rgb, uColor.a * alpha);\n"
+        "}\n";
+    GLuint arc_vsh = mobile_compile_shader(GL_VERTEX_SHADER, arc_vs);
+    GLuint arc_fsh = mobile_compile_shader(GL_FRAGMENT_SHADER, arc_fs);
+    if (arc_vsh && arc_fsh) {
+        g_arc_program = glCreateProgram();
+        glAttachShader(g_arc_program, arc_vsh);
+        glAttachShader(g_arc_program, arc_fsh);
+        glLinkProgram(g_arc_program);
+        glGetProgramiv(g_arc_program, GL_LINK_STATUS, &linked);
+        glDeleteShader(arc_vsh);
+        glDeleteShader(arc_fsh);
+        if (linked) {
+            g_arc_a_pos_loc       = glGetAttribLocation(g_arc_program, "aPos");
+            g_arc_u_center_loc    = glGetUniformLocation(g_arc_program, "uCenter");
+            g_arc_u_inner_r_sq_loc = glGetUniformLocation(g_arc_program, "uInnerRSq");
+            g_arc_u_outer_r_sq_loc = glGetUniformLocation(g_arc_program, "uOuterRSq");
+            g_arc_u_start_angle_loc = glGetUniformLocation(g_arc_program, "uStartRad");
+            g_arc_u_sweep_loc     = glGetUniformLocation(g_arc_program, "uSweepRad");
+            g_arc_u_color_loc     = glGetUniformLocation(g_arc_program, "uColor");
+        }
+    } else {
+        if (arc_vsh) glDeleteShader(arc_vsh);
+        if (arc_fsh) glDeleteShader(arc_fsh);
+    }
+
+    return 1;
 }
 
 static int mobile_egl_init(ANativeWindow* window) {
@@ -132,6 +213,8 @@ static int mobile_egl_init(ANativeWindow* window) {
         return 0;
     }
 
+    eglSwapInterval(g_egl_display, 1);
+
     g_egl_window = window;
     g_window_w = ANativeWindow_getWidth(window);
     g_window_h = ANativeWindow_getHeight(window);
@@ -176,60 +259,70 @@ static void mobile_draw_rect_norm(float x, float y, float w, float h,
         0.0f, 1.0f,
         1.0f, 1.0f,
     };
-    GLint offset_loc;
-    GLint scale_loc;
-    GLint color_loc;
-    GLint pos_loc;
 
     if (!g_egl_ready || g_color_program == 0 || w <= 0.0f || h <= 0.0f) {
         return;
     }
 
-    offset_loc = glGetUniformLocation(g_color_program, "uOffset");
-    scale_loc = glGetUniformLocation(g_color_program, "uScale");
-    color_loc = glGetUniformLocation(g_color_program, "uColor");
-    pos_loc = glGetAttribLocation(g_color_program, "aPos");
-
     glUseProgram(g_color_program);
-    glUniform2f(offset_loc, -1.0f + (2.0f * x / (float)g_window_w),
+    glUniform2f(g_u_offset_loc, -1.0f + (2.0f * x / (float)g_window_w),
                 1.0f - (2.0f * (y + h) / (float)g_window_h));
-    glUniform2f(scale_loc, 2.0f * w / (float)g_window_w, 2.0f * h / (float)g_window_h);
-    glUniform4f(color_loc, r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f);
-    glEnableVertexAttribArray((GLuint)pos_loc);
-    glVertexAttribPointer((GLuint)pos_loc, 2, GL_FLOAT, GL_FALSE, 0, verts);
+    glUniform2f(g_u_scale_loc, 2.0f * w / (float)g_window_w, 2.0f * h / (float)g_window_h);
+    glUniform4f(g_u_color_loc, r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f);
+    glEnableVertexAttribArray((GLuint)g_a_pos_loc);
+    glVertexAttribPointer((GLuint)g_a_pos_loc, 2, GL_FLOAT, GL_FALSE, 0, verts);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    glDisableVertexAttribArray((GLuint)pos_loc);
+    glDisableVertexAttribArray((GLuint)g_a_pos_loc);
 }
 
 static void mobile_fill_corner_phys(int cx, int cy, int radius, int quadrant,
                                     unsigned char r, unsigned char g,
                                     unsigned char b, unsigned char a) {
-    int dy;
+    float verts[262];
+    int segments, vert_count;
 
-    for (dy = 0; dy <= radius; dy++) {
-        int dx = 0;
-        if (radius > 0) {
-            dx = (int)(sqrtf((float)radius * (float)radius - (float)dy * (float)dy) + 0.999f);
-        }
+    if (radius <= 0 || !g_egl_ready) return;
+
+    segments = radius < 4 ? 4 : radius;
+    if (segments > 128) segments = 128;
+    vert_count = segments + 2;
+    if (vert_count * 2 > 262) return;
+
+    /* Center of fan = corner center */
+    verts[0] = -1.0f + 2.0f * (float)cx / (float)g_window_w;
+    verts[1] =  1.0f - 2.0f * (float)cy / (float)g_window_h;
+
+    /* Arc vertices as triangle fan around the corner center.
+     * Angles in screen coords: 0=right, π/2=down, π=left, 3π/2=up */
+    for (int i = 0; i <= segments; i++) {
+        float frac = (float)i / (float)segments;
+        float a;
         switch (quadrant) {
-        case 0:
-            mobile_draw_rect_norm((float)(cx - dx), (float)(cy - dy),
-                                  (float)(dx + 1), 1.0f, r, g, b, a);
-            break;
-        case 1:
-            mobile_draw_rect_norm((float)cx, (float)(cy - dy),
-                                  (float)(dx + 1), 1.0f, r, g, b, a);
-            break;
-        case 2:
-            mobile_draw_rect_norm((float)(cx - dx), (float)(cy + dy),
-                                  (float)(dx + 1), 1.0f, r, g, b, a);
-            break;
-        default:
-            mobile_draw_rect_norm((float)cx, (float)(cy + dy),
-                                  (float)(dx + 1), 1.0f, r, g, b, a);
-            break;
+        case 0: /* top-left:  left(π) → up(3π/2)   increasing */
+            a = (float)M_PI + (float)M_PI * 0.5f * frac; break;
+        case 1: /* top-right: up(3π/2) → right(2π)  increasing */
+            a = (float)M_PI * 1.5f + (float)M_PI * 0.5f * frac; break;
+        case 2: /* bottom-left: left(π) → down(π/2) decreasing */
+            a = (float)M_PI - (float)M_PI * 0.5f * frac; break;
+        default: /* bottom-right: down(π/2) → right(0) decreasing */
+            a = (float)M_PI * 0.5f - (float)M_PI * 0.5f * frac; break;
         }
+        float px = (float)cx + (float)radius * cosf(a);
+        float py = (float)cy + (float)radius * sinf(a);
+        verts[(i + 1) * 2 + 0] = -1.0f + 2.0f * px / (float)g_window_w;
+        verts[(i + 1) * 2 + 1] =  1.0f - 2.0f * py / (float)g_window_h;
     }
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glUseProgram(g_color_program);
+    glUniform2f(g_u_offset_loc, 0.0f, 0.0f);
+    glUniform2f(g_u_scale_loc, 1.0f, 1.0f);
+    glUniform4f(g_u_color_loc, r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f);
+    glEnableVertexAttribArray((GLuint)g_a_pos_loc);
+    glVertexAttribPointer((GLuint)g_a_pos_loc, 2, GL_FLOAT, GL_FALSE, 0, verts);
+    glDrawArrays(GL_TRIANGLE_FAN, 0, vert_count);
+    glDisableVertexAttribArray((GLuint)g_a_pos_loc);
 }
 
 static void mobile_draw_rounded_rect_phys(float x, float y, float w, float h,
@@ -298,25 +391,50 @@ static void mobile_draw_pixel_phys(int px, int py,
 static void mobile_draw_line_phys(int x1, int y1, int x2, int y2,
                                   unsigned char r, unsigned char g,
                                   unsigned char b, unsigned char a) {
-    int dx = x2 - x1;
-    int dy = y2 - y1;
-    int steps = dx < 0 ? -dx : dx;
-    int ady = dy < 0 ? -dy : dy;
-    int i;
+    float dx = (float)(x2 - x1);
+    float dy = (float)(y2 - y1);
+    float len = sqrtf(dx * dx + dy * dy);
+    float perp_x, perp_y;
+    float verts[8];
+    float x1f, y1f, x2f, y2f;
 
-    if (ady > steps) {
-        steps = ady;
-    }
-    if (steps <= 0) {
-        mobile_draw_pixel_phys(x1, y1, r, g, b, a);
+    if (!g_egl_ready) return;
+
+    if (len < 0.5f) {
+        /* Single pixel */
+        mobile_draw_rect_norm((float)x1, (float)y1, 1.0f, 1.0f, r, g, b, a);
         return;
     }
-    for (i = 0; i <= steps; i++) {
-        float t = (float)i / (float)steps;
-        int x = x1 + (int)(dx * t + 0.5f);
-        int y = y1 + (int)(dy * t + 0.5f);
-        mobile_draw_pixel_phys(x, y, r, g, b, a);
-    }
+
+    /* Perpendicular unit vector for 1px line width */
+    perp_x = -dy / len;
+    perp_y =  dx / len;
+
+    x1f = (float)x1;
+    y1f = (float)y1;
+    x2f = (float)x2;
+    y2f = (float)y2;
+
+    /* Two-triangle quad as triangle strip (pre-transformed to clip space) */
+    verts[0] = -1.0f + 2.0f * (x1f + perp_x) / (float)g_window_w;
+    verts[1] =  1.0f - 2.0f * (y1f + perp_y) / (float)g_window_h;
+    verts[2] = -1.0f + 2.0f * (x1f - perp_x) / (float)g_window_w;
+    verts[3] =  1.0f - 2.0f * (y1f - perp_y) / (float)g_window_h;
+    verts[4] = -1.0f + 2.0f * (x2f + perp_x) / (float)g_window_w;
+    verts[5] =  1.0f - 2.0f * (y2f + perp_y) / (float)g_window_h;
+    verts[6] = -1.0f + 2.0f * (x2f - perp_x) / (float)g_window_w;
+    verts[7] =  1.0f - 2.0f * (y2f - perp_y) / (float)g_window_h;
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glUseProgram(g_color_program);
+    glUniform2f(g_u_offset_loc, 0.0f, 0.0f);
+    glUniform2f(g_u_scale_loc, 1.0f, 1.0f);
+    glUniform4f(g_u_color_loc, r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f);
+    glEnableVertexAttribArray((GLuint)g_a_pos_loc);
+    glVertexAttribPointer((GLuint)g_a_pos_loc, 2, GL_FLOAT, GL_FALSE, 0, verts);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glDisableVertexAttribArray((GLuint)g_a_pos_loc);
 }
 
 static void mobile_draw_arc_phys(int center_x, int center_y, int radius,
@@ -325,103 +443,70 @@ static void mobile_draw_arc_phys(int center_x, int center_y, int radius,
     float half_w = (float)line_width * 0.5f;
     float r_inner = (float)radius - half_w;
     float r_outer = (float)radius + half_w;
-    float start_rad = (start_angle - 90.0f) * (float)M_PI / 180.0f;
-    float end_rad = (end_angle - 90.0f) * (float)M_PI / 180.0f;
     float sweep_deg = end_angle - start_angle;
-    int extent;
-    int min_x;
-    int min_y;
-    int max_x;
-    int max_y;
-    int py;
-    int is_full_circle;
+    float start_rad, step_rad;
+    int steps, pass, vert_count;
+    float verts[1440];
 
-    if (radius <= 0 || line_width <= 0) {
+    if (radius <= 0 || line_width <= 0 || !g_egl_ready) {
         return;
     }
-    if (r_inner < 0.0f) {
-        r_inner = 0.0f;
-    }
+    if (r_inner < 0.0f) r_inner = 0.0f;
 
-    while (end_rad < start_rad) {
-        end_rad += 2.0f * (float)M_PI;
-    }
-    while (sweep_deg <= 0.0f) {
-        sweep_deg += 360.0f;
-    }
-    is_full_circle = sweep_deg >= 359.0f;
+    while (sweep_deg <= 0.0f) sweep_deg += 360.0f;
 
-    extent = (int)(r_outer + 2.0f);
-    min_x = center_x - extent;
-    min_y = center_y - extent;
-    max_x = center_x + extent;
-    max_y = center_y + extent;
+    steps = (int)(sweep_deg * 0.5f) + 1;
+    if (steps < 4) steps = 4;
+    if (steps > 360) steps = 360;
+
+    step_rad = sweep_deg * (float)M_PI / 180.0f / (float)(steps - 1);
+    start_rad = (start_angle - 90.0f) * (float)M_PI / 180.0f;
+
+    vert_count = steps * 2;
+    if (vert_count * 2 > 1440) return;
 
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    for (py = min_y; py <= max_y; py++) {
-        int px;
-        for (px = min_x; px <= max_x; px++) {
-            float dx = (float)px - (float)center_x + 0.5f;
-            float dy = (float)py - (float)center_y + 0.5f;
-            float dist = sqrtf(dx * dx + dy * dy);
-            float angle;
-            float angle_aa = 1.0f;
-            float radial_aa = 1.0f;
-            float final_alpha;
-            unsigned char a;
-
-            if (dist < r_inner - 1.0f || dist > r_outer + 1.0f) {
-                continue;
-            }
-
-            angle = atan2f(dy, dx);
-            while (angle < start_rad) {
-                angle += 2.0f * (float)M_PI;
-            }
-            while (angle > start_rad + 2.0f * (float)M_PI) {
-                angle -= 2.0f * (float)M_PI;
-            }
-
-            if (!is_full_circle) {
-                float pixel_angle = 1.0f / (dist > 0.0f ? dist : 1.0f);
-                if (angle < start_rad + pixel_angle) {
-                    angle_aa = (angle - start_rad) / pixel_angle;
-                } else if (angle > end_rad - pixel_angle) {
-                    angle_aa = (end_rad - angle) / pixel_angle;
-                } else if (angle > end_rad) {
-                    continue;
-                }
-                if (angle_aa <= 0.0f) {
-                    continue;
-                }
-                if (angle_aa > 1.0f) {
-                    angle_aa = 1.0f;
-                }
-            } else if (angle > end_rad) {
-                continue;
-            }
-
-            if (dist < r_inner) {
-                radial_aa = 1.0f - (r_inner - dist);
-            } else if (dist > r_outer) {
-                radial_aa = 1.0f - (dist - r_outer);
-            }
-            if (radial_aa <= 0.0f) {
-                continue;
-            }
-            if (radial_aa > 1.0f) {
-                radial_aa = 1.0f;
-            }
-
-            final_alpha = angle_aa * radial_aa;
-            a = (unsigned char)(final_alpha * (float)color.a);
-            if (a == 0) {
-                continue;
-            }
-            mobile_draw_pixel_phys(px, py, color.r, color.g, color.b, a);
+    /* Three passes for anti-aliasing:
+     *  pass 0: inner AA edge (r_inner-1 → r_inner) at 40% alpha
+     *  pass 1: main body    (r_inner   → r_outer)  at 100% alpha
+     *  pass 2: outer AA edge (r_outer   → r_outer+1) at 40% alpha
+     */
+    for (pass = 0; pass < 3; pass++) {
+        float ri, ro;
+        unsigned char a;
+        switch (pass) {
+        case 0: ri = r_inner - 1.0f; ro = r_inner; a = (unsigned char)(color.a * 0.4f); break;
+        case 1: ri = r_inner;        ro = r_outer; a = color.a; break;
+        default:ri = r_outer;        ro = r_outer + 1.0f; a = (unsigned char)(color.a * 0.4f); break;
         }
+        if (ri < 0.0f) ri = 0.0f;
+
+        for (int i = 0; i < steps; i++) {
+            float ang = start_rad + step_rad * (float)i;
+            float cos_a = cosf(ang);
+            float sin_a = sinf(ang);
+            float ox = (float)center_x + ro * cos_a;
+            float oy = (float)center_y + ro * sin_a;
+            float ix = (float)center_x + ri * cos_a;
+            float iy = (float)center_y + ri * sin_a;
+
+            verts[i * 4 + 0] = -1.0f + 2.0f * ox / (float)g_window_w;
+            verts[i * 4 + 1] =  1.0f - 2.0f * oy / (float)g_window_h;
+            verts[i * 4 + 2] = -1.0f + 2.0f * ix / (float)g_window_w;
+            verts[i * 4 + 3] =  1.0f - 2.0f * iy / (float)g_window_h;
+        }
+
+        glUseProgram(g_color_program);
+        glUniform2f(g_u_offset_loc, 0.0f, 0.0f);
+        glUniform2f(g_u_scale_loc, 1.0f, 1.0f);
+        glUniform4f(g_u_color_loc, color.r / 255.0f, color.g / 255.0f,
+                    color.b / 255.0f, a / 255.0f);
+        glEnableVertexAttribArray((GLuint)g_a_pos_loc);
+        glVertexAttribPointer((GLuint)g_a_pos_loc, 2, GL_FLOAT, GL_FALSE, 0, verts);
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, vert_count);
+        glDisableVertexAttribArray((GLuint)g_a_pos_loc);
     }
 }
 
@@ -1022,7 +1107,7 @@ void backend_set_windowsize(int width, int height) {
     }
 }
 
-void backend_set_window_size(char* title) {
+void backend_set_window_title(char* title) {
     (void)title;
 }
 
@@ -1179,12 +1264,6 @@ void backend_tick(Layer* ui_root) {
     }
 
     g_ui_root = ui_root;
-
-#ifdef __ANDROID__
-    if (g_egl_ready && g_egl_display != EGL_NO_DISPLAY) {
-        eglMakeCurrent(g_egl_display, g_egl_surface, g_egl_surface, g_egl_context);
-    }
-#endif
 
     for (i = 0; i < g_update_callback_count; i++) {
         if (g_update_callbacks[i]) {

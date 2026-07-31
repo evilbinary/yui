@@ -160,11 +160,13 @@ static void table_tooltip_layer_render(Layer* layer) {
 static void table_hide_tooltip(TableComponent* component) {
     if (!component || !component->tooltip_popup) return;
 
-    Layer* tl = ((PopupLayer*)component->tooltip_popup)->layer;
-    popup_manager_remove(tl);
-    if (tl && tl->text) free(tl->text);
-    if (tl) free(tl);
+    Layer* tl = (Layer*)component->tooltip_popup;
     component->tooltip_popup = NULL;
+    popup_manager_remove(tl);
+    if (tl) {
+        if (tl->text) free(tl->text);
+        free(tl);
+    }
 }
 
 static void table_tooltip_reset(TableComponent* component) {
@@ -325,7 +327,7 @@ static void table_show_tooltip(TableComponent* component, Layer* layer,
 
     PopupLayer* popup = popup_layer_create(tl, POPUP_TYPE_TOOLTIP, 100);
     if (popup && popup_manager_add(popup)) {
-        component->tooltip_popup = popup;
+        component->tooltip_popup = tl;
     } else {
         free(tl->text);
         free(tl);

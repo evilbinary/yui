@@ -909,7 +909,7 @@ int select_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
         CLEAR_STATE(layer, LAYER_STATE_HOVER);
     }
     
-    if (event->phase == POINTER_DOWN && (event->device != POINTER_DEVICE_MOUSE || event->button == SDL_BUTTON_LEFT)) {
+    if (event->phase == POINTER_DOWN && (event->device == POINTER_DEVICE_TOUCH || event->button == SDL_BUTTON_LEFT)) {
         if (component->expanded && !in_select_area && !in_dropdown_area && !component->just_expanded) {
             select_component_collapse(component);
             return 0;
@@ -1484,7 +1484,7 @@ int select_component_handle_dropdown_mouse_event(Layer* layer, PointerEvent* eve
         content_width -= component->scrollbar_width;
     }
     
-    if (event->phase == POINTER_DOWN && (event->device != POINTER_DEVICE_MOUSE || event->button == SDL_BUTTON_LEFT)) {
+    if (event->phase == POINTER_DOWN && event->button == SDL_BUTTON_LEFT) {
         // 检查是否点击在下拉菜单内容区域
         if (event->x >= dropdown_x && event->x < dropdown_x + content_width &&
             event->y >= dropdown_y && event->y < dropdown_y + dropdown_height) {

@@ -1,0 +1,8 @@
+{
+  "name": "game",
+  "version": "1.0",
+  "description": "Game theme — transparent background for game layers",
+  "styles": [
+    { "selector": "View", "style": { "bgColor": "transparent" } }
+  ]
+}

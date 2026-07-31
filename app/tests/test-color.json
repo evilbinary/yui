@@ -1,4 +1,5 @@
 {
+  "id": "test-color",
   "type": "View",
   "name": "testView",
   "size": [400, 300],

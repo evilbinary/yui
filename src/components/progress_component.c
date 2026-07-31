@@ -318,26 +318,18 @@ void progress_component_render(Layer* layer) {
     
     ProgressComponent* component = (ProgressComponent*)layer->component;
     
-    // 调试信息：打印当前状态
-    printf("Progress: %.2f, Target: %.2f, Animating: %d, Shape: %d\n", 
-           component->progress, component->target_progress, component->animating, component->shape);
-    
     // 处理动画更新
     if (component->animating) {
         // 计算当前帧应该移动的进度
         float diff = component->target_progress - component->progress;
         
-        printf("Animation diff: %.4f\n", diff);
-        
         if (fabs(diff) < 0.01f) {
             // 如果差值很小，直接设置为目标值并停止动画
             component->progress = component->target_progress;
             component->animating = 0;
-            printf("Animation completed, progress set to: %.2f\n", component->progress);
         } else {
             // 否则，根据动画速度更新进度
             component->progress += diff * component->animation_speed;
-            printf("Animation updated, new progress: %.2f\n", component->progress);
         }
     }
     

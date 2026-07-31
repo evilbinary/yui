@@ -31,6 +31,14 @@
           "fontSize": 16
         },
         {
+          "id": "btn_perf",
+          "type": "Button",
+          "text": "Perf: OFF",
+          "size": [72, 28],
+          "fontSize": 10,
+          "events": { "onClick": "@onPerfToggle" }
+        },
+        {
           "id": "theme_select",
           "type": "Select",
           "size": [100, 28],

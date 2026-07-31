@@ -17,6 +17,8 @@ var THEMES = [
     { id: "mocha",              path: "app/lib/themes/mocha.json" },
 ];
 
+var perfVisible = false;
+
 function onLauncherLoad() {
     initThemes();
     var apps = scanApps();
@@ -42,6 +44,13 @@ function onThemeSelect() {
     if (!val) return;
     Theme.setCurrent(val);
     Theme.apply();
+}
+
+function onPerfToggle() {
+    perfVisible = !perfVisible;
+    YUI.perf.enable();
+    YUI.perf.setOverlay(perfVisible);
+    YUI.setText("btn_perf", perfVisible ? "Perf: ON" : "Perf: OFF");
 }
 
 // ---------- Scanning ----------
@@ -177,6 +186,12 @@ function onDemoClick(layerId) {
 }
 
 function onBackClick() {
+    if (typeof _gameIsRunning !== "undefined") _gameIsRunning = false;
+    // 恢复之前的主题
+    if (typeof _prevThemeName !== "undefined" && _prevThemeName && typeof Theme !== "undefined") {
+        Theme.setCurrent(_prevThemeName);
+        Theme.apply();
+    }
     if (currentAppId) YUI.hide(currentAppId);
     YUI.update({ target: "page_outlet", change: { children: null } });
     YUI.hide("page_outlet");

@@ -344,7 +344,7 @@ void backend_set_windowsize(int width, int height) {
     // STM32 LCD 分辨率固定，此功能不适用
 }
 
-void backend_set_window_size(char* title) {
+void backend_set_window_title(char* title) {
     // STM32 没有窗口标题概念，此功能不适用
 }
 

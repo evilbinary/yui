@@ -16,6 +16,13 @@
 #include <stdint.h>
 #include <string.h>
 
+/* Compatibility: bundled SDL_ttf (< 2.20) lacks TTF_GlyphIsProvided32(Uint32);
+   fall back to the 16-bit API. Supplementary-plane codepoints (>0xFFFF) cannot
+   be queried reliably with the old API and are treated as absent. */
+#ifndef TTF_GlyphIsProvided32
+#define TTF_GlyphIsProvided32(font, cp) TTF_GlyphIsProvided((font), (Uint16)(cp))
+#endif
+
 #if defined(_WIN32) && !defined(__EMSCRIPTEN__)
 #define YUI_WIN32_NATIVE 1
 #include <windows.h>
@@ -43,7 +50,7 @@ DFont* default_font=NULL;
 Layer* g_ui_root = NULL;
 int g_running=0;
 
-static int g_auto_frames = -1; /* -1 = run forever */
+static int g_auto_frames = -1; /* -1 = run forever */  
 static int g_request_quit = 0;
 static int g_exit_code = 0;
 static int g_headless = -1; /* -1 = unset (read YUI_HEADLESS), 0/1 = explicit */
@@ -1500,7 +1507,25 @@ int backend_init(){
     window = SDL_CreateWindow("YUI",
                                         SDL_WINDOWPOS_CENTERED,
                                         SDL_WINDOWPOS_CENTERED,
-                                        800, 600, window_flags);
+                                        0, 0, window_flags);
+
+    /* 平台视频驱动可能不支持 OpenGL（如 YiYiYa DUMMY 驱动无 GL_CreateContext），
+       此时 SDL_CreateWindow 会因 SDL_WINDOW_OPENGL 失败返回 NULL。去掉 OpenGL
+       标志重试，回退到纯软件/帧缓冲渲染。 */
+    if (!window && (window_flags & SDL_WINDOW_OPENGL)) {
+        window_flags &= ~SDL_WINDOW_OPENGL;
+        window = SDL_CreateWindow("YUI",
+                                            SDL_WINDOWPOS_CENTERED,
+                                            SDL_WINDOWPOS_CENTERED,
+                                            0, 0, window_flags);
+    }
+
+    if (!window) {
+        printf("Error: Failed to create window: %s\n", SDL_GetError());
+        return -1;
+    }
+
+    SDL_SetWindowMinimumSize(window, 900, 720);
 
     if (window && backend_is_headless()) {
         SDL_HideWindow(window);
@@ -2470,7 +2495,7 @@ void backend_set_windowsize(int width,int  height){
     backend_apply_display_scale();
 }
 
-void backend_set_window_size(char* title){
+void backend_set_window_title(char* title){
     SDL_SetWindowTitle(window,title);
 }
 

@@ -898,7 +898,7 @@ void backend_set_windowsize(int width, int height)
     }
 }
 
-void backend_set_window_size(char* title)
+void backend_set_window_title(char* title)
 {
     (void)title;
 }
