@@ -22,6 +22,13 @@ tests/
 
 Add `tests/unit/test_foo.c` and run `ya -r test_foo`.
 
+`tests/unit/test_backend_perf.c` is a backend drawing perf gate: it benchmarks
+`backend_render_*` (fill/rect/rounded/line/bezier/arc/shadow/gradient/backdrop/
+text-copy/present) with headless SDL and fails when any op exceeds its µs/op
+budget. Budgets are soft (≈6× measured on the dev OpenGL renderer) to stay
+stable on slow CI / software renderers while catching >5× regressions.
+Requires `YUI_HEADLESS=1` (the runner sets it); skip if `backend_init()` fails.
+
 ## Integration (YTest)
 
 1. `tests/integration/test-foo.json` with `"autoTest": true`
