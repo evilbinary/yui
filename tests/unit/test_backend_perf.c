@@ -235,6 +235,9 @@ static int setup_backend(void **state)
     DFont *font = backend_load_font("Roboto-Regular.ttf", 14);
     if (font) {
         g_ctx.texture = backend_render_texture(font, "PerfGate", g_ctx.color);
+    }else{
+        printf("load font failed\n");
+        return -1;
     }
     return 0;
 }
