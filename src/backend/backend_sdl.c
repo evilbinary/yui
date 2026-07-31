@@ -38,6 +38,7 @@
 #define WINDOW_WIDTH 1000
 #define MAX_TOUCHES 10
 #define MAX_UPDATE_CALLBACKS 16
+#define TEXTURE_CACHE_SIZE 256  // 2^8，便于用位运算取模
 #define MAX_TEXTURE_CACHE_ENTRIES 200
 
 // ====================== 全局渲染器 ======================
@@ -105,6 +106,7 @@ static ResizeCallback resize_callback = NULL;
 
 // 字体缓存结构
 typedef struct {
+    uint64_t hash;          // 预计算的哈希值
     char font_path[MAX_PATH];
     int size;
     char weight[32];  // "normal", "bold", "light"
@@ -112,8 +114,9 @@ typedef struct {
     Uint32 last_used;
 } FontCacheEntry;
 
+#define FONT_CACHE_SIZE 256  // 2^8，便于用位运算取模
 #define MAX_FONT_CACHE_ENTRIES 150
-FontCacheEntry font_cache[MAX_FONT_CACHE_ENTRIES] = {0};
+FontCacheEntry font_cache[FONT_CACHE_SIZE] = {0};
 int font_cache_initialized = 0;
 
 // 纹理缓存结构
@@ -132,7 +135,7 @@ typedef struct {
     uint8_t pinned;
 } TextureCacheEntry;
 
-TextureCacheEntry texture_cache[MAX_TEXTURE_CACHE_ENTRIES] = {0};
+TextureCacheEntry texture_cache[TEXTURE_CACHE_SIZE] = {0};
 int texture_cache_initialized = 0;
 static int texture_cache_scale_milli = -1;
 
@@ -232,46 +235,54 @@ static void backend_texture_cache_sync_scale(void) {
 
 static int backend_texture_cache_find_index(uint64_t key_hash, DFont* font, int font_size,
                                             Color color, const char* text) {
-    int i;
-
-    for (i = 0; i < MAX_TEXTURE_CACHE_ENTRIES; i++) {
-        if (!texture_cache[i].texture || texture_cache[i].key_hash != key_hash) {
-            continue;
+    // 开放寻址哈希表查找：从 hash 位置开始线性探测
+    int start = (int)(key_hash & 0xFF);  // TEXTURE_CACHE_SIZE = 256
+    int probe = start;
+    int max_probes = 8;  // 最多探测 8 个槽位，超过则回退到线性搜索
+    
+    while (max_probes-- > 0) {
+        if (texture_cache[probe].texture && 
+            texture_cache[probe].key_hash == key_hash &&
+            backend_texture_cache_entry_matches(&texture_cache[probe], key_hash, font, font_size, color, text)) {
+            return probe;
         }
-        if (backend_texture_cache_entry_matches(&texture_cache[i], key_hash, font, font_size, color, text)) {
-            return i;
-        }
+        probe = (probe + 1) & 0xFF;  // 循环探测
+        if (probe == start) break;
     }
     return -1;
 }
 
-static int backend_texture_cache_pick_evict_index(void) {
-    int i;
-    int cache_index = -1;
+static int backend_texture_cache_pick_evict_index(uint64_t key_hash) {
+    int start = (int)(key_hash & 0xFF);
+    int probe = start;
+    int empty_slot = -1;
+    int lru_slot = -1;
     Uint32 oldest_time = SDL_GetTicks();
-
-    for (i = 0; i < MAX_TEXTURE_CACHE_ENTRIES; i++) {
-        if (!texture_cache[i].texture) {
-            return i;
+    int probes = 0;
+    
+    // 探测寻找空槽或 LRU 条目
+    while (probes < 16) {  // 探测最多 16 个位置
+        if (!texture_cache[probe].texture) {
+            empty_slot = probe;
+            break;  // 找到空槽，直接使用
         }
+        if (!texture_cache[probe].pinned && texture_cache[probe].last_used < oldest_time) {
+            oldest_time = texture_cache[probe].last_used;
+            lru_slot = probe;
+        }
+        probe = (probe + 1) & 0xFF;
+        probes++;
+        if (probe == start) break;
     }
-
-    for (i = 0; i < MAX_TEXTURE_CACHE_ENTRIES; i++) {
-        if (texture_cache[i].pinned) {
-            continue;
-        }
-        if (texture_cache[i].last_used <= oldest_time) {
-            oldest_time = texture_cache[i].last_used;
-            cache_index = i;
-        }
-    }
-    return cache_index;
+    
+    // 优先使用空槽，否则使用 LRU 位置
+    return empty_slot >= 0 ? empty_slot : lru_slot;
 }
 
 static void backend_texture_cache_store_entry(int cache_index, uint64_t key_hash, DFont* font,
                                               int font_size, const char* text, Color color,
                                               SDL_Texture* texture, int width, int height, int pinned) {
-    if (cache_index < 0 || cache_index >= MAX_TEXTURE_CACHE_ENTRIES) {
+    if (cache_index < 0 || cache_index >= TEXTURE_CACHE_SIZE) {
         return;
     }
     if (texture_cache[cache_index].texture && texture_cache[cache_index].texture != texture) {
@@ -935,7 +946,7 @@ void init_texture_cache() {
         return;
     }
 
-    for (i = 0; i < MAX_TEXTURE_CACHE_ENTRIES; i++) {
+    for (i = 0; i < TEXTURE_CACHE_SIZE; i++) {
         texture_cache[i].key_hash = 0;
         texture_cache[i].font = NULL;
         texture_cache[i].font_size = 0;
@@ -956,7 +967,7 @@ void init_texture_cache() {
 void cleanup_texture_cache() {
     int i;
 
-    for (i = 0; i < MAX_TEXTURE_CACHE_ENTRIES; i++) {
+    for (i = 0; i < TEXTURE_CACHE_SIZE; i++) {
         if (texture_cache[i].texture) {
             SDL_DestroyTexture(texture_cache[i].texture);
             texture_cache[i].texture = NULL;
@@ -977,7 +988,7 @@ void cleanup_texture_cache() {
 void backend_texture_cache_invalidate(void) {
     int i;
 
-    for (i = 0; i < MAX_TEXTURE_CACHE_ENTRIES; i++) {
+    for (i = 0; i < TEXTURE_CACHE_SIZE; i++) {
         if (!texture_cache[i].texture || texture_cache[i].pinned) {
             continue;
         }
@@ -1081,7 +1092,7 @@ void add_texture_to_cache(DFont* font, const char* text, Color color, int font_s
         return;
     }
 
-    cache_index = backend_texture_cache_pick_evict_index();
+    cache_index = backend_texture_cache_pick_evict_index(key_hash);
     if (cache_index < 0) {
         SDL_DestroyTexture(texture);
         return;
@@ -1092,10 +1103,31 @@ void add_texture_to_cache(DFont* font, const char* text, Color color, int font_s
 }
 
 // ====================== 字体缓存管理 ======================
+// 计算 Font Cache 的哈希值
+static uint64_t font_cache_hash(const char* font_path, int size, const char* weight) {
+    uint64_t h = 14695981039346656037ULL;
+    if (font_path) {
+        for (const char* p = font_path; *p; p++) {
+            h ^= (uint64_t)(unsigned char)*p;
+            h *= 1099511628211ULL;
+        }
+    }
+    h ^= (uint64_t)size;
+    h *= 1099511628211ULL;
+    if (weight) {
+        for (const char* p = weight; *p; p++) {
+            h ^= (uint64_t)(unsigned char)*p;
+            h *= 1099511628211ULL;
+        }
+    }
+    return h;
+}
+
 void init_font_cache() {
     if (font_cache_initialized) return;
     
-    for (int i = 0; i < MAX_FONT_CACHE_ENTRIES; i++) {
+    for (int i = 0; i < FONT_CACHE_SIZE; i++) {
+        font_cache[i].hash = 0;
         font_cache[i].font = NULL;
         font_cache[i].font_path[0] = '\0';
         font_cache[i].size = 0;
@@ -1108,11 +1140,12 @@ void init_font_cache() {
 
 void cleanup_font_cache() {
     printf("Cleaning up font cache...\n");
-    for (int i = 0; i < MAX_FONT_CACHE_ENTRIES; i++) {
+    for (int i = 0; i < FONT_CACHE_SIZE; i++) {
         if (font_cache[i].font) {
             TTF_CloseFont(font_cache[i].font);
             font_cache[i].font = NULL;
         }
+        font_cache[i].hash = 0;
         font_cache[i].font_path[0] = '\0';
         font_cache[i].size = 0;
         font_cache[i].weight[0] = '\0';
@@ -1120,43 +1153,54 @@ void cleanup_font_cache() {
     printf("Font cache cleanup completed\n");
 }
 
-// 在缓存中查找字体
+// 在缓存中查找字体（使用哈希表）
 TTF_Font* find_font_in_cache(const char* font_path, int size, const char* weight) {
-    for (int i = 0; i < MAX_FONT_CACHE_ENTRIES; i++) {
-        if (font_cache[i].font &&
-            strcmp(font_cache[i].font_path, font_path) == 0 &&
-            font_cache[i].size == size &&
-            strcmp(font_cache[i].weight, weight) == 0) {
-            font_cache[i].last_used = SDL_GetTicks();
-            return font_cache[i].font;
+    uint64_t hash = font_cache_hash(font_path, size, weight);
+    int start = (int)(hash & 0xFF);
+    int probe = start;
+    int probes = 0;
+    
+    while (probes < 8) {
+        if (font_cache[probe].font && font_cache[probe].hash == hash &&
+            strcmp(font_cache[probe].font_path, font_path) == 0 &&
+            font_cache[probe].size == size &&
+            strcmp(font_cache[probe].weight, weight) == 0) {
+            font_cache[probe].last_used = SDL_GetTicks();
+            return font_cache[probe].font;
         }
+        probe = (probe + 1) & 0xFF;
+        probes++;
+        if (probe == start) break;
     }
     return NULL;
 }
 
-// 添加字体到缓存
+// 添加字体到缓存（使用哈希表）
 void add_font_to_cache(const char* font_path, int size, const char* weight, TTF_Font* font) {
-    // 查找空闲位置或最久未使用的位置
-    int cache_index = -1;
+    uint64_t hash = font_cache_hash(font_path, size, weight);
+    int start = (int)(hash & 0xFF);
+    int probe = start;
+    int empty_slot = -1;
+    int lru_slot = -1;
     Uint32 oldest_time = SDL_GetTicks();
+    int probes = 0;
     
-    // 首先查找空闲位置
-    for (int i = 0; i < MAX_FONT_CACHE_ENTRIES; i++) {
-        if (!font_cache[i].font) {
-            cache_index = i;
-            break;
+    // 探测寻找空槽或 LRU 条目
+    while (probes < 16) {
+        if (!font_cache[probe].font) {
+            empty_slot = probe;
+            break;  // 找到空槽，直接使用
         }
+        if (font_cache[probe].last_used < oldest_time) {
+            oldest_time = font_cache[probe].last_used;
+            lru_slot = probe;
+        }
+        probe = (probe + 1) & 0xFF;
+        probes++;
+        if (probe == start) break;
     }
     
-    // 如果没有空闲位置，查找最久未使用的位置
-    if (cache_index == -1) {
-        for (int i = 0; i < MAX_FONT_CACHE_ENTRIES; i++) {
-            if (font_cache[i].last_used < oldest_time) {
-                oldest_time = font_cache[i].last_used;
-                cache_index = i;
-            }
-        }
-    }
+    int cache_index = (empty_slot >= 0) ? empty_slot : lru_slot;
     
     if (cache_index >= 0) {
         // 如果该位置已有字体，先关闭它
@@ -1165,6 +1209,7 @@ void add_font_to_cache(const char* font_path, int size, const char* weight, TTF_
         }
         
         // 添加新字体到缓存
+        font_cache[cache_index].hash = hash;
         strncpy(font_cache[cache_index].font_path, font_path, MAX_PATH - 1);
         font_cache[cache_index].font_path[MAX_PATH - 1] = '\0';
         font_cache[cache_index].size = size;
@@ -1194,6 +1239,7 @@ int blur_cache_initialized = 0;
 #define MAX_ARC_CACHE_ENTRIES 32
 
 typedef struct {
+    uint64_t hash;          // 预计算的哈希值，避免查找时重复计算
     SDL_Texture* texture;
     int radius;
     int line_width;
@@ -1253,14 +1299,9 @@ static uint64_t arc_cache_hash(int radius, int line_width, float start_angle, fl
 static int find_arc_cache_entry(int radius, int line_width, float start_angle, float end_angle, Color color) {
     uint64_t target_hash = arc_cache_hash(radius, line_width, start_angle, end_angle, color);
     for (int i = 0; i < MAX_ARC_CACHE_ENTRIES; i++) {
-        if (arc_cache[i].in_use && arc_cache[i].texture) {
-            uint64_t entry_hash = arc_cache_hash(arc_cache[i].radius, arc_cache[i].line_width,
-                                                  arc_cache[i].start_angle, arc_cache[i].end_angle,
-                                                  arc_cache[i].color);
-            if (entry_hash == target_hash) {
-                arc_cache[i].last_used = arc_cache_frame;
-                return i;
-            }
+        if (arc_cache[i].in_use && arc_cache[i].texture && arc_cache[i].hash == target_hash) {
+            arc_cache[i].last_used = arc_cache_frame;
+            return i;
         }
     }
     return -1;
@@ -2060,7 +2101,7 @@ void backend_render_text_destroy(Texture * texture){
     // 检查纹理是否在缓存中，如果在缓存中则不销毁
     if (!texture) return;
     
-    for (int i = 0; i < MAX_TEXTURE_CACHE_ENTRIES; i++) {
+    for (int i = 0; i < TEXTURE_CACHE_SIZE; i++) {
         if (texture_cache[i].texture == texture) {
             // 纹理在缓存中，不销毁
             return;
@@ -4314,6 +4355,7 @@ void backend_render_arc(int center_x, int center_y, int radius, float start_angl
             // 存入缓存
             int cache_idx = find_available_arc_cache_entry();
             if (cache_idx >= 0) {
+                arc_cache[cache_idx].hash = arc_cache_hash(radius, line_width, start_angle, end_angle, color);
                 arc_cache[cache_idx].texture = tex;
                 arc_cache[cache_idx].radius = radius;
                 arc_cache[cache_idx].line_width = line_width;
