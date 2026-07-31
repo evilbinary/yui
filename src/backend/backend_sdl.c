@@ -3246,7 +3246,8 @@ static void yui_draw_rounded_row_aa(SDL_Renderer *renderer, int x, int py, int w
     }
 }
 
-void draw_rounded_rect(SDL_Renderer* renderer, int x, int y, int w, int h, int radius, SDL_Color color) {
+/* 直接光栅化圆角矩形（无缓存），供纹理烘焙与缓存失败回退使用 */
+static void yui_draw_rounded_rect_direct(SDL_Renderer* renderer, int x, int y, int w, int h, int radius, SDL_Color color) {
     int r = radius;
     YuiRadiusAA *aa;
 
@@ -3288,6 +3289,37 @@ void draw_rounded_rect(SDL_Renderer* renderer, int x, int y, int w, int h, int r
             yui_draw_rounded_row_aa(renderer, x, py, w, r, cir_y, aa, color);
         }
     }
+}
+
+/* 圆角矩形纹理缓存：按 (w,h,radius,rgba) 烘焙一次，之后单次 blit。
+   依赖 g_style_fx 缓存（kind=3），复用 shadow/gradient 的 offscreen 纹理方案。 */
+static SDL_Texture* yui_rounded_rect_texture_get(int w, int h, int radius, SDL_Color color);
+
+/* 绘制带圆角的填充矩形（缓存版：首次烘焙纹理，后续单次 blit） */
+void draw_rounded_rect(SDL_Renderer* renderer, int x, int y, int w, int h, int radius, SDL_Color color) {
+    SDL_Texture* tex;
+    int r = radius;
+
+    if (w <= 0 || h <= 0 || color.a == 0) return;
+    if (r > w / 2) r = w / 2;
+    if (r > h / 2) r = h / 2;
+
+    if (r <= 0) {
+        SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+        SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
+        SDL_Rect rect = {x, y, w, h};
+        SDL_RenderFillRect(renderer, &rect);
+        return;
+    }
+
+    tex = yui_rounded_rect_texture_get(w, h, r, color);
+    if (tex) {
+        SDL_Rect dst = {x, y, w, h};
+        SDL_RenderCopy(renderer, tex, NULL, &dst);
+        return;
+    }
+
+    yui_draw_rounded_rect_direct(renderer, x, y, w, h, r, color);
 }
 
 // 绘制带边框的圆角矩形
@@ -3402,6 +3434,62 @@ static int yui_style_fx_alloc_slot(void) {
     }
     memset(&g_style_fx[lru_i], 0, sizeof(g_style_fx[lru_i]));
     return lru_i;
+}
+
+static SDL_Texture* yui_rounded_rect_texture_get(int w, int h, int radius, SDL_Color color) {
+    Uint32 rgba = ((Uint32)color.r << 24) | ((Uint32)color.g << 16) | ((Uint32)color.b << 8) | (Uint32)color.a;
+    SDL_Rect prev_clip;
+    SDL_bool clip_on;
+    SDL_Texture* prev;
+    SDL_Texture* tex;
+    int slot;
+
+    if (!renderer || w <= 0 || h <= 0 || radius <= 0) return NULL;
+
+    g_style_fx_clock++;
+    for (int i = 0; i < YUI_STYLE_FX_CACHE; i++) {
+        YuiStyleFxEntry* e = &g_style_fx[i];
+        if (e->kind != 3 || !e->tex || e->w != w || e->h != h ||
+            e->radius != radius || e->rgba != rgba) {
+            continue;
+        }
+        e->last_use = g_style_fx_clock;
+        return e->tex;
+    }
+
+    slot = yui_style_fx_alloc_slot();
+    tex = SDL_CreateTexture(renderer, yui_fx_pixel_format(), SDL_TEXTUREACCESS_TARGET, w, h);
+    if (!tex) return NULL;
+    SDL_SetTextureBlendMode(tex, SDL_BLENDMODE_BLEND);
+
+    /* 烘焙期间关闭 clip，避免主表面的裁剪影响纹理内容 */
+    clip_on = SDL_RenderIsClipEnabled(renderer);
+    if (clip_on) SDL_RenderGetClipRect(renderer, &prev_clip);
+    SDL_RenderSetClipRect(renderer, NULL);
+
+    prev = SDL_GetRenderTarget(renderer);
+    if (SDL_SetRenderTarget(renderer, tex) != 0) {
+        SDL_RenderSetClipRect(renderer, clip_on ? &prev_clip : NULL);
+        SDL_DestroyTexture(tex);
+        return NULL;
+    }
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
+    SDL_RenderClear(renderer);
+    yui_draw_rounded_rect_direct(renderer, 0, 0, w, h, radius, color);
+    SDL_SetRenderTarget(renderer, prev);
+
+    if (clip_on) SDL_RenderSetClipRect(renderer, &prev_clip);
+
+    g_style_fx[slot].tex = tex;
+    g_style_fx[slot].tw = w;
+    g_style_fx[slot].th = h;
+    g_style_fx[slot].kind = 3;
+    g_style_fx[slot].w = w;
+    g_style_fx[slot].h = h;
+    g_style_fx[slot].radius = radius;
+    g_style_fx[slot].rgba = rgba;
+    g_style_fx[slot].last_use = g_style_fx_clock;
+    return tex;
 }
 
 static void yui_draw_vertical_gradient_fast(int x, int y, int w, int h, int radius,
