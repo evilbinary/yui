@@ -9,6 +9,8 @@ YUI 各端**宿主壳**目录。引擎在 `src/`（`libyui.a`），业务在 `ap
 | [android/](android/) | Gradle + JNI | POC |
 | [ios/](ios/) | Xcode + Metal 桥接 | 骨架 |
 | [web/](web/vanilla/) | WASM 宿主（vanilla HTML） | 骨架 |
+| [esp32/](esp32/) | ESP-IDF 工程模板（ST7789+CST816S 原生后端，不依赖 LVGL） | 骨架 |
+| [stm32/](stm32/) | STM32 宿主壳（LTDC+DMA2D+SDRAM，backend_stm32.c） | 骨架 |
 
 设计文档：[docs/platform-design.md](../docs/platform-design.md)
 

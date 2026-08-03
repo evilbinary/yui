@@ -1,15 +1,17 @@
 # coding:utf-8
 
-target("yui-pc")
-(
-    add_deps("yui", "cjson", "yaml2json", "quickjs", "jsmodule-quickjs", "socket"),
-    add_rules("mode.debug", "mode.release"),
-    set_kind("binary"),
-    add_flags(),
-    add_cflags("-Iplatform/common", "-Isrc", "-Ilib/cjson", "-Ilib/yaml2json", "-Ilib/jsmodule", "-DHAS_JS_MODULE"),
-    add_files("pc/main.c", "common/yui_boot.c"),
-    add_run()
-)
+if get_plat() not in ("esp32", "stm32"):
+    # 嵌入式平台跳过宿主导航（依赖 jsmodule-quickjs，嵌入式平台已跳过）
+    target("yui-pc")
+    (
+        add_deps("yui", "cjson", "yaml2json", "quickjs", "jsmodule-quickjs", "socket"),
+        add_rules("mode.debug", "mode.release"),
+        set_kind("binary"),
+        add_flags(),
+        add_cflags("-Iplatform/common", "-Isrc", "-Ilib/cjson", "-Ilib/yaml2json", "-Ilib/jsmodule", "-DHAS_JS_MODULE"),
+        add_files("pc/main.c", "common/yui_boot.c"),
+        add_run()
+    )
 
 if get_plat() == "android":
     target("yui-android-prebuilt")
@@ -57,54 +59,71 @@ if get_plat() == "ios":
         add_rules("mode.debug", "mode.release"),
     )
 
-target("yui-web.js")
-(
-    add_deps("socket", "yui", "quickjs", "jsmodule-quickjs", "yaml2json"),
-    add_rules("mode.debug", "mode.release", "web.artifacts"),
-    set_kind("binary"),
-    add_flags(),
-    add_cflags(
-        "-Iplatform/common",
-        "-Isrc",
-        "-Ilib/cjson",
-        "-Ilib/yaml2json",
-        "-Ilib/jsmodule",
-        "-DHAS_JS_MODULE",
-    ),
-    add_files("web/vanilla/main.c", "common/yui_boot.c"),
-    add_ldflags(
-        "-sMODULARIZE=1",
-        "-sEXPORT_NAME=YuiModule",
-        "-sINVOKE_RUN=0",
-        "-sEXPORTED_RUNTIME_METHODS=['callMain','FS']",
-        "-sENVIRONMENT=web",
-        "-sTOTAL_STACK=8388608",
-    ),
-)
+if get_plat() not in ("esp32", "stm32"):
+    # emscripten-only target（依赖 jsmodule-quickjs，嵌入式平台已跳过）
+    target("yui-web.js")
+    (
+        add_deps("socket", "yui", "quickjs", "jsmodule-quickjs", "yaml2json"),
+        add_rules("mode.debug", "mode.release", "web.artifacts"),
+        set_kind("binary"),
+        add_flags(),
+        add_cflags(
+            "-Iplatform/common",
+            "-Isrc",
+            "-Ilib/cjson",
+            "-Ilib/yaml2json",
+            "-Ilib/jsmodule",
+            "-DHAS_JS_MODULE",
+        ),
+        add_files("web/vanilla/main.c", "common/yui_boot.c"),
+        add_ldflags(
+            "-sMODULARIZE=1",
+            "-sEXPORT_NAME=YuiModule",
+            "-sINVOKE_RUN=0",
+            "-sEXPORTED_RUNTIME_METHODS=['callMain','FS']",
+            "-sENVIRONMENT=web",
+            "-sTOTAL_STACK=8388608",
+        ),
+    )
 
-target("yui-web-lvgl.js")
-(
-    add_deps("socket", "yui", "quickjs", "jsmodule-quickjs", "yaml2json", "lvglmodule", "lvgl", "lvgl_extra"),
-    add_rules("mode.debug", "mode.release", "web.artifacts"),
-    set_kind("binary"),
-    add_flags(),
-    add_cflags(
-        "-Iplatform/common",
-        "-Isrc",
-        "-Ilib/cjson",
-        "-Ilib/yaml2json",
-        "-Ilib/jsmodule",
-        "-Ilib/lvglmodule",
-        "-DHAS_JS_MODULE",
-        "-DYUI_HAS_LVGLMODULE",
-    ),
-    add_files("web/vanilla/main_lvgl.c", "common/yui_boot.c"),
-    add_ldflags(
-        "-sMODULARIZE=1",
-        "-sEXPORT_NAME=YuiModule",
-        "-sINVOKE_RUN=0",
-        "-sEXPORTED_RUNTIME_METHODS=['callMain','FS']",
-        "-sENVIRONMENT=web",
-        "-sTOTAL_STACK=8388608",
-    ),
-)
+if get_plat() not in ("esp32", "stm32"):
+    # emscripten-only target（依赖 lvglmodule，嵌入式平台已跳过）
+    target("yui-web-lvgl.js")
+    (
+        add_deps("socket", "yui", "quickjs", "jsmodule-quickjs", "yaml2json", "lvglmodule", "lvgl", "lvgl_extra"),
+        add_rules("mode.debug", "mode.release", "web.artifacts"),
+        set_kind("binary"),
+        add_flags(),
+        add_cflags(
+            "-Iplatform/common",
+            "-Isrc",
+            "-Ilib/cjson",
+            "-Ilib/yaml2json",
+            "-Ilib/jsmodule",
+            "-Ilib/lvglmodule",
+            "-DHAS_JS_MODULE",
+            "-DYUI_HAS_LVGLMODULE",
+        ),
+        add_files("web/vanilla/main_lvgl.c", "common/yui_boot.c"),
+        add_ldflags(
+            "-sMODULARIZE=1",
+            "-sEXPORT_NAME=YuiModule",
+            "-sINVOKE_RUN=0",
+            "-sEXPORTED_RUNTIME_METHODS=['callMain','FS']",
+            "-sENVIRONMENT=web",
+            "-sTOTAL_STACK=8388608",
+        ),
+    )
+
+if get_plat() == "stm32":
+    # STM32 宿主壳入口（HAL/BSP 由用户工程提供，见 platform/stm32/README.md）
+    target("yui-stm32")
+    (
+        add_deps("yui"),
+        add_rules("mode.debug", "mode.release"),
+        set_kind("binary"),
+        add_flags(),
+        add_cflags("-Isrc", "-Ilib/cjson"),
+        add_files("stm32/main.c"),
+        add_run()
+    )

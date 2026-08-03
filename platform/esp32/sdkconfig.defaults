@@ -1,0 +1,2 @@
+# 提高主任务栈：UI 渲染 + 字体需要
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192

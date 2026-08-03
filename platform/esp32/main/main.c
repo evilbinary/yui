@@ -1,0 +1,102 @@
+/*
+ * YUI ESP32 宿主壳（示例入口）
+ *
+ * 构建步骤（前置：先编译 yui 核心库）：
+ *   cd e:/workspace/yui
+ *   ya -p esp32 -a esp32c3          # 生成 build/esp32/esp32c3/None/libyui.a 等
+ *   cd platform/esp32
+ *   idf.py set-target esp32c3
+ *   idf.py build
+ *   idf.py -p COM3 flash monitor
+ *
+ * 默认板级配置：ST7789 240x240 SPI + CST816S I2C 触摸（C3 常用小板）。
+ * 按实际硬件用 backend_esp32_set_config / backend_esp32_set_spi_pins /
+ * backend_esp32_set_touch 调整。
+ */
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "backend.h"
+#include "layer.h"
+#include "layout.h"
+#include "render.h"
+#include "popup_manager.h"
+#include "cJSON.h"
+
+/* ESP32 后端扩展接口（backend_esp32.c 定义，不在通用 backend.h 中） */
+void backend_esp32_set_config(int width, int height, int spi_host,
+                              int cs, int dc, int rst, int bl, int freq_hz);
+void backend_esp32_set_spi_pins(int mosi, int sclk);
+void backend_esp32_set_touch(int i2c_host, int sda, int scl, int addr, int int_pin);
+DFont* backend_esp32_load_font_from_flash(const char* partition_label, int size);
+
+/* 简单 UI 描述（也可改为从 Flash/SPIFFS 加载 JSON 文件） */
+static const char s_ui_json[] =
+    "{"
+    "  \"type\": \"container\","
+    "  \"text\": \"YUI ESP32\","
+    "  \"layout\": \"vertical\","
+    "  \"rect\": {\"x\": 0, \"y\": 0, \"w\": 240, \"h\": 240},"
+    "  \"style\": {\"bg-color\": \"#102040\", \"color\": \"#ffffff\", \"font-size\": 20},"
+    "  \"children\": ["
+    "    {\"type\": \"label\", \"text\": \"Hello YUI\","
+    "     \"style\": {\"color\": \"#ffd700\", \"font-size\": 24}}"
+    "  ]"
+    "}";
+
+void app_main(void) {
+    cJSON* json;
+    Layer* ui_root;
+    DFont* font;
+
+    /* 1. 板级配置：分辨率/SPI 主机/CS/DC/RST/BL/SPI 时钟 */
+    backend_esp32_set_config(240, 240, 2, 5, 16, -1, -1, 40 * 1000 * 1000);
+    /* SPI 总线引脚（MOSI/SCK） */
+    backend_esp32_set_spi_pins(23, 18);
+    /* 触摸（I2C CST816S；int_pin=-1 禁用轮询中断） */
+    backend_esp32_set_touch(0, 4, 5, 0x15, 6);
+
+    /* 2. 初始化后端 + 弹层管理 */
+    backend_init();
+    popup_manager_init();
+
+    /* 3. 加载字体：优先 Flash 映射（零 RAM），回退 RAM 加载。
+     *    Flash 分区方案见 partitions.csv 的 "font" 分区与 README。 */
+    font = backend_esp32_load_font_from_flash("font", 16);
+    if (!font)
+        font = backend_load_font("font.ttf", 16);
+
+    /* 4. 构建 UI */
+    json = cJSON_Parse(s_ui_json);
+    ui_root = layer_create_from_json(json, NULL);
+    cJSON_Delete(json);
+    if (!ui_root) {
+        printf("yui: failed to create ui\n");
+        backend_quit();
+        return;
+    }
+
+    /* 预置字体：load_all_fonts 检测到 default_font 已设置会跳过重新加载 */
+    if (font) {
+        ui_root->font = (Font*)malloc(sizeof(Font));
+        memset(ui_root->font, 0, sizeof(Font));
+        ui_root->font->default_font = font;
+        ui_root->font->size = 16;
+        strcpy(ui_root->font->path, "font.ttf");
+    }
+    ui_root->assets = (Assets*)malloc(sizeof(Assets));
+    strcpy(ui_root->assets->path, "assets");
+
+    if (ui_root->rect.w <= 0 || ui_root->rect.h <= 0) {
+        ui_root->rect.w = 240;
+        ui_root->rect.h = 240;
+    }
+    load_all_fonts(ui_root);
+    load_textures(ui_root);
+    layout_layer(ui_root);
+
+    /* 5. 主循环（内部不返回） */
+    backend_run(ui_root);
+    backend_quit();
+}
