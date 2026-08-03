@@ -69,6 +69,8 @@ def _mingw_env():
     env["YUI_HEADLESS"] = "1"
     if "YUI_AUTO_FRAMES" not in env:
         env["YUI_AUTO_FRAMES"] = "120"
+    if sys.platform.startswith("linux"):
+        env["SDL_DISABLE_DBUS"] = "1"
     return env
 
 
