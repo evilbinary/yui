@@ -4,6 +4,7 @@
 #include "render.h"
 #include "ytype.h"
 #include "popup_manager.h"
+#include "backend_embed_font.h"
 #include <stdbool.h>
 #include <math.h>
 
@@ -117,36 +118,11 @@ Texture* backend_load_texture_from_base64(const char* base64_data, size_t data_l
 }
 
 int backend_measure_text_width(DFont* font, const char* text) {
-    if (!font || !text || !text[0]) {
-        return 0;
-    }
-    return (int)(strlen(text) * font->size / 2);
+    return embed_font_measure_text(font, text);
 }
 
 Texture* backend_render_texture(DFont* font, const char* text, Color color) {
-    // STM32 平台实现 - 渲染文本为纹理
-    // 这里需要实现字体渲染
-    Texture* texture = (Texture*)malloc(sizeof(Texture));
-    if (!texture) return NULL;
-    
-    // 计算文本大小
-    int text_width = strlen(text) * font->size / 2; // 简单估算
-    int text_height = font->size;
-    
-    texture->w = text_width;
-    texture->h = text_height;
-    texture->data = malloc(text_width * text_height * 4);
-    
-    if (!texture->data) {
-        free(texture);
-        return NULL;
-    }
-    
-    // 渲染文本到纹理数据
-    // 这里需要实现具体的文本渲染逻辑
-    memset(texture->data, 0, text_width * text_height * 4);
-    
-    return texture;
+    return embed_font_render(font, text, color);
 }
 
 void backend_render_fill_rect(Rect* rect, Color color) {
@@ -394,61 +370,68 @@ void backend_render_clear_color(unsigned char r, unsigned char g, unsigned char 
 
 // ====================== 字体管理函数 ======================
 DFont* backend_load_font(char* font_path, int size) {
-    // STM32 平台实现 - 从文件系统加载字体
-    DFont* font = (DFont*)malloc(sizeof(DFont));
-    if (!font) return NULL;
-    
-    font->size = size;
-    font->path = strdup(font_path);
-    font->weight = "normal";
-    
-    // 这里需要根据具体字体格式实现字体加载
-    // 可以使用FreeType等库
-    
-    return font;
+    return embed_font_load(font_path, size);
 }
 
 DFont* backend_load_font_with_weight(char* font_path, int size, const char* weight) {
-    DFont* font = backend_load_font(font_path, size);
-    if (font) {
-        font->weight = strdup(weight);
-    }
-    return font;
+    return embed_font_load_with_weight(font_path, size, weight);
 }
 
 void backend_render_text_destroy(Texture* texture) {
-    if (texture) {
-        if (texture->data) {
-            free(texture->data);
-        }
-        free(texture);
+    if (!texture) return;
+    if (texture->priv) {
+        embed_font_texture_free(texture);
+        return;
     }
+    free(texture);
 }
 
 void backend_render_text_copy(Texture* texture, const Rect* srcrect, const Rect* dstrect) {
-    if (!texture || !framebuffer || !srcrect || !dstrect) return;
-    
-    // 简化实现：复制纹理到帧缓冲区
-    // 这里需要实现具体的纹理复制逻辑
-    if (texture->data) {
-        uint32_t* src = (uint32_t*)texture->data;
-        
-        for (int y = 0; y < dstrect->h && y < srcrect->h; y++) {
-            for (int x = 0; x < dstrect->w && x < srcrect->w; x++) {
-                int src_x = srcrect->x + x;
-                int src_y = srcrect->y + y;
-                int dst_x = dstrect->x + x;
-                int dst_y = dstrect->y + y;
-                
-                if (dst_x >= 0 && dst_x < LCD_WIDTH && dst_y >= 0 && dst_y < LCD_HEIGHT &&
-                    src_x >= 0 && src_x < texture->w && src_y >= 0 && src_y < texture->h) {
-                    framebuffer[dst_y * LCD_WIDTH + dst_x] = src[src_y * texture->w + src_x];
-                }
+    unsigned char* src;
+    int sw, sh;
+    int sx0, sy0, src_w, src_h;
+    if (!texture || !framebuffer || !dstrect) return;
+    src = embed_font_texture_pixels(texture);
+    if (!src) return;
+    sw = texture->w;
+    sh = texture->h;
+    sx0 = srcrect ? srcrect->x : 0;
+    sy0 = srcrect ? srcrect->y : 0;
+    src_w = srcrect ? srcrect->w : sw;
+    src_h = srcrect ? srcrect->h : sh;
+
+    for (int y = 0; y < dstrect->h && y < src_h; y++) {
+        int sy = sy0 + y;
+        if (sy < 0 || sy >= sh) continue;
+        for (int x = 0; x < dstrect->w && x < src_w; x++) {
+            int sx = sx0 + x;
+            int dx = dstrect->x + x;
+            int dy = dstrect->y + y;
+            size_t si;
+            unsigned char a;
+            if (dx < 0 || dx >= LCD_WIDTH || dy < 0 || dy >= LCD_HEIGHT) continue;
+            if (sx < 0 || sx >= sw) continue;
+            si = ((size_t)sy * sw + sx) * 4;
+            a = src[si + 3];
+            if (a == 0) continue;
+            if (a == 255) {
+                framebuffer[dy * LCD_WIDTH + dx] =
+                    ((uint32_t)a << 24) | ((uint32_t)src[si] << 16) |
+                    ((uint32_t)src[si + 1] << 8) | (uint32_t)src[si + 2];
+            } else {
+                uint32_t d = framebuffer[dy * LCD_WIDTH + dx];
+                unsigned char dr = (unsigned char)(d >> 16);
+                unsigned char dg = (unsigned char)(d >> 8);
+                unsigned char db = (unsigned char)d;
+                dr = (unsigned char)((dr * (255 - a) + src[si] * a) / 255);
+                dg = (unsigned char)((dg * (255 - a) + src[si + 1] * a) / 255);
+                db = (unsigned char)((db * (255 - a) + src[si + 2] * a) / 255);
+                framebuffer[dy * LCD_WIDTH + dx] = (0xFFu << 24) | ((uint32_t)dr << 16) |
+                                                   ((uint32_t)dg << 8) | (uint32_t)db;
             }
         }
-        
-        display_needs_update = true;
     }
+    display_needs_update = true;
 }
 
 void backend_render_texture_tinted(Texture* texture, const Rect* srcrect, const Rect* dstrect, Color tint) {

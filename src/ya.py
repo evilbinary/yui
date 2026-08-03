@@ -30,7 +30,15 @@ if get_plat() in ("lvgl", "em-lvgl"):
     add_deps("lvgl", "lvgl_extra", "lvglmodule")
 elif get_plat() == "stm32":
     add_files("backend/backend_stm32.c")
+    add_files("backend/backend_embed_font.c")
+    add_includedirs('../lib/stb')
     add_cflags("-DSTM32_PLATFORM")
+    add_cflags("-DYUI_BACKEND_MOBILE")
+elif get_plat() == "esp32":
+    add_files("backend/backend_esp32.c")
+    add_files("backend/backend_embed_font.c")
+    add_includedirs('../lib/stb')
+    add_cflags("-DYUI_BACKEND_MOBILE")
 elif get_plat() in ("android", "ios"):
     add_files("backend/backend_mobile.c")
     add_files("backend/mobile_text.c")

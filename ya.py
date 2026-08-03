@@ -48,6 +48,9 @@ elif platform.system()=='Linux':
 elif is_plat("stm32"):
     # STM32平台不需要设置环境变量
     prefix_env=''
+elif is_plat("esp32"):
+    # ESP32 平台不需要设置环境变量
+    prefix_env=''
 
 def _resolve_emscripten_tool(name):
     import shutil
@@ -267,6 +270,134 @@ def _add_android_compile_flags():
         "-lm",
     )
 
+_esp32_toolchain_cache = {}
+
+def _esp32_is_riscv(arch):
+    return arch and (arch.startswith("esp32c") or arch.startswith("esp32h") or arch.startswith("esp32p"))
+
+def configure_esp32_toolchain(target=None):
+    if not is_plat("esp32"):
+        return
+    if _esp32_toolchain_cache:
+        return
+    import glob
+    import shutil
+
+    arch = get_arch()
+    if (not arch or arch == "None") and target is not None:
+        arch = target.get_arch()
+    if not arch or arch == "None":
+        arch = os.environ.get("ESP32_CHIP") or "esp32c3"
+    set_arch(arch)
+
+    riscv = _esp32_is_riscv(arch)
+    prefix = "riscv32-esp-elf-" if riscv else "xtensa-esp-elf-"
+    if not riscv:
+        # 旧版 ESP-IDF 用 xtensa-esp32-elf-，新版用 xtensa-esp-elf-
+        prefix_legacy = "xtensa-esp32-elf-"
+
+    # 查找 ESP-IDF tools 路径
+    tools_path = (os.environ.get("ESP_IDF_TOOLS_PATH") or
+                  os.environ.get("IDF_TOOLS_PATH") or "")
+    if not tools_path:
+        for root in (r"E:\soft\Espressif\tools", r"E:\soft\Espressif",
+                     os.path.expanduser("~/esp"), os.path.expanduser("~/.espressif")):
+            if os.path.isdir(root):
+                tools_path = root
+                break
+
+    cc = None
+    bin_dir = None
+    # 优先在 tools_path 搜索
+    if tools_path:
+        for pfx in (prefix, prefix_legacy if not riscv else prefix):
+            pattern = os.path.join(tools_path, "**", "bin", pfx + "gcc*")
+            matches = [m for m in glob.glob(pattern, recursive=True)
+                       if not m.endswith((".py", ".sh"))]
+            if matches:
+                cc = matches[0]
+                bin_dir = os.path.dirname(cc)
+                prefix = pfx
+                break
+    # 退回 PATH 查找
+    if not cc:
+        for pfx in (prefix, prefix_legacy if not riscv else prefix):
+            found = shutil.which(pfx + "gcc") or shutil.which(pfx + "gcc.exe")
+            if found:
+                cc = found
+                bin_dir = os.path.dirname(found)
+                prefix = pfx
+                break
+
+    tool = get_toolchain_node()
+    if not tool:
+        print("warning: gcc toolchain not found for esp32 build")
+    elif cc:
+        tool["cc"] = cc
+        tool["cxx"] = cc.replace("gcc", "g++") if "gcc" in cc else cc.replace("GCC", "g++")
+        tool["ld"] = cc
+        tool["ar"] = os.path.join(bin_dir, prefix + "ar") if bin_dir else (prefix + "ar")
+    else:
+        print("warning: esp32 gcc not found, set ESP_IDF_TOOLS_PATH or activate ESP-IDF env")
+
+    # 查找 IDF_PATH（components 目录）
+    idf_path = os.environ.get("IDF_PATH") or ""
+    if not idf_path:
+        for root in (r"E:\soft\Espressif\framework\esp-idf-v5.5.5",
+                     r"E:\soft\Espressif\framework\esp-idf",
+                     r"E:\soft\Espressif\esp-idf"):
+            if os.path.isdir(os.path.join(root, "components")):
+                idf_path = root
+                break
+
+    _esp32_toolchain_cache["arch"] = arch
+    _esp32_toolchain_cache["riscv"] = riscv
+    _esp32_toolchain_cache["idf_path"] = idf_path
+    _esp32_toolchain_cache["has_idf"] = bool(idf_path and os.path.isdir(os.path.join(idf_path, "components")))
+    return _esp32_toolchain_cache
+
+def _add_esp32_compile_flags():
+    if not _esp32_toolchain_cache:
+        configure_esp32_toolchain()
+    arch = _esp32_toolchain_cache.get("arch", "esp32c3")
+    riscv = _esp32_toolchain_cache.get("riscv", True)
+    has_idf = _esp32_toolchain_cache.get("has_idf", False)
+    idf_path = _esp32_toolchain_cache.get("idf_path", "")
+    import glob
+
+    if riscv:
+        add_cflags('-march=rv32imc', '-mabi=ilp32', '-mcmodel=medany')
+    else:
+        add_cflags('-mlongcalls', '-mtext-section-literals')
+
+    add_cflags(
+        '-g', '-Os',
+        '-ffunction-sections', '-fdata-sections',
+        '-fno-builtin', '-Wall',
+        '-I.', '-Isrc', '-Ilib/stb',
+    )
+    # 仅当 ESP-IDF 可用时才定义 ESP_PLATFORM（启用真实 LCD/触摸驱动）
+    if has_idf:
+        add_cflags('-DESP_PLATFORM', '-DIDF_TARGET_' + arch.upper())
+        # 自动添加 components/*/include
+        for inc in glob.glob(os.path.join(idf_path, "components", "*", "include")):
+            add_cflags('-I' + inc)
+        # freRTOS portable
+        if riscv:
+            add_cflags('-I' + os.path.join(idf_path, "components", "freertos", "FreeRTOS-Kernel", "portable", "riscv", "include"))
+            soc_inc = os.path.join(idf_path, "components", "soc", arch, "include")
+            hal_inc = os.path.join(idf_path, "components", "hal", arch, "include")
+        else:
+            add_cflags('-I' + os.path.join(idf_path, "components", "freertos", "FreeRTOS-Kernel", "portable", "xtensa", "include"))
+            soc_inc = os.path.join(idf_path, "components", "soc", arch, "include")
+            hal_inc = os.path.join(idf_path, "components", "hal", arch, "include")
+        if os.path.isdir(soc_inc): add_cflags('-I' + soc_inc)
+        if os.path.isdir(hal_inc): add_cflags('-I' + hal_inc)
+        # esp_lcd interface
+        add_cflags('-I' + os.path.join(idf_path, "components", "esp_lcd", "interface"))
+    else:
+        print("warning: ESP-IDF not found, compiling esp32 backend as PC stub (no ESP_PLATFORM)")
+
 _ios_toolchain_cache = {}
 
 def _ios_sdk_name():
@@ -418,6 +549,11 @@ def add_flags():
             '-lsupc++',
             '-Wl,--end-group'
             ),
+    elif is_plat("esp32"):
+        set_toolchain('gcc')
+        configure_esp32_toolchain()
+        _add_esp32_compile_flags()
+        before_build(configure_esp32_toolchain)
     elif is_plat("android"):
         set_toolchain('gcc')
         configure_android_toolchain()
@@ -519,6 +655,15 @@ def run(target):
         print("STM32 target, run through debugger (e.g., ST-Link)")
         print("Binary file:", targetfile)
         # 这里可以添加通过ST-Link或其他调试器运行的代码
+    elif is_plat("esp32"):
+        # ESP32 通过 esptool.py 烧录
+        import shutil as _sh
+        port = os.environ.get("ESPPORT") or "COM3"
+        baud = os.environ.get("ESPBAUD") or "921600"
+        esptool = _sh.which("esptool.py") or "esptool.py"
+        cmd = [esptool, "--port", port, "--baud", baud, "write_flash", "0x0", targetfile]
+        print("flash", " ".join(cmd))
+        subprocess.run(cmd)
     else:
         # 直接使用 Python 的 subprocess 来运行，确保环境变量正确传递
         cmd = ["./" + targetfile] + extra
