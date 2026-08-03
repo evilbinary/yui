@@ -378,12 +378,7 @@ DFont* backend_load_font_with_weight(char* font_path, int size, const char* weig
 }
 
 void backend_render_text_destroy(Texture* texture) {
-    if (!texture) return;
-    if (texture->priv) {
-        embed_font_texture_free(texture);
-        return;
-    }
-    free(texture);
+    embed_font_texture_release(texture);
 }
 
 void backend_render_text_copy(Texture* texture, const Rect* srcrect, const Rect* dstrect) {

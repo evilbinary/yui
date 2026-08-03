@@ -29,6 +29,7 @@
 #include "driver/spi_master.h"
 #include "driver/gpio.h"
 #include "driver/i2c.h"
+#include "esp_partition.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #endif
@@ -90,6 +91,37 @@ void backend_esp32_set_touch(int i2c_host, int sda, int scl, int addr, int int_p
     s_cfg.touch_scl = scl;
     s_cfg.touch_addr = addr;
     s_cfg.touch_int = int_pin;
+}
+
+#ifdef ESP_PLATFORM
+static esp_partition_mmap_handle_t s_font_mmap_handle;
+#endif
+
+/* 从 SPI Flash 分区映射 TTF（不占 RAM），适合子集化小字体。
+ * partitions.csv 中需定义同名 data 分区，烧录子集化 TTF 到该分区。 */
+DFont* backend_esp32_load_font_from_flash(const char* partition_label, int size) {
+#ifdef ESP_PLATFORM
+    const esp_partition_t* part;
+    void* mapped;
+    esp_err_t err;
+    if (!partition_label) return NULL;
+    part = esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_ANY, partition_label);
+    if (!part) {
+        ESP_LOGE(YUI_E32_TAG, "font partition '%s' not found", partition_label);
+        return NULL;
+    }
+    err = esp_partition_mmap(part, 0, part->size, ESP_PARTITION_MMAP_DATA,
+                             &mapped, &s_font_mmap_handle);
+    if (err != ESP_OK) {
+        ESP_LOGE(YUI_E32_TAG, "font mmap failed: %s", esp_err_to_name(err));
+        return NULL;
+    }
+    /* mapped 指向 Flash，embed_font_load_from_memory 不复制、不释放 */
+    return embed_font_load_from_memory(mapped, part->size, size, "normal");
+#else
+    (void)partition_label; (void)size;
+    return NULL;
+#endif
 }
 
 /* ====================== Framebuffer ====================== */
@@ -384,14 +416,8 @@ Texture* backend_render_texture(DFont* font, const char* text, Color color) {
 }
 
 void backend_render_text_destroy(Texture* texture) {
-    /* 区分字体纹理与图片纹理 */
-    if (!texture) return;
-    if (texture->priv) {
-        /* embed_font 纹理统一用 embed_font_texture_free 释放 */
-        embed_font_texture_free(texture);
-        return;
-    }
-    free(texture);
+    /* embed_font_render 返回的纹理归缓存管理，release 仅引用计数 -1 */
+    embed_font_texture_release(texture);
 }
 
 /* ====================== 基础绘制 ====================== */
