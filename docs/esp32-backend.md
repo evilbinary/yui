@@ -65,6 +65,18 @@ ESP32 后端不引入 LVGL，直接操作 RGB565 framebuffer，通过 ESP-IDF �
 
 ### 编译
 
+#### 分工说明
+
+ESP-IDF 的组件 include 路径由 CMake/`idf.py` 生成（如 lwip 的 `#include_next`），ya 无法完整覆盖。因此构建分工如下：
+
+| 层 | 构建工具 | 产物 |
+|----|---------|------|
+| yui 核心库（layer/render/components + backend_embed_font） | **ya** | `yui.a` |
+| ESP32 后端（backend_esp32.c，依赖 esp_lcd/lwip/freertos） | **idf.py** | `backend_esp32.o` |
+| 应用固件（app + 链接 yui.a + backend_esp32.o） | **idf.py** | `firmware.bin` |
+
+#### 步骤 1：ya 编译 yui 核心库
+
 ```bash
 # ESP32-C3（RISC-V）
 ya -p esp32 -a esp32c3
@@ -80,16 +92,31 @@ ya.py 自动识别架构：
 - `esp32c*` / `esp32h*` → RISC-V（`-march=rv32imc -mabi=ilp32`）
 - `esp32` / `esp32s2` / `esp32s3` → Xtensa（`-mlongcalls`）
 
-仅当检测到 ESP-IDF（`IDF_PATH/components` 存在）时才定义 `ESP_PLATFORM`，启用真实 LCD/触摸驱动；否则编译为 PC stub（用于语法检查）。
+产物：`build/esp32/esp32c3/yui.a`（含 yui 核心组件 + 通用字体，**不含** backend_esp32.c）。
 
-### 烧录
+#### 步骤 2：ESP-IDF 工程编译后端 + 固件
+
+在 ESP-IDF 工程中（`app/esp32/`），`CMakeLists.txt` 编译 `backend_esp32.c` 并链接 ya 产出的 `yui.a`：
+
+```cmake
+# app/esp32/main/CMakeLists.txt
+idf_component_register(
+    SRCS "main.c" "../../../src/backend/backend_esp32.c"
+    INCLUDE_DIRS "../../../src" "../../../src/backend" "../../../lib/stb"
+    REQUIRES esp_lcd esp_lcd_touch esp_timer driver nvs_flash
+)
+
+# 链接 ya 编译的 yui.a
+target_link_libraries(${COMPONENT_LIB} PRIVATE
+    ${CMAKE_SOURCE_DIR}/../../../build/esp32/esp32c3/yui.a)
+```
 
 ```bash
-set ESPPORT=COM3
-set ESPBAUD=921600
-ya -p esp32 -a esp32c3 --run
+cd app/esp32
+idf.py set-target esp32c3
+idf.py build
+idf.py -p COM3 flash monitor
 ```
-ya 通过 `esptool.py write_flash 0x0 <binary>` 烧录。
 
 ---
 

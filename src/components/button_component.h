@@ -10,7 +10,7 @@ typedef struct {
     void* user_data;       // 用户数据
     char* icon_path;       // SVG/图片文件路径
     char* icon_text;       // 图标文本 (emoji等)
-    struct Texture* icon_tex;  // 缓存的图标纹理
+    Texture* icon_tex;  // 缓存的图标纹理
     int icon_size;         // 图标最大尺寸 (0 = 自动)
     int icon_align;        // 图标对齐方式: ICON_ALIGN_*
     int icon_gap;          // 图标与文字间距

@@ -24,11 +24,11 @@ typedef struct TreeNode {
     char* collapse_icon; // custom icon text when expanded (e.g. "▼")
     char* expand_icon_path;   // path to SVG/image for collapsed icon
     char* collapse_icon_path; // path to SVG/image for expanded icon
-    struct Texture* expand_icon_tex;   // cached texture for expand
-    struct Texture* collapse_icon_tex; // cached texture for collapse
+    Texture* expand_icon_tex;   // cached texture for expand
+    Texture* collapse_icon_tex; // cached texture for collapse
     char* icon;       // file path to SVG/image, or programmatic ID (e.g. "database", "table")
     char* icon_text;  // icon text rendered before node label (e.g. "📊", "⚡")
-    struct Texture* icon_tex;  // cached texture for icon
+    Texture* icon_tex;  // cached texture for icon
 } TreeNode;
 
 // 树视图组件
