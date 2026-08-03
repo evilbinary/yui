@@ -3,7 +3,7 @@
 
 #if !defined(YUI_TYPE_H)
 // 定义 Color 和 DFont 类型（如果尚未定义）
-#ifdef YUI_BACKEND_MOBILE
+#if defined(YUI_BACKEND_MOBILE) || defined(YUI_BACKEND_EMBEDDED)
 // Mobile 后端：自定义 Color 类型
 #ifndef SDL2
 #define SDL2 1

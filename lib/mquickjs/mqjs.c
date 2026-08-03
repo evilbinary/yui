@@ -220,7 +220,14 @@ static void run_timers(JSContext *ctx)
     }
 }
 
+/* stdlib ROM table: 32-bit targets (JS_PTR64 undefined) use the
+   32-bit table, which is also required by RISC-V (ilp32) since GCC
+   cannot build the 64-bit self-referencing table on RV32. */
+#ifdef JS_PTR64
 #include "mqjs_stdlib.h"
+#else
+#include "mqjs_stdlib_32.h"
+#endif
 
 #define STYLE_DEFAULT    COLOR_BRIGHT_GREEN
 #define STYLE_COMMENT    COLOR_WHITE

@@ -15,6 +15,8 @@ import os
 import glob
 
 def add_yui_unit_test(name):
+    if get_plat() in ("esp32", "stm32"):
+        return  # 单元测试为宿主 cmocka 二进制，嵌入式平台跳过
     target(name)
     (
         add_deps("yui", "cjson", "cmocka"),

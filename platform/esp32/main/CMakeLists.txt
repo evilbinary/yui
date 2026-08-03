@@ -18,7 +18,7 @@ idf_component_register(
 )
 
 # 嵌入式模式：ytype.h 使用 YuiTexture/YuiFont，不依赖 SDL
-target_compile_definitions(${COMPONENT_LIB} PRIVATE YUI_BACKEND_MOBILE)
+target_compile_definitions(${COMPONENT_LIB} PRIVATE YUI_BACKEND_EMBEDDED)
 
 # 链接 ya 编译的 yui 核心库（按实际 set-target 调整 arch 目录）
 set(YUI_BUILD_DIR ${YUI_ROOT}/build/esp32/esp32c3/None)

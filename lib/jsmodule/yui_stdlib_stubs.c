@@ -115,3 +115,31 @@ int JS_ToBool(JSContext* ctx, JSValue val) {
     }
     return !JS_IsNull(val) && !JS_IsUndefined(val);
 }
+
+// mquickjs 无 JS_FreeCString（JSCStringBuf 为栈缓冲，无需释放）；提供空实现
+void JS_FreeCString(JSContext* ctx, JSCStringBuf* buf) {
+    (void)ctx;
+    (void)buf;
+}
+
+// mquickjs 用 JS_NewFloat64 表示 number，无 JS_NewNumber
+JSValue JS_NewNumber(JSContext* ctx, double d) {
+    return JS_NewFloat64(ctx, d);
+}
+
+// mquickjs 无 JS_IsObject；生成工具不依赖运行结果，返回 0
+int JS_IsObject(JSContext* ctx, JSValue v) {
+    (void)ctx;
+    (void)v;
+    return 0;
+}
+
+// 属性 JSON 读取存根（生成头文件工具不需要运行时功能）
+cJSON* layer_get_property_as_json(Layer* layer, const char* key) {
+    return NULL;
+}
+
+void backend_get_windowsize(int* width, int* height) {
+    if (width) *width = 800;
+    if (height) *height = 480;
+}

@@ -1,6 +1,6 @@
 # coding:utf-8
 
-if get_plat() not in ("esp32", "stm32"):
+if is_host_plat():
     # 嵌入式平台跳过宿主导航（依赖 jsmodule-quickjs，嵌入式平台已跳过）
     target("yui-pc")
     (
@@ -59,7 +59,7 @@ if get_plat() == "ios":
         add_rules("mode.debug", "mode.release"),
     )
 
-if get_plat() not in ("esp32", "stm32"):
+if is_host_plat():
     # emscripten-only target（依赖 jsmodule-quickjs，嵌入式平台已跳过）
     target("yui-web.js")
     (
@@ -86,7 +86,7 @@ if get_plat() not in ("esp32", "stm32"):
         ),
     )
 
-if get_plat() not in ("esp32", "stm32"):
+if is_host_plat():
     # emscripten-only target（依赖 lvglmodule，嵌入式平台已跳过）
     target("yui-web-lvgl.js")
     (

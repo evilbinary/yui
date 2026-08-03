@@ -30,7 +30,7 @@ ESP32 后端不引入 LVGL，直接操作 RGB565 framebuffer，通过 ESP-IDF �
     └── backend_run(ui_root)         主循环：触摸轮询 → 渲染 → 刷新脏区域
 ```
 
-类型系统复用 `YUI_BACKEND_MOBILE`（`YuiFont{size,priv}` / `YuiTexture{w,h,priv}`），不依赖 SDL。
+类型系统复用 `YUI_BACKEND_EMBEDDED`（`YuiTexture{priv}` / `YuiFont{size,priv}`），不依赖 SDL。
 
 ---
 

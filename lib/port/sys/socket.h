@@ -27,6 +27,26 @@ struct sockaddr {
     char sa_data[14];
 };
 
+/* 地址族 / socket 类型 */
+#define AF_INET     2
+#define PF_INET     AF_INET
+#define SOCK_STREAM 1
+#define SOCK_DGRAM  2
+
+/* shutdown(2) */
+#define SHUT_RD   0
+#define SHUT_WR   1
+#define SHUT_RDWR 2
+
+/* setsockopt 层级与选项（值与 lwIP 一致） */
+#define SOL_SOCKET   0xfff
+#define SO_REUSEADDR 0x0004
+#define SO_KEEPALIVE 0x0008
+#define SO_BROADCAST 0x0020
+#define SO_SNDTIMEO  0x1005
+#define SO_RCVTIMEO  0x1006
+#define SO_ERROR     0x1007
+
 struct msghdr {
     void *msg_name;
     socklen_t msg_namelen;

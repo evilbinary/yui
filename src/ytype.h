@@ -6,7 +6,13 @@
 #include <string.h>
 #include "cJSON.h"
 
+/* 嵌入式后端共用无 SDL 的类型系统（YuiTexture/YuiFont）：
+   esp32/stm32 定义 YUI_BACKEND_EMBEDDED；android/ios 的 YUI_BACKEND_MOBILE 统一到这里 */
 #if defined(YUI_BACKEND_MOBILE)
+#define YUI_BACKEND_EMBEDDED 1
+#endif
+
+#if defined(YUI_BACKEND_EMBEDDED)
 
 #include <stdint.h>
 
@@ -173,7 +179,7 @@ typedef YuiFont DFont;
 #define BUTTON_PRESSED SDL_PRESSED
 #define BUTTON_RIGHT SDL_BUTTON_RIGHT
 
-#else /* !YUI_BACKEND_MOBILE */
+#else /* !YUI_BACKEND_EMBEDDED */
 
 #ifdef D_SDL
 #include <SDL2/SDL.h>
@@ -185,7 +191,7 @@ typedef YuiFont DFont;
 #include <SDL_image.h>
 #endif
 
-#endif /* YUI_BACKEND_MOBILE */
+#endif /* YUI_BACKEND_EMBEDDED */
 
 // 功能定义区域
 #define SDL2 1
@@ -265,7 +271,7 @@ typedef struct Point {
 } Point;
 
 
-#if defined(YUI_BACKEND_MOBILE)
+#if defined(YUI_BACKEND_EMBEDDED)
 /* Rect / Color / Texture / DFont defined above */
 #elif SDL2
 
@@ -295,7 +301,7 @@ typedef struct Rect {
 
 #endif
 
-#if !defined(YUI_BACKEND_MOBILE)
+#if !defined(YUI_BACKEND_EMBEDDED)
 
 #define DFont TTF_Font
 

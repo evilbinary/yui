@@ -35,6 +35,13 @@ def is_plat(plat_name):
     plat = get_plat()
     return plat == plat_name
 
+# 宿主平台白名单（对应 platform/* 下的目录 + em/lvgl 变体）；
+# esp32/stm32 为嵌入式平台，宿主工具与 demo 一律跳过
+HOST_PLATS = ("", "sdl", "pc", "android", "ios", "web", "lvgl", "em", "emscripten", "em-lvgl")
+
+def is_host_plat():
+    return get_plat() in HOST_PLATS
+
 prefix_env=''
 
 if platform.system()=='Windows':
@@ -370,7 +377,6 @@ def _add_esp32_compile_flags():
     riscv = _esp32_toolchain_cache.get("riscv", True)
     has_idf = _esp32_toolchain_cache.get("has_idf", False)
     idf_path = _esp32_toolchain_cache.get("idf_path", "")
-    import glob
 
     if riscv:
         add_cflags('-march=rv32imc', '-mabi=ilp32', '-mcmodel=medany')
@@ -381,31 +387,20 @@ def _add_esp32_compile_flags():
         '-g', '-Os',
         '-ffunction-sections', '-fdata-sections',
         '-fno-builtin', '-Wall',
-        '-I.', '-Isrc', '-Ilib/stb',
+        '-Wno-format',
+        '-Wno-incompatible-pointer-types',
+        '-Wno-implicit-function-declaration',
+        '-I.', '-Isrc', '-Ilib/stb', '-Ilib/port',
     )
-    # 仅当 ESP-IDF 可用时才定义 ESP_PLATFORM（启用真实 LCD/触摸驱动）
-    if has_idf:
-        add_cflags('-DESP_PLATFORM', '-DIDF_TARGET_' + arch.upper())
-        # 自动添加 components/*/include
-        for inc in glob.glob(os.path.join(idf_path, "components", "*", "include")):
-            add_cflags('-I' + inc)
-        # freRTOS portable
-        if riscv:
-            add_cflags('-I' + os.path.join(idf_path, "components", "freertos", "FreeRTOS-Kernel", "portable", "riscv", "include"))
-            soc_inc = os.path.join(idf_path, "components", "soc", arch, "include")
-            hal_inc = os.path.join(idf_path, "components", "hal", arch, "include")
-        else:
-            add_cflags('-I' + os.path.join(idf_path, "components", "freertos", "FreeRTOS-Kernel", "portable", "xtensa", "include"))
-            soc_inc = os.path.join(idf_path, "components", "soc", arch, "include")
-            hal_inc = os.path.join(idf_path, "components", "hal", arch, "include")
-        if os.path.isdir(soc_inc): add_cflags('-I' + soc_inc)
-        if os.path.isdir(hal_inc): add_cflags('-I' + hal_inc)
-        # esp_lcd interface
-        add_cflags('-I' + os.path.join(idf_path, "components", "esp_lcd", "interface"))
-    else:
-        if not _esp32_toolchain_cache.get("warned"):
-            _esp32_toolchain_cache["warned"] = True
-            print("warning: ESP-IDF not found, compiling esp32 backend as PC stub (no ESP_PLATFORM)")
+    # ya 只编译 yui 核心（不依赖 ESP-IDF 组件）
+    # backend_esp32.c 依赖 esp_lcd/lwip/freertos 等，其 include 路径由
+    # idf.py 生成，故由 ESP-IDF 工程编译，不在 ya 中定义 ESP_PLATFORM
+    if has_idf and not _esp32_toolchain_cache.get("warned"):
+        _esp32_toolchain_cache["warned"] = True
+        print("esp32: ESP-IDF found at", idf_path, "(backend_esp32.c compiled by ESP-IDF project)")
+    elif not has_idf and not _esp32_toolchain_cache.get("warned"):
+        _esp32_toolchain_cache["warned"] = True
+        print("esp32: ESP-IDF not found (backend_esp32.c to be compiled in ESP-IDF project)")
 
 _ios_toolchain_cache = {}
 
@@ -531,6 +526,7 @@ def add_flags():
             '-DUSE_HAL_DRIVER',
             '-Isrc',
             '-Ilib',
+            '-Ilib/port',  # POSIX 头文件 mock（termios/sys/ioctl/socket 等）
             '-IInc',  # STM32 HAL头文件
             '-I../Drivers/STM32F7xx_HAL_Driver/Inc',
             '-I../Drivers/STM32F7xx_HAL_Driver/Inc/Legacy',
@@ -786,6 +782,7 @@ def add_run():
 add_buildin('add_flags',add_flags)
 add_buildin('add_run',add_run)
 add_buildin('get_prefix',get_prefix)
+add_buildin('is_host_plat',is_host_plat)
 
 includes("./src/ya.py")
 includes("./lib/ya.py")

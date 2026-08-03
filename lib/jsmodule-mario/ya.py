@@ -8,6 +8,9 @@
 target("jsmodule-mario")
 add_deps("mario","cjson","yui")
 add_cflags(' -DBUILD_NO_MAIN=1  -I. -I../../lib/mario -g ')
+if get_plat() in ("esp32", "stm32"):
+    # 嵌入式模式：ytype.h 使用 YuiTexture/YuiFont，不依赖 SDL
+    add_cflags('-DYUI_BACKEND_EMBEDDED')
 add_flags()
 
 set_kind("static")
