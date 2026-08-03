@@ -1,0 +1,25 @@
+{
+    "id": "ringDebug",
+    "type": "View",
+    "size": [700, 700],
+    "style": {
+        "bgColor": "#f0f0f0"
+    },
+    "js": ["ring-debug.js"],
+    "events": {
+        "onLoad": "@onRingDebugLoad"
+    },
+    "layout": {
+        "type": "vertical",
+        "spacing": 10,
+        "padding": [10, 10, 10, 10],
+        "align": "center",
+        "justifyContent": "center"
+    },
+    "children": [
+        {"id": "r1", "type": "Progress", "size": [150, 150], "shape": "circle", "value": 3},
+        {"id": "r2", "type": "Progress", "size": [150, 150], "shape": "circle", "value": 30},
+        {"id": "r3", "type": "Progress", "size": [150, 150], "shape": "circle", "value": 75},
+        {"id": "r4", "type": "Progress", "size": [150, 150], "shape": "circle", "value": 100}
+    ]
+}
