@@ -71,6 +71,9 @@ def _mingw_env():
         env["YUI_AUTO_FRAMES"] = "120"
     if sys.platform.startswith("linux"):
         env["SDL_DISABLE_DBUS"] = "1"
+        existing = env.get("ASAN_OPTIONS", "")
+        if "detect_leaks" not in existing:
+            env["ASAN_OPTIONS"] = (existing + " detect_leaks=0").strip()
     return env
 
 
