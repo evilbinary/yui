@@ -3753,80 +3753,96 @@ static void yui_shadow_fill_rounded(Uint32* px, int out_w, int out_h,
 static void yui_shadow_box_blur(Uint32* px, int w, int h, int radius) {
     Uint32* tmp;
     int r = radius;
+    int window;
     if (r < 1 || w <= 0 || h <= 0) return;
     if (r > 24) r = 24;
+    window = 2 * r + 1;
     tmp = (Uint32*)malloc((size_t)w * (size_t)h * sizeof(Uint32));
     if (!tmp) return;
 
-    /* horizontal */
+    /* horizontal pass — sliding window O(w*h) */
     for (int y = 0; y < h; y++) {
         const Uint32* src = px + y * w;
         Uint32* dst = tmp + y * w;
         int sum_a = 0, sum_r = 0, sum_g = 0, sum_b = 0;
-        int count = 0;
 
-        for (int i = -r; i <= r; i++) {
+        for (int i = 0; i <= r; i++) {
             int x = i;
-            if (x < 0) x = 0;
             if (x >= w) x = w - 1;
             Uint32 p = src[x];
             sum_a += (int)((p >> 24) & 255);
             sum_r += (int)((p >> 16) & 255);
             sum_g += (int)((p >> 8) & 255);
             sum_b += (int)(p & 255);
-            count++;
         }
-        dst[0] = ((Uint32)(sum_a / count) << 24) | ((Uint32)(sum_r / count) << 16) |
-                 ((Uint32)(sum_g / count) << 8) | (Uint32)(sum_b / count);
+        /* window at x=0 covers indices [0, r] but we need [-r, r] clamped */
+        /* add the clamped -r..-1 entries (all clamp to src[0]) */
+        for (int i = 0; i < r && i < w; i++) {
+            Uint32 p = src[0];
+            sum_a += (int)((p >> 24) & 255);
+            sum_r += (int)((p >> 16) & 255);
+            sum_g += (int)((p >> 8) & 255);
+            sum_b += (int)(p & 255);
+        }
+        dst[0] = ((Uint32)(sum_a / window) << 24) | ((Uint32)(sum_r / window) << 16) |
+                 ((Uint32)(sum_g / window) << 8) | (Uint32)(sum_b / window);
 
         for (int x = 1; x < w; x++) {
-            int leave = x - r - 1;
-            int enter = x + r;
-            if (leave < 0) leave = 0;
-            if (enter >= w) enter = w - 1;
-            {
-                Uint32 pl = src[leave];
-                Uint32 pe = src[enter];
-                /* 重新用固定窗口更稳（边界 clamp 时滑动难维护），小半径可接受 */
-                (void)pl;
-                (void)pe;
-            }
-            sum_a = sum_r = sum_g = sum_b = 0;
-            count = 0;
-            for (int i = -r; i <= r; i++) {
-                int xx = x + i;
-                if (xx < 0) xx = 0;
-                if (xx >= w) xx = w - 1;
-                Uint32 p = src[xx];
-                sum_a += (int)((p >> 24) & 255);
-                sum_r += (int)((p >> 16) & 255);
-                sum_g += (int)((p >> 8) & 255);
-                sum_b += (int)(p & 255);
-                count++;
-            }
-            dst[x] = ((Uint32)(sum_a / count) << 24) | ((Uint32)(sum_r / count) << 16) |
-                     ((Uint32)(sum_g / count) << 8) | (Uint32)(sum_b / count);
+            int leave_idx = x - r - 1;
+            int enter_idx = x + r;
+            if (leave_idx < 0) leave_idx = 0;
+            if (enter_idx >= w) enter_idx = w - 1;
+
+            Uint32 pl = src[leave_idx];
+            Uint32 pe = src[enter_idx];
+            sum_a += (int)((pe >> 24) & 255) - (int)((pl >> 24) & 255);
+            sum_r += (int)((pe >> 16) & 255) - (int)((pl >> 16) & 255);
+            sum_g += (int)((pe >> 8) & 255) - (int)((pl >> 8) & 255);
+            sum_b += (int)(pe & 255) - (int)(pl & 255);
+
+            dst[x] = ((Uint32)(sum_a / window) << 24) | ((Uint32)(sum_r / window) << 16) |
+                     ((Uint32)(sum_g / window) << 8) | (Uint32)(sum_b / window);
         }
     }
 
-    /* vertical */
+    /* vertical pass — sliding window O(w*h) */
     for (int x = 0; x < w; x++) {
-        for (int y = 0; y < h; y++) {
-            int sum_a = 0, sum_r = 0, sum_g = 0, sum_b = 0;
-            int count = 0;
-            for (int i = -r; i <= r; i++) {
-                int yy = y + i;
-                if (yy < 0) yy = 0;
-                if (yy >= h) yy = h - 1;
-                Uint32 p = tmp[yy * w + x];
-                sum_a += (int)((p >> 24) & 255);
-                sum_r += (int)((p >> 16) & 255);
-                sum_g += (int)((p >> 8) & 255);
-                sum_b += (int)(p & 255);
-                count++;
-            }
-            px[y * w + x] = ((Uint32)(sum_a / count) << 24) | ((Uint32)(sum_r / count) << 16) |
-                            ((Uint32)(sum_g / count) << 8) | (Uint32)(sum_b / count);
+        int sum_a = 0, sum_r = 0, sum_g = 0, sum_b = 0;
+
+        for (int i = 0; i <= r; i++) {
+            int y = i;
+            if (y >= h) y = h - 1;
+            Uint32 p = tmp[y * w + x];
+            sum_a += (int)((p >> 24) & 255);
+            sum_r += (int)((p >> 16) & 255);
+            sum_g += (int)((p >> 8) & 255);
+            sum_b += (int)(p & 255);
+        }
+        for (int i = 0; i < r && i < h; i++) {
+            Uint32 p = tmp[0 * w + x];
+            sum_a += (int)((p >> 24) & 255);
+            sum_r += (int)((p >> 16) & 255);
+            sum_g += (int)((p >> 8) & 255);
+            sum_b += (int)(p & 255);
+        }
+        px[0 * w + x] = ((Uint32)(sum_a / window) << 24) | ((Uint32)(sum_r / window) << 16) |
+                        ((Uint32)(sum_g / window) << 8) | (Uint32)(sum_b / window);
+
+        for (int y = 1; y < h; y++) {
+            int leave_idx = y - r - 1;
+            int enter_idx = y + r;
+            if (leave_idx < 0) leave_idx = 0;
+            if (enter_idx >= h) enter_idx = h - 1;
+
+            Uint32 pl = tmp[leave_idx * w + x];
+            Uint32 pe = tmp[enter_idx * w + x];
+            sum_a += (int)((pe >> 24) & 255) - (int)((pl >> 24) & 255);
+            sum_r += (int)((pe >> 16) & 255) - (int)((pl >> 16) & 255);
+            sum_g += (int)((pe >> 8) & 255) - (int)((pl >> 8) & 255);
+            sum_b += (int)(pe & 255) - (int)(pl & 255);
+
+            px[y * w + x] = ((Uint32)(sum_a / window) << 24) | ((Uint32)(sum_r / window) << 16) |
+                            ((Uint32)(sum_g / window) << 8) | (Uint32)(sum_b / window);
         }
     }
 
