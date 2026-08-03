@@ -42044,7 +42044,19 @@ static int getTimezoneOffset(int64_t time) {
     }
     ti = time;
     localtime_r(&ti, &tm);
+#if defined(__GLIBC__) || defined(__APPLE__) || defined(__linux__)
     return -tm.tm_gmtoff / 60;
+#else
+    /* newlib (ESP32/STM32) struct tm has no tm_gmtoff:
+       interpret the UTC time as local and diff against the real UTC */
+    {
+        time_t utc_as_local;
+        struct tm tm_utc;
+        gmtime_r(&ti, &tm_utc);
+        utc_as_local = mktime(&tm_utc);
+        return (int)((ti - utc_as_local) / 60);
+    }
+#endif
 #endif
 }
 
