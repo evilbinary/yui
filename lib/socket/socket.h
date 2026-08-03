@@ -24,6 +24,14 @@
 // #endif
 
 #else
+#ifdef ESP_PLATFORM
+#include <lwip/sockets.h>
+#include <lwip/netdb.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+#include <stdlib.h>
+#include <string.h>
+#else
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
@@ -34,6 +42,7 @@
 #include <arpa/inet.h>
 #include <stdlib.h>
 #include <string.h>
+#endif
 #endif
 
 #ifdef ANDROID

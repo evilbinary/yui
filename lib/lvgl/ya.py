@@ -52,6 +52,9 @@ add_includedirs('.', './src', public=True)
 if get_plat() == "yiyiya":
     add_files('port_yiyiya/*.c')
     add_cflags('-DYUI_LVGL_PORT_YIYIYA', public=True)
+elif get_plat() in ("esp32", "stm32"):
+    # 嵌入式平台用 YUI 原生后端，不依赖 LVGL，不编译任何 port
+    pass
 else:
     add_files('port_sdl/*.c')
     add_cflags('-DYUI_LVGL_PORT_SDL', public=True)

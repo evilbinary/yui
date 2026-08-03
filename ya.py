@@ -342,13 +342,20 @@ def configure_esp32_toolchain(target=None):
 
     # 查找 IDF_PATH（components 目录）
     idf_path = os.environ.get("IDF_PATH") or ""
+    if idf_path and not os.path.isdir(os.path.join(idf_path, "components")):
+        idf_path = ""  # IDF_PATH 无效，回退到搜索
     if not idf_path:
-        for root in (r"E:\soft\Espressif\framework\esp-idf-v5.5.5",
+        for root in (r"E:\soft\Espressif\frameworks\esp-idf-v5.5.5",
+                     r"E:\soft\Espressif\frameworks\esp-idf",
+                     r"E:\soft\Espressif\framework\esp-idf-v5.5.5",
                      r"E:\soft\Espressif\framework\esp-idf",
-                     r"E:\soft\Espressif\esp-idf"):
+                     r"E:\soft\Espressif\esp-idf",
+                     os.path.expanduser("~/esp/esp-idf")):
             if os.path.isdir(os.path.join(root, "components")):
                 idf_path = root
                 break
+    if idf_path:
+        print("esp32: ESP-IDF found at", idf_path)
 
     _esp32_toolchain_cache["arch"] = arch
     _esp32_toolchain_cache["riscv"] = riscv
@@ -396,7 +403,9 @@ def _add_esp32_compile_flags():
         # esp_lcd interface
         add_cflags('-I' + os.path.join(idf_path, "components", "esp_lcd", "interface"))
     else:
-        print("warning: ESP-IDF not found, compiling esp32 backend as PC stub (no ESP_PLATFORM)")
+        if not _esp32_toolchain_cache.get("warned"):
+            _esp32_toolchain_cache["warned"] = True
+            print("warning: ESP-IDF not found, compiling esp32 backend as PC stub (no ESP_PLATFORM)")
 
 _ios_toolchain_cache = {}
 
