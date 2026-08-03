@@ -1,0 +1,4 @@
+# YUI ESP32 依赖：触摸组件（backend_esp32.c 使用 esp_lcd_new_touch_cst816s）
+dependencies:
+  espressif/esp_lcd_touch: "^1.0"
+  espressif/esp_lcd_touch_cst816s: "^1.0"

@@ -37,7 +37,7 @@ def is_plat(plat_name):
 
 # 宿主平台白名单（对应 platform/* 下的目录 + em/lvgl 变体）；
 # esp32/stm32 为嵌入式平台，宿主工具与 demo 一律跳过
-HOST_PLATS = ("", "sdl", "pc", "android", "ios", "web", "lvgl", "em", "emscripten", "em-lvgl")
+HOST_PLATS = ("None","", "sdl", "pc", "android", "ios", "web", "lvgl", "em", "emscripten", "em-lvgl")
 
 def is_host_plat():
     return get_plat() in HOST_PLATS

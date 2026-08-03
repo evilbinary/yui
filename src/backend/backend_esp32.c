@@ -26,9 +26,10 @@
 #include "esp_lcd_panel_vendor.h"
 #include "esp_lcd_panel_ops.h"
 #include "esp_lcd_touch.h"
+#include "esp_lcd_touch_cst816s.h"
 #include "driver/spi_master.h"
 #include "driver/gpio.h"
-#include "driver/i2c.h"
+#include "driver/i2c_master.h"
 #include "esp_partition.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -102,7 +103,7 @@ static esp_partition_mmap_handle_t s_font_mmap_handle;
 DFont* backend_esp32_load_font_from_flash(const char* partition_label, int size) {
 #ifdef ESP_PLATFORM
     const esp_partition_t* part;
-    void* mapped;
+    const void* mapped;
     esp_err_t err;
     if (!partition_label) return NULL;
     part = esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_ANY, partition_label);
@@ -269,26 +270,39 @@ static int esp32_touch_init(void) {
     esp_lcd_touch_handle_t t = NULL;
     if (s_cfg.touch_i2c_host < 0 || s_cfg.touch_sda < 0) return 0;
 
+    /* I2C 总线（IDF 5.x 新驱动） */
+    i2c_master_bus_config_t bus_cfg = {
+        .i2c_port = (i2c_port_num_t)s_cfg.touch_i2c_host,
+        .sda_io_num = s_cfg.touch_sda,
+        .scl_io_num = s_cfg.touch_scl,
+        .clk_source = I2C_CLK_SRC_DEFAULT,
+        .glitch_ignore_cnt = 7,
+        .flags.enable_internal_pullup = true,
+    };
+    i2c_master_bus_handle_t bus = NULL;
+    if (i2c_new_master_bus(&bus_cfg, &bus) != ESP_OK) {
+        ESP_LOGW(YUI_E32_TAG, "touch i2c bus init failed, running without touch");
+        return 0;
+    }
+
+    /* 触摸用 panel IO */
+    esp_lcd_panel_io_i2c_config_t io_cfg = ESP_LCD_TOUCH_IO_I2C_CST816S_CONFIG();
+    io_cfg.dev_addr = s_cfg.touch_addr;
+    io_cfg.scl_speed_hz = 400000;
+    esp_lcd_panel_io_handle_t io = NULL;
+    if (esp_lcd_new_panel_io_i2c(bus, &io_cfg, &io) != ESP_OK) {
+        ESP_LOGW(YUI_E32_TAG, "touch panel io init failed, running without touch");
+        return 0;
+    }
+
     memset(&tcfg, 0, sizeof(tcfg));
     tcfg.x_max = s_cfg.width;
     tcfg.y_max = s_cfg.height;
     tcfg.rst_gpio_num = -1;
     tcfg.int_gpio_num = s_cfg.touch_int;
 
-    /* I2C 初始化 */
-    i2c_config_t i2c_cfg;
-    memset(&i2c_cfg, 0, sizeof(i2c_cfg));
-    i2c_cfg.mode = I2C_MODE_MASTER;
-    i2c_cfg.sda_io_num = s_cfg.touch_sda;
-    i2c_cfg.scl_io_num = s_cfg.touch_scl;
-    i2c_cfg.sda_pullup_en = GPIO_PULLUP_ENABLE;
-    i2c_cfg.scl_pullup_en = GPIO_PULLUP_ENABLE;
-    i2c_cfg.master.clk_speed = 400000;
-    i2c_param_config((i2c_port_t)s_cfg.touch_i2c_host, &i2c_cfg);
-    i2c_driver_install((i2c_port_t)s_cfg.touch_i2c_host, i2c_cfg.mode, 0, 0, 0);
-
     /* 使用 CST816S 触摸（常见于 ESP32-C3 LCD 板） */
-    if (esp_lcd_new_touch_cst816s((i2c_port_t)s_cfg.touch_i2c_host, s_cfg.touch_addr, &tcfg, &t) == ESP_OK) {
+    if (esp_lcd_touch_new_i2c_cst816s(io, &tcfg, &t) == ESP_OK) {
         s_touch = t;
     } else {
         ESP_LOGW(YUI_E32_TAG, "touch init failed, running without touch");
@@ -310,7 +324,7 @@ static void esp32_touch_poll(PointerEvent* ev, int* has_event) {
     uint8_t cnt = 0;
     *has_event = 0;
     if (!s_touch) return;
-    esp_lcd_touch_read(s_touch);
+    esp_lcd_touch_read_data(s_touch);
     if (esp_lcd_touch_get_coordinates(s_touch, tx, ty, strength, &cnt, 5) && cnt > 0) {
         int x = tx[0], y = ty[0];
         if (!s_touch_active) {

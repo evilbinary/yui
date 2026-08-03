@@ -47,3 +47,4 @@ perf.txt
 app/db/db-config.json
 .trae/
 platform/android/local.properties
+.espressif-cache/*
