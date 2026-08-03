@@ -31,6 +31,17 @@ void backend_esp32_set_spi_pins(int mosi, int sclk);
 void backend_esp32_set_touch(int i2c_host, int sda, int scl, int addr, int int_pin);
 DFont* backend_esp32_load_font_from_flash(const char* partition_label, int size);
 
+/* 触摸芯片创建钩子：覆盖 backend_esp32.c 中的弱符号，实现为 CST816S。
+ * 换触摸芯片时改这里即可，backend 层无需改动。 */
+#include "esp_lcd_touch.h"
+#include "esp_lcd_touch_cst816s.h"
+esp_lcd_touch_handle_t yui_esp32_touch_create(esp_lcd_panel_io_handle_t io,
+                                              const esp_lcd_touch_config_t* cfg) {
+    esp_lcd_touch_handle_t t = NULL;
+    if (esp_lcd_touch_new_i2c_cst816s(io, cfg, &t) == ESP_OK) return t;
+    return NULL;
+}
+
 /* 简单 UI 描述（也可改为从 Flash/SPIFFS 加载 JSON 文件） */
 static const char s_ui_json[] =
     "{"

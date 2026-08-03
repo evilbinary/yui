@@ -26,7 +26,6 @@
 #include "esp_lcd_panel_vendor.h"
 #include "esp_lcd_panel_ops.h"
 #include "esp_lcd_touch.h"
-#include "esp_lcd_touch_cst816s.h"
 #include "driver/spi_master.h"
 #include "driver/gpio.h"
 #include "driver/i2c_master.h"
@@ -265,6 +264,16 @@ static int esp32_lcd_init(void) {
     return 0;
 }
 
+/* 触摸芯片创建钩子（弱符号，默认无触摸）。
+ * 平台层可强定义同名函数覆盖，例如 CST816S：
+ *   esp_lcd_touch_new_i2c_cst816s(io, cfg, &t); */
+__attribute__((weak))
+esp_lcd_touch_handle_t yui_esp32_touch_create(esp_lcd_panel_io_handle_t io,
+                                              const esp_lcd_touch_config_t* cfg) {
+    (void)io; (void)cfg;
+    return NULL;
+}
+
 static int esp32_touch_init(void) {
     esp_lcd_touch_config_t tcfg;
     esp_lcd_touch_handle_t t = NULL;
@@ -285,10 +294,19 @@ static int esp32_touch_init(void) {
         return 0;
     }
 
-    /* 触摸用 panel IO */
-    esp_lcd_panel_io_i2c_config_t io_cfg = ESP_LCD_TOUCH_IO_I2C_CST816S_CONFIG();
-    io_cfg.dev_addr = s_cfg.touch_addr;
-    io_cfg.scl_speed_hz = 400000;
+    /* 触摸用 panel IO（通用 I2C 寄存器式配置，芯片无关） */
+    esp_lcd_panel_io_i2c_config_t io_cfg = {
+        .dev_addr = s_cfg.touch_addr,
+        .scl_speed_hz = 400000,
+        .control_phase_bytes = 1,
+        .dc_bit_offset = 0,
+        .lcd_cmd_bits = 8,
+        .lcd_param_bits = 0,
+        .flags = {
+            .dc_low_on_data = 0,
+            .disable_control_phase = 1,
+        },
+    };
     esp_lcd_panel_io_handle_t io = NULL;
     if (esp_lcd_new_panel_io_i2c(bus, &io_cfg, &io) != ESP_OK) {
         ESP_LOGW(YUI_E32_TAG, "touch panel io init failed, running without touch");
@@ -301,8 +319,9 @@ static int esp32_touch_init(void) {
     tcfg.rst_gpio_num = -1;
     tcfg.int_gpio_num = s_cfg.touch_int;
 
-    /* 使用 CST816S 触摸（常见于 ESP32-C3 LCD 板） */
-    if (esp_lcd_touch_new_i2c_cst816s(io, &tcfg, &t) == ESP_OK) {
+    /* 创建触摸芯片（由平台层钩子提供具体驱动实现） */
+    t = yui_esp32_touch_create(io, &tcfg);
+    if (t != NULL) {
         s_touch = t;
     } else {
         ESP_LOGW(YUI_E32_TAG, "touch init failed, running without touch");
@@ -737,7 +756,8 @@ void backend_texture_cache_invalidate(void) {}
 void backend_texture_cache_pin(DFont* f, const char* t, Color c) { (void)f; (void)t; (void)c; }
 void backend_texture_cache_warmup(DFont* f, const char** t, int n, Color c) { (void)f; (void)t; (void)n; (void)c; }
 int backend_screenshot(const char* p) { (void)p; return -1; }
-void backend_set_ui_root(Layer* root) { (void)root; }
+Layer* g_ui_root = NULL;
+void backend_set_ui_root(Layer* root) { g_ui_root = root; }
 
 /* ====================== 主循环 ====================== */
 static Layer* s_ui_root = NULL;
