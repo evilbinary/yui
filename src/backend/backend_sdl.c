@@ -3455,7 +3455,7 @@ static Color sdl_gradient_sample(const Color* colors, int count, float t) {
 }
 
 /* ---- Soft UI 风格效果缓存：shadow / gradient 同尺寸同色只烘焙一次 ---- */
-#define YUI_STYLE_FX_CACHE 32
+#define YUI_STYLE_FX_CACHE 64
 
 typedef struct {
     SDL_Texture* tex;
@@ -3850,17 +3850,15 @@ static void yui_shadow_box_blur(Uint32* px, int w, int h, int radius) {
 }
 
 static SDL_Texture* yui_shadow_texture_from_pixels(Uint32* px, int w, int h) {
-    SDL_Surface* surf;
     SDL_Texture* tex;
-    /* 与打包一致：A R G B 字节序用 RGBA8888 在小端上对应 A<<24|R<<16|G<<8|B 不一定，改用带 mask 的 surface */
-    surf = SDL_CreateRGBSurfaceFrom(
-        px, w, h, 32, w * 4,
-        0x00FF0000u, 0x0000FF00u, 0x000000FFu, 0xFF000000u);
-    if (!surf) return NULL;
-    tex = SDL_CreateTextureFromSurface(renderer, surf);
-    SDL_FreeSurface(surf);
-    if (tex) {
-        SDL_SetTextureBlendMode(tex, SDL_BLENDMODE_BLEND);
+    /* 直接创建流式纹理并更新像素，避免 SDL_CreateRGBSurfaceFrom 中间开销 */
+    tex = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888,
+                            SDL_TEXTUREACCESS_STREAMING, w, h);
+    if (!tex) return NULL;
+    SDL_SetTextureBlendMode(tex, SDL_BLENDMODE_BLEND);
+    if (SDL_UpdateTexture(tex, NULL, px, w * 4) != 0) {
+        SDL_DestroyTexture(tex);
+        return NULL;
     }
     return tex;
 }
