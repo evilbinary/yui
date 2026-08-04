@@ -761,7 +761,7 @@ static int collect_js_recursive(cJSON* json, const char* json_dir)
     }
 
     // 注册事件映射（纯字符串表，不依赖 JS 引擎）
-    // scan_and_register_events(json);   // BISECT: disabled to isolate corruption
+    scan_and_register_events(json);
 
     // 递归遍历子节点
     cJSON* child = json->child;
