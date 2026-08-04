@@ -30,6 +30,7 @@
 #include "driver/gpio.h"
 #include "driver/i2c_master.h"
 #include "esp_partition.h"
+#include "esp_heap_caps.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #endif
@@ -137,6 +138,17 @@ DFont* backend_esp32_load_font_from_flash(const char* partition_label, int size)
 }
 
 /* ====================== Framebuffer ====================== */
+/* 编译期宏：是否启用 LCD 软件 framebuffer（RGB565，240x240 约 115KB）。
+ *   - 默认 0（不启用）：不分配 s_fb，backend_render_* 不跳过，而是经
+ *     direct_draw_point 逐点直写 LCD；无面板（QEMU/headless）时像素落点
+ *     为空操作，但渲染调用链（组件渲染/字体光栅化/逐像素循环）完整执行。
+ *     RAM 占用最小，适合 QEMU 冒烟测试与内存紧张场景。
+ *   - 定义 YUI_ESP32_LCD_BUFFER=1（如真实 LCD 硬件）时分配 s_fb，
+ *     backend_render_* 写入 framebuffer，经脏矩形批量推送（esp32_flush_dirty）。 */
+#ifndef YUI_ESP32_LCD_BUFFER
+#define YUI_ESP32_LCD_BUFFER 0
+#endif
+
 static uint16_t* s_fb = NULL;       /* RGB565 */
 static int s_fb_w = 0, s_fb_h = 0;
 
@@ -348,7 +360,7 @@ static int esp32_touch_init(void) {
 }
 
 static void esp32_flush_dirty(void) {
-    if (!s_has_dirty || !s_panel) return;
+    if (!s_has_dirty || !s_panel || !s_fb) return;
     esp_lcd_panel_draw_bitmap(s_panel, s_dirty.x, s_dirty.y,
                               s_dirty.x + s_dirty.w, s_dirty.y + s_dirty.h,
                               s_fb + s_dirty.y * s_fb_w + s_dirty.x);
@@ -420,8 +432,22 @@ int backend_init(void) {
 
     s_fb_w = s_cfg.width;
     s_fb_h = s_cfg.height;
+#if YUI_ESP32_LCD_BUFFER
     s_fb = (uint16_t*)calloc((size_t)s_fb_w * s_fb_h, 2);
-    if (!s_fb) return -1;
+    if (!s_fb) {
+#ifdef ESP_PLATFORM
+        printf("YUI: framebuffer calloc %ux%ux2=%u bytes failed, "
+               "free=%u largest=%u\n",
+               s_fb_w, s_fb_h, (unsigned)((size_t)s_fb_w * s_fb_h * 2),
+               (unsigned)heap_caps_get_free_size(MALLOC_CAP_8BIT),
+               (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
+#endif
+        return -1;
+    }
+#else
+    s_fb = NULL;
+    printf("YUI: LCD buffer disabled (YUI_ESP32_LCD_BUFFER=0), direct draw\n");
+#endif
 
 #ifdef ESP_PLATFORM
     esp32_lcd_init();
@@ -472,16 +498,35 @@ void backend_render_text_destroy(Texture* texture) {
 }
 
 /* ====================== 基础绘制 ====================== */
+/* 无 framebuffer 模式（YUI_ESP32_LCD_BUFFER=0）的像素落点：
+ * 有 LCD 面板时逐点直写（esp_lcd_panel_draw_bitmap 1x1），
+ * 无面板（QEMU/headless）时为空操作 —— 渲染调用链照常执行。 */
+static void direct_draw_point(int x, int y, Color c)
+{
+#if YUI_ESP32_LCD_BUFFER
+    (void)x; (void)y; (void)c;
+#elif defined(ESP_PLATFORM)
+    uint16_t px;
+    if (!s_panel) return;
+    px = color_to_rgb565(c);
+    esp_lcd_panel_draw_bitmap(s_panel, x, y, x + 1, y + 1, &px);
+#else
+    (void)x; (void)y; (void)c;
+#endif
+}
+
 void backend_render_fill_rect(Rect* rect, Color color) {
     Rect clip, r;
-    int x, y, x1, y1;
-    uint16_t px;
-    if (!s_fb || !rect) return;
+    int x, y;
+    if (!rect) return;
     clip_get_current(&clip);
     r = *rect;
     clip_intersect(&r, &r, &clip);
     if (r.w <= 0 || r.h <= 0) return;
 
+#if YUI_ESP32_LCD_BUFFER
+    uint16_t px;
+    if (!s_fb) return;
     px = color_to_rgb565(color);
     /* alpha 混合 */
     if (color.a == 255) {
@@ -503,6 +548,15 @@ void backend_render_fill_rect(Rect* rect, Color color) {
         }
     }
     dirty_add(r.x, r.y, r.w, r.h);
+#else
+    /* 直接写屏：逐点绘制（无混合读回，alpha=0 跳过，其余按原色直写） */
+    if (color.a == 0) return;
+    for (y = r.y; y < r.y + r.h; y++) {
+        for (x = r.x; x < r.x + r.w; x++) {
+            direct_draw_point(x, y, color);
+        }
+    }
+#endif
 }
 
 void backend_render_rect(Rect* rect, Color color) {
@@ -527,7 +581,6 @@ void backend_render_fill_rect_color(Rect* rect, unsigned char r, unsigned char g
 
 void backend_render_clear_color(unsigned char r, unsigned char g, unsigned char b, unsigned char a) {
     Rect full;
-    if (!s_fb) return;
     full.x = 0; full.y = 0; full.w = s_fb_w; full.h = s_fb_h;
     backend_render_fill_rect(&full, (Color){r, g, b, a});
 }
@@ -535,13 +588,16 @@ void backend_render_clear_color(unsigned char r, unsigned char g, unsigned char 
 void backend_render_line(int x1, int y1, int x2, int y2, Color color) {
     int dx, dy, sx, sy, err, e2;
     Rect clip;
+#if YUI_ESP32_LCD_BUFFER
     if (!s_fb) return;
+#endif
     clip_get_current(&clip);
     dx = abs(x2 - x1); dy = abs(y2 - y1);
     sx = x1 < x2 ? 1 : -1; sy = y1 < y2 ? 1 : -1;
     err = dx - dy;
     while (1) {
         if (x1 >= clip.x && x1 < clip.x + clip.w && y1 >= clip.y && y1 < clip.y + clip.h) {
+#if YUI_ESP32_LCD_BUFFER
             if (color.a == 255) {
                 s_fb[y1 * s_fb_w + x1] = color_to_rgb565(color);
             } else if (color.a > 0) {
@@ -552,13 +608,18 @@ void backend_render_line(int x1, int y1, int x2, int y2, Color color) {
                 d.b = (unsigned char)((d.b * (255 - a) + color.b * a) / 255);
                 s_fb[y1 * s_fb_w + x1] = color_to_rgb565(d);
             }
+#else
+            if (color.a > 0) direct_draw_point(x1, y1, color);
+#endif
         }
         if (x1 == x2 && y1 == y2) break;
         e2 = 2 * err;
         if (e2 > -dy) { err -= dy; x1 += sx; }
         if (e2 < dx) { err += dx; y1 += sy; }
     }
+#if YUI_ESP32_LCD_BUFFER
     dirty_add(x1 < x2 ? x1 : x2, y1 < y2 ? y1 : y2, abs(x2 - x1) + 1, abs(y2 - y1) + 1);
+#endif
 }
 
 void backend_render_bezier_cubic(int x0, int y0, int cx1, int cy1, int cx2, int cy2,
@@ -630,7 +691,7 @@ void backend_render_text_copy(Texture* texture, const Rect* srcrect, const Rect*
     unsigned char* src;
     Rect clip, dst, src_r;
     int x, y, sw, sh;
-    if (!texture || !s_fb || !dstrect) return;
+    if (!texture || !dstrect) return;
     src = embed_font_texture_pixels(texture);
     if (!src) return;
     sw = texture->w; sh = texture->h;
@@ -643,6 +704,8 @@ void backend_render_text_copy(Texture* texture, const Rect* srcrect, const Rect*
     clip_intersect(&dst, &dst, &clip);
     if (dst.w <= 0 || dst.h <= 0) return;
 
+#if YUI_ESP32_LCD_BUFFER
+    if (!s_fb) return;
     for (y = 0; y < dst.h; y++) {
         int sy = src_r.y + (y * src_r.h) / (dstrect->h > 0 ? dstrect->h : 1);
         if (sy < 0 || sy >= sh) continue;
@@ -667,6 +730,24 @@ void backend_render_text_copy(Texture* texture, const Rect* srcrect, const Rect*
         }
     }
     dirty_add(dst.x, dst.y, dst.w, dst.h);
+#else
+    /* 直接写屏：逐点绘制（无混合读回，仅按 alpha 跳过透明像素） */
+    for (y = 0; y < dst.h; y++) {
+        int sy = src_r.y + (y * src_r.h) / (dstrect->h > 0 ? dstrect->h : 1);
+        if (sy < 0 || sy >= sh) continue;
+        for (x = 0; x < dst.w; x++) {
+            int sx = src_r.x + (x * src_r.w) / (dstrect->w > 0 ? dstrect->w : 1);
+            size_t si;
+            unsigned a;
+            if (sx < 0 || sx >= sw) continue;
+            si = ((size_t)sy * sw + sx) * 4;
+            a = src[si + 3];
+            if (a == 0) continue;
+            direct_draw_point(dst.x + x, dst.y + y,
+                              (Color){src[si], src[si+1], src[si+2], 255});
+        }
+    }
+#endif
 }
 
 void backend_render_texture_tinted(Texture* texture, const Rect* srcrect, const Rect* dstrect, Color tint) {
