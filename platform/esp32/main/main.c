@@ -31,6 +31,7 @@ void backend_esp32_set_config(int width, int height, int spi_host,
                               int cs, int dc, int rst, int bl, int freq_hz);
 void backend_esp32_set_spi_pins(int mosi, int sclk);
 void backend_esp32_set_touch(int i2c_host, int sda, int scl, int addr, int int_pin);
+void backend_esp32_set_hw_display(int on);
 DFont* backend_esp32_load_font_from_flash(const char* partition_label, int size);
 
 /* 触摸芯片创建钩子：覆盖 backend_esp32.c 中的弱符号，实现为 CST816S。
@@ -92,12 +93,24 @@ void app_main(void) {
     backend_esp32_set_config(240, 240, 2, 5, 16, -1, -1, 40 * 1000 * 1000);
     /* SPI 总线引脚（MOSI/SCK） */
     backend_esp32_set_spi_pins(23, 18);
+#if defined(YUI_ESP32_QEMU)
+    /* QEMU 无 ST7789/CST816S：跳过 SPI LCD 与 I2C 触摸，避免 init 卡死。
+     * 注意：QEMU 的 -display sdl 窗口也不是这块 SPI 屏，界面只在软件 fb 里。 */
+    backend_esp32_set_hw_display(0);
+    printf("YUI: QEMU mode (software framebuffer, no LCD/touch)\n");
+#else
     /* 触摸（I2C CST816S；int_pin=-1 禁用轮询中断） */
     backend_esp32_set_touch(0, 4, 5, 0x15, 6);
+#endif
 
     /* 2. 初始化后端 + 弹层管理 */
-    backend_init();
+    printf("YUI: backend_init...\n");
+    if (backend_init() != 0) {
+        printf("YUI: backend_init failed\n");
+        return;
+    }
     popup_manager_init();
+    printf("YUI: backend ready\n");
 
     /* 3. 加载字体：优先 Flash 映射（零 RAM），回退 RAM 加载。
      *    Flash 分区方案见 partitions.csv 的 "font" 分区与 README。
@@ -120,16 +133,24 @@ void app_main(void) {
         return;
     }
 
-    /* 预置字体：load_all_fonts 检测到 default_font 已设置会跳过重新加载 */
+    /* 预置字体：写到解析时已创建/被子层共享的 Font 对象上，避免替换指针导致
+     * 子层仍持有 default_font=NULL 的旧对象。 */
     if (font) {
-        ui_root->font = (Font*)malloc(sizeof(Font));
-        memset(ui_root->font, 0, sizeof(Font));
+        if (!ui_root->font) {
+            ui_root->font = (Font*)malloc(sizeof(Font));
+            memset(ui_root->font, 0, sizeof(Font));
+            strcpy(ui_root->font->path, "Roboto-Regular.ttf");
+            ui_root->font->size = 16;
+            strcpy(ui_root->font->weight, "normal");
+        }
         ui_root->font->default_font = font;
-        ui_root->font->size = 16;
-        strcpy(ui_root->font->path, "Roboto-Regular.ttf");
     }
-    ui_root->assets = (Assets*)malloc(sizeof(Assets));
-    strcpy(ui_root->assets->path, "assets");
+    if (!ui_root->assets) {
+        ui_root->assets = (Assets*)malloc(sizeof(Assets));
+        memset(ui_root->assets, 0, sizeof(Assets));
+    }
+    /* 字体在 flash 分区，不在 SPIFFS assets 下 */
+    ui_root->assets->path[0] = '\0';
 
     if (ui_root->rect.w <= 0 || ui_root->rect.h <= 0) {
         ui_root->rect.w = 240;

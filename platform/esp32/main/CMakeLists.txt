@@ -20,6 +20,12 @@ idf_component_register(
 # 嵌入式模式：ytype.h 使用 YuiTexture/YuiFont，不依赖 SDL
 target_compile_definitions(${COMPONENT_LIB} PRIVATE YUI_BACKEND_EMBEDDED)
 
+# QEMU 构建：跳过真实 LCD/触摸（host 设 YUI_ESP32_QEMU=1）
+if(DEFINED ENV{YUI_ESP32_QEMU})
+    target_compile_definitions(${COMPONENT_LIB} PRIVATE YUI_ESP32_QEMU=1)
+    message(STATUS "YUI: QEMU build (software framebuffer only)")
+endif()
+
 # 链接 ya 编译的 yui 核心库（按实际 set-target 调整 arch 目录）
 set(YUI_BUILD_DIR ${YUI_ROOT}/build/esp32/esp32c3/None)
 target_link_libraries(${COMPONENT_LIB} PRIVATE

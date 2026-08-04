@@ -487,7 +487,9 @@ typedef struct WindowEvent {
     int y;
 } WindowEvent;
 
+#ifndef MAX_EVENT
 #define MAX_EVENT 512
+#endif
 
 // 定义事件处理函数类型
 typedef void* (*EventHandler)(void* data);

@@ -46,6 +46,12 @@ elif get_plat() == "esp32":
     add_files("backend/backend_embed_font.c")
     add_includedirs('../lib/stb')
     add_cflags("-DYUI_BACKEND_EMBEDDED")
+    # ESP32-C3 仅 400KB SRAM，缩小桌面级静态池，腾出堆给 115KB 的
+    # RGB565 framebuffer（否则 backend_init 的 calloc 会失败）
+    add_cflags("-DPERF_MAX_SLOTS=16")
+    add_cflags("-DMAX_EVENT=64")
+    add_cflags("-DYUI_MAX_TYPES=32")
+    add_cflags("-DEMBED_TEXT_CACHE_DEFAULT=16")
 elif get_plat() in ("android", "ios"):
     add_files("backend/backend_mobile.c")
     add_files("backend/mobile_text.c")

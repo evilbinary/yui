@@ -93,6 +93,11 @@ void backend_esp32_set_touch(int i2c_host, int sda, int scl, int addr, int int_p
     s_cfg.touch_int = int_pin;
 }
 
+/* 0 = 仅软件 framebuffer（QEMU / 无屏）；1 = 初始化 SPI LCD + 触摸 */
+static int s_hw_display = 1;
+void backend_esp32_set_hw_display(int on) { s_hw_display = on ? 1 : 0; }
+int backend_esp32_get_hw_display(void) { return s_hw_display; }
+
 #ifdef ESP_PLATFORM
 static esp_partition_mmap_handle_t s_font_mmap_handle;
 /* 缓存已映射的字体分区数据，避免每次 load 重新 mmap（重复 mmap 会累积句柄） */
@@ -117,12 +122,12 @@ DFont* backend_esp32_load_font_from_flash(const char* partition_label, int size)
         err = esp_partition_mmap(part, 0, part->size, ESP_PARTITION_MMAP_DATA,
                                  &mapped, &s_font_mmap_handle);
         if (err != ESP_OK) {
-        ESP_LOGE(YUI_E32_TAG, "font mmap failed: %s", esp_err_to_name(err));
-        return NULL;
-    }
-    /* mapped 指向 Flash，embed_font_load_from_memory 不复制、不释放 */
-    s_font_mapped = mapped;
-    s_font_mapped_size = part->size;
+            ESP_LOGE(YUI_E32_TAG, "font mmap failed: %s", esp_err_to_name(err));
+            return NULL;
+        }
+        /* mapped 指向 Flash，embed_font_load_from_memory 不复制、不释放 */
+        s_font_mapped = mapped;
+        s_font_mapped_size = part->size;
     }
     return embed_font_load_from_memory(s_font_mapped, s_font_mapped_size, size, "normal");
 #else
@@ -219,6 +224,11 @@ static int esp32_lcd_init(void) {
     esp_lcd_panel_dev_config_t panel_config;
     esp_err_t ret;
 
+    if (!s_hw_display) {
+        ESP_LOGI(YUI_E32_TAG, "hw display off: software framebuffer only");
+        return 0;
+    }
+
     memset(&buscfg, 0, sizeof(buscfg));
     buscfg.mosi_io_num = s_cfg.mosi;
     buscfg.miso_io_num = -1;
@@ -284,6 +294,7 @@ esp_lcd_touch_handle_t yui_esp32_touch_create(esp_lcd_panel_io_handle_t io,
 static int esp32_touch_init(void) {
     esp_lcd_touch_config_t tcfg;
     esp_lcd_touch_handle_t t = NULL;
+    if (!s_hw_display) return 0;
     if (s_cfg.touch_i2c_host < 0 || s_cfg.touch_sda < 0) return 0;
 
     /* I2C 总线（IDF 5.x 新驱动） */

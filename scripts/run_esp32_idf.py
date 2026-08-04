@@ -286,6 +286,12 @@ def main():
     args = sys.argv[1:]
     env = base_env()
 
+    # QEMU firmware build: set YUI_ESP32_QEMU so main skips LCD/touch init
+    if len(args) >= 1 and args[0] == 'build-qemu':
+        env['YUI_ESP32_QEMU'] = '1'
+        # Force CMake reconfigure so the compile definition is applied
+        sys.exit(run_idf(env, 'reconfigure', 'build'))
+
     # Build SPIFFS image from app/watch-os + app/assets
     if len(args) >= 1 and args[0] == 'make-spiffs':
         make_spiffs(env)
