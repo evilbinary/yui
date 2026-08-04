@@ -64,9 +64,10 @@ typedef struct {
 
 static yui_esp32_config_t s_cfg = {
     .width = 240, .height = 240,
-    .spi_host = 2, /* FSPI_HOST */
-    .mosi = 23, .sclk = 18,
-    .cs = 5, .dc = 16, .rst = -1, .bl = -1,
+    /* ESP32-C3 仅 SPI2_HOST(=1)；经典 ESP32 也可用 SPI2。勿用 2（C3 上非法）。 */
+    .spi_host = 1,
+    .mosi = 6, .sclk = 4,
+    .cs = 7, .dc = 2, .rst = -1, .bl = -1,
     .freq_hz = 40 * 1000 * 1000,
     .touch_i2c_host = -1,
     .touch_sda = -1, .touch_scl = -1, .touch_addr = 0x15, .touch_int = -1,
@@ -346,6 +347,8 @@ static int esp32_touch_init(void) {
     esp_lcd_touch_config_t tcfg;
     esp_lcd_touch_handle_t t = NULL;
     if (!s_hw_display) return 0;
+    /* LCD 未起来时不必探触摸（避免无屏板子上刷 I2C 错误日志） */
+    if (!s_panel) return 0;
     if (s_cfg.touch_i2c_host < 0 || s_cfg.touch_sda < 0) return 0;
 
     /* I2C 总线（IDF 5.x 新驱动） */
@@ -609,8 +612,30 @@ void backend_render_text_destroy(Texture* texture) {
 /* 无 framebuffer 模式（YUI_ESP32_LCD_BUFFER=0）的像素落点：
  *   - QEMU：写虚拟 RGB 面板的专属 framebuffer（纯内存写，快），
  *     每帧在 present 时整帧推送一次；
- *   - 真实 LCD：逐点 esp_lcd_panel_draw_bitmap 1x1 直写；
+ *   - 真实 LCD：禁止逐点 1x1 SPI（240x240 会触发 task_wdt）；
+ *     fill/blit 用行缓冲一次推一整行；
  *   - 无面板：空操作 —— 渲染调用链照常执行。 */
+#if defined(ESP_PLATFORM) && !defined(YUI_ESP32_QEMU) && !YUI_ESP32_LCD_BUFFER
+#define YUI_SPI_LINE_MAX 320
+static uint16_t s_spi_line[YUI_SPI_LINE_MAX];
+
+static void spi_draw_line(int x, int y, int w, uint16_t px)
+{
+    int i;
+    if (!s_panel || w <= 0) return;
+    if (w > YUI_SPI_LINE_MAX) w = YUI_SPI_LINE_MAX;
+    for (i = 0; i < w; i++) s_spi_line[i] = px;
+    esp_lcd_panel_draw_bitmap(s_panel, x, y, x + w, y + 1, s_spi_line);
+}
+
+static void spi_draw_line_buf(int x, int y, int w, const uint16_t* buf)
+{
+    if (!s_panel || w <= 0 || !buf) return;
+    if (w > YUI_SPI_LINE_MAX) w = YUI_SPI_LINE_MAX;
+    esp_lcd_panel_draw_bitmap(s_panel, x, y, x + w, y + 1, buf);
+}
+#endif
+
 static void direct_draw_point(int x, int y, Color c)
 {
 #if YUI_ESP32_LCD_BUFFER
@@ -619,6 +644,7 @@ static void direct_draw_point(int x, int y, Color c)
     if (!s_fb || x < 0 || y < 0 || x >= s_fb_w || y >= s_fb_h) return;
     s_fb[y * s_fb_w + x] = color_to_rgb565(c);
 #elif defined(ESP_PLATFORM)
+    /* 真实 LCD：单点 SPI 极慢，仅用于少量点绘；大面积走 spi_draw_line */
     uint16_t px;
     if (!s_panel) return;
     px = color_to_rgb565(c);
@@ -661,8 +687,21 @@ void backend_render_fill_rect(Rect* rect, Color color) {
         }
     }
     dirty_add(r.x, r.y, r.w, r.h);
+#elif defined(ESP_PLATFORM) && !defined(YUI_ESP32_QEMU)
+    /* 行缓冲一次 SPI：避免 1x1 写屏触发 task_wdt */
+    if (color.a == 0 || !s_panel) return;
+    {
+        uint16_t px = color_to_rgb565(color);
+        for (y = r.y; y < r.y + r.h; y++) {
+            spi_draw_line(r.x, y, r.w, px);
+            if (((y - r.y) & 15) == 15) {
+                /* 让出 CPU，使 IDLE 能喂狗（main 未加入 TWDT，勿调 esp_task_wdt_reset） */
+                vTaskDelay(1);
+            }
+        }
+    }
 #else
-    /* 直接写屏：逐点绘制（无混合读回，alpha=0 跳过，其余按原色直写） */
+    /* QEMU / stub：逐点（QEMU 写内存；无面板为空操作） */
     if (color.a == 0) return;
     for (y = r.y; y < r.y + r.h; y++) {
         for (x = r.x; x < r.x + r.w; x++) {
@@ -843,6 +882,44 @@ void backend_render_text_copy(Texture* texture, const Rect* srcrect, const Rect*
         }
     }
     dirty_add(dst.x, dst.y, dst.w, dst.h);
+#elif defined(ESP_PLATFORM) && !defined(YUI_ESP32_QEMU)
+    /* 行缓冲 SPI：先合成一行 RGB565，再一次 draw_bitmap */
+    if (!s_panel) return;
+    for (y = 0; y < dst.h; y++) {
+        int sy = src_r.y + (y * src_r.h) / (dstrect->h > 0 ? dstrect->h : 1);
+        int run_x0 = -1, run_n = 0;
+        if (sy < 0 || sy >= sh) continue;
+        for (x = 0; x < dst.w; x++) {
+            int sx = src_r.x + (x * src_r.w) / (dstrect->w > 0 ? dstrect->w : 1);
+            size_t si;
+            unsigned a;
+            if (sx < 0 || sx >= sw) {
+                if (run_n > 0) {
+                    spi_draw_line_buf(dst.x + run_x0, dst.y + y, run_n, s_spi_line);
+                    run_n = 0; run_x0 = -1;
+                }
+                continue;
+            }
+            si = ((size_t)sy * sw + sx) * 4;
+            a = src[si + 3];
+            if (a == 0) {
+                if (run_n > 0) {
+                    spi_draw_line_buf(dst.x + run_x0, dst.y + y, run_n, s_spi_line);
+                    run_n = 0; run_x0 = -1;
+                }
+                continue;
+            }
+            if (run_x0 < 0) run_x0 = x;
+            if (run_n < YUI_SPI_LINE_MAX) {
+                s_spi_line[run_n++] = color_to_rgb565(
+                    (Color){src[si], src[si + 1], src[si + 2], 255});
+            }
+        }
+        if (run_n > 0) {
+            spi_draw_line_buf(dst.x + run_x0, dst.y + y, run_n, s_spi_line);
+        }
+        if ((y & 15) == 15) vTaskDelay(1);
+    }
 #else
     /* 直接写屏：逐点绘制（无混合读回，仅按 alpha 跳过透明像素） */
     for (y = 0; y < dst.h; y++) {
@@ -1026,6 +1103,10 @@ void backend_tick(Layer* ui_root) {
 void backend_run(Layer* ui_root) {
     s_ui_root = ui_root;
     if (!ui_root) return;
+#ifdef ESP_PLATFORM
+    printf("YUI: backend_run start (panel=%s buffer=%d)\n",
+           s_panel ? "yes" : "no", YUI_ESP32_LCD_BUFFER);
+#endif
     while (!s_should_quit) {
         backend_tick(ui_root);
         s_frame_count++;

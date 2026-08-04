@@ -368,7 +368,7 @@ Texture* embed_font_render_nocache(DFont* font, const char* text, Color color) {
         stbtt_GetCodepointHMetrics(&ef->info, cp, &advance, &lsb);
         stbtt_GetCodepointBitmapBox(&ef->info, cp, ef->scale, ef->scale, &x0, &y0, &x1, &y1);
         gw = x1 - x0; gh = y1 - y0;
-        glyph_bitmap = stbtt_GetCodepointBitmap(&ef->info, 0, ef->scale, cp, &gw, &gh, 0, 0);
+        glyph_bitmap = stbtt_GetCodepointBitmap(&ef->info, ef->scale, ef->scale, cp, &gw, &gh, 0, 0);
         if (glyph_bitmap) {
             dst_x = pen_x + x0 - min_x;
             dst_y = baseline + y0 - min_y;

@@ -27,6 +27,7 @@
 #include "cJSON.h"
 #include "esp_spiffs.h"
 #include "esp_heap_caps.h"
+#include "driver/spi_master.h"
 
 /* ESP32 后端扩展接口（backend_esp32.c 定义，不在通用 backend.h 中） */
 void backend_esp32_set_config(int width, int height, int spi_host,
@@ -101,10 +102,16 @@ void app_main(void) {
 
     printf("YUI ESP32 starting...\n");
 
-    /* 0. 板级配置：分辨率/SPI 主机/CS/DC/RST/BL/SPI 时钟 */
-    backend_esp32_set_config(240, 240, 2, 5, 16, -1, -1, 40 * 1000 * 1000);
-    /* SPI 总线引脚（MOSI/SCK） */
+    /* 0. 板级配置：分辨率/SPI 主机/CS/DC/RST/BL/SPI 时钟
+     * ESP32-C3 只有 SPI2_HOST(=1)，没有 host=2；GPIO 仅 0–21。
+     * 旧默认 (host=2, MOSI=23) 会触发 spi_bus_initialize: invalid host_id。 */
+#if CONFIG_IDF_TARGET_ESP32C3
+    backend_esp32_set_config(240, 240, SPI2_HOST, 7, 2, -1, -1, 40 * 1000 * 1000);
+    backend_esp32_set_spi_pins(6, 4);   /* MOSI / SCLK — C3 常用硬件 SPI */
+#else
+    backend_esp32_set_config(240, 240, SPI2_HOST, 5, 16, -1, -1, 40 * 1000 * 1000);
     backend_esp32_set_spi_pins(23, 18);
+#endif
 #if defined(YUI_ESP32_QEMU)
     /* QEMU 无 ST7789/CST816S：跳过 SPI LCD 与 I2C 触摸。
      * QEMU 构建会自动创建虚拟 RGB 面板（esp_lcd_qemu_rgb），YUI 渲染像素
@@ -115,8 +122,12 @@ void app_main(void) {
      * framebuffer 由编译期宏 YUI_ESP32_LCD_BUFFER 控制，默认关闭（直写像素）。 */
     // backend_set_auto_frames(100);
 #else
-    /* 触摸（I2C CST816S；int_pin=-1 禁用轮询中断） */
+#if CONFIG_IDF_TARGET_ESP32C3
+    /* 无触摸硬件时不要默认探测 CST816S（会刷 I2C 错误）。有触摸板再打开：
+     * backend_esp32_set_touch(0, 8, 9, 0x15, -1); */
+#else
     backend_esp32_set_touch(0, 4, 5, 0x15, 6);
+#endif
 #endif
 
     /* 1. 初始化后端 + 弹层管理。
@@ -252,7 +263,9 @@ void app_main(void) {
     ui_root->rect.w = 240;
     ui_root->rect.h = 240;
     load_textures(ui_root);
+    printf("YUI: layout...\n");
     layout_layer(ui_root);
+    printf("YUI: enter main loop\n");
 
     /* 7. 主循环（内部不返回） */
     backend_run(ui_root);
