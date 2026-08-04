@@ -37,6 +37,11 @@ void js_module_register_api(void);
 // append=1: 仅追加 JS 与事件，不清空、不触发 onLoad（动态页面）
 int js_module_load_from_json(cJSON* root_json, const char* json_file_path, int append);
 
+// 两阶段加载（嵌入式堆紧张时使用）：阶段1 在 cJSON 树存活时收集 JS 路径 + 注册事件
+int js_module_collect_from_json(cJSON* root_json, const char* json_file_path, int append);
+// 阶段2 在 JS 引擎初始化后，加载阶段1收集的文件
+int js_module_load_collected(void);
+
 // 应用退出：根 Layer onHide/onUnload
 void js_module_shutdown(void);
 

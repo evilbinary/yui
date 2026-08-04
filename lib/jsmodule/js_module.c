@@ -40,9 +40,17 @@ int js_module_init(void)
 {
     printf("JS: Initializing JavaScript engine...\n");
 
+#if defined(ESP_PLATFORM)
+    extern size_t heap_caps_get_free_size(int caps);
+    extern size_t heap_caps_get_largest_free_block(int caps);
+    printf("JS: heap free=%u largest=%u\n",
+           (unsigned)heap_caps_get_free_size(MALLOC_CAP_8BIT),
+           (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
+#endif
+
     g_js_mem = malloc(g_js_mem_size);
     if (!g_js_mem) {
-        fprintf(stderr, "JS: Failed to allocate memory\n");
+        fprintf(stderr, "JS: Failed to allocate memory (%u bytes)\n", (unsigned)g_js_mem_size);
         return -1;
     }
 

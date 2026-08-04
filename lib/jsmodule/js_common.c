@@ -706,6 +706,113 @@ static int load_js_recursive(cJSON* json, const char* json_dir)
     return loaded_count;
 }
 
+// ====================== 两阶段 JS 加载（嵌入式内存优化） ======================
+// 嵌入式端（ESP32）堆紧张：必须先释放 cJSON 树，再初始化 JS 引擎 64KB 池。
+// 故把 js_module_load_from_json 拆成：
+//   1) js_module_collect_from_json  —— cJSON 树还活着时收集 JS 路径 + 注册事件（不依赖引擎）
+//   2) js_module_load_collected      —— 引擎就绪后按收集的路径逐个加载
+#define MAX_COLLECTED_JS 16
+static char g_collected_js_paths[MAX_COLLECTED_JS][128];
+static int g_collected_js_count = 0;
+
+// 递归遍历 JSON，收集 "js" 字段指定的文件路径（不加载、不执行）
+static int collect_js_recursive(cJSON* json, const char* json_dir)
+{
+    if (!json) return 0;
+
+    int collected = 0;
+
+    cJSON* js_file = cJSON_GetObjectItem(json, "js");
+    if (js_file) {
+        if (cJSON_IsString(js_file)) {
+            const char* js_path = js_file->valuestring;
+            char full_path[MAX_PATH];
+            build_js_path(js_path, json_dir, full_path, MAX_PATH);
+            if (g_collected_js_count < MAX_COLLECTED_JS) {
+                strncpy(g_collected_js_paths[g_collected_js_count], full_path, 127);
+                g_collected_js_paths[g_collected_js_count][127] = '\0';
+                g_collected_js_count++;
+                collected++;
+            }
+        } else if (cJSON_IsArray(js_file)) {
+            int array_size = cJSON_GetArraySize(js_file);
+            for (int i = 0; i < array_size; i++) {
+                cJSON* js_item = cJSON_GetArrayItem(js_file, i);
+                if (js_item && cJSON_IsString(js_item)) {
+                    const char* js_path = js_item->valuestring;
+                    char full_path[MAX_PATH];
+                    build_js_path(js_path, json_dir, full_path, MAX_PATH);
+                    if (g_collected_js_count < MAX_COLLECTED_JS) {
+                        strncpy(g_collected_js_paths[g_collected_js_count], full_path, 127);
+                        g_collected_js_paths[g_collected_js_count][127] = '\0';
+                        g_collected_js_count++;
+                        collected++;
+                    }
+                }
+            }
+        }
+    }
+
+    // 注册事件映射（纯字符串表，不依赖 JS 引擎）
+    scan_and_register_events(json);
+
+    // 递归遍历子节点
+    cJSON* child = json->child;
+    while (child) {
+        collected += collect_js_recursive(child, json_dir);
+        child = child->next;
+    }
+
+    return collected;
+}
+
+// 阶段 1：从 JSON 收集 JS 文件路径 + 注册事件。可在 JS 引擎初始化前调用。
+int js_module_collect_from_json(cJSON* root_json, const char* json_file_path, int append)
+{
+    if (!root_json) {
+        printf("JS: root_json is NULL\n");
+        return 0;
+    }
+
+    if (!append) {
+        js_module_clear_events();
+    }
+
+    char json_dir[MAX_PATH];
+    if (json_file_path && json_file_path[0] != '\0') {
+        get_file_dir(json_file_path, json_dir, MAX_PATH);
+    } else if (append) {
+        strcpy(json_dir, ".");
+    } else {
+        strcpy(json_dir, "app/mquickjs");
+    }
+
+    LOGD("js", "%s JS from JSON directory: %s", append ? "Appending" : "Loading", json_dir);
+
+    g_collected_js_count = 0;
+    int total = collect_js_recursive(root_json, json_dir);
+    LOGD("js", "Collected %d JS file(s) from JSON", total);
+
+    return total;
+}
+
+// 阶段 2：加载已收集的 JS 文件（须在 JS 引擎初始化之后调用）。
+int js_module_load_collected(void)
+{
+    int total_loaded = 0;
+    for (int i = 0; i < g_collected_js_count; i++) {
+        if (js_module_load_file(g_collected_js_paths[i]) == 0) {
+            total_loaded++;
+        }
+    }
+
+    if (g_layer_root) {
+        layer_lifecycle_init_tree(g_layer_root);
+    }
+
+    return total_loaded;
+}
+
 // 清空事件映射表
 void js_module_clear_events(void)
 {

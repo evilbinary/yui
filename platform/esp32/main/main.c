@@ -152,25 +152,10 @@ void app_main(void) {
         js_module_set_fs_root("/spiffs");
     }
 
-    /* 3. 初始化 JS 引擎（mquickjs 模块，64KB 内存池）。
-     *    C3 内存紧张：约 270KB 堆，mquickjs 内存池在 malloc 的堆上。 */
-    if (js_module_init() != 0) {
-        printf("YUI: JS engine init failed, continuing without JS\n");
-    }
-
-    /* 4. 加载字体：优先 Flash 映射（零 RAM），回退 RAM 加载。
-     *    Flash 分区方案见 partitions.csv 的 "font" 分区与 README。
-     *    QEMU 环境：无 font 分区，跳过字体加载（纯图形测试）。 */
-    font = backend_esp32_load_font_from_flash("font", 16);
-    if (!font) {
-        font = backend_load_font("Roboto-Regular.ttf", 16);
-    }
-    if (!font) {
-        printf("YUI: No font loaded, running in headless mode\n");
-    }
-
-    /* 5. 构建 UI：优先加载 /spiffs/app.json（watch-os 启动入口）。
-     *    读取失败/解析失败时回退到内置的 s_fallback_ui_json。 */
+    /* 3. 构建 UI：优先加载 /spiffs/app.json（watch-os 启动入口）。
+     *    读取失败/解析失败时回退到内置的 s_fallback_ui_json。
+     *    注意：字体加载（stb_truetype 解析吃堆）放到 JS 引擎初始化之后，
+     *    否则最大连续块 < 64KB，JS 内存池 malloc 失败。 */
     {
         char* ui_buf = read_file_alloc("/spiffs/app.json", 64 * 1024);
         if (ui_buf) {
@@ -194,9 +179,37 @@ void app_main(void) {
         return;
     }
 
-    /* 6. 绑定图层树到 JS（须在加载 JS 之前，事件绑定才能找到图层），
-     *    然后按桌面端 watch-os 流程加载 JS 并触发 onLoad。 */
+    /* 5. 两阶段 JS 加载：
+     *    a) 先绑定图层树（g_layer_root，事件注册需按 layer id 查找图层，不依赖 JS 引擎）。
+     *    b) cJSON 树还活着时，收集 JS 文件路径 + 注册事件。
+     *    c) 释放 cJSON 树（cJSON 解析 3.3KB JSON 需 ~20-40KB 堆）。
+     *    d) 再初始化 JS 引擎 64KB 池 —— 否则堆碎片化导致 malloc 失败（QEMU 实测）。 */
     js_module_init_layer(ui_root);
+
+    if (json) {
+        js_module_collect_from_json(json, "/spiffs/app.json", 0);
+        cJSON_Delete(json);
+        json = NULL;
+    }
+
+    printf("YUI: before js_module_init free=%u largest=%u\n",
+           (unsigned)heap_caps_get_free_size(MALLOC_CAP_8BIT),
+           (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
+
+    if (js_module_init() != 0) {
+        printf("YUI: JS engine init failed, continuing without JS\n");
+    }
+    /* 6. 加载字体（放在 JS 引擎初始化之后，避免 stb_truetype 解析抢占堆）：
+     *    优先 Flash 映射（零 RAM），回退 RAM 加载。
+     *    Flash 分区方案见 partitions.csv 的 "font" 分区与 README。
+     *    QEMU 环境：无 font 分区，跳过字体加载（纯图形测试）。 */
+    font = backend_esp32_load_font_from_flash("font", 16);
+    if (!font) {
+        font = backend_load_font("Roboto-Regular.ttf", 16);
+    }
+    if (!font) {
+        printf("YUI: No font loaded, running in headless mode\n");
+    }
 
     /* 预置字体：写到解析时已创建/被子层共享的 Font 对象上，避免替换指针导致
      * 子层仍持有 default_font=NULL 的旧对象。 */
@@ -219,13 +232,12 @@ void app_main(void) {
 
     load_all_fonts(ui_root);
 
-    /* 加载并执行 JS（app.json 的 "js" 数组，相对路径相对 /app.json 所在目录）
+    /* 加载并执行 JS（阶段2：加载阶段1收集的路径）
      * onLoad 等生命周期事件由 layer_lifecycle 在脚本就绪后触发 */
-    if (json) {
-        int js_count = js_module_load_from_json(json, "/spiffs/app.json", 0);
+    {
+        int js_count = js_module_load_collected();
         printf("YUI: loaded %d JS file(s)\n", js_count);
         print_registered_events();
-        cJSON_Delete(json);
     }
 
     /* 屏幕尺寸优先：app.json 里的 size（如 watch-os 的 420x420）
