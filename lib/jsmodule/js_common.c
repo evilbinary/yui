@@ -324,6 +324,9 @@ static void build_js_path(const char* js_path, const char* json_dir, char* full_
         // 构建最终路径
         if (strlen(temp_dir) > 0 && strcmp(temp_dir, ".") != 0) {
             snprintf(full_path, max_len, "%s/%s", temp_dir, path_ptr);
+        } else if (temp_dir[0] == '\0') {
+            // 目录已上跳到根 (json_dir="/" 时)，结果仍是绝对路径
+            snprintf(full_path, max_len, "/%s", path_ptr);
         } else {
             strncpy(full_path, path_ptr, max_len - 1);
         }

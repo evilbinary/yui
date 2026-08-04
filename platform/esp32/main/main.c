@@ -23,6 +23,7 @@
 #include "layout.h"
 #include "render.h"
 #include "popup_manager.h"
+#include "js_module.h"
 #include "cJSON.h"
 #include "esp_spiffs.h"
 #include "esp_heap_caps.h"
@@ -46,8 +47,8 @@ esp_lcd_touch_handle_t yui_esp32_touch_create(esp_lcd_panel_io_handle_t io,
     return NULL;
 }
 
-/* 简单 UI 描述（也可改为从 Flash/SPIFFS 加载 JSON 文件） */
-static const char s_ui_json[] =
+/* 简单 UI 描述（SPIFFS 里没有 app.json 时的回退） */
+static const char s_fallback_ui_json[] =
     "{"
     "  \"type\": \"View\","
     "  \"text\": \"YUI ESP32\","
@@ -59,6 +60,34 @@ static const char s_ui_json[] =
     "     \"style\": {\"color\": \"#ffd700\", \"fontSize\": 24}}"
     "  ]"
     "}";
+
+/* 读整个文件到堆缓冲（调用方负责 free）。失败返回 NULL。 */
+static char* read_file_alloc(const char* path, size_t max_len) {
+    FILE* f = fopen(path, "rb");
+    char* buf = NULL;
+    long sz;
+    if (!f) return NULL;
+    fseek(f, 0, SEEK_END);
+    sz = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    if (sz <= 0 || (size_t)sz > max_len) {
+        fclose(f);
+        return NULL;
+    }
+    buf = (char*)malloc((size_t)sz + 1);
+    if (!buf) {
+        fclose(f);
+        return NULL;
+    }
+    if (fread(buf, 1, (size_t)sz, f) != (size_t)sz) {
+        free(buf);
+        fclose(f);
+        return NULL;
+    }
+    buf[sz] = '\0';
+    fclose(f);
+    return buf;
+}
 
 void app_main(void) {
     cJSON* json;
@@ -98,11 +127,11 @@ void app_main(void) {
     popup_manager_init();
     printf("YUI: backend ready\n");
 
-    /* 2. 挂载 SPIFFS 分区（watch-os JS/JSON 等资源）。
-     *    ESP-IDF 的 chdir() 是桩函数（永远返回 ENOSYS），不能依赖 cwd。
-     *    资源路径一律用绝对路径 /spiffs/...（见 SPIFFS base_path）。 */
+    /* 2. 挂载 SPIFFS 分区到根目录 "/"（watch-os JS/JSON 等资源）。
+     *    资源路径一律绝对路径（/app.json、/lib/router.js、/apps/...），
+     *    与桌面端 ../lib 上跳解析一致，共享代码零平台差异。 */
     esp_vfs_spiffs_conf_t spiffs_conf = {
-        .base_path = "/spiffs",
+        .base_path = "/",
         .partition_label = "spiffs",
         .max_files = 16,
         .format_if_mount_failed = false,
@@ -121,7 +150,14 @@ void app_main(void) {
         }
     }
 
-    /* 3. 加载字体：优先 Flash 映射（零 RAM），回退 RAM 加载。
+    /* 3. 初始化 JS 引擎（QuickJS，mquickjs 模块）。
+     *    C3 内存紧张：约 270KB 堆，QuickJS 运行时约需 100-200KB，
+     *    若 OOM 会体现在 js_module_load_from_json 阶段。 */
+    if (js_module_init() != 0) {
+        printf("YUI: JS engine init failed, continuing without JS\n");
+    }
+
+    /* 4. 加载字体：优先 Flash 映射（零 RAM），回退 RAM 加载。
      *    Flash 分区方案见 partitions.csv 的 "font" 分区与 README。
      *    QEMU 环境：无 font 分区，跳过字体加载（纯图形测试）。 */
     font = backend_esp32_load_font_from_flash("font", 16);
@@ -132,15 +168,34 @@ void app_main(void) {
         printf("YUI: No font loaded, running in headless mode\n");
     }
 
-    /* 4. 构建 UI */
-    json = cJSON_Parse(s_ui_json);
-    ui_root = layer_create_from_json(json, NULL);
-    cJSON_Delete(json);
+    /* 5. 构建 UI：优先加载 /app.json（watch-os 启动入口）。
+     *    读取失败/解析失败时回退到内置的 s_fallback_ui_json。 */
+    {
+        char* ui_buf = read_file_alloc("/app.json", 64 * 1024);
+        if (ui_buf) {
+            json = cJSON_Parse(ui_buf);
+            free(ui_buf);
+            if (!json) {
+                printf("YUI: /app.json parse failed, using fallback UI\n");
+            }
+        } else {
+            json = NULL;
+        }
+        if (!json) {
+            json = cJSON_Parse(s_fallback_ui_json);
+        }
+        ui_root = layer_create_from_json(json, NULL);
+    }
     if (!ui_root) {
         printf("YUI: failed to create UI\n");
+        cJSON_Delete(json);
         backend_quit();
         return;
     }
+
+    /* 6. 绑定图层树到 JS（须在加载 JS 之前，事件绑定才能找到图层），
+     *    然后按桌面端 watch-os 流程加载 JS 并触发 onLoad。 */
+    js_module_init_layer(ui_root);
 
     /* 预置字体：写到解析时已创建/被子层共享的 Font 对象上，避免替换指针导致
      * 子层仍持有 default_font=NULL 的旧对象。 */
@@ -161,15 +216,26 @@ void app_main(void) {
     /* 字体在 flash 分区，不在 SPIFFS assets 下 */
     ui_root->assets->path[0] = '\0';
 
-    if (ui_root->rect.w <= 0 || ui_root->rect.h <= 0) {
-        ui_root->rect.w = 240;
-        ui_root->rect.h = 240;
-    }
     load_all_fonts(ui_root);
+
+    /* 加载并执行 JS（app.json 的 "js" 数组，相对路径相对 /app.json 所在目录）
+     * onLoad 等生命周期事件由 layer_lifecycle 在脚本就绪后触发 */
+    if (json) {
+        int js_count = js_module_load_from_json(json, "/app.json", 0);
+        printf("YUI: loaded %d JS file(s)\n", js_count);
+        print_registered_events();
+        cJSON_Delete(json);
+    }
+
+    /* 屏幕尺寸优先：app.json 里的 size（如 watch-os 的 420x420）
+     * 以实际 LCD 分辨率（240x240）为准 */
+    ui_root->rect.w = 240;
+    ui_root->rect.h = 240;
     load_textures(ui_root);
     layout_layer(ui_root);
 
-    /* 5. 主循环（内部不返回） */
+    /* 7. 主循环（内部不返回） */
     backend_run(ui_root);
+    js_module_cleanup();  // 清理 JS 引擎
     backend_quit();
 }
