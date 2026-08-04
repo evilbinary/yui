@@ -151,6 +151,9 @@ void app_main(void) {
         }
         js_module_set_fs_root("/spiffs");
     }
+    printf("YUI: after spiffs free=%u largest=%u\n",
+           (unsigned)heap_caps_get_free_size(MALLOC_CAP_8BIT),
+           (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
 
     /* 3. 构建 UI：优先加载 /spiffs/app.json（watch-os 启动入口）。
      *    读取失败/解析失败时回退到内置的 s_fallback_ui_json。
@@ -178,6 +181,9 @@ void app_main(void) {
         backend_quit();
         return;
     }
+    printf("YUI: after ui build free=%u largest=%u\n",
+           (unsigned)heap_caps_get_free_size(MALLOC_CAP_8BIT),
+           (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
 
     /* 5. 两阶段 JS 加载：
      *    a) 先绑定图层树（g_layer_root，事件注册需按 layer id 查找图层，不依赖 JS 引擎）。

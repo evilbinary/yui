@@ -20,7 +20,7 @@ struct Layer* g_layer_root = NULL;
 typedef void (*CEventHandler)(Layer* layer, const char* event_type);
 
 // C 事件处理器注册表
-#define MAX_C_EVENT_HANDLERS 128
+#define MAX_C_EVENT_HANDLERS 32
 typedef struct {
     char event_name[128];
     CEventHandler handler;
@@ -30,7 +30,11 @@ static CEventEntry g_c_event_handlers[MAX_C_EVENT_HANDLERS];
 static int g_c_event_handler_count = 0;
 
 // JS 事件映射表（存储 JS 函数名）
-#define MAX_JS_EVENTS 512
+#ifdef ESP_PLATFORM
+#define MAX_JS_EVENTS 64
+#else
+#define MAX_JS_EVENTS 256
+#endif
 typedef struct {
     char event_name[128];
     char func_name[128];
