@@ -22,6 +22,16 @@ idf_component_register(
 # 嵌入式模式：ytype.h 使用 YuiTexture/YuiFont，不依赖 SDL
 target_compile_definitions(${COMPONENT_LIB} PRIVATE YUI_BACKEND_EMBEDDED)
 
+# 必须与 ya.py 的核心库编译参数一致，否则 sizeof(Layer)/sizeof(Font) 不匹配
+# ytype.h 中 MAX_PATH 默认 1024，但 ya.py 编译核心库时用 256
+target_compile_definitions(${COMPONENT_LIB} PRIVATE
+    MAX_PATH=256
+    YUI_PATH_MAX=256
+    MAX_JS_EVENTS=64
+    MAX_C_EVENT_HANDLERS=32
+    JS_MEM_POOL_SIZE=96*1024
+)
+
 # QEMU 构建：跳过真实 LCD/触摸（host 设 YUI_ESP32_QEMU=1）
 if(DEFINED ENV{YUI_ESP32_QEMU})
     target_compile_definitions(${COMPONENT_LIB} PRIVATE YUI_ESP32_QEMU=1)
