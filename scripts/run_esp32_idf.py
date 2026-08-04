@@ -228,11 +228,13 @@ def base_env():
 
 def run_idf(env, *args):
     """Run idf.py after activating ESP-IDF export/activate script."""
-    if IS_WIN and not is_mingw():
+    # On Windows, prefer PowerShell + export.ps1 when available.
+    # Rationale: even when invoked from MSYS/Git Bash (MSYSTEM set), spawning
+    # `bash -c` may resolve to WSL2's bash.exe (whose Ubuntu vhdx is often
+    # missing), causing "Bash/Service/CreateInstance/MountDisk/HCS/ERROR_FILE_NOT_FOUND".
+    # PowerShell is always present on Windows and ESP-IDF ships export.ps1.
+    if IS_WIN and (IDF_PATH / 'export.ps1').is_file():
         export_ps1 = IDF_PATH / 'export.ps1'
-        if not export_ps1.is_file():
-            print(f"ERROR: missing {export_ps1}", file=sys.stderr)
-            return 1
         idf_args = ' '.join(args)
         activate_cmd = f'. {export_ps1}; cd {ESP32_DIR}; idf.py {idf_args}'
         full_cmd = ['powershell', '-ExecutionPolicy', 'Bypass', '-Command', activate_cmd]
