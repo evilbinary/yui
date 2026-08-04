@@ -72,12 +72,13 @@ void app_main(void) {
     /* SPI 总线引脚（MOSI/SCK） */
     backend_esp32_set_spi_pins(23, 18);
 #if defined(YUI_ESP32_QEMU)
-    /* QEMU 无 ST7789/CST816S：跳过 SPI LCD 与 I2C 触摸，避免 init 卡死。
-     * 注意：QEMU 的 -display sdl 窗口也不是这块 SPI 屏，界面只在软件 fb 里。 */
+    /* QEMU 无 ST7789/CST816S：跳过 SPI LCD 与 I2C 触摸。
+     * QEMU 构建会自动创建虚拟 RGB 面板（esp_lcd_qemu_rgb），YUI 渲染像素
+     * 直写该面板，由 -display sdl 窗口实时显示；无 --graphics 时为无头模式。 */
     backend_esp32_set_hw_display(0);
-    printf("YUI: QEMU mode (headless, no LCD/touch/framebuffer)\n");
+    printf("YUI: QEMU mode (virtual RGB panel)\n");
     /* 冒烟测试：渲染固定帧数后自动退出，便于无头验证完整主循环。
-     * framebuffer 由编译期宏 YUI_ESP32_LCD_BUFFER 控制，默认关闭。 */
+     * framebuffer 由编译期宏 YUI_ESP32_LCD_BUFFER 控制，默认关闭（直写像素）。 */
     backend_set_auto_frames(100);
 #else
     /* 触摸（I2C CST816S；int_pin=-1 禁用轮询中断） */

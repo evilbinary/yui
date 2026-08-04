@@ -26,6 +26,9 @@
 #include "esp_lcd_panel_vendor.h"
 #include "esp_lcd_panel_ops.h"
 #include "esp_lcd_touch.h"
+#ifdef YUI_ESP32_QEMU
+#include "esp_lcd_qemu_rgb.h"
+#endif
 #include "driver/spi_master.h"
 #include "driver/gpio.h"
 #include "driver/i2c_master.h"
@@ -236,6 +239,28 @@ static int esp32_lcd_init(void) {
     esp_lcd_panel_dev_config_t panel_config;
     esp_err_t ret;
 
+#ifdef YUI_ESP32_QEMU
+    /* QEMU 虚拟 RGB 面板：专属 framebuffer（不占内部 RAM），由
+     * QEMU -display sdl 窗口实时扫描输出。分辨率与 s_cfg 一致（240x240）。
+     * direct_draw_point / esp32_flush_dirty 经 esp_lcd_panel_draw_bitmap
+     * 把 YUI 渲染像素写入该虚拟屏。 */
+    {
+        esp_lcd_rgb_qemu_config_t qcfg = {
+            .width = s_cfg.width,
+            .height = s_cfg.height,
+            .bpp = RGB_QEMU_BPP_16,
+        };
+        ret = esp_lcd_new_rgb_qemu(&qcfg, &s_panel);
+        if (ret != ESP_OK) {
+            ESP_LOGE(YUI_E32_TAG, "esp_lcd_new_rgb_qemu failed (%s)", esp_err_to_name(ret));
+            return -1;
+        }
+        esp_lcd_panel_reset(s_panel);
+        esp_lcd_panel_init(s_panel);
+        printf("YUI: QEMU virtual RGB panel %dx%d RGB565 ready\n", s_cfg.width, s_cfg.height);
+    }
+    return 0;
+#else
     if (!s_hw_display) {
         ESP_LOGI(YUI_E32_TAG, "hw display off: software framebuffer only");
         return 0;
@@ -292,6 +317,7 @@ static int esp32_lcd_init(void) {
     }
     return 0;
 }
+#endif /* YUI_ESP32_QEMU (else 分支：真实 SPI LCD) */
 
 /* 触摸芯片创建钩子（弱符号，默认无触摸）。
  * 平台层可强定义同名函数覆盖，例如 CST816S：
