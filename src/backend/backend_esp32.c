@@ -95,29 +95,36 @@ void backend_esp32_set_touch(int i2c_host, int sda, int scl, int addr, int int_p
 
 #ifdef ESP_PLATFORM
 static esp_partition_mmap_handle_t s_font_mmap_handle;
+/* 缓存已映射的字体分区数据，避免每次 load 重新 mmap（重复 mmap 会累积句柄） */
+static const void* s_font_mapped = NULL;
+static size_t s_font_mapped_size = 0;
 #endif
 
 /* 从 SPI Flash 分区映射 TTF（不占 RAM），适合子集化小字体。
  * partitions.csv 中需定义同名 data 分区，烧录子集化 TTF 到该分区。 */
 DFont* backend_esp32_load_font_from_flash(const char* partition_label, int size) {
 #ifdef ESP_PLATFORM
-    const esp_partition_t* part;
-    const void* mapped;
-    esp_err_t err;
     if (!partition_label) return NULL;
-    part = esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_ANY, partition_label);
-    if (!part) {
-        ESP_LOGE(YUI_E32_TAG, "font partition '%s' not found", partition_label);
-        return NULL;
-    }
-    err = esp_partition_mmap(part, 0, part->size, ESP_PARTITION_MMAP_DATA,
-                             &mapped, &s_font_mmap_handle);
-    if (err != ESP_OK) {
+    if (!s_font_mapped) {
+        const esp_partition_t* part;
+        const void* mapped;
+        esp_err_t err;
+        part = esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_ANY, partition_label);
+        if (!part) {
+            ESP_LOGE(YUI_E32_TAG, "font partition '%s' not found", partition_label);
+            return NULL;
+        }
+        err = esp_partition_mmap(part, 0, part->size, ESP_PARTITION_MMAP_DATA,
+                                 &mapped, &s_font_mmap_handle);
+        if (err != ESP_OK) {
         ESP_LOGE(YUI_E32_TAG, "font mmap failed: %s", esp_err_to_name(err));
         return NULL;
     }
     /* mapped 指向 Flash，embed_font_load_from_memory 不复制、不释放 */
-    return embed_font_load_from_memory(mapped, part->size, size, "normal");
+    s_font_mapped = mapped;
+    s_font_mapped_size = part->size;
+    }
+    return embed_font_load_from_memory(s_font_mapped, s_font_mapped_size, size, "normal");
 #else
     (void)partition_label; (void)size;
     return NULL;
@@ -675,10 +682,20 @@ void backend_render_set_clip_rect(Rect* clip) {
 
 /* ====================== 字体 ====================== */
 DFont* backend_load_font(char* path, int size) {
-    return embed_font_load(path, size);
+    DFont* font = embed_font_load(path, size);
+    if (!font) {
+        /* 文件不存在（字体只在 flash font 分区）：回退到分区字体 */
+        font = backend_esp32_load_font_from_flash("font", size);
+    }
+    return font;
 }
 DFont* backend_load_font_with_weight(char* path, int size, const char* weight) {
-    return embed_font_load_with_weight(path, size, weight);
+    DFont* font = embed_font_load_with_weight(path, size, weight);
+    if (!font) {
+        /* 文件不存在（字体只在 flash font 分区）：回退到分区字体 */
+        font = backend_esp32_load_font_from_flash("font", size);
+    }
+    return font;
 }
 
 /* ====================== 窗口/时间 ====================== */

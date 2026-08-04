@@ -149,9 +149,8 @@ def make_spiffs(env):
     if staging.exists():
         shutil.rmtree(staging)
 
-    # 1. watch-os app tree
+    # 1. watch-os app tree (SPIFFS root = apps/, lib/, themes/, ...)
     src = WORKSPACE / 'app' / 'watch-os'
-    dst = staging / 'watch-os'
     if not src.is_dir():
         print("ERROR: no app/watch-os directory", file=sys.stderr)
         sys.exit(1)
@@ -159,8 +158,9 @@ def make_spiffs(env):
     for dirpath, dirnames, filenames in os.walk(src):
         rel_dir = os.path.relpath(dirpath, src).replace('\\', '/')
         for fn in filenames:
-            img_path = f"watch-os/{rel_dir}/{fn}" if rel_dir != '.' else f"watch-os/{fn}"
-            if len(img_path) > 32:
+            img_path = f"{rel_dir}/{fn}" if rel_dir != '.' else fn
+            # spiffsgen adds '/' prefix, so max allowed is 31 chars for img_path
+            if len(img_path) >= 32:
                 skipped.append(img_path)
                 continue
             full = Path(dirpath) / fn
@@ -172,7 +172,8 @@ def make_spiffs(env):
         for p in skipped:
             print(f"  - {p}", flush=True)
 
-    # 2. shared lib files referenced by watch-os/app.json as "../lib/*"
+    # 2. shared lib files referenced by app.json as "../lib/*"
+    #    (mirrored at SPIFFS root as lib/)
     lib_src = WORKSPACE / 'app' / 'lib'
     lib_dst = staging / 'lib'
     if lib_src.is_dir():

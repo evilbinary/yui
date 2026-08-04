@@ -51,10 +51,10 @@ static const char s_ui_json[] =
     "  \"text\": \"YUI ESP32\","
     "  \"layout\": \"vertical\","
     "  \"rect\": {\"x\": 0, \"y\": 0, \"w\": 240, \"h\": 240},"
-    "  \"style\": {\"bg-color\": \"#102040\", \"color\": \"#ffffff\", \"font-size\": 20},"
+    "  \"style\": {\"bgColor\": \"#102040\", \"color\": \"#ffffff\", \"fontSize\": 20},"
     "  \"children\": ["
     "    {\"type\": \"Label\", \"text\": \"Hello YUI\","
-    "     \"style\": {\"color\": \"#ffd700\", \"font-size\": 24}}"
+    "     \"style\": {\"color\": \"#ffd700\", \"fontSize\": 24}}"
     "  ]"
     "}";
 
@@ -65,8 +65,9 @@ void app_main(void) {
 
     printf("YUI ESP32 starting...\n");
 
-    /* 0. 挂载 SPIFFS 分区（watch-os JS/JSON 等资源），并把当前目录切到挂载点，
-     *    使 yui 的相对路径（app/watch-os/app.json 等）直接解析到分区内。 */
+    /* 0. 挂载 SPIFFS 分区（watch-os JS/JSON 等资源）。
+     *    ESP-IDF 的 chdir() 是桩函数（永远返回 ENOSYS），不能依赖 cwd。
+     *    资源路径一律用绝对路径 /spiffs/...（见 SPIFFS base_path）。 */
     esp_vfs_spiffs_conf_t spiffs_conf = {
         .base_path = "/spiffs",
         .partition_label = "spiffs",
@@ -78,8 +79,12 @@ void app_main(void) {
         printf("YUI: SPIFFS mount failed (%s), running without app resources\n",
                esp_err_to_name(spiffs_err));
     } else {
-        if (chdir("/spiffs") != 0) {
-            printf("YUI: chdir /spiffs failed\n");
+        size_t total = 0, used = 0;
+        if (esp_spiffs_info("spiffs", &total, &used) == ESP_OK) {
+            printf("YUI: SPIFFS mounted at /spiffs (%u/%u bytes used)\n",
+                   (unsigned)used, (unsigned)total);
+        } else {
+            printf("YUI: SPIFFS mounted at /spiffs\n");
         }
     }
 
