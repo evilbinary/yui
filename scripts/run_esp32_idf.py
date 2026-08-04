@@ -78,14 +78,16 @@ def run_idf(env, *args):
     return result.returncode
 
 def read_partition_table(env):
-    """Parse build/partition_table/partition-table.bin -> {name: (offset, size)}."""
+    """Parse build/partition_table/partition-table.bin -> {name: (offset, size)}.
+    Entry layout (32 bytes): magic 0x50AA (2), type (1), subtype (1),
+    offset (4), size (4), name (16), flags (4)."""
     ptable = BUILD_DIR / 'partition_table' / 'partition-table.bin'
     if not ptable.exists():
         return {}
     data = ptable.read_bytes()
     parts = {}
     for i in range(0, len(data) - 32 + 1, 32):
-        if data[i] != 0x50:  # magic byte
+        if int.from_bytes(data[i:i + 2], 'little') != 0x50AA:  # magic
             break
         offset = int.from_bytes(data[i + 4:i + 8], 'little')
         size = int.from_bytes(data[i + 8:i + 12], 'little')
