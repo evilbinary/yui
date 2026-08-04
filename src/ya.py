@@ -56,6 +56,7 @@ elif get_plat() == "esp32":
     add_cflags("-DMAX_C_EVENT_HANDLERS=32")
     add_cflags("-DMAX_PATH=256")
     add_cflags("-DYUI_PATH_MAX=256")
+    add_cflags("-DJS_MEM_POOL_SIZE=96*1024")
 elif get_plat() in ("android", "ios"):
     add_files("backend/backend_mobile.c")
     add_files("backend/mobile_text.c")
