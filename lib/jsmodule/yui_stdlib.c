@@ -16,6 +16,8 @@
 #include <sys/time.h>
 #include <math.h>
 #include <fcntl.h>
+#include <dirent.h>
+#include <sys/stat.h>
 
 #include "cutils.h"
 #include "mquickjs.h"
@@ -48,6 +50,7 @@ extern Layer* parse_layer_from_string(const char* json_str, Layer* parent);
 extern void destroy_layer(Layer* layer);
 extern int js_module_load_from_json(cJSON* root_json, const char* json_file_path, int append);
 extern char* js_module_read_file(const char* file_path);
+extern int js_module_resolve_path(const char* in, char* out, size_t out_sz);
 
 // 颜色结构体定义
 
@@ -478,6 +481,58 @@ static JSValue js_read_file(JSContext *ctx, JSValue *this_val, int argc, JSValue
     return result;
 }
 
+/* 与 jsmodule-quickjs 的 YUI.listDir 对齐：返回 [{name, isDir}, ...]，失败返回 null */
+static JSValue js_list_dir(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+{
+    const char* dir_path = ".";
+    char resolved[MAX_PATH];
+    JSCStringBuf cbuf;
+    DIR* dir;
+    struct dirent* entry;
+    JSValue result;
+    int idx = 0;
+
+    if (argc >= 1) {
+        dir_path = JS_ToCString(ctx, argv[0], &cbuf);
+        if (!dir_path) dir_path = ".";
+    }
+
+    if (js_module_resolve_path(dir_path, resolved, sizeof(resolved)) != 0) {
+        /* 解析失败仍尝试原路径（与 quickjs 行为一致） */
+        strncpy(resolved, dir_path, sizeof(resolved) - 1);
+        resolved[sizeof(resolved) - 1] = '\0';
+    }
+
+    dir = opendir(resolved);
+    if (!dir) {
+        return JS_NULL;
+    }
+
+    result = JS_NewArray(ctx, 0);
+    while ((entry = readdir(dir)) != NULL) {
+        char full_path[MAX_PATH];
+        struct stat st;
+        JSValue item;
+        int is_dir;
+
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+            continue;
+        }
+
+        item = JS_NewObject(ctx);
+        JS_SetPropertyStr(ctx, item, "name", JS_NewString(ctx, entry->d_name));
+
+        snprintf(full_path, sizeof(full_path), "%s/%s", resolved, entry->d_name);
+        is_dir = (stat(full_path, &st) == 0 && S_ISDIR(st.st_mode)) ? 1 : 0;
+        JS_SetPropertyStr(ctx, item, "isDir", JS_NewBool(is_dir));
+
+        JS_SetPropertyUint32(ctx, result, (uint32_t)idx++, item);
+    }
+
+    closedir(dir);
+    return result;
+}
+
 static JSValue js_resize_root(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
 {
     if (argc < 2) {
@@ -549,6 +604,7 @@ static const JSPropDef js_yui[] = {
     JS_CFUNC_DEF("getWindowSize", 0, js_get_window_size ),
     JS_CFUNC_DEF("renderFromJson", 3, js_render_from_json ),
     JS_CFUNC_DEF("readFile", 1, js_read_file ),
+    JS_CFUNC_DEF("listDir", 1, js_list_dir ),
     JS_CFUNC_DEF("resizeRoot", 2, js_resize_root ),
     JS_CFUNC_DEF("call", 2, js_yui_call ),
     JS_CFUNC_DEF("update", 1, js_yui_update ),

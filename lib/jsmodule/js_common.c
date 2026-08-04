@@ -12,6 +12,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <time.h>
+#include <sys/stat.h>
 
 // 全局 UI 根图层
 struct Layer* g_layer_root = NULL;
@@ -1213,6 +1214,46 @@ static FILE* js_try_fopen(const char* path, const char** used)
     f = fopen(path, "rb");
     if (f && used) *used = path;
     return f;
+}
+
+static int js_path_exists(const char* path)
+{
+    struct stat st;
+    if (!path || !path[0]) return 0;
+    return stat(path, &st) == 0;
+}
+
+/* 解析可读路径：原样 → base_path/ → fs_root/。成功写入 out 并返回 0。 */
+int js_module_resolve_path(const char* in, char* out, size_t out_sz)
+{
+    char path_buf[YUI_PATH_MAX];
+
+    if (!in || !out || out_sz == 0) return -1;
+
+    if (js_path_exists(in)) {
+        strncpy(out, in, out_sz - 1);
+        out[out_sz - 1] = '\0';
+        return 0;
+    }
+    if (in[0] == '/') return -1;
+
+    if (g_js_base_path[0]) {
+        snprintf(path_buf, sizeof(path_buf), "%s/%s", g_js_base_path, in);
+        if (js_path_exists(path_buf)) {
+            strncpy(out, path_buf, out_sz - 1);
+            out[out_sz - 1] = '\0';
+            return 0;
+        }
+    }
+    if (strcmp(g_js_fs_root, "/") != 0) {
+        snprintf(path_buf, sizeof(path_buf), "%s/%s", g_js_fs_root, in);
+        if (js_path_exists(path_buf)) {
+            strncpy(out, path_buf, out_sz - 1);
+            out[out_sz - 1] = '\0';
+            return 0;
+        }
+    }
+    return -1;
 }
 
 /* 相对路径：先原样，再 base_path/，再 fs_root/（通用，各平台相同）。 */

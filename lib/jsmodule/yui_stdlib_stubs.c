@@ -97,6 +97,13 @@ char* js_module_read_file(const char* file_path) {
     return NULL;
 }
 
+int js_module_resolve_path(const char* in, char* out, size_t out_sz) {
+    (void)in;
+    (void)out;
+    (void)out_sz;
+    return -1;
+}
+
 int js_module_resize_root(int width, int height) {
     return -1;
 }
