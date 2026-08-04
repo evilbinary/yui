@@ -131,7 +131,7 @@ register_js_event_mapping("updateBtn1.onClick", "testSingleUpdate");
 ### 依赖关系
 
 ```
-jsmodule → yui, mquickjs, cjson, socket
+jsmodule-mqjs → jsmodule (公共代码), yui, mquickjs, cjson, socket
 jsmodule-mario → jsmodule (公共代码), mario, yui
 jsmodule-quickjs → jsmodule (公共代码), quickjs, yui
 ```
@@ -140,7 +140,7 @@ jsmodule-quickjs → jsmodule (公共代码), quickjs, yui
 
 ```bash
 # 编译所有 JS 模块
-ya -b jsmodule
+ya -b jsmodule-mqjs
 ya -b jsmodule-mario
 ya -b jsmodule-quickjs
 

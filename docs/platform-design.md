@@ -250,7 +250,7 @@ ya -p android -a arm64-v8a -m release
 
 # Android + mquickjs
 ya -p android -a arm64-v8a -m release
-# target: yui-mobile-mqjs → libyui.a + libmquickjs.a + libjsmodule.a
+# target: yui-mobile-mqjs → libyui.a + libmquickjs.a + libjsmodule-mqjs.a
 
 # iOS
 ya -p ios -a arm64 -m release
@@ -268,7 +268,7 @@ ya -p em -m release
 | 构建 target | JS 引擎 | 依赖库 |
 |-------------|---------|--------|
 | `yui-mobile-quickjs` | QuickJS | `libquickjs.a` + `libjsmodule-quickjs.a` |
-| `yui-mobile-mqjs` | mquickjs | `libmquickjs.a` + `libjsmodule.a` |
+| `yui-mobile-mqjs` | mquickjs | `libmquickjs.a` + `libjsmodule-mqjs.a` |
 
 `platform/android` Gradle 通过 `productFlavor` 或 CMake 变量选择链接哪一套；与桌面 `playground` / `playground-mqjs` 命名对齐。
 
@@ -281,7 +281,7 @@ ya -p em -m release
 | `libyui.a` | YUI 引擎 |
 | `libcjson.a` | JSON 解析 |
 | `libquickjs.a` + `libjsmodule-quickjs.a` | QuickJS 变体 |
-| `libmquickjs.a` + `libjsmodule.a` | mquickjs 变体 |
+| `libmquickjs.a` + `libjsmodule-mqjs.a` | mquickjs 变体 |
 | `libskia.a`（skia-pack 预编译） | 移动端 GPU 绘制 |
 | 系统库 | `libc++`、`libm`、`libz`；iOS 另加 Metal/UIKit 等 |
 

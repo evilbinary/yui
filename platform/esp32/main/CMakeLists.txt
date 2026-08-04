@@ -15,6 +15,7 @@ idf_component_register(
         "${YUI_ROOT}/lib/stb"
         "${YUI_ROOT}/lib/cjson"
         "${YUI_ROOT}/lib/jsmodule"
+        "${YUI_ROOT}/lib/jsmodule-mqjs"
         "${YUI_ROOT}/lib/socket"
     REQUIRES esp_lcd esp_lcd_touch esp_lcd_qemu_rgb esp_timer driver nvs_flash spi_flash spiffs lwip
 )
@@ -49,11 +50,11 @@ target_link_libraries(${COMPONENT_LIB} PRIVATE
     ${YUI_BUILD_DIR}/libyui.a
     ${YUI_BUILD_DIR}/libcjson.a
     ${YUI_BUILD_DIR}/libtsm.a
-    # JS 模块：jsmodule(mquickjs 引擎) 与 mquickjs 归档内部成员互相引用
+    # JS 模块：jsmodule-mqjs(mquickjs 引擎) 与 mquickjs 归档内部成员互相引用
     # （mquickjs.o 定义 JS_* 而 mqjs_std.o 引用，单趟扫描顺序依赖），
     # 用 --start-group 允许多趟解析。
     -Wl,--start-group
-    ${YUI_BUILD_DIR}/libjsmodule.a
+    ${YUI_BUILD_DIR}/libjsmodule-mqjs.a
     ${YUI_BUILD_DIR}/libmquickjs.a
     -Wl,--end-group
     m

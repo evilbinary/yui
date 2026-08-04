@@ -63,7 +63,7 @@ Socket API 在 mquickjs 和 QuickJS 引擎中可用。
 
 #### naive api 接口
 
-##### mquickjs 引擎 (lib/jsmodule/yui_stdlib.c)
+##### mquickjs 引擎 (lib/jsmodule-mqjs/yui_stdlib.c)
 
 **YUI Native 函数定义**
 
@@ -85,7 +85,7 @@ static JSValue js_yui_themeSetCurrent(JSContext *ctx, JSValue *this_val, int arg
 static JSValue js_yui_themeUnload(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
 static JSValue js_yui_themeApplyToTree(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
 
-// Socket API (lib/jsmodule/js_socket.c)
+// Socket API (lib/jsmodule-mqjs/js_socket.c)
 static JSValue js_socket_create(JSContext* ctx, JSValue* this_val, int argc, JSValue* argv)
 static JSValue js_socket_close(JSContext* ctx, JSValue* this_val, int argc, JSValue* argv)
 static JSValue js_socket_shutdown(JSContext* ctx, JSValue* this_val, int argc, JSValue* argv)

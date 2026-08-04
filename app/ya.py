@@ -54,7 +54,7 @@ if is_host_plat():
 
 
 if is_host_plat():
-    # 嵌入式平台跳过依赖 mario/mquickjs/jsmodule 的 demo（这些库在嵌入式平台已跳过）
+    # 嵌入式平台跳过依赖 mario/mquickjs/jsmodule-mqjs 的 demo（这些库在嵌入式平台已跳过）
     target("playground-mario") 
     (
         add_deps("jsmodule-mario","yui", "mario","yaml2json"),
@@ -67,7 +67,7 @@ if is_host_plat():
 
     target("playground-mqjs") 
     (
-        add_deps("jsmodule","yui", "mquickjs","yaml2json"),
+        add_deps("jsmodule-mqjs","yui", "mquickjs","yaml2json"),
         add_rules("mode.debug", "mode.release"),
         set_kind("binary"),
         add_flags(),
@@ -78,7 +78,7 @@ if is_host_plat():
 
     target("mqjs") 
     (
-        add_deps( "jsmodule","yui", "mquickjs",),
+        add_deps( "jsmodule-mqjs","yui", "mquickjs",),
         add_rules("mode.debug", "mode.release"),
         set_kind("binary"),
         add_flags(),
@@ -132,7 +132,7 @@ if is_host_plat():
 
     target("network-mqjs") 
     (
-        add_deps( "jsmodule","yui", "mquickjs",),
+        add_deps( "jsmodule-mqjs","yui", "mquickjs",),
         add_rules("mode.debug", "mode.release"),
         set_kind("binary"),
         add_flags(),

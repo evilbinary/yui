@@ -9,10 +9,24 @@
   "preferences": {
     "autoConnect": true,
     "pageSize": 500,
-    "fontSize": 13
+    "fontSize": 13,
+    "lastConnectionId": "default"
   },
   "theme": "element-plus-dark",
   "windowWidth": 1197,
   "windowHeight": 880,
-  "sqlEditorContainer": 367
+  "sqlEditorContainer": 367,
+  "connections": [
+    {
+      "id": "default",
+      "name": "默认连接",
+      "host": "localhost",
+      "user": "root",
+      "password": "root",
+      "database": "",
+      "port": 3306,
+      "ssl": false
+    }
+  ],
+  "activeConnectionId": "default"
 }

@@ -96,7 +96,7 @@ HUD 中橙色行表示：`renderCount > 1` 或 `renderMs > 2ms`。
 - `src/perf/perf.c` — 统计与 overlay
 - `src/render.c` — `render_layer` 埋点
 - `src/backend/backend_sdl.c` — 帧级计时
-- `lib/jsmodule/yui_stdlib.c` — mquickjs `YUI.perf.*` 绑定
+- `lib/jsmodule-mqjs/yui_stdlib.c` — mquickjs `YUI.perf.*` 绑定
 - `lib/jsmodule-quickjs/js_perf.c` — QuickJS `YUI.perf.*` 绑定
 
 ## 与 Inspect 配合
