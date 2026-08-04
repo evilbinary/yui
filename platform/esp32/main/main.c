@@ -197,6 +197,8 @@ void app_main(void) {
         backend_quit();
         return;
     }
+    printf("YUI: ui id='%s' flags=0x%x onLoad='%s'\n",
+           ui_root->id, (unsigned)ui_root->lifecycle_flags, ui_root->lifecycle_on_load);
     check_heap("after ui build");
 
     /* 5. 两阶段 JS 加载：
@@ -205,11 +207,17 @@ void app_main(void) {
      *    c) 释放 cJSON 树（cJSON 解析 3.3KB JSON 需 ~20-40KB 堆）。
      *    d) 再初始化 JS 引擎 64KB 池 —— 否则堆碎片化导致 malloc 失败（QEMU 实测）。 */
     js_module_init_layer(ui_root);
+    printf("YUI: lc after init_layer flags=0x%x onLoad='%s'\n",
+           (unsigned)ui_root->lifecycle_flags, ui_root->lifecycle_on_load);
 
     if (json) {
         js_module_collect_from_json(json, "/spiffs/app.json", 0);
+        printf("YUI: lc after collect flags=0x%x onLoad='%s'\n",
+               (unsigned)ui_root->lifecycle_flags, ui_root->lifecycle_on_load);
         check_heap("after collect");
         cJSON_Delete(json);
+        printf("YUI: lc after cjson free flags=0x%x onLoad='%s'\n",
+               (unsigned)ui_root->lifecycle_flags, ui_root->lifecycle_on_load);
         check_heap("after cjson free");
         json = NULL;
     }
@@ -217,6 +225,8 @@ void app_main(void) {
     if (js_module_init() != 0) {
         printf("YUI: JS engine init failed, continuing without JS\n");
     }
+    printf("YUI: lc after js_init flags=0x%x onLoad='%s'\n",
+           (unsigned)ui_root->lifecycle_flags, ui_root->lifecycle_on_load);
     /* 6. 加载字体（放在 JS 引擎初始化之后，避免 stb_truetype 解析抢占堆）：
      *    优先 Flash 映射（零 RAM），回退 RAM 加载。
      *    Flash 分区方案见 partitions.csv 的 "font" 分区与 README。
@@ -228,6 +238,8 @@ void app_main(void) {
     if (!font) {
         printf("YUI: No font loaded, running in headless mode\n");
     }
+    printf("YUI: lc after font flags=0x%x onLoad='%s'\n",
+           (unsigned)ui_root->lifecycle_flags, ui_root->lifecycle_on_load);
 
     /* 预置字体：写到解析时已创建/被子层共享的 Font 对象上，避免替换指针导致
      * 子层仍持有 default_font=NULL 的旧对象。 */
@@ -249,6 +261,8 @@ void app_main(void) {
     ui_root->assets->path[0] = '\0';
 
     load_all_fonts(ui_root);
+    printf("YUI: lc after load_all_fonts flags=0x%x onLoad='%s'\n",
+           (unsigned)ui_root->lifecycle_flags, ui_root->lifecycle_on_load);
 
     /* 加载并执行 JS（阶段2：加载阶段1收集的路径）
      * onLoad 等生命周期事件由 layer_lifecycle 在脚本就绪后触发 */

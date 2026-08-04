@@ -17,8 +17,12 @@ typedef struct cJSON cJSON;
 // 初始化 JS 引擎
 int js_module_init(void);
 
-// 设置文件系统根前缀（相对路径 ../ 上跳不越过此根，默认 "/"）
+// 设置文件系统根前缀（相对路径 ../ 上跳不越过此根；相对资源可读 fs_root/path）
+// 默认 "/"。嵌入式挂载点例如 "/spiffs"。
 void js_module_set_fs_root(const char* root);
+
+// 可选：相对资源路径前缀（如桌面 "app/watch-os"）。嵌入式通常不设。
+void js_module_set_base_path(const char* base);
 
 // 清理 JS 引擎
 void js_module_cleanup(void);

@@ -17,7 +17,7 @@ function onStoreShow() {
 
 function loadStoreCatalog() {
     storeCatalog = [];
-    var raw = YUI.readFile("app/watch-os/store/catalog.json");
+    var raw = YUI.readFile("store/catalog.json");
     if (!raw) return;
     try {
         var data = JSON.parse(raw);

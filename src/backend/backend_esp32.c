@@ -142,7 +142,6 @@ DFont* backend_esp32_load_font_from_flash(const char* partition_label, int size)
 #endif
 }
 
-/* ====================== Framebuffer ====================== */
 /* 编译期宏：是否启用 LCD 软件 framebuffer（RGB565，240x240 约 115KB）。
  *   - 默认 0（不启用）：不分配 s_fb，backend_render_* 不跳过，而是经
  *     direct_draw_point 逐点直写 LCD；无面板（QEMU/headless）时像素落点
@@ -152,14 +151,17 @@ DFont* backend_esp32_load_font_from_flash(const char* partition_label, int size)
  *     framebuffer，经脏矩形批量推送（esp32_flush_dirty）。
  *   - QEMU 构建（YUI_ESP32_QEMU）强制为 1，但 s_fb 不 calloc——指向虚拟
  *     RGB 面板的专属 framebuffer（不占内部 SRAM），见 backend_init。 */
+#ifdef YUI_ESP32_QEMU
+#ifndef YUI_ESP32_LCD_BUFFER
+#define YUI_ESP32_LCD_BUFFER 1
+#endif
+#else
 #ifndef YUI_ESP32_LCD_BUFFER
 #define YUI_ESP32_LCD_BUFFER 0
 #endif
+#endif
 
-/* QEMU 模式：不强制 framebuffer 模式，保持宏语义（默认 0 = 写点）。
- * 区别只在 direct_draw_point 的落点实现：QEMU 下写专属 framebuffer
- * （纯内存写，快），真实 LCD 下逐点 esp_lcd_panel_draw_bitmap。
- * 每帧在 backend_render_present 做一次整帧推送（带超时保护）。 */
+/* QEMU：写专属 framebuffer（纯内存），经脏矩形 / 整帧 push 刷新 SDL 窗口。 */
 
 static uint16_t* s_fb = NULL;       /* RGB565 */
 static int s_fb_w = 0, s_fb_h = 0;

@@ -290,12 +290,38 @@ static EventHandler get_event_handler_by_type(const char* event_type)
 // 嵌入式 SPIFFS 挂载在 /spiffs 时设为 "/spiffs"，使 app 根与挂载根一致。
 static char g_js_fs_root[MAX_PATH] = "/";
 
+static char g_js_base_path[MAX_PATH] = "";
+
+static void strip_trailing_slash(char* s)
+{
+    size_t n;
+    if (!s) return;
+    n = strlen(s);
+    while (n > 1 && (s[n - 1] == '/' || s[n - 1] == '\\')) {
+        s[--n] = '\0';
+    }
+}
+
 void js_module_set_fs_root(const char* root)
 {
-    if (root && root[0] == '/') {
-        strncpy(g_js_fs_root, root, MAX_PATH - 1);
-        g_js_fs_root[MAX_PATH - 1] = '\0';
+    if (!root || !root[0]) {
+        strcpy(g_js_fs_root, "/");
+        return;
     }
+    strncpy(g_js_fs_root, root, MAX_PATH - 1);
+    g_js_fs_root[MAX_PATH - 1] = '\0';
+    strip_trailing_slash(g_js_fs_root);
+}
+
+void js_module_set_base_path(const char* base)
+{
+    if (!base || !base[0]) {
+        g_js_base_path[0] = '\0';
+        return;
+    }
+    strncpy(g_js_base_path, base, MAX_PATH - 1);
+    g_js_base_path[MAX_PATH - 1] = '\0';
+    strip_trailing_slash(g_js_base_path);
 }
 
 static void build_js_path(const char* js_path, const char* json_dir, char* full_path, size_t max_len)
@@ -1114,31 +1140,61 @@ const char* js_module_get_select_value(const char* layer_id) {
 
 // ====================== 文件读取功能 ======================
 
-// 文件读取函数，用于JavaScript环境
+static FILE* js_try_fopen(const char* path, const char** used)
+{
+    FILE* f;
+    if (!path || !path[0]) return NULL;
+    f = fopen(path, "rb");
+    if (f && used) *used = path;
+    return f;
+}
+
+/* 相对路径：先原样，再 base_path/，再 fs_root/（通用，各平台相同）。 */
 char* js_module_read_file(const char* file_path) {
+    char path_buf[YUI_PATH_MAX];
+    const char* open_path = file_path;
+    FILE* f = NULL;
+    long file_size;
+    char* buffer;
+    size_t bytes_read;
+
     if (!file_path) return NULL;
-    
-    FILE *f = fopen(file_path, "r");
+
+    f = js_try_fopen(file_path, &open_path);
+    if (!f && file_path[0] != '/') {
+        if (g_js_base_path[0]) {
+            snprintf(path_buf, sizeof(path_buf), "%s/%s", g_js_base_path, file_path);
+            f = js_try_fopen(path_buf, &open_path);
+        }
+        if (!f && strcmp(g_js_fs_root, "/") != 0) {
+            snprintf(path_buf, sizeof(path_buf), "%s/%s", g_js_fs_root, file_path);
+            f = js_try_fopen(path_buf, &open_path);
+        }
+    }
     if (!f) {
         printf("JS: Cannot open file %s\n", file_path);
         return NULL;
     }
 
     fseek(f, 0, SEEK_END);
-    long file_size = ftell(f);
+    file_size = ftell(f);
     fseek(f, 0, SEEK_SET);
+    if (file_size < 0) {
+        fclose(f);
+        return NULL;
+    }
 
-    char *buffer = malloc(file_size + 1);
+    buffer = malloc((size_t)file_size + 1);
     if (!buffer) {
         fclose(f);
         return NULL;
     }
 
-    size_t bytes_read = fread(buffer, 1, file_size, f);
+    bytes_read = fread(buffer, 1, (size_t)file_size, f);
     buffer[bytes_read] = '\0';
     fclose(f);
 
-    printf("JS: Successfully read %ld bytes from file %s\n", bytes_read, file_path);
+    printf("JS: Successfully read %ld bytes from file %s\n", (long)bytes_read, open_path);
     return buffer;
 }
 

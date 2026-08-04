@@ -10,12 +10,12 @@
  */
 
 var WatchAppRegistry = {
-    appsRoot: "app/watch-os/apps",
-    installedRegistry: "app/watch-os/installed/registry.json",
+    appsRoot: "apps",
+    installedRegistry: "installed/registry.json",
     shellRoutes: {
-        "/": { json: "app/watch-os/apps/face/face.json", keepAlive: true },
-        "/launcher": { json: "app/watch-os/apps/launcher/launcher.json", keepAlive: true },
-        "/notifications": { json: "app/watch-os/apps/notifications/notifications.json", keepAlive: true }
+        "/": { json: "apps/face/face.json", keepAlive: true },
+        "/launcher": { json: "apps/launcher/launcher.json", keepAlive: true },
+        "/notifications": { json: "apps/notifications/notifications.json", keepAlive: true }
     },
     apps: [],
     routes: {},

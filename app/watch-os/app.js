@@ -42,8 +42,8 @@ var Watch = {
 Watch.launcherMode = "bubble";
 
 var clockTimer = null;
-var watchThemeDir = "app/watch-os/themes";
-var WATCH_CONFIG_PATH = "app/watch-os/config.json";
+var watchThemeDir = "themes";
+var WATCH_CONFIG_PATH = "config.json";
 var swipeAnimating = false;
 
 function loadWatchConfig() {
@@ -104,6 +104,7 @@ function initWatchApps() {
 }
 
 function onWatchLoad() {
+    YUI.log("onWatchLoad");
     var cfg = loadWatchConfig();
     Watch.launcherMode = cfg.launcherMode;
     initWatchThemes();
@@ -420,3 +421,11 @@ function applyWatchTheme() {
 function getWatchThemeLabel() {
     return Watch.themeMode === "dark" ? "暗色" : "亮色";
 }
+
+/* mquickjs：显式挂到全局，确保 C 侧 JS_GetPropertyStr 能取到生命周期回调 */
+(function (g) {
+    if (!g) return;
+    g.onWatchLoad = onWatchLoad;
+    g.onWatchShow = onWatchShow;
+})(typeof globalThis !== "undefined" ? globalThis : this);
+
