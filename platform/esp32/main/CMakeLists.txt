@@ -14,7 +14,7 @@ idf_component_register(
         "${YUI_ROOT}/src/backend"
         "${YUI_ROOT}/lib/stb"
         "${YUI_ROOT}/lib/cjson"
-    REQUIRES esp_lcd esp_lcd_touch esp_timer driver nvs_flash spi_flash
+    REQUIRES esp_lcd esp_lcd_touch esp_timer driver nvs_flash spi_flash spiffs
 )
 
 # 嵌入式模式：ytype.h 使用 YuiTexture/YuiFont，不依赖 SDL

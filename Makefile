@@ -117,9 +117,14 @@ esp32-font:
 	python scripts/subset_font.py --input app/assets/Roboto-Regular.ttf \
 		--output platform/esp32/build/font-subset.ttf --scan app/
 
-esp32-flash: esp32-build esp32-font
+# 生成 SPIFFS 镜像（app/watch-os + app/assets，供 spiffs 分区烧录 / QEMU 镜像合并）
+esp32-spiffs:
+	$(ESP32_IDF_WRAPPER) make-spiffs
+
+esp32-flash: esp32-build esp32-font esp32-spiffs
 	$(ESP32_IDF_WRAPPER) -p $(ESP32_PORT) flash
 	$(ESP32_IDF_WRAPPER) write-font
+	$(ESP32_IDF_WRAPPER) write-spiffs
 
 esp32-monitor:
 	$(ESP32_IDF_WRAPPER) -p $(ESP32_PORT) monitor
@@ -127,10 +132,10 @@ esp32-monitor:
 esp32-flash-monitor: esp32-flash
 	$(ESP32_IDF_WRAPPER) -p $(ESP32_PORT) monitor
 
-esp32-qemu: esp32-build esp32-font
+esp32-qemu: esp32-build esp32-font esp32-spiffs
 	$(ESP32_IDF_WRAPPER) qemu --graphics monitor
 
-esp32-qemu-headless: esp32-build esp32-font
+esp32-qemu-headless: esp32-build esp32-font esp32-spiffs
 	$(ESP32_IDF_WRAPPER) qemu monitor
 
 esp32-menuconfig:

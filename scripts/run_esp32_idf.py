@@ -96,7 +96,7 @@ def read_partition_table(env):
     return parts
 
 def merge_qemu_flash(env):
-    """Generate qemu_flash.bin from bootloader/app/partition binaries + font data."""
+    """Generate qemu_flash.bin (4MB) from bootloader/app/partition + font + spiffs."""
     cmd = [IDF_PYTHON, '-m', 'esptool', '--chip', 'esp32c3', 'merge_bin',
            '--output', str(BUILD_DIR / 'qemu_flash.bin'),
            '--fill-flash-size', '2MB', '--flash_mode', 'dio',
@@ -105,10 +105,11 @@ def merge_qemu_flash(env):
            '0x10000', str(BUILD_DIR / 'yui_esp32.bin'),
            '0x8000', str(BUILD_DIR / 'partition_table' / 'partition-table.bin')]
 
+    parts = read_partition_table(env)
+
     # Add font partition data if available (from build/font-subset.ttf)
     font_bin = BUILD_DIR / 'font-subset.ttf'
     if font_bin.exists():
-        parts = read_partition_table(env)
         if 'font' in parts:
             font_off, _ = parts['font']
             cmd += [f'0x{font_off:x}', str(font_bin)]
@@ -116,10 +117,83 @@ def merge_qemu_flash(env):
         else:
             print("WARN: no 'font' partition in partition table, skipping font merge", file=sys.stderr)
 
+    # Add SPIFFS partition data (watch-os apps) if available
+    spiffs_img = BUILD_DIR / 'watch-os.img'
+    if spiffs_img.exists():
+        if 'spiffs' in parts:
+            spiffs_off, _ = parts['spiffs']
+            cmd += [f'0x{spiffs_off:x}', str(spiffs_img)]
+            print(f"Merge SPIFFS '{spiffs_img.name}' at offset 0x{spiffs_off:x}", flush=True)
+        else:
+            print("WARN: no 'spiffs' partition in partition table, skipping spiffs merge", file=sys.stderr)
+
     result = subprocess.run(cmd, env=env, cwd=str(ESP32_DIR))
     if result.returncode != 0:
         print(f"ERROR: merge_bin failed (rc={result.returncode})", file=sys.stderr)
         sys.exit(result.returncode)
+
+def make_spiffs(env):
+    """Build SPIFFS image into build/watch-os.img.
+
+    Layout (SPIFFS root):
+      watch-os/  - watch-os app tree (apps, themes, store, ...)
+      lib/       - shared JS libs referenced via "../lib/.." (router.js, theme.js)
+
+    Constraints:
+      - SPIFFS obj name limit is 32 chars; deep paths are skipped with a warning.
+      - app/assets (large font files) is excluded - embedded fonts are served
+        from the 'font' partition, not from SPIFFS.
+    """
+    import shutil
+    staging = BUILD_DIR / 'spiffs-staging'
+    if staging.exists():
+        shutil.rmtree(staging)
+
+    # 1. watch-os app tree
+    src = WORKSPACE / 'app' / 'watch-os'
+    dst = staging / 'watch-os'
+    if not src.is_dir():
+        print("ERROR: no app/watch-os directory", file=sys.stderr)
+        sys.exit(1)
+    skipped = []
+    for dirpath, dirnames, filenames in os.walk(src):
+        rel_dir = os.path.relpath(dirpath, src).replace('\\', '/')
+        for fn in filenames:
+            img_path = f"watch-os/{rel_dir}/{fn}" if rel_dir != '.' else f"watch-os/{fn}"
+            if len(img_path) > 32:
+                skipped.append(img_path)
+                continue
+            full = Path(dirpath) / fn
+            out = staging / img_path.replace('/', os.sep)
+            out.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(full, out)
+    if skipped:
+        print(f"WARN: {len(skipped)} file(s) skipped (SPIFFS path > 32 chars):", flush=True)
+        for p in skipped:
+            print(f"  - {p}", flush=True)
+
+    # 2. shared lib files referenced by watch-os/app.json as "../lib/*"
+    lib_src = WORKSPACE / 'app' / 'lib'
+    lib_dst = staging / 'lib'
+    if lib_src.is_dir():
+        lib_dst.mkdir(parents=True, exist_ok=True)
+        for fn in ('router.js', 'theme.js'):
+            f = lib_src / fn
+            if f.is_file():
+                shutil.copy2(f, lib_dst / fn)
+
+    parts = read_partition_table(env)
+    spiffs_size = parts['spiffs'][1] if 'spiffs' in parts else 0x80000
+
+    out = BUILD_DIR / 'watch-os.img'
+    cmd = [IDF_PYTHON, str(IDF_PATH / 'components' / 'spiffs' / 'spiffsgen.py'),
+           str(spiffs_size), str(staging), str(out)]
+    print(f"Building SPIFFS image ({spiffs_size} bytes): app/watch-os + app/lib", flush=True)
+    result = subprocess.run(cmd, env=env, cwd=str(ESP32_DIR))
+    if result.returncode != 0:
+        print(f"ERROR: spiffsgen failed (rc={result.returncode})", file=sys.stderr)
+        sys.exit(result.returncode)
+    print(f"OK: {out} ({out.stat().st_size} bytes)", flush=True)
 
 def run_qemu_headless(env):
     """Manual QEMU launch + monitor (avoids idf.py background-spawn issue)."""
@@ -188,13 +262,41 @@ def run_write_font(env):
     result = subprocess.run(cmd, env=env, cwd=str(ESP32_DIR))
     sys.exit(result.returncode)
 
+def run_write_spiffs(env):
+    """Flash the SPIFFS image into the 'spiffs' data partition on real hardware."""
+    port = os.environ.get('ESP32_PORT', 'COM3')
+    img = BUILD_DIR / 'watch-os.img'
+    if not img.exists():
+        print("ERROR: watch-os.img not found, run 'make esp32-spiffs' first", file=sys.stderr)
+        sys.exit(1)
+    parts = read_partition_table(env)
+    if 'spiffs' not in parts:
+        print("ERROR: no 'spiffs' partition in partition table", file=sys.stderr)
+        sys.exit(1)
+    off, _ = parts['spiffs']
+    print(f"Flashing SPIFFS to {port} at offset 0x{off:x} ...", flush=True)
+    cmd = [IDF_PYTHON, '-m', 'esptool', '--chip', 'esp32c3', '-p', port,
+           'write_flash', f'0x{off:x}', str(img)]
+    result = subprocess.run(cmd, env=env, cwd=str(ESP32_DIR))
+    sys.exit(result.returncode)
+
 def main():
     args = sys.argv[1:]
     env = base_env()
 
+    # Build SPIFFS image from app/watch-os + app/assets
+    if len(args) >= 1 and args[0] == 'make-spiffs':
+        make_spiffs(env)
+        return
+
     # Write subset font into the font partition (real hardware)
     if len(args) >= 1 and args[0] == 'write-font':
         run_write_font(env)
+        return
+
+    # Write SPIFFS image into the spiffs partition (real hardware)
+    if len(args) >= 1 and args[0] == 'write-spiffs':
+        run_write_spiffs(env)
         return
 
     # Headless QEMU: `qemu monitor` (no --graphics)

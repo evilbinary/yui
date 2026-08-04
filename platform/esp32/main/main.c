@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "backend.h"
 #include "layer.h"
@@ -23,6 +24,7 @@
 #include "render.h"
 #include "popup_manager.h"
 #include "cJSON.h"
+#include "esp_spiffs.h"
 
 /* ESP32 后端扩展接口（backend_esp32.c 定义，不在通用 backend.h 中） */
 void backend_esp32_set_config(int width, int height, int spi_host,
@@ -45,13 +47,13 @@ esp_lcd_touch_handle_t yui_esp32_touch_create(esp_lcd_panel_io_handle_t io,
 /* 简单 UI 描述（也可改为从 Flash/SPIFFS 加载 JSON 文件） */
 static const char s_ui_json[] =
     "{"
-    "  \"type\": \"container\","
+    "  \"type\": \"View\","
     "  \"text\": \"YUI ESP32\","
     "  \"layout\": \"vertical\","
     "  \"rect\": {\"x\": 0, \"y\": 0, \"w\": 240, \"h\": 240},"
     "  \"style\": {\"bg-color\": \"#102040\", \"color\": \"#ffffff\", \"font-size\": 20},"
     "  \"children\": ["
-    "    {\"type\": \"label\", \"text\": \"Hello YUI\","
+    "    {\"type\": \"Label\", \"text\": \"Hello YUI\","
     "     \"style\": {\"color\": \"#ffd700\", \"font-size\": 24}}"
     "  ]"
     "}";
@@ -62,6 +64,24 @@ void app_main(void) {
     DFont* font;
 
     printf("YUI ESP32 starting...\n");
+
+    /* 0. 挂载 SPIFFS 分区（watch-os JS/JSON 等资源），并把当前目录切到挂载点，
+     *    使 yui 的相对路径（app/watch-os/app.json 等）直接解析到分区内。 */
+    esp_vfs_spiffs_conf_t spiffs_conf = {
+        .base_path = "/spiffs",
+        .partition_label = "spiffs",
+        .max_files = 16,
+        .format_if_mount_failed = false,
+    };
+    esp_err_t spiffs_err = esp_vfs_spiffs_register(&spiffs_conf);
+    if (spiffs_err != ESP_OK) {
+        printf("YUI: SPIFFS mount failed (%s), running without app resources\n",
+               esp_err_to_name(spiffs_err));
+    } else {
+        if (chdir("/spiffs") != 0) {
+            printf("YUI: chdir /spiffs failed\n");
+        }
+    }
 
     /* 1. 板级配置：分辨率/SPI 主机/CS/DC/RST/BL/SPI 时钟 */
     backend_esp32_set_config(240, 240, 2, 5, 16, -1, -1, 40 * 1000 * 1000);
