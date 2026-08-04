@@ -73,6 +73,8 @@ static void layer_lifecycle_dispatch(Layer* layer, const char* event_type) {
         printf("LayerLifecycle: %s.%s (no JS dispatch)\n", layer->id, event_type);
         return;
     }
+    printf("LayerLifecycle: dispatch %s.%s\n",
+           layer->id[0] ? layer->id : "(anon)", event_type);
     g_lifecycle_dispatch(layer, event_type);
 }
 

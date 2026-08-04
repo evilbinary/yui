@@ -322,12 +322,15 @@ def configure_esp32_toolchain(target=None):
 
     cc = None
     bin_dir = None
-    # 优先在 tools_path 搜索
+    # 优先在 tools_path 搜索。必须匹配精确的 gcc，不能用 gcc*：
+    # 否则会误选 gcc-ar / gcc-nm，导致编译变成 ar 报「不适用的选项 -- /」。
     if tools_path:
         for pfx in (prefix, prefix_legacy if not riscv else prefix):
-            pattern = os.path.join(tools_path, "**", "bin", pfx + "gcc*")
-            matches = [m for m in glob.glob(pattern, recursive=True)
-                       if not m.endswith((".py", ".sh"))]
+            names = (pfx + "gcc", pfx + "gcc.exe")
+            matches = []
+            for name in names:
+                pattern = os.path.join(tools_path, "**", "bin", name)
+                matches.extend(glob.glob(pattern, recursive=True))
             if matches:
                 cc = matches[0]
                 bin_dir = os.path.dirname(cc)
@@ -348,7 +351,10 @@ def configure_esp32_toolchain(target=None):
         print("warning: gcc toolchain not found for esp32 build")
     elif cc:
         tool["cc"] = cc
-        tool["cxx"] = cc.replace("gcc", "g++") if "gcc" in cc else cc.replace("GCC", "g++")
+        # 只替换工具名尾缀，避免把路径中的 "gcc" 误伤（如 .../gcc-*/）
+        base = os.path.basename(cc)
+        cxx_base = base.replace("gcc", "g++").replace("GCC", "g++")
+        tool["cxx"] = os.path.join(bin_dir, cxx_base) if bin_dir else cxx_base
         tool["ld"] = cc
         tool["ar"] = os.path.join(bin_dir, prefix + "ar") if bin_dir else (prefix + "ar")
     else:
@@ -359,12 +365,20 @@ def configure_esp32_toolchain(target=None):
     if idf_path and not os.path.isdir(os.path.join(idf_path, "components")):
         idf_path = ""  # IDF_PATH 无效，回退到搜索
     if not idf_path:
-        for root in (r"E:\soft\Espressif\frameworks\esp-idf-v5.5.5",
-                     r"E:\soft\Espressif\frameworks\esp-idf",
-                     r"E:\soft\Espressif\framework\esp-idf-v5.5.5",
-                     r"E:\soft\Espressif\framework\esp-idf",
-                     r"E:\soft\Espressif\esp-idf",
-                     os.path.expanduser("~/esp/esp-idf")):
+        candidates = [
+            r"E:\soft\Espressif\frameworks\esp-idf-v5.5.5",
+            r"E:\soft\Espressif\frameworks\esp-idf",
+            r"E:\soft\Espressif\framework\esp-idf-v5.5.5",
+            r"E:\soft\Espressif\framework\esp-idf",
+            r"E:\soft\Espressif\esp-idf",
+            os.path.expanduser("~/esp/esp-idf"),
+        ]
+        # EIM / Linux: ~/.espressif/v*/esp-idf
+        candidates.extend(sorted(
+            glob.glob(os.path.expanduser("~/.espressif/v*/esp-idf")),
+            reverse=True,
+        ))
+        for root in candidates:
             if os.path.isdir(os.path.join(root, "components")):
                 idf_path = root
                 break
@@ -489,7 +503,8 @@ def add_flags():
     if platform.system()=='Windows':
         checkmem=False
         
-    if checkmem and not is_plat("stm32") and get_plat() not in ("android", "ios", "em", "emscripten", "em-lvgl"):
+    if (checkmem and not is_plat("stm32") and not is_plat("esp32")
+            and get_plat() not in ("android", "ios", "em", "emscripten", "em-lvgl")):
         tool=get_toolchain_node()
         tool['ld']='gcc'
         add_cflags(

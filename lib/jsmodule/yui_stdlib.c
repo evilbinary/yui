@@ -808,8 +808,12 @@ static JSValue js_yui_themeLoad(JSContext *ctx, JSValue *this_val, int argc, JSV
         // 是JSON字符串，从JSON加载
         theme = theme_manager_load_theme_from_json(theme_input);
     } else {
-        // 是文件路径，从文件加载
-        theme = theme_manager_load_theme(theme_input);
+        /* 走 js_module_read_file，与 YUI.readFile 相同的 fs_root/base_path 解析 */
+        char* content = js_module_read_file(theme_input);
+        if (content) {
+            theme = theme_manager_load_theme_from_json(content);
+            free(content);
+        }
     }
     
     if (theme) {

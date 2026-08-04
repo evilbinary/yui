@@ -207,6 +207,8 @@ int js_module_call_event(const char* event_name, Layer* layer)
     int argc = is_gesture ? 2 : 1;
 
     if (JS_StackCheck(g_js_ctx, (uint32_t)(argc + 2))) {
+        JS_FreeValue(g_js_ctx, global_obj);
+        JS_FreeValue(g_js_ctx, func);
         return -1;
     }
 
@@ -220,6 +222,8 @@ int js_module_call_event(const char* event_name, Layer* layer)
     JS_PushArg(g_js_ctx, func);
     JS_PushArg(g_js_ctx, JS_NULL);
     JSValue result = JS_Call(g_js_ctx, argc);
+
+    JS_FreeValue(g_js_ctx, global_obj);
 
     if (JS_IsException(result)) {
         JSValue exc = JS_GetException(g_js_ctx);

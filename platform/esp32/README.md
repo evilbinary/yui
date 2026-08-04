@@ -26,9 +26,11 @@ idf.py -p COM3 flash monitor
 
 | API | 参数 | 默认 |
 |-----|------|------|
-| `backend_esp32_set_config(w,h,spi_host,cs,dc,rst,bl,freq)` | 分辨率/SPI/引脚 | 240x240, FSPI_HOST(2), cs=5, dc=16 |
-| `backend_esp32_set_spi_pins(mosi,sclk)` | SPI 总线 | mosi=23, sclk=18 |
-| `backend_esp32_set_touch(i2c_host,sda,scl,addr,int_pin)` | 触摸 | I2C0, sda=4, scl=5, addr=0x15, int=6 |
+| `backend_esp32_set_config(w,h,spi_host,cs,dc,rst,bl,freq)` | 分辨率/SPI/引脚 | 240x240, **SPI2_HOST(1)**, cs=7, dc=2（C3） |
+| `backend_esp32_set_spi_pins(mosi,sclk)` | SPI 总线 | mosi=6, sclk=4（C3；勿用 GPIO>21） |
+| `backend_esp32_set_touch(i2c_host,sda,scl,addr,int_pin)` | 触摸 | I2C0, sda=8, scl=9, addr=0x15（与 LCD CS 错开） |
+
+> ESP32-C3 只有 `SPI2_HOST`（值为 1）。旧默认 `spi_host=2` / `MOSI=23` 会报 `invalid host_id`。
 
 当前内置驱动：ST7789（SPI）、CST816S（I2C）。其他屏/触摸需替换 `backend_esp32.c` 中的 `esp32_lcd_init` / `esp32_touch_init`。
 
