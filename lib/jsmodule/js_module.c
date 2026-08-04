@@ -15,12 +15,17 @@
 
 // Layer 结构的最小定义（只使用我们需要的字段）
 #define MAX_TEXT 256
+#ifndef MAX_PATH
 #define MAX_PATH 1024
+#endif
 
 // 全局 JS 上下文
 static JSContext* g_js_ctx = NULL;
 static uint8_t* g_js_mem = NULL;
-static size_t g_js_mem_size = 256 * 1024; // 256KB 内存
+#ifndef JS_MEM_POOL_SIZE
+#define JS_MEM_POOL_SIZE (64 * 1024)
+#endif
+static size_t g_js_mem_size = JS_MEM_POOL_SIZE;
 
 // 全局 UI 根图层
 extern struct Layer* g_layer_root;
@@ -40,9 +45,17 @@ int js_module_init(void)
 {
     printf("JS: Initializing JavaScript engine...\n");
 
+#if defined(ESP_PLATFORM)
+    extern size_t heap_caps_get_free_size(int caps);
+    extern size_t heap_caps_get_largest_free_block(int caps);
+    printf("JS: heap free=%u largest=%u\n",
+           (unsigned)heap_caps_get_free_size(MALLOC_CAP_8BIT),
+           (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
+#endif
+
     g_js_mem = malloc(g_js_mem_size);
     if (!g_js_mem) {
-        fprintf(stderr, "JS: Failed to allocate memory\n");
+        fprintf(stderr, "JS: Failed to allocate memory (%u bytes)\n", (unsigned)g_js_mem_size);
         return -1;
     }
 

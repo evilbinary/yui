@@ -43,6 +43,14 @@ extern ssize_t _recvfrom(int socket, void *buffer, size_t length, int flags, str
 extern int _socketpair(int domain, int type, int protocol, int socket_vector[2]);
 extern in_addr_t _inet_addr(const char* strptr);
 extern uint32_t _ntohl(uint32_t netlong);
+extern uint16_t _htons(uint16_t v);
+extern uint32_t _htonl(uint32_t v);
+extern uint16_t _ntohs(uint16_t v);
+extern char* _inet_ntoa(struct in_addr in);
+extern int _getaddrinfo(const char* nodename, const char* servname,
+                        const struct addrinfo* hints, struct addrinfo** res);
+extern const char* _gai_strerror(int errcode);
+extern void _freeaddrinfo(struct addrinfo* res);
 
 // 类ID定义
 #define JS_CLASS_SOCKET (JS_CLASS_USER + 1)
@@ -160,10 +168,10 @@ static JSValue js_socket_connect(JSContext* ctx, JSValue* this_val, int argc,
   
   snprintf(port_str, sizeof(port_str), "%d", port);
   
-  int gai_res = getaddrinfo(host, port_str, &hints, &res_addrs);
+  int gai_res = _getaddrinfo(host, port_str, &hints, &res_addrs);
   if (gai_res != 0) {
     // 解析失败，输出错误信息
-    printf("JS(Socket): getaddrinfo failed for host '%s': %s\n", host, gai_strerror(gai_res));
+    printf("JS(Socket): getaddrinfo failed for host '%s': %s\n", host, _gai_strerror(gai_res));
     return JS_NewInt32(ctx, -1);
   }
   
@@ -224,7 +232,7 @@ static JSValue js_socket_connect(JSContext* ctx, JSValue* this_val, int argc,
   }
   
   // 释放地址信息链表
-  freeaddrinfo(res_addrs);
+  _freeaddrinfo(res_addrs);
 
   return JS_NewInt32(ctx, res);
 }
@@ -258,7 +266,7 @@ static JSValue js_socket_bind(JSContext* ctx, JSValue* this_val, int argc,
   struct sockaddr_in addr;
   memset(&addr, 0, sizeof(addr));
   addr.sin_family = AF_INET;
-  addr.sin_port = htons(port);
+  addr.sin_port = _htons(port);
   if (host && host[0] != 0) addr.sin_addr.s_addr = _inet_addr(host);
 
   res = _bind(fd, (struct sockaddr*)&addr, sizeof(struct sockaddr));
@@ -323,7 +331,7 @@ static JSValue js_socket_getsockname(JSContext* ctx, JSValue* this_val,
     // 返回包含地址和端口的对象
     JSValue obj = JS_NewObject(ctx);
     JS_SetPropertyStr(ctx, obj, "ip",
-                      JS_NewString(ctx, inet_ntoa(addr.sin_addr)));
+                      JS_NewString(ctx, _inet_ntoa(addr.sin_addr)));
     JS_SetPropertyStr(ctx, obj, "port", JS_NewInt32(ctx, _ntohl(addr.sin_port)));
 
     return obj;
@@ -352,7 +360,7 @@ static JSValue js_socket_getpeername(JSContext* ctx, JSValue* this_val,
     // 返回包含地址和端口的对象
     JSValue obj = JS_NewObject(ctx);
     JS_SetPropertyStr(ctx, obj, "ip",
-                      JS_NewString(ctx, inet_ntoa(addr.sin_addr)));
+                      JS_NewString(ctx, _inet_ntoa(addr.sin_addr)));
     JS_SetPropertyStr(ctx, obj, "port", JS_NewInt32(ctx, _ntohl(addr.sin_port)));
 
     return obj;
@@ -569,7 +577,7 @@ static JSValue js_socket_sendto(JSContext* ctx, JSValue* this_val, int argc,
   memset(&addr, 0, sizeof(addr));
   addr.sin_family = AF_INET;
   addr.sin_addr.s_addr = _inet_addr(host);
-  addr.sin_port = htons(port);
+  addr.sin_port = _htons(port);
 
   int result = _sendto(fd, message, msg_len, flags, (struct sockaddr*)&addr,
                       sizeof(struct sockaddr));
@@ -615,9 +623,9 @@ static JSValue js_socket_recvfrom(JSContext* ctx, JSValue* this_val, int argc,
     JSValue obj = JS_NewObject(ctx);
     JS_SetPropertyStr(ctx, obj, "data", JS_NewStringLen(ctx, buffer, result));
     JS_SetPropertyStr(ctx, obj, "ip",
-                      JS_NewString(ctx, inet_ntoa(from_addr.sin_addr)));
+                      JS_NewString(ctx, _inet_ntoa(from_addr.sin_addr)));
     JS_SetPropertyStr(ctx, obj, "port",
-                      JS_NewInt32(ctx, ntohs(from_addr.sin_port)));
+                      JS_NewInt32(ctx, _ntohs(from_addr.sin_port)));
 
     free(buffer);
     return obj;
@@ -686,8 +694,8 @@ static JSValue js_socket_make_sockaddr_in(JSContext* ctx, JSValue* this_val,
 
   memset(addr_in, 0, sizeof(struct sockaddr_in));
   addr_in->sin_family = family;
-  addr_in->sin_addr.s_addr = htonl(addr);
-  addr_in->sin_port = htons(port);
+  addr_in->sin_addr.s_addr = _htonl(addr);
+  addr_in->sin_port = _htons(port);
 
   // 在JS中返回这个结构的指针表示
   JSValue obj = JS_NewObject(ctx);

@@ -14,7 +14,9 @@
 #define YUI_BACKEND_LVGL (1u << 1)
 #define YUI_BACKEND_ALL  (YUI_BACKEND_SDL | YUI_BACKEND_LVGL)
 
+#ifndef YUI_MAX_TYPES
 #define YUI_MAX_TYPES 128
+#endif
 
 typedef void* (*YuiComponentCreateFn)(Layer* layer, cJSON* json);
 

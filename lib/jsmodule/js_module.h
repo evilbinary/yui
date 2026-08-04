@@ -17,6 +17,9 @@ typedef struct cJSON cJSON;
 // 初始化 JS 引擎
 int js_module_init(void);
 
+// 设置文件系统根前缀（相对路径 ../ 上跳不越过此根，默认 "/"）
+void js_module_set_fs_root(const char* root);
+
 // 清理 JS 引擎
 void js_module_cleanup(void);
 
@@ -33,6 +36,11 @@ void js_module_register_api(void);
 // append=0: 清空事件表、初始化生命周期树（应用启动）
 // append=1: 仅追加 JS 与事件，不清空、不触发 onLoad（动态页面）
 int js_module_load_from_json(cJSON* root_json, const char* json_file_path, int append);
+
+// 两阶段加载（嵌入式堆紧张时使用）：阶段1 在 cJSON 树存活时收集 JS 路径 + 注册事件
+int js_module_collect_from_json(cJSON* root_json, const char* json_file_path, int append);
+// 阶段2 在 JS 引擎初始化后，加载阶段1收集的文件
+int js_module_load_collected(void);
 
 // 应用退出：根 Layer onHide/onUnload
 void js_module_shutdown(void);

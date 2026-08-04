@@ -21,7 +21,9 @@
 #include "stb_truetype.h"
 
 #define EMBED_TEXT_CACHE_KEY_MAX 127   /* 文本 key 最大长度（超长不缓存） */
+#ifndef EMBED_TEXT_CACHE_DEFAULT
 #define EMBED_TEXT_CACHE_DEFAULT 64    /* 默认缓存槽数 */
+#endif
 
 typedef struct {
     unsigned char* data;     /* ttf 文件数据（可能指向 Flash） */

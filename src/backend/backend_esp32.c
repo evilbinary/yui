@@ -26,10 +26,14 @@
 #include "esp_lcd_panel_vendor.h"
 #include "esp_lcd_panel_ops.h"
 #include "esp_lcd_touch.h"
+#ifdef YUI_ESP32_QEMU
+#include "esp_lcd_qemu_rgb.h"
+#endif
 #include "driver/spi_master.h"
 #include "driver/gpio.h"
 #include "driver/i2c_master.h"
 #include "esp_partition.h"
+#include "esp_heap_caps.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #endif
@@ -93,31 +97,43 @@ void backend_esp32_set_touch(int i2c_host, int sda, int scl, int addr, int int_p
     s_cfg.touch_int = int_pin;
 }
 
+/* 0 = 仅软件 framebuffer（QEMU / 无屏）；1 = 初始化 SPI LCD + 触摸 */
+static int s_hw_display = 1;
+void backend_esp32_set_hw_display(int on) { s_hw_display = on ? 1 : 0; }
+int backend_esp32_get_hw_display(void) { return s_hw_display; }
+
 #ifdef ESP_PLATFORM
 static esp_partition_mmap_handle_t s_font_mmap_handle;
+/* 缓存已映射的字体分区数据，避免每次 load 重新 mmap（重复 mmap 会累积句柄） */
+static const void* s_font_mapped = NULL;
+static size_t s_font_mapped_size = 0;
 #endif
 
 /* 从 SPI Flash 分区映射 TTF（不占 RAM），适合子集化小字体。
  * partitions.csv 中需定义同名 data 分区，烧录子集化 TTF 到该分区。 */
 DFont* backend_esp32_load_font_from_flash(const char* partition_label, int size) {
 #ifdef ESP_PLATFORM
-    const esp_partition_t* part;
-    const void* mapped;
-    esp_err_t err;
     if (!partition_label) return NULL;
-    part = esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_ANY, partition_label);
-    if (!part) {
-        ESP_LOGE(YUI_E32_TAG, "font partition '%s' not found", partition_label);
-        return NULL;
+    if (!s_font_mapped) {
+        const esp_partition_t* part;
+        const void* mapped;
+        esp_err_t err;
+        part = esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_ANY, partition_label);
+        if (!part) {
+            ESP_LOGE(YUI_E32_TAG, "font partition '%s' not found", partition_label);
+            return NULL;
+        }
+        err = esp_partition_mmap(part, 0, part->size, ESP_PARTITION_MMAP_DATA,
+                                 &mapped, &s_font_mmap_handle);
+        if (err != ESP_OK) {
+            ESP_LOGE(YUI_E32_TAG, "font mmap failed: %s", esp_err_to_name(err));
+            return NULL;
+        }
+        /* mapped 指向 Flash，embed_font_load_from_memory 不复制、不释放 */
+        s_font_mapped = mapped;
+        s_font_mapped_size = part->size;
     }
-    err = esp_partition_mmap(part, 0, part->size, ESP_PARTITION_MMAP_DATA,
-                             &mapped, &s_font_mmap_handle);
-    if (err != ESP_OK) {
-        ESP_LOGE(YUI_E32_TAG, "font mmap failed: %s", esp_err_to_name(err));
-        return NULL;
-    }
-    /* mapped 指向 Flash，embed_font_load_from_memory 不复制、不释放 */
-    return embed_font_load_from_memory(mapped, part->size, size, "normal");
+    return embed_font_load_from_memory(s_font_mapped, s_font_mapped_size, size, "normal");
 #else
     (void)partition_label; (void)size;
     return NULL;
@@ -125,6 +141,24 @@ DFont* backend_esp32_load_font_from_flash(const char* partition_label, int size)
 }
 
 /* ====================== Framebuffer ====================== */
+/* 编译期宏：是否启用 LCD 软件 framebuffer（RGB565，240x240 约 115KB）。
+ *   - 默认 0（不启用）：不分配 s_fb，backend_render_* 不跳过，而是经
+ *     direct_draw_point 逐点直写 LCD；无面板（QEMU/headless）时像素落点
+ *     为空操作，但渲染调用链（组件渲染/字体光栅化/逐像素循环）完整执行。
+ *     RAM 占用最小，适合真实 LCD 硬件与内存紧张场景。
+ *   - 定义 YUI_ESP32_LCD_BUFFER=1 时分配 s_fb，backend_render_* 写入
+ *     framebuffer，经脏矩形批量推送（esp32_flush_dirty）。
+ *   - QEMU 构建（YUI_ESP32_QEMU）强制为 1，但 s_fb 不 calloc——指向虚拟
+ *     RGB 面板的专属 framebuffer（不占内部 SRAM），见 backend_init。 */
+#ifndef YUI_ESP32_LCD_BUFFER
+#define YUI_ESP32_LCD_BUFFER 0
+#endif
+
+/* QEMU 模式：不强制 framebuffer 模式，保持宏语义（默认 0 = 写点）。
+ * 区别只在 direct_draw_point 的落点实现：QEMU 下写专属 framebuffer
+ * （纯内存写，快），真实 LCD 下逐点 esp_lcd_panel_draw_bitmap。
+ * 每帧在 backend_render_present 做一次整帧推送（带超时保护）。 */
+
 static uint16_t* s_fb = NULL;       /* RGB565 */
 static int s_fb_w = 0, s_fb_h = 0;
 
@@ -212,6 +246,33 @@ static int esp32_lcd_init(void) {
     esp_lcd_panel_dev_config_t panel_config;
     esp_err_t ret;
 
+#ifdef YUI_ESP32_QEMU
+    /* QEMU 虚拟 RGB 面板：专属 framebuffer（不占内部 RAM），由
+     * QEMU -display sdl 窗口实时扫描输出。分辨率与 s_cfg 一致（240x240）。
+     * direct_draw_point / esp32_flush_dirty 经 esp_lcd_panel_draw_bitmap
+     * 把 YUI 渲染像素写入该虚拟屏。 */
+    {
+        esp_lcd_rgb_qemu_config_t qcfg = {
+            .width = s_cfg.width,
+            .height = s_cfg.height,
+            .bpp = RGB_QEMU_BPP_16,
+        };
+        ret = esp_lcd_new_rgb_qemu(&qcfg, &s_panel);
+        if (ret != ESP_OK) {
+            ESP_LOGE(YUI_E32_TAG, "esp_lcd_new_rgb_qemu failed (%s)", esp_err_to_name(ret));
+            return -1;
+        }
+        esp_lcd_panel_reset(s_panel);
+        esp_lcd_panel_init(s_panel);
+        printf("YUI: QEMU virtual RGB panel %dx%d RGB565 ready\n", s_cfg.width, s_cfg.height);
+    }
+    return 0;
+#else
+    if (!s_hw_display) {
+        ESP_LOGI(YUI_E32_TAG, "hw display off: software framebuffer only");
+        return 0;
+    }
+
     memset(&buscfg, 0, sizeof(buscfg));
     buscfg.mosi_io_num = s_cfg.mosi;
     buscfg.miso_io_num = -1;
@@ -222,8 +283,8 @@ static int esp32_lcd_init(void) {
 
     ret = spi_bus_initialize((spi_host_device_t)s_cfg.spi_host, &buscfg, SPI_DMA_CH_AUTO);
     if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {
-        ESP_LOGE(YUI_E32_TAG, "spi_bus_initialize failed: %s", esp_err_to_name(ret));
-        return -1;
+        ESP_LOGW(YUI_E32_TAG, "spi_bus_initialize failed (%s), running in headless mode", esp_err_to_name(ret));
+        return 0;  /* QEMU 或无 SPI 硬件时降级为虚拟 framebuffer */
     }
 
     memset(&io_config, 0, sizeof(io_config));
@@ -237,8 +298,8 @@ static int esp32_lcd_init(void) {
 
     ret = esp_lcd_new_panel_io_spi((esp_lcd_spi_bus_handle_t)s_cfg.spi_host, &io_config, &io_handle);
     if (ret != ESP_OK) {
-        ESP_LOGE(YUI_E32_TAG, "esp_lcd_new_panel_io_spi failed: %s", esp_err_to_name(ret));
-        return -1;
+        ESP_LOGW(YUI_E32_TAG, "esp_lcd_new_panel_io_spi failed (%s), running in headless mode", esp_err_to_name(ret));
+        return 0;  /* QEMU 或无 LCD 硬件时降级为虚拟 framebuffer */
     }
 
     memset(&panel_config, 0, sizeof(panel_config));
@@ -248,8 +309,8 @@ static int esp32_lcd_init(void) {
 
     ret = esp_lcd_new_panel_st7789(io_handle, &panel_config, &s_panel);
     if (ret != ESP_OK) {
-        ESP_LOGE(YUI_E32_TAG, "esp_lcd_new_panel_st7789 failed: %s", esp_err_to_name(ret));
-        return -1;
+        ESP_LOGW(YUI_E32_TAG, "esp_lcd_new_panel_st7789 failed (%s), running in headless mode", esp_err_to_name(ret));
+        return 0;  /* QEMU 或无 ST7789 时降级为虚拟 framebuffer */
     }
 
     esp_lcd_panel_reset(s_panel);
@@ -262,6 +323,7 @@ static int esp32_lcd_init(void) {
         gpio_set_level((gpio_num_t)s_cfg.bl, 1);
     }
     return 0;
+#endif /* YUI_ESP32_QEMU (else 分支：真实 SPI LCD) */
 }
 
 /* 触摸芯片创建钩子（弱符号，默认无触摸）。
@@ -277,6 +339,7 @@ esp_lcd_touch_handle_t yui_esp32_touch_create(esp_lcd_panel_io_handle_t io,
 static int esp32_touch_init(void) {
     esp_lcd_touch_config_t tcfg;
     esp_lcd_touch_handle_t t = NULL;
+    if (!s_hw_display) return 0;
     if (s_cfg.touch_i2c_host < 0 || s_cfg.touch_sda < 0) return 0;
 
     /* I2C 总线（IDF 5.x 新驱动） */
@@ -330,12 +393,56 @@ static int esp32_touch_init(void) {
 }
 
 static void esp32_flush_dirty(void) {
-    if (!s_has_dirty || !s_panel) return;
+    if (!s_has_dirty || !s_panel || !s_fb) return;
     esp_lcd_panel_draw_bitmap(s_panel, s_dirty.x, s_dirty.y,
                               s_dirty.x + s_dirty.w, s_dirty.y + s_dirty.h,
                               s_fb + s_dirty.y * s_fb_w + s_dirty.x);
     dirty_reset();
 }
+
+#ifdef YUI_ESP32_QEMU
+/* QEMU 虚拟 RGB 面板寄存器布局（同 esp_lcd_qemu_rgb 组件的私有定义，
+ * 这里本地复制一份以做带超时的推送，避免组件内无限忙等卡死）：
+ *   0x00 version  0x04 size(高16=height,低16=width)
+ *   0x08 update_from(高16=y,低16=x)  0x0c update_to
+ *   0x10 update_content(像素源地址)  0x14 update_st(bit0=ena)
+ *   0x18 bpp */
+typedef volatile struct {
+    uint32_t version;
+    uint32_t size;
+    uint32_t update_from;
+    uint32_t update_to;
+    uint32_t update_content;
+    uint32_t update_st;
+    uint32_t bpp;
+} yui_qemu_rgb_dev_t;
+#define YUI_QEMU_RGB_DEV ((volatile yui_qemu_rgb_dev_t*)0x21000000)
+
+/* 整帧（或脏矩形）推送到虚拟屏。组件默认实现在 ena 上无限忙等，
+ * 设备不复位时会把整个 guest 卡死；这里加超时保护并主动清零。 */
+static void esp32_qemu_push_rect(int x0, int y0, int x1, int y1) {
+    volatile yui_qemu_rgb_dev_t* dev = YUI_QEMU_RGB_DEV;
+    int i;
+    if (!s_fb) return;
+    /* 设备尚在处理上一次推送（-nographic 无显示后端时 ena 永远不清）：
+     * 跳过本次，避免每帧 100k 次轮询拖慢渲染。 */
+    if (dev->update_st == 1) return;
+    dev->update_from = (uint32_t)(((uint32_t)y0 << 16) | (uint32_t)(x0 & 0xffff));
+    dev->update_to = (uint32_t)(((uint32_t)y1 << 16) | (uint32_t)(x1 & 0xffff));
+    dev->update_content = (uint32_t)(uintptr_t)(s_fb + (size_t)y0 * s_fb_w + x0);
+    dev->update_st = 1;
+    for (i = 0; i < 100000 && dev->update_st == 1; i++) {
+    }
+    if (dev->update_st == 1) {
+        static int warned = 0;
+        dev->update_st = 0;
+        if (!warned) {
+            warned = 1;
+            printf("YUI: qemu update busy timeout (display backend idle?)\n");
+        }
+    }
+}
+#endif /* YUI_ESP32_QEMU */
 
 static void esp32_touch_poll(PointerEvent* ev, int* has_event) {
     uint16_t tx[5], ty[5];
@@ -402,12 +509,46 @@ int backend_init(void) {
 
     s_fb_w = s_cfg.width;
     s_fb_h = s_cfg.height;
+
+#ifdef YUI_ESP32_QEMU
+    /* QEMU：先建虚拟 RGB 面板，再取专属 framebuffer（0x20000000，
+     * QEMU 提供的外部 RAM，不占内部 SRAM）。两种模式共用此指针：
+     *   - buffer=0（默认）：direct_draw_point 写 s_fb（纯内存写），
+     *     每帧在 present 时整帧推送；
+     *   - buffer=1：渲染路径直接写 s_fb，脏矩形推送。 */
+    if (esp32_lcd_init() != 0) {
+        printf("YUI: esp32_lcd_init failed\n");
+        return -1;
+    }
+    esp_lcd_rgb_qemu_get_frame_buffer(s_panel, (void**)&s_fb);
+    if (!s_fb) {
+        printf("YUI: esp_lcd_rgb_qemu_get_frame_buffer failed\n");
+        return -1;
+    }
+    printf("YUI: QEMU framebuffer %p (%ux%u RGB565, dedicated RAM)\n",
+           (void*)s_fb, s_fb_w, s_fb_h);
+#else
+#if YUI_ESP32_LCD_BUFFER
     s_fb = (uint16_t*)calloc((size_t)s_fb_w * s_fb_h, 2);
-    if (!s_fb) return -1;
+    if (!s_fb) {
+#ifdef ESP_PLATFORM
+        printf("YUI: framebuffer calloc %ux%ux2=%u bytes failed, "
+               "free=%u largest=%u\n",
+               s_fb_w, s_fb_h, (unsigned)((size_t)s_fb_w * s_fb_h * 2),
+               (unsigned)heap_caps_get_free_size(MALLOC_CAP_8BIT),
+               (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
+#endif
+        return -1;
+    }
+#else
+    s_fb = NULL;
+    printf("YUI: LCD buffer disabled (YUI_ESP32_LCD_BUFFER=0), direct draw\n");
+#endif
 
 #ifdef ESP_PLATFORM
     esp32_lcd_init();
     esp32_touch_init();
+#endif
 #endif
     return 0;
 }
@@ -418,7 +559,12 @@ void backend_quit(void) {
         esp_lcd_panel_disp_on_off(s_panel, false);
     }
 #endif
+#ifdef YUI_ESP32_QEMU
+    /* QEMU 专属 framebuffer（0x20000000）是虚拟面板设备内存，非堆分配，不能 free */
+    s_fb = NULL;
+#else
     if (s_fb) { free(s_fb); s_fb = NULL; }
+#endif
 }
 
 /* ====================== 纹理 ====================== */
@@ -454,16 +600,40 @@ void backend_render_text_destroy(Texture* texture) {
 }
 
 /* ====================== 基础绘制 ====================== */
+/* 无 framebuffer 模式（YUI_ESP32_LCD_BUFFER=0）的像素落点：
+ *   - QEMU：写虚拟 RGB 面板的专属 framebuffer（纯内存写，快），
+ *     每帧在 present 时整帧推送一次；
+ *   - 真实 LCD：逐点 esp_lcd_panel_draw_bitmap 1x1 直写；
+ *   - 无面板：空操作 —— 渲染调用链照常执行。 */
+static void direct_draw_point(int x, int y, Color c)
+{
+#if YUI_ESP32_LCD_BUFFER
+    (void)x; (void)y; (void)c;
+#elif defined(YUI_ESP32_QEMU)
+    if (!s_fb || x < 0 || y < 0 || x >= s_fb_w || y >= s_fb_h) return;
+    s_fb[y * s_fb_w + x] = color_to_rgb565(c);
+#elif defined(ESP_PLATFORM)
+    uint16_t px;
+    if (!s_panel) return;
+    px = color_to_rgb565(c);
+    esp_lcd_panel_draw_bitmap(s_panel, x, y, x + 1, y + 1, &px);
+#else
+    (void)x; (void)y; (void)c;
+#endif
+}
+
 void backend_render_fill_rect(Rect* rect, Color color) {
     Rect clip, r;
-    int x, y, x1, y1;
-    uint16_t px;
-    if (!s_fb || !rect) return;
+    int x, y;
+    if (!rect) return;
     clip_get_current(&clip);
     r = *rect;
     clip_intersect(&r, &r, &clip);
     if (r.w <= 0 || r.h <= 0) return;
 
+#if YUI_ESP32_LCD_BUFFER
+    uint16_t px;
+    if (!s_fb) return;
     px = color_to_rgb565(color);
     /* alpha 混合 */
     if (color.a == 255) {
@@ -485,6 +655,15 @@ void backend_render_fill_rect(Rect* rect, Color color) {
         }
     }
     dirty_add(r.x, r.y, r.w, r.h);
+#else
+    /* 直接写屏：逐点绘制（无混合读回，alpha=0 跳过，其余按原色直写） */
+    if (color.a == 0) return;
+    for (y = r.y; y < r.y + r.h; y++) {
+        for (x = r.x; x < r.x + r.w; x++) {
+            direct_draw_point(x, y, color);
+        }
+    }
+#endif
 }
 
 void backend_render_rect(Rect* rect, Color color) {
@@ -509,7 +688,6 @@ void backend_render_fill_rect_color(Rect* rect, unsigned char r, unsigned char g
 
 void backend_render_clear_color(unsigned char r, unsigned char g, unsigned char b, unsigned char a) {
     Rect full;
-    if (!s_fb) return;
     full.x = 0; full.y = 0; full.w = s_fb_w; full.h = s_fb_h;
     backend_render_fill_rect(&full, (Color){r, g, b, a});
 }
@@ -517,13 +695,16 @@ void backend_render_clear_color(unsigned char r, unsigned char g, unsigned char 
 void backend_render_line(int x1, int y1, int x2, int y2, Color color) {
     int dx, dy, sx, sy, err, e2;
     Rect clip;
+#if YUI_ESP32_LCD_BUFFER
     if (!s_fb) return;
+#endif
     clip_get_current(&clip);
     dx = abs(x2 - x1); dy = abs(y2 - y1);
     sx = x1 < x2 ? 1 : -1; sy = y1 < y2 ? 1 : -1;
     err = dx - dy;
     while (1) {
         if (x1 >= clip.x && x1 < clip.x + clip.w && y1 >= clip.y && y1 < clip.y + clip.h) {
+#if YUI_ESP32_LCD_BUFFER
             if (color.a == 255) {
                 s_fb[y1 * s_fb_w + x1] = color_to_rgb565(color);
             } else if (color.a > 0) {
@@ -534,13 +715,18 @@ void backend_render_line(int x1, int y1, int x2, int y2, Color color) {
                 d.b = (unsigned char)((d.b * (255 - a) + color.b * a) / 255);
                 s_fb[y1 * s_fb_w + x1] = color_to_rgb565(d);
             }
+#else
+            if (color.a > 0) direct_draw_point(x1, y1, color);
+#endif
         }
         if (x1 == x2 && y1 == y2) break;
         e2 = 2 * err;
         if (e2 > -dy) { err -= dy; x1 += sx; }
         if (e2 < dx) { err += dx; y1 += sy; }
     }
+#if YUI_ESP32_LCD_BUFFER
     dirty_add(x1 < x2 ? x1 : x2, y1 < y2 ? y1 : y2, abs(x2 - x1) + 1, abs(y2 - y1) + 1);
+#endif
 }
 
 void backend_render_bezier_cubic(int x0, int y0, int cx1, int cy1, int cx2, int cy2,
@@ -612,7 +798,7 @@ void backend_render_text_copy(Texture* texture, const Rect* srcrect, const Rect*
     unsigned char* src;
     Rect clip, dst, src_r;
     int x, y, sw, sh;
-    if (!texture || !s_fb || !dstrect) return;
+    if (!texture || !dstrect) return;
     src = embed_font_texture_pixels(texture);
     if (!src) return;
     sw = texture->w; sh = texture->h;
@@ -625,6 +811,8 @@ void backend_render_text_copy(Texture* texture, const Rect* srcrect, const Rect*
     clip_intersect(&dst, &dst, &clip);
     if (dst.w <= 0 || dst.h <= 0) return;
 
+#if YUI_ESP32_LCD_BUFFER
+    if (!s_fb) return;
     for (y = 0; y < dst.h; y++) {
         int sy = src_r.y + (y * src_r.h) / (dstrect->h > 0 ? dstrect->h : 1);
         if (sy < 0 || sy >= sh) continue;
@@ -649,6 +837,24 @@ void backend_render_text_copy(Texture* texture, const Rect* srcrect, const Rect*
         }
     }
     dirty_add(dst.x, dst.y, dst.w, dst.h);
+#else
+    /* 直接写屏：逐点绘制（无混合读回，仅按 alpha 跳过透明像素） */
+    for (y = 0; y < dst.h; y++) {
+        int sy = src_r.y + (y * src_r.h) / (dstrect->h > 0 ? dstrect->h : 1);
+        if (sy < 0 || sy >= sh) continue;
+        for (x = 0; x < dst.w; x++) {
+            int sx = src_r.x + (x * src_r.w) / (dstrect->w > 0 ? dstrect->w : 1);
+            size_t si;
+            unsigned a;
+            if (sx < 0 || sx >= sw) continue;
+            si = ((size_t)sy * sw + sx) * 4;
+            a = src[si + 3];
+            if (a == 0) continue;
+            direct_draw_point(dst.x + x, dst.y + y,
+                              (Color){src[si], src[si+1], src[si+2], 255});
+        }
+    }
+#endif
 }
 
 void backend_render_texture_tinted(Texture* texture, const Rect* srcrect, const Rect* dstrect, Color tint) {
@@ -675,10 +881,20 @@ void backend_render_set_clip_rect(Rect* clip) {
 
 /* ====================== 字体 ====================== */
 DFont* backend_load_font(char* path, int size) {
-    return embed_font_load(path, size);
+    DFont* font = embed_font_load(path, size);
+    if (!font) {
+        /* 文件不存在（字体只在 flash font 分区）：回退到分区字体 */
+        font = backend_esp32_load_font_from_flash("font", size);
+    }
+    return font;
 }
 DFont* backend_load_font_with_weight(char* path, int size, const char* weight) {
-    return embed_font_load_with_weight(path, size, weight);
+    DFont* font = embed_font_load_with_weight(path, size, weight);
+    if (!font) {
+        /* 文件不存在（字体只在 flash font 分区）：回退到分区字体 */
+        font = backend_esp32_load_font_from_flash("font", size);
+    }
+    return font;
 }
 
 /* ====================== 窗口/时间 ====================== */
@@ -719,7 +935,16 @@ void backend_delay(int ms) {
 
 void backend_render_present(void) {
 #ifdef ESP_PLATFORM
+#ifdef YUI_ESP32_QEMU
+    /* QEMU：直写模式（buffer=0）无脏矩形跟踪，每帧整帧推送；带超时。 */
+    if (!s_has_dirty) {
+        esp32_qemu_push_rect(0, 0, s_fb_w, s_fb_h);
+    } else {
+        esp32_flush_dirty();
+    }
+#else
     esp32_flush_dirty();
+#endif
 #else
     dirty_reset();
 #endif
@@ -774,8 +999,12 @@ void backend_tick(Layer* ui_root) {
         if (s_update_cb[i]) s_update_cb[i]();
     }
     backend_render_clear_color(20, 20, 20, 255);
-    if (ui_root && ui_root->render) ui_root->render(ui_root);
+    if (ui_root) render_layer(ui_root);
+    popup_manager_render();
     backend_render_present();
+#ifdef YUI_ESP32_QEMU
+    if ((s_frame_count % 10) == 0) printf("YUI: frame %d done\n", s_frame_count);
+#endif
 }
 
 void backend_run(Layer* ui_root) {

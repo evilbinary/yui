@@ -103,6 +103,52 @@ web-serve: web
 web-serve-lvgl: web-lvgl
 	cd platform/web/vanilla && python -m http.server 8080
 
+# ESP32/ESP32-C3 targets
+# 跨平台 wrapper：使用 Python 脚本激活 ESP-IDF 环境
+ESP32_PORT ?= COM3
+ESP32_IDF_WRAPPER := python scripts/run_esp32_idf.py
+
+esp32-build:
+	ya -p esp32 -a esp32c3
+	$(ESP32_IDF_WRAPPER) build
+
+# QEMU 固件：定义 YUI_ESP32_QEMU，跳过真实 LCD/触摸 init（否则 SPI/I2C 会卡死）
+esp32-build-qemu:
+	ya -p esp32 -a esp32c3
+	$(ESP32_IDF_WRAPPER) build-qemu
+
+# 生成子集化字体（供 font 分区烧录 / QEMU 镜像合并）
+esp32-font:
+	python scripts/subset_font.py --input app/assets/Roboto-Regular.ttf \
+		--output platform/esp32/build/font-subset.ttf --scan app/
+
+# 生成 SPIFFS 镜像（app/watch-os + app/assets），供 spiffs 分区烧录 / QEMU 镜像合并
+esp32-spiffs:
+	$(ESP32_IDF_WRAPPER) make-spiffs
+
+esp32-flash: esp32-build esp32-font esp32-spiffs
+	$(ESP32_IDF_WRAPPER) -p $(ESP32_PORT) flash
+	$(ESP32_IDF_WRAPPER) write-font
+	$(ESP32_IDF_WRAPPER) write-spiffs
+
+esp32-monitor:
+	$(ESP32_IDF_WRAPPER) -p $(ESP32_PORT) monitor
+
+esp32-flash-monitor: esp32-flash
+	$(ESP32_IDF_WRAPPER) -p $(ESP32_PORT) monitor
+
+esp32-qemu: esp32-build-qemu esp32-font esp32-spiffs
+	$(ESP32_IDF_WRAPPER) qemu --graphics monitor
+
+esp32-qemu-headless: esp32-build-qemu esp32-font esp32-spiffs
+	$(ESP32_IDF_WRAPPER) qemu monitor
+
+esp32-menuconfig:
+	$(ESP32_IDF_WRAPPER) menuconfig
+
+esp32-size:
+	$(ESP32_IDF_WRAPPER) size
+
 run: main
 	ya -r main
 

@@ -310,7 +310,9 @@ typedef struct Rect {
 
 
 
+#ifndef MAX_PATH
 #define MAX_PATH 1024
+#endif
 #define MAX_TEXT 256
 
 // 图标对齐常量（用于 Label/Button/Input 等组件）
@@ -487,7 +489,9 @@ typedef struct WindowEvent {
     int y;
 } WindowEvent;
 
+#ifndef MAX_EVENT
 #define MAX_EVENT 512
+#endif
 
 // 定义事件处理函数类型
 typedef void* (*EventHandler)(void* data);

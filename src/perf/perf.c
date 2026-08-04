@@ -11,7 +11,9 @@
 #include <SDL.h>
 #endif
 
+#ifndef PERF_MAX_SLOTS
 #define PERF_MAX_SLOTS 512
+#endif
 #define PERF_MAX_WATCH 16
 #define PERF_MAX_OVERLAY_LINES 14
 

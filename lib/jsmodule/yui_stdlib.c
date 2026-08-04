@@ -32,7 +32,9 @@
 
 
 #define MAX_TEXT 256
+#ifndef MAX_PATH
 #define MAX_PATH 1024
+#endif
 
 // YUI Layer 类型定义（最小化定义）
 typedef struct Layer Layer;
