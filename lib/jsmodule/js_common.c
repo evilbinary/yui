@@ -425,11 +425,24 @@ static void get_file_dir(const char* filepath, char* dir, size_t max_len)
 
 uint8_t* load_file(const char *filename, int *plen)
 {
-    FILE *f;
+    FILE *f = NULL;
     uint8_t *buf;
     int buf_len;
+    char path_buf[YUI_PATH_MAX];
+
+    if (!filename || !filename[0]) return NULL;
 
     f = fopen(filename, "rb");
+    if (!f && filename[0] != '/') {
+        if (g_js_base_path[0]) {
+            snprintf(path_buf, sizeof(path_buf), "%s/%s", g_js_base_path, filename);
+            f = fopen(path_buf, "rb");
+        }
+        if (!f && strcmp(g_js_fs_root, "/") != 0) {
+            snprintf(path_buf, sizeof(path_buf), "%s/%s", g_js_fs_root, filename);
+            f = fopen(path_buf, "rb");
+        }
+    }
     if (!f) {
         printf("JS: Cannot open file %s\n", filename);
         return NULL;
@@ -624,9 +637,12 @@ static void layer_lifecycle_js_dispatch(Layer* layer, const char* event_type)
         return;
     }
 
+    char handler_buf[128];
     const char* handler_name = layer_lifecycle_handler_name(layer, event_type);
     if (handler_name) {
-        js_module_call_event(handler_name, layer);
+        strncpy(handler_buf, handler_name, sizeof(handler_buf) - 1);
+        handler_buf[sizeof(handler_buf) - 1] = '\0';
+        js_module_call_event(handler_buf, layer);
         return;
     }
 
@@ -787,7 +803,8 @@ static int collect_js_recursive(cJSON* json, const char* json_dir)
     }
 
     // 注册事件映射（纯字符串表，不依赖 JS 引擎）
-    scan_and_register_events(json);
+    // onTouch 等会走 js_module_set_layer_event → 坏 Event* 导致 Store access fault
+    // scan_and_register_events(json);   // BISECT: keep disabled; lifecycle uses Layer fields
 
     // 递归遍历子节点
     cJSON* child = json->child;
@@ -830,12 +847,61 @@ int js_module_collect_from_json(cJSON* root_json, const char* json_file_path, in
 }
 
 // 阶段 2：加载已收集的 JS 文件（须在 JS 引擎初始化之后调用）。
+typedef struct {
+    unsigned char flags;
+    char on_load[128];
+    char on_show[128];
+    char on_hide[128];
+    char on_unload[128];
+} LifecycleSnap;
+
+static void lifecycle_snap_save(Layer* layer, LifecycleSnap* snap)
+{
+    if (!layer || !snap) return;
+    snap->flags = layer->lifecycle_flags;
+    memcpy(snap->on_load, layer->lifecycle_on_load, sizeof(snap->on_load));
+    memcpy(snap->on_show, layer->lifecycle_on_show, sizeof(snap->on_show));
+    memcpy(snap->on_hide, layer->lifecycle_on_hide, sizeof(snap->on_hide));
+    memcpy(snap->on_unload, layer->lifecycle_on_unload, sizeof(snap->on_unload));
+}
+
+static void lifecycle_snap_restore(Layer* layer, const LifecycleSnap* snap)
+{
+    if (!layer || !snap) return;
+    layer->lifecycle_flags = snap->flags;
+    memcpy(layer->lifecycle_on_load, snap->on_load, sizeof(layer->lifecycle_on_load));
+    memcpy(layer->lifecycle_on_show, snap->on_show, sizeof(layer->lifecycle_on_show));
+    memcpy(layer->lifecycle_on_hide, snap->on_hide, sizeof(layer->lifecycle_on_hide));
+    memcpy(layer->lifecycle_on_unload, snap->on_unload, sizeof(layer->lifecycle_on_unload));
+}
+
+/* mquickjs 在 64/96KB 池里 eval 大脚本时会踩到相邻堆上的 Layer（lifecycle 字段）。
+ * 加载前后保存/恢复根层 lifecycle，避免 onLoad 处理器名被改成垃圾（曾见 "ormal"）。 */
 int js_module_load_collected(void)
 {
+    LifecycleSnap root_life;
+    int have_root_life = 0;
+
+    if (g_layer_root) {
+        lifecycle_snap_save(g_layer_root, &root_life);
+        have_root_life = 1;
+    }
+
     int total_loaded = 0;
     for (int i = 0; i < g_collected_js_count; i++) {
         if (js_module_load_file(g_collected_js_paths[i]) == 0) {
             total_loaded++;
+        }
+        if (have_root_life) {
+            lifecycle_snap_restore(g_layer_root, &root_life);
+        }
+    }
+
+    if (have_root_life) {
+        lifecycle_snap_restore(g_layer_root, &root_life);
+        /* 确保根层可见，否则 init_tree 不会派发 onLoad */
+        if (g_layer_root->visible == IN_VISIBLE) {
+            g_layer_root->visible = VISIBLE;
         }
     }
 

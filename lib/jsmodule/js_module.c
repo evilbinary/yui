@@ -186,35 +186,67 @@ int js_module_call_event(const char* event_name, Layer* layer)
 {
     if (!g_js_ctx || !event_name) return -1;
 
-    // 移除 @ 前缀（如果有）
-    const char* func_name = event_name;
-    if (func_name[0] == '@') {
-        func_name++;
-    }
+    /* 拷到栈上：event_name / layer->id 常指向 Layer 内嵌字段；
+     * GetProperty/Call 可能触发 mquickjs GC，踩坏相邻堆（曾见名变成 "ormal"）。 */
+    char func_name_buf[128];
+    char layer_id_buf[64];
+    const char* src = event_name[0] == '@' ? event_name + 1 : event_name;
+    strncpy(func_name_buf, src, sizeof(func_name_buf) - 1);
+    func_name_buf[sizeof(func_name_buf) - 1] = '\0';
 
-    JSValue global_obj = JS_GetGlobalObject(g_js_ctx);
-    JSValue func = JS_GetPropertyStr(g_js_ctx, global_obj, func_name);
-
-    if (JS_IsUndefined(func) || !JS_IsFunction(g_js_ctx, func)) {
-        JS_FreeValue(g_js_ctx, global_obj);
-        JS_FreeValue(g_js_ctx, func);
-        // 全局函数不存在时，回退到事件映射表查找
-        return js_module_trigger_event(func_name, layer);
+    layer_id_buf[0] = '\0';
+    if (layer && layer->id[0]) {
+        strncpy(layer_id_buf, layer->id, sizeof(layer_id_buf) - 1);
+        layer_id_buf[sizeof(layer_id_buf) - 1] = '\0';
     }
 
     const PointerEvent* pe = get_current_pointer_event();
     int is_gesture = event_name_is_layer_touch(layer, event_name) && pe != NULL;
     int argc = is_gesture ? 2 : 1;
 
+    JSValue global_obj = JS_GetGlobalObject(g_js_ctx);
+    JSValue func = JS_GetPropertyStr(g_js_ctx, global_obj, func_name_buf);
+
+    if (JS_IsUndefined(func) || !JS_IsFunction(g_js_ctx, func)) {
+        printf("JS: call_event '%s' not on global, try map/eval\n", func_name_buf);
+        JS_FreeValue(g_js_ctx, global_obj);
+        JS_FreeValue(g_js_ctx, func);
+
+        if (js_module_trigger_event(func_name_buf, layer) == 0) {
+            return 0;
+        }
+
+        /* mquickjs：部分 function 声明对 GetProperty 不可见，用 eval 按名调用 */
+        char expr[256];
+        if (layer_id_buf[0]) {
+            snprintf(expr, sizeof(expr),
+                     "(function(){if(typeof %s!=='function')throw new Error('no %s');%s('%s');})()",
+                     func_name_buf, func_name_buf, func_name_buf, layer_id_buf);
+        } else {
+            snprintf(expr, sizeof(expr),
+                     "(function(){if(typeof %s!=='function')throw new Error('no %s');%s();})()",
+                     func_name_buf, func_name_buf, func_name_buf);
+        }
+        JSValue v = JS_Eval(g_js_ctx, expr, strlen(expr), "<call_event>", 0);
+        if (JS_IsException(v)) {
+            JSValue exc = JS_GetException(g_js_ctx);
+            printf("JS: Eval call %s failed: ", func_name_buf);
+            JS_PrintValueF(g_js_ctx, exc, JS_DUMP_LONG);
+            printf("\n");
+            return -1;
+        }
+        return 0;
+    }
+
     if (JS_StackCheck(g_js_ctx, (uint32_t)(argc + 2))) {
+        printf("JS: call_event '%s' stack/oom\n", func_name_buf);
         JS_FreeValue(g_js_ctx, global_obj);
         JS_FreeValue(g_js_ctx, func);
         return -1;
     }
 
-    JSValue layer_id_val = layer ? JS_NewString(g_js_ctx, layer->id) : JS_NULL;
+    JSValue layer_id_val = layer_id_buf[0] ? JS_NewString(g_js_ctx, layer_id_buf) : JS_NULL;
 
-    /* Push order: arg[n-1] ... arg[0], func, this */
     if (is_gesture) {
         JS_PushArg(g_js_ctx, js_make_pointer_event_object(g_js_ctx, pe));
     }
@@ -227,9 +259,9 @@ int js_module_call_event(const char* event_name, Layer* layer)
 
     if (JS_IsException(result)) {
         JSValue exc = JS_GetException(g_js_ctx);
-        fprintf(stderr, "JS: Error calling event %s:\n", event_name);
+        printf("JS: Error calling event %s:\n", func_name_buf);
         JS_PrintValueF(g_js_ctx, exc, JS_DUMP_LONG);
-        fprintf(stderr, "\n");
+        printf("\n");
         return -1;
     }
 
@@ -242,4 +274,3 @@ static void check_timers(void)
 {
     if (!g_js_ctx) return;
 }
-

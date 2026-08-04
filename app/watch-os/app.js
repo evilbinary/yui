@@ -133,11 +133,24 @@ function startWatchClock() {
     }, 30000);
 }
 
+function watchNow() {
+    /* mquickjs 仅支持 Date.now()，不支持 new Date() */
+    var ms = Date.now();
+    var totalMin = Math.floor(ms / 60000);
+    var m = totalMin % 60;
+    var h = Math.floor(totalMin / 60) % 24;
+    return { h: h, m: m };
+}
+
+function formatWatchTime(now) {
+    var h = now.h;
+    var m = now.m;
+    return (h < 10 ? "0" : "") + h + ":" + (m < 10 ? "0" : "") + m;
+}
+
 function tickWatchClock() {
-    var now = new Date();
-    var h = now.getHours();
-    var m = now.getMinutes();
-    var timeStr = (h < 10 ? "0" : "") + h + ":" + (m < 10 ? "0" : "") + m;
+    var now = watchNow();
+    var timeStr = formatWatchTime(now);
     YUI.setText("status_time", timeStr);
 
     var route = YUI.currentRoute ? YUI.currentRoute() : null;
@@ -150,11 +163,7 @@ function tickWatchClock() {
 }
 
 function updateFaceClock() {
-    var now = new Date();
-    var h = now.getHours();
-    var m = now.getMinutes();
-    var timeStr = (h < 10 ? "0" : "") + h + ":" + (m < 10 ? "0" : "") + m;
-    YUI.setText("face_time", timeStr);
+    YUI.setText("face_time", formatWatchTime(watchNow()));
 }
 
 function getUnreadNotificationCount() {

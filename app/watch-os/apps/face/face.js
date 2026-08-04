@@ -45,8 +45,27 @@ function updateFaceData() {
 }
 
 function updateFaceDate() {
-    var now = new Date();
-    var dateStr = FACE_DAYS[now.getDay()] + " · " + FACE_MONTHS[now.getMonth()] + " " + now.getDate();
+    /* mquickjs: Date.now() only — approximate weekday/month from UTC ms */
+    var ms = Date.now();
+    var dayMs = 86400000;
+    var days = Math.floor(ms / dayMs);
+    var dow = (days + 4) % 7; /* 1970-01-01 was Thursday */
+    var y = 1970;
+    var rem = days;
+    while (1) {
+        var ydays = ((y % 4 === 0 && y % 100 !== 0) || (y % 400 === 0)) ? 366 : 365;
+        if (rem < ydays) break;
+        rem -= ydays;
+        y++;
+    }
+    var mdays = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    if ((y % 4 === 0 && y % 100 !== 0) || (y % 400 === 0)) mdays[1] = 29;
+    var mo = 0;
+    while (mo < 12 && rem >= mdays[mo]) {
+        rem -= mdays[mo];
+        mo++;
+    }
+    var dateStr = FACE_DAYS[dow] + " · " + FACE_MONTHS[mo] + " " + (rem + 1);
     YUI.setText("face_date", dateStr);
 }
 

@@ -720,11 +720,12 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
     layer->layout_manager->type = LAYOUT_VERTICAL;
   }
 
-  // 默认背景颜色
+  // 默认背景颜色（含不透明，否则 render 因 a==0 跳过填色）
   if (layer->bg_color.a == 0) {
     layer->bg_color.r = 0xF5;
     layer->bg_color.g = 0xF5;
     layer->bg_color.b = 0xF5;
+    layer->bg_color.a = 0xFF;
   }
   // 解析样式
   if (style) {
