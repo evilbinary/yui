@@ -19,17 +19,22 @@ if is_host_plat():
     def after_build_host(target):
         # target.on_run(target)
         import subprocess
+        import os
         targetfile = target.targetfile()
         print('gen yui_stdlib.h by exec',target.name())
         exe=get_prefix()+"./"+targetfile
+        # 生成器在 ASan 下运行会因 LeakSanitizer 检测到泄漏以非零码退出，
+        # 且退出时不冲刷 stdout，导致生成的表文件被截断。关闭泄漏检测。
+        env = dict(os.environ)
+        env['ASAN_OPTIONS'] = (env.get('ASAN_OPTIONS', '') + ' detect_leaks=0').strip()
         # 使用 subprocess 运行并捕获输出
         with open('lib/jsmodule-mqjs/yui_stdlib.h', 'w') as f:
-            result = subprocess.run([exe], stdout=f, stderr=subprocess.PIPE, text=True)
+            result = subprocess.run([exe], stdout=f, stderr=subprocess.PIPE, text=True, env=env)
             if result.returncode != 0:
                 print('Error generating yui_stdlib.h:', result.stderr)
         # 同时生成 32 位表（esp32/stm32 等嵌入式平台使用）
         with open('lib/jsmodule-mqjs/yui_stdlib_32.h', 'w') as f:
-            result = subprocess.run([exe, '-m32'], stdout=f, stderr=subprocess.PIPE, text=True)
+            result = subprocess.run([exe, '-m32'], stdout=f, stderr=subprocess.PIPE, text=True, env=env)
             if result.returncode != 0:
                 print('Error generating yui_stdlib_32.h:', result.stderr)
 
