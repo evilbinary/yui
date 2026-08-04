@@ -12,7 +12,8 @@ itself, then runs idf_monitor to connect.
 import os
 import sys
 import time
-import glob
+import shlex
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -20,38 +21,181 @@ from pathlib import Path
 WORKSPACE = Path(__file__).parent.parent
 ESP32_DIR = WORKSPACE / 'platform' / 'esp32'
 BUILD_DIR = ESP32_DIR / 'build'
-
-# ESP-IDF paths (override via env for custom installs)
-IDF_PATH = Path(os.environ.get('ESP_IDF_PATH', r'E:\soft\Espressif\frameworks\esp-idf-v5.5.5'))
-IDF_PYTHON = os.environ.get('ESP_IDF_PYTHON',
-                            r'E:\soft\Espressif\python_env\idf5.5_py3.11_env\Scripts\python.exe')
-IDF_EXPORT_PS1 = IDF_PATH / 'export.ps1'
 QEMU_PORT = '5555'
+IS_WIN = sys.platform.startswith('win')
 
-# Toolchain prefix directory (for addr2line in monitor)
-TOOLCHAIN_DIR = os.environ.get(
-    'ESP_IDF_TOOLCHAIN',
-    r'E:\soft\Espressif\tools\riscv32-esp-elf\esp-14.2.0_20260121\riscv32-esp-elf\bin')
 
 def is_mingw():
     """Check if running in MinGW/Git Bash."""
     return 'MSYSTEM' in os.environ
+
+
+def _first_existing_dir(*candidates):
+    for c in candidates:
+        if c and Path(c).is_dir():
+            return Path(c)
+    return None
+
+
+def _first_existing_file(*candidates):
+    for c in candidates:
+        if c and Path(c).is_file():
+            return Path(c)
+    return None
+
+
+def resolve_idf_path():
+    """Locate ESP-IDF root (contains tools/idf.py + export.sh/ps1)."""
+    env = _first_existing_dir(os.environ.get('ESP_IDF_PATH'),
+                              os.environ.get('IDF_PATH'))
+    if env and (env / 'tools' / 'idf.py').is_file():
+        return env
+
+    candidates = []
+    if IS_WIN:
+        candidates.append(Path(r'E:\soft\Espressif\frameworks\esp-idf-v5.5.5'))
+        candidates.append(Path(r'E:\soft\Espressif\framework\esp-idf-v5.5.5'))
+    else:
+        home = Path.home()
+        espressif = home / '.espressif'
+        if espressif.is_dir():
+            # Prefer newest v*/esp-idf (e.g. v6.0.2/esp-idf)
+            candidates.extend(sorted(espressif.glob('v*/esp-idf'), reverse=True))
+        candidates.extend([
+            home / 'esp' / 'esp-idf',
+            Path('/opt/esp/esp-idf'),
+        ])
+
+    for c in candidates:
+        if (c / 'tools' / 'idf.py').is_file():
+            return c
+    return None
+
+
+def resolve_idf_tools_path():
+    env = os.environ.get('IDF_TOOLS_PATH') or os.environ.get('ESP_IDF_TOOLS_PATH')
+    if env and Path(env).is_dir():
+        return Path(env)
+    if IS_WIN:
+        win = Path(r'E:\soft\Espressif\tools')
+        if win.is_dir():
+            return win
+        return Path.home() / '.espressif'
+
+    # EIM layout: toolchains + activate_idf_*.sh live under ~/.espressif/tools
+    eim_tools = Path.home() / '.espressif' / 'tools'
+    if eim_tools.is_dir() and (
+            any(eim_tools.glob('activate_idf_*.sh')) or
+            (eim_tools / 'riscv32-esp-elf').is_dir() or
+            (eim_tools / 'python').is_dir()):
+        return eim_tools
+
+    # Classic idf_tools install uses ~/.espressif as IDF_TOOLS_PATH
+    return Path.home() / '.espressif'
+
+
+def resolve_idf_python(tools_path):
+    """Python used for esptool / idf_monitor / spiffsgen."""
+    env_py = os.environ.get('ESP_IDF_PYTHON')
+    if env_py and Path(env_py).is_file():
+        return env_py
+
+    if IS_WIN:
+        win = Path(r'E:\soft\Espressif\python_env\idf5.5_py3.11_env\Scripts\python.exe')
+        if win.is_file():
+            return str(win)
+        for pat in ('python_env/*/Scripts/python.exe',
+                    'python/*/venv/Scripts/python.exe',
+                    'tools/python/*/venv/Scripts/python.exe'):
+            hits = sorted(tools_path.glob(pat), reverse=True)
+            if hits:
+                return str(hits[0])
+    else:
+        for pat in ('python/*/venv/bin/python',
+                    'python_env/*/bin/python',
+                    'tools/python/*/venv/bin/python'):
+            hits = sorted(tools_path.glob(pat), reverse=True)
+            if hits:
+                return str(hits[0])
+
+    return sys.executable
+
+
+def resolve_toolchain_dir(tools_path):
+    env = os.environ.get('ESP_IDF_TOOLCHAIN')
+    if env and os.path.isdir(env):
+        return env
+
+    search_roots = [tools_path, tools_path / 'tools']
+    for root in search_roots:
+        if not root.is_dir():
+            continue
+        hits = sorted(root.glob('riscv32-esp-elf/*/riscv32-esp-elf/bin'), reverse=True)
+        if hits:
+            return str(hits[0])
+    return ''
+
+
+def find_eim_activate(idf_path):
+    """Espressif IDE Manager activate script, if present."""
+    tools = Path.home() / '.espressif' / 'tools'
+    if not tools.is_dir():
+        return None
+    # idf_path like ~/.espressif/v6.0.2/esp-idf → activate_idf_v6.0.2.sh
+    ver = idf_path.parent.name if idf_path else ''
+    if ver.startswith('v'):
+        specific = tools / f'activate_idf_{ver}.sh'
+        if specific.is_file():
+            return specific
+    hits = sorted(tools.glob('activate_idf_v*.sh'), reverse=True)
+    return hits[0] if hits else None
+
+
+def resolve_default_port():
+    return os.environ.get('ESP32_PORT') or ('COM3' if IS_WIN else '/dev/ttyUSB0')
+
+
+IDF_PATH = resolve_idf_path()
+IDF_TOOLS_PATH = resolve_idf_tools_path()
+IDF_PYTHON = resolve_idf_python(IDF_TOOLS_PATH)
+TOOLCHAIN_DIR = resolve_toolchain_dir(IDF_TOOLS_PATH)
+
 
 def find_qemu():
     """Locate qemu-system-riscv32 executable."""
     env_qemu = os.environ.get('ESP_IDF_QEMU')
     if env_qemu and Path(env_qemu).is_file():
         return env_qemu
-    tools = Path(r'E:\soft\Espressif\tools')
-    for pat in ('qemu-riscv32/*/qemu/bin/qemu-system-riscv32*.exe',
-                'qemu-riscv32/*/qemu/bin/qemu-system-riscv32*'):
-        hits = list(tools.glob(pat))
-        if hits:
-            return str(hits[0])
+
+    which = shutil.which('qemu-system-riscv32')
+    if which:
+        return which
+
+    roots = [IDF_TOOLS_PATH, IDF_TOOLS_PATH / 'tools']
+    if IS_WIN:
+        roots.append(Path(r'E:\soft\Espressif\tools'))
+    roots.append(Path.home() / '.espressif' / 'tools')
+
+    for tools in roots:
+        if not tools.is_dir():
+            continue
+        for pat in ('qemu-riscv32/*/qemu/bin/qemu-system-riscv32',
+                    'qemu-riscv32/*/qemu/bin/qemu-system-riscv32.exe',
+                    'qemu-riscv32/*/qemu/bin/qemu-system-riscv32*'):
+            hits = [h for h in sorted(tools.glob(pat), reverse=True)
+                    if h.is_file() and not h.name.endswith(('.debug', '.pdb'))]
+            if hits:
+                return str(hits[0])
     return None
+
 
 def base_env():
     """Sandbox workaround env vars + toolchain PATH."""
+    if not IDF_PATH:
+        print("ERROR: ESP-IDF not found. Set ESP_IDF_PATH/IDF_PATH or install under ~/.espressif/v*/esp-idf",
+              file=sys.stderr)
+        sys.exit(1)
+
     env = os.environ.copy()
     env.update({
         'IDF_SKIP_CHECK_SUBMODULES': '1',
@@ -60,22 +204,58 @@ def base_env():
         'CCACHE_DIR': str(WORKSPACE / '.ccache'),
         'CCACHE_DISABLE': '1',
         'IDF_PATH': str(IDF_PATH),
+        'IDF_TOOLS_PATH': str(IDF_TOOLS_PATH),
     })
     # Prepend toolchain to PATH so monitor can find addr2line
-    if os.path.isdir(TOOLCHAIN_DIR):
+    if TOOLCHAIN_DIR and os.path.isdir(TOOLCHAIN_DIR):
         env['PATH'] = TOOLCHAIN_DIR + os.pathsep + env.get('PATH', '')
     if is_mingw():
         env.pop('MSYSTEM', None)
         env.pop('MSYS', None)
     return env
 
+
 def run_idf(env, *args):
-    """Run idf.py via PowerShell export.ps1 (works in PowerShell & MinGW)."""
-    idf_args = ' '.join(args)
-    activate_cmd = f'. {IDF_EXPORT_PS1}; cd {ESP32_DIR}; idf.py {idf_args}'
-    full_cmd = ['powershell', '-ExecutionPolicy', 'Bypass', '-Command', activate_cmd]
-    result = subprocess.run(full_cmd, env=env)
-    return result.returncode
+    """Run idf.py after activating ESP-IDF export/activate script."""
+    if IS_WIN and not is_mingw():
+        export_ps1 = IDF_PATH / 'export.ps1'
+        if not export_ps1.is_file():
+            print(f"ERROR: missing {export_ps1}", file=sys.stderr)
+            return 1
+        idf_args = ' '.join(args)
+        activate_cmd = f'. {export_ps1}; cd {ESP32_DIR}; idf.py {idf_args}'
+        full_cmd = ['powershell', '-ExecutionPolicy', 'Bypass', '-Command', activate_cmd]
+        return subprocess.run(full_cmd, env=env).returncode
+
+    idf_args = ' '.join(shlex.quote(a) for a in args)
+    eim_activate = find_eim_activate(IDF_PATH)
+    if eim_activate:
+        # EIM activate may exit non-zero (e.g. optional `eim select` fails);
+        # still apply env, then run idf.py.
+        cmd = (
+            f'source {shlex.quote(str(eim_activate))}; '
+            f'cd {shlex.quote(str(ESP32_DIR))} && '
+            f'idf.py {idf_args}'
+        )
+        return subprocess.run(['bash', '-c', cmd], env=env).returncode
+
+    export_sh = IDF_PATH / 'export.sh'
+    if not export_sh.is_file():
+        print(f"ERROR: missing {export_sh}", file=sys.stderr)
+        return 1
+    # Classic install: point export.sh at the resolved venv when present
+    py = Path(IDF_PYTHON)
+    venv = py.parent.parent  # .../venv/{bin|Scripts}/python
+    if venv.name == 'venv' or (venv / 'pyvenv.cfg').is_file():
+        env = dict(env)
+        env['IDF_PYTHON_ENV_PATH'] = str(venv)
+    cmd = (
+        f'source {shlex.quote(str(export_sh))}; '
+        f'cd {shlex.quote(str(ESP32_DIR))} && '
+        f'idf.py {idf_args}'
+    )
+    return subprocess.run(['bash', '-c', cmd], env=env).returncode
+
 
 def read_partition_table(env):
     """Parse build/partition_table/partition-table.bin -> {name: (offset, size)}.
@@ -94,6 +274,7 @@ def read_partition_table(env):
         name = data[i + 12:i + 28].split(b'\x00')[0].decode('utf-8', 'replace')
         parts[name] = (offset, size)
     return parts
+
 
 def merge_qemu_flash(env):
     """Generate qemu_flash.bin (4MB) from bootloader/app/partition + font + spiffs."""
@@ -132,6 +313,7 @@ def merge_qemu_flash(env):
         print(f"ERROR: merge_bin failed (rc={result.returncode})", file=sys.stderr)
         sys.exit(result.returncode)
 
+
 def make_spiffs(env):
     """Build SPIFFS image into build/watch-os.img.
 
@@ -144,7 +326,6 @@ def make_spiffs(env):
       - app/assets (large font files) is excluded - embedded fonts are served
         from the 'font' partition, not from SPIFFS.
     """
-    import shutil
     staging = BUILD_DIR / 'spiffs-staging'
     if staging.exists():
         shutil.rmtree(staging)
@@ -196,11 +377,15 @@ def make_spiffs(env):
         sys.exit(result.returncode)
     print(f"OK: {out} ({out.stat().st_size} bytes)", flush=True)
 
+
 def run_qemu_headless(env):
     """Manual QEMU launch + monitor (avoids idf.py background-spawn issue)."""
     qemu = find_qemu()
     if not qemu:
-        print("ERROR: qemu-system-riscv32 not found. Install via idf_tools.py", file=sys.stderr)
+        print("ERROR: qemu-system-riscv32 not found.", file=sys.stderr)
+        print("  Install:  python $IDF_PATH/tools/idf_tools.py install qemu-riscv32",
+              file=sys.stderr)
+        print("  Or set:   ESP_IDF_QEMU=/path/to/qemu-system-riscv32", file=sys.stderr)
         sys.exit(1)
 
     # qemu_flash.bin is prepared by main() via merge_qemu_flash()
@@ -246,9 +431,10 @@ def run_qemu_headless(env):
             qemu_proc.kill()
     sys.exit(result.returncode)
 
+
 def run_write_font(env):
     """Flash the subset font into the 'font' data partition on real hardware."""
-    port = os.environ.get('ESP32_PORT', 'COM3')
+    port = resolve_default_port()
     font_bin = BUILD_DIR / 'font-subset.ttf'
     if not font_bin.exists():
         print("ERROR: font-subset.ttf not found, run 'make esp32-font' first", file=sys.stderr)
@@ -264,9 +450,10 @@ def run_write_font(env):
     result = subprocess.run(cmd, env=env, cwd=str(ESP32_DIR))
     sys.exit(result.returncode)
 
+
 def run_write_spiffs(env):
     """Flash the SPIFFS image into the 'spiffs' data partition on real hardware."""
-    port = os.environ.get('ESP32_PORT', 'COM3')
+    port = resolve_default_port()
     img = BUILD_DIR / 'watch-os.img'
     if not img.exists():
         print("ERROR: watch-os.img not found, run 'make esp32-spiffs' first", file=sys.stderr)
@@ -282,8 +469,12 @@ def run_write_spiffs(env):
     result = subprocess.run(cmd, env=env, cwd=str(ESP32_DIR))
     sys.exit(result.returncode)
 
+
 def main():
     args = sys.argv[1:]
+    print(f"ESP-IDF: {IDF_PATH}", flush=True)
+    print(f"IDF tools: {IDF_TOOLS_PATH}", flush=True)
+    print(f"IDF python: {IDF_PYTHON}", flush=True)
     env = base_env()
 
     # QEMU firmware build: set YUI_ESP32_QEMU so main skips LCD/touch init
@@ -324,6 +515,7 @@ def main():
 
     # Everything else goes through idf.py
     sys.exit(run_idf(env, *args))
+
 
 if __name__ == '__main__':
     main()
