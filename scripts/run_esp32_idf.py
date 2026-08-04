@@ -206,9 +206,18 @@ def base_env():
         'IDF_PATH': str(IDF_PATH),
         'IDF_TOOLS_PATH': str(IDF_TOOLS_PATH),
     })
-    # Prepend toolchain to PATH so monitor can find addr2line
+    # Prepend toolchain + QEMU bins so idf.py / monitor / qemu find them
+    path_prepend = []
     if TOOLCHAIN_DIR and os.path.isdir(TOOLCHAIN_DIR):
-        env['PATH'] = TOOLCHAIN_DIR + os.pathsep + env.get('PATH', '')
+        path_prepend.append(TOOLCHAIN_DIR)
+    qemu = find_qemu()
+    if qemu:
+        qbin = str(Path(qemu).parent)
+        if qbin not in path_prepend:
+            path_prepend.append(qbin)
+        env['ESP_IDF_QEMU'] = qemu
+    if path_prepend:
+        env['PATH'] = os.pathsep.join(path_prepend + [env.get('PATH', '')])
     if is_mingw():
         env.pop('MSYSTEM', None)
         env.pop('MSYS', None)
