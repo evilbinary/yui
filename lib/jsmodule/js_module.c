@@ -20,7 +20,7 @@
 // 全局 JS 上下文
 static JSContext* g_js_ctx = NULL;
 static uint8_t* g_js_mem = NULL;
-static size_t g_js_mem_size = 256 * 1024; // 256KB 内存
+static size_t g_js_mem_size = 64 * 1024; // 64KB 内存
 
 // 全局 UI 根图层
 extern struct Layer* g_layer_root;

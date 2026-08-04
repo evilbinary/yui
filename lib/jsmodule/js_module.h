@@ -17,6 +17,9 @@ typedef struct cJSON cJSON;
 // 初始化 JS 引擎
 int js_module_init(void);
 
+// 设置文件系统根前缀（相对路径 ../ 上跳不越过此根，默认 "/"）
+void js_module_set_fs_root(const char* root);
+
 // 清理 JS 引擎
 void js_module_cleanup(void);
 

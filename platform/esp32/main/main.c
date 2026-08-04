@@ -127,11 +127,12 @@ void app_main(void) {
     popup_manager_init();
     printf("YUI: backend ready\n");
 
-    /* 2. 挂载 SPIFFS 分区到根目录 "/"（watch-os JS/JSON 等资源）。
-     *    资源路径一律绝对路径（/app.json、/lib/router.js、/apps/...），
-     *    与桌面端 ../lib 上跳解析一致，共享代码零平台差异。 */
+    /* 2. 挂载 SPIFFS 分区到 "/spiffs"（watch-os JS/JSON 等资源）。
+     *    IDF vfs 不允许挂载根 "/"（base_path 至少 2 字符），故挂 /spiffs；
+     *    设置 JS 文件系统根为 "/spiffs"，使 ../lib 上跳解析 clamp 在挂载根，
+     *    共享代码零平台差异。 */
     esp_vfs_spiffs_conf_t spiffs_conf = {
-        .base_path = "/",
+        .base_path = "/spiffs",
         .partition_label = "spiffs",
         .max_files = 16,
         .format_if_mount_failed = false,
@@ -148,11 +149,11 @@ void app_main(void) {
         } else {
             printf("YUI: SPIFFS mounted at /spiffs\n");
         }
+        js_module_set_fs_root("/spiffs");
     }
 
-    /* 3. 初始化 JS 引擎（QuickJS，mquickjs 模块）。
-     *    C3 内存紧张：约 270KB 堆，QuickJS 运行时约需 100-200KB，
-     *    若 OOM 会体现在 js_module_load_from_json 阶段。 */
+    /* 3. 初始化 JS 引擎（mquickjs 模块，64KB 内存池）。
+     *    C3 内存紧张：约 270KB 堆，mquickjs 内存池在 malloc 的堆上。 */
     if (js_module_init() != 0) {
         printf("YUI: JS engine init failed, continuing without JS\n");
     }
@@ -168,15 +169,15 @@ void app_main(void) {
         printf("YUI: No font loaded, running in headless mode\n");
     }
 
-    /* 5. 构建 UI：优先加载 /app.json（watch-os 启动入口）。
+    /* 5. 构建 UI：优先加载 /spiffs/app.json（watch-os 启动入口）。
      *    读取失败/解析失败时回退到内置的 s_fallback_ui_json。 */
     {
-        char* ui_buf = read_file_alloc("/app.json", 64 * 1024);
+        char* ui_buf = read_file_alloc("/spiffs/app.json", 64 * 1024);
         if (ui_buf) {
             json = cJSON_Parse(ui_buf);
             free(ui_buf);
             if (!json) {
-                printf("YUI: /app.json parse failed, using fallback UI\n");
+                printf("YUI: /spiffs/app.json parse failed, using fallback UI\n");
             }
         } else {
             json = NULL;
@@ -221,7 +222,7 @@ void app_main(void) {
     /* 加载并执行 JS（app.json 的 "js" 数组，相对路径相对 /app.json 所在目录）
      * onLoad 等生命周期事件由 layer_lifecycle 在脚本就绪后触发 */
     if (json) {
-        int js_count = js_module_load_from_json(json, "/app.json", 0);
+        int js_count = js_module_load_from_json(json, "/spiffs/app.json", 0);
         printf("YUI: loaded %d JS file(s)\n", js_count);
         print_registered_events();
         cJSON_Delete(json);

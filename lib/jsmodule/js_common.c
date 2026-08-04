@@ -279,6 +279,18 @@ static EventHandler get_event_handler_by_type(const char* event_type)
 }
 
 // 辅助函数：构建完整的 JS 文件路径（相对于 JSON 文件目录）
+// 文件系统根前缀：相对路径 ../ 上跳不会越过此根（默认 "/"）。
+// 嵌入式 SPIFFS 挂载在 /spiffs 时设为 "/spiffs"，使 app 根与挂载根一致。
+static char g_js_fs_root[MAX_PATH] = "/";
+
+void js_module_set_fs_root(const char* root)
+{
+    if (root && root[0] == '/') {
+        strncpy(g_js_fs_root, root, MAX_PATH - 1);
+        g_js_fs_root[MAX_PATH - 1] = '\0';
+    }
+}
+
 static void build_js_path(const char* js_path, const char* json_dir, char* full_path, size_t max_len)
 {
     if (js_path[0] == '/') {
@@ -306,6 +318,14 @@ static void build_js_path(const char* js_path, const char* json_dir, char* full_
             
             if (sep) {
                 *sep = '\0';  // 截断到最后一个分隔符之前
+                if (strcmp(temp_dir, g_js_fs_root) == 0) {
+                    // 已到文件系统根，不再上跳，消耗剩余 ../ 
+                    while (path_ptr[0] == '.' && path_ptr[1] == '.' &&
+                           (path_ptr[2] == '/' || path_ptr[2] == '\\')) {
+                        path_ptr += 3;
+                    }
+                    break;
+                }
             } else {
                 // 如果没有更多目录，使用根目录
                 strcpy(temp_dir, ".");
