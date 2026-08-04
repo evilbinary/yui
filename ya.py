@@ -28,6 +28,13 @@ def apply_cli_arch():
         if env_abi:
             set_arch(env_abi)
 
+def apply_default_plat():
+    """未指定 -p 时默认 pc（ymake 默认为 None，产物会落到 build/None/...）。"""
+    plat = get_plat()
+    if plat in (None, 'None', ''):
+        set_defaultplat('pc')
+
+apply_default_plat()
 apply_cli_arch()
 
 # 判断是否为指定平台

@@ -45,16 +45,16 @@ game: build-playground
 	ya -r playground -- app/game/demo.json
 
 gdb: build-db
-	gdb -x  gdb.gdb ./build/None/None/None/db.exe  app/db/db.json
+	gdb -x  gdb.gdb ./build/pc/None/None/db.exe  app/db/db.json
 
 gdb-watch: build-db
-	gdb -x  gdb.gdb ./build/None/None/None/db.exe  app/watch-os/app.json
+	gdb -x  gdb.gdb ./build/pc/None/None/db.exe  app/watch-os/app.json
 
 gdb-lvgl: build-lvgl
 	gdb -x  gdb.gdb  ./build/lvgl/None/None/lvgl-sdl.exe app/lvgl/calc.json
 
 gdb-menu: build-playground
-	gdb -x  gdb.gdb ./build/None/None/None/playground.exe  app/tests/test-menu.json
+	gdb -x  gdb.gdb ./build/pc/None/None/playground.exe  app/tests/test-menu.json
 
 
 
