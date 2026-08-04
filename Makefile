@@ -112,8 +112,14 @@ esp32-build:
 	ya -p esp32 -a esp32c3
 	$(ESP32_IDF_WRAPPER) build
 
-esp32-flash: esp32-build
+# 生成子集字体（供 font 分区烧录 / QEMU 镜像合并）
+esp32-font:
+	python scripts/subset_font.py --input app/assets/Roboto-Regular.ttf \
+		--output platform/esp32/build/font-subset.ttf --scan app/
+
+esp32-flash: esp32-build esp32-font
 	$(ESP32_IDF_WRAPPER) -p $(ESP32_PORT) flash
+	$(ESP32_IDF_WRAPPER) write-font
 
 esp32-monitor:
 	$(ESP32_IDF_WRAPPER) -p $(ESP32_PORT) monitor
@@ -121,10 +127,10 @@ esp32-monitor:
 esp32-flash-monitor: esp32-flash
 	$(ESP32_IDF_WRAPPER) -p $(ESP32_PORT) monitor
 
-esp32-qemu: esp32-build
+esp32-qemu: esp32-build esp32-font
 	$(ESP32_IDF_WRAPPER) qemu --graphics monitor
 
-esp32-qemu-headless: esp32-build
+esp32-qemu-headless: esp32-build esp32-font
 	$(ESP32_IDF_WRAPPER) qemu monitor
 
 esp32-menuconfig:

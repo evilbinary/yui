@@ -77,8 +77,24 @@ def run_idf(env, *args):
     result = subprocess.run(full_cmd, env=env)
     return result.returncode
 
+def read_partition_table(env):
+    """Parse build/partition_table/partition-table.bin -> {name: (offset, size)}."""
+    ptable = BUILD_DIR / 'partition_table' / 'partition-table.bin'
+    if not ptable.exists():
+        return {}
+    data = ptable.read_bytes()
+    parts = {}
+    for i in range(0, len(data) - 32 + 1, 32):
+        if data[i] != 0x50:  # magic byte
+            break
+        offset = int.from_bytes(data[i + 4:i + 8], 'little')
+        size = int.from_bytes(data[i + 8:i + 12], 'little')
+        name = data[i + 12:i + 28].split(b'\x00')[0].decode('utf-8', 'replace')
+        parts[name] = (offset, size)
+    return parts
+
 def merge_qemu_flash(env):
-    """Generate qemu_flash.bin from bootloader/app/partition binaries."""
+    """Generate qemu_flash.bin from bootloader/app/partition binaries + font data."""
     cmd = [IDF_PYTHON, '-m', 'esptool', '--chip', 'esp32c3', 'merge_bin',
            '--output', str(BUILD_DIR / 'qemu_flash.bin'),
            '--fill-flash-size', '2MB', '--flash_mode', 'dio',
@@ -86,6 +102,18 @@ def merge_qemu_flash(env):
            '0x0', str(BUILD_DIR / 'bootloader' / 'bootloader.bin'),
            '0x10000', str(BUILD_DIR / 'yui_esp32.bin'),
            '0x8000', str(BUILD_DIR / 'partition_table' / 'partition-table.bin')]
+
+    # Add font partition data if available (from build/font-subset.ttf)
+    font_bin = BUILD_DIR / 'font-subset.ttf'
+    if font_bin.exists():
+        parts = read_partition_table(env)
+        if 'font' in parts:
+            font_off, _ = parts['font']
+            cmd += [f'0x{font_off:x}', str(font_bin)]
+            print(f"Merge font '{font_bin.name}' at offset 0x{font_off:x}", flush=True)
+        else:
+            print("WARN: no 'font' partition in partition table, skipping font merge", file=sys.stderr)
+
     result = subprocess.run(cmd, env=env, cwd=str(ESP32_DIR))
     if result.returncode != 0:
         print(f"ERROR: merge_bin failed (rc={result.returncode})", file=sys.stderr)
@@ -140,9 +168,32 @@ def run_qemu_headless(env):
             qemu_proc.kill()
     sys.exit(result.returncode)
 
+def run_write_font(env):
+    """Flash the subset font into the 'font' data partition on real hardware."""
+    port = os.environ.get('ESP32_PORT', 'COM3')
+    font_bin = BUILD_DIR / 'font-subset.ttf'
+    if not font_bin.exists():
+        print("ERROR: font-subset.ttf not found, run 'make esp32-font' first", file=sys.stderr)
+        sys.exit(1)
+    parts = read_partition_table(env)
+    if 'font' not in parts:
+        print("ERROR: no 'font' partition in partition table", file=sys.stderr)
+        sys.exit(1)
+    off, _ = parts['font']
+    print(f"Flashing font to {port} at offset 0x{off:x} ...", flush=True)
+    cmd = [IDF_PYTHON, '-m', 'esptool', '--chip', 'esp32c3', '-p', port,
+           'write_flash', f'0x{off:x}', str(font_bin)]
+    result = subprocess.run(cmd, env=env, cwd=str(ESP32_DIR))
+    sys.exit(result.returncode)
+
 def main():
     args = sys.argv[1:]
     env = base_env()
+
+    # Write subset font into the font partition (real hardware)
+    if len(args) >= 1 and args[0] == 'write-font':
+        run_write_font(env)
+        return
 
     # Headless QEMU: `qemu monitor` (no --graphics)
     if len(args) >= 1 and args[0] == 'qemu' and '--graphics' not in args:

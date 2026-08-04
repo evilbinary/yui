@@ -1,2 +1,6 @@
 # 提高主任务栈：UI 渲染 + 字体需要
 CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192
+
+# 使用自定义分区表（partitions.csv，含 font 数据分区）
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
