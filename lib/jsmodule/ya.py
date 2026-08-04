@@ -42,6 +42,14 @@ add_cflags(' -DBUILD_NO_MAIN=1 -DHAS_JS_MODULE -DCONFIG_CLASS_SOCKET -DCONFIG_CL
 if get_plat() in ("esp32", "stm32"):
     # 嵌入式模式：ytype.h 使用 YuiTexture/YuiFont，不依赖 SDL
     add_cflags('-DYUI_BACKEND_EMBEDDED')
+    # ABI 一致性：MAX_PATH / YUI_PATH_MAX 必须与核心库 (ya.py) 和 ESP-IDF (CMakeLists.txt) 一致。
+    # ytype.h 默认 MAX_PATH=1024，但核心库编译时用 256。若不一致，Event 等结构体大小不匹配，
+    # 会导致 Store access fault（js_module_set_layer_event 中 strncpy 越界）。
+    # MAX_JS_EVENTS / MAX_C_EVENT_HANDLERS 同理必须与 CMakeLists.txt 一致。
+    add_cflags('-DMAX_PATH=256')
+    add_cflags('-DYUI_PATH_MAX=256')
+    add_cflags('-DMAX_JS_EVENTS=64')
+    add_cflags('-DMAX_C_EVENT_HANDLERS=32')
 add_flags()
 
 set_kind("static")
