@@ -4,15 +4,17 @@ ESP-IDF wrapper for running idf.py with proper environment.
 Works on Windows (PowerShell/CMD), Linux, macOS.
 Usage: python scripts/run_esp32_idf.py <idf.py args...>
 
-Special handling for headless QEMU (`qemu monitor` without --graphics):
-ESP-IDF's idf.py spawns QEMU as a background process, which gets blocked in
-sandboxed environments. This script launches QEMU as a foreground subprocess
-itself, then runs idf_monitor to connect.
+Special handling for QEMU (`qemu` / `qemu --graphics` + monitor):
+ESP-IDF's idf.py spawns QEMU in the background with stdout/stderr PIPEd.
+That often exits (or deadlocks) under SDL, and idf_monitor then sees
+"Connection reset by peer" with no serial output. This script launches QEMU
+itself, then attaches idf_monitor.
 """
 import os
 import sys
 import time
 import shlex
+import socket
 import shutil
 import subprocess
 from pathlib import Path
@@ -387,7 +389,19 @@ def make_spiffs(env):
     print(f"OK: {out} ({out.stat().st_size} bytes)", flush=True)
 
 
-def run_qemu_headless(env):
+def _wait_for_tcp_port(port, timeout_s=15.0):
+    """Block until something listens on localhost:port (or raise)."""
+    deadline = time.time() + timeout_s
+    while time.time() < deadline:
+        try:
+            with socket.create_connection(('127.0.0.1', int(port)), timeout=0.5):
+                return
+        except OSError:
+            time.sleep(0.1)
+    raise TimeoutError(f'timeout waiting for tcp://127.0.0.1:{port}')
+
+
+def run_qemu(env, graphics=False):
     """Manual QEMU launch + monitor (avoids idf.py background-spawn issue)."""
     qemu = find_qemu()
     if not qemu:
@@ -406,6 +420,8 @@ def run_qemu_headless(env):
     if not efuse.exists():
         efuse = Path(os.devnull)  # efuse optional
 
+    # server (no nowait): guest boots only after monitor connects → no lost boot log
+    display = ['-display', 'sdl'] if graphics else ['-nographic']
     qemu_cmd = [
         qemu, '-M', 'esp32c3',
         '-drive', f'file={flash},if=mtd,format=raw',
@@ -413,13 +429,26 @@ def run_qemu_headless(env):
         '-global', 'driver=nvram.esp32c3.efuse,property=drive,value=efuse',
         '-global', 'driver=timer.esp32c3.timg,property=wdt_disable,value=true',
         '-nic', 'user,model=open_eth',
-        '-nographic', '-serial', f'tcp::{QEMU_PORT},server',
+        *display,
+        '-serial', f'tcp::{QEMU_PORT},server',
     ]
     print(f"Launching QEMU: {' '.join(qemu_cmd)}", flush=True)
+    # Do NOT pipe stdout/stderr — idf.py does that and SDL QEMU often dies,
+    # leaving monitor with "Connection reset by peer" and no prints.
     qemu_proc = subprocess.Popen(qemu_cmd, cwd=str(ESP32_DIR))
 
-    # Wait for QEMU to listen on the serial port
-    time.sleep(2)
+    try:
+        _wait_for_tcp_port(QEMU_PORT, timeout_s=20.0)
+    except TimeoutError as e:
+        print(f"ERROR: {e}", file=sys.stderr)
+        if qemu_proc.poll() is not None:
+            print(f"ERROR: QEMU exited early (rc={qemu_proc.returncode})", file=sys.stderr)
+        qemu_proc.terminate()
+        sys.exit(1)
+
+    if qemu_proc.poll() is not None:
+        print(f"ERROR: QEMU exited before monitor (rc={qemu_proc.returncode})", file=sys.stderr)
+        sys.exit(qemu_proc.returncode or 1)
 
     monitor_cmd = [
         IDF_PYTHON, str(IDF_PATH / 'tools' / 'idf_monitor.py'),
@@ -512,15 +541,11 @@ def main():
     # this step the font and spiffs partitions are empty (mount -10025 / no font).
     if len(args) >= 1 and args[0] == 'qemu':
         merge_qemu_flash(env)
-        flash = BUILD_DIR / 'qemu_flash.bin'
-        if '--graphics' not in args:
-            # Headless: custom foreground launch (avoids idf.py bg-spawn issues)
-            run_qemu_headless(env)
-            return
-        # Graphics: hand the pre-merged image to idf.py
-        rest = [a for a in args[1:] if a != '--graphics']
-        sys.exit(run_idf(env, 'qemu', '--graphics',
-                         '--flash-file', str(flash), *rest))
+        graphics = '--graphics' in args
+        # Always launch QEMU ourselves (graphics or headless). idf.py's bg
+        # spawn + PIPE often kills SDL QEMU → empty monitor / connection reset.
+        run_qemu(env, graphics=graphics)
+        return
 
     # Everything else goes through idf.py
     sys.exit(run_idf(env, *args))

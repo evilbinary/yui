@@ -109,7 +109,7 @@ ifeq ($(OS),Windows_NT)
 ESP32_PORT ?= COM3
 ESP32_IDF_WRAPPER := python scripts/run_esp32_idf.py
 else
-ESP32_PORT ?= /dev/ttyUSB0
+ESP32_PORT ?= /dev/ttyACM0
 ESP32_IDF_WRAPPER := python3 scripts/run_esp32_idf.py
 endif
 
