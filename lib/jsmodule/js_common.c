@@ -20,7 +20,9 @@ struct Layer* g_layer_root = NULL;
 typedef void (*CEventHandler)(Layer* layer, const char* event_type);
 
 // C 事件处理器注册表
+#ifndef MAX_C_EVENT_HANDLERS
 #define MAX_C_EVENT_HANDLERS 32
+#endif
 typedef struct {
     char event_name[128];
     CEventHandler handler;
@@ -30,10 +32,11 @@ static CEventEntry g_c_event_handlers[MAX_C_EVENT_HANDLERS];
 static int g_c_event_handler_count = 0;
 
 // JS 事件映射表（存储 JS 函数名）
-#ifdef ESP_PLATFORM
-#define MAX_JS_EVENTS 64
-#else
+#ifndef MAX_JS_EVENTS
 #define MAX_JS_EVENTS 256
+#endif
+#ifndef YUI_PATH_MAX
+#define YUI_PATH_MAX MAX_PATH
 #endif
 typedef struct {
     char event_name[128];
@@ -305,37 +308,37 @@ static void build_js_path(const char* js_path, const char* json_dir, char* full_
         snprintf(full_path, max_len, "%s%s", json_dir, js_path + 1);
     } else if (js_path[0] == '.' && js_path[1] == '.') {
         // ../ 开头的路径，需要处理相对路径
-        char temp_dir[MAX_PATH];
-        strncpy(temp_dir, json_dir, MAX_PATH - 1);
-        temp_dir[MAX_PATH - 1] = '\0';
+        char temp_dir[YUI_PATH_MAX];
+        strncpy(temp_dir, json_dir, sizeof(temp_dir) - 1);
+        temp_dir[sizeof(temp_dir) - 1] = '\0';
         
         const char* path_ptr = js_path;
         
         // 处理每个 ../ 
         while (path_ptr[0] == '.' && path_ptr[1] == '.' && (path_ptr[2] == '/' || path_ptr[2] == '\\')) {
+            // 已到文件系统根，不再上跳，消耗剩余 ../
+            if (strcmp(temp_dir, g_js_fs_root) == 0) {
+                while (path_ptr[0] == '.' && path_ptr[1] == '.' &&
+                       (path_ptr[2] == '/' || path_ptr[2] == '\\')) {
+                    path_ptr += 3;
+                }
+                break;
+            }
             // 从目录中移除最后一部分
             char* last_sep = strrchr(temp_dir, '/');
             char* last_sep_win = strrchr(temp_dir, '\\');
-            
+
             // 使用最后的分隔符
             char* sep = (last_sep_win > last_sep) ? last_sep_win : last_sep;
-            
+
             if (sep) {
                 *sep = '\0';  // 截断到最后一个分隔符之前
-                if (strcmp(temp_dir, g_js_fs_root) == 0) {
-                    // 已到文件系统根，不再上跳，消耗剩余 ../ 
-                    while (path_ptr[0] == '.' && path_ptr[1] == '.' &&
-                           (path_ptr[2] == '/' || path_ptr[2] == '\\')) {
-                        path_ptr += 3;
-                    }
-                    break;
-                }
             } else {
                 // 如果没有更多目录，使用根目录
                 strcpy(temp_dir, ".");
                 break;
             }
-            
+
             // 移动到路径的下一部分
             path_ptr += 3;  // 跳过 "../"
         }
@@ -669,8 +672,8 @@ static int load_js_recursive(cJSON* json, const char* json_dir)
         // 支持字符串格式（单个JS文件）
         if (cJSON_IsString(js_file)) {
             const char* js_path = js_file->valuestring;
-            char full_path[MAX_PATH];
-            build_js_path(js_path, json_dir, full_path, MAX_PATH);
+            char full_path[YUI_PATH_MAX];
+            build_js_path(js_path, json_dir, full_path, YUI_PATH_MAX);
 
             printf("JS: Loading JS file from config: %s -> %s\n", js_path, full_path);
             if (js_module_load_file(full_path) == 0) {
@@ -684,8 +687,8 @@ static int load_js_recursive(cJSON* json, const char* json_dir)
                 cJSON* js_item = cJSON_GetArrayItem(js_file, i);
                 if (js_item && cJSON_IsString(js_item)) {
                     const char* js_path = js_item->valuestring;
-                    char full_path[MAX_PATH];
-                    build_js_path(js_path, json_dir, full_path, MAX_PATH);
+                    char full_path[YUI_PATH_MAX];
+                    build_js_path(js_path, json_dir, full_path, YUI_PATH_MAX);
 
                     printf("JS: Loading JS files from config[%d]: %s -> %s\n", i, js_path, full_path);
                     if (js_module_load_file(full_path) == 0) {
@@ -730,8 +733,8 @@ static int collect_js_recursive(cJSON* json, const char* json_dir)
     if (js_file) {
         if (cJSON_IsString(js_file)) {
             const char* js_path = js_file->valuestring;
-            char full_path[MAX_PATH];
-            build_js_path(js_path, json_dir, full_path, MAX_PATH);
+            char full_path[YUI_PATH_MAX];
+            build_js_path(js_path, json_dir, full_path, YUI_PATH_MAX);
             if (g_collected_js_count < MAX_COLLECTED_JS) {
                 strncpy(g_collected_js_paths[g_collected_js_count], full_path, 127);
                 g_collected_js_paths[g_collected_js_count][127] = '\0';
@@ -744,8 +747,8 @@ static int collect_js_recursive(cJSON* json, const char* json_dir)
                 cJSON* js_item = cJSON_GetArrayItem(js_file, i);
                 if (js_item && cJSON_IsString(js_item)) {
                     const char* js_path = js_item->valuestring;
-                    char full_path[MAX_PATH];
-                    build_js_path(js_path, json_dir, full_path, MAX_PATH);
+                    char full_path[YUI_PATH_MAX];
+                    build_js_path(js_path, json_dir, full_path, YUI_PATH_MAX);
                     if (g_collected_js_count < MAX_COLLECTED_JS) {
                         strncpy(g_collected_js_paths[g_collected_js_count], full_path, 127);
                         g_collected_js_paths[g_collected_js_count][127] = '\0';
@@ -758,7 +761,7 @@ static int collect_js_recursive(cJSON* json, const char* json_dir)
     }
 
     // 注册事件映射（纯字符串表，不依赖 JS 引擎）
-    scan_and_register_events(json);
+    // scan_and_register_events(json);   // BISECT: disabled to isolate corruption
 
     // 递归遍历子节点
     cJSON* child = json->child;
@@ -782,9 +785,9 @@ int js_module_collect_from_json(cJSON* root_json, const char* json_file_path, in
         js_module_clear_events();
     }
 
-    char json_dir[MAX_PATH];
+    char json_dir[YUI_PATH_MAX];
     if (json_file_path && json_file_path[0] != '\0') {
-        get_file_dir(json_file_path, json_dir, MAX_PATH);
+        get_file_dir(json_file_path, json_dir, YUI_PATH_MAX);
     } else if (append) {
         strcpy(json_dir, ".");
     } else {
@@ -837,9 +840,9 @@ int js_module_load_from_json(cJSON* root_json, const char* json_file_path, int a
         js_module_clear_events();
     }
 
-    char json_dir[MAX_PATH];
+    char json_dir[YUI_PATH_MAX];
     if (json_file_path && json_file_path[0] != '\0') {
-        get_file_dir(json_file_path, json_dir, MAX_PATH);
+        get_file_dir(json_file_path, json_dir, YUI_PATH_MAX);
     } else if (append) {
         strcpy(json_dir, ".");
     } else {

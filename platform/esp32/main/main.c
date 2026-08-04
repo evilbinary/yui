@@ -62,8 +62,13 @@ static const char s_fallback_ui_json[] =
     "}";
 
 /* 读整个文件到堆缓冲（调用方负责 free）。失败返回 NULL。 */
-static char* read_file_alloc(const char* path, size_t max_len) {
-    FILE* f = fopen(path, "rb");
+static void check_heap(const char* tag) {
+    printf("YUI: [%s] free=%u largest=%u\n", tag,
+           (unsigned)heap_caps_get_free_size(MALLOC_CAP_8BIT),
+           (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
+}
+
+static char* read_file_alloc(const char* path, size_t max_len) {    FILE* f = fopen(path, "rb");
     char* buf = NULL;
     long sz;
     if (!f) return NULL;
@@ -181,9 +186,7 @@ void app_main(void) {
         backend_quit();
         return;
     }
-    printf("YUI: after ui build free=%u largest=%u\n",
-           (unsigned)heap_caps_get_free_size(MALLOC_CAP_8BIT),
-           (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
+    check_heap("after ui build");
 
     /* 5. 两阶段 JS 加载：
      *    a) 先绑定图层树（g_layer_root，事件注册需按 layer id 查找图层，不依赖 JS 引擎）。
@@ -194,13 +197,11 @@ void app_main(void) {
 
     if (json) {
         js_module_collect_from_json(json, "/spiffs/app.json", 0);
+        check_heap("after collect");
         cJSON_Delete(json);
+        check_heap("after cjson free");
         json = NULL;
     }
-
-    printf("YUI: before js_module_init free=%u largest=%u\n",
-           (unsigned)heap_caps_get_free_size(MALLOC_CAP_8BIT),
-           (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
 
     if (js_module_init() != 0) {
         printf("YUI: JS engine init failed, continuing without JS\n");

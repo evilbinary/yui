@@ -310,7 +310,9 @@ typedef struct Rect {
 
 
 
+#ifndef MAX_PATH
 #define MAX_PATH 1024
+#endif
 #define MAX_TEXT 256
 
 // 图标对齐常量（用于 Label/Button/Input 等组件）

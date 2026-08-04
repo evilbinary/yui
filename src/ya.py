@@ -52,6 +52,10 @@ elif get_plat() == "esp32":
     add_cflags("-DMAX_EVENT=64")
     add_cflags("-DYUI_MAX_TYPES=32")
     add_cflags("-DEMBED_TEXT_CACHE_DEFAULT=16")
+    add_cflags("-DMAX_JS_EVENTS=64")
+    add_cflags("-DMAX_C_EVENT_HANDLERS=32")
+    add_cflags("-DMAX_PATH=256")
+    add_cflags("-DYUI_PATH_MAX=256")
 elif get_plat() in ("android", "ios"):
     add_files("backend/backend_mobile.c")
     add_files("backend/mobile_text.c")

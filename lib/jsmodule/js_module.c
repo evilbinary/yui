@@ -15,7 +15,9 @@
 
 // Layer 结构的最小定义（只使用我们需要的字段）
 #define MAX_TEXT 256
+#ifndef MAX_PATH
 #define MAX_PATH 1024
+#endif
 
 // 全局 JS 上下文
 static JSContext* g_js_ctx = NULL;
