@@ -203,10 +203,11 @@ def run_qemu_headless(env):
         print("ERROR: qemu-system-riscv32 not found. Install via idf_tools.py", file=sys.stderr)
         sys.exit(1)
 
-    # Make sure flash image is up to date
-    merge_qemu_flash(env)
-
+    # qemu_flash.bin is prepared by main() via merge_qemu_flash()
     flash = BUILD_DIR / 'qemu_flash.bin'
+    if not flash.exists():
+        print("ERROR: qemu_flash.bin missing; merge_qemu_flash was not run", file=sys.stderr)
+        sys.exit(1)
     efuse = BUILD_DIR / 'qemu_efuse.bin'
     if not efuse.exists():
         efuse = Path(os.devnull)  # efuse optional
@@ -300,10 +301,20 @@ def main():
         run_write_spiffs(env)
         return
 
-    # Headless QEMU: `qemu monitor` (no --graphics)
-    if len(args) >= 1 and args[0] == 'qemu' and '--graphics' not in args:
-        run_qemu_headless(env)
-        return
+    # QEMU: always merge font + SPIFFS into qemu_flash.bin first.
+    # idf.py qemu only merges bootloader/app/partition by default, so without
+    # this step the font and spiffs partitions are empty (mount -10025 / no font).
+    if len(args) >= 1 and args[0] == 'qemu':
+        merge_qemu_flash(env)
+        flash = BUILD_DIR / 'qemu_flash.bin'
+        if '--graphics' not in args:
+            # Headless: custom foreground launch (avoids idf.py bg-spawn issues)
+            run_qemu_headless(env)
+            return
+        # Graphics: hand the pre-merged image to idf.py
+        rest = [a for a in args[1:] if a != '--graphics']
+        sys.exit(run_idf(env, 'qemu', '--graphics',
+                         '--flash-file', str(flash), *rest))
 
     # Everything else goes through idf.py
     sys.exit(run_idf(env, *args))
