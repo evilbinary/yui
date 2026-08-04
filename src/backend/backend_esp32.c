@@ -20,6 +20,7 @@
 #include <math.h>
 
 #ifdef ESP_PLATFORM
+#include "esp_idf_version.h"
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "esp_lcd_panel_io.h"
@@ -304,7 +305,12 @@ static int esp32_lcd_init(void) {
 
     memset(&panel_config, 0, sizeof(panel_config));
     panel_config.reset_gpio_num = s_cfg.rst;
+    /* IDF 5+: color_space renamed to rgb_ele_order */
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+    panel_config.rgb_ele_order = LCD_RGB_ELEMENT_ORDER_RGB;
+#else
     panel_config.color_space = ESP_LCD_COLOR_SPACE_RGB;
+#endif
     panel_config.bits_per_pixel = 16;
 
     ret = esp_lcd_new_panel_st7789(io_handle, &panel_config, &s_panel);
