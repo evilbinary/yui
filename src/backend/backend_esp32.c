@@ -936,9 +936,10 @@ void backend_delay(int ms) {
 void backend_render_present(void) {
 #ifdef ESP_PLATFORM
 #ifdef YUI_ESP32_QEMU
-    /* QEMU：直写模式（buffer=0）无脏矩形跟踪，每帧整帧推送；带超时。 */
+    /* QEMU：直写模式（buffer=0）无脏矩形跟踪，每帧整帧推送。
+     * 使用官方 esp_lcd_rgb_qemu_refresh API 确保 SDL 显示后端正确处理。 */
     if (!s_has_dirty) {
-        esp32_qemu_push_rect(0, 0, s_fb_w, s_fb_h);
+        esp_lcd_rgb_qemu_refresh(s_panel);
     } else {
         esp32_flush_dirty();
     }
@@ -998,11 +999,20 @@ void backend_tick(Layer* ui_root) {
     for (i = 0; i < s_update_cb_count; i++) {
         if (s_update_cb[i]) s_update_cb[i]();
     }
-    backend_render_clear_color(20, 20, 20, 255);
+    backend_render_clear_color(30, 60, 120, 255);
     if (ui_root) render_layer(ui_root);
     popup_manager_render();
     backend_render_present();
 #ifdef YUI_ESP32_QEMU
+    if (s_frame_count == 0) {
+        /* 首帧调试：检查 framebuffer 是否被写入 */
+        int i, nonzero = 0;
+        for (i = 0; i < s_fb_w * s_fb_h; i++) {
+            if (s_fb[i] != 0) { nonzero++; }
+        }
+        printf("YUI: fb debug: %d/%d nonzero pixels, fb[0]=0x%04x fb[100]=0x%04x\n",
+               nonzero, s_fb_w * s_fb_h, s_fb[0], s_fb[100]);
+    }
     if ((s_frame_count % 10) == 0) printf("YUI: frame %d done\n", s_frame_count);
 #endif
 }
