@@ -79,7 +79,7 @@ void app_main(void) {
     printf("YUI: QEMU mode (virtual RGB panel)\n");
     /* 冒烟测试：渲染固定帧数后自动退出，便于无头验证完整主循环。
      * framebuffer 由编译期宏 YUI_ESP32_LCD_BUFFER 控制，默认关闭（直写像素）。 */
-    backend_set_auto_frames(100);
+    // backend_set_auto_frames(100);
 #else
     /* 触摸（I2C CST816S；int_pin=-1 禁用轮询中断） */
     backend_esp32_set_touch(0, 4, 5, 0x15, 6);
