@@ -222,8 +222,8 @@ static int esp32_lcd_init(void) {
 
     ret = spi_bus_initialize((spi_host_device_t)s_cfg.spi_host, &buscfg, SPI_DMA_CH_AUTO);
     if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {
-        ESP_LOGE(YUI_E32_TAG, "spi_bus_initialize failed: %s", esp_err_to_name(ret));
-        return -1;
+        ESP_LOGW(YUI_E32_TAG, "spi_bus_initialize failed (%s), running in headless mode", esp_err_to_name(ret));
+        return 0;  /* QEMU 或无 SPI 硬件时降级为虚拟 framebuffer */
     }
 
     memset(&io_config, 0, sizeof(io_config));
@@ -237,8 +237,8 @@ static int esp32_lcd_init(void) {
 
     ret = esp_lcd_new_panel_io_spi((esp_lcd_spi_bus_handle_t)s_cfg.spi_host, &io_config, &io_handle);
     if (ret != ESP_OK) {
-        ESP_LOGE(YUI_E32_TAG, "esp_lcd_new_panel_io_spi failed: %s", esp_err_to_name(ret));
-        return -1;
+        ESP_LOGW(YUI_E32_TAG, "esp_lcd_new_panel_io_spi failed (%s), running in headless mode", esp_err_to_name(ret));
+        return 0;  /* QEMU 或无 LCD 硬件时降级为虚拟 framebuffer */
     }
 
     memset(&panel_config, 0, sizeof(panel_config));
@@ -248,8 +248,8 @@ static int esp32_lcd_init(void) {
 
     ret = esp_lcd_new_panel_st7789(io_handle, &panel_config, &s_panel);
     if (ret != ESP_OK) {
-        ESP_LOGE(YUI_E32_TAG, "esp_lcd_new_panel_st7789 failed: %s", esp_err_to_name(ret));
-        return -1;
+        ESP_LOGW(YUI_E32_TAG, "esp_lcd_new_panel_st7789 failed (%s), running in headless mode", esp_err_to_name(ret));
+        return 0;  /* QEMU 或无 ST7789 时降级为虚拟 framebuffer */
     }
 
     esp_lcd_panel_reset(s_panel);

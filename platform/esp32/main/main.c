@@ -61,6 +61,8 @@ void app_main(void) {
     Layer* ui_root;
     DFont* font;
 
+    printf("YUI ESP32 starting...\n");
+
     /* 1. 板级配置：分辨率/SPI 主机/CS/DC/RST/BL/SPI 时钟 */
     backend_esp32_set_config(240, 240, 2, 5, 16, -1, -1, 40 * 1000 * 1000);
     /* SPI 总线引脚（MOSI/SCK） */
@@ -73,17 +75,22 @@ void app_main(void) {
     popup_manager_init();
 
     /* 3. 加载字体：优先 Flash 映射（零 RAM），回退 RAM 加载。
-     *    Flash 分区方案见 partitions.csv 的 "font" 分区与 README。 */
+     *    Flash 分区方案见 partitions.csv 的 "font" 分区与 README。
+     *    QEMU 环境：无 font 分区，跳过字体加载（纯图形测试）。 */
     font = backend_esp32_load_font_from_flash("font", 16);
-    if (!font)
-        font = backend_load_font("font.ttf", 16);
+    if (!font) {
+        font = backend_load_font("Roboto-Regular.ttf", 16);
+    }
+    if (!font) {
+        printf("YUI: No font loaded, running in headless mode\n");
+    }
 
     /* 4. 构建 UI */
     json = cJSON_Parse(s_ui_json);
     ui_root = layer_create_from_json(json, NULL);
     cJSON_Delete(json);
     if (!ui_root) {
-        printf("yui: failed to create ui\n");
+        printf("YUI: failed to create UI\n");
         backend_quit();
         return;
     }
@@ -94,7 +101,7 @@ void app_main(void) {
         memset(ui_root->font, 0, sizeof(Font));
         ui_root->font->default_font = font;
         ui_root->font->size = 16;
-        strcpy(ui_root->font->path, "font.ttf");
+        strcpy(ui_root->font->path, "Roboto-Regular.ttf");
     }
     ui_root->assets = (Assets*)malloc(sizeof(Assets));
     strcpy(ui_root->assets->path, "assets");

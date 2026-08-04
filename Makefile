@@ -103,6 +103,36 @@ web-serve: web
 web-serve-lvgl: web-lvgl
 	cd platform/web/vanilla && python -m http.server 8080
 
+# ESP32/ESP32-C3 targets
+# 跨平台 wrapper：使用 Python 脚本激活 ESP-IDF 环境
+ESP32_PORT ?= COM3
+ESP32_IDF_WRAPPER := python scripts/run_esp32_idf.py
+
+esp32-build:
+	ya -p esp32 -a esp32c3
+	$(ESP32_IDF_WRAPPER) build
+
+esp32-flash: esp32-build
+	$(ESP32_IDF_WRAPPER) -p $(ESP32_PORT) flash
+
+esp32-monitor:
+	$(ESP32_IDF_WRAPPER) -p $(ESP32_PORT) monitor
+
+esp32-flash-monitor: esp32-flash
+	$(ESP32_IDF_WRAPPER) -p $(ESP32_PORT) monitor
+
+esp32-qemu: esp32-build
+	$(ESP32_IDF_WRAPPER) qemu --graphics monitor
+
+esp32-qemu-headless: esp32-build
+	$(ESP32_IDF_WRAPPER) qemu monitor
+
+esp32-menuconfig:
+	$(ESP32_IDF_WRAPPER) menuconfig
+
+esp32-size:
+	$(ESP32_IDF_WRAPPER) size
+
 run: main
 	ya -r main
 
