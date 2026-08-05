@@ -155,6 +155,127 @@ static JSValue js_date_now(JSContext *ctx, JSValue *this_val, int argc, JSValue 
     return JS_NewInt64(ctx, (int64_t)tv.tv_sec * 1000 + (tv.tv_usec / 1000));
 }
 
+/* Date internal helper */
+static int64_t js_date_get_timestamp(JSContext *ctx, JSValue obj)
+{
+    JSValue ts_val = JS_GetPropertyStr(ctx, obj, "_timestamp");
+    double d = 0;
+    if (JS_IsException(ts_val))
+        return 0;
+    JS_ToNumber(ctx, &d, ts_val);
+    return (int64_t)d;
+}
+
+/* Date prototype methods */
+JSValue js_date_getTime(JSContext *ctx, JSValue *this_val,
+                        int argc, JSValue *argv)
+{
+    return JS_NewInt64(ctx, js_date_get_timestamp(ctx, *this_val));
+}
+
+JSValue js_date_getFullYear(JSContext *ctx, JSValue *this_val,
+                            int argc, JSValue *argv)
+{
+    int64_t ts = js_date_get_timestamp(ctx, *this_val);
+    time_t t = (time_t)(ts / 1000);
+    struct tm *tm_info = gmtime(&t);
+    return JS_NewInt32(ctx, tm_info->tm_year + 1900);
+}
+
+JSValue js_date_getMonth(JSContext *ctx, JSValue *this_val,
+                         int argc, JSValue *argv)
+{
+    int64_t ts = js_date_get_timestamp(ctx, *this_val);
+    time_t t = (time_t)(ts / 1000);
+    struct tm *tm_info = gmtime(&t);
+    return JS_NewInt32(ctx, tm_info->tm_mon);
+}
+
+JSValue js_date_getDate(JSContext *ctx, JSValue *this_val,
+                        int argc, JSValue *argv)
+{
+    int64_t ts = js_date_get_timestamp(ctx, *this_val);
+    time_t t = (time_t)(ts / 1000);
+    struct tm *tm_info = gmtime(&t);
+    return JS_NewInt32(ctx, tm_info->tm_mday);
+}
+
+JSValue js_date_getHours(JSContext *ctx, JSValue *this_val,
+                         int argc, JSValue *argv)
+{
+    int64_t ts = js_date_get_timestamp(ctx, *this_val);
+    time_t t = (time_t)(ts / 1000);
+    struct tm *tm_info = gmtime(&t);
+    return JS_NewInt32(ctx, tm_info->tm_hour);
+}
+
+JSValue js_date_getMinutes(JSContext *ctx, JSValue *this_val,
+                           int argc, JSValue *argv)
+{
+    int64_t ts = js_date_get_timestamp(ctx, *this_val);
+    time_t t = (time_t)(ts / 1000);
+    struct tm *tm_info = gmtime(&t);
+    return JS_NewInt32(ctx, tm_info->tm_min);
+}
+
+JSValue js_date_getSeconds(JSContext *ctx, JSValue *this_val,
+                           int argc, JSValue *argv)
+{
+    int64_t ts = js_date_get_timestamp(ctx, *this_val);
+    time_t t = (time_t)(ts / 1000);
+    struct tm *tm_info = gmtime(&t);
+    return JS_NewInt32(ctx, tm_info->tm_sec);
+}
+
+JSValue js_date_getDay(JSContext *ctx, JSValue *this_val,
+                       int argc, JSValue *argv)
+{
+    int64_t ts = js_date_get_timestamp(ctx, *this_val);
+    time_t t = (time_t)(ts / 1000);
+    struct tm *tm_info = gmtime(&t);
+    return JS_NewInt32(ctx, tm_info->tm_wday);
+}
+
+JSValue js_date_toString(JSContext *ctx, JSValue *this_val,
+                         int argc, JSValue *argv)
+{
+    int64_t ts = js_date_get_timestamp(ctx, *this_val);
+    time_t t = (time_t)(ts / 1000);
+    struct tm *tm_info = gmtime(&t);
+    char buf[64];
+    strftime(buf, sizeof(buf), "%a %b %d %Y %H:%M:%S GMT%z", tm_info);
+    return JS_NewString(ctx, buf);
+}
+
+/* Date constructor */
+JSValue js_date_constructor_impl(JSContext *ctx, JSValue *this_val,
+                                 int argc, JSValue *argv)
+{
+    struct timeval tv;
+    int64_t timestamp;
+    time_t t;
+    struct tm *tm_info;
+    char buf[64];
+
+    gettimeofday(&tv, NULL);
+    timestamp = (int64_t)tv.tv_sec * 1000 + (tv.tv_usec / 1000);
+
+    if (!(argc & FRAME_CF_CTOR)) {
+        /* Called without new: return current date string */
+        t = (time_t)(timestamp / 1000);
+        tm_info = gmtime(&t);
+        strftime(buf, sizeof(buf), "%a %b %d %Y %H:%M:%S GMT%z", tm_info);
+        return JS_NewString(ctx, buf);
+    }
+
+    argc &= ~FRAME_CF_CTOR;
+
+    /* Store timestamp as internal property */
+    JS_SetPropertyStr(ctx, *this_val, "_timestamp", JS_NewInt64(ctx, timestamp));
+
+    return *this_val;
+}
+
 static JSValue js_performance_now(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
 {
     return JS_NewInt64(ctx, get_time_ms());

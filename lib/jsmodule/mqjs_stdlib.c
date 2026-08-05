@@ -305,8 +305,21 @@ static const JSPropDef js_date[] = {
     JS_PROP_END,
 };
 
+static const JSPropDef js_date_proto[] = {
+    JS_CFUNC_DEF("getTime", 0, js_date_getTime),
+    JS_CFUNC_DEF("getFullYear", 0, js_date_getFullYear),
+    JS_CFUNC_DEF("getMonth", 0, js_date_getMonth),
+    JS_CFUNC_DEF("getDate", 0, js_date_getDate),
+    JS_CFUNC_DEF("getHours", 0, js_date_getHours),
+    JS_CFUNC_DEF("getMinutes", 0, js_date_getMinutes),
+    JS_CFUNC_DEF("getSeconds", 0, js_date_getSeconds),
+    JS_CFUNC_DEF("getDay", 0, js_date_getDay),
+    JS_CFUNC_DEF("toString", 0, js_date_toString),
+    JS_PROP_END,
+};
+
 static const JSClassDef js_date_class =
-    JS_CLASS_DEF("Date", 7, js_date_constructor, JS_CLASS_DATE, js_date, NULL, NULL, NULL);
+    JS_CLASS_DEF("Date", 7, js_date_constructor_impl, JS_CLASS_DATE, js_date, js_date_proto, NULL, NULL);
 
 static const JSPropDef js_console[] = {
     JS_CFUNC_DEF("log", 1, js_print),
