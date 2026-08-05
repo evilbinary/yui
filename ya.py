@@ -588,7 +588,7 @@ def add_flags():
             '-DMAX_JS_EVENTS=64',
             '-DMAX_C_EVENT_HANDLERS=32',
         )
-        add_cflags('-DJS_MEM_POOL_SIZE=4194304')
+        # add_cflags('-DJS_MEM_POOL_SIZE=4194304')
     elif is_plat("esp32"):
         set_toolchain('gcc')
         configure_esp32_toolchain()

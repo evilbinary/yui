@@ -651,6 +651,7 @@ static JSValue js_list_dir(JSContext *ctx, JSValue *this_val, int argc, JSValue 
     DIR *dp = NULL;
     struct dirent *de;
     JSValue arr, entry;
+    JSGCRef arr_ref, entry_ref;
     int n = 0;
 
     if (argc < 1) {
@@ -693,6 +694,7 @@ static JSValue js_list_dir(JSContext *ctx, JSValue *this_val, int argc, JSValue 
     }
 
     arr = JS_NewArray(ctx, 0);
+    JS_PUSH_VALUE(ctx, arr);
     while ((de = readdir(dp)) != NULL) {
         if (strcmp(de->d_name, ".") == 0 || strcmp(de->d_name, "..") == 0) {
             continue;
@@ -702,6 +704,7 @@ static JSValue js_list_dir(JSContext *ctx, JSValue *this_val, int argc, JSValue 
             printf("YUI: listDir: JS_NewObject exception, aborting list\n");
             break;
         }
+        JS_PUSH_VALUE(ctx, entry);
         JS_SetPropertyStr(ctx, entry, "name", JS_NewString(ctx, de->d_name));
         {
             struct stat st;
@@ -711,7 +714,9 @@ static JSValue js_list_dir(JSContext *ctx, JSValue *this_val, int argc, JSValue 
             JS_SetPropertyStr(ctx, entry, "isDir", JS_NewBool(is_dir));
         }
         JS_SetPropertyUint32(ctx, arr, n++, entry);
+        JS_POP_VALUE(ctx, entry);
     }
+    JS_POP_VALUE(ctx, arr);
     printf("YUI: listDir('%s') -> %d entries\n", dir, n);
     closedir(dp);
     return arr;
