@@ -270,10 +270,36 @@ JSValue js_date_constructor_impl(JSContext *ctx, JSValue *this_val,
 
     argc &= ~FRAME_CF_CTOR;
 
-    /* Store timestamp as internal property */
-    JS_SetPropertyStr(ctx, *this_val, "_timestamp", JS_NewInt64(ctx, timestamp));
+    /* mquickjs passes JS_UNDEFINED as this_val for `new`; native constructors
+       must allocate and return the instance themselves. As the engine does not
+       export a way to build a JS_CLASS_DATE object, build a plain object and
+       copy the Date methods (getHours/...) from Date.prototype onto it, plus
+       the internal _timestamp those methods read. */
+    {
+        JSValue g, d, proto, f, obj;
+        int i;
 
-    return *this_val;
+        obj = JS_NewObject(ctx);
+        if (JS_IsException(obj))
+            return obj;
+
+        g = JS_GetGlobalObject(ctx);
+        d = JS_GetPropertyStr(ctx, g, "Date");
+        proto = JS_GetPropertyStr(ctx, d, "prototype");
+        {
+            static const char *m[] = {
+                "getTime", "getFullYear", "getMonth", "getDate",
+                "getHours", "getMinutes", "getSeconds", "getDay", "toString"
+            };
+            for (i = 0; i < 9; i++) {
+                f = JS_GetPropertyStr(ctx, proto, m[i]);
+                if (!JS_IsException(f) && !JS_IsUndefined(f))
+                    JS_SetPropertyStr(ctx, obj, m[i], f);
+            }
+        }
+        JS_SetPropertyStr(ctx, obj, "_timestamp", JS_NewInt64(ctx, timestamp));
+        return obj;
+    }
 }
 
 static JSValue js_performance_now(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
