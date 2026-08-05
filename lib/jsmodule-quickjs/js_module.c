@@ -514,8 +514,12 @@ static JSValue js_theme_load(JSContext *ctx, JSValueConst this_val, int argc, JS
         // 是JSON字符串，从JSON加载
         theme = theme_manager_load_theme_from_json(theme_input);
     } else {
-        // 是文件路径，从文件加载
-        theme = theme_manager_load_theme(theme_input);
+        // 是文件路径，从文件加载（走 js_module_read_file，与 YUI.readFile 相同 fs_root/base_path 解析）
+        char* content = js_module_read_file(theme_input);
+        if (content) {
+            theme = theme_manager_load_theme_from_json(content);
+            free(content);
+        }
     }
 
     JS_FreeCString(ctx, theme_input);
@@ -2121,7 +2125,32 @@ JSValue js_list_dir(JSContext* ctx, JSValueConst this_val, int argc, JSValueCons
         else need_free = 1;
     }
 
-    DIR* dir = opendir(dir_path);
+    /* 与 js_module_read_file 相同的路径解析：相对路径尝试 fs_root/path */
+    const char* fs_root = js_module_get_fs_root();
+    const char* base_path = js_module_get_base_path();
+    char resolved[1024];
+    const char* open_dir = NULL;
+
+    if (dir_path[0] == '/') {
+        open_dir = dir_path;
+    } else if (fs_root && strcmp(fs_root, "/") != 0) {
+        snprintf(resolved, sizeof(resolved), "%s/%s", fs_root, dir_path);
+        open_dir = resolved;
+    } else if (base_path && base_path[0]) {
+        snprintf(resolved, sizeof(resolved), "%s/%s", base_path, dir_path);
+        open_dir = resolved;
+    } else {
+        open_dir = dir_path;
+    }
+
+    DIR* dir = opendir(open_dir);
+    if (!dir) {
+        /* 回退：再尝试 base_path/path */
+        if (base_path && base_path[0] && open_dir != resolved) {
+            snprintf(resolved, sizeof(resolved), "%s/%s", base_path, dir_path);
+            dir = opendir(resolved);
+        }
+    }
     if (!dir) {
         if (need_free) JS_FreeCString(ctx, dir_path);
         return JS_NULL;
@@ -2138,7 +2167,7 @@ JSValue js_list_dir(JSContext* ctx, JSValueConst this_val, int argc, JSValueCons
         JS_SetPropertyStr(ctx, item, "name", JS_NewString(ctx, entry->d_name));
 
         char full_path[1024];
-        snprintf(full_path, sizeof(full_path), "%s/%s", dir_path, entry->d_name);
+        snprintf(full_path, sizeof(full_path), "%s/%s", open_dir, entry->d_name);
         struct stat st;
         int is_dir = (stat(full_path, &st) == 0 && S_ISDIR(st.st_mode)) ? 1 : 0;
         JS_SetPropertyStr(ctx, item, "isDir", JS_NewBool(ctx, is_dir));
