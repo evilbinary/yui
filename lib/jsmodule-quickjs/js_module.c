@@ -1787,8 +1787,10 @@ JSValue js_read_file(JSContext* ctx, JSValueConst this_val, int argc, JSValueCon
     char* content = js_module_read_file(file_path);
     JS_FreeCString(ctx, file_path);
 
+    /* 与 mquickjs 的 js_read_file 一致：文件不存在返回 null，
+       让 JS 层 (if (!raw) return default) 走默认分支，而不是抛异常。 */
     if (!content) {
-        return JS_ThrowInternalError(ctx, "Failed to read file");
+        return JS_NULL;
     }
 
     JSValue result = JS_NewString(ctx, content);
