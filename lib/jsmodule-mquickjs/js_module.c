@@ -58,6 +58,7 @@ int js_module_init(void)
         fprintf(stderr, "JS: Failed to allocate memory (%u bytes)\n", (unsigned)g_js_mem_size);
         return -1;
     }
+    printf("JS: JS_MEM_POOL_SIZE=%u bytes\n", (unsigned)g_js_mem_size);
 
     g_js_ctx = JS_NewContext(g_js_mem, g_js_mem_size, &js_yuistdlib);
     if (!g_js_ctx) {
