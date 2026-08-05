@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "mquickjs_build.h"
+#include "js_module.h"
 
 
 #include <errno.h>
@@ -17,6 +18,7 @@
 #include <math.h>
 #include <fcntl.h>
 #include <dirent.h>
+#include <sys/stat.h>
 
 #include "cutils.h"
 #include "mquickjs.h"
@@ -697,7 +699,13 @@ static JSValue js_list_dir(JSContext *ctx, JSValue *this_val, int argc, JSValue 
         }
         entry = JS_NewObject(ctx);
         JS_SetPropertyStr(ctx, entry, "name", JS_NewString(ctx, de->d_name));
-        JS_SetPropertyStr(ctx, entry, "isDir", JS_NewBool((de->d_type & DT_DIR) != 0));
+        {
+            struct stat st;
+            char path[MAX_PATH];
+            snprintf(path, sizeof(path), "%s/%s", open_dir, de->d_name);
+            int is_dir = (stat(path, &st) == 0) && S_ISDIR(st.st_mode);
+            JS_SetPropertyStr(ctx, entry, "isDir", JS_NewBool(is_dir));
+        }
         JS_SetPropertyUint32(ctx, arr, n++, entry);
     }
     closedir(dp);

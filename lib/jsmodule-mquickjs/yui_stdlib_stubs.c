@@ -97,6 +97,14 @@ char* js_module_read_file(const char* file_path) {
     return NULL;
 }
 
+const char* js_module_get_fs_root(void) {
+    return "/spiffs";
+}
+
+const char* js_module_get_base_path(void) {
+    return "";
+}
+
 int js_module_resize_root(int width, int height) {
     return -1;
 }
