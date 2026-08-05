@@ -98,20 +98,19 @@ char* js_module_read_file(const char* file_path) {
     return NULL;
 }
 
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib_stubs.c
 int js_module_resolve_path(const char* in, char* out, size_t out_sz) {
     (void)in;
     (void)out;
     (void)out_sz;
     return -1;
-========
+}
+
 const char* js_module_get_fs_root(void) {
     return "/spiffs";
 }
 
 const char* js_module_get_base_path(void) {
     return "";
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib_stubs.c
 }
 
 int js_module_resize_root(int width, int height) {

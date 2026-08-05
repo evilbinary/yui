@@ -585,169 +585,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   0x0000000065646968,
   (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (4 << (JS_MTAG_BITS + 3)), /* "show" (offset=579) */
   0x00000000776f6873,
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (13 << (JS_MTAG_BITS + 3)), /* "getWindowSize" (offset=560) */
-  0x6f646e6957746567,
-  0x000000657a695377,
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (14 << (JS_MTAG_BITS + 3)), /* "renderFromJson" (offset=563) */
-  0x72467265646e6572,
-  0x00006e6f734a6d6f,
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (8 << (JS_MTAG_BITS + 3)), /* "readFile" (offset=566) */
-  0x656c694664616572,
-  0x0000000000000000,
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (7 << (JS_MTAG_BITS + 3)), /* "listDir" (offset=569) */
-  0x007269447473696c,
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (10 << (JS_MTAG_BITS + 3)), /* "resizeRoot" (offset=571) */
-  0x6f52657a69736572,
-  0x000000000000746f,
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (6 << (JS_MTAG_BITS + 3)), /* "update" (offset=574) */
-  0x0000657461647075,
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (4 << (JS_MTAG_BITS + 3)), /* "dump" (offset=576) */
-  0x00000000706d7564,
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (9 << (JS_MTAG_BITS + 3)), /* "themeLoad" (offset=578) */
-  0x616f4c656d656874,
-  0x0000000000000064,
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (15 << (JS_MTAG_BITS + 3)), /* "themeSetCurrent" (offset=581) */
-  0x746553656d656874,
-  0x00746e6572727543,
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (11 << (JS_MTAG_BITS + 3)), /* "themeUnload" (offset=584) */
-  0x6c6e55656d656874,
-  0x000000000064616f,
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (16 << (JS_MTAG_BITS + 3)), /* "themeApplyToTree" (offset=587) */
-  0x707041656d656874,
-  0x656572546f54796c,
-  0x0000000000000000,
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (14 << (JS_MTAG_BITS + 3)), /* "inspect.enable" (offset=591) */
-  0x2e74636570736e69,
-  0x0000656c62616e65,
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (15 << (JS_MTAG_BITS + 3)), /* "inspect.disable" (offset=594) */
-  0x2e74636570736e69,
-  0x00656c6261736964,
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (16 << (JS_MTAG_BITS + 3)), /* "inspect.setLayer" (offset=597) */
-  0x2e74636570736e69,
-  0x726579614c746573,
-  0x0000000000000000,
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (21 << (JS_MTAG_BITS + 3)), /* "inspect.setShowBounds" (offset=601) */
-  0x2e74636570736e69,
-  0x42776f6853746573,
-  0x00000073646e756f,
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (19 << (JS_MTAG_BITS + 3)), /* "inspect.setShowInfo" (offset=605) */
-  0x2e74636570736e69,
-  0x49776f6853746573,
-  0x00000000006f666e,
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (11 << (JS_MTAG_BITS + 3)), /* "perf.enable" (offset=609) */
-  0x616e652e66726570,
-  0x0000000000656c62,
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (12 << (JS_MTAG_BITS + 3)), /* "perf.disable" (offset=612) */
-  0x7369642e66726570,
-  0x00000000656c6261,
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (10 << (JS_MTAG_BITS + 3)), /* "perf.reset" (offset=615) */
-  0x7365722e66726570,
-  0x0000000000007465,
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (15 << (JS_MTAG_BITS + 3)), /* "perf.setOverlay" (offset=618) */
-  0x7465732e66726570,
-  0x0079616c7265764f,
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (12 << (JS_MTAG_BITS + 3)), /* "perf.setTopN" (offset=621) */
-  0x7465732e66726570,
-  0x000000004e706f54,
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (19 << (JS_MTAG_BITS + 3)), /* "perf.setLogInterval" (offset=624) */
-  0x7465732e66726570,
-  0x7265746e49676f4c,
-  0x00000000006c6176,
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (10 << (JS_MTAG_BITS + 3)), /* "perf.watch" (offset=628) */
-  0x7461772e66726570,
-  0x0000000000006863,
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (12 << (JS_MTAG_BITS + 3)), /* "perf.unwatch" (offset=631) */
-  0x776e752e66726570,
-  0x0000000068637461,
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (15 << (JS_MTAG_BITS + 3)), /* "perf.clearWatch" (offset=634) */
-  0x656c632e66726570,
-  0x0068637461577261,
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (18 << (JS_MTAG_BITS + 3)), /* "perf.getFrameStats" (offset=637) */
-  0x7465672e66726570,
-  0x617453656d617246,
-  0x0000000000007374,
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (18 << (JS_MTAG_BITS + 3)), /* "perf.getLayerStats" (offset=641) */
-  0x7465672e66726570,
-  0x617453726579614c,
-  0x0000000000007374,
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (8 << (JS_MTAG_BITS + 3)), /* "setEvent" (offset=645) */
-  0x746e657645746573,
-  0x0000000000000000,
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (1 << (JS_MTAG_BITS + 3)), /* "x" (offset=648) */
-  0x0000000000000078,
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (5 << (JS_MTAG_BITS + 3)), /* "get x" (offset=650) */
-  0x0000007820746567,
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (1 << (JS_MTAG_BITS + 3)), /* "y" (offset=652) */
-  0x0000000000000079,
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (5 << (JS_MTAG_BITS + 3)), /* "get y" (offset=654) */
-  0x0000007920746567,
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (6 << (JS_MTAG_BITS + 3)), /* "Socket" (offset=656) */
-  0x000074656b636f53,
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (3 << (JS_MTAG_BITS + 3)), /* "TCP" (offset=658) */
-  0x0000000000504354,
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (3 << (JS_MTAG_BITS + 3)), /* "UDP" (offset=660) */
-  0x0000000000504455,
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (6 << (JS_MTAG_BITS + 3)), /* "socket" (offset=662) */
-  0x000074656b636f73,
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (5 << (JS_MTAG_BITS + 3)), /* "close" (offset=664) */
-  0x00000065736f6c63,
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (8 << (JS_MTAG_BITS + 3)), /* "shutdown" (offset=666) */
-  0x6e776f6474756873,
-  0x0000000000000000,
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (7 << (JS_MTAG_BITS + 3)), /* "connect" (offset=669) */
-  0x007463656e6e6f63,
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (6 << (JS_MTAG_BITS + 3)), /* "listen" (offset=671) */
-  0x00006e657473696c,
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (6 << (JS_MTAG_BITS + 3)), /* "accept" (offset=673) */
-  0x0000747065636361,
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (11 << (JS_MTAG_BITS + 3)), /* "getsockname" (offset=675) */
-  0x6e6b636f73746567,
-  0x0000000000656d61,
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (11 << (JS_MTAG_BITS + 3)), /* "getpeername" (offset=678) */
-  0x6e72656570746567,
-  0x0000000000656d61,
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (10 << (JS_MTAG_BITS + 3)), /* "socketpair" (offset=681) */
-  0x617074656b636f73,
-  0x0000000000007269,
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (10 << (JS_MTAG_BITS + 3)), /* "setsockopt" (offset=684) */
-  0x6f6b636f73746573,
-  0x0000000000007470,
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (10 << (JS_MTAG_BITS + 3)), /* "getsockopt" (offset=687) */
-  0x6f6b636f73746567,
-  0x0000000000007470,
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (4 << (JS_MTAG_BITS + 3)), /* "send" (offset=690) */
-  0x00000000646e6573,
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (4 << (JS_MTAG_BITS + 3)), /* "recv" (offset=692) */
-  0x0000000076636572,
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (6 << (JS_MTAG_BITS + 3)), /* "sendto" (offset=694) */
-  0x00006f74646e6573,
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (8 << (JS_MTAG_BITS + 3)), /* "recvfrom" (offset=696) */
-  0x6d6f726676636572,
-  0x0000000000000000,
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (9 << (JS_MTAG_BITS + 3)), /* "inet_addr" (offset=699) */
-  0x6464615f74656e69,
-  0x0000000000000072,
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (5 << (JS_MTAG_BITS + 3)), /* "ntohl" (offset=702) */
-  0x0000006c686f746e,
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (16 << (JS_MTAG_BITS + 3)), /* "make_sockaddr_in" (offset=704) */
-  0x636f735f656b616d,
-  0x6e695f726464616b,
-  0x0000000000000000,
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (2 << (JS_MTAG_BITS + 3)), /* "gc" (offset=708) */
-  0x0000000000006367,
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (4 << (JS_MTAG_BITS + 3)), /* "load" (offset=710) */
-  0x0000000064616f6c,
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (10 << (JS_MTAG_BITS + 3)), /* "setTimeout" (offset=712) */
-  0x6f656d6954746573,
-  0x0000000000007475,
-  (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (12 << (JS_MTAG_BITS + 3)), /* "clearTimeout" (offset=715) */
-  0x6d69547261656c63,
-  0x0000000074756f65,
-
-  /* sorted atom table (offset=718) */
-  JS_VALUE_ARRAY_HEADER(292),
-========
   (JS_MTAG_STRING << 1) | (1 << JS_MTAG_BITS) | (1 << (JS_MTAG_BITS + 1)) | (0 << (JS_MTAG_BITS + 2)) | (13 << (JS_MTAG_BITS + 3)), /* "getWindowSize" (offset=581) */
   0x6f646e6957746567,
   0x000000657a695377,
@@ -909,7 +746,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
 
   /* sorted atom table (offset=739) */
   JS_VALUE_ARRAY_HEADER(300),
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_ROM_VALUE(97), /* empty */
   JS_ROM_VALUE(147), /* _Infinity */
   JS_ROM_VALUE(117), /* _eval_ */
@@ -952,24 +788,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(436), /* RegExp */
   JS_ROM_VALUE(366), /* SQRT1_2 */
   JS_ROM_VALUE(368), /* SQRT2 */
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  JS_ROM_VALUE(656), /* Socket */
-  JS_ROM_VALUE(244), /* String */
-  JS_ROM_VALUE(459), /* SyntaxError */
-  JS_ROM_VALUE(658), /* TCP */
-  JS_ROM_VALUE(462), /* TypeError */
-  JS_ROM_VALUE(484), /* TypedArray */
-  JS_ROM_VALUE(660), /* UDP */
-  JS_ROM_VALUE(465), /* URIError */
-  JS_ROM_VALUE(514), /* Uint16Array */
-  JS_ROM_VALUE(520), /* Uint32Array */
-  JS_ROM_VALUE(508), /* Uint8Array */
-  JS_ROM_VALUE(480), /* Uint8ClampedArray */
-  JS_ROM_VALUE(544), /* YUI */
-  JS_ROM_VALUE(154), /* __proto__ */
-  JS_ROM_VALUE(344), /* abs */
-  JS_ROM_VALUE(673), /* accept */
-========
   JS_ROM_VALUE(677), /* Socket */
   JS_ROM_VALUE(244), /* String */
   JS_ROM_VALUE(480), /* SyntaxError */
@@ -986,7 +804,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(154), /* __proto__ */
   JS_ROM_VALUE(344), /* abs */
   JS_ROM_VALUE(694), /* accept */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_ROM_VALUE(378), /* acos */
   JS_ROM_VALUE(192), /* apply */
   JS_ROM_VALUE(121), /* arguments */
@@ -1007,15 +824,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(255), /* charAt */
   JS_ROM_VALUE(257), /* charCodeAt */
   JS_ROM_VALUE(62), /* class */
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  JS_ROM_VALUE(715), /* clearTimeout */
-  JS_ROM_VALUE(664), /* close */
-  JS_ROM_VALUE(394), /* clz32 */
-  JS_ROM_VALUE(260), /* codePointAt */
-  JS_ROM_VALUE(268), /* concat */
-  JS_ROM_VALUE(669), /* connect */
-  JS_ROM_VALUE(537), /* console */
-========
   JS_ROM_VALUE(736), /* clearTimeout */
   JS_ROM_VALUE(685), /* close */
   JS_ROM_VALUE(394), /* clz32 */
@@ -1023,7 +831,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(268), /* concat */
   JS_ROM_VALUE(690), /* connect */
   JS_ROM_VALUE(558), /* console */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_ROM_VALUE(64), /* const */
   JS_ROM_VALUE(133), /* constructor */
   JS_ROM_VALUE(37), /* continue */
@@ -1034,11 +841,7 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(165), /* defineProperty */
   JS_ROM_VALUE(16), /* delete */
   JS_ROM_VALUE(29), /* do */
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  JS_ROM_VALUE(576), /* dump */
-========
   JS_ROM_VALUE(597), /* dump */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_ROM_VALUE(8), /* else */
   JS_ROM_VALUE(66), /* enum */
   JS_ROM_VALUE(119), /* eval */
@@ -1058,11 +861,7 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(249), /* fromCodePoint */
   JS_ROM_VALUE(396), /* fround */
   JS_ROM_VALUE(54), /* function */
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  JS_ROM_VALUE(708), /* gc */
-========
   JS_ROM_VALUE(729), /* gc */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_ROM_VALUE(126), /* get */
   JS_ROM_VALUE(516), /* get buffer */
   JS_ROM_VALUE(498), /* get byteLength */
@@ -1073,20 +872,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(463), /* get message */
   JS_ROM_VALUE(199), /* get name */
   JS_ROM_VALUE(184), /* get prototype */
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  JS_ROM_VALUE(428), /* get source */
-  JS_ROM_VALUE(447), /* get stack */
-  JS_ROM_VALUE(650), /* get x */
-  JS_ROM_VALUE(654), /* get y */
-  JS_ROM_VALUE(550), /* getProperty */
-  JS_ROM_VALUE(168), /* getPrototypeOf */
-  JS_ROM_VALUE(548), /* getText */
-  JS_ROM_VALUE(560), /* getWindowSize */
-  JS_ROM_VALUE(678), /* getpeername */
-  JS_ROM_VALUE(675), /* getsockname */
-  JS_ROM_VALUE(687), /* getsockopt */
-  JS_ROM_VALUE(534), /* globalThis */
-========
   JS_ROM_VALUE(449), /* get source */
   JS_ROM_VALUE(468), /* get stack */
   JS_ROM_VALUE(671), /* get x */
@@ -1107,7 +892,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(696), /* getsockname */
   JS_ROM_VALUE(708), /* getsockopt */
   JS_ROM_VALUE(555), /* globalThis */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_ROM_VALUE(178), /* hasOwnProperty */
   JS_ROM_VALUE(577), /* hide */
   JS_ROM_VALUE(6), /* if */
@@ -1117,15 +901,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(24), /* in */
   JS_ROM_VALUE(157), /* index */
   JS_ROM_VALUE(270), /* indexOf */
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  JS_ROM_VALUE(699), /* inet_addr */
-  JS_ROM_VALUE(159), /* input */
-  JS_ROM_VALUE(594), /* inspect.disable */
-  JS_ROM_VALUE(591), /* inspect.enable */
-  JS_ROM_VALUE(597), /* inspect.setLayer */
-  JS_ROM_VALUE(601), /* inspect.setShowBounds */
-  JS_ROM_VALUE(605), /* inspect.setShowInfo */
-========
   JS_ROM_VALUE(720), /* inet_addr */
   JS_ROM_VALUE(159), /* input */
   JS_ROM_VALUE(615), /* inspect.disable */
@@ -1133,7 +908,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(618), /* inspect.setLayer */
   JS_ROM_VALUE(622), /* inspect.setShowBounds */
   JS_ROM_VALUE(626), /* inspect.setShowInfo */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_ROM_VALUE(26), /* instanceof */
   JS_ROM_VALUE(79), /* interface */
   JS_ROM_VALUE(303), /* isArray */
@@ -1145,15 +919,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(272), /* lastIndexOf */
   JS_ROM_VALUE(136), /* length */
   JS_ROM_VALUE(82), /* let */
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  JS_ROM_VALUE(569), /* listDir */
-  JS_ROM_VALUE(671), /* listen */
-  JS_ROM_VALUE(710), /* load */
-  JS_ROM_VALUE(386), /* log */
-  JS_ROM_VALUE(402), /* log10 */
-  JS_ROM_VALUE(400), /* log2 */
-  JS_ROM_VALUE(704), /* make_sockaddr_in */
-========
   JS_ROM_VALUE(590), /* listDir */
   JS_ROM_VALUE(692), /* listen */
   JS_ROM_VALUE(731), /* load */
@@ -1161,7 +926,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(402), /* log10 */
   JS_ROM_VALUE(400), /* log2 */
   JS_ROM_VALUE(725), /* make_sockaddr_in */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_ROM_VALUE(325), /* map */
   JS_ROM_VALUE(275), /* match */
   JS_ROM_VALUE(340), /* max */
@@ -1170,11 +934,7 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(150), /* name */
   JS_ROM_VALUE(22), /* new */
   JS_ROM_VALUE(406), /* now */
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  JS_ROM_VALUE(702), /* ntohl */
-========
   JS_ROM_VALUE(723), /* ntohl */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_ROM_VALUE(0), /* null */
   JS_ROM_VALUE(104), /* number */
   JS_ROM_VALUE(106), /* object */
@@ -1183,20 +943,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(431), /* parse */
   JS_ROM_VALUE(207), /* parseFloat */
   JS_ROM_VALUE(204), /* parseInt */
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  JS_ROM_VALUE(634), /* perf.clearWatch */
-  JS_ROM_VALUE(612), /* perf.disable */
-  JS_ROM_VALUE(609), /* perf.enable */
-  JS_ROM_VALUE(637), /* perf.getFrameStats */
-  JS_ROM_VALUE(641), /* perf.getLayerStats */
-  JS_ROM_VALUE(615), /* perf.reset */
-  JS_ROM_VALUE(624), /* perf.setLogInterval */
-  JS_ROM_VALUE(618), /* perf.setOverlay */
-  JS_ROM_VALUE(621), /* perf.setTopN */
-  JS_ROM_VALUE(631), /* perf.unwatch */
-  JS_ROM_VALUE(628), /* perf.watch */
-  JS_ROM_VALUE(539), /* performance */
-========
   JS_ROM_VALUE(655), /* perf.clearWatch */
   JS_ROM_VALUE(633), /* perf.disable */
   JS_ROM_VALUE(630), /* perf.enable */
@@ -1209,7 +955,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(652), /* perf.unwatch */
   JS_ROM_VALUE(649), /* perf.watch */
   JS_ROM_VALUE(560), /* performance */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_ROM_VALUE(307), /* pop */
   JS_ROM_VALUE(388), /* pow */
   JS_ROM_VALUE(563), /* print */
@@ -1219,18 +964,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(91), /* public */
   JS_ROM_VALUE(305), /* push */
   JS_ROM_VALUE(390), /* random */
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  JS_ROM_VALUE(566), /* readFile */
-  JS_ROM_VALUE(692), /* recv */
-  JS_ROM_VALUE(696), /* recvfrom */
-  JS_ROM_VALUE(329), /* reduce */
-  JS_ROM_VALUE(331), /* reduceRight */
-  JS_ROM_VALUE(563), /* renderFromJson */
-  JS_ROM_VALUE(299), /* repeat */
-  JS_ROM_VALUE(277), /* replace */
-  JS_ROM_VALUE(279), /* replaceAll */
-  JS_ROM_VALUE(571), /* resizeRoot */
-========
   JS_ROM_VALUE(587), /* readFile */
   JS_ROM_VALUE(713), /* recv */
   JS_ROM_VALUE(717), /* recvfrom */
@@ -1241,38 +974,16 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(277), /* replace */
   JS_ROM_VALUE(279), /* replaceAll */
   JS_ROM_VALUE(592), /* resizeRoot */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_ROM_VALUE(10), /* return */
   JS_ROM_VALUE(311), /* reverse */
   JS_ROM_VALUE(350), /* round */
   JS_ROM_VALUE(282), /* search */
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  JS_ROM_VALUE(690), /* send */
-  JS_ROM_VALUE(694), /* sendto */
-========
   JS_ROM_VALUE(711), /* send */
   JS_ROM_VALUE(715), /* sendto */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_ROM_VALUE(128), /* set */
   JS_ROM_VALUE(444), /* set lastIndex */
   JS_ROM_VALUE(252), /* set length */
   JS_ROM_VALUE(187), /* set prototype */
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  JS_ROM_VALUE(553), /* setBgColor */
-  JS_ROM_VALUE(645), /* setEvent */
-  JS_ROM_VALUE(171), /* setPrototypeOf */
-  JS_ROM_VALUE(546), /* setText */
-  JS_ROM_VALUE(712), /* setTimeout */
-  JS_ROM_VALUE(684), /* setsockopt */
-  JS_ROM_VALUE(313), /* shift */
-  JS_ROM_VALUE(558), /* show */
-  JS_ROM_VALUE(666), /* shutdown */
-  JS_ROM_VALUE(342), /* sign */
-  JS_ROM_VALUE(370), /* sin */
-  JS_ROM_VALUE(263), /* slice */
-  JS_ROM_VALUE(662), /* socket */
-  JS_ROM_VALUE(681), /* socketpair */
-========
   JS_ROM_VALUE(574), /* setBgColor */
   JS_ROM_VALUE(666), /* setEvent */
   JS_ROM_VALUE(171), /* setPrototypeOf */
@@ -1287,7 +998,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(263), /* slice */
   JS_ROM_VALUE(683), /* socket */
   JS_ROM_VALUE(702), /* socketpair */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_ROM_VALUE(321), /* some */
   JS_ROM_VALUE(334), /* sort */
   JS_ROM_VALUE(447), /* source */
@@ -1304,19 +1014,11 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(40), /* switch */
   JS_ROM_VALUE(374), /* tan */
   JS_ROM_VALUE(138), /* target */
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  JS_ROM_VALUE(438), /* test */
-  JS_ROM_VALUE(587), /* themeApplyToTree */
-  JS_ROM_VALUE(578), /* themeLoad */
-  JS_ROM_VALUE(581), /* themeSetCurrent */
-  JS_ROM_VALUE(584), /* themeUnload */
-========
   JS_ROM_VALUE(459), /* test */
   JS_ROM_VALUE(608), /* themeApplyToTree */
   JS_ROM_VALUE(599), /* themeLoad */
   JS_ROM_VALUE(602), /* themeSetCurrent */
   JS_ROM_VALUE(605), /* themeUnload */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_ROM_VALUE(14), /* this */
   JS_ROM_VALUE(46), /* throw */
   JS_ROM_VALUE(234), /* toExponential */
@@ -1334,30 +1036,18 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(20), /* typeof */
   JS_ROM_VALUE(108), /* undefined */
   JS_ROM_VALUE(317), /* unshift */
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  JS_ROM_VALUE(574), /* update */
-========
   JS_ROM_VALUE(595), /* update */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_ROM_VALUE(124), /* value */
   JS_ROM_VALUE(102), /* valueOf */
   JS_ROM_VALUE(12), /* var */
   JS_ROM_VALUE(18), /* void */
   JS_ROM_VALUE(31), /* while */
   JS_ROM_VALUE(60), /* with */
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  JS_ROM_VALUE(648), /* x */
-  JS_ROM_VALUE(652), /* y */
-  JS_ROM_VALUE(95), /* yield */
-
-  /* properties (offset=1011) */
-========
   JS_ROM_VALUE(669), /* x */
   JS_ROM_VALUE(673), /* y */
   JS_ROM_VALUE(95), /* yield */
 
   /* properties (offset=1040) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(24),
   6 << 1, /* n_props */
   3 << 1, /* hash_mask */
@@ -1383,11 +1073,7 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(130) /* prototype */,
   JS_CLASS_OBJECT << 1,
   (15 << 1) | (JS_PROP_SPECIAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* properties (offset=1036) */
-========
   /* properties (offset=1065) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(13),
   3 << 1, /* n_props */
   1 << 1, /* hash_mask */
@@ -1402,16 +1088,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(133) /* constructor */,
   (uint32_t)(-JS_CLASS_OBJECT - 1) << 1,
   (7 << 1) | (JS_PROP_SPECIAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* class (offset=1050) */
-  JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
-  JS_ROM_VALUE(1011),
-  1,
-  JS_ROM_VALUE(1036),
-  JS_NULL,
-
-  /* properties (offset=1055) */
-========
   /* class (offset=1079) */
   JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
   JS_ROM_VALUE(1040),
@@ -1420,7 +1096,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_NULL,
 
   /* properties (offset=1084) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(6),
   1 << 1, /* n_props */
   0 << 1, /* hash_mask */
@@ -1428,38 +1103,22 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(130) /* prototype */,
   JS_CLASS_CLOSURE << 1,
   (0 << 1) | (JS_PROP_SPECIAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* getset (offset=1062) */
-========
   /* getset (offset=1091) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(2),
   JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 10),
   JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 11),
 
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* getset (offset=1065) */
-========
   /* getset (offset=1094) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(2),
   JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 12),
   JS_UNDEFINED,
 
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* getset (offset=1068) */
-========
   /* getset (offset=1097) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(2),
   JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 13),
   JS_UNDEFINED,
 
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* properties (offset=1071) */
-========
   /* properties (offset=1100) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(30),
   8 << 1, /* n_props */
   3 << 1, /* hash_mask */
@@ -1468,11 +1127,7 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   18 << 1,
   24 << 1,
   JS_ROM_VALUE(130) /* prototype */,
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  JS_ROM_VALUE(1062),
-========
   JS_ROM_VALUE(1091),
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   (0 << 1) | (JS_PROP_GETSET << 30),
   JS_ROM_VALUE(190) /* call */,
   JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 14),
@@ -1487,31 +1142,14 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 17),
   (0 << 1) | (JS_PROP_NORMAL << 30),
   JS_ROM_VALUE(136) /* length */,
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  JS_ROM_VALUE(1065),
-  (12 << 1) | (JS_PROP_GETSET << 30),
-  JS_ROM_VALUE(150) /* name */,
-  JS_ROM_VALUE(1068),
-========
   JS_ROM_VALUE(1094),
   (12 << 1) | (JS_PROP_GETSET << 30),
   JS_ROM_VALUE(150) /* name */,
   JS_ROM_VALUE(1097),
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   (15 << 1) | (JS_PROP_GETSET << 30),
   JS_ROM_VALUE(133) /* constructor */,
   (uint32_t)(-JS_CLASS_CLOSURE - 1) << 1,
   (0 << 1) | (JS_PROP_SPECIAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* class (offset=1102) */
-  JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
-  JS_ROM_VALUE(1055),
-  9,
-  JS_ROM_VALUE(1071),
-  JS_NULL,
-
-  /* float64 (offset=1107) */
-========
   /* class (offset=1131) */
   JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
   JS_ROM_VALUE(1084),
@@ -1540,43 +1178,18 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   0x7ff0000000000000,
 
   /* float64 (offset=1146) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
-  JS_MB_HEADER_DEF(JS_MTAG_FLOAT64),
-  0x7fefffffffffffff,
-
-  /* float64 (offset=1148) */
-  JS_MB_HEADER_DEF(JS_MTAG_FLOAT64),
-  0x0000000000000001,
-
-  /* float64 (offset=1150) */
-  JS_MB_HEADER_DEF(JS_MTAG_FLOAT64),
-  0x7ff8000000000000,
-
-  /* float64 (offset=1113) */
-  JS_MB_HEADER_DEF(JS_MTAG_FLOAT64),
-  0xfff0000000000000,
-
-  /* float64 (offset=1115) */
-  JS_MB_HEADER_DEF(JS_MTAG_FLOAT64),
-  0x7ff0000000000000,
-
-  /* float64 (offset=1117) */
   JS_MB_HEADER_DEF(JS_MTAG_FLOAT64),
   0x3cb0000000000000,
 
-  /* float64 (offset=1119) */
+  /* float64 (offset=1148) */
   JS_MB_HEADER_DEF(JS_MTAG_FLOAT64),
   0x433fffffffffffff,
 
-  /* float64 (offset=1121) */
+  /* float64 (offset=1150) */
   JS_MB_HEADER_DEF(JS_MTAG_FLOAT64),
   0xc33fffffffffffff,
 
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* properties (offset=1123) */
-========
   /* properties (offset=1152) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(43),
   11 << 1, /* n_props */
   7 << 1, /* hash_mask */
@@ -1595,30 +1208,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 20),
   (0 << 1) | (JS_PROP_NORMAL << 30),
   JS_ROM_VALUE(210) /* MAX_VALUE */,
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  JS_ROM_VALUE(1107),
-  (0 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(213) /* MIN_VALUE */,
-  JS_ROM_VALUE(1109),
-  (0 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(142) /* NaN */,
-  JS_ROM_VALUE(1111),
-  (0 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(216) /* NEGATIVE_INFINITY */,
-  JS_ROM_VALUE(1113),
-  (0 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(220) /* POSITIVE_INFINITY */,
-  JS_ROM_VALUE(1115),
-  (10 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(224) /* EPSILON */,
-  JS_ROM_VALUE(1117),
-  (25 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(226) /* MAX_SAFE_INTEGER */,
-  JS_ROM_VALUE(1119),
-  (16 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(230) /* MIN_SAFE_INTEGER */,
-  JS_ROM_VALUE(1121),
-========
   JS_ROM_VALUE(1136),
   (0 << 1) | (JS_PROP_NORMAL << 30),
   JS_ROM_VALUE(213) /* MIN_VALUE */,
@@ -1641,16 +1230,11 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   (16 << 1) | (JS_PROP_NORMAL << 30),
   JS_ROM_VALUE(230) /* MIN_SAFE_INTEGER */,
   JS_ROM_VALUE(1150),
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   (22 << 1) | (JS_PROP_NORMAL << 30),
   JS_ROM_VALUE(130) /* prototype */,
   JS_CLASS_NUMBER << 1,
   (34 << 1) | (JS_PROP_SPECIAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* properties (offset=1167) */
-========
   /* properties (offset=1196) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(21),
   5 << 1, /* n_props */
   3 << 1, /* hash_mask */
@@ -1673,16 +1257,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(133) /* constructor */,
   (uint32_t)(-JS_CLASS_NUMBER - 1) << 1,
   (9 << 1) | (JS_PROP_SPECIAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* class (offset=1189) */
-  JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
-  JS_ROM_VALUE(1123),
-  18,
-  JS_ROM_VALUE(1167),
-  JS_NULL,
-
-  /* properties (offset=1194) */
-========
   /* class (offset=1218) */
   JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
   JS_ROM_VALUE(1152),
@@ -1691,7 +1265,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_NULL,
 
   /* properties (offset=1223) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(6),
   1 << 1, /* n_props */
   0 << 1, /* hash_mask */
@@ -1699,11 +1272,7 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(130) /* prototype */,
   JS_CLASS_BOOLEAN << 1,
   (0 << 1) | (JS_PROP_SPECIAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* properties (offset=1201) */
-========
   /* properties (offset=1230) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(6),
   1 << 1, /* n_props */
   0 << 1, /* hash_mask */
@@ -1711,16 +1280,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(133) /* constructor */,
   (uint32_t)(-JS_CLASS_BOOLEAN - 1) << 1,
   (0 << 1) | (JS_PROP_SPECIAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* class (offset=1208) */
-  JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
-  JS_ROM_VALUE(1194),
-  25,
-  JS_ROM_VALUE(1201),
-  JS_NULL,
-
-  /* properties (offset=1213) */
-========
   /* class (offset=1237) */
   JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
   JS_ROM_VALUE(1223),
@@ -1729,7 +1288,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_NULL,
 
   /* properties (offset=1242) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(13),
   3 << 1, /* n_props */
   1 << 1, /* hash_mask */
@@ -1744,20 +1302,12 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(130) /* prototype */,
   JS_CLASS_STRING << 1,
   (4 << 1) | (JS_PROP_SPECIAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* getset (offset=1227) */
-========
   /* getset (offset=1256) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(2),
   JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 29),
   JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 30),
 
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* properties (offset=1230) */
-========
   /* properties (offset=1259) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(76),
   22 << 1, /* n_props */
   7 << 1, /* hash_mask */
@@ -1770,11 +1320,7 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   43 << 1,
   61 << 1,
   JS_ROM_VALUE(136) /* length */,
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  JS_ROM_VALUE(1227),
-========
   JS_ROM_VALUE(1256),
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   (0 << 1) | (JS_PROP_GETSET << 30),
   JS_ROM_VALUE(255) /* charAt */,
   JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 31),
@@ -1839,16 +1385,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(133) /* constructor */,
   (uint32_t)(-JS_CLASS_STRING - 1) << 1,
   (40 << 1) | (JS_PROP_SPECIAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* class (offset=1307) */
-  JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
-  JS_ROM_VALUE(1213),
-  26,
-  JS_ROM_VALUE(1230),
-  JS_NULL,
-
-  /* properties (offset=1312) */
-========
   /* class (offset=1336) */
   JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
   JS_ROM_VALUE(1242),
@@ -1857,7 +1393,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_NULL,
 
   /* properties (offset=1341) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(9),
   2 << 1, /* n_props */
   0 << 1, /* hash_mask */
@@ -1868,20 +1403,12 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(130) /* prototype */,
   JS_CLASS_ARRAY << 1,
   (3 << 1) | (JS_PROP_SPECIAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* getset (offset=1322) */
-========
   /* getset (offset=1351) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(2),
   JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 53),
   JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 54),
 
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* properties (offset=1325) */
-========
   /* properties (offset=1354) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(79),
   23 << 1, /* n_props */
   7 << 1, /* hash_mask */
@@ -1897,11 +1424,7 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 55),
   (0 << 1) | (JS_PROP_NORMAL << 30),
   JS_ROM_VALUE(136) /* length */,
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  JS_ROM_VALUE(1322),
-========
   JS_ROM_VALUE(1351),
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   (0 << 1) | (JS_PROP_GETSET << 30),
   JS_ROM_VALUE(305) /* push */,
   JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 56),
@@ -1966,16 +1489,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(133) /* constructor */,
   (uint32_t)(-JS_CLASS_ARRAY - 1) << 1,
   (58 << 1) | (JS_PROP_SPECIAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* class (offset=1405) */
-  JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
-  JS_ROM_VALUE(1312),
-  51,
-  JS_ROM_VALUE(1325),
-  JS_NULL,
-
-  /* float64 (offset=1410) */
-========
   /* class (offset=1434) */
   JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
   JS_ROM_VALUE(1341),
@@ -2004,43 +1517,18 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   0x3fdbcb7b1526e50e,
 
   /* float64 (offset=1449) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
-  JS_MB_HEADER_DEF(JS_MTAG_FLOAT64),
-  0x4005bf0a8b145769,
-
-  /* float64 (offset=1451) */
-  JS_MB_HEADER_DEF(JS_MTAG_FLOAT64),
-  0x40026bb1bbb55516,
-
-  /* float64 (offset=1453) */
-  JS_MB_HEADER_DEF(JS_MTAG_FLOAT64),
-  0x3fe62e42fefa39ef,
-
-  /* float64 (offset=1416) */
-  JS_MB_HEADER_DEF(JS_MTAG_FLOAT64),
-  0x3ff71547652b82fe,
-
-  /* float64 (offset=1418) */
-  JS_MB_HEADER_DEF(JS_MTAG_FLOAT64),
-  0x3fdbcb7b1526e50e,
-
-  /* float64 (offset=1420) */
   JS_MB_HEADER_DEF(JS_MTAG_FLOAT64),
   0x400921fb54442d18,
 
-  /* float64 (offset=1422) */
+  /* float64 (offset=1451) */
   JS_MB_HEADER_DEF(JS_MTAG_FLOAT64),
   0x3fe6a09e667f3bcd,
 
-  /* float64 (offset=1424) */
+  /* float64 (offset=1453) */
   JS_MB_HEADER_DEF(JS_MTAG_FLOAT64),
   0x3ff6a09e667f3bcd,
 
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* properties (offset=1426) */
-========
   /* properties (offset=1455) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(109),
   33 << 1, /* n_props */
   7 << 1, /* hash_mask */
@@ -2077,30 +1565,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 82),
   (19 << 1) | (JS_PROP_NORMAL << 30),
   JS_VALUE_MAKE_SPECIAL(JS_TAG_STRING_CHAR, 69) /* E */,
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  JS_ROM_VALUE(1410),
-  (0 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(356) /* LN10 */,
-  JS_ROM_VALUE(1412),
-  (25 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(358) /* LN2 */,
-  JS_ROM_VALUE(1414),
-  (28 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(360) /* LOG2E */,
-  JS_ROM_VALUE(1416),
-  (31 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(362) /* LOG10E */,
-  JS_ROM_VALUE(1418),
-  (22 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(364) /* PI */,
-  JS_ROM_VALUE(1420),
-  (37 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(366) /* SQRT1_2 */,
-  JS_ROM_VALUE(1422),
-  (40 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(368) /* SQRT2 */,
-  JS_ROM_VALUE(1424),
-========
   JS_ROM_VALUE(1439),
   (0 << 1) | (JS_PROP_NORMAL << 30),
   JS_ROM_VALUE(356) /* LN10 */,
@@ -2123,7 +1587,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   (40 << 1) | (JS_PROP_NORMAL << 30),
   JS_ROM_VALUE(368) /* SQRT2 */,
   JS_ROM_VALUE(1453),
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   (43 << 1) | (JS_PROP_NORMAL << 30),
   JS_ROM_VALUE(370) /* sin */,
   JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 83),
@@ -2176,24 +1639,14 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(402) /* log10 */,
   JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 99),
   (94 << 1) | (JS_PROP_NORMAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* class (offset=1536) */
-  JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
-  JS_ROM_VALUE(1426),
-========
   /* class (offset=1565) */
   JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
   JS_ROM_VALUE(1455),
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   -1,
   JS_NULL,
   JS_NULL,
 
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* properties (offset=1541) */
-========
   /* properties (offset=1570) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(9),
   2 << 1, /* n_props */
   0 << 1, /* hash_mask */
@@ -2204,24 +1657,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(130) /* prototype */,
   JS_CLASS_DATE << 1,
   (3 << 1) | (JS_PROP_SPECIAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* properties (offset=1551) */
-  JS_VALUE_ARRAY_HEADER(6),
-  1 << 1, /* n_props */
-  0 << 1, /* hash_mask */
-  3 << 1,
-  JS_ROM_VALUE(133) /* constructor */,
-  (uint32_t)(-JS_CLASS_DATE - 1) << 1,
-  (0 << 1) | (JS_PROP_SPECIAL << 30),
-  /* class (offset=1558) */
-  JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
-  JS_ROM_VALUE(1541),
-  100,
-  JS_ROM_VALUE(1551),
-  JS_NULL,
-
-  /* properties (offset=1563) */
-========
   /* properties (offset=1580) */
   JS_VALUE_ARRAY_HEADER(40),
   10 << 1, /* n_props */
@@ -2272,7 +1707,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_NULL,
 
   /* properties (offset=1626) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(9),
   2 << 1, /* n_props */
   0 << 1, /* hash_mask */
@@ -2283,24 +1717,14 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(433) /* stringify */,
   JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 112),
   (3 << 1) | (JS_PROP_NORMAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* class (offset=1573) */
-  JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
-  JS_ROM_VALUE(1563),
-========
   /* class (offset=1636) */
   JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
   JS_ROM_VALUE(1626),
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   -1,
   JS_NULL,
   JS_NULL,
 
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* properties (offset=1578) */
-========
   /* properties (offset=1641) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(6),
   1 << 1, /* n_props */
   0 << 1, /* hash_mask */
@@ -2308,54 +1732,28 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(130) /* prototype */,
   JS_CLASS_REGEXP << 1,
   (0 << 1) | (JS_PROP_SPECIAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* getset (offset=1585) */
-========
   /* getset (offset=1648) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(2),
   JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 114),
   JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 115),
 
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* getset (offset=1588) */
-========
   /* getset (offset=1651) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(2),
   JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 116),
   JS_UNDEFINED,
 
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* getset (offset=1591) */
-========
   /* getset (offset=1654) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(2),
   JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 117),
   JS_UNDEFINED,
 
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* properties (offset=1594) */
-========
   /* properties (offset=1657) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(24),
   6 << 1, /* n_props */
   3 << 1, /* hash_mask */
   21 << 1,
   12 << 1,
   18 << 1,
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  JS_ROM_VALUE(417) /* lastIndex */,
-  JS_ROM_VALUE(1585),
-  (0 << 1) | (JS_PROP_GETSET << 30),
-  JS_ROM_VALUE(426) /* source */,
-  JS_ROM_VALUE(1588),
-  (0 << 1) | (JS_PROP_GETSET << 30),
-  JS_ROM_VALUE(431) /* flags */,
-  JS_ROM_VALUE(1591),
-========
   6 << 1,
   JS_ROM_VALUE(438) /* lastIndex */,
   JS_ROM_VALUE(1648),
@@ -2365,7 +1763,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   (0 << 1) | (JS_PROP_GETSET << 30),
   JS_ROM_VALUE(452) /* flags */,
   JS_ROM_VALUE(1654),
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   (0 << 1) | (JS_PROP_GETSET << 30),
   JS_ROM_VALUE(457) /* exec */,
   JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 118),
@@ -2375,17 +1772,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   (9 << 1) | (JS_PROP_NORMAL << 30),
   JS_ROM_VALUE(133) /* constructor */,
   (uint32_t)(-JS_CLASS_REGEXP - 1) << 1,
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  (6 << 1) | (JS_PROP_SPECIAL << 30),
-  /* class (offset=1619) */
-  JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
-  JS_ROM_VALUE(1578),
-  104,
-  JS_ROM_VALUE(1594),
-  JS_NULL,
-
-  /* properties (offset=1624) */
-========
   (15 << 1) | (JS_PROP_SPECIAL << 30),
   /* class (offset=1682) */
   JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
@@ -2395,7 +1781,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_NULL,
 
   /* properties (offset=1687) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(6),
   1 << 1, /* n_props */
   0 << 1, /* hash_mask */
@@ -2403,29 +1788,17 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(130) /* prototype */,
   JS_CLASS_ERROR << 1,
   (0 << 1) | (JS_PROP_SPECIAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* getset (offset=1631) */
-========
   /* getset (offset=1694) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(2),
   JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 121),
   JS_UNDEFINED,
 
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* getset (offset=1634) */
-========
   /* getset (offset=1697) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(2),
   JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 122),
   JS_UNDEFINED,
 
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* properties (offset=1637) */
-========
   /* properties (offset=1700) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(21),
   5 << 1, /* n_props */
   3 << 1, /* hash_mask */
@@ -2439,33 +1812,14 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(150) /* name */,
   JS_ROM_VALUE(152) /* Error */,
   (0 << 1) | (JS_PROP_NORMAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  JS_ROM_VALUE(440) /* message */,
-  JS_ROM_VALUE(1631),
-  (0 << 1) | (JS_PROP_GETSET << 30),
-  JS_ROM_VALUE(445) /* stack */,
-  JS_ROM_VALUE(1634),
-========
   JS_ROM_VALUE(461) /* message */,
   JS_ROM_VALUE(1694),
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   (0 << 1) | (JS_PROP_GETSET << 30),
   JS_ROM_VALUE(466) /* stack */,
   JS_ROM_VALUE(1697),
   (9 << 1) | (JS_PROP_GETSET << 30),
   JS_ROM_VALUE(133) /* constructor */,
   (uint32_t)(-JS_CLASS_ERROR - 1) << 1,
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  (15 << 1) | (JS_PROP_SPECIAL << 30),
-  /* class (offset=1659) */
-  JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
-  JS_ROM_VALUE(1624),
-  111,
-  JS_ROM_VALUE(1637),
-  JS_NULL,
-
-  /* properties (offset=1664) */
-========
   (12 << 1) | (JS_PROP_SPECIAL << 30),
   /* class (offset=1722) */
   JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
@@ -2475,7 +1829,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_NULL,
 
   /* properties (offset=1727) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(6),
   1 << 1, /* n_props */
   0 << 1, /* hash_mask */
@@ -2483,11 +1836,7 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(130) /* prototype */,
   JS_CLASS_EVAL_ERROR << 1,
   (0 << 1) | (JS_PROP_SPECIAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* properties (offset=1671) */
-========
   /* properties (offset=1734) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(9),
   2 << 1, /* n_props */
   0 << 1, /* hash_mask */
@@ -2498,16 +1847,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(133) /* constructor */,
   (uint32_t)(-JS_CLASS_EVAL_ERROR - 1) << 1,
   (3 << 1) | (JS_PROP_SPECIAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* class (offset=1681) */
-  JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
-  JS_ROM_VALUE(1664),
-  115,
-  JS_ROM_VALUE(1671),
-  JS_ROM_VALUE(1659),
-
-  /* properties (offset=1686) */
-========
   /* class (offset=1744) */
   JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
   JS_ROM_VALUE(1727),
@@ -2516,7 +1855,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(1722),
 
   /* properties (offset=1749) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(6),
   1 << 1, /* n_props */
   0 << 1, /* hash_mask */
@@ -2524,11 +1862,7 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(130) /* prototype */,
   JS_CLASS_RANGE_ERROR << 1,
   (0 << 1) | (JS_PROP_SPECIAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* properties (offset=1693) */
-========
   /* properties (offset=1756) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(9),
   2 << 1, /* n_props */
   0 << 1, /* hash_mask */
@@ -2539,16 +1873,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(133) /* constructor */,
   (uint32_t)(-JS_CLASS_RANGE_ERROR - 1) << 1,
   (3 << 1) | (JS_PROP_SPECIAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* class (offset=1703) */
-  JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
-  JS_ROM_VALUE(1686),
-  116,
-  JS_ROM_VALUE(1693),
-  JS_ROM_VALUE(1659),
-
-  /* properties (offset=1708) */
-========
   /* class (offset=1766) */
   JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
   JS_ROM_VALUE(1749),
@@ -2557,7 +1881,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(1722),
 
   /* properties (offset=1771) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(6),
   1 << 1, /* n_props */
   0 << 1, /* hash_mask */
@@ -2565,11 +1888,7 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(130) /* prototype */,
   JS_CLASS_REFERENCE_ERROR << 1,
   (0 << 1) | (JS_PROP_SPECIAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* properties (offset=1715) */
-========
   /* properties (offset=1778) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(9),
   2 << 1, /* n_props */
   0 << 1, /* hash_mask */
@@ -2580,16 +1899,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(133) /* constructor */,
   (uint32_t)(-JS_CLASS_REFERENCE_ERROR - 1) << 1,
   (3 << 1) | (JS_PROP_SPECIAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* class (offset=1725) */
-  JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
-  JS_ROM_VALUE(1708),
-  117,
-  JS_ROM_VALUE(1715),
-  JS_ROM_VALUE(1659),
-
-  /* properties (offset=1730) */
-========
   /* class (offset=1788) */
   JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
   JS_ROM_VALUE(1771),
@@ -2598,7 +1907,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(1722),
 
   /* properties (offset=1793) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(6),
   1 << 1, /* n_props */
   0 << 1, /* hash_mask */
@@ -2606,11 +1914,7 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(130) /* prototype */,
   JS_CLASS_SYNTAX_ERROR << 1,
   (0 << 1) | (JS_PROP_SPECIAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* properties (offset=1737) */
-========
   /* properties (offset=1800) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(9),
   2 << 1, /* n_props */
   0 << 1, /* hash_mask */
@@ -2621,16 +1925,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(133) /* constructor */,
   (uint32_t)(-JS_CLASS_SYNTAX_ERROR - 1) << 1,
   (3 << 1) | (JS_PROP_SPECIAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* class (offset=1747) */
-  JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
-  JS_ROM_VALUE(1730),
-  118,
-  JS_ROM_VALUE(1737),
-  JS_ROM_VALUE(1659),
-
-  /* properties (offset=1752) */
-========
   /* class (offset=1810) */
   JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
   JS_ROM_VALUE(1793),
@@ -2639,7 +1933,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(1722),
 
   /* properties (offset=1815) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(6),
   1 << 1, /* n_props */
   0 << 1, /* hash_mask */
@@ -2647,11 +1940,7 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(130) /* prototype */,
   JS_CLASS_TYPE_ERROR << 1,
   (0 << 1) | (JS_PROP_SPECIAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* properties (offset=1759) */
-========
   /* properties (offset=1822) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(9),
   2 << 1, /* n_props */
   0 << 1, /* hash_mask */
@@ -2662,16 +1951,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(133) /* constructor */,
   (uint32_t)(-JS_CLASS_TYPE_ERROR - 1) << 1,
   (3 << 1) | (JS_PROP_SPECIAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* class (offset=1769) */
-  JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
-  JS_ROM_VALUE(1752),
-  119,
-  JS_ROM_VALUE(1759),
-  JS_ROM_VALUE(1659),
-
-  /* properties (offset=1774) */
-========
   /* class (offset=1832) */
   JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
   JS_ROM_VALUE(1815),
@@ -2680,7 +1959,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(1722),
 
   /* properties (offset=1837) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(6),
   1 << 1, /* n_props */
   0 << 1, /* hash_mask */
@@ -2688,11 +1966,7 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(130) /* prototype */,
   JS_CLASS_URI_ERROR << 1,
   (0 << 1) | (JS_PROP_SPECIAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* properties (offset=1781) */
-========
   /* properties (offset=1844) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(9),
   2 << 1, /* n_props */
   0 << 1, /* hash_mask */
@@ -2703,16 +1977,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(133) /* constructor */,
   (uint32_t)(-JS_CLASS_URI_ERROR - 1) << 1,
   (3 << 1) | (JS_PROP_SPECIAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* class (offset=1791) */
-  JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
-  JS_ROM_VALUE(1774),
-  120,
-  JS_ROM_VALUE(1781),
-  JS_ROM_VALUE(1659),
-
-  /* properties (offset=1796) */
-========
   /* class (offset=1854) */
   JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
   JS_ROM_VALUE(1837),
@@ -2721,7 +1985,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(1722),
 
   /* properties (offset=1859) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(6),
   1 << 1, /* n_props */
   0 << 1, /* hash_mask */
@@ -2729,11 +1992,7 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(130) /* prototype */,
   JS_CLASS_INTERNAL_ERROR << 1,
   (0 << 1) | (JS_PROP_SPECIAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* properties (offset=1803) */
-========
   /* properties (offset=1866) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(9),
   2 << 1, /* n_props */
   0 << 1, /* hash_mask */
@@ -2744,16 +2003,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(133) /* constructor */,
   (uint32_t)(-JS_CLASS_INTERNAL_ERROR - 1) << 1,
   (3 << 1) | (JS_PROP_SPECIAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* class (offset=1813) */
-  JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
-  JS_ROM_VALUE(1796),
-  121,
-  JS_ROM_VALUE(1803),
-  JS_ROM_VALUE(1659),
-
-  /* properties (offset=1818) */
-========
   /* class (offset=1876) */
   JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
   JS_ROM_VALUE(1859),
@@ -2762,7 +2011,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(1722),
 
   /* properties (offset=1881) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(6),
   1 << 1, /* n_props */
   0 << 1, /* hash_mask */
@@ -2770,45 +2018,22 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(130) /* prototype */,
   JS_CLASS_ARRAY_BUFFER << 1,
   (0 << 1) | (JS_PROP_SPECIAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* getset (offset=1825) */
-========
   /* getset (offset=1888) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(2),
   JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 132),
   JS_UNDEFINED,
 
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* properties (offset=1828) */
-========
   /* properties (offset=1891) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(9),
   2 << 1, /* n_props */
   0 << 1, /* hash_mask */
   6 << 1,
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  JS_ROM_VALUE(474) /* byteLength */,
-  JS_ROM_VALUE(1825),
-========
   JS_ROM_VALUE(495) /* byteLength */,
   JS_ROM_VALUE(1888),
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   (0 << 1) | (JS_PROP_GETSET << 30),
   JS_ROM_VALUE(133) /* constructor */,
   (uint32_t)(-JS_CLASS_ARRAY_BUFFER - 1) << 1,
   (3 << 1) | (JS_PROP_SPECIAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* class (offset=1838) */
-  JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
-  JS_ROM_VALUE(1818),
-  122,
-  JS_ROM_VALUE(1828),
-  JS_NULL,
-
-  /* properties (offset=1843) */
-========
   /* class (offset=1901) */
   JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
   JS_ROM_VALUE(1881),
@@ -2817,7 +2042,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_NULL,
 
   /* properties (offset=1906) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(6),
   1 << 1, /* n_props */
   0 << 1, /* hash_mask */
@@ -2825,47 +2049,27 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(130) /* prototype */,
   JS_CLASS_TYPED_ARRAY << 1,
   (0 << 1) | (JS_PROP_SPECIAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* getset (offset=1850) */
-========
   /* getset (offset=1913) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(2),
   JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 134),
   JS_UNDEFINED,
 
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* getset (offset=1853) */
-========
   /* getset (offset=1916) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(2),
   JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 135),
   JS_UNDEFINED,
 
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* getset (offset=1856) */
-========
   /* getset (offset=1919) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(2),
   JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 136),
   JS_UNDEFINED,
 
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* getset (offset=1859) */
-========
   /* getset (offset=1922) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(2),
   JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 137),
   JS_UNDEFINED,
 
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* properties (offset=1862) */
-========
   /* properties (offset=1925) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(37),
   9 << 1, /* n_props */
   7 << 1, /* hash_mask */
@@ -2878,18 +2082,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   28 << 1,
   0 << 1,
   JS_ROM_VALUE(136) /* length */,
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  JS_ROM_VALUE(1850),
-  (0 << 1) | (JS_PROP_GETSET << 30),
-  JS_ROM_VALUE(474) /* byteLength */,
-  JS_ROM_VALUE(1853),
-  (0 << 1) | (JS_PROP_GETSET << 30),
-  JS_ROM_VALUE(487) /* byteOffset */,
-  JS_ROM_VALUE(1856),
-  (0 << 1) | (JS_PROP_GETSET << 30),
-  JS_ROM_VALUE(493) /* buffer */,
-  JS_ROM_VALUE(1859),
-========
   JS_ROM_VALUE(1913),
   (0 << 1) | (JS_PROP_GETSET << 30),
   JS_ROM_VALUE(495) /* byteLength */,
@@ -2900,7 +2092,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   (0 << 1) | (JS_PROP_GETSET << 30),
   JS_ROM_VALUE(514) /* buffer */,
   JS_ROM_VALUE(1922),
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   (0 << 1) | (JS_PROP_GETSET << 30),
   JS_ROM_VALUE(309) /* join */,
   JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 58),
@@ -2917,16 +2108,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(133) /* constructor */,
   (uint32_t)(-JS_CLASS_TYPED_ARRAY - 1) << 1,
   (22 << 1) | (JS_PROP_SPECIAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* class (offset=1900) */
-  JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
-  JS_ROM_VALUE(1843),
-  124,
-  JS_ROM_VALUE(1862),
-  JS_NULL,
-
-  /* properties (offset=1905) */
-========
   /* class (offset=1963) */
   JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
   JS_ROM_VALUE(1906),
@@ -2935,7 +2116,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_NULL,
 
   /* properties (offset=1968) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(9),
   2 << 1, /* n_props */
   0 << 1, /* hash_mask */
@@ -2946,11 +2126,7 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(130) /* prototype */,
   JS_CLASS_UINT8C_ARRAY << 1,
   (3 << 1) | (JS_PROP_SPECIAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* properties (offset=1915) */
-========
   /* properties (offset=1978) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(9),
   2 << 1, /* n_props */
   0 << 1, /* hash_mask */
@@ -2961,16 +2137,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(133) /* constructor */,
   (uint32_t)(-JS_CLASS_UINT8C_ARRAY - 1) << 1,
   (3 << 1) | (JS_PROP_SPECIAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* class (offset=1925) */
-  JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
-  JS_ROM_VALUE(1905),
-  131,
-  JS_ROM_VALUE(1915),
-  JS_ROM_VALUE(1900),
-
-  /* properties (offset=1930) */
-========
   /* class (offset=1988) */
   JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
   JS_ROM_VALUE(1968),
@@ -2979,7 +2145,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(1963),
 
   /* properties (offset=1993) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(9),
   2 << 1, /* n_props */
   0 << 1, /* hash_mask */
@@ -2990,11 +2155,7 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(130) /* prototype */,
   JS_CLASS_INT8_ARRAY << 1,
   (3 << 1) | (JS_PROP_SPECIAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* properties (offset=1940) */
-========
   /* properties (offset=2003) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(9),
   2 << 1, /* n_props */
   0 << 1, /* hash_mask */
@@ -3005,16 +2166,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(133) /* constructor */,
   (uint32_t)(-JS_CLASS_INT8_ARRAY - 1) << 1,
   (3 << 1) | (JS_PROP_SPECIAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* class (offset=1950) */
-  JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
-  JS_ROM_VALUE(1930),
-  132,
-  JS_ROM_VALUE(1940),
-  JS_ROM_VALUE(1900),
-
-  /* properties (offset=1955) */
-========
   /* class (offset=2013) */
   JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
   JS_ROM_VALUE(1993),
@@ -3023,7 +2174,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(1963),
 
   /* properties (offset=2018) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(9),
   2 << 1, /* n_props */
   0 << 1, /* hash_mask */
@@ -3034,11 +2184,7 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(130) /* prototype */,
   JS_CLASS_UINT8_ARRAY << 1,
   (3 << 1) | (JS_PROP_SPECIAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* properties (offset=1965) */
-========
   /* properties (offset=2028) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(9),
   2 << 1, /* n_props */
   0 << 1, /* hash_mask */
@@ -3049,16 +2195,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(133) /* constructor */,
   (uint32_t)(-JS_CLASS_UINT8_ARRAY - 1) << 1,
   (3 << 1) | (JS_PROP_SPECIAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* class (offset=1975) */
-  JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
-  JS_ROM_VALUE(1955),
-  133,
-  JS_ROM_VALUE(1965),
-  JS_ROM_VALUE(1900),
-
-  /* properties (offset=1980) */
-========
   /* class (offset=2038) */
   JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
   JS_ROM_VALUE(2018),
@@ -3067,7 +2203,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(1963),
 
   /* properties (offset=2043) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(9),
   2 << 1, /* n_props */
   0 << 1, /* hash_mask */
@@ -3078,11 +2213,7 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(130) /* prototype */,
   JS_CLASS_INT16_ARRAY << 1,
   (3 << 1) | (JS_PROP_SPECIAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* properties (offset=1990) */
-========
   /* properties (offset=2053) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(9),
   2 << 1, /* n_props */
   0 << 1, /* hash_mask */
@@ -3093,16 +2224,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(133) /* constructor */,
   (uint32_t)(-JS_CLASS_INT16_ARRAY - 1) << 1,
   (3 << 1) | (JS_PROP_SPECIAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* class (offset=2000) */
-  JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
-  JS_ROM_VALUE(1980),
-  134,
-  JS_ROM_VALUE(1990),
-  JS_ROM_VALUE(1900),
-
-  /* properties (offset=2005) */
-========
   /* class (offset=2063) */
   JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
   JS_ROM_VALUE(2043),
@@ -3111,7 +2232,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(1963),
 
   /* properties (offset=2068) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(9),
   2 << 1, /* n_props */
   0 << 1, /* hash_mask */
@@ -3122,11 +2242,7 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(130) /* prototype */,
   JS_CLASS_UINT16_ARRAY << 1,
   (3 << 1) | (JS_PROP_SPECIAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* properties (offset=2015) */
-========
   /* properties (offset=2078) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(9),
   2 << 1, /* n_props */
   0 << 1, /* hash_mask */
@@ -3137,16 +2253,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(133) /* constructor */,
   (uint32_t)(-JS_CLASS_UINT16_ARRAY - 1) << 1,
   (3 << 1) | (JS_PROP_SPECIAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* class (offset=2025) */
-  JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
-  JS_ROM_VALUE(2005),
-  135,
-  JS_ROM_VALUE(2015),
-  JS_ROM_VALUE(1900),
-
-  /* properties (offset=2030) */
-========
   /* class (offset=2088) */
   JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
   JS_ROM_VALUE(2068),
@@ -3155,7 +2261,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(1963),
 
   /* properties (offset=2093) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(9),
   2 << 1, /* n_props */
   0 << 1, /* hash_mask */
@@ -3166,11 +2271,7 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(130) /* prototype */,
   JS_CLASS_INT32_ARRAY << 1,
   (3 << 1) | (JS_PROP_SPECIAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* properties (offset=2040) */
-========
   /* properties (offset=2103) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(9),
   2 << 1, /* n_props */
   0 << 1, /* hash_mask */
@@ -3181,16 +2282,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(133) /* constructor */,
   (uint32_t)(-JS_CLASS_INT32_ARRAY - 1) << 1,
   (3 << 1) | (JS_PROP_SPECIAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* class (offset=2050) */
-  JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
-  JS_ROM_VALUE(2030),
-  136,
-  JS_ROM_VALUE(2040),
-  JS_ROM_VALUE(1900),
-
-  /* properties (offset=2055) */
-========
   /* class (offset=2113) */
   JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
   JS_ROM_VALUE(2093),
@@ -3199,7 +2290,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(1963),
 
   /* properties (offset=2118) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(9),
   2 << 1, /* n_props */
   0 << 1, /* hash_mask */
@@ -3210,11 +2300,7 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(130) /* prototype */,
   JS_CLASS_UINT32_ARRAY << 1,
   (3 << 1) | (JS_PROP_SPECIAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* properties (offset=2065) */
-========
   /* properties (offset=2128) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(9),
   2 << 1, /* n_props */
   0 << 1, /* hash_mask */
@@ -3225,16 +2311,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(133) /* constructor */,
   (uint32_t)(-JS_CLASS_UINT32_ARRAY - 1) << 1,
   (3 << 1) | (JS_PROP_SPECIAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* class (offset=2075) */
-  JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
-  JS_ROM_VALUE(2055),
-  137,
-  JS_ROM_VALUE(2065),
-  JS_ROM_VALUE(1900),
-
-  /* properties (offset=2080) */
-========
   /* class (offset=2138) */
   JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
   JS_ROM_VALUE(2118),
@@ -3243,7 +2319,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(1963),
 
   /* properties (offset=2143) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(9),
   2 << 1, /* n_props */
   0 << 1, /* hash_mask */
@@ -3254,11 +2329,7 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(130) /* prototype */,
   JS_CLASS_FLOAT32_ARRAY << 1,
   (3 << 1) | (JS_PROP_SPECIAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* properties (offset=2090) */
-========
   /* properties (offset=2153) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(9),
   2 << 1, /* n_props */
   0 << 1, /* hash_mask */
@@ -3269,16 +2340,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(133) /* constructor */,
   (uint32_t)(-JS_CLASS_FLOAT32_ARRAY - 1) << 1,
   (3 << 1) | (JS_PROP_SPECIAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* class (offset=2100) */
-  JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
-  JS_ROM_VALUE(2080),
-  138,
-  JS_ROM_VALUE(2090),
-  JS_ROM_VALUE(1900),
-
-  /* properties (offset=2105) */
-========
   /* class (offset=2163) */
   JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
   JS_ROM_VALUE(2143),
@@ -3287,7 +2348,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(1963),
 
   /* properties (offset=2168) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(9),
   2 << 1, /* n_props */
   0 << 1, /* hash_mask */
@@ -3298,11 +2358,7 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(130) /* prototype */,
   JS_CLASS_FLOAT64_ARRAY << 1,
   (3 << 1) | (JS_PROP_SPECIAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* properties (offset=2115) */
-========
   /* properties (offset=2178) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(9),
   2 << 1, /* n_props */
   0 << 1, /* hash_mask */
@@ -3313,24 +2369,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(133) /* constructor */,
   (uint32_t)(-JS_CLASS_FLOAT64_ARRAY - 1) << 1,
   (3 << 1) | (JS_PROP_SPECIAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* class (offset=2125) */
-  JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
-  JS_ROM_VALUE(2105),
-  139,
-  JS_ROM_VALUE(2115),
-  JS_ROM_VALUE(1900),
-
-  /* float64 (offset=2130) */
-  JS_MB_HEADER_DEF(JS_MTAG_FLOAT64),
-  0x7ff0000000000000,
-
-  /* float64 (offset=2132) */
-  JS_MB_HEADER_DEF(JS_MTAG_FLOAT64),
-  0x7ff8000000000000,
-
-  /* properties (offset=2134) */
-========
   /* class (offset=2188) */
   JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
   JS_ROM_VALUE(2168),
@@ -3347,7 +2385,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   0x7ff8000000000000,
 
   /* properties (offset=2197) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(6),
   1 << 1, /* n_props */
   0 << 1, /* hash_mask */
@@ -3355,24 +2392,14 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(386) /* log */,
   JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 149),
   (0 << 1) | (JS_PROP_NORMAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* class (offset=2141) */
-  JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
-  JS_ROM_VALUE(2134),
-========
   /* class (offset=2204) */
   JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
   JS_ROM_VALUE(2197),
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   -1,
   JS_NULL,
   JS_NULL,
 
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* properties (offset=2146) */
-========
   /* properties (offset=2209) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(6),
   1 << 1, /* n_props */
   0 << 1, /* hash_mask */
@@ -3380,155 +2407,13 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(406) /* now */,
   JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 150),
   (0 << 1) | (JS_PROP_NORMAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* class (offset=2153) */
-  JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
-  JS_ROM_VALUE(2146),
-========
   /* class (offset=2216) */
   JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
   JS_ROM_VALUE(2209),
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   -1,
   JS_NULL,
   JS_NULL,
 
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* properties (offset=2158) */
-  JS_VALUE_ARRAY_HEADER(121),
-  37 << 1, /* n_props */
-  7 << 1, /* hash_mask */
-  112 << 1,
-  97 << 1,
-  64 << 1,
-  118 << 1,
-  115 << 1,
-  100 << 1,
-  103 << 1,
-  49 << 1,
-  JS_ROM_VALUE(386) /* log */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 143),
-  (0 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(546) /* setText */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 144),
-  (10 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(548) /* getText */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 145),
-  (0 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(550) /* getProperty */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 146),
-  (0 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(553) /* setBgColor */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 147),
-  (0 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(556) /* hide */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 148),
-  (16 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(558) /* show */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 149),
-  (19 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(560) /* getWindowSize */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 150),
-  (0 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(563) /* renderFromJson */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 151),
-  (0 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(566) /* readFile */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 152),
-  (28 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(569) /* listDir */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 153),
-  (22 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(571) /* resizeRoot */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 154),
-  (34 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(190) /* call */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 155),
-  (37 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(574) /* update */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 156),
-  (46 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(576) /* dump */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 157),
-  (31 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(578) /* themeLoad */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 158),
-  (13 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(581) /* themeSetCurrent */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 159),
-  (0 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(584) /* themeUnload */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 160),
-  (52 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(587) /* themeApplyToTree */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 161),
-  (43 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(591) /* inspect.enable */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 162),
-  (0 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(594) /* inspect.disable */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 163),
-  (55 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(597) /* inspect.setLayer */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 164),
-  (58 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(601) /* inspect.setShowBounds */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 165),
-  (40 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(605) /* inspect.setShowInfo */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 166),
-  (73 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(609) /* perf.enable */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 167),
-  (76 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(612) /* perf.disable */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 168),
-  (25 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(615) /* perf.reset */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 169),
-  (67 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(618) /* perf.setOverlay */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 170),
-  (70 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(621) /* perf.setTopN */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 171),
-  (79 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(624) /* perf.setLogInterval */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 172),
-  (61 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(628) /* perf.watch */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 173),
-  (85 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(631) /* perf.unwatch */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 174),
-  (88 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(634) /* perf.clearWatch */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 175),
-  (91 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(637) /* perf.getFrameStats */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 176),
-  (94 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(641) /* perf.getLayerStats */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 177),
-  (82 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(645) /* setEvent */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 178),
-  (109 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(130) /* prototype */,
-  JS_CLASS_YUI << 1,
-  (106 << 1) | (JS_PROP_SPECIAL << 30),
-  /* getset (offset=2280) */
-  JS_VALUE_ARRAY_HEADER(2),
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 179),
-  JS_UNDEFINED,
-
-  /* getset (offset=2283) */
-  JS_VALUE_ARRAY_HEADER(2),
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 180),
-  JS_UNDEFINED,
-
-  /* properties (offset=2286) */
-========
   /* properties (offset=2221) */
   JS_VALUE_ARRAY_HEADER(121),
   37 << 1, /* n_props */
@@ -3663,116 +2548,20 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_UNDEFINED,
 
   /* properties (offset=2349) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(13),
   3 << 1, /* n_props */
   1 << 1, /* hash_mask */
   10 << 1,
   0 << 1,
   JS_VALUE_MAKE_SPECIAL(JS_TAG_STRING_CHAR, 120) /* x */,
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  JS_ROM_VALUE(2280),
-  (0 << 1) | (JS_PROP_GETSET << 30),
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_STRING_CHAR, 121) /* y */,
-  JS_ROM_VALUE(2283),
-========
   JS_ROM_VALUE(2343),
   (0 << 1) | (JS_PROP_GETSET << 30),
   JS_VALUE_MAKE_SPECIAL(JS_TAG_STRING_CHAR, 121) /* y */,
   JS_ROM_VALUE(2346),
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   (4 << 1) | (JS_PROP_GETSET << 30),
   JS_ROM_VALUE(133) /* constructor */,
   (uint32_t)(-JS_CLASS_YUI - 1) << 1,
   (7 << 1) | (JS_PROP_SPECIAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* class (offset=2300) */
-  JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
-  JS_ROM_VALUE(2158),
-  142,
-  JS_ROM_VALUE(2286),
-  JS_NULL,
-
-  /* properties (offset=2305) */
-  JS_VALUE_ARRAY_HEADER(76),
-  22 << 1, /* n_props */
-  7 << 1, /* hash_mask */
-  43 << 1,
-  70 << 1,
-  64 << 1,
-  73 << 1,
-  25 << 1,
-  55 << 1,
-  49 << 1,
-  67 << 1,
-  JS_ROM_VALUE(658) /* TCP */,
-  0 << 1,
-  (0 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(660) /* UDP */,
-  1 << 1,
-  (0 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(662) /* socket */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 182),
-  (0 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(664) /* close */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 183),
-  (0 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(666) /* shutdown */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 184),
-  (10 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(669) /* connect */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 185),
-  (0 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(194) /* bind */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 186),
-  (22 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(671) /* listen */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 187),
-  (0 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(673) /* accept */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 188),
-  (0 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(675) /* getsockname */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 189),
-  (0 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(678) /* getpeername */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 190),
-  (16 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(681) /* socketpair */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 191),
-  (34 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(684) /* setsockopt */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 192),
-  (13 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(687) /* getsockopt */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 193),
-  (31 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(690) /* send */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 194),
-  (28 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(692) /* recv */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 195),
-  (46 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(694) /* sendto */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 196),
-  (40 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(696) /* recvfrom */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 197),
-  (19 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(699) /* inet_addr */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 198),
-  (37 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(702) /* ntohl */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 199),
-  (58 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(704) /* make_sockaddr_in */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 200),
-  (61 << 1) | (JS_PROP_NORMAL << 30),
-  JS_ROM_VALUE(130) /* prototype */,
-  JS_CLASS_SOCKET << 1,
-  (52 << 1) | (JS_PROP_SPECIAL << 30),
-  /* properties (offset=2382) */
-========
   /* class (offset=2363) */
   JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
   JS_ROM_VALUE(2221),
@@ -3859,7 +2648,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_CLASS_SOCKET << 1,
   (28 << 1) | (JS_PROP_SPECIAL << 30),
   /* properties (offset=2445) */
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_VALUE_ARRAY_HEADER(6),
   1 << 1, /* n_props */
   0 << 1, /* hash_mask */
@@ -3867,73 +2655,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(133) /* constructor */,
   (uint32_t)(-JS_CLASS_SOCKET - 1) << 1,
   (0 << 1) | (JS_PROP_SPECIAL << 30),
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  /* class (offset=2389) */
-  JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
-  JS_ROM_VALUE(2305),
-  181,
-  JS_ROM_VALUE(2382),
-  JS_NULL,
-
-  /* global object properties (offset=2394) */
-  JS_VALUE_ARRAY_HEADER(92),
-  JS_ROM_VALUE(163) /* Object */,
-  JS_ROM_VALUE(1050),
-  JS_ROM_VALUE(181) /* Function */,
-  JS_ROM_VALUE(1102),
-  JS_ROM_VALUE(202) /* Number */,
-  JS_ROM_VALUE(1189),
-  JS_ROM_VALUE(242) /* Boolean */,
-  JS_ROM_VALUE(1208),
-  JS_ROM_VALUE(244) /* String */,
-  JS_ROM_VALUE(1307),
-  JS_ROM_VALUE(301) /* Array */,
-  JS_ROM_VALUE(1405),
-  JS_ROM_VALUE(336) /* Math */,
-  JS_ROM_VALUE(1536),
-  JS_ROM_VALUE(404) /* Date */,
-  JS_ROM_VALUE(1558),
-  JS_ROM_VALUE(408) /* JSON */,
-  JS_ROM_VALUE(1573),
-  JS_ROM_VALUE(415) /* RegExp */,
-  JS_ROM_VALUE(1619),
-  JS_ROM_VALUE(152) /* Error */,
-  JS_ROM_VALUE(1659),
-  JS_ROM_VALUE(450) /* EvalError */,
-  JS_ROM_VALUE(1681),
-  JS_ROM_VALUE(453) /* RangeError */,
-  JS_ROM_VALUE(1703),
-  JS_ROM_VALUE(456) /* ReferenceError */,
-  JS_ROM_VALUE(1725),
-  JS_ROM_VALUE(459) /* SyntaxError */,
-  JS_ROM_VALUE(1747),
-  JS_ROM_VALUE(462) /* TypeError */,
-  JS_ROM_VALUE(1769),
-  JS_ROM_VALUE(465) /* URIError */,
-  JS_ROM_VALUE(1791),
-  JS_ROM_VALUE(468) /* InternalError */,
-  JS_ROM_VALUE(1813),
-  JS_ROM_VALUE(471) /* ArrayBuffer */,
-  JS_ROM_VALUE(1838),
-  JS_ROM_VALUE(480) /* Uint8ClampedArray */,
-  JS_ROM_VALUE(1925),
-  JS_ROM_VALUE(505) /* Int8Array */,
-  JS_ROM_VALUE(1950),
-  JS_ROM_VALUE(508) /* Uint8Array */,
-  JS_ROM_VALUE(1975),
-  JS_ROM_VALUE(511) /* Int16Array */,
-  JS_ROM_VALUE(2000),
-  JS_ROM_VALUE(514) /* Uint16Array */,
-  JS_ROM_VALUE(2025),
-  JS_ROM_VALUE(517) /* Int32Array */,
-  JS_ROM_VALUE(2050),
-  JS_ROM_VALUE(520) /* Uint32Array */,
-  JS_ROM_VALUE(2075),
-  JS_ROM_VALUE(523) /* Float32Array */,
-  JS_ROM_VALUE(2100),
-  JS_ROM_VALUE(526) /* Float64Array */,
-  JS_ROM_VALUE(2125),
-========
   /* class (offset=2452) */
   JS_MB_HEADER_DEF(JS_MTAG_OBJECT),
   JS_ROM_VALUE(2368),
@@ -3999,23 +2720,11 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(2163),
   JS_ROM_VALUE(547) /* Float64Array */,
   JS_ROM_VALUE(2188),
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_ROM_VALUE(204) /* parseInt */,
   JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 19),
   JS_ROM_VALUE(207) /* parseFloat */,
   JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 20),
   JS_ROM_VALUE(119) /* eval */,
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 201),
-  JS_ROM_VALUE(529) /* isNaN */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 202),
-  JS_ROM_VALUE(531) /* isFinite */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 203),
-  JS_ROM_VALUE(144) /* Infinity */,
-  JS_ROM_VALUE(2130),
-  JS_ROM_VALUE(142) /* NaN */,
-  JS_ROM_VALUE(2132),
-========
   JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 210),
   JS_ROM_VALUE(550) /* isNaN */,
   JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 211),
@@ -4025,31 +2734,10 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_ROM_VALUE(2193),
   JS_ROM_VALUE(142) /* NaN */,
   JS_ROM_VALUE(2195),
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_ROM_VALUE(108) /* undefined */,
   JS_UNDEFINED,
   JS_ROM_VALUE(555) /* globalThis */,
   JS_NULL,
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  JS_ROM_VALUE(537) /* console */,
-  JS_ROM_VALUE(2141),
-  JS_ROM_VALUE(539) /* performance */,
-  JS_ROM_VALUE(2153),
-  JS_ROM_VALUE(542) /* print */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 204),
-  JS_ROM_VALUE(544) /* YUI */,
-  JS_ROM_VALUE(2300),
-  JS_ROM_VALUE(656) /* Socket */,
-  JS_ROM_VALUE(2389),
-  JS_ROM_VALUE(708) /* gc */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 205),
-  JS_ROM_VALUE(710) /* load */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 206),
-  JS_ROM_VALUE(712) /* setTimeout */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 207),
-  JS_ROM_VALUE(715) /* clearTimeout */,
-  JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 208),
-========
   JS_ROM_VALUE(558) /* console */,
   JS_ROM_VALUE(2204),
   JS_ROM_VALUE(560) /* performance */,
@@ -4068,7 +2756,6 @@ static const uint64_t __attribute((aligned(64))) js_stdlib_table[] = {
   JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 216),
   JS_ROM_VALUE(736) /* clearTimeout */,
   JS_VALUE_MAKE_SPECIAL(JS_TAG_SHORT_FUNC, 217),
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
 };
 
 static const JSCFunctionDef js_c_function_table[] = {
@@ -4550,21 +3237,6 @@ static const JSCFunctionDef js_c_function_table[] = {
     JS_ROM_VALUE(579) /* show */,
     JS_CFUNC_generic, 1, 0 },
   { { .generic = js_get_window_size },
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-    JS_ROM_VALUE(560) /* getWindowSize */,
-    JS_CFUNC_generic, 0, 0 },
-  { { .generic = js_render_from_json },
-    JS_ROM_VALUE(563) /* renderFromJson */,
-    JS_CFUNC_generic, 3, 0 },
-  { { .generic = js_read_file },
-    JS_ROM_VALUE(566) /* readFile */,
-    JS_CFUNC_generic, 1, 0 },
-  { { .generic = js_list_dir },
-    JS_ROM_VALUE(569) /* listDir */,
-    JS_CFUNC_generic, 1, 0 },
-  { { .generic = js_resize_root },
-    JS_ROM_VALUE(571) /* resizeRoot */,
-========
     JS_ROM_VALUE(581) /* getWindowSize */,
     JS_CFUNC_generic, 0, 0 },
   { { .generic = js_render_from_json },
@@ -4578,102 +3250,11 @@ static const JSCFunctionDef js_c_function_table[] = {
     JS_CFUNC_generic, 1, 0 },
   { { .generic = js_resize_root },
     JS_ROM_VALUE(592) /* resizeRoot */,
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
     JS_CFUNC_generic, 2, 0 },
   { { .generic = js_yui_call },
     JS_ROM_VALUE(190) /* call */,
     JS_CFUNC_generic, 2, 0 },
   { { .generic = js_yui_update },
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-    JS_ROM_VALUE(574) /* update */,
-    JS_CFUNC_generic, 1, 0 },
-  { { .generic = js_yui_dump },
-    JS_ROM_VALUE(576) /* dump */,
-    JS_CFUNC_generic, 1, 0 },
-  { { .generic = js_yui_themeLoad },
-    JS_ROM_VALUE(578) /* themeLoad */,
-    JS_CFUNC_generic, 1, 0 },
-  { { .generic = js_yui_themeSetCurrent },
-    JS_ROM_VALUE(581) /* themeSetCurrent */,
-    JS_CFUNC_generic, 1, 0 },
-  { { .generic = js_yui_themeUnload },
-    JS_ROM_VALUE(584) /* themeUnload */,
-    JS_CFUNC_generic, 1, 0 },
-  { { .generic = js_yui_themeApplyToTree },
-    JS_ROM_VALUE(587) /* themeApplyToTree */,
-    JS_CFUNC_generic, 0, 0 },
-  { { .generic = js_yui_inspect_enable },
-    JS_ROM_VALUE(591) /* inspect.enable */,
-    JS_CFUNC_generic, 0, 0 },
-  { { .generic = js_yui_inspect_disable },
-    JS_ROM_VALUE(594) /* inspect.disable */,
-    JS_CFUNC_generic, 0, 0 },
-  { { .generic = js_yui_inspect_setLayer },
-    JS_ROM_VALUE(597) /* inspect.setLayer */,
-    JS_CFUNC_generic, 2, 0 },
-  { { .generic = js_yui_inspect_setShowBounds },
-    JS_ROM_VALUE(601) /* inspect.setShowBounds */,
-    JS_CFUNC_generic, 1, 0 },
-  { { .generic = js_yui_inspect_setShowInfo },
-    JS_ROM_VALUE(605) /* inspect.setShowInfo */,
-    JS_CFUNC_generic, 1, 0 },
-  { { .generic = js_yui_perf_enable },
-    JS_ROM_VALUE(609) /* perf.enable */,
-    JS_CFUNC_generic, 0, 0 },
-  { { .generic = js_yui_perf_disable },
-    JS_ROM_VALUE(612) /* perf.disable */,
-    JS_CFUNC_generic, 0, 0 },
-  { { .generic = js_yui_perf_reset },
-    JS_ROM_VALUE(615) /* perf.reset */,
-    JS_CFUNC_generic, 0, 0 },
-  { { .generic = js_yui_perf_setOverlay },
-    JS_ROM_VALUE(618) /* perf.setOverlay */,
-    JS_CFUNC_generic, 1, 0 },
-  { { .generic = js_yui_perf_setTopN },
-    JS_ROM_VALUE(621) /* perf.setTopN */,
-    JS_CFUNC_generic, 1, 0 },
-  { { .generic = js_yui_perf_setLogInterval },
-    JS_ROM_VALUE(624) /* perf.setLogInterval */,
-    JS_CFUNC_generic, 1, 0 },
-  { { .generic = js_yui_perf_watch },
-    JS_ROM_VALUE(628) /* perf.watch */,
-    JS_CFUNC_generic, 1, 0 },
-  { { .generic = js_yui_perf_unwatch },
-    JS_ROM_VALUE(631) /* perf.unwatch */,
-    JS_CFUNC_generic, 1, 0 },
-  { { .generic = js_yui_perf_clearWatch },
-    JS_ROM_VALUE(634) /* perf.clearWatch */,
-    JS_CFUNC_generic, 0, 0 },
-  { { .generic = js_yui_perf_getFrameStats },
-    JS_ROM_VALUE(637) /* perf.getFrameStats */,
-    JS_CFUNC_generic, 0, 0 },
-  { { .generic = js_yui_perf_getLayerStats },
-    JS_ROM_VALUE(641) /* perf.getLayerStats */,
-    JS_CFUNC_generic, 1, 0 },
-  { { .generic = js_yui_set_event },
-    JS_ROM_VALUE(645) /* setEvent */,
-    JS_CFUNC_generic, 3, 0 },
-  { { .generic = js_yui_get_x },
-    JS_ROM_VALUE(650) /* get x */,
-    JS_CFUNC_generic, 0, 0 },
-  { { .generic = js_yui_get_y },
-    JS_ROM_VALUE(654) /* get y */,
-    JS_CFUNC_generic, 0, 0 },
-  { { .constructor = js_socket_constructor },
-    JS_ROM_VALUE(656) /* Socket */,
-    JS_CFUNC_constructor, 2, JS_CLASS_SOCKET },
-  { { .generic = js_socket_create },
-    JS_ROM_VALUE(662) /* socket */,
-    JS_CFUNC_generic, 1, 0 },
-  { { .generic = js_socket_close },
-    JS_ROM_VALUE(664) /* close */,
-    JS_CFUNC_generic, 1, 0 },
-  { { .generic = js_socket_shutdown },
-    JS_ROM_VALUE(666) /* shutdown */,
-    JS_CFUNC_generic, 1, 0 },
-  { { .generic = js_socket_connect },
-    JS_ROM_VALUE(669) /* connect */,
-========
     JS_ROM_VALUE(595) /* update */,
     JS_CFUNC_generic, 1, 0 },
   { { .generic = js_yui_dump },
@@ -4762,54 +3343,11 @@ static const JSCFunctionDef js_c_function_table[] = {
     JS_CFUNC_generic, 1, 0 },
   { { .generic = js_socket_connect },
     JS_ROM_VALUE(690) /* connect */,
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
     JS_CFUNC_generic, 4, 0 },
   { { .generic = js_socket_bind },
     JS_ROM_VALUE(194) /* bind */,
     JS_CFUNC_generic, 3, 0 },
   { { .generic = js_socket_listen },
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-    JS_ROM_VALUE(671) /* listen */,
-    JS_CFUNC_generic, 2, 0 },
-  { { .generic = js_socket_accept },
-    JS_ROM_VALUE(673) /* accept */,
-    JS_CFUNC_generic, 1, 0 },
-  { { .generic = js_socket_getsockname },
-    JS_ROM_VALUE(675) /* getsockname */,
-    JS_CFUNC_generic, 1, 0 },
-  { { .generic = js_socket_getpeername },
-    JS_ROM_VALUE(678) /* getpeername */,
-    JS_CFUNC_generic, 1, 0 },
-  { { .generic = js_socket_socketpair },
-    JS_ROM_VALUE(681) /* socketpair */,
-    JS_CFUNC_generic, 3, 0 },
-  { { .generic = js_socket_setsockopt },
-    JS_ROM_VALUE(684) /* setsockopt */,
-    JS_CFUNC_generic, 5, 0 },
-  { { .generic = js_socket_getsockopt },
-    JS_ROM_VALUE(687) /* getsockopt */,
-    JS_CFUNC_generic, 4, 0 },
-  { { .generic = js_socket_send },
-    JS_ROM_VALUE(690) /* send */,
-    JS_CFUNC_generic, 3, 0 },
-  { { .generic = js_socket_recv },
-    JS_ROM_VALUE(692) /* recv */,
-    JS_CFUNC_generic, 3, 0 },
-  { { .generic = js_socket_sendto },
-    JS_ROM_VALUE(694) /* sendto */,
-    JS_CFUNC_generic, 5, 0 },
-  { { .generic = js_socket_recvfrom },
-    JS_ROM_VALUE(696) /* recvfrom */,
-    JS_CFUNC_generic, 3, 0 },
-  { { .generic = js_socket_inet_addr },
-    JS_ROM_VALUE(699) /* inet_addr */,
-    JS_CFUNC_generic, 1, 0 },
-  { { .generic = js_socket_ntohl },
-    JS_ROM_VALUE(702) /* ntohl */,
-    JS_CFUNC_generic, 1, 0 },
-  { { .generic = js_socket_make_sockaddr_in },
-    JS_ROM_VALUE(704) /* make_sockaddr_in */,
-========
     JS_ROM_VALUE(692) /* listen */,
     JS_CFUNC_generic, 2, 0 },
   { { .generic = js_socket_accept },
@@ -4850,7 +3388,6 @@ static const JSCFunctionDef js_c_function_table[] = {
     JS_CFUNC_generic, 1, 0 },
   { { .generic = js_socket_make_sockaddr_in },
     JS_ROM_VALUE(725) /* make_sockaddr_in */,
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
     JS_CFUNC_generic, 3, 0 },
   { { .generic = js_global_eval },
     JS_ROM_VALUE(119) /* eval */,
@@ -4865,18 +3402,6 @@ static const JSCFunctionDef js_c_function_table[] = {
     JS_ROM_VALUE(563) /* print */,
     JS_CFUNC_generic, 1, 0 },
   { { .generic = js_gc },
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-    JS_ROM_VALUE(708) /* gc */,
-    JS_CFUNC_generic, 0, 0 },
-  { { .generic = js_load },
-    JS_ROM_VALUE(710) /* load */,
-    JS_CFUNC_generic, 1, 0 },
-  { { .generic = js_setTimeout },
-    JS_ROM_VALUE(712) /* setTimeout */,
-    JS_CFUNC_generic, 2, 0 },
-  { { .generic = js_clearTimeout },
-    JS_ROM_VALUE(715) /* clearTimeout */,
-========
     JS_ROM_VALUE(729) /* gc */,
     JS_CFUNC_generic, 0, 0 },
   { { .generic = js_load },
@@ -4887,7 +3412,6 @@ static const JSCFunctionDef js_c_function_table[] = {
     JS_CFUNC_generic, 2, 0 },
   { { .generic = js_clearTimeout },
     JS_ROM_VALUE(736) /* clearTimeout */,
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
     JS_CFUNC_generic, 1, 0 },
 };
 
@@ -4904,17 +3428,10 @@ const JSSTDLibraryDef js_yuistdlib = {
   js_stdlib_table,
   js_c_function_table,
   js_c_finalizer_table,
-<<<<<<<< HEAD:lib/jsmodule-mqjs/yui_stdlib.h
-  2487,
-  64,
-  718,
-  2394,
-========
   2550,
   64,
   739,
   2457,
->>>>>>>> 763231279d618b3159c55c989a4133b17136503c:lib/jsmodule-mquickjs/yui_stdlib.h
   JS_CLASS_COUNT,
 };
 

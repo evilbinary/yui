@@ -31,12 +31,12 @@ if is_host_plat():
         # 使用 subprocess 运行并捕获输出
 
         with open('lib/jsmodule-mquickjs/yui_stdlib.h', 'w') as f:
-            result = subprocess.run([exe], stdout=f, stderr=subprocess.PIPE, text=True)
+            result = subprocess.run([exe], stdout=f, stderr=subprocess.PIPE, text=True, env=env)
             if result.returncode != 0:
                 print('Error generating yui_stdlib.h:', result.stderr)
         # 同时生成 32 位表（esp32/stm32 等嵌入式平台使用）
         with open('lib/jsmodule-mquickjs/yui_stdlib_32.h', 'w') as f:
-            result = subprocess.run([exe, '-m32'], stdout=f, stderr=subprocess.PIPE, text=True)
+            result = subprocess.run([exe, '-m32'], stdout=f, stderr=subprocess.PIPE, text=True, env=env)
             if result.returncode != 0:
                 print('Error generating yui_stdlib_32.h:', result.stderr)
 
