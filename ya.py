@@ -610,7 +610,7 @@ def add_flags():
             '-DYUI_PATH_MAX=256',
             '-DMAX_JS_EVENTS=64',
             '-DMAX_C_EVENT_HANDLERS=32',
-            '-DJS_MEM_POOL_SIZE=192*1024',
+            '-DJS_MEM_POOL_SIZE=92*1024',
             '-DYUI_ESP_PLATFORM=1',
         )
     elif is_plat("android"):

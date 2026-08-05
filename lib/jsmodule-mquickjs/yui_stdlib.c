@@ -718,6 +718,40 @@ static JSValue js_list_dir(JSContext *ctx, JSValue *this_val, int argc, JSValue 
             if (strcmp(de->d_name, ".") == 0 || strcmp(de->d_name, "..") == 0) {
                 continue;
             }
+            /* SPIFFS 是扁平文件系统：readdir 只返回实际文件，且名称带
+               子目录前缀（如 "alarm/alarm.js"）。这里把第一个路径段
+               合成成虚拟目录项（去重），让 listDir 表现和真实目录一致。 */
+            const char* slash = strchr(de->d_name, '/');
+            const char* leaf;
+            int virt_dir = 0;
+            char seg[256];
+            if (slash) {
+                size_t seg_len = (size_t)(slash - de->d_name);
+                if (seg_len == 0 || seg_len >= sizeof(seg)) {
+                    continue;
+                }
+                memcpy(seg, de->d_name, seg_len);
+                seg[seg_len] = '\0';
+                leaf = seg;
+                virt_dir = 1;
+            } else {
+                leaf = de->d_name;
+            }
+
+            /* 虚拟目录去重：已在 names 中出现过的段跳过 */
+            if (virt_dir) {
+                int dup = 0;
+                for (int k = 0; k < count; k++) {
+                    if (strcmp(names[k], leaf) == 0) {
+                        dup = 1;
+                        break;
+                    }
+                }
+                if (dup) {
+                    continue;
+                }
+            }
+
             if (count == cap) {
                 cap *= 2;
                 char (*n)[256] = realloc(names, sizeof(char[256]) * cap);
@@ -732,25 +766,28 @@ static JSValue js_list_dir(JSContext *ctx, JSValue *this_val, int argc, JSValue 
                 names = n;
                 is_dirs = d;
             }
-            snprintf(names[count], sizeof(names[count]), "%s", de->d_name);
-            /* 目录判定（SPIFFS 是扁平文件系统，虚拟目录无法 stat）：
-              - 优先用 dirent->d_type：SPIFFS 填 SPIFFS_TYPE_DIR(2)/FILE(1)，
-                Linux(d_type) 用 DT_DIR(4)/DT_REG(8)/DT_UNKNOWN(0)。
-              - DT_UNKNOWN(0) 或类型不可用时，回退 stat 判断（桌面 FS 可靠）。 */
-            char path[YUI_MAX_PATH];
-            snprintf(path, sizeof(path), "%s/%s", open_dir, de->d_name);
-            int is_dir = 0;
-#if defined(YUI_ESP_PLATFORM)
-            is_dir = (de->d_type == 2); /* SPIFFS_TYPE_DIR */
-#else
-            if (de->d_type != 0) {
-                is_dir = (de->d_type == DT_DIR);
+            snprintf(names[count], sizeof(names[count]), "%s", leaf);
+            if (virt_dir) {
+                /* 扁平 FS 的前缀段必然是目录 */
+                is_dirs[count] = 1;
             } else {
-                struct stat st;
-                is_dir = (stat(path, &st) == 0) && S_ISDIR(st.st_mode);
-            }
+                /* 真目录：优先 d_type（SPIFFS 填 SPIFFS_TYPE_DIR=2），
+                   桌面 FS 用 DT_DIR/DT_UNKNOWN+stat 回退 */
+                char path[YUI_MAX_PATH];
+                snprintf(path, sizeof(path), "%s/%s", open_dir, leaf);
+                int is_dir = 0;
+#if defined(YUI_ESP_PLATFORM)
+                is_dir = (de->d_type == 2);
+#else
+                if (de->d_type != 0) {
+                    is_dir = (de->d_type == DT_DIR);
+                } else {
+                    struct stat st;
+                    is_dir = (stat(path, &st) == 0) && S_ISDIR(st.st_mode);
+                }
 #endif
-            is_dirs[count] = is_dir;
+                is_dirs[count] = is_dir;
+            }
             count++;
         }
         for (int i = 0; i < count; i++) {
