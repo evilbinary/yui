@@ -1195,7 +1195,6 @@ Layer* find_layer_by_id(Layer* root, const char* id) {
     if (!root || !id) return NULL;
 
     if (strcmp(root->id, id) == 0) {
-        printf("YUI: find_layer_by_id MATCH root->id='%s' == '%s'\n", root->id, id);
         return root;
     }
 
