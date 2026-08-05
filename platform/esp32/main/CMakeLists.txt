@@ -15,7 +15,7 @@ idf_component_register(
         "${YUI_ROOT}/lib/stb"
         "${YUI_ROOT}/lib/cjson"
         "${YUI_ROOT}/lib/jsmodule"
-        "${YUI_ROOT}/lib/jsmodule-mqjs"
+        "${YUI_ROOT}/lib/jsmodule-mquickjs"
         "${YUI_ROOT}/lib/socket"
     REQUIRES esp_lcd esp_lcd_touch esp_lcd_qemu_rgb esp_timer driver nvs_flash spi_flash spiffs lwip
 )
