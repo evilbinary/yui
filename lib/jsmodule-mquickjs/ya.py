@@ -39,7 +39,7 @@ if is_host_plat():
 # ESP32/STM32：32 位表（mqjs_stdlib_32.h / yui_stdlib_32.h）由 JS_PTR64 条件选择
 target("jsmodule-mquickjs")
 add_deps("mquickjs","cjson","yui","socket")
-add_cflags(' -DBUILD_NO_MAIN=1 -DHAS_JS_MODULE -DCONFIG_CLASS_SOCKET -DCONFIG_CLASS_YUI  -I. -I../mquickjs -g ')
+add_cflags(' -DBUILD_NO_MAIN=1 -DHAS_JS_MODULE -DCONFIG_CLASS_SOCKET -DCONFIG_CLASS_YUI  -I. -I../mquickjs -g -Wno-implicit-function-declaration ')
 if get_plat() in ("esp32", "stm32"):
     # 嵌入式模式：ytype.h 使用 YuiTexture/YuiFont，不依赖 SDL
     add_cflags('-DYUI_BACKEND_EMBEDDED')

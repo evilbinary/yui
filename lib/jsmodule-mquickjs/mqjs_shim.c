@@ -6,6 +6,9 @@
 
 #include "mquickjs.h"
 
+// JS_FreeValue 在标准 QuickJS 中用于引用计数释放；mquickjs 使用
+// 追踪 + 压缩 GC 且不依赖 C 库 malloc/free，值由 GC 统一回收，
+// 无需（也无法）显式释放。此空实现仅为 API 兼容存根，见 lib/mquickjs/README.md。
 void JS_FreeValue(JSContext *ctx, JSValue val)
 {
     (void)ctx;

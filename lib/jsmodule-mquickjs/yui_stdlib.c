@@ -698,6 +698,10 @@ static JSValue js_list_dir(JSContext *ctx, JSValue *this_val, int argc, JSValue 
             continue;
         }
         entry = JS_NewObject(ctx);
+        if (JS_IsException(entry)) {
+            printf("YUI: listDir: JS_NewObject exception, aborting list\n");
+            break;
+        }
         JS_SetPropertyStr(ctx, entry, "name", JS_NewString(ctx, de->d_name));
         {
             struct stat st;
@@ -708,6 +712,7 @@ static JSValue js_list_dir(JSContext *ctx, JSValue *this_val, int argc, JSValue 
         }
         JS_SetPropertyUint32(ctx, arr, n++, entry);
     }
+    printf("YUI: listDir('%s') -> %d entries\n", dir, n);
     closedir(dp);
     return arr;
 }
