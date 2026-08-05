@@ -759,13 +759,37 @@ static JSValue js_list_dir(JSContext *ctx, JSValue *this_val, int argc, JSValue 
     arr = JS_NewArray(ctx, 0);
     JS_PUSH_VALUE(ctx, arr);
     {
-        /* 先收集目录项，再一次性构建 JS 数组，避免循环内频繁 GC。 */
-        char names[4096][256];
-        int is_dirs[4096];
+        /* 先收集目录项，再一次性构建 JS 数组，避免循环内频繁 GC。
+           注意：4096 项 × 256B 的栈上数组在 ESP32 只有 8KB 任务栈时
+           会直接栈溢出（Store access fault），故改用堆缓冲按需增长。 */
         int count = 0;
-        while ((de = readdir(dp)) != NULL && count < 4096) {
+        int cap = 8;
+        char (*names)[256] = malloc(sizeof(char[256]) * cap);
+        unsigned char *is_dirs = malloc(cap);
+        if (!names || !is_dirs) {
+            free(names);
+            free(is_dirs);
+            JS_POP_VALUE(ctx, arr);
+            closedir(dp);
+            return JS_ThrowOutOfMemory(ctx);
+        }
+        while ((de = readdir(dp)) != NULL) {
             if (strcmp(de->d_name, ".") == 0 || strcmp(de->d_name, "..") == 0) {
                 continue;
+            }
+            if (count == cap) {
+                cap *= 2;
+                char (*n)[256] = realloc(names, sizeof(char[256]) * cap);
+                unsigned char *d = realloc(is_dirs, cap);
+                if (!n || !d) {
+                    free(names);
+                    free(is_dirs);
+                    JS_POP_VALUE(ctx, arr);
+                    closedir(dp);
+                    return JS_ThrowOutOfMemory(ctx);
+                }
+                names = n;
+                is_dirs = d;
             }
             snprintf(names[count], sizeof(names[count]), "%s", de->d_name);
             char path[YUI_MAX_PATH];
@@ -806,6 +830,8 @@ static JSValue js_list_dir(JSContext *ctx, JSValue *this_val, int argc, JSValue 
             arr = arr_ref.val;
             JS_POP_VALUE(ctx, entry);
         }
+        free(names);
+        free(is_dirs);
     }
     arr = arr_ref.val;
     JS_POP_VALUE(ctx, arr);
