@@ -600,11 +600,18 @@ def add_flags():
         # (platform/esp32/main/CMakeLists.txt) 之间保持一致。
         # ytype.h 默认 YUI_MAX_PATH=1024；不一致会改变 sizeof(Event)/sizeof(Layer)，
         # 导致 js_module_set_layer_event 的 strncpy 越界写、堆损坏（Store/Load fault）。
+        # JS_MEM_POOL_SIZE 必须在此设置：js_module.c 由 ya 预编译进静态库，
+        # CMakeLists 里的宏只作用于 main.c 等组件内源文件，对库无效。
+        # esp32c3 有 400KB SRAM；192KB 池可容纳 watch-os 全部 JS(约 53KB)+解析/runtime。
+        # YUI_ESP_PLATFORM 供 JS 库(lib/jsmodule-mquickjs)区分 SPIFFS 扁平文件系统
+        # 的目录判定（SPIFFS 虚拟目录 stat()/opendir() 均不可靠，需用 d_type==2）。
         add_cflags(
             '-DYUI_MAX_PATH=256',
             '-DYUI_PATH_MAX=256',
             '-DMAX_JS_EVENTS=64',
             '-DMAX_C_EVENT_HANDLERS=32',
+            '-DJS_MEM_POOL_SIZE=192*1024',
+            '-DYUI_ESP_PLATFORM=1',
         )
     elif is_plat("android"):
         set_toolchain('gcc')
@@ -644,6 +651,7 @@ def add_flags():
             '-Ilib',
             '-Ilib/mquickjs',
             '-DHAS_JS_MODULE',
+            '-DJS_MEM_POOL_SIZE=4194304',
             )
         add_ldflags(
             '-lSDL2',
