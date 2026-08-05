@@ -310,8 +310,8 @@ typedef struct Rect {
 
 
 
-#ifndef MAX_PATH
-#define MAX_PATH 1024
+#ifndef YUI_MAX_PATH
+#define YUI_MAX_PATH 1024
 #endif
 #define MAX_TEXT 256
 
@@ -401,7 +401,7 @@ typedef struct LayoutManager {
 
 // 添加数据绑定结构
 typedef struct Binding {
-    char path[MAX_PATH];
+    char path[YUI_MAX_PATH];
 } Binding;
 
 typedef struct Data {
@@ -411,13 +411,13 @@ typedef struct Data {
 
 typedef struct Font {
     char weight[20];      // 字体粗细：normal, bold, light, etc.
-    char path[MAX_PATH];
+    char path[YUI_MAX_PATH];
     int size;
     DFont* default_font;  // 添加默认字体
 } Font;
 
 typedef struct Assets {
-    char path[MAX_PATH];
+    char path[YUI_MAX_PATH];
     int size;
 } Assets;
 // 滚动条方向枚举
@@ -504,18 +504,18 @@ typedef struct {
 
 
 typedef struct Event {
-    char click_name[MAX_PATH];
+    char click_name[YUI_MAX_PATH];
     EventHandler click;
     EventHandler press;
     // 添加滚动事件回调函数指针
-    char scroll_name[MAX_PATH];
+    char scroll_name[YUI_MAX_PATH];
     EventHandler scroll;
 
     // 合并的触屏事件
-    char touch_name[MAX_PATH];
+    char touch_name[YUI_MAX_PATH];
     EventHandler touch;
 
-    char resize_name[MAX_PATH];
+    char resize_name[YUI_MAX_PATH];
     void (*resize)(Layer* layer, const ResizeEvent* event);
 } Event;
 
@@ -592,7 +592,7 @@ typedef struct Layer {
     Color bg_color;
     int radius; // 圆角半径
     int padding[4]; // style.padding: top, right, bottom, left
-    char source[MAX_PATH];
+    char source[YUI_MAX_PATH];
     Texture* texture;
     Layer** children;
     int child_count;

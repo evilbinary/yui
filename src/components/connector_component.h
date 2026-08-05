@@ -39,7 +39,7 @@ typedef struct ConnectorComponent {
     int has_ctrl2;
     Color stroke_color;
     int stroke_width;
-    char on_connect_change_name[MAX_PATH];
+    char on_connect_change_name[YUI_MAX_PATH];
 } ConnectorComponent;
 
 typedef struct ConnectorAnchorEntry {

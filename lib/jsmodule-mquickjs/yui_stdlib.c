@@ -36,8 +36,8 @@
 
 
 #define MAX_TEXT 256
-#ifndef MAX_PATH
-#define MAX_PATH 1024
+#ifndef YUI_MAX_PATH
+#define YUI_MAX_PATH 1024
 #endif
 
 // YUI Layer 类型定义（最小化定义）
@@ -52,6 +52,25 @@ extern Layer* parse_layer_from_string(const char* json_str, Layer* parent);
 extern void destroy_layer(Layer* layer);
 extern int js_module_load_from_json(cJSON* root_json, const char* json_file_path, int append);
 extern char* js_module_read_file(const char* file_path);
+
+// 调试：递归打印图层树
+static void yui_debug_walk(Layer* root, int depth) {
+    if (!root) return;
+    for (int i = 0; i < depth; i++) printf("  ");
+    printf("id='%s' children=%d", root->id, root->child_count);
+    if (depth == 0) {
+        printf(" [ROOT]");
+    }
+    printf("\n");
+    for (int i = 0; i < root->child_count; i++) {
+        yui_debug_walk(root->children[i], depth + 1);
+    }
+    if (root->sub) {
+        for (int i = 0; i < depth; i++) printf("  ");
+        printf("sub ->\n");
+        yui_debug_walk(root->sub, depth + 1);
+    }
+}
 
 // 颜色结构体定义
 
@@ -463,8 +482,13 @@ static JSValue js_show(JSContext *ctx, JSValue *this_val, int argc, JSValue *arg
         recursive = JS_ToBool(ctx, argv[1]);
     }
 
+    printf("YUI: show() called, layer_id='%s' g_layer_root=%p\n",
+           layer_id ? layer_id : "(null)", (void*)g_layer_root);
+
     if (layer_id && g_layer_root ) {
         Layer* layer = find_layer_by_id(g_layer_root, layer_id);
+        printf("YUI: show() find '%s' -> %s\n",
+               layer_id, layer ? "FOUND" : "NOT FOUND");
         if (layer) {
             layer_show(layer, recursive);
             printf("YUI: Show layer '%s'%s\n", layer_id, recursive ? " (recursive)" : "");
@@ -541,7 +565,16 @@ static JSValue js_render_from_json(JSContext *ctx, JSValue *this_val, int argc, 
         json_source_path = JS_ToCString(ctx, argv[3], &buf3);
     }
 
-    printf("YUI: render_from_json called with layer_id='%s', append=%d\n", layer_id, append);
+    printf("YUI: render_from_json ENTRY layer_id='%s' append=%d g_layer_root=%p id='%s' children=%d sub=%p\n",
+           layer_id, append, (void*)g_layer_root,
+           g_layer_root ? g_layer_root->id : "(null)",
+           g_layer_root ? g_layer_root->child_count : -1,
+           g_layer_root ? (void*)g_layer_root->sub : NULL);
+    {
+        Layer* probe = find_layer_by_id(g_layer_root, "grid_apps");
+        printf("YUI: probe find('grid_apps') via g_layer_root -> %s (ptr=%p, parent_layer not yet)\n",
+               probe ? "FOUND" : "NULL", (void*)probe);
+    }
 
     if (!g_layer_root) {
         return JS_NewInt32(ctx, -4);
@@ -593,6 +626,37 @@ static JSValue js_render_from_json(JSContext *ctx, JSValue *this_val, int argc, 
         }
         parent_layer->children[0] = new_layer;
         parent_layer->child_count = 1;
+    }
+
+    {
+        /* 调试：验证 append 后的树链接 */
+        Layer* verify = find_layer_by_id(g_layer_root, new_layer->id);
+        Layer* grid = find_layer_by_id(g_layer_root, "grid_apps");
+        printf("YUI: after append, parent='%s' child_count=%d, find('%s') -> %s\n",
+               parent_layer->id, parent_layer->child_count, new_layer->id,
+               verify ? "FOUND" : "NOT FOUND");
+
+        /* 关键指针对比 */
+        printf("YUI: ptr compare: g_layer_root=%p parent_layer=%p grid=%p parent==grid:%s\n",
+               (void*)g_layer_root, (void*)parent_layer, (void*)grid,
+               parent_layer == grid ? "YES" : "NO");
+
+        /* 从 g_layer_root 完整遍历树 */
+        printf("YUI: full tree walk from root (id='%s', ptr=%p, child_count=%d, sub=%p):\n",
+               g_layer_root->id, (void*)g_layer_root, g_layer_root->child_count,
+               (void*)g_layer_root->sub);
+        yui_debug_walk(g_layer_root, 0);
+
+        if (grid) {
+            printf("YUI: walk from grid_ptr (id='%s') children=%d:\n",
+                   grid->id, grid->child_count);
+            yui_debug_walk(grid, 0);
+            printf("YUI: grid children[0]=%p", (void*)(grid->child_count > 0 ? grid->children[0] : NULL));
+            if (grid->child_count > 0 && grid->children[0]) {
+                printf(" id='%s'", grid->children[0]->id);
+            }
+            printf("\n");
+        }
     }
 
     layout_layer(parent_layer);
@@ -652,7 +716,7 @@ static JSValue js_list_dir(JSContext *ctx, JSValue *this_val, int argc, JSValue 
 {
     JSCStringBuf buf;
     const char* dir = NULL;
-    char dir_copy[MAX_PATH];
+    char dir_copy[YUI_MAX_PATH];
     DIR *dp = NULL;
     struct dirent *de;
     JSValue arr, entry;
@@ -675,7 +739,7 @@ static JSValue js_list_dir(JSContext *ctx, JSValue *this_val, int argc, JSValue 
     /* 与 js_module_read_file 相同的路径解析：相对路径尝试 fs_root/path */
     const char* fs_root = js_module_get_fs_root();
     const char* base_path = js_module_get_base_path();
-    char resolved[MAX_PATH];
+    char resolved[YUI_MAX_PATH];
     const char* open_dir = NULL;
 
     if (dir[0] == '/') {
@@ -718,7 +782,7 @@ static JSValue js_list_dir(JSContext *ctx, JSValue *this_val, int argc, JSValue 
         JS_SetPropertyStr(ctx, entry, "name", JS_NewString(ctx, de->d_name));
         {
             struct stat st;
-            char path[MAX_PATH];
+            char path[YUI_MAX_PATH];
             snprintf(path, sizeof(path), "%s/%s", open_dir, de->d_name);
             int is_dir = (stat(path, &st) == 0) && S_ISDIR(st.st_mode);
             JS_SetPropertyStr(ctx, entry, "isDir", JS_NewBool(is_dir));

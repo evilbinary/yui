@@ -23,8 +23,8 @@
 #endif
 
 static Layer* g_root = NULL;
-static char g_json_path[MAX_PATH];
-static char g_assets_override[MAX_PATH];
+static char g_json_path[YUI_MAX_PATH];
+static char g_assets_override[YUI_MAX_PATH];
 
 static const char* yui_default_assets_dir(const char* json_path, const char* assets_override) {
     if (assets_override && assets_override[0]) {

@@ -475,11 +475,11 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
     
     // 设置字体路径（优先级：直接属性 > style > 默认）
     if (font && font->valuestring) {
-      strncpy(layer->font->path, font->valuestring, MAX_PATH - 1);
-      layer->font->path[MAX_PATH - 1] = '\0';
+      strncpy(layer->font->path, font->valuestring, YUI_MAX_PATH - 1);
+      layer->font->path[YUI_MAX_PATH - 1] = '\0';
     } else if (styleFont && styleFont->valuestring) {
-      strncpy(layer->font->path, styleFont->valuestring, MAX_PATH - 1);
-      layer->font->path[MAX_PATH - 1] = '\0';
+      strncpy(layer->font->path, styleFont->valuestring, YUI_MAX_PATH - 1);
+      layer->font->path[YUI_MAX_PATH - 1] = '\0';
     } else {
       strcpy(layer->font->path, "Roboto-Regular.ttf");  // 默认字体
     }
@@ -534,7 +534,7 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
   {
     cJSON* font_fallback = cJSON_GetObjectItem(json_obj, "fontFallback");
     if (font_fallback && cJSON_IsString(font_fallback) && font_fallback->valuestring[0]) {
-      char fallback_path[MAX_PATH];
+      char fallback_path[YUI_MAX_PATH];
       if (layer->assets && layer->assets->path[0] != '\0') {
         snprintf(fallback_path, sizeof(fallback_path), "%s/%s",
                  layer->assets->path, font_fallback->valuestring);
@@ -1195,6 +1195,7 @@ Layer* find_layer_by_id(Layer* root, const char* id) {
     if (!root || !id) return NULL;
 
     if (strcmp(root->id, id) == 0) {
+        printf("YUI: find_layer_by_id MATCH root->id='%s' == '%s'\n", root->id, id);
         return root;
     }
 

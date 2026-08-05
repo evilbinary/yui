@@ -23,9 +23,9 @@ idf_component_register(
 target_compile_definitions(${COMPONENT_LIB} PRIVATE YUI_BACKEND_EMBEDDED)
 
 # 必须与 ya.py 的核心库编译参数一致，否则 sizeof(Layer)/sizeof(Font) 不匹配
-# ytype.h 中 MAX_PATH 默认 1024，但 ya.py 编译核心库时用 256
+# ytype.h 中 YUI_MAX_PATH 默认 1024，但 ya.py 编译核心库时用 256
 target_compile_definitions(${COMPONENT_LIB} PRIVATE
-    MAX_PATH=256
+    YUI_MAX_PATH=256
     YUI_PATH_MAX=256
     MAX_JS_EVENTS=64
     MAX_C_EVENT_HANDLERS=32

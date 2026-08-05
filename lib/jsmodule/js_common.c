@@ -36,7 +36,7 @@ static int g_c_event_handler_count = 0;
 #define MAX_JS_EVENTS 256
 #endif
 #ifndef YUI_PATH_MAX
-#define YUI_PATH_MAX MAX_PATH
+#define YUI_PATH_MAX YUI_MAX_PATH
 #endif
 typedef struct {
     char event_name[128];
@@ -99,8 +99,8 @@ int js_module_set_layer_event(Layer* layer, const char* event_name, const char* 
     // 检查 click 事件
     if (strcmp(event_name, "click") == 0 || strcmp(event_name, "onClick") == 0) {
         if (event_func_name) {
-            strncpy(layer->event->click_name, event_func_name, MAX_PATH - 1);
-            layer->event->click_name[MAX_PATH - 1] = '\0';
+            strncpy(layer->event->click_name, event_func_name, YUI_MAX_PATH - 1);
+            layer->event->click_name[YUI_MAX_PATH - 1] = '\0';
         }
         layer->event->click = (EventHandler)event_handler;
         return 0;
@@ -113,8 +113,8 @@ int js_module_set_layer_event(Layer* layer, const char* event_name, const char* 
     // 检查 scroll 事件
     if (strcmp(event_name, "scroll") == 0 || strcmp(event_name, "onScroll") == 0) {
         if (event_func_name) {
-            strncpy(layer->event->scroll_name, event_func_name, MAX_PATH - 1);
-            layer->event->scroll_name[MAX_PATH - 1] = '\0';
+            strncpy(layer->event->scroll_name, event_func_name, YUI_MAX_PATH - 1);
+            layer->event->scroll_name[YUI_MAX_PATH - 1] = '\0';
         }
         layer->event->scroll = (EventHandler)event_handler;
         return 0;
@@ -122,8 +122,8 @@ int js_module_set_layer_event(Layer* layer, const char* event_name, const char* 
     // 检查 touch 事件
     if (strcmp(event_name, "touch") == 0 || strcmp(event_name, "onTouch") == 0) {
         if (event_func_name) {
-            strncpy(layer->event->touch_name, event_func_name, MAX_PATH - 1);
-            layer->event->touch_name[MAX_PATH - 1] = '\0';
+            strncpy(layer->event->touch_name, event_func_name, YUI_MAX_PATH - 1);
+            layer->event->touch_name[YUI_MAX_PATH - 1] = '\0';
         }
         layer->event->touch = (EventHandler)event_handler;
         return 0;
@@ -140,8 +140,8 @@ int js_module_set_layer_event(Layer* layer, const char* event_name, const char* 
     // 检查 resize 事件
     if (strcmp(event_name, "resize") == 0 || strcmp(event_name, "onResize") == 0) {
         if (event_func_name) {
-            strncpy(layer->event->resize_name, event_func_name, MAX_PATH - 1);
-            layer->event->resize_name[MAX_PATH - 1] = '\0';
+            strncpy(layer->event->resize_name, event_func_name, YUI_MAX_PATH - 1);
+            layer->event->resize_name[YUI_MAX_PATH - 1] = '\0';
         }
         layer->event->resize = js_layer_resize_handler;
         return 0;
@@ -288,9 +288,9 @@ static EventHandler get_event_handler_by_type(const char* event_type)
 // 辅助函数：构建完整的 JS 文件路径（相对于 JSON 文件目录）
 // 文件系统根前缀：相对路径 ../ 上跳不会越过此根（默认 "/"）。
 // 嵌入式 SPIFFS 挂载在 /spiffs 时设为 "/spiffs"，使 app 根与挂载根一致。
-static char g_js_fs_root[MAX_PATH] = "/";
+static char g_js_fs_root[YUI_MAX_PATH] = "/";
 
-static char g_js_base_path[MAX_PATH] = "";
+static char g_js_base_path[YUI_MAX_PATH] = "";
 
 static void strip_trailing_slash(char* s)
 {
@@ -308,8 +308,8 @@ void js_module_set_fs_root(const char* root)
         strcpy(g_js_fs_root, "/");
         return;
     }
-    strncpy(g_js_fs_root, root, MAX_PATH - 1);
-    g_js_fs_root[MAX_PATH - 1] = '\0';
+    strncpy(g_js_fs_root, root, YUI_MAX_PATH - 1);
+    g_js_fs_root[YUI_MAX_PATH - 1] = '\0';
     strip_trailing_slash(g_js_fs_root);
 }
 
@@ -324,8 +324,8 @@ void js_module_set_base_path(const char* base)
         g_js_base_path[0] = '\0';
         return;
     }
-    strncpy(g_js_base_path, base, MAX_PATH - 1);
-    g_js_base_path[MAX_PATH - 1] = '\0';
+    strncpy(g_js_base_path, base, YUI_MAX_PATH - 1);
+    g_js_base_path[YUI_MAX_PATH - 1] = '\0';
     strip_trailing_slash(g_js_base_path);
 }
 

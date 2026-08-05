@@ -37,7 +37,7 @@ void load_textures(Layer* root) {
             }
         } else {
             // 修改为使用image支持多种格式
-            char path[MAX_PATH];
+            char path[YUI_MAX_PATH];
             
             // 检查是否为绝对路径（以 '/' 开头，Unix/Linux/macOS）
             if (root->source[0] == '/') {
@@ -71,7 +71,7 @@ void load_all_fonts(Layer* layer) {
         }
 
         if (needs_load) {
-            char font_path[MAX_PATH];
+            char font_path[YUI_MAX_PATH];
             
             if (layer->font->path[0] == '/') {
                 snprintf(font_path, sizeof(font_path), "%s", layer->font->path);
@@ -133,7 +133,7 @@ void load_font(Layer* root){
     }
     
     // 加载默认字体 (需要在项目目录下提供字体文件)
-    char font_path[MAX_PATH];
+    char font_path[YUI_MAX_PATH];
     
     // 检查字体路径是否为绝对路径
     if (root->font->path[0] == '/') {

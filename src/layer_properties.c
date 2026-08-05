@@ -101,8 +101,8 @@ static int handle_font(Layer* layer, cJSON* value, int is_creating) {
         strcpy(layer->font->weight, "normal");
     }
     if (layer->font) {
-        strncpy(layer->font->path, value->valuestring, MAX_PATH - 1);
-        layer->font->path[MAX_PATH - 1] = '\0';
+        strncpy(layer->font->path, value->valuestring, YUI_MAX_PATH - 1);
+        layer->font->path[YUI_MAX_PATH - 1] = '\0';
         if (!is_creating) {
             mark_layer_dirty(layer, DIRTY_TEXT);
         }

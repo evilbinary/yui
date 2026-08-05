@@ -6,7 +6,7 @@
 // 图片组件结构体
 typedef struct {
     Layer* layer;          // 关联的图层
-    char source[MAX_PATH]; // 图片源文件路径
+    char source[YUI_MAX_PATH]; // 图片源文件路径
     ImageMode image_mode;  // 图片显示模式
     int preserve_aspect;   // 是否保持宽高比
 } ImageComponent;

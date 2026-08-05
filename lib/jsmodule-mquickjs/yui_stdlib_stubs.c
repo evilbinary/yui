@@ -18,6 +18,7 @@ int yui_inspect_show_info = 0;
 
 // 图层操作函数存根
 Layer* find_layer_by_id(Layer* root, const char* id) {
+    printf("find_layer_by_id here=>>>>> not permission\n");
     return NULL;
 }
 

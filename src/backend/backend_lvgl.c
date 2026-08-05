@@ -959,7 +959,7 @@ DFont* backend_load_font(char* font_path, int size)
 DFont* backend_load_font_with_weight(char* font_path, int size, const char* weight)
 {
 #if defined(YUI_LVGL_PORT_SDL)
-    char weighted_path[MAX_PATH];
+    char weighted_path[YUI_MAX_PATH];
     TTF_Font* font = NULL;
     const char* candidates[12];
     int count = 0;

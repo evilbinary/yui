@@ -62,12 +62,12 @@ void image_component_set_source(ImageComponent* component, const char* source) {
         return;
     }
     
-    strncpy(component->source, source, MAX_PATH - 1);
-    component->source[MAX_PATH - 1] = '\0';
+    strncpy(component->source, source, YUI_MAX_PATH - 1);
+    component->source[YUI_MAX_PATH - 1] = '\0';
     
     // 更新layer的source属性
-    strncpy(component->layer->source, source, MAX_PATH - 1);
-    component->layer->source[MAX_PATH - 1] = '\0';
+    strncpy(component->layer->source, source, YUI_MAX_PATH - 1);
+    component->layer->source[YUI_MAX_PATH - 1] = '\0';
     
     // 释放旧的纹理
     if (component->layer->texture) {

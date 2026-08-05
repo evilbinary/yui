@@ -338,7 +338,7 @@ handle_window_event(root, &we);
 ```c
 typedef struct MyComponent {
     Layer* layer;
-    char on_foo_name[MAX_PATH];   // 去掉 @ 后的 JS 函数名，如 "onMyFoo"
+    char on_foo_name[YUI_MAX_PATH];   // 去掉 @ 后的 JS 函数名，如 "onMyFoo"
     // 可选：EventHandler on_foo;  // 仅部分组件缓存 handler（如 Sash）
 } MyComponent;
 ```
