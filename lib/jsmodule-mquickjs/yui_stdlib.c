@@ -705,33 +705,61 @@ static JSValue js_list_dir(JSContext *ctx, JSValue *this_val, int argc, JSValue 
 
     arr = JS_NewArray(ctx, 0);
     JS_PUSH_VALUE(ctx, arr);
-    while ((de = readdir(dp)) != NULL) {
-        if (strcmp(de->d_name, ".") == 0 || strcmp(de->d_name, "..") == 0) {
-            continue;
-        }
-        entry = JS_NewObject(ctx);
-        if (JS_IsException(entry)) {
-            printf("YUI: listDir: JS_NewObject exception, aborting list\n");
-            break;
-        }
-        JS_PUSH_VALUE(ctx, entry);
-        JS_SetPropertyStr(ctx, entry, "name", JS_NewString(ctx, de->d_name));
-        {
-            struct stat st;
+    {
+        /* 先收集目录项，再一次性构建 JS 数组，避免循环内频繁 GC。 */
+        char names[4096][256];
+        int is_dirs[4096];
+        int count = 0;
+        while ((de = readdir(dp)) != NULL && count < 4096) {
+            if (strcmp(de->d_name, ".") == 0 || strcmp(de->d_name, "..") == 0) {
+                continue;
+            }
+            snprintf(names[count], sizeof(names[count]), "%s", de->d_name);
             char path[YUI_MAX_PATH];
             snprintf(path, sizeof(path), "%s/%s", open_dir, de->d_name);
-            int is_dir = (stat(path, &st) == 0) && S_ISDIR(st.st_mode);
-            JS_SetPropertyStr(ctx, entry, "isDir", JS_NewBool(is_dir));
+            struct stat st;
+            is_dirs[count] = (stat(path, &st) == 0) && S_ISDIR(st.st_mode);
+            count++;
         }
-        JS_SetPropertyUint32(ctx, arr, n++, entry);
-        JS_POP_VALUE(ctx, entry);
+        for (int i = 0; i < count; i++) {
+            entry = JS_NewObject(ctx);
+            if (JS_IsException(entry)) {
+                printf("YUI: listDir: JS_NewObject exception, aborting list\n");
+                count = i;
+                break;
+            }
+            JS_PUSH_VALUE(ctx, entry);
+            {
+                JSValue name_str = JS_NewString(ctx, names[i]);
+                JSGCRef name_str_ref;
+                JS_PUSH_VALUE(ctx, name_str);
+                entry = entry_ref.val;
+                arr = arr_ref.val;
+                JS_SetPropertyStr(ctx, entry, "name", name_str);
+                name_str = name_str_ref.val;
+                JS_POP_VALUE(ctx, name_str);
+                JSValue bool_val = JS_NewBool(is_dirs[i]);
+                JSGCRef bool_val_ref;
+                JS_PUSH_VALUE(ctx, bool_val);
+                entry = entry_ref.val;
+                arr = arr_ref.val;
+                JS_SetPropertyStr(ctx, entry, "isDir", bool_val);
+                bool_val = bool_val_ref.val;
+                JS_POP_VALUE(ctx, bool_val);
+            }
+            entry = entry_ref.val;
+            arr = arr_ref.val;
+            JS_SetPropertyUint32(ctx, arr, n++, entry);
+            arr = arr_ref.val;
+            JS_POP_VALUE(ctx, entry);
+        }
     }
+    arr = arr_ref.val;
     JS_POP_VALUE(ctx, arr);
     printf("YUI: listDir('%s') -> %d entries\n", dir, n);
     closedir(dp);
     return arr;
 }
-
 
 
 extern JSValue js_setTimeout(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv);
