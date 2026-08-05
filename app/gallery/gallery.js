@@ -24,24 +24,24 @@ var g_perf = {
 };
 
 function setStatus(msg) {
-    var el = yui.find("galleryStatus");
+    var el = YUI.find("galleryStatus");
     if (el) el.text = msg;
 }
 
 function setPerfStatus(msg) {
-    var el = yui.find("galleryPerfStatus");
+    var el = YUI.find("galleryPerfStatus");
     if (el) el.text = "状态：" + msg;
 }
 
 function setPerfStats(msg) {
     if (msg === g_perf.lastStatsText) return;
     g_perf.lastStatsText = msg;
-    var el = yui.find("galleryPerfStats");
+    var el = YUI.find("galleryPerfStats");
     if (el) el.text = msg;
 }
 
 function setBtnText(id, text) {
-    var el = yui.find(id);
+    var el = YUI.find(id);
     if (el) el.text = text;
 }
 
@@ -219,7 +219,8 @@ function updateThemeButtonSelection(themeId) {
     var id;
     for (id in GALLERY_THEMES) {
         if (!GALLERY_THEMES.hasOwnProperty(id)) continue;
-        var btn = yui.find(GALLERY_THEMES[id].buttonId);
+        var buttonId = GALLERY_THEMES[id].buttonId;        
+        var btn = YUI.find(buttonId);
         if (!btn) continue;
         btn.variant = (id === themeId) ? "primary" : "compact";
     }
