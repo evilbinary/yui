@@ -46,29 +46,8 @@ int js_module_init(void)
     printf("JS: Initializing JavaScript engine...\n");
 
 #if defined(YUI_ESP_PLATFORM)
-    /* ya 预编译本库时不带 ESP-IDF 头文件，故用 extern 声明代替 include。
-       MALLOC_CAP_8BIT 在 esp_heap_caps.h 中为 (1<<2)=4，避免依赖头文件。 */
     extern size_t heap_caps_get_free_size(int caps);
-    extern size_t heap_caps_get_largest_free_block(int caps);
-    size_t largest = heap_caps_get_largest_free_block(4);
-    printf("JS: heap free=%u largest=%u\n",
-           (unsigned)heap_caps_get_free_size(4),
-           (unsigned)largest);
-
-    /* 自适应池大小：目标为 JS_MEM_POOL_SIZE(编译宏)，但不超过
-       当前最大连续空闲块 - 预留(16KB，供加载 JS 文件缓冲/渲染等用)，
-       且不低于 64KB（保证 mquickjs 基本运行）。QEMU 堆小（~114KB）
-       会自动降级，真机(esp32c3 ~400KB) 保持 192KB。 */
-    size_t budget = (largest > 16384) ? (largest - 16384) : 65536;
-    g_js_mem_size = JS_MEM_POOL_SIZE;
-    if (g_js_mem_size > budget) {
-        g_js_mem_size = budget;
-    }
-    if (g_js_mem_size < 64 * 1024) {
-        g_js_mem_size = 64 * 1024;
-    }
-#else
-    g_js_mem_size = JS_MEM_POOL_SIZE;
+    printf("JS: heap free=%u\n", (unsigned)heap_caps_get_free_size(4));
 #endif
 
     g_js_mem = malloc(g_js_mem_size);
