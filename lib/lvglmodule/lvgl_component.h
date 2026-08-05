@@ -11,7 +11,7 @@ typedef struct LvglComponent {
     lv_obj_t* obj;
     void* widget_data;
     EventHandler on_change;
-    char on_change_name[MAX_PATH];
+    char on_change_name[YUI_MAX_PATH];
 } LvglComponent;
 
 void lvgl_component_sync_rect(LvglComponent* component);

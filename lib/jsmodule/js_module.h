@@ -21,6 +21,10 @@ int js_module_init(void);
 // 默认 "/"。嵌入式挂载点例如 "/spiffs"。
 void js_module_set_fs_root(const char* root);
 
+// 读取已设置的 fs_root / base_path（供 listDir 等按同样规则解析相对路径）
+const char* js_module_get_fs_root(void);
+const char* js_module_get_base_path(void);
+
 // 可选：相对资源路径前缀（如桌面 "app/watch-os"）。嵌入式通常不设。
 void js_module_set_base_path(const char* base);
 

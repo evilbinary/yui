@@ -200,8 +200,8 @@ static void list_dispatch_select(ListComponent* component, int index) {
         layer->event = calloc(1, sizeof(Event));
     }
     if (layer->event) {
-        strncpy(layer->event->click_name, component->on_select_name, MAX_PATH - 1);
-        layer->event->click_name[MAX_PATH - 1] = '\0';
+        strncpy(layer->event->click_name, component->on_select_name, YUI_MAX_PATH - 1);
+        layer->event->click_name[YUI_MAX_PATH - 1] = '\0';
     }
 
     if (layer->text) free(layer->text);

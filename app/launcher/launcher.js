@@ -120,7 +120,7 @@ function readMeta(path, fallback) {
     try { raw = YUI.readFile(path); } catch (e) { return null; }
     if (!raw) return null;
     var json;
-    try { json = JSON.parse(raw); } catch (e) { return null; }
+    try { json = JSON.parse(raw); } catch (err) { return null; }
     if (!json.type && !json.children && !json.js) return null;
     var title = json.title || json.text || json.id || fallback;
     var id = json.id || title;
@@ -174,7 +174,7 @@ function onDemoClick(layerId) {
     try { raw = YUI.readFile(demo.jsonPath); } catch (e) { return; }
     if (!raw) return;
     var json;
-    try { json = JSON.parse(raw); } catch (e) { return; }
+    try { json = JSON.parse(raw); } catch (err) { return; }
     var appId = json.id || "page_outlet";
     YUI.hide("launcher_content");
     YUI.show("btn_back");

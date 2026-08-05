@@ -14,6 +14,7 @@ if is_host_plat():
               'yui_stdlib_build.c',
               '../mquickjs/mquickjs_build.c'
               )
+
     add_includedirs('.', '..', '../jsmodule', public=true)
     add_cflags(' -Isrc/ -I../jsmodule -DCONFIG_CLASS_SOCKET -DCONFIG_CLASS_YUI -DSTDLIB_BUILD -DYUI_BACKEND_EMBEDDED ')
     def after_build_host(target):
@@ -28,13 +29,14 @@ if is_host_plat():
         env = dict(os.environ)
         env['ASAN_OPTIONS'] = (env.get('ASAN_OPTIONS', '') + ' detect_leaks=0').strip()
         # 使用 subprocess 运行并捕获输出
-        with open('lib/jsmodule-mqjs/yui_stdlib.h', 'w') as f:
-            result = subprocess.run([exe], stdout=f, stderr=subprocess.PIPE, text=True, env=env)
+
+        with open('lib/jsmodule-mquickjs/yui_stdlib.h', 'w') as f:
+            result = subprocess.run([exe], stdout=f, stderr=subprocess.PIPE, text=True)
             if result.returncode != 0:
                 print('Error generating yui_stdlib.h:', result.stderr)
         # 同时生成 32 位表（esp32/stm32 等嵌入式平台使用）
-        with open('lib/jsmodule-mqjs/yui_stdlib_32.h', 'w') as f:
-            result = subprocess.run([exe, '-m32'], stdout=f, stderr=subprocess.PIPE, text=True, env=env)
+        with open('lib/jsmodule-mquickjs/yui_stdlib_32.h', 'w') as f:
+            result = subprocess.run([exe, '-m32'], stdout=f, stderr=subprocess.PIPE, text=True)
             if result.returncode != 0:
                 print('Error generating yui_stdlib_32.h:', result.stderr)
 

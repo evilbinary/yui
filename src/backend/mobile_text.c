@@ -52,8 +52,8 @@ static void mobile_destroy_text_texture_uncached(Texture* texture);
 
 static unsigned char* mobile_read_file(const char* path, size_t* out_size);
 
-static char g_font_fallback_path[MAX_PATH] = "";
-static char g_fallback_loaded_path[MAX_PATH] = "";
+static char g_font_fallback_path[YUI_MAX_PATH] = "";
+static char g_fallback_loaded_path[YUI_MAX_PATH] = "";
 static DFont* g_fallback_font = NULL;
 static int g_fallback_font_size = 0;
 
@@ -206,7 +206,7 @@ static DFont* mobile_get_fallback_font_for(DFont* primary) {
         "/product/fonts/NotoSansSymbols-Regular-Subsetted2.ttf",
         NULL,
     };
-    char sibling_path[MAX_PATH];
+    char sibling_path[YUI_MAX_PATH];
     const char* loaded_from = NULL;
     char* slash;
     int size;

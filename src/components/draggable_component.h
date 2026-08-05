@@ -16,8 +16,8 @@ typedef struct DraggableComponent {
     int drag_start_x;
     int drag_start_y;
     int drag_handle_height;
-    char on_drag_change_name[MAX_PATH];
-    char on_connect_change_name[MAX_PATH];
+    char on_drag_change_name[YUI_MAX_PATH];
+    char on_connect_change_name[YUI_MAX_PATH];
     int show_dots;
     int dot_size;
     Color dot_color;

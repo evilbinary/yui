@@ -107,7 +107,7 @@ static ResizeCallback resize_callback = NULL;
 // 字体缓存结构
 typedef struct {
     uint64_t hash;          // 预计算的哈希值
-    char font_path[MAX_PATH];
+    char font_path[YUI_MAX_PATH];
     int size;
     char weight[32];  // "normal", "bold", "light"
     TTF_Font* font;
@@ -304,7 +304,7 @@ static void backend_texture_cache_store_entry(int cache_index, uint64_t key_hash
     texture_cache[cache_index].pinned = pinned ? 1 : 0;
 }
 
-static char g_font_fallback_path[MAX_PATH] = "";
+static char g_font_fallback_path[YUI_MAX_PATH] = "";
 
 void backend_set_font_fallback_path(const char* path) {
     if (!path) {
@@ -1210,8 +1210,8 @@ void add_font_to_cache(const char* font_path, int size, const char* weight, TTF_
         
         // 添加新字体到缓存
         font_cache[cache_index].hash = hash;
-        strncpy(font_cache[cache_index].font_path, font_path, MAX_PATH - 1);
-        font_cache[cache_index].font_path[MAX_PATH - 1] = '\0';
+        strncpy(font_cache[cache_index].font_path, font_path, YUI_MAX_PATH - 1);
+        font_cache[cache_index].font_path[YUI_MAX_PATH - 1] = '\0';
         font_cache[cache_index].size = size;
         strncpy(font_cache[cache_index].weight, weight, 31);
         font_cache[cache_index].weight[31] = '\0';
@@ -2396,7 +2396,7 @@ DFont* backend_load_font_with_weight(char* font_path,int size,const char* weight
         return cached_font;
     }
 
-    char full_path[MAX_PATH];
+    char full_path[YUI_MAX_PATH];
     TTF_Font* default_font = NULL;
 
 #ifdef __EMSCRIPTEN__

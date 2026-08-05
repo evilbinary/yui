@@ -67,7 +67,7 @@ if is_host_plat():
 
     target("playground-mqjs") 
     (
-        add_deps("jsmodule-mqjs","yui", "mquickjs","yaml2json"),
+        add_deps("jsmodule-mquickjs","yui", "mquickjs","yaml2json"),
         add_rules("mode.debug", "mode.release"),
         set_kind("binary"),
         add_flags(),
@@ -78,7 +78,7 @@ if is_host_plat():
 
     target("mqjs") 
     (
-        add_deps( "jsmodule-mqjs","yui", "mquickjs",),
+        add_deps( "jsmodule-mquickjs","yui", "mquickjs",),
         add_rules("mode.debug", "mode.release"),
         set_kind("binary"),
         add_flags(),
@@ -132,7 +132,7 @@ if is_host_plat():
 
     target("network-mqjs") 
     (
-        add_deps( "jsmodule-mqjs","yui", "mquickjs",),
+        add_deps( "jsmodule-mquickjs","yui", "mquickjs",),
         add_rules("mode.debug", "mode.release"),
         set_kind("binary"),
         add_flags(),

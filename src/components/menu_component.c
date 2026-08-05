@@ -86,7 +86,7 @@ MenuComponent* menu_component_create(Layer* layer) {
             layer->font = malloc(sizeof(Font));
             if (layer->font) {
                 memset(layer->font, 0, sizeof(Font));
-                snprintf(layer->font->path, MAX_PATH, "%s", "Roboto-Regular.ttf");
+                snprintf(layer->font->path, YUI_MAX_PATH, "%s", "Roboto-Regular.ttf");
                 layer->font->size = 16;
                 snprintf(layer->font->weight, sizeof(layer->font->weight), "%s", "normal");
                 layer->font->default_font = NULL;
@@ -579,8 +579,8 @@ static void menu_item_click(MenuComponent* component, MenuItem* item) {
             }
         }
         if (component->layer->event) {
-            strncpy(component->layer->event->click_name, component->on_select_name, MAX_PATH - 1);
-            component->layer->event->click_name[MAX_PATH - 1] = '\0';
+            strncpy(component->layer->event->click_name, component->on_select_name, YUI_MAX_PATH - 1);
+            component->layer->event->click_name[YUI_MAX_PATH - 1] = '\0';
         }
 
         EventHandler handler = find_event_by_name(component->on_select_name);

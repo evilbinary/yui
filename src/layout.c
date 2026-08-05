@@ -894,7 +894,7 @@ static cJSON* layer_json_wh(int w, int h)
 
 static void layer_json_add_event(cJSON* events, const char* key, const char* name)
 {
-    char buf[MAX_PATH + 2];
+    char buf[YUI_MAX_PATH + 2];
 
     if (!events || !key || !name || !name[0]) {
         return;

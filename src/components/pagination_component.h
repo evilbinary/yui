@@ -29,7 +29,7 @@ typedef struct PaginationComponent {
     PaginationZone hovered_zone;
     PaginationZone pressed_zone;
 
-    char on_change_name[MAX_PATH];
+    char on_change_name[YUI_MAX_PATH];
     EventHandler on_change;
 
     Color text_color;

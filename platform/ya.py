@@ -22,7 +22,7 @@ if get_plat() == "android":
 
     target("yui-android-prebuilt-mqjs")
     (
-        add_deps("yui", "cjson", "yaml", "yaml2json", "mquickjs", "jsmodule-mqjs", "socket"),
+        add_deps("yui", "cjson", "yaml", "yaml2json", "mquickjs", "jsmodule-mquickjs", "socket"),
         add_rules("mode.debug", "mode.release"),
     )
 
@@ -38,7 +38,7 @@ if get_plat() == "android":
 
     target("yui-android-jni-mqjs")
     (
-        add_deps("yui", "cjson", "yaml", "yaml2json", "mquickjs", "jsmodule-mqjs", "socket"),
+        add_deps("yui", "cjson", "yaml", "yaml2json", "mquickjs", "jsmodule-mquickjs", "socket"),
         add_rules("mode.debug", "mode.release"),
         set_kind("shared"),
         add_flags(),
@@ -55,7 +55,7 @@ if get_plat() == "ios":
 
     target("yui-ios-prebuilt-mqjs")
     (
-        add_deps("yui", "cjson", "yaml", "yaml2json", "mquickjs", "jsmodule-mqjs", "socket"),
+        add_deps("yui", "cjson", "yaml", "yaml2json", "mquickjs", "jsmodule-mquickjs", "socket"),
         add_rules("mode.debug", "mode.release"),
     )
 
