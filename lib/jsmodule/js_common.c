@@ -807,6 +807,13 @@ int js_module_collect_from_json(cJSON* root_json, const char* json_file_path, in
         strcpy(json_dir, "app/mquickjs");
     }
 
+    /* 未显式设置 root 时，默认以 json 所在目录为基准：
+       apps/、themes/、readFile(...) 等相对路径直接相对 app.json 解析。
+       显式 set_root（如 esp32 的 "/spiffs"）优先，不覆盖。 */
+    if (g_js_root[0] == '\0') {
+        js_module_set_root(json_dir);
+    }
+
     LOGD("js", "%s JS from JSON directory: %s", append ? "Appending" : "Loading", json_dir);
 
     g_collected_js_count = 0;
@@ -909,6 +916,11 @@ int js_module_load_from_json(cJSON* root_json, const char* json_file_path, int a
         strcpy(json_dir, ".");
     } else {
         strcpy(json_dir, "app/mquickjs");
+    }
+
+    /* 与 collect 阶段一致：未显式设置 root 时默认 json 所在目录 */
+    if (g_js_root[0] == '\0') {
+        js_module_set_root(json_dir);
     }
 
     LOGD("js", "%s JS from JSON directory: %s", append ? "Appending" : "Loading", json_dir);
