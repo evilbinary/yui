@@ -658,8 +658,7 @@ static JSValue js_list_dir(JSContext *ctx, JSValue *this_val, int argc, JSValue 
     struct dirent *de;
     JSValue arr, entry;
     JSGCRef arr_ref, entry_ref;
-    int n = 0;
-
+    int n = 0;    
     if (argc < 1) {
         return JS_ThrowTypeError(ctx, "Expected 1 argument: path");
     }

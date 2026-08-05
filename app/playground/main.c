@@ -137,24 +137,6 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
-    /* 包内相对路径（apps/、themes/、readFile(...)）相对 json 所在目录解析；
-       与 watch-os/main.c 的 fs_root/base_path 机制一致。 */
-    {
-        char base[YUI_MAX_PATH] = ".";
-        const char* last_sep_b = strrchr(json_path, '/');
-        const char* last_sep_w = strrchr(json_path, '\\');
-        const char* sep = (last_sep_w > last_sep_b) ? last_sep_w : last_sep_b;
-        if (sep) {
-            size_t len = (size_t)(sep - json_path);
-            if (len >= sizeof(base)) len = sizeof(base) - 1;
-            memcpy(base, json_path, len);
-            base[len] = '\0';
-            if (strcmp(base, ".") != 0 && base[0] != '\0') {
-                printf("DEBUG: Setting base path: %s\n", base);
-                js_module_set_base_path(base);
-            }
-        }
-    }
 
     printf("DEBUG: Loading file from path: %s\n", json_path);
     if (auto_test) {
