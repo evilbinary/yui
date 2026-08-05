@@ -648,6 +648,7 @@ static JSValue js_list_dir(JSContext *ctx, JSValue *this_val, int argc, JSValue 
 {
     JSCStringBuf buf;
     const char* dir = NULL;
+    char dir_copy[MAX_PATH];
     DIR *dp = NULL;
     struct dirent *de;
     JSValue arr, entry;
@@ -661,6 +662,11 @@ static JSValue js_list_dir(JSContext *ctx, JSValue *this_val, int argc, JSValue 
     if (!dir) {
         return JS_ThrowTypeError(ctx, "Invalid path");
     }
+    /* JS_ToCString 不复制字符串，返回的是 JS 字符串内部缓冲的指针。
+       下面循环中会分配大量对象触发 GC，可能回收 argv[0] 的字符串，
+       导致 dir 变成悬空指针。这里把字符串复制到本地缓冲以解耦生命周期。 */
+    snprintf(dir_copy, sizeof(dir_copy), "%s", dir);
+    dir = dir_copy;
 
     /* 与 js_module_read_file 相同的路径解析：相对路径尝试 fs_root/path */
     const char* fs_root = js_module_get_fs_root();
