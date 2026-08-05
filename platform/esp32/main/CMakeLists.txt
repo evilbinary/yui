@@ -53,7 +53,7 @@ target_link_libraries(${COMPONENT_LIB} PRIVATE
     # （mquickjs.o 定义 JS_* 而 mqjs_std.o 引用，单趟扫描顺序依赖），
     # 用 --start-group 允许多趟解析。
     -Wl,--start-group
-    ${YUI_BUILD_DIR}/libjsmodule.a
+    ${YUI_BUILD_DIR}/libjsmodule-mquickjs.a
     ${YUI_BUILD_DIR}/libmquickjs.a
     -Wl,--end-group
     m

@@ -576,11 +576,35 @@ def add_flags():
             '-lsupc++',
             '-Wl,--end-group'
             ),
+        # ABI 一致性：MAX_PATH / YUI_PATH_MAX / MAX_JS_EVENTS / MAX_C_EVENT_HANDLERS
+        # 必须在 yui 核心(src/ya.py 已加 -DMAX_PATH=256)、所有 JS 引擎适配器
+        # (jsmodule-mquickjs / jsmodule-quickjs / jsmodule-mario) 与 ESP-IDF
+        # (platform/esp32/main/CMakeLists.txt) 之间保持一致。
+        # ytype.h 默认 MAX_PATH=1024；不一致会改变 sizeof(Event)/sizeof(Layer)，
+        # 导致 js_module_set_layer_event 的 strncpy 越界写、堆损坏（Store/Load fault）。
+        add_cflags(
+            '-DMAX_PATH=256',
+            '-DYUI_PATH_MAX=256',
+            '-DMAX_JS_EVENTS=64',
+            '-DMAX_C_EVENT_HANDLERS=32',
+        )
     elif is_plat("esp32"):
         set_toolchain('gcc')
         configure_esp32_toolchain()
         _add_esp32_compile_flags()
         before_build(configure_esp32_toolchain)
+        # ABI 一致性：MAX_PATH / YUI_PATH_MAX / MAX_JS_EVENTS / MAX_C_EVENT_HANDLERS
+        # 必须在 yui 核心(src/ya.py 已加 -DMAX_PATH=256)、所有 JS 引擎适配器
+        # (jsmodule-mquickjs / jsmodule-quickjs / jsmodule-mario) 与 ESP-IDF
+        # (platform/esp32/main/CMakeLists.txt) 之间保持一致。
+        # ytype.h 默认 MAX_PATH=1024；不一致会改变 sizeof(Event)/sizeof(Layer)，
+        # 导致 js_module_set_layer_event 的 strncpy 越界写、堆损坏（Store/Load fault）。
+        add_cflags(
+            '-DMAX_PATH=256',
+            '-DYUI_PATH_MAX=256',
+            '-DMAX_JS_EVENTS=64',
+            '-DMAX_C_EVENT_HANDLERS=32',
+        )
     elif is_plat("android"):
         set_toolchain('gcc')
         configure_android_toolchain()
