@@ -105,12 +105,8 @@ int js_module_resolve_path(const char* in, char* out, size_t out_sz) {
     return -1;
 }
 
-const char* js_module_get_fs_root(void) {
+const char* js_module_get_root(void) {
     return "/spiffs";
-}
-
-const char* js_module_get_base_path(void) {
-    return "";
 }
 
 int js_module_resize_root(int width, int height) {

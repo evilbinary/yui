@@ -81,8 +81,8 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
-    /* 包内相对路径（apps/、themes/）相对此目录解析；与嵌入式 fs_root 同机制 */
-    js_module_set_base_path("app/watch-os");
+    /* 包内相对路径（apps/、themes/）相对此目录解析；与嵌入式 mount 同机制 */
+    js_module_set_root("app/watch-os");
 
     char* json_path="app/watch-os/app.json";
     // 加载UI描述文件

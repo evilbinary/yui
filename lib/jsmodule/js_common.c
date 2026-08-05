@@ -287,11 +287,10 @@ static EventHandler get_event_handler_by_type(const char* event_type)
 }
 
 // 辅助函数：构建完整的 JS 文件路径（相对于 JSON 文件目录）
-// 文件系统根前缀：相对路径 ../ 上跳不会越过此根（默认 "/"）。
-// 嵌入式 SPIFFS 挂载在 /spiffs 时设为 "/spiffs"，使 app 根与挂载根一致。
-static char g_js_fs_root[YUI_MAX_PATH] = "/";
-
-static char g_js_base_path[YUI_MAX_PATH] = "";
+// 统一基准路径前缀：空串表示未设置。
+// 嵌入式 SPIFFS 挂载在 /spiffs 时设为 "/spiffs"；宿主桌面资源在
+// "app/watch-os" 时设为 "app/watch-os"。相对路径解析统一为 原样 -> root/。
+static char g_js_root[YUI_MAX_PATH] = "";
 
 static void strip_trailing_slash(char* s)
 {
@@ -303,36 +302,20 @@ static void strip_trailing_slash(char* s)
     }
 }
 
-void js_module_set_fs_root(const char* root)
+void js_module_set_root(const char* root)
 {
     if (!root || !root[0]) {
-        strcpy(g_js_fs_root, "/");
+        g_js_root[0] = '\0';
         return;
     }
-    strncpy(g_js_fs_root, root, YUI_MAX_PATH - 1);
-    g_js_fs_root[YUI_MAX_PATH - 1] = '\0';
-    strip_trailing_slash(g_js_fs_root);
+    strncpy(g_js_root, root, YUI_MAX_PATH - 1);
+    g_js_root[YUI_MAX_PATH - 1] = '\0';
+    strip_trailing_slash(g_js_root);
 }
 
-const char* js_module_get_fs_root(void)
+const char* js_module_get_root(void)
 {
-    return g_js_fs_root;
-}
-
-void js_module_set_base_path(const char* base)
-{
-    if (!base || !base[0]) {
-        g_js_base_path[0] = '\0';
-        return;
-    }
-    strncpy(g_js_base_path, base, YUI_MAX_PATH - 1);
-    g_js_base_path[YUI_MAX_PATH - 1] = '\0';
-    strip_trailing_slash(g_js_base_path);
-}
-
-const char* js_module_get_base_path(void)
-{
-    return g_js_base_path;
+    return g_js_root;
 }
 
 static void build_js_path(const char* js_path, const char* json_dir, char* full_path, size_t max_len)
@@ -353,8 +336,9 @@ static void build_js_path(const char* js_path, const char* json_dir, char* full_
         
         // 处理每个 ../ 
         while (path_ptr[0] == '.' && path_ptr[1] == '.' && (path_ptr[2] == '/' || path_ptr[2] == '\\')) {
-            // 已到文件系统根，不再上跳，消耗剩余 ../
-            if (strcmp(temp_dir, g_js_fs_root) == 0) {
+            // 已到文件系统根，不再上跳，消耗剩余 ../（仅绝对 root 参与 clamp，
+            // 宿主相对 root（如 app/watch-os）不截断，避免 ../lib 解析错误）
+            if (g_js_root[0] == '/' && strcmp(temp_dir, g_js_root) == 0) {
                 while (path_ptr[0] == '.' && path_ptr[1] == '.' &&
                        (path_ptr[2] == '/' || path_ptr[2] == '\\')) {
                     path_ptr += 3;
@@ -1222,16 +1206,9 @@ int js_module_resolve_path(const char* in, char* out, size_t out_sz)
     }
     if (in[0] == '/') return -1;
 
-    if (g_js_base_path[0]) {
-        snprintf(path_buf, sizeof(path_buf), "%s/%s", g_js_base_path, in);
-        if (js_path_exists(path_buf)) {
-            strncpy(out, path_buf, out_sz - 1);
-            out[out_sz - 1] = '\0';
-            return 0;
-        }
-    }
-    if (strcmp(g_js_fs_root, "/") != 0) {
-        snprintf(path_buf, sizeof(path_buf), "%s/%s", g_js_fs_root, in);
+    /* 仅绝对 root 参与 ../ 上跳 clamp；相对 root 只用于 resolve/read 前缀 */
+    if (g_js_root[0]) {
+        snprintf(path_buf, sizeof(path_buf), "%s/%s", g_js_root, in);
         if (js_path_exists(path_buf)) {
             strncpy(out, path_buf, out_sz - 1);
             out[out_sz - 1] = '\0';
@@ -1241,7 +1218,7 @@ int js_module_resolve_path(const char* in, char* out, size_t out_sz)
     return -1;
 }
 
-/* 相对路径：先原样，再 base_path/，再 fs_root/（通用，各平台相同）。 */
+/* 相对路径：先原样，再 root/（通用，各平台相同）。 */
 char* js_module_read_file(const char* file_path) {
     char path_buf[YUI_PATH_MAX];
     const char* open_path = file_path;
@@ -1254,12 +1231,8 @@ char* js_module_read_file(const char* file_path) {
 
     f = js_try_fopen(file_path, &open_path);
     if (!f && file_path[0] != '/') {
-        if (g_js_base_path[0]) {
-            snprintf(path_buf, sizeof(path_buf), "%s/%s", g_js_base_path, file_path);
-            f = js_try_fopen(path_buf, &open_path);
-        }
-        if (!f && strcmp(g_js_fs_root, "/") != 0) {
-            snprintf(path_buf, sizeof(path_buf), "%s/%s", g_js_fs_root, file_path);
+        if (g_js_root[0]) {
+            snprintf(path_buf, sizeof(path_buf), "%s/%s", g_js_root, file_path);
             f = js_try_fopen(path_buf, &open_path);
         }
     }

@@ -44,29 +44,14 @@ Watch.launcherMode = "bubble";
 var clockTimer = null;
 var watchThemeDir = "themes";
 var WATCH_CONFIG_PATH = "config.json";
-var watchBasePath = "";
 var swipeAnimating = false;
-
-function wp(p) {
-    return watchBasePath ? watchBasePath + "/" + p : p;
-}
-
-function detectWatchBasePath() {
-    if (typeof YUI.readFile !== "function") return "";
-    if (YUI.readFile(WATCH_CONFIG_PATH)) return "";
-    var probe = "app/watch-os/" + WATCH_CONFIG_PATH;
-    if (YUI.readFile(probe)) {
-        return "app/watch-os";
-    }
-    return "";
-}
 
 function loadWatchConfig() {
     var cfg = { launcherMode: "bubble" };
     if (typeof YUI.readFile !== "function") {
         return cfg;
     }
-    var raw = YUI.readFile(wp(WATCH_CONFIG_PATH));
+    var raw = YUI.readFile(WATCH_CONFIG_PATH);
     if (!raw) {
         return cfg;
     }
@@ -85,7 +70,7 @@ function saveWatchConfig(cfg) {
     if (typeof YUI.writeFile !== "function" || !cfg) {
         return false;
     }
-    return YUI.writeFile(wp(WATCH_CONFIG_PATH), JSON.stringify(cfg, null, 2));
+    return YUI.writeFile(WATCH_CONFIG_PATH, JSON.stringify(cfg, null, 2));
 }
 
 function getWatchLauncherMode() {
@@ -106,8 +91,8 @@ function setWatchLauncherMode(mode) {
 }
 
 function initWatchThemes() {
-    Theme.load(wp(watchThemeDir + "/dark.json"), "dark");
-    Theme.load(wp(watchThemeDir + "/light.json"), "light");
+    Theme.load(watchThemeDir + "/dark.json", "dark");
+    Theme.load(watchThemeDir + "/light.json", "light");
     Theme.setCurrent(Watch.themeMode);
     Theme.apply();
 }
@@ -120,23 +105,9 @@ function initWatchApps() {
 
 function onWatchLoad() {
     YUI.log("onWatchLoad");
-    watchBasePath = detectWatchBasePath();
-    if (watchBasePath) {
-        YUI.log("watch base path: " + watchBasePath);
-    }
     var cfg = loadWatchConfig();
     Watch.launcherMode = cfg.launcherMode;
     initWatchThemes();
-
-    if (watchBasePath) {
-        WatchAppRegistry.appsRoot = wp(WatchAppRegistry.appsRoot);
-        WatchAppRegistry.installedRegistry = wp(WatchAppRegistry.installedRegistry);
-        for (var p in WatchAppRegistry.shellRoutes) {
-            if (WatchAppRegistry.shellRoutes.hasOwnProperty(p)) {
-                WatchAppRegistry.shellRoutes[p].json = wp(WatchAppRegistry.shellRoutes[p].json);
-            }
-        }
-    }
 
     Router.init({
         outlet: "watch_page_outlet",

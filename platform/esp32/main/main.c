@@ -165,7 +165,7 @@ void app_main(void) {
         } else {
             printf("YUI: SPIFFS mounted at /spiffs\n");
         }
-        js_module_set_fs_root("/spiffs");
+        js_module_set_root("/spiffs");
     }
     printf("YUI: after spiffs free=%u largest=%u\n",
            (unsigned)heap_caps_get_free_size(MALLOC_CAP_8BIT),

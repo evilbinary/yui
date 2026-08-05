@@ -2125,19 +2125,15 @@ JSValue js_list_dir(JSContext* ctx, JSValueConst this_val, int argc, JSValueCons
         else need_free = 1;
     }
 
-    /* 与 js_module_read_file 相同的路径解析：相对路径尝试 fs_root/path */
-    const char* fs_root = js_module_get_fs_root();
-    const char* base_path = js_module_get_base_path();
+    /* 与 js_module_read_file 相同的路径解析：相对路径尝试 root/path */
+    const char* root = js_module_get_root();
     char resolved[1024];
     const char* open_dir = NULL;
 
     if (dir_path[0] == '/') {
         open_dir = dir_path;
-    } else if (fs_root && strcmp(fs_root, "/") != 0) {
-        snprintf(resolved, sizeof(resolved), "%s/%s", fs_root, dir_path);
-        open_dir = resolved;
-    } else if (base_path && base_path[0]) {
-        snprintf(resolved, sizeof(resolved), "%s/%s", base_path, dir_path);
+    } else if (root && root[0]) {
+        snprintf(resolved, sizeof(resolved), "%s/%s", root, dir_path);
         open_dir = resolved;
     } else {
         open_dir = dir_path;
@@ -2145,9 +2141,9 @@ JSValue js_list_dir(JSContext* ctx, JSValueConst this_val, int argc, JSValueCons
 
     DIR* dir = opendir(open_dir);
     if (!dir) {
-        /* 回退：再尝试 base_path/path */
-        if (base_path && base_path[0] && open_dir != resolved) {
-            snprintf(resolved, sizeof(resolved), "%s/%s", base_path, dir_path);
+        /* 回退：再尝试 root/path */
+        if (root && root[0] && open_dir != resolved) {
+            snprintf(resolved, sizeof(resolved), "%s/%s", root, dir_path);
             dir = opendir(resolved);
         }
     }
