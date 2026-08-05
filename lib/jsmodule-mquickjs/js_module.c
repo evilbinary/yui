@@ -140,7 +140,7 @@ int js_module_load_file(const char* filename)
         return -1;
     }
 
-    printf("JS: Successfully loaded %s\n", filename);
+    printf("JS: Successfully loaded %s, len=%d\n", filename, len);
     return 0;
 }
 // 调用 JS 事件函数
