@@ -28,6 +28,7 @@
 #include "layout.h"
 #include "layer_lifecycle.h"
 #include "cJSON.h"
+#include "../../src/render.h"
 
 #ifndef STDLIB_BUILD
 #include "../../src/perf/perf.h"
@@ -575,6 +576,8 @@ static JSValue js_render_from_json(JSContext *ctx, JSValue *this_val, int argc, 
         printf("YUI: ERROR - Failed to parse JSON string\n");
         return JS_NewInt32(ctx, -3);
     }
+    /* 与 jsmodule-quickjs 一致：先 IN_VISIBLE，由 JS 侧 YUI.show 再显示并触发布局 */
+    new_layer->visible = IN_VISIBLE;
 
     if (append) {
         if (append_layer_child(parent_layer, new_layer) != 0) {
@@ -593,6 +596,7 @@ static JSValue js_render_from_json(JSContext *ctx, JSValue *this_val, int argc, 
     }
 
     layout_layer(parent_layer);
+    load_all_fonts(new_layer);
     theme_manager_apply_to_tree(new_layer);
 
     cJSON* page_json = cJSON_Parse(json_str);
