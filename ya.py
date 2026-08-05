@@ -602,9 +602,9 @@ def add_flags():
         # 导致 js_module_set_layer_event 的 strncpy 越界写、堆损坏（Store/Load fault）。
         # JS_MEM_POOL_SIZE 必须在此设置：js_module.c 由 ya 预编译进静态库，
         # CMakeLists 里的宏只作用于 main.c 等组件内源文件，对库无效。
-        # 64KB 默认池在 esp32 上可容纳 watch-os 全部 JS(约 53KB)+运行时，
-        # 真实 esp32c3/QEMU 均已验证渲染正常；更大的池会挤占 UI 图层堆，
-        # 导致 parse_layer_from_json 里 malloc 失败、Store access fault。
+        # 注意：64KB 默认池在 26 apps 全部注册后不足以承载运行时，
+        # face.js 渲染时 eval 会报 "not enough memory"。池需随注册应用数增长，
+        # 但过大又会挤占 UI 图层堆（parse_layer_from_json malloc 失败）。
         # YUI_ESP_PLATFORM 供 JS 库(lib/jsmodule-mquickjs)区分 SPIFFS 扁平文件系统
         # 的目录判定（SPIFFS 虚拟目录 stat()/opendir() 均不可靠，需用 d_type==2）。
         add_cflags(
@@ -613,6 +613,7 @@ def add_flags():
             '-DMAX_JS_EVENTS=64',
             '-DMAX_C_EVENT_HANDLERS=32',
             '-DYUI_ESP_PLATFORM=1',
+            '-DJS_MEM_POOL_SIZE=80*1024',
         )
     elif is_plat("android"):
         set_toolchain('gcc')

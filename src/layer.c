@@ -373,8 +373,13 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
   if(layer==NULL){
     layer = malloc(sizeof(Layer));
     memset(layer, 0, sizeof(Layer));
-    layer->parent = parent;
-    layer_init_strings(layer);
+    if(layer!=NULL){
+      layer->parent = parent;
+      layer_init_strings(layer);
+    }else{
+      printf("malloc layer failed\n");
+      return NULL;
+    }
   }
 
   if (!layer->handle_pointer_event) {
