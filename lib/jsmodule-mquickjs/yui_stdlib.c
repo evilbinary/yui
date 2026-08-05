@@ -16,6 +16,7 @@
 #include <sys/time.h>
 #include <math.h>
 #include <fcntl.h>
+#include <dirent.h>
 
 #include "cutils.h"
 #include "mquickjs.h"
@@ -641,6 +642,68 @@ static JSValue js_resize_root(JSContext *ctx, JSValue *this_val, int argc, JSVal
     return JS_NewInt32(ctx, js_module_resize_root(width, height));
 }
 
+static JSValue js_list_dir(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+{
+    JSCStringBuf buf;
+    const char* dir = NULL;
+    DIR *dp = NULL;
+    struct dirent *de;
+    JSValue arr, entry;
+    int n = 0;
+
+    if (argc < 1) {
+        return JS_ThrowTypeError(ctx, "Expected 1 argument: path");
+    }
+    dir = JS_ToCString(ctx, argv[0], &buf);
+    if (!dir) {
+        return JS_ThrowTypeError(ctx, "Invalid path");
+    }
+
+    /* 与 js_module_read_file 相同的路径解析：相对路径尝试 fs_root/path */
+    const char* fs_root = js_module_get_fs_root();
+    const char* base_path = js_module_get_base_path();
+    char resolved[MAX_PATH];
+    const char* open_dir = NULL;
+
+    if (dir[0] == '/') {
+        open_dir = dir;
+    } else if (fs_root && strcmp(fs_root, "/") != 0) {
+        snprintf(resolved, sizeof(resolved), "%s/%s", fs_root, dir);
+        open_dir = resolved;
+    } else if (base_path && base_path[0]) {
+        snprintf(resolved, sizeof(resolved), "%s/%s", base_path, dir);
+        open_dir = resolved;
+    } else {
+        open_dir = dir;
+    }
+
+    dp = opendir(open_dir);
+    if (!dp && fs_root && strcmp(fs_root, "/") != 0 && strcmp(fs_root, "") != 0) {
+        /* 回退：再尝试 base_path/path */
+        if (base_path && base_path[0]) {
+            snprintf(resolved, sizeof(resolved), "%s/%s", base_path, dir);
+            dp = opendir(resolved);
+        }
+    }
+
+    if (!dp) {
+        return JS_NULL;
+    }
+
+    arr = JS_NewArray(ctx, 0);
+    while ((de = readdir(dp)) != NULL) {
+        if (strcmp(de->d_name, ".") == 0 || strcmp(de->d_name, "..") == 0) {
+            continue;
+        }
+        entry = JS_NewObject(ctx);
+        JS_SetPropertyStr(ctx, entry, "name", JS_NewString(ctx, de->d_name));
+        JS_SetPropertyStr(ctx, entry, "isDir", JS_NewBool((de->d_type & DT_DIR) != 0));
+        JS_SetPropertyUint32(ctx, arr, n++, entry);
+    }
+    closedir(dp);
+    return arr;
+}
+
 
 
 extern JSValue js_setTimeout(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv);
@@ -696,6 +759,7 @@ static const JSPropDef js_yui[] = {
     JS_CFUNC_DEF("getWindowSize", 0, js_get_window_size ),
     JS_CFUNC_DEF("renderFromJson", 3, js_render_from_json ),
     JS_CFUNC_DEF("readFile", 1, js_read_file ),
+    JS_CFUNC_DEF("listDir", 1, js_list_dir ),
     JS_CFUNC_DEF("resizeRoot", 2, js_resize_root ),
     JS_CFUNC_DEF("call", 2, js_yui_call ),
     JS_CFUNC_DEF("update", 1, js_yui_update ),

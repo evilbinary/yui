@@ -313,6 +313,11 @@ void js_module_set_fs_root(const char* root)
     strip_trailing_slash(g_js_fs_root);
 }
 
+const char* js_module_get_fs_root(void)
+{
+    return g_js_fs_root;
+}
+
 void js_module_set_base_path(const char* base)
 {
     if (!base || !base[0]) {
@@ -322,6 +327,11 @@ void js_module_set_base_path(const char* base)
     strncpy(g_js_base_path, base, MAX_PATH - 1);
     g_js_base_path[MAX_PATH - 1] = '\0';
     strip_trailing_slash(g_js_base_path);
+}
+
+const char* js_module_get_base_path(void)
+{
+    return g_js_base_path;
 }
 
 static void build_js_path(const char* js_path, const char* json_dir, char* full_path, size_t max_len)
@@ -425,30 +435,18 @@ static void get_file_dir(const char* filepath, char* dir, size_t max_len)
 
 uint8_t* load_file(const char *filename, int *plen)
 {
-    FILE *f;
-    uint8_t *buf;
-    int buf_len;
+    char *content;
+    size_t len;
 
-    f = fopen(filename, "rb");
-    if (!f) {
-        printf("JS: Cannot open file %s\n", filename);
+    /* 与 js_module_read_file 一致：对相对路径应用 base_path/fs_root 回退，
+       使 "apps/xxx.js"（未带 /spiffs 前缀）也能从 /spiffs 下正确打开。 */
+    content = js_module_read_file(filename);
+    if (!content)
         return NULL;
-    }
-
-    fseek(f, 0, SEEK_END);
-    buf_len = ftell(f);
-    fseek(f, 0, SEEK_SET);
-    buf = malloc(buf_len + 1);
-    if (!buf) {
-        fclose(f);
-        return NULL;
-    }
-    fread(buf, 1, buf_len, f);
-    buf[buf_len] = '\0';
-    fclose(f);
-
-    if (plen) *plen = buf_len;
-    return buf;
+    len = strlen(content);
+    if (plen)
+        *plen = (int)len;
+    return (uint8_t *)content;
 }
 
 static int is_page_lifecycle_event(const char* event_name)
