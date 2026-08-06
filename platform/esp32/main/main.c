@@ -23,6 +23,7 @@
 #include "layout.h"
 #include "render.h"
 #include "popup_manager.h"
+#include "event.h"
 #include "js_module.h"
 #include "cJSON.h"
 #include "esp_spiffs.h"
@@ -64,9 +65,19 @@ static const char s_fallback_ui_json[] =
 
 /* 读整个文件到堆缓冲（调用方负责 free）。失败返回 NULL。 */
 static void check_heap(const char* tag) {
-    printf("YUI: [%s] free=%u largest=%u\n", tag,
+    printf("YUI: [%s] total=%u free=%u minfree=%u largest=%u\n", tag,
+           (unsigned)heap_caps_get_total_size(MALLOC_CAP_8BIT),
            (unsigned)heap_caps_get_free_size(MALLOC_CAP_8BIT),
+           (unsigned)heap_caps_get_minimum_free_size(MALLOC_CAP_8BIT),
            (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
+}
+
+/* JS 可调用事件：YUI.call("check_heap", "tag")
+ * data 为 JSON 字符串（可为 null），打印堆占用后返回成功 JSON。 */
+static void* handle_check_heap(void* data) {
+    const char* tag = data ? (const char*)data : "";
+    check_heap(tag);
+    return strdup("{\"success\":true}");
 }
 
 static char* read_file_alloc(const char* path, size_t max_len) {    FILE* f = fopen(path, "rb");
@@ -141,6 +152,7 @@ void app_main(void) {
         return;
     }
     popup_manager_init();
+    register_event_handler("check_heap", handle_check_heap);
     printf("YUI: backend ready\n");
 
     /* 2. 挂载 SPIFFS 分区到 "/spiffs"（watch-os JS/JSON 等资源）。
@@ -225,6 +237,7 @@ void app_main(void) {
     if (js_module_init() != 0) {
         printf("YUI: JS engine init failed, continuing without JS\n");
     }
+    check_heap("after js pool");
     printf("YUI: lc after js_init flags=0x%x onLoad='%s'\n",
            (unsigned)ui_root->lifecycle_flags, ui_root->lifecycle_on_load);
     /* 6. 加载字体（放在 JS 引擎初始化之后，避免 stb_truetype 解析抢占堆）：

@@ -891,9 +891,35 @@ static JSValue js_yui_gc(JSContext *ctx, JSValue *this_val, int argc, JSValue *a
     return JS_UNDEFINED;
 }
 
+/* YUI.checkHeap(tag): print C free heap for memory profiling probes. */
+static JSValue js_yui_check_heap(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+{
+    const char *tag = "";
+
+#if defined(YUI_ESP_PLATFORM)
+    extern size_t heap_caps_get_free_size(int caps);
+    extern size_t heap_caps_get_largest_free_block(int caps);
+    if (argc > 0 && JS_IsString(ctx, argv[0])) {
+        JSCStringBuf cbuf;
+        tag = JS_ToCStringLen(ctx, NULL, argv[0], &cbuf);
+    }
+    printf("YUI: [heap-probe] tag=%s free=%u largest=%u\n", tag,
+           (unsigned)heap_caps_get_free_size(4),
+           (unsigned)heap_caps_get_largest_free_block(4));
+#else
+    if (argc > 0 && JS_IsString(ctx, argv[0])) {
+        JSCStringBuf cbuf;
+        tag = JS_ToCStringLen(ctx, NULL, argv[0], &cbuf);
+    }
+    printf("YUI: [heap-probe] tag=%s (non-ESP, skipped)\n", tag);
+#endif
+    return JS_UNDEFINED;
+}
+
 static const JSPropDef js_yui[] = {
     JS_CFUNC_DEF("log", 1, js_yui_log ),
     JS_CFUNC_DEF("gc", 0, js_yui_gc),
+    JS_CFUNC_DEF("checkHeap", 1, js_yui_check_heap),
     JS_CFUNC_DEF("setText", 1, js_set_text ),
     JS_CFUNC_DEF("getText", 1, js_get_text ),
     JS_CFUNC_DEF("getProperty", 2, js_get_property ),
