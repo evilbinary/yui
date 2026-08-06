@@ -778,6 +778,12 @@ static JSValue js_list_dir(JSContext *ctx, JSValue *this_val, int argc, JSValue 
                 int is_dir = 0;
 #if defined(YUI_ESP_PLATFORM)
                 is_dir = (de->d_type == 2);
+#elif defined(_WIN32)
+                {
+                    /* mingw 的 struct dirent 无 d_type，统一用 stat */
+                    struct stat st;
+                    is_dir = (stat(path, &st) == 0) && S_ISDIR(st.st_mode);
+                }
 #else
                 if (de->d_type != 0) {
                     is_dir = (de->d_type == DT_DIR);
@@ -875,8 +881,19 @@ static const JSPropDef js_yui_proto[] = {
     JS_PROP_END,
 };
 
+static JSValue js_yui_gc(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+{
+    fprintf(stderr, "[gc] before:\n");
+    JS_DumpMemory(ctx, FALSE);
+    JS_GC(ctx);
+    fprintf(stderr, "[gc] after:\n");
+    JS_DumpMemory(ctx, FALSE);
+    return JS_UNDEFINED;
+}
+
 static const JSPropDef js_yui[] = {
     JS_CFUNC_DEF("log", 1, js_yui_log ),
+    JS_CFUNC_DEF("gc", 0, js_yui_gc),
     JS_CFUNC_DEF("setText", 1, js_set_text ),
     JS_CFUNC_DEF("getText", 1, js_get_text ),
     JS_CFUNC_DEF("getProperty", 2, js_get_property ),

@@ -1349,6 +1349,25 @@ static JSValue js_yui_find(JSContext* ctx, JSValueConst this_val, int argc, JSVa
 // 注册 C API 到 JS
 /* ====================== YUI.call Bridge ====================== */
 
+/* ====================== Global gc ====================== */
+
+static JSValue js_gc(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv)
+{
+    (void)this_val; (void)argc; (void)argv;
+    if (!g_js_rt) return JS_UNDEFINED;
+
+    JSMemoryUsage before, after;
+    JS_ComputeMemoryUsage(g_js_rt, &before);
+    JS_RunGC(g_js_rt);
+    JS_ComputeMemoryUsage(g_js_rt, &after);
+    printf("[gc] memory %lld -> %lld bytes (objects %lld -> %lld)\n",
+           (long long)before.memory_used_size,
+           (long long)after.memory_used_size,
+           (long long)before.memory_used_count,
+           (long long)after.memory_used_count);
+    return JS_UNDEFINED;
+}
+
 void* js_module_get_context(void) {
     return g_js_ctx;
 }
@@ -1480,6 +1499,9 @@ void js_module_register_api(void)
 
     // 注册 print 到全局对象（与 log 功能相同）
     JS_SetPropertyStr(g_js_ctx, global_obj, "print", JS_NewCFunction(g_js_ctx, js_log, "print", 1));
+
+    // 注册全局 gc 函数（手动触发 GC 并打印内存使用）
+    JS_SetPropertyStr(g_js_ctx, global_obj, "gc", JS_NewCFunction(g_js_ctx, js_gc, "gc", 0));
 
     // 注册 YUI.call 桥接（C 事件处理器调用入口）
     JS_SetPropertyStr(g_js_ctx, yui_obj, "call", JS_NewCFunction(g_js_ctx, js_native_call, "call", 2));

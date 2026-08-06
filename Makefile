@@ -114,6 +114,7 @@ ESP32_IDF_WRAPPER := python3 scripts/run_esp32_idf.py
 endif
 
 esp32-build:
+	ya -p pc -r yui-stdlib-host
 	ya -p esp32 -a esp32c3
 	$(ESP32_IDF_WRAPPER) build
 
