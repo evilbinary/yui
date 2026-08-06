@@ -50,7 +50,7 @@ DFont* backend_esp32_load_font_from_flash(const char* partition_label, int size)
 esp_lcd_touch_handle_t yui_esp32_touch_create(esp_lcd_panel_io_handle_t io,
                                               const esp_lcd_touch_config_t* cfg) {
     esp_lcd_touch_handle_t t = NULL;
-    if (esp_lcd_touch_new_i2c_cst816s(io, cfg, &t) == ESP_OK) return t;
+    // if (esp_lcd_touch_new_i2c_cst816s(io, cfg, &t) == ESP_OK) return t;
     return NULL;
 }
 
@@ -128,13 +128,16 @@ void app_main(void) {
     Layer* ui_root;
     DFont* font;
 
-    printf("YUI ESP32 starting...\n");
+    printf("YUI ESP32 starting...%d\n", SPI2_HOST);
 
     /* 0. 板级配置：分辨率/SPI 主机/CS/DC/RST/BL/SPI 时钟
      * ESP32-C3 只有 SPI2_HOST(=1)，没有 host=2；GPIO 仅 0–21。
      * 旧默认 (host=2, MOSI=23) 会触发 spi_bus_initialize: invalid host_id。 */
 #if CONFIG_IDF_TARGET_ESP32C3
-    backend_esp32_set_config(YUI_SCREEN_WIDTH, YUI_SCREEN_HEIGHT, SPI2_HOST, 7, 2, -1, -1, 40 * 1000 * 1000);
+    /* 模块丝印 gnd vcc scl sda res dc blk：无 CS 脚（内部固定选通，cs=-1）；
+     * RST 接 GPIO7，背光接 GPIO8。杜邦线/面包板 40MHz 信号完整性差，
+     * 降到 10MHz 更稳（ST7789 支持 5-10MHz 正常工作）。 */
+    backend_esp32_set_config(YUI_SCREEN_WIDTH, YUI_SCREEN_HEIGHT, SPI2_HOST, -1, 2, 7, 8, 10 * 1000 * 1000);
     backend_esp32_set_spi_pins(6, 4);   /* MOSI / SCLK — C3 常用硬件 SPI */
 #else
     backend_esp32_set_config(YUI_SCREEN_WIDTH, YUI_SCREEN_HEIGHT, SPI2_HOST, 5, 16, -1, -1, 40 * 1000 * 1000);

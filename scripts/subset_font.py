@@ -64,6 +64,25 @@ def scan_json_files(scan_dir):
     return chars
 
 
+def scan_js_files(scan_dir):
+    """扫描目录下所有 .js 源码，收集其中出现的非 ASCII 字符（emoji 图标等）。"""
+    chars = set()
+    if not scan_dir or not os.path.isdir(scan_dir):
+        return chars
+    for root, _dirs, files in os.walk(scan_dir):
+        for fname in files:
+            if not fname.endswith(".js"):
+                continue
+            fpath = os.path.join(root, fname)
+            try:
+                with open(fpath, "r", encoding="utf-8") as f:
+                    data = f.read()
+            except Exception:
+                continue
+            chars.update(ch for ch in data if ord(ch) > 0x7F)
+    return chars
+
+
 def _collect_text(obj, chars):
     """递归收集 JSON 中的文本字段值。"""
     if isinstance(obj, dict):
@@ -108,16 +127,36 @@ def _merge_emoji_font(font, emoji_path, text):
     added = 0
     high = {}
     newnames = []
+    # 主字体与 emoji 字体的 upm 通常不同（本工程 256 vs 2048）。若不缩放，
+    # emoji 字形(advance ~2600)在主字体 256-upm 下会放大 ~8-10 倍 → 图标巨大/溢出。
+    scale = float(font["head"].unitsPerEm) / float(emoji_font["head"].unitsPerEm)
+    tmat = (scale, 0, 0, scale, 0, 0)
     for cp, sname in emoji_cmap.items():
         if cp in main_cmap:
             continue
         newname = "em%x" % cp
         if newname in main_glyf:
             continue
-        main_glyf[newname] = copy.deepcopy(emoji_glyf[sname])
-        main_hmtx[newname] = emoji_hmtx[sname]
+        g = copy.deepcopy(emoji_glyf[sname])
+        # fontTools 5.x 的 glyf 项是 Glyph 包装对象：简单字形缩放 coordinates，
+        # 复合字形缩放各 component 的变换/偏移。
+        coords = getattr(g, "coordinates", None)
+        if coords is not None:
+            coords.transform([[scale, 0], [0, scale]])
+        comps = getattr(g, "components", None)
+        if comps:
+            for comp in comps:
+                ct = getattr(comp, "transform", None)
+                if ct:
+                    comp.transform = (ct[0] * scale, ct[1] * scale,
+                                      ct[2] * scale, ct[3] * scale,
+                                      ct[4] * scale, ct[5] * scale)
+        main_glyf[newname] = g
+        eadv, elsb = emoji_hmtx[sname]
+        main_hmtx[newname] = (int(round(eadv * scale)), int(round(elsb * scale)))
         if "vmtx" in font and "vmtx" in emoji_font:
-            font["vmtx"][newname] = emoji_font["vmtx"][sname]
+            vadv, vtop = emoji_font["vmtx"][sname]
+            font["vmtx"][newname] = (int(round(vadv * scale)), int(round(vtop * scale)))
         elif "vmtx" in font:
             font["vmtx"][newname] = (0, 0)
         if cp <= 0xFFFF:
@@ -170,6 +209,9 @@ def main():
         scanned = scan_json_files(args.scan)
         print(f"scanned {len(scanned)} unique chars from {args.scan}")
         chars.update(scanned)
+        js_scanned = scan_js_files(args.scan)
+        print(f"scanned {len(js_scanned)} non-ascii chars from .js files")
+        chars.update(js_scanned)
     # 额外字符
     if args.extra:
         chars.update(args.extra)
