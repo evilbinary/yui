@@ -38,6 +38,11 @@ void backend_esp32_set_touch(int i2c_host, int sda, int scl, int addr, int int_p
 void backend_esp32_set_hw_display(int on);
 DFont* backend_esp32_load_font_from_flash(const char* partition_label, int size);
 
+/* 屏幕分辨率：与 app/watch-os/app.json 根节点 size:[420,420] 对齐，
+ * 布局按此逻辑宽计算。修改需同时改两处引用（set_config / ui_root->rect）。 */
+#define YUI_SCREEN_WIDTH  420
+#define YUI_SCREEN_HEIGHT 420
+
 /* 触摸芯片创建钩子：覆盖 backend_esp32.c 中的弱符号，实现为 CST816S。
  * 换触摸芯片时改这里即可，backend 层无需改动。 */
 #include "esp_lcd_touch.h"
@@ -117,7 +122,7 @@ void app_main(void) {
      * ESP32-C3 只有 SPI2_HOST(=1)，没有 host=2；GPIO 仅 0–21。
      * 旧默认 (host=2, MOSI=23) 会触发 spi_bus_initialize: invalid host_id。 */
 #if CONFIG_IDF_TARGET_ESP32C3
-    backend_esp32_set_config(240, 240, SPI2_HOST, 7, 2, -1, -1, 40 * 1000 * 1000);
+    backend_esp32_set_config(YUI_SCREEN_WIDTH, YUI_SCREEN_HEIGHT, SPI2_HOST, 7, 2, -1, -1, 40 * 1000 * 1000);
     backend_esp32_set_spi_pins(6, 4);   /* MOSI / SCLK — C3 常用硬件 SPI */
 #else
     backend_esp32_set_config(240, 240, SPI2_HOST, 5, 16, -1, -1, 40 * 1000 * 1000);
@@ -285,10 +290,10 @@ void app_main(void) {
         print_registered_events();
     }
 
-    /* 屏幕尺寸优先：app.json 里的 size（如 watch-os 的 420x420）
-     * 以实际 LCD 分辨率（240x240）为准 */
-    ui_root->rect.w = 240;
-    ui_root->rect.h = 240;
+    /* 屏幕尺寸：与 backend_esp32_set_config 的 LCD 分辨率一致（YUI_SCREEN_WIDTH/
+     * HEIGHT，对齐 app/watch-os/app.json 根节点 size，布局按此计算）。 */
+    ui_root->rect.w = YUI_SCREEN_WIDTH;
+    ui_root->rect.h = YUI_SCREEN_HEIGHT;
     load_textures(ui_root);
     printf("YUI: layout...\n");
     layout_layer(ui_root);

@@ -1084,10 +1084,12 @@ void backend_tick(Layer* ui_root) {
     for (i = 0; i < s_update_cb_count; i++) {
         if (s_update_cb[i]) s_update_cb[i]();
     }
+    if (s_frame_count == 0) printf("YUI: tick: clear_color\n");
     backend_render_clear_color(30, 60, 120, 255);
     if (ui_root) render_layer(ui_root);
     popup_manager_render();
     backend_render_present();
+    if (s_frame_count == 0) printf("YUI: tick: done\n");
 #ifdef YUI_ESP32_QEMU
     if (s_frame_count == 0) {
         /* 首帧调试：检查 framebuffer 是否被写入 */
