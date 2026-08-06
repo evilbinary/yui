@@ -563,6 +563,8 @@ int backend_init(void) {
     return 0;
 }
 
+static void yui_aa_cache_teardown(void); /* 圆角 AA 覆盖率缓存回收（定义见文件后部） */
+
 void backend_quit(void) {
 #ifdef ESP_PLATFORM
     if (s_panel) {
@@ -575,6 +577,7 @@ void backend_quit(void) {
 #else
     if (s_fb) { free(s_fb); s_fb = NULL; }
 #endif
+    yui_aa_cache_teardown();
 }
 
 /* ====================== 纹理 ====================== */
@@ -652,6 +655,31 @@ static void direct_draw_point(int x, int y, Color c)
     esp_lcd_panel_draw_bitmap(s_panel, x, y, x + 1, y + 1, &px);
 #else
     (void)x; (void)y; (void)c;
+#endif
+}
+
+/* 抗锯齿单点落笔：有 framebuffer（YUI_ESP32_LCD_BUFFER / QEMU）时做 alpha 混合；
+ * 直写模式（无 fb、无法读回）退化为不透明落点（硬边，形状仍正确）。 */
+static void backend_draw_point_aa(int x, int y, Color c) {
+#if YUI_ESP32_LCD_BUFFER
+    uint16_t* p;
+    if (!s_fb || x < 0 || y < 0 || x >= s_fb_w || y >= s_fb_h) return;
+    p = &s_fb[y * s_fb_w + x];
+    if (c.a == 255) {
+        *p = color_to_rgb565(c);
+    } else if (c.a > 0) {
+        Color d = rgb565_to_color(*p);
+        unsigned a = c.a;
+        d.r = (unsigned char)((d.r * (255 - a) + c.r * a) / 255);
+        d.g = (unsigned char)((d.g * (255 - a) + c.g * a) / 255);
+        d.b = (unsigned char)((d.b * (255 - a) + c.b * a) / 255);
+        *p = color_to_rgb565(d);
+    }
+    dirty_add(x, y, 1, 1);
+#else
+    Color s = c;
+    s.a = 255;
+    direct_draw_point(x, y, s);
 #endif
 }
 
@@ -832,29 +860,229 @@ void backend_render_arc(int center_x, int center_y, int radius, float start_angl
     }
 }
 
-/* 按行填充一个圆角矩形：中间为整行，顶部/底部两排由圆弧削角。
- * 每行只算一次水平跨度，复用 backend_render_fill_rect 的裁剪/混合。 */
+/* ============================================================
+ * 圆角抗锯齿光栅化 —— 移植自 backend_sdl.c（同款算法）：
+ * 用 4x 超采样的 Bresenham 圆预计算覆盖率表，对每个角落扫描线
+ * 给出「自实心区向外」的每像素覆盖率（0..~240），再逐点 alpha 混合。
+ * ============================================================ */
+#define YUI_AA_CACHE_SIZE 8
+
+typedef struct {
+    int radius;                     /* 0 = 空槽 */
+    uint8_t* cir_opa;               /* 覆盖率流（每扫描线自内向外） */
+    uint16_t* opa_start_on_y;       /* 各扫描线在 cir_opa 的起点（len = radius+2） */
+    uint16_t* x_start_on_y;         /* 各扫描线的起点 x（len = radius+2） */
+} YuiAA;
+
+static YuiAA yui_aa_cache[YUI_AA_CACHE_SIZE];
+
+static void yui_aa_free(YuiAA* c) {
+    free(c->cir_opa);
+    free(c->opa_start_on_y);
+    free(c->x_start_on_y);
+    memset(c, 0, sizeof(*c));
+}
+
+static void yui_aa_cache_teardown(void) {
+    for (int i = 0; i < YUI_AA_CACHE_SIZE; i++) {
+        if (yui_aa_cache[i].cir_opa) yui_aa_free(&yui_aa_cache[i]);
+    }
+}
+
+static void yui_aa_circ_init(int* cx, int* cy, int* tmp, int radius) { *cx = radius; *cy = 0; *tmp = 1 - radius; }
+static int yui_aa_circ_cont(int cx, int cy) { return cy <= cx; }
+static void yui_aa_circ_next(int* cx, int* cy, int* tmp) {
+    if (*tmp <= 0) {
+        *tmp += 2 * (*cy) + 3;
+    } else {
+        *tmp += 2 * ((*cy) - (*cx)) + 5;
+        (*cx)--;
+    }
+    (*cy)++;
+}
+
+static void yui_aa_circle_build(YuiAA* c, int radius) {
+    int* cir_x;
+    int* cir_y;
+    int cir_size = 0;
+    int cp_x, cp_y, tmp, i;
+    if (c->cir_opa) { free(c->cir_opa); c->cir_opa = NULL; }
+    if (radius <= 0) { c->radius = 0; return; }
+    c->radius = radius;
+    c->cir_opa = (uint8_t*)malloc((size_t)radius * 2 + 2);
+    c->opa_start_on_y = (uint16_t*)calloc((size_t)radius + 2, 2);
+    c->x_start_on_y = (uint16_t*)calloc((size_t)radius + 2, 2);
+    if (!c->cir_opa || !c->opa_start_on_y || !c->x_start_on_y) { yui_aa_free(c); return; }
+    if (radius == 1) {
+        c->cir_opa[0] = 180;
+        c->opa_start_on_y[0] = 0;
+        c->opa_start_on_y[1] = 1;
+        c->x_start_on_y[0] = 0;
+        return;
+    }
+    cir_x = (int*)malloc((size_t)(radius + 1) * 4 * sizeof(int));
+    cir_y = cir_x + (radius + 1) * 2;
+    if (!cir_x) { yui_aa_free(c); return; }
+    {
+        const int cir_opa_max = radius * 2 + 2;
+        int y_8th_cnt = 0;
+        int x_int[4];
+        int x_fract[4];
+        yui_aa_circ_init(&cp_x, &cp_y, &tmp, radius * 4);
+        x_int[0] = cp_x >> 2;
+        x_fract[0] = 0;
+        while (yui_aa_circ_cont(cp_x, cp_y)) {
+            for (i = 0; i < 4; i++) {
+                yui_aa_circ_next(&cp_x, &cp_y, &tmp);
+                if (!yui_aa_circ_cont(cp_x, cp_y)) break;
+                x_int[i] = cp_x >> 2;
+                x_fract[i] = cp_x & 0x3;
+            }
+            if (i != 4) break;
+#define YUI_AA_PUSH_CIR(px, py, opa) do { \
+                if (cir_size >= cir_opa_max) { goto yui_aa_build_done; } \
+                cir_x[cir_size] = (px); \
+                cir_y[cir_size] = (py); \
+                c->cir_opa[cir_size] = (uint8_t)(opa); \
+                cir_size++; \
+            } while (0)
+            if (x_int[0] == x_int[3]) {
+                YUI_AA_PUSH_CIR(x_int[0], y_8th_cnt, (x_fract[0] + x_fract[1] + x_fract[2] + x_fract[3]) * 16);
+            } else if (x_int[0] != x_int[1]) {
+                YUI_AA_PUSH_CIR(x_int[0], y_8th_cnt, x_fract[0] * 16);
+                YUI_AA_PUSH_CIR(x_int[0] - 1, y_8th_cnt, (4 + x_fract[1] + x_fract[2] + x_fract[3]) * 16);
+            } else if (x_int[0] != x_int[2]) {
+                YUI_AA_PUSH_CIR(x_int[0], y_8th_cnt, (x_fract[0] + x_fract[1]) * 16);
+                YUI_AA_PUSH_CIR(x_int[0] - 1, y_8th_cnt, (8 + x_fract[2] + x_fract[3]) * 16);
+            } else {
+                YUI_AA_PUSH_CIR(x_int[0], y_8th_cnt, (x_fract[0] + x_fract[1] + x_fract[2]) * 16);
+                YUI_AA_PUSH_CIR(x_int[0] - 1, y_8th_cnt, (12 + x_fract[3]) * 16);
+            }
+            y_8th_cnt++;
+        }
+        {
+            int mid = radius * 723;
+            int mid_int = mid >> 10;
+            if (cir_size == 0 || cir_x[cir_size - 1] != mid_int || cir_y[cir_size - 1] != mid_int) {
+                int tmp_val = mid - (mid_int << 10);
+                if (tmp_val <= 512) {
+                    tmp_val = (tmp_val * tmp_val * 2) >> (10 + 6);
+                } else {
+                    tmp_val = 1024 - tmp_val;
+                    tmp_val = (tmp_val * tmp_val * 2) >> (10 + 6);
+                    tmp_val = 15 - tmp_val;
+                }
+                YUI_AA_PUSH_CIR(mid_int, mid_int, tmp_val * 16);
+            }
+        }
+        for (i = cir_size - 2; i >= 0; i--, cir_size++) {
+            if (cir_size >= cir_opa_max) break;
+            cir_x[cir_size] = cir_y[i];
+            cir_y[cir_size] = cir_x[i];
+            c->cir_opa[cir_size] = c->cir_opa[i];
+        }
+yui_aa_build_done:
+#undef YUI_AA_PUSH_CIR
+        {
+            int y = 0;
+            i = 0;
+            c->opa_start_on_y[0] = 0;
+            while (i < cir_size && y <= radius) {
+                c->opa_start_on_y[y] = (uint16_t)i;
+                c->x_start_on_y[y] = (uint16_t)cir_x[i];
+                for (; i < cir_size && cir_y[i] == y; i++) {
+                    if (cir_x[i] < (int)c->x_start_on_y[y]) c->x_start_on_y[y] = (uint16_t)cir_x[i];
+                }
+                y++;
+            }
+            if (y <= radius) c->opa_start_on_y[y] = (uint16_t)cir_size;
+        }
+    }
+    free(cir_x);
+}
+
+static YuiAA* yui_aa_circle_get(int radius) {
+    int start, probe, slot, probes;
+    if (radius <= 0) return NULL;
+    start = radius % YUI_AA_CACHE_SIZE;
+    probe = start; slot = -1; probes = 0;
+    while (probes < YUI_AA_CACHE_SIZE) {
+        if (yui_aa_cache[probe].radius == radius && yui_aa_cache[probe].cir_opa) return &yui_aa_cache[probe];
+        if (yui_aa_cache[probe].radius == 0 && slot < 0) slot = probe;
+        probe = (probe + 1) % YUI_AA_CACHE_SIZE;
+        probes++;
+    }
+    if (slot < 0) slot = start;
+    yui_aa_circle_build(&yui_aa_cache[slot], radius);
+    return yui_aa_cache[slot].cir_opa ? &yui_aa_cache[slot] : NULL;
+}
+
+static void yui_aa_circle_get_line(const YuiAA* c, int cir_y, int* aa_len, int* x_start, uint8_t** aa_opa) {
+    int r = c->radius;
+    uint16_t s0, s1;
+    if (cir_y < 0) cir_y = 0;
+    if (cir_y >= r) cir_y = r - 1;
+    s0 = c->opa_start_on_y[cir_y];
+    s1 = c->opa_start_on_y[cir_y + 1];
+    *aa_len = (int)(s1 - s0);
+    *x_start = (int)c->x_start_on_y[cir_y];
+    *aa_opa = &c->cir_opa[s0];
+    if (*aa_len < 0) *aa_len = 0;
+}
+
+/* 画圆角矩形的一行扫描线（顶部/底部角帽区）：中间实心 + 两侧逐点抗锯齿 */
+static void rounded_row_aa(int x, int py, int w, int r, int cir_y, const YuiAA* aa, Color color) {
+    int aa_len, x_start, i;
+    int cir_x_left, cir_x_right;
+    uint8_t* aa_opa;
+    yui_aa_circle_get_line(aa, cir_y, &aa_len, &x_start, &aa_opa);
+    cir_x_left = x + r - x_start - 1;
+    cir_x_right = x + w - r + x_start;
+    if (cir_x_right > cir_x_left + 1) {
+        Rect solid = {cir_x_left + 1, py, cir_x_right - cir_x_left - 1, 1};
+        backend_render_fill_rect(&solid, color);
+    }
+    for (i = 0; i < aa_len; i++) {
+        unsigned a = (color.a * aa_opa[aa_len - 1 - i]) / 255;
+        Color e = color;
+        if (a == 0) continue;
+        e.a = (unsigned char)a;
+        backend_draw_point_aa(cir_x_left - i, py, e);
+        backend_draw_point_aa(cir_x_right + i, py, e);
+    }
+}
+
+/* 按行填充圆角矩形：中部全行实心，顶部/底部两帽按角样例抗锯齿。 */
 static void rounded_rect_fill(Rect* rect, Color color, int radius) {
+    const YuiAA* aa;
     int x = rect->x, y = rect->y, w = rect->w, h = rect->h;
     int r = rounded_rect_radius(rect, radius);
-    Rect mid;
+    int py;
     if (r <= 0) { backend_render_fill_rect(rect, color); return; }
-    if (h <= 2 * r) r = h / 2;          /* 极扁矩形：缩小半径避免倒扣 */
-    if (r < 1) r = 1;
-    mid.x = x; mid.y = y + r; mid.w = w; mid.h = h - 2 * r;
-    if (mid.h > 0) backend_render_fill_rect(&mid, color);
-    for (int i = 0; i < r; i++) {
-        float dy = (float)(r - i);       /* 该行到角圆心的距离（顶部对称） */
-        float sq = (float)r * r - dy * dy;
-        if (sq < 0) sq = 0;
-        int inset = (int)(r - sqrtf(sq));
-        if (inset < 0) inset = 0;
-        int run_w = w - 2 * inset;
-        if (run_w > 0) {
-            Rect a = { x + inset, y + i, run_w, 1 };
-            Rect b = { x + inset, y + h - 1 - i, run_w, 1 };
-            backend_render_fill_rect(&a, color);
-            backend_render_fill_rect(&b, color);
+    aa = yui_aa_circle_get(r);
+    for (py = y; py < y + h; py++) {
+        int local_y = py - y;
+        int corner = -1;
+        if (local_y < r) {
+            corner = r - local_y - 1;
+        } else if (local_y >= h - r) {
+            corner = local_y - (h - r);
+        }
+        if (corner < 0) {
+            Rect row = {x, py, w, 1};
+            backend_render_fill_rect(&row, color);
+        } else if (aa) {
+            rounded_row_aa(x, py, w, r, corner, aa, color);
+        } else {
+            /* 覆盖率缓存失败：退回按行 inset 硬边填充 */
+            int inset = (int)(r - sqrtf((float)r * r - (float)(r - corner) * (r - corner)));
+            int run_w;
+            if (inset < 0) inset = 0;
+            run_w = w - 2 * inset;
+            if (run_w > 0) {
+                Rect row = {x + inset, py, run_w, 1};
+                backend_render_fill_rect(&row, color);
+            }
         }
     }
 }
