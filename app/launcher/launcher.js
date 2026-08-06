@@ -127,7 +127,6 @@ function readMeta(path, fallback) {
     var icon = json.icon || null;
     return { id: String(id), title: String(title), icon: icon, jsonPath: path, _source: json.source || null };
 }
-
 // ---------- Grid UI ----------
 
 function buildGrid(gridId, demos) {
