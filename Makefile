@@ -124,9 +124,11 @@ esp32-build-qemu:
 	$(ESP32_IDF_WRAPPER) build-qemu
 
 # 生成子集化字体（供 font 分区烧录 / QEMU 镜像合并）
+# --emoji-input 把 NotoEmoji 的 emoji 字形合并进子集，主字体缺失字形时兜底
 esp32-font:
 	$(PYTHON) scripts/subset_font.py --input app/assets/Roboto-Regular.ttf \
-		--output platform/esp32/build/font-subset.ttf --scan app/
+		--output platform/esp32/build/font-subset.ttf --scan app/ \
+		--emoji-input app/assets/NotoEmoji-Regular.ttf
 
 # 生成 SPIFFS 镜像（app/watch-os + app/assets），供 spiffs 分区烧录 / QEMU 镜像合并
 esp32-spiffs:

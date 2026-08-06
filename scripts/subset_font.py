@@ -25,11 +25,11 @@ except ImportError:
     print("error: need fonttools, run: pip install fonttools", file=sys.stderr)
     sys.exit(1)
 
-# JSON 中需扫描的字段名
+# JSON 中需扫描的字段名（含 icon，emoji 图标也进子集）
 TEXT_FIELDS = {
     "text", "label", "title", "message", "placeholder",
     "value", "name", "desc", "description", "hint", "tooltip",
-    "button_text", "ok_text", "cancel_text",
+    "button_text", "ok_text", "cancel_text", "icon",
 }
 
 # 常用中文字符（约 3500 常用字，这里列最常见的一小部分，可按需扩充）
@@ -77,6 +77,78 @@ def _collect_text(obj, chars):
             _collect_text(item, chars)
 
 
+def _merge_emoji_font(font, emoji_path, text):
+    """把 emoji 字体中主字体缺失的字形复制进主字体（字符级合并）。
+
+    处理要点：
+    - 高码位(>0xFFFF)必须进 cmap format12，不能写进 format4（会溢出）。
+    - TTFont.getBestCmap() 返回 subtable.cmap 的引用，必须拷贝后再改，
+      否则会把高码位写进 format4。
+    """
+    import copy
+    from fontTools.ttLib import TTFont
+    from fontTools.ttLib.tables._c_m_a_p import CmapSubtable
+
+    emoji_font = TTFont(emoji_path)
+    emoji_opts = subset.Options()
+    emoji_opts.glyph_names = False
+    emoji_opts.notdef_outline = True
+    emoji_font = subset.load_font(emoji_path, emoji_opts)
+    sub = subset.Subsetter(options=emoji_opts)
+    sub.populate(text=text)
+    sub.subset(emoji_font)
+
+    main_cmap = dict(font.getBestCmap())
+    emoji_cmap = emoji_font.getBestCmap()
+    main_glyf = font["glyf"]
+    emoji_glyf = emoji_font["glyf"]
+    main_hmtx = font["hmtx"]
+    emoji_hmtx = emoji_font["hmtx"]
+
+    added = 0
+    high = {}
+    newnames = []
+    for cp, sname in emoji_cmap.items():
+        if cp in main_cmap:
+            continue
+        newname = "em%x" % cp
+        if newname in main_glyf:
+            continue
+        main_glyf[newname] = copy.deepcopy(emoji_glyf[sname])
+        main_hmtx[newname] = emoji_hmtx[sname]
+        if "vmtx" in font and "vmtx" in emoji_font:
+            font["vmtx"][newname] = emoji_font["vmtx"][sname]
+        elif "vmtx" in font:
+            font["vmtx"][newname] = (0, 0)
+        if cp <= 0xFFFF:
+            for table in font["cmap"].tables:
+                if table.isUnicode():
+                    table.cmap[cp] = newname
+        else:
+            high[cp] = newname
+        main_cmap[cp] = newname
+        newnames.append(newname)
+        added += 1
+
+    if newnames:
+        # FontGlyphs 的 __setitem__ 已自动维护 glyf 的 glyphOrder（与 ttFont.glyphOrder
+        # 同引用），这里只需把尚未注册的新名字补进全局 order，避免重复。
+        order = font.getGlyphOrder()
+        font.glyphOrder = order + [n for n in newnames if n not in order]
+        font["maxp"].numGlyphs = len(font.glyphOrder)
+
+    if high and not any(t.format == 12 for t in font["cmap"].tables):
+        t12 = CmapSubtable.newSubtable(12)
+        t12.platformID = 3
+        t12.platEncID = 10
+        t12.language = 0
+        t12.cmap = dict(high)
+        font["cmap"].tables.append(t12)
+        font["cmap"].tableVersion = 0
+
+    print(f"emoji merge: added {added} glyphs ({len(high)} high codepoints) from {emoji_path}")
+
+
 def main():
     parser = argparse.ArgumentParser(description="YUI 字体子集化工具")
     parser.add_argument("--input", required=True, help="输入 TTF 路径")
@@ -84,6 +156,7 @@ def main():
     parser.add_argument("--scan", default="", help="扫描目录（提取 JSON 文本字段）")
     parser.add_argument("--extra", default="", help="额外字符")
     parser.add_argument("--no-cjk", action="store_true", help="不包含常用中文字符")
+    parser.add_argument("--emoji-input", default="", help="附加 emoji/符号 TTF，子集化后合并进输出（补主字体缺失字形）")
     args = parser.parse_args()
 
     chars = set()
@@ -115,6 +188,17 @@ def main():
     subsetter = subset.Subsetter(options=options)
     subsetter.populate(text=text)
     subsetter.subset(font)
+
+    # 合并 emoji 字体缺失字形（如 NotoEmoji 的高码位符号/emoji）
+    if args.emoji_input:
+        try:
+            from fontTools.ttLib.tables._c_m_a_p import CmapSubtable
+        except ImportError:
+            CmapSubtable = None
+        if CmapSubtable is None:
+            print("warning: fontTools cmap module unavailable, skip emoji merge", file=sys.stderr)
+        else:
+            _merge_emoji_font(font, args.emoji_input, text)
 
     os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
     font.save(args.output)
