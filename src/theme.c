@@ -150,6 +150,32 @@ void theme_add_rule(Theme* theme, ThemeRule* rule) {
 }
 
 // 从JSON创建规则
+/* theme_merge_style 已提取为标量字段的 style 键:纯此类键的规则无需
+ * 深拷贝 style_json,apply 时标量已直接写入 layer。 */
+static int theme_style_key_is_scalar(const char* key) {
+    static const char* scalar_keys[] = {
+        "color", "bgColor", "fontSize", "fontWeight", "radius",
+        "borderRadius", "borderWidth", "borderSize", "border-color",
+        "borderColor", "border", "spacing", "padding", "opacity",
+        "width", "height", NULL
+    };
+    for (int i = 0; scalar_keys[i]; i++) {
+        if (strcmp(key, scalar_keys[i]) == 0) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static int theme_style_all_scalar(cJSON* style) {
+    for (cJSON* child = style->child; child; child = child->next) {
+        if (child->string && !theme_style_key_is_scalar(child->string)) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
 ThemeRule* theme_rule_create_from_json(cJSON* json) {
     if (!json || !cJSON_IsObject(json)) {
         return NULL;
@@ -307,7 +333,14 @@ ThemeRule* theme_rule_create_from_json(cJSON* json) {
         rule->height = height_obj->valueint;
     }
 
-        rule->style_json = cJSON_Duplicate(style_obj, 1);
+        /* style_json 深拷贝仅用于 theme_apply_component_style 的扩展属性
+         * (set_style / layer_set_properties_from_json)。已被 merge_style 提取
+         * 为标量字段的键(颜色/字号/边距等)无需保留:dark/light 主题 191 个
+         * style 键全部是标量,深拷贝 68 份纯属浪费,置 NULL 省 ~25KB。 */
+        rule->style_json = NULL;
+        if (!theme_style_all_scalar(style_obj)) {
+            rule->style_json = cJSON_Duplicate(style_obj, 1);
+        }
     }
 
     rule->next = NULL;

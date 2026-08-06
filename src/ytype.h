@@ -315,6 +315,19 @@ typedef struct Rect {
 #endif
 #define MAX_TEXT 256
 
+// 图层内嵌字符串缓冲大小。默认桌面值；嵌入式(esp32)由 ya.py / CMakeLists
+// 传 -DYUI_LAYER_ID_MAX=32 等收紧，缩 sizeof(Layer)。修改必须保证所有
+// 编译单元一致，否则 sizeof(Layer) 不匹配导致 ABI 越界。
+#ifndef YUI_LAYER_ID_MAX
+#define YUI_LAYER_ID_MAX 50
+#endif
+#ifndef YUI_LAYER_VARIANT_MAX
+#define YUI_LAYER_VARIANT_MAX 128
+#endif
+#ifndef YUI_LIFECYCLE_NAME_MAX
+#define YUI_LIFECYCLE_NAME_MAX 128
+#endif
+
 // 图标对齐常量（用于 Label/Button/Input 等组件）
 #define ICON_ALIGN_LEFT    0
 #define ICON_ALIGN_RIGHT   1
@@ -583,8 +596,8 @@ typedef  int (*set_property_fun_t)(Layer* layer, const char* key, cJSON* value, 
 typedef void (*set_style_fun_t)(Layer* layer, cJSON* style);
 
 typedef struct Layer {
-    char id[50];
-    char variant[128];
+    char id[YUI_LAYER_ID_MAX];
+    char variant[YUI_LAYER_VARIANT_MAX];
     int index;
     LayerType type;
     Rect rect;
@@ -607,10 +620,10 @@ typedef struct Layer {
 
     // Layer 生命周期：声明位 + 运行时状态，见 layer_lifecycle.h
     unsigned char lifecycle_flags;
-    char lifecycle_on_load[128];
-    char lifecycle_on_show[128];
-    char lifecycle_on_hide[128];
-    char lifecycle_on_unload[128];
+    char lifecycle_on_load[YUI_LIFECYCLE_NAME_MAX];
+    char lifecycle_on_show[YUI_LIFECYCLE_NAME_MAX];
+    char lifecycle_on_hide[YUI_LIFECYCLE_NAME_MAX];
+    char lifecycle_on_unload[YUI_LIFECYCLE_NAME_MAX];
 
     //动画
     Animation* animation;

@@ -401,7 +401,9 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
 
   // 解析基础属性
   if (cJSON_HasObjectItem(json_obj, "id")) {
-    strcpy(layer->id, cJSON_GetObjectItem(json_obj, "id")->valuestring);
+    strncpy(layer->id, cJSON_GetObjectItem(json_obj, "id")->valuestring,
+            sizeof(layer->id) - 1);
+    layer->id[sizeof(layer->id) - 1] = '\0';
   }
   if (cJSON_HasObjectItem(json_obj, "connectable")) {
     cJSON* connectable_item = cJSON_GetObjectItem(json_obj, "connectable");
