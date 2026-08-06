@@ -26,6 +26,41 @@ BUILD_DIR = ESP32_DIR / 'build'
 QEMU_PORT = '5555'
 IS_WIN = sys.platform.startswith('win')
 
+# Variant -> build subdir. Device and QEMU differ only by the YUI_ESP32_QEMU
+# compile macro, so each gets its OWN build dir to keep .o / ELF / partition
+# artifacts independent (no forced reconfigure when switching).
+VARIANT_ROOTS = {
+    'device': 'build',
+    'qemu': 'build-qemu',
+}
+
+
+def set_variant(variant):
+    """Point the global BUILD_DIR at the given variant's own build dir."""
+    global BUILD_DIR
+    build_dir = VARIANT_ROOTS.get(variant, 'device')
+    BUILD_DIR = ESP32_DIR / build_dir
+    return BUILD_DIR
+
+
+def parse_variant(args):
+    """Extract `--variant=X` and the legacy `build-qemu` shorthand.
+
+    Returns (variant_name, remaining_args). The QEMU firmware build is
+    otherwise identical to a normal build; only the build dir + macro differ.
+    """
+    variant = 'device'
+    rest = []
+    for a in args:
+        if a.startswith('--variant='):
+            variant = a.split('=', 1)[1].strip() or 'device'
+        elif a == 'build-qemu':
+            variant = 'qemu'
+            rest.append('build')
+        else:
+            rest.append(a)
+    return variant, rest
+
 
 def is_mingw():
     """Check if running in MinGW/Git Bash."""
@@ -235,12 +270,12 @@ def run_idf(env, *args):
     # PowerShell is always present on Windows and ESP-IDF ships export.ps1.
     if IS_WIN and (IDF_PATH / 'export.ps1').is_file():
         export_ps1 = IDF_PATH / 'export.ps1'
-        idf_args = ' '.join(args)
+        idf_args = ' '.join(['-B', str(BUILD_DIR)] + list(args))
         activate_cmd = f'. {export_ps1}; cd {ESP32_DIR}; idf.py {idf_args}'
         full_cmd = ['powershell', '-ExecutionPolicy', 'Bypass', '-Command', activate_cmd]
         return subprocess.run(full_cmd, env=env).returncode
 
-    idf_args = ' '.join(shlex.quote(a) for a in args)
+    idf_args = ' '.join(shlex.quote(a) for a in ['-B', str(BUILD_DIR)] + list(args))
     eim_activate = find_eim_activate(IDF_PATH)
     if eim_activate:
         # EIM activate may exit non-zero (e.g. optional `eim select` fails);
@@ -515,24 +550,38 @@ def main():
     print(f"ESP-IDF: {IDF_PATH}", flush=True)
     print(f"IDF tools: {IDF_TOOLS_PATH}", flush=True)
     print(f"IDF python: {IDF_PYTHON}", flush=True)
-    env = base_env()
 
-    # QEMU firmware build: set YUI_ESP32_QEMU so main skips LCD/touch init
-    if len(args) >= 1 and args[0] == 'build-qemu':
+    # Resolve variant first so all artifact paths (build dir, spiffs, merge)
+    # point at the correct, independent build tree.
+    variant, args = parse_variant(args)
+    set_variant(variant)
+    print(f"YUI ESP32 build variant: {variant} (build dir: {BUILD_DIR})", flush=True)
+
+    env = base_env()
+    # The macro decides real-LCD vs virtual-QEMU-panel in main.c. Set/clear it
+    # per variant so a device build never accidentally inherits a leftover
+    # exported YUI_ESP32_QEMU, and vice versa.
+    if variant == 'qemu':
         env['YUI_ESP32_QEMU'] = '1'
-        # Only reconfigure on the first build; the compile definition is baked
-        # into the generated build files afterwards.
+    else:
+        env.pop('YUI_ESP32_QEMU', None)
+
+    # One-time migration guard: a build dir created by the OLD single-dir flow
+    # may have the other variant's YUI_ESP32_QEMU baked into its ninja rules.
+    # With separate per-variant dirs this only matters once; re-run cmake so the
+    # baked compile definition matches this variant.
+    if args and args[0] == 'build':
         ninja = BUILD_DIR / 'build.ninja'
-        need_cfg = True
+        baked_qemu = False
         if ninja.exists():
             try:
-                if 'YUI_ESP32_QEMU' in ninja.read_text(encoding='utf-8', errors='replace'):
-                    need_cfg = False
+                baked_qemu = 'YUI_ESP32_QEMU' in ninja.read_text(encoding='utf-8', errors='replace')
             except OSError:
                 pass
-        if need_cfg:
-            sys.exit(run_idf(env, 'reconfigure', 'build'))
-        sys.exit(run_idf(env, 'build'))
+        if baked_qemu != (variant == 'qemu'):
+            print(f"WARN: {BUILD_DIR} baked YUI_ESP32_QEMU={'1' if baked_qemu else '0'}; "
+                  f"reconfiguring for {variant} variant", flush=True)
+            run_idf(env, 'reconfigure', 'build')
 
     # Build SPIFFS image from app/watch-os + app/assets
     if len(args) >= 1 and args[0] == 'make-spiffs':
@@ -555,12 +604,12 @@ def main():
     if len(args) >= 1 and args[0] == 'qemu':
         merge_qemu_flash(env)
         graphics = '--graphics' in args
-        # Always launch QEMU ourselves (graphics or headless). idf.py's bg
-        # spawn + PIPE often kills SDL QEMU → empty monitor / connection reset.
+        # Always launch QEMU ourselves (graphics or headless). do not let idf.py
+        # background-spawn it.
         run_qemu(env, graphics=graphics)
         return
 
-    # Everything else goes through idf.py
+    # Everything else goes through idf.py (with -B <variant build dir>)
     sys.exit(run_idf(env, *args))
 
 

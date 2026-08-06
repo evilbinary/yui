@@ -113,15 +113,17 @@ ESP32_PORT ?= /dev/ttyACM0
 ESP32_IDF_WRAPPER := python3 scripts/run_esp32_idf.py
 endif
 
+# 设备构建（真机 ST7789 LCD + CST816S 触摸）：build/ 目录，不定义 YUI_ESP32_QEMU
 esp32-build:
 	ya -p pc -r yui-stdlib-host
 	ya -p esp32 -a esp32c3
 	$(ESP32_IDF_WRAPPER) build
 
-# QEMU 固件：定义 YUI_ESP32_QEMU，跳过真实 LCD/触摸 init（否则 SPI/I2C 会卡死）
+# QEMU 构建：build-qemu/ 目录，定义 YUI_ESP32_QEMU（跳过真实 LCD/触摸，用虚拟 RGB 面板）
+# 与 esp32-build 使用独立 build 目录，可随时来回切换、互不冲突。
 esp32-build-qemu:
 	ya -p esp32 -a esp32c3
-	$(ESP32_IDF_WRAPPER) build-qemu
+	$(ESP32_IDF_WRAPPER) --variant=qemu build
 
 # 生成子集化字体（供 font 分区烧录 / QEMU 镜像合并）
 # --emoji-input 把 NotoEmoji 的 emoji 字形合并进子集，主字体缺失字形时兜底
@@ -130,12 +132,20 @@ esp32-font:
 		--output platform/esp32/build/font-subset.ttf --scan app/ \
 		--emoji-input app/assets/NotoEmoji-Regular.ttf
 
+esp32-font-qemu:
+	$(PYTHON) scripts/subset_font.py --input app/assets/Roboto-Regular.ttf \
+		--output platform/esp32/build-qemu/font-subset.ttf --scan app/ \
+		--emoji-input app/assets/NotoEmoji-Regular.ttf
+
 # 生成 SPIFFS 镜像（app/watch-os + app/assets），供 spiffs 分区烧录 / QEMU 镜像合并
 esp32-spiffs:
 	$(ESP32_IDF_WRAPPER) make-spiffs
 
+esp32-spiffs-qemu:
+	$(ESP32_IDF_WRAPPER) --variant=qemu make-spiffs
+
 esp32-flash: esp32-build esp32-font esp32-spiffs
-	ESP32_PORT=$(ESP32_PORT) $(ESP32_IDF_WRAPPER) -p $(ESP32_PORT) flash
+	ESP32_PORT=$(ESP32_PORT) $(ESP32_IDF_WRAPPER) flash
 	ESP32_PORT=$(ESP32_PORT) $(ESP32_IDF_WRAPPER) write-font
 	ESP32_PORT=$(ESP32_PORT) $(ESP32_IDF_WRAPPER) write-spiffs
 
@@ -145,11 +155,11 @@ esp32-monitor:
 esp32-flash-monitor: esp32-flash
 	$(ESP32_IDF_WRAPPER) -p $(ESP32_PORT) monitor
 
-esp32-qemu: esp32-build-qemu esp32-font esp32-spiffs
-	$(ESP32_IDF_WRAPPER) qemu --graphics monitor
+esp32-qemu: esp32-build-qemu esp32-font-qemu esp32-spiffs-qemu
+	$(ESP32_IDF_WRAPPER) --variant=qemu qemu --graphics monitor
 
-esp32-qemu-headless: esp32-build-qemu esp32-font esp32-spiffs
-	$(ESP32_IDF_WRAPPER) qemu monitor
+esp32-qemu-headless: esp32-build-qemu esp32-font-qemu esp32-spiffs-qemu
+	$(ESP32_IDF_WRAPPER) --variant=qemu qemu monitor
 
 esp32-menuconfig:
 	$(ESP32_IDF_WRAPPER) menuconfig

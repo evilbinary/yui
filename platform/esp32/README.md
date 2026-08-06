@@ -20,6 +20,19 @@ idf.py -p COM3 flash monitor
 
 > `main/CMakeLists.txt` 里 `YUI_BUILD_DIR` 指向 `build/esp32/esp32c3/None`，换芯片时同步改 arch 目录。
 
+### 设备 / QEMU 双构建目录
+
+真机与 QEMU 构建分别使用**独立的 build 目录**，`.o`、固件、分区产物互不冲突，可随时来回切换（不需要 `clean` 或强制 reconfigure）：
+
+| 目标 | 宏 `YUI_ESP32_QEMU` | build 目录 | 说明 |
+|------|---------------------|------------|------|
+| `make esp32-build` | 否 | `build/` | 真机：ST7789 SPI LCD + CST816S I2C 触摸 |
+| `make esp32-build-qemu` | 是 | `build-qemu/` | 虚拟 RGB 面板，跳过真实 LCD/触摸 init |
+| `make esp32-flash` | 否 | `build/` | 真机烧录（firmware + font 分区 + SPIFFS） |
+| `make esp32-qemu` | 是 | `build-qemu/` | 生成 `qemu_flash.bin` 并启动 QEMU |
+
+字体与 SPIFFS 产物也按目录分开（`build/font-subset.ttf` vs `build-qemu/font-subset.ttf`）。
+
 ## 板级配置
 
 `main/main.c` 中按实际硬件调用：
