@@ -520,8 +520,19 @@ def main():
     # QEMU firmware build: set YUI_ESP32_QEMU so main skips LCD/touch init
     if len(args) >= 1 and args[0] == 'build-qemu':
         env['YUI_ESP32_QEMU'] = '1'
-        # Force CMake reconfigure so the compile definition is applied
-        sys.exit(run_idf(env, 'reconfigure', 'build'))
+        # Only reconfigure on the first build; the compile definition is baked
+        # into the generated build files afterwards.
+        ninja = BUILD_DIR / 'build.ninja'
+        need_cfg = True
+        if ninja.exists():
+            try:
+                if 'YUI_ESP32_QEMU' in ninja.read_text(encoding='utf-8', errors='replace'):
+                    need_cfg = False
+            except OSError:
+                pass
+        if need_cfg:
+            sys.exit(run_idf(env, 'reconfigure', 'build'))
+        sys.exit(run_idf(env, 'build'))
 
     # Build SPIFFS image from app/watch-os + app/assets
     if len(args) >= 1 and args[0] == 'make-spiffs':

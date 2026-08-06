@@ -54,17 +54,29 @@ esp_lcd_touch_handle_t yui_esp32_touch_create(esp_lcd_panel_io_handle_t io,
     return NULL;
 }
 
-/* 简单 UI 描述（SPIFFS 里没有 app.json 时的回退） */
+/* 简单 UI 描述（SPIFFS 里没有 app.json 时的回退；也可作渲染自检场景：
+ * 覆盖 View 背景、各字号 Label、Button、Progress 的基础渲染） */
 static const char s_fallback_ui_json[] =
     "{"
+    "  \"id\": \"watch_os\","
     "  \"type\": \"View\","
-    "  \"text\": \"YUI ESP32\","
-    "  \"layout\": \"vertical\","
-    "  \"rect\": {\"x\": 0, \"y\": 0, \"w\": 240, \"h\": 240},"
-    "  \"style\": {\"bgColor\": \"#102040\", \"color\": \"#ffffff\", \"fontSize\": 20},"
+    "  \"size\": [240, 240],"
+    "  \"layout\": {\"type\": \"vertical\", \"spacing\": 6},"
+    "  \"style\": {\"bgColor\": \"#202020\"},"
+    "  \"text\": \"YUI Test\","
     "  \"children\": ["
-    "    {\"type\": \"Label\", \"text\": \"Hello YUI\","
-    "     \"style\": {\"color\": \"#ffd700\", \"fontSize\": 24}}"
+    "    {\"id\": \"lbl_red\", \"type\": \"Label\", \"text\": \"RED Label 24\", \"size\": [220, 30],"
+    "     \"style\": {\"color\": \"#FF0000\", \"fontSize\": 24}},"
+    "    {\"id\": \"lbl_white\", \"type\": \"Label\", \"text\": \"WHITE 32\", \"size\": [220, 40],"
+    "     \"style\": {\"color\": \"#FFFFFF\", \"fontSize\": 32}},"
+    "    {\"id\": \"lbl_cyan\", \"type\": \"Label\", \"text\": \"CYAN BIG 48\", \"size\": [220, 50],"
+    "     \"style\": {\"color\": \"#00D4FF\", \"fontSize\": 48}},"
+    "    {\"id\": \"btn_primary\", \"type\": \"Button\", \"text\": \"PRIMARY\", \"size\": [220, 36],"
+    "     \"style\": {\"bgColor\": \"#00D4FF\", \"color\": \"#000000\", \"borderRadius\": 12}},"
+    "    {\"id\": \"btn_dark\", \"type\": \"Button\", \"text\": \"DARK BTN\", \"size\": [220, 34],"
+    "     \"style\": {\"bgColor\": \"#1C1C1E\", \"color\": \"#FFFFFF\", \"borderRadius\": 10}},"
+    "    {\"id\": \"progress_h\", \"type\": \"Progress\", \"value\": 66, \"size\": [220, 8],"
+    "     \"style\": {\"bgColor\": \"#333333\", \"fillColor\": \"#30D158\"}}"
     "  ]"
     "}";
 

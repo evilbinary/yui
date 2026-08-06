@@ -29,19 +29,19 @@
                     "type": "Label",
                     "variant": "watch-secondary",
                     "text": "SUNDAY · JUL 12",
-                    "size": [350, 14]
+                    "size": [200, 14]
                 },
                 {
                     "id": "face_time",
                     "type": "Label",
                     "variant": "watch-display",
                     "text": "10:09",
-                    "size": [350, 80]
+                    "size": [200, 80]
                 },
                 {
                     "id": "activity_rings",
                     "type": "View",
-                    "size": [350, 88],
+                    "size": [200, 88],
                     "layout": { "type": "horizontal", "spacing": 16, "align": "center", "justifyContent": "center" },
                     "children": [
                         {
@@ -79,7 +79,7 @@
                 {
                     "id": "complication_row",
                     "type": "View",
-                    "size": [350, 76],
+                    "size": [200, 76],
                     "layout": { "type": "horizontal", "spacing": 8 },
                     "children": [
                         {
@@ -115,7 +115,7 @@
         {
             "id": "dock",
             "type": "View",
-            "size": [350, 54],
+            "size": [200, 54],
             "layout": { "type": "horizontal", "spacing": 10, "justifyContent": "center" },
             "children": [
                 {
