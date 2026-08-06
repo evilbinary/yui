@@ -601,14 +601,7 @@ int backend_measure_text_width(DFont* font, const char* text) {
 }
 
 Texture* backend_render_texture(DFont* font, const char* text, Color color) {
-    static int s_cnt = 0;
-    Texture* t = embed_font_render(font, text, color);
-    if (s_cnt++ < 30) {
-        printf("YUI: rt font=%p text='%s' color=%d,%d,%d tex=%p size=%dx%d\n",
-               (void*)font, text ? text : "", color.r, color.g, color.b,
-               (void*)t, t ? t->w : 0, t ? t->h : 0);
-    }
-    return t;
+    return embed_font_render(font, text, color);
 }
 
 void backend_render_text_destroy(Texture* texture) {
@@ -1090,30 +1083,10 @@ void backend_tick(Layer* ui_root) {
     for (i = 0; i < s_update_cb_count; i++) {
         if (s_update_cb[i]) s_update_cb[i]();
     }
-    if (s_frame_count == 0) printf("YUI: tick: clear_color\n");
     backend_render_clear_color(30, 60, 120, 255);
     if (ui_root) render_layer(ui_root);
     popup_manager_render();
-    if (s_frame_count == 0) {
-        printf("YUI: tick: dump tree\n");
-        if (ui_root) {
-            extern const char* yui_type_name(int type_id);
-            void walk(Layer* l, int depth) {
-                if (!l || depth > 4) return;
-                printf("YUI: tree %*s id='%s' type=%s vis=%d r=%d,%d,%dx%d color=%d,%d,%d,%d bg=%d,%d,%d,%d text='%s' kids=%d\n",
-                       depth * 2, "", l->id[0] ? l->id : "(anon)",
-                       l->type >= 0 ? yui_type_name(l->type) : "?",
-                       l->visible, l->rect.x, l->rect.y, l->rect.w, l->rect.h,
-                       l->color.r, l->color.g, l->color.b, l->color.a,
-                       l->bg_color.r, l->bg_color.g, l->bg_color.b, l->bg_color.a,
-                       l->text ? l->text : "", l->child_count);
-                for (int i = 0; i < l->child_count; i++) walk(l->children[i], depth + 1);
-            }
-            walk(ui_root, 0);
-        }
-    }
     backend_render_present();
-    if (s_frame_count == 0) printf("YUI: tick: done\n");
 #ifdef YUI_ESP32_QEMU
     if (s_frame_count == 0) {
         /* 首帧调试：检查 framebuffer 是否被写入 */
@@ -1123,48 +1096,6 @@ void backend_tick(Layer* ui_root) {
         }
         printf("YUI: fb debug: %d/%d nonzero pixels, fb[0]=0x%04x fb[100]=0x%04x\n",
                nonzero, s_fb_w * s_fb_h, s_fb[0], s_fb[100]);
-        /* 颜色统计：非背景(0x0820 根bg/0xf7be label白)像素分布 */
-        {
-            int col_counts[4] = {0,0,0,0}; /* 红 白 青 其它 */
-            int rx0=0, ry0=0, rx1=0, ry1=0;
-            for (i = 0; i < s_fb_w * s_fb_h; i++) {
-                uint16_t p = s_fb[i];
-                if (p == 0x0820 || p == 0x2104 || p == 0xf7be) continue;
-                int x = i % s_fb_w, y = i / s_fb_w;
-                /* RED 0xF800, WHITE 0xFFFF, CYAN 0x07FF, GREEN 0x07E0, 蓝绿按钮 0x07FF? */
-                int r = (p >> 11) & 31, g = (p >> 5) & 63, b = p & 31;
-                if (r > 20 && g < 12 && b < 12) col_counts[0]++;
-                else if (r > 20 && g > 40 && b > 20) col_counts[1]++;
-                else if (r < 8 && g > 40 && b > 20) col_counts[2]++;
-                else col_counts[3]++;
-                if (!rx1) { rx0 = x; ry0 = y; rx1 = x; ry1 = y; }
-                if (x < rx0) { rx0 = x; }
-                if (x > rx1) { rx1 = x; }
-                if (y < ry0) { ry0 = y; }
-                if (y > ry1) { ry1 = y; }
-            }
-            printf("YUI: fb color: red=%d white=%d cyan=%d other=%d range=(%d,%d)-(%d,%d)\n",
-                   col_counts[0], col_counts[1], col_counts[2], col_counts[3],
-                   rx0, ry0, rx1, ry1);
-        }
-        /* ASCII 缩略图：24x24 块(每 10x10 像素一块)，#=有非零像素 . = 全背景 */
-        {
-            int bx, by, cx, cy, hit;
-            for (by = 0; by < 24; by++) {
-                char line[26];
-                for (bx = 0; bx < 24; bx++) {
-                    hit = 0;
-                    for (cy = by * 10; cy < by * 10 + 10 && !hit; cy++) {
-                        for (cx = bx * 10; cx < bx * 10 + 10 && !hit; cx++) {
-                            if (s_fb[cy * s_fb_w + cx] != 0) { hit = 1; }
-                        }
-                    }
-                    line[bx] = hit ? '#' : '.';
-                }
-                line[24] = '\0';
-                printf("YUI: fb map %s\n", line);
-            }
-        }
     }
     if ((s_frame_count % 10) == 0) printf("YUI: frame %d done\n", s_frame_count);
 #endif
