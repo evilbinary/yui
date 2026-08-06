@@ -612,6 +612,9 @@ def add_flags():
             '-DYUI_PATH_MAX=256',
             '-DMAX_JS_EVENTS=64',
             '-DMAX_C_EVENT_HANDLERS=32',
+            '-DYUI_LAYER_ID_MAX=32',
+            '-DYUI_LAYER_VARIANT_MAX=32',
+            '-DYUI_LIFECYCLE_NAME_MAX=32',
             '-DYUI_ESP_PLATFORM=1',
             '-DJS_MEM_POOL_SIZE=84*1024',
         )
