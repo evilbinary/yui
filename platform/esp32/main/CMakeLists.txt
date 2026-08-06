@@ -33,7 +33,7 @@ target_compile_definitions(${COMPONENT_LIB} PRIVATE
     YUI_PATH_MAX=256
     MAX_JS_EVENTS=64
     MAX_C_EVENT_HANDLERS=32
-    JS_MEM_POOL_SIZE=96*1024
+    JS_MEM_POOL_SIZE=84*1024
 )
 
 # QEMU 构建：跳过真实 LCD/触摸（host 设 YUI_ESP32_QEMU=1）

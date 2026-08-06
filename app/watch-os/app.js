@@ -90,21 +90,47 @@ function setWatchLauncherMode(mode) {
     }
 }
 
+function ensureWatchTheme(mode) {
+    mode = mode || Watch.themeMode;
+    if (typeof Theme.isLoaded === "function" && Theme.isLoaded(mode)) {
+        return true;
+    }
+    var old = ThemeManager && ThemeManager.currentTheme;
+    Theme.load(watchThemeDir + "/" + mode + ".json", mode);
+    var loaded = typeof Theme.isLoaded === "function" && Theme.isLoaded(mode);
+    if (loaded && old && old !== mode && typeof Theme.unload === "function") {
+        Theme.unload(old);
+    }
+    return loaded;
+}
+
+function switchWatchTheme(mode) {
+    if (mode !== "dark" && mode !== "light") return false;
+    if (mode === Watch.themeMode) return true;
+    Watch.themeMode = mode;
+    saveWatchConfig({ launcherMode: Watch.launcherMode, themeMode: mode });
+    return applyWatchTheme();
+}
+
 function initWatchThemes() {
-    Theme.load(watchThemeDir + "/dark.json", "dark");
-    Theme.load(watchThemeDir + "/light.json", "light");
+    YUI.checkHeap("themes.before");
+    ensureWatchTheme(Watch.themeMode);
     Theme.setCurrent(Watch.themeMode);
     Theme.apply();
+    YUI.checkHeap("themes.after");
 }
 
 function initWatchApps() {
+    YUI.checkHeap("apps.before");
     var routes = WatchAppRegistry.init();
     Watch.apps = WatchAppRegistry.getAll();
+    YUI.checkHeap("apps.after");
     return routes;
 }
 
 function onWatchLoad() {
     YUI.log("onWatchLoad");
+    YUI.checkHeap("onWatchLoad.begin");
     var cfg = loadWatchConfig();
     Watch.launcherMode = cfg.launcherMode;
     initWatchThemes();
@@ -114,7 +140,11 @@ function onWatchLoad() {
         routes: initWatchApps()
     });
 
+    YUI.checkHeap("navigate.before");
     YUI.navigate("/");
+    YUI.checkHeap("navigate.mid_gc_before");
+    YUI.gc();
+    YUI.checkHeap("navigate.after_gc");
     updateWatchChrome();
     startWatchClock();
 }
@@ -423,6 +453,7 @@ function rescanWatchApps() {
 }
 
 function applyWatchTheme() {
+    ensureWatchTheme(Watch.themeMode);
     Theme.setCurrent(Watch.themeMode);
     Theme.apply();
 }

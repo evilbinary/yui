@@ -122,6 +122,7 @@ var WatchAppRegistry = {
             YUI.log("WatchAppRegistry: cannot list " + root);
             return 0;
         }
+        YUI.checkHeap("scan.listed");
 
         var count = 0;
         for (var i = 0; i < entries.length; i++) {
@@ -130,7 +131,11 @@ var WatchAppRegistry = {
             var dirName = entry.name;
             if (!dirName || dirName.charAt(0) === ".") continue;
             if (this._registerApp(this._loadAppDir(root, dirName, isInstalled))) count++;
+            if (i % 8 === 7) {
+                YUI.checkHeap("scan." + (i + 1) + "of" + entries.length);
+            }
         }
+        YUI.checkHeap("scan.done." + count);
         return count;
     },
 
