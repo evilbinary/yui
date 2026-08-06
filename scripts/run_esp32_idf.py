@@ -189,7 +189,17 @@ def find_eim_activate(idf_path):
 
 
 def resolve_default_port():
-    return os.environ.get('ESP32_PORT') or ('COM3' if IS_WIN else '/dev/ttyUSB0')
+    port = os.environ.get('ESP32_PORT')
+    if port:
+        return port
+    if IS_WIN:
+        return 'COM3'
+    # ESP32-C3：片载 USB-JTAG 串口（ttyACM*）才是下载/烧录口；
+    # ttyUSB*（如 CH340）通常只作应用日志 console，esptool 无法稳定重进下载模式。
+    for p in ('/dev/ttyACM0', '/dev/ttyACM1', '/dev/ttyUSB0'):
+        if os.path.exists(p):
+            return p
+    return '/dev/ttyACM0'
 
 
 IDF_PATH = resolve_idf_path()

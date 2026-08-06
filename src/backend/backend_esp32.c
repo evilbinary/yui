@@ -791,35 +791,95 @@ void backend_render_bezier_cubic(int x0, int y0, int cx1, int cy1, int cx2, int 
     }
 }
 
+static int rounded_rect_radius(const Rect* rect, int radius) {
+    int max_r = rect->w < rect->h ? rect->w / 2 : rect->h / 2;
+    if (radius < 0) radius = max_r;      /* 负值 = 胶囊/全圆角 */
+    if (radius > max_r) radius = max_r;
+    if (radius < 0) radius = 0;
+    return radius;
+}
+
 void backend_render_arc(int center_x, int center_y, int radius, float start_angle, float end_angle, Color color, int line_width) {
     float step = 0.1f;
-    float prev_x = center_x + radius * cosf(start_angle);
-    float prev_y = center_y + radius * sinf(start_angle);
-    (void)line_width;
-    for (float a = start_angle + step; a <= end_angle; a += step) {
-        float x = center_x + radius * cosf(a);
-        float y = center_y + radius * sinf(a);
-        backend_render_line((int)prev_x, (int)prev_y, (int)x, (int)y, color);
-        prev_x = x; prev_y = y;
+    int half;
+    if (radius <= 0 || color.a == 0) return;
+    if (start_angle > end_angle) { float t = start_angle; start_angle = end_angle; end_angle = t; }
+    if (line_width <= 1) {
+        float prev_x = center_x + radius * cosf(start_angle);
+        float prev_y = center_y + radius * sinf(start_angle);
+        for (float a = start_angle + step; a <= end_angle; a += step) {
+            float x = center_x + radius * cosf(a);
+            float y = center_y + radius * sinf(a);
+            backend_render_line((int)prev_x, (int)prev_y, (int)x, (int)y, color);
+            prev_x = x; prev_y = y;
+        }
+        return;
+    }
+    /* 线宽 >1：围绕同一圆心叠加同心圆弧（同一原点下各半径带宽恒定） */
+    half = line_width / 2;
+    for (int wo = -half; wo <= (line_width - 1 - half); wo++) {
+        int rad = radius + wo;
+        float prev_x, prev_y;
+        if (rad <= 0) continue;
+        prev_x = center_x + rad * cosf(start_angle);
+        prev_y = center_y + rad * sinf(start_angle);
+        for (float a = start_angle + step; a <= end_angle; a += step) {
+            float x = center_x + rad * cosf(a);
+            float y = center_y + rad * sinf(a);
+            backend_render_line((int)prev_x, (int)prev_y, (int)x, (int)y, color);
+            prev_x = x; prev_y = y;
+        }
+    }
+}
+
+/* 按行填充一个圆角矩形：中间为整行，顶部/底部两排由圆弧削角。
+ * 每行只算一次水平跨度，复用 backend_render_fill_rect 的裁剪/混合。 */
+static void rounded_rect_fill(Rect* rect, Color color, int radius) {
+    int x = rect->x, y = rect->y, w = rect->w, h = rect->h;
+    int r = rounded_rect_radius(rect, radius);
+    Rect mid;
+    if (r <= 0) { backend_render_fill_rect(rect, color); return; }
+    if (h <= 2 * r) r = h / 2;          /* 极扁矩形：缩小半径避免倒扣 */
+    if (r < 1) r = 1;
+    mid.x = x; mid.y = y + r; mid.w = w; mid.h = h - 2 * r;
+    if (mid.h > 0) backend_render_fill_rect(&mid, color);
+    for (int i = 0; i < r; i++) {
+        float dy = (float)(r - i);       /* 该行到角圆心的距离（顶部对称） */
+        float sq = (float)r * r - dy * dy;
+        if (sq < 0) sq = 0;
+        int inset = (int)(r - sqrtf(sq));
+        if (inset < 0) inset = 0;
+        int run_w = w - 2 * inset;
+        if (run_w > 0) {
+            Rect a = { x + inset, y + i, run_w, 1 };
+            Rect b = { x + inset, y + h - 1 - i, run_w, 1 };
+            backend_render_fill_rect(&a, color);
+            backend_render_fill_rect(&b, color);
+        }
     }
 }
 
 /* ====================== 圆角/阴影/渐变 ====================== */
 void backend_render_rounded_rect(Rect* rect, Color color, int radius) {
-    (void)radius;
-    backend_render_fill_rect(rect, color);
+    if (!rect) return;
+    if (color.a == 0) return;
+    rounded_rect_fill(rect, color, radius);
 }
 void backend_render_rounded_rect_color(Rect* rect, unsigned char r, unsigned char g, unsigned char b, unsigned char a, int radius) {
     backend_render_rounded_rect(rect, (Color){r, g, b, a}, radius);
 }
 void backend_render_rounded_rect_with_border(Rect* rect, Color bg, int radius, int bw, Color bc) {
-    Rect t;
-    backend_render_fill_rect(rect, bg);
-    t = *rect; t.h = bw; backend_render_fill_rect(&t, bc);
-    t = *rect; t.y = rect->y + rect->h - bw; t.h = bw; backend_render_fill_rect(&t, bc);
-    t = *rect; t.w = bw; backend_render_fill_rect(&t, bc);
-    t = *rect; t.x = rect->x + rect->w - bw; t.w = bw; backend_render_fill_rect(&t, bc);
-    (void)radius;
+    Rect inner;
+    int r_in;
+    if (!rect) return;
+    if (bw <= 0) { backend_render_rounded_rect(rect, bg, radius); return; }
+    /* 先画外圆角 = 边框色，再叠内圆角 = 背景色，形成圆角描边 */
+    rounded_rect_fill(rect, bc, radius);
+    inner.x = rect->x + bw; inner.y = rect->y + bw;
+    inner.w = rect->w - 2 * bw; inner.h = rect->h - 2 * bw;
+    if (inner.w <= 0 || inner.h <= 0) return;
+    r_in = radius < 0 ? -1 : (radius > bw ? radius - bw : 0);
+    rounded_rect_fill(&inner, bg, r_in);
 }
 void backend_render_shadow(const Rect* rect, int radius, int ox, int oy, int blur, int spread, Color color) {
     Rect r;
@@ -831,9 +891,33 @@ void backend_render_shadow(const Rect* rect, int radius, int ox, int oy, int blu
     if (r.w > 0 && r.h > 0) backend_render_fill_rect(&r, color);
 }
 void backend_render_rounded_gradient(const Rect* rect, int radius, int vertical, const Color* colors, int count) {
-    (void)radius; (void)vertical; (void)count;
-    if (!rect || !colors) return;
-    backend_render_fill_rect((Rect*)rect, colors[0]);
+    int n, k, p, p1, p2;
+    float t;
+    if (!rect || !colors || count < 1) return;
+    n = vertical ? rect->h : rect->w;
+    if (n < 1) return;
+    if (count == 1) { backend_render_rounded_rect((Rect*)rect, colors[0], radius); return; }
+    for (k = 0; k < n; k++) {
+        float f = count > 1 ? (float)k / (float)(n - 1) : 0.0f;
+        if (f < 0) f = 0; else if (f > 1) f = 1;
+        t = f * (count - 1);
+        p = (int)t;
+        if (p >= count - 1) { p = count - 2; t = 1.0f; } else { t -= p; }
+        p1 = p; p2 = p + 1;
+        {
+            unsigned char cr = (unsigned char)(colors[p1].r + (colors[p2].r - colors[p1].r) * t);
+            unsigned char cg = (unsigned char)(colors[p1].g + (colors[p2].g - colors[p1].g) * t);
+            unsigned char cb = (unsigned char)(colors[p1].b + (colors[p2].b - colors[p1].b) * t);
+            unsigned char ca = (unsigned char)(colors[p1].a + (colors[p2].a - colors[p1].a) * t);
+            Rect row;
+            if (vertical) {
+                row.x = rect->x; row.y = rect->y + k; row.w = rect->w; row.h = 1;
+            } else {
+                row.x = rect->x + k; row.y = rect->y; row.w = 1; row.h = rect->h;
+            }
+            backend_render_rounded_rect(&row, (Color){cr, cg, cb, ca}, radius);
+        }
+    }
 }
 void backend_render_backdrop_filter(Rect* rect, int blur_radius, float saturation, float brightness) {
     (void)rect; (void)blur_radius; (void)saturation; (void)brightness;
