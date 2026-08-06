@@ -1022,11 +1022,15 @@ void backend_render_present(void) {
 #ifdef ESP_PLATFORM
 #ifdef YUI_ESP32_QEMU
     /* QEMU：直写模式（buffer=0）无脏矩形跟踪，每帧整帧推送。
-     * 使用官方 esp_lcd_rgb_qemu_refresh API 确保 SDL 显示后端正确处理。 */
+     * 官方 esp_lcd_rgb_qemu_refresh 内部对 ena 无限忙等（esp_lcd_qemu_rgb.c），
+     * 无头模式（-nographic 无 SDL 显示后端）时 ena 永不清零会把 guest 卡死；
+     * 用带超时的 esp32_qemu_push_rect 替代。 */
     if (!s_has_dirty) {
-        esp_lcd_rgb_qemu_refresh(s_panel);
+        esp32_qemu_push_rect(0, 0, s_fb_w, s_fb_h);
     } else {
-        esp32_flush_dirty();
+        esp32_qemu_push_rect(s_dirty.x, s_dirty.y,
+                             s_dirty.x + s_dirty.w, s_dirty.y + s_dirty.h);
+        dirty_reset();
     }
 #else
     esp32_flush_dirty();

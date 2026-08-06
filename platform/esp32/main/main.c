@@ -40,8 +40,8 @@ DFont* backend_esp32_load_font_from_flash(const char* partition_label, int size)
 
 /* 屏幕分辨率：与 app/watch-os/app.json 根节点 size:[420,420] 对齐，
  * 布局按此逻辑宽计算。修改需同时改两处引用（set_config / ui_root->rect）。 */
-#define YUI_SCREEN_WIDTH  420
-#define YUI_SCREEN_HEIGHT 420
+#define YUI_SCREEN_WIDTH  240
+#define YUI_SCREEN_HEIGHT 240
 
 /* 触摸芯片创建钩子：覆盖 backend_esp32.c 中的弱符号，实现为 CST816S。
  * 换触摸芯片时改这里即可，backend 层无需改动。 */
@@ -125,7 +125,7 @@ void app_main(void) {
     backend_esp32_set_config(YUI_SCREEN_WIDTH, YUI_SCREEN_HEIGHT, SPI2_HOST, 7, 2, -1, -1, 40 * 1000 * 1000);
     backend_esp32_set_spi_pins(6, 4);   /* MOSI / SCLK — C3 常用硬件 SPI */
 #else
-    backend_esp32_set_config(240, 240, SPI2_HOST, 5, 16, -1, -1, 40 * 1000 * 1000);
+    backend_esp32_set_config(YUI_SCREEN_WIDTH, YUI_SCREEN_HEIGHT, SPI2_HOST, 5, 16, -1, -1, 40 * 1000 * 1000);
     backend_esp32_set_spi_pins(23, 18);
 #endif
 #if defined(YUI_ESP32_QEMU)

@@ -6,7 +6,7 @@
     "assets": "app/assets",
     "font": "Roboto-Regular.ttf",
     "fontFallback": "NotoColorEmoji.ttf",
-    "size": [420, 420],
+    "size": [240, 240],
     "text": "YUI Watch",
     "js": [
         "../lib/router.js",
@@ -84,7 +84,7 @@
         {
             "id": "swipe_index",
             "type": "View",
-            "size": [390, 14],
+            "size": [200, 14],
             "layout": {
                 "type": "horizontal",
                 "spacing": 4,
