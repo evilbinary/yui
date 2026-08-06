@@ -116,14 +116,14 @@
             "id": "dock",
             "type": "View",
             "size": [200, 54],
-            "layout": { "type": "horizontal", "spacing": 10, "justifyContent": "center" },
+            "layout": { "type": "horizontal", "spacing": 8, "justifyContent": "center" },
             "children": [
                 {
                     "id": "dock_app_messages",
                     "type": "Button",
                     "variant": "dock-flat",
                     "text": "💬",
-                    "size": [52, 52],
+                    "size": [44, 44],
                     "events": { "onClick": "@onDockAppClick" }
                 },
                 {
@@ -131,7 +131,7 @@
                     "type": "Button",
                     "variant": "dock-flat",
                     "text": "📞",
-                    "size": [52, 52],
+                    "size": [44, 44],
                     "events": { "onClick": "@onDockAppClick" }
                 },
                 {
@@ -139,7 +139,7 @@
                     "type": "Button",
                     "variant": "dock-flat",
                     "text": "🩺",
-                    "size": [52, 52],
+                    "size": [44, 44],
                     "events": { "onClick": "@onDockAppClick" }
                 },
                 {
@@ -147,7 +147,7 @@
                     "type": "Button",
                     "variant": "dock-accent",
                     "text": "🚀",
-                    "size": [52, 52],
+                    "size": [44, 44],
                     "events": { "onClick": "@openLauncher" }
                 }
             ]
