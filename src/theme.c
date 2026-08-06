@@ -605,17 +605,27 @@ void theme_merge_style(ThemeRule* rule, Layer* layer) {
     if (rule->font_size > 0) {
         if (!layer->font) {
             layer->font = (Font*)malloc(sizeof(Font));
-            memset(layer->font, 0, sizeof(Font));
-            strcpy(layer->font->path, "Roboto-Regular.ttf");
-            strcpy(layer->font->weight, "normal");
-            layer->font->size = 16;
+            if (!layer->font) {
+                printf("[Theme] OOM: cannot allocate Font for layer id='%s', skipping font\n", layer->id);
+            } else {
+                memset(layer->font, 0, sizeof(Font));
+                strcpy(layer->font->path, "Roboto-Regular.ttf");
+                strcpy(layer->font->weight, "normal");
+                layer->font->size = 16;
+            }
         } else if (layer->parent && layer->parent->font == layer->font) {
+            // 与父级共享字体：需要复制成独立字体。OOM 时回退继续使用共享字体，不再 memcpy。
             Font* shared = layer->font;
-            layer->font = (Font*)malloc(sizeof(Font));
-            memcpy(layer->font, shared, sizeof(Font));
-            layer->font->default_font = NULL;
+            Font* copy = (Font*)malloc(sizeof(Font));
+            if (!copy) {
+                printf("[Theme] OOM duplicating shared font for layer id='%s', keeping shared font\n", layer->id);
+            } else {
+                memcpy(copy, shared, sizeof(Font));
+                layer->font = copy;
+                layer->font->default_font = NULL;
+            }
         }
-        if (layer->font->size != rule->font_size) {
+        if (layer->font && layer->font->size != rule->font_size) {
             layer->font->size = rule->font_size;
             layer->font->default_font = NULL;
             mark_layer_dirty(layer, DIRTY_TEXT | DIRTY_LAYOUT);

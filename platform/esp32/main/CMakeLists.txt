@@ -5,6 +5,9 @@
 #   ya -p esp32 -a esp32c3
 # （产物在仓库根 build/esp32/esp32c3/None/ 下）
 
+set(IDF_SKIP_DEFAULT_COMPONENTS ON)
+set(CONFIG_SDKCONFIG_AUTO_SAVE OFF)
+set(CONFIG_SDKCONFIG_AUTO_GEN OFF)
 set(YUI_ROOT ${CMAKE_CURRENT_LIST_DIR}/../../..)
 
 idf_component_register(

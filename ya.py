@@ -613,7 +613,7 @@ def add_flags():
             '-DMAX_JS_EVENTS=64',
             '-DMAX_C_EVENT_HANDLERS=32',
             '-DYUI_ESP_PLATFORM=1',
-            '-DJS_MEM_POOL_SIZE=80*1024',
+            '-DJS_MEM_POOL_SIZE=70*1024',
         )
     elif is_plat("android"):
         set_toolchain('gcc')
