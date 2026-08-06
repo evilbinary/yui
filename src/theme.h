@@ -13,7 +13,7 @@ typedef enum {
 
 // 主题规则（对应一个选择器）
 typedef struct ThemeRule {
-    char selector[256];           // "#id" 或 "Type"
+    char selector[64];            // "#id" 或 "Type"（实际最长 26）
     ThemeSelectorType selector_type;  // 选择器类型
     
     // 样式属性
