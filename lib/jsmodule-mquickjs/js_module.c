@@ -41,6 +41,7 @@ extern const JSSTDLibraryDef js_yuistdlib;
   
 extern uint8_t* load_file(const char *filename, int *plen);
 extern int hex_to_int(char c);
+extern const char* js_module_get_root(void);
 
 
 // 初始化 JS 引擎
@@ -117,7 +118,53 @@ void js_module_register_api(void)
     printf("JS(Socket): Registered API function\n");
 }
 
-// 加载并执行 JS 文件
+
+/* 二进制安全读取文件（相对路径回退 g_js_root）。返回 malloc 缓冲区，
+   长度写入 *plen（含二进制 \0 不截断）。失败返回 NULL。 */
+static uint8_t* read_file_binary(const char* filename, int* plen)
+{
+    char path_buf[YUI_MAX_PATH];
+    FILE* f = NULL;
+    long size;
+    uint8_t* buf;
+
+    f = fopen(filename, "rb");
+    if (!f) {
+        const char* root = js_module_get_root();
+        if (root && root[0] && filename[0] != '/') {
+            snprintf(path_buf, sizeof(path_buf), "%s/%s", root, filename);
+            f = fopen(path_buf, "rb");
+        }
+    }
+    if (!f) {
+        return NULL;
+    }
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return NULL; }
+    size = ftell(f);
+    if (size < 0 || fseek(f, 0, SEEK_SET) != 0) { fclose(f); return NULL; }
+    buf = (uint8_t*)malloc((size_t)size + 1);
+    if (!buf) { fclose(f); return NULL; }
+    if (fread(buf, 1, (size_t)size, f) != (size_t)size) {
+        free(buf); fclose(f); return NULL;
+    }
+    buf[size] = '\0';
+    fclose(f);
+    if (plen) *plen = (int)size;
+    return buf;
+}
+
+/* 构造同目录字节码路径：xxx.js -> xxx.bc */
+static void js_bc_path(const char* filename, char* out, size_t out_sz)
+{
+    size_t n = strlen(filename);
+    if (n > 3 && strcmp(filename + n - 3, ".js") == 0) {
+        snprintf(out, out_sz, "%.*s.bc", (int)(n - 3), filename);
+    } else {
+        snprintf(out, out_sz, "%s.bc", filename);
+    }
+}
+
+// 加载并执行 JS 文件（优先同目录 xxx.bc 预编译字节码，回退源码 eval）
 int js_module_load_file(const char* filename)
 {
     if (!g_js_ctx) {
@@ -128,13 +175,41 @@ int js_module_load_file(const char* filename)
     printf("JS: Loading file %s...\n", filename);
 
     int len = 0;
-    uint8_t* buf = load_file(filename, &len);
-    if (!buf) {
-        return -1;
-    }
+    uint8_t* buf = NULL;
+    char bc_path[YUI_MAX_PATH];
+    JSValue val;
+    int is_bc = 0;
 
-    JSValue val = JS_Eval(g_js_ctx, (const char*)buf, len, filename, 0);
-    free(buf);
+    js_bc_path(filename, bc_path, sizeof(bc_path));
+    buf = read_file_binary(bc_path, &len);
+    if (buf && JS_IsBytecode(buf, (size_t)len)) {
+        is_bc = 1;
+        printf("JS: Loading bytecode %s (len=%d)\n", bc_path, len);
+        if (JS_RelocateBytecode(g_js_ctx, buf, (size_t)len)) {
+            fprintf(stderr, "JS: Could not relocate bytecode %s\n", bc_path);
+            free(buf);
+            return -1;
+        }
+        val = JS_LoadBytecode(g_js_ctx, buf);
+        if (JS_IsException(val)) {
+            JSValue exc = JS_GetException(g_js_ctx);
+            fprintf(stderr, "JS: Error loading bytecode %s:\n", bc_path);
+            JS_PrintValueF(g_js_ctx, exc, JS_DUMP_LONG);
+            printf("\n");
+            free(buf);
+            return -1;
+        }
+        free(buf);
+        val = JS_Run(g_js_ctx, val);
+    } else {
+        if (buf) free(buf);
+        buf = load_file(filename, &len);
+        if (!buf) {
+            return -1;
+        }
+        val = JS_Eval(g_js_ctx, (const char*)buf, (size_t)len, filename, 0);
+        free(buf);
+    }
 
     if (JS_IsException(val)) {
         JSValue exc = JS_GetException(g_js_ctx);
@@ -144,7 +219,8 @@ int js_module_load_file(const char* filename)
         return -1;
     }
 
-    printf("JS: Successfully loaded %s, len=%d\n", filename, len);
+    printf("JS: Successfully loaded %s, len=%d (%s)\n", filename, len,
+           is_bc ? "bytecode" : "source");
     return 0;
 }
 // 调用 JS 事件函数

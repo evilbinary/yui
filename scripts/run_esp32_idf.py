@@ -422,6 +422,17 @@ def make_spiffs(env):
             if f.is_file():
                 shutil.copy2(f, lib_dst / fn)
 
+    # 3. pre-compile every JS to mquickjs 32-bit bytecode (xxx.bc) into staging.
+    #    Runtime js_module_load_file prefers the .bc over the .js source.
+    pre = WORKSPACE / 'scripts' / 'precompile_js.py'
+    if pre.is_file():
+        mqjs = shutil.which('mqjs') or str(WORKSPACE / 'scripts' / 'mqjs32' / 'mqjs32.exe')
+        print(f"Pre-compiling JS to bytecode with mqjs: {mqjs}", flush=True)
+        rc = subprocess.run([sys.executable, str(pre), '--mqjs', mqjs, '--out', str(staging)],
+                            cwd=str(WORKSPACE))
+        if rc.returncode != 0:
+            print("WARN: bytecode precompile skipped/failed (falling back to source)", file=sys.stderr)
+
     parts = read_partition_table(env)
     spiffs_size = parts['spiffs'][1] if 'spiffs' in parts else 0x80000
 
