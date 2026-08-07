@@ -538,11 +538,15 @@ void button_component_render(Layer* layer) {
 
     if (icon_tex) {
         int iw, ih;
+        int icon_fs = (layer && layer->font) ? layer->font->size : 0;
         backend_query_texture(icon_tex, NULL, NULL, &iw, &ih);
         icon_w = iw / density;
         icon_h = ih / density;
+        /* 无显式 iconSize 时：优先按字号得到目标高度（与文本渲染一致，
+           避免 CBDT 位图(136x136)按按钮高度缩放导致尺寸异常）；fallback 按钮高度。 */
         int icon_max = component->icon_size > 0 ? component->icon_size
-            : (has_text ? (icon_h > 0 ? icon_h : 16) : (layer->rect.h - pad_top - pad_bottom));
+            : (icon_fs > 0 ? (int)(icon_fs * 1.2f + 0.5f)
+                             : (layer->rect.h - pad_top - pad_bottom));
         if (icon_max < 4) icon_max = 4;
         if (icon_w > icon_max || icon_h > icon_max) {
             float ratio = (float)icon_w / icon_h;
