@@ -426,14 +426,28 @@ def make_spiffs(env):
     #    Runtime js_module_load_file prefers the .bc over the .js source.
     pre = WORKSPACE / 'scripts' / 'precompile_js.py'
     if pre.is_file():
-        bcgen = (shutil.which('bc-gen') or
-                 str(WORKSPACE / 'scripts' / 'mqjs32' / 'bc-gen.exe') or
-                 str(WORKSPACE / 'build' / 'pc' / 'None' / 'None' / 'bc-gen.exe'))
-        print(f"Pre-compiling JS to bytecode with bc-gen: {bcgen}", flush=True)
-        rc = subprocess.run([sys.executable, str(pre), '--bcgen', bcgen, '--out', str(staging)],
-                            cwd=str(WORKSPACE))
-        if rc.returncode != 0:
-            print("WARN: bytecode precompile skipped/failed (falling back to source)", file=sys.stderr)
+        bcgen = None
+        for cand in (shutil.which('bc-gen'),
+                     str(WORKSPACE / 'scripts' / 'mqjs32' / 'bc-gen.exe'),
+                     str(WORKSPACE / 'build' / 'pc' / 'None' / 'None' / 'bc-gen.exe'),
+                     str(WORKSPACE / 'build' / 'pc' / 'None' / 'None' / 'bc-gen')):
+            if not cand:
+                continue
+            # bc-gen.exe 只在 Windows 可用；Linux/macOS 直接执行会 Exec format error。
+            if os.name != 'nt' and cand.lower().endswith('.exe'):
+                continue
+            if os.path.exists(cand):
+                bcgen = cand
+                break
+        if bcgen:
+            print(f"Pre-compiling JS to bytecode with bc-gen: {bcgen}", flush=True)
+            rc = subprocess.run([sys.executable, str(pre), '--bcgen', bcgen, '--out', str(staging)],
+                                cwd=str(WORKSPACE))
+            if rc.returncode != 0:
+                print("WARN: bytecode precompile failed (falling back to source)", file=sys.stderr)
+        else:
+            print("WARN: no usable bc-gen host tool on this platform; precompile skipped (source used)",
+                  file=sys.stderr)
 
     parts = read_partition_table(env)
     spiffs_size = parts['spiffs'][1] if 'spiffs' in parts else 0x80000

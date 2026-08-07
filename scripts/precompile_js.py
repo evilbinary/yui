@@ -34,9 +34,15 @@ def find_bcgen():
         "bc-gen",
     ]
     for c in candidates:
-        if c and shutil.which(c):
+        if not c:
+            continue
+        # bc-gen.exe 是 Windows 宿主工具：仅 Windows 上可用，
+        # Linux/macOS 上直接执行会报 "Exec format error"，必须跳过。
+        if sys.platform != "win32" and c.lower().endswith(".exe"):
+            continue
+        if shutil.which(c):
             return os.path.abspath(shutil.which(c))
-        if c and os.path.isfile(c):
+        if os.path.isfile(c):
             return os.path.abspath(c)
     return None
 
@@ -71,8 +77,12 @@ def compile_dir(bcgen, src_dir, out_dir):
             dst = os.path.join(out_dir, dst_rel)
             os.makedirs(os.path.dirname(dst), exist_ok=True)
             # bc-gen.exe 是 32 位工具（JSW=4），直接产出 32 位字节码，无 -m32。
-            res = subprocess.run([bcgen, "-o", dst, src],
-                                 capture_output=True, text=True)
+            try:
+                res = subprocess.run([bcgen, "-o", dst, src],
+                                     capture_output=True, text=True)
+            except OSError as e:
+                print(f"WARN: cannot run bc-gen ({e}), skipping {rel}")
+                continue
             ok = res.returncode == 0
             if not ok and os.path.isfile(dst) and os.path.getsize(dst) > 0:
                 ok = True

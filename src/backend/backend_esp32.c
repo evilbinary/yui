@@ -566,7 +566,9 @@ int backend_init(void) {
     return 0;
 }
 
+#if YUI_ESP32_LCD_BUFFER
 static void yui_aa_cache_teardown(void); /* 圆角 AA 覆盖率缓存回收（定义见文件后部） */
+#endif
 
 void backend_quit(void) {
 #ifdef ESP_PLATFORM
@@ -580,7 +582,9 @@ void backend_quit(void) {
 #else
     if (s_fb) { free(s_fb); s_fb = NULL; }
 #endif
+    #if YUI_ESP32_LCD_BUFFER
     yui_aa_cache_teardown();
+#endif
 }
 
 /* ====================== 纹理 ====================== */
@@ -662,9 +666,9 @@ static void direct_draw_point(int x, int y, Color c)
 }
 
 /* 抗锯齿单点落笔：有 framebuffer（YUI_ESP32_LCD_BUFFER / QEMU）时做 alpha 混合；
- * 直写模式（无 fb、无法读回）退化为不透明落点（硬边，形状仍正确）。 */
-static void backend_draw_point_aa(int x, int y, Color c) {
+ * 直写模式（无 fb、无法读回）不使用（rounded_rect_fill 走批量行填充）。 */
 #if YUI_ESP32_LCD_BUFFER
+static void backend_draw_point_aa(int x, int y, Color c) {
     uint16_t* p;
     if (!s_fb || x < 0 || y < 0 || x >= s_fb_w || y >= s_fb_h) return;
     p = &s_fb[y * s_fb_w + x];
@@ -679,12 +683,8 @@ static void backend_draw_point_aa(int x, int y, Color c) {
         *p = color_to_rgb565(d);
     }
     dirty_add(x, y, 1, 1);
-#else
-    Color s = c;
-    s.a = 255;
-    direct_draw_point(x, y, s);
-#endif
 }
+#endif /* YUI_ESP32_LCD_BUFFER */
 
 void backend_render_fill_rect(Rect* rect, Color color) {
     Rect clip, r;
@@ -863,10 +863,12 @@ void backend_render_arc(int center_x, int center_y, int radius, float start_angl
     }
 }
 
+#if YUI_ESP32_LCD_BUFFER
 /* ============================================================
  * 圆角抗锯齿光栅化 —— 移植自 backend_sdl.c（同款算法）：
  * 用 4x 超采样的 Bresenham 圆预计算覆盖率表，对每个角落扫描线
  * 给出「自实心区向外」的每像素覆盖率（0..~240），再逐点 alpha 混合。
+ * 仅在 framebuffer 路径（QEMU / buffer=1）编译启用。
  * ============================================================ */
 #define YUI_AA_CACHE_SIZE 8
 
@@ -1054,15 +1056,18 @@ static void rounded_row_aa(int x, int py, int w, int r, int cir_y, const YuiAA* 
         backend_draw_point_aa(cir_x_right + i, py, e);
     }
 }
+#endif /* YUI_ESP32_LCD_BUFFER */
 
 /* 按行填充圆角矩形：中部全行实心，顶部/底部两帽按角样例抗锯齿。 */
 static void rounded_rect_fill(Rect* rect, Color color, int radius) {
-    const YuiAA* aa;
     int x = rect->x, y = rect->y, w = rect->w, h = rect->h;
     int r = rounded_rect_radius(rect, radius);
     int py;
     if (r <= 0) { backend_render_fill_rect(rect, color); return; }
-    aa = yui_aa_circle_get(r);
+#if YUI_ESP32_LCD_BUFFER
+    /* 有 framebuffer（QEMU / buffer=1）时启用逐点抗锯齿。 */
+    {
+    const YuiAA* aa = yui_aa_circle_get(r);
     for (py = y; py < y + h; py++) {
         int local_y = py - y;
         int corner = -1;
@@ -1088,6 +1093,34 @@ static void rounded_rect_fill(Rect* rect, Color color, int radius) {
             }
         }
     }
+    }
+#else
+    /* 直写模式（真实 LCD 无 framebuffer，buffer=0）：逐点画抗锯齿边缘像素
+     * 意味着每像素一次 1x1 SPI 写，会拖垮主任务触发 task WDT。
+     * 退回按行 inset 的批量行填充（整行一次 SPI），保持稳定。 */
+    for (py = y; py < y + h; py++) {
+        int local_y = py - y;
+        int corner = -1;
+        if (local_y < r) {
+            corner = r - local_y - 1;
+        } else if (local_y >= h - r) {
+            corner = local_y - (h - r);
+        }
+        if (corner < 0) {
+            Rect row = {x, py, w, 1};
+            backend_render_fill_rect(&row, color);
+        } else {
+            int inset = (int)(r - sqrtf((float)r * r - (float)(r - corner) * (r - corner)));
+            int run_w;
+            if (inset < 0) inset = 0;
+            run_w = w - 2 * inset;
+            if (run_w > 0) {
+                Rect row = {x + inset, py, run_w, 1};
+                backend_render_fill_rect(&row, color);
+            }
+        }
+    }
+#endif
 }
 
 /* ====================== 圆角/阴影/渐变 ====================== */
