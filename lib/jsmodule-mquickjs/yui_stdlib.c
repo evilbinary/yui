@@ -905,26 +905,24 @@ static JSValue js_yui_gc(JSContext *ctx, JSValue *this_val, int argc, JSValue *a
     return JS_UNDEFINED;
 }
 
-/* YUI.checkHeap(tag): print C free heap for memory profiling probes. */
+/* YUI.checkHeap(tag): print C free heap + JS object dump for memory profiling. */
 static JSValue js_yui_check_heap(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
 {
     const char *tag = "";
 
+    if (argc > 0 && JS_IsString(ctx, argv[0])) {
+        JSCStringBuf cbuf;
+        tag = JS_ToCStringLen(ctx, NULL, argv[0], &cbuf);
+    }
 #if defined(YUI_ESP_PLATFORM)
     extern size_t heap_caps_get_free_size(int caps);
     extern size_t heap_caps_get_largest_free_block(int caps);
-    if (argc > 0 && JS_IsString(ctx, argv[0])) {
-        JSCStringBuf cbuf;
-        tag = JS_ToCStringLen(ctx, NULL, argv[0], &cbuf);
-    }
-    printf("YUI: [heap-probe] tag=%s free=%u largest=%u\n", tag,
+    printf("YUI: [heap-probe] tag=%s cheap_free=%u cheap_largest=%u\n",
+           tag,
            (unsigned)heap_caps_get_free_size(4),
            (unsigned)heap_caps_get_largest_free_block(4));
+    JS_DumpMemory(ctx, FALSE);
 #else
-    if (argc > 0 && JS_IsString(ctx, argv[0])) {
-        JSCStringBuf cbuf;
-        tag = JS_ToCStringLen(ctx, NULL, argv[0], &cbuf);
-    }
     printf("YUI: [heap-probe] tag=%s (non-ESP, skipped)\n", tag);
 #endif
     return JS_UNDEFINED;
