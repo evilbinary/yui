@@ -408,6 +408,9 @@ Texture* embed_font_render_nocache(DFont* font, const char* text, Color color) {
 }
 
 /* ====================== 渲染（带缓存） ====================== */
+#ifndef EMBED_TEXT_CACHE_MAX_TEX_SIZE
+#define EMBED_TEXT_CACHE_MAX_TEX_SIZE (16 * 1024)   /* 大纹理不入缓存，帧末即释放 */
+#endif
 Texture* embed_font_render(DFont* font, const char* text, Color color) {
     Texture* tex;
     EmbedTexture* et;
@@ -426,6 +429,12 @@ Texture* embed_font_render(DFont* font, const char* text, Color color) {
     tex = embed_font_render_nocache(font, text, color);
     if (!tex) return NULL;
     et = (EmbedTexture*)tex->priv;
+    /* 大纹理（如整屏大字号时钟）不入缓存：缓存只淘汰 refcount==0 的槽，
+     * 而大纹理常驻会让 LRU 无法及时回收，导致堆在首帧就耗尽。 */
+    if ((size_t)et->w * (size_t)et->h * 4 > EMBED_TEXT_CACHE_MAX_TEX_SIZE) {
+        et->cached = 0;
+        return tex;
+    }
     et->cached = 1;
     cache_store(tex, font, text, color);
     return tex;

@@ -176,13 +176,23 @@ def _merge_emoji_font(font, emoji_path, text):
         font.glyphOrder = order + [n for n in newnames if n not in order]
         font["maxp"].numGlyphs = len(font.glyphOrder)
 
-    if high and not any(t.format == 12 for t in font["cmap"].tables):
+    if high:
+        # 有高码位(>0xFFFF)字形时，确保存在一个包含【全部】Unicode 映射的
+        # format 12 表，并移除 format 4。
+        # 原因：stb_truetype 的 stbtt__cmap_find_best_subtable 优先选择
+        # format 12（platform 3 / enc 10），若 format 12 只含高码位 emoji 而
+        # format 4 含 ASCII/CJK，运行时查 BMP 字符会落空 -> 渲染成方块。
+        merged = {}
+        for table in font["cmap"].tables:
+            if table.isUnicode() and table.format != 12:
+                merged.update(table.cmap)
+        merged.update(high)
         t12 = CmapSubtable.newSubtable(12)
         t12.platformID = 3
         t12.platEncID = 10
         t12.language = 0
-        t12.cmap = dict(high)
-        font["cmap"].tables.append(t12)
+        t12.cmap = merged
+        font["cmap"].tables = [t12]
         font["cmap"].tableVersion = 0
 
     print(f"emoji merge: added {added} glyphs ({len(high)} high codepoints) from {emoji_path}")
