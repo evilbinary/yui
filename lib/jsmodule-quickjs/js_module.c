@@ -319,6 +319,28 @@ static JSValue js_log(JSContext *ctx, JSValueConst this_val, int argc, JSValueCo
     return JS_UNDEFINED;
 }
 
+// YUI.checkHeap(tag): 内存探针。ESP 上打印 C 堆余量，其它平台仅打印 tag。
+static JSValue js_check_heap(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    const char *tag = "";
+    if (argc > 0) {
+        const char* s = JS_ToCString(ctx, argv[0]);
+        if (s) { tag = s; }
+    }
+#if defined(YUI_ESP_PLATFORM)
+    {
+        extern size_t heap_caps_get_free_size(int caps);
+        extern size_t heap_caps_get_largest_free_block(int caps);
+        printf("YUI: [heap-probe] tag=%s free=%u largest=%u\n", tag,
+               (unsigned)heap_caps_get_free_size(4),
+               (unsigned)heap_caps_get_largest_free_block(4));
+    }
+#else
+    printf("YUI: [heap-probe] tag=%s (non-ESP, skipped)\n", tag);
+#endif
+    return JS_UNDEFINED;
+}
+
 static int append_layer_child_qjs(Layer* parent, Layer* child) {
     if (!parent || !child) return -1;
     Layer** new_children = realloc(parent->children, sizeof(Layer*) * (parent->child_count + 1));
@@ -1502,6 +1524,9 @@ void js_module_register_api(void)
 
     // 注册全局 gc 函数（手动触发 GC 并打印内存使用）
     JS_SetPropertyStr(g_js_ctx, global_obj, "gc", JS_NewCFunction(g_js_ctx, js_gc, "gc", 0));
+    // YUI.gc / YUI.checkHeap（与 mquickjs 适配器保持一致，watch-os app.js 依赖）
+    JS_SetPropertyStr(g_js_ctx, yui_obj, "gc", JS_NewCFunction(g_js_ctx, js_gc, "gc", 0));
+    JS_SetPropertyStr(g_js_ctx, yui_obj, "checkHeap", JS_NewCFunction(g_js_ctx, js_check_heap, "checkHeap", 1));
 
     // 注册 YUI.call 桥接（C 事件处理器调用入口）
     JS_SetPropertyStr(g_js_ctx, yui_obj, "call", JS_NewCFunction(g_js_ctx, js_native_call, "call", 2));
