@@ -1565,7 +1565,9 @@ int backend_init(){
         printf("Error: Failed to create window: %s\n", SDL_GetError());
         return -1;
     }
+#if defined(__linux__) && !defined(LINUX)
     SDL_SetWindowMinimumSize(window, 900, 720);
+#endif
 
     if (window && backend_is_headless()) {
         SDL_HideWindow(window);
