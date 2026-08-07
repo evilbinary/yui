@@ -216,6 +216,16 @@ if is_host_plat():
         add_run()
     )
 
+    target("watch-os-mqjs") 
+    (
+        add_deps("socket","yui","mquickjs","jsmodule-mquickjs","yaml2json"),
+        add_rules("mode.debug", "mode.release"),
+        set_kind("binary"),
+        add_flags(),
+        add_files("watch-os/main.c"),
+        add_run()
+    )
+
 
     target("watch-os.html") 
     (

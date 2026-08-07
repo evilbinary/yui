@@ -19,9 +19,14 @@ build-db:
 build-watch-os:
 	ya -b watch-os
 
+build-watch-os-mqjs:
+	ya -b watch-os-mqjs
+
 watch-os: build-watch-os
 	ya -r watch-os --  app/watch-os/app.json
 
+watch-os-mqjs: build-watch-os-mqjs
+	ya -r watch-os-mqjs --  app/watch-os/app.json
 
 build-lvgl:
 	ya -b lvgl-sdl -p lvgl
