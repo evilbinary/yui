@@ -1597,6 +1597,7 @@ static void print_quickjs_exception(JSContext* ctx, JSValueConst exception, cons
 }
 
 // 加载并执行 JS 文件
+extern uint8_t* load_file(const char *filename, int *plen);
 int js_module_load_file(const char* filename)
 {
     if (!g_js_ctx) {
@@ -1606,32 +1607,17 @@ int js_module_load_file(const char* filename)
 
     printf("JS(QuickJS): Loading file %s...\n", filename);
 
-    // 读取文件 (使用二进制模式避免 Windows 文本模式转换)
-    FILE* f = fopen(filename, "rb");
-    if (!f) {
+    // 读取文件：走共享 load_file（对相对路径应用 g_js_root 回退，
+    // 与 js_module_read_file 一致，避免 "apps/xxx.js" 缺 app/watch-os 前缀）
+    int size = 0;
+    uint8_t* buf = load_file(filename, &size);
+    if (!buf) {
         printf("JS(QuickJS): Failed to open file %s\n", filename);
         return -1;
     }
 
-    fseek(f, 0, SEEK_END);
-    long size = ftell(f);
-    fseek(f, 0, SEEK_SET);
-
-    char* buf = (char*)malloc(size + 1);
-    if (!buf) {
-        fclose(f);
-        printf("JS(QuickJS): Failed to allocate memory for file\n");
-        return -1;
-    }
-
-    size_t read_size = fread(buf, 1, size, f);
-    buf[read_size] = '\0';
-    fclose(f);
-    
-    printf("JS(QuickJS): Read %ld bytes from file\n", (long)read_size);
-
     // 使用 QuickJS 加载并运行代码
-    JSValue val = JS_Eval(g_js_ctx, buf, read_size, filename, JS_EVAL_TYPE_GLOBAL);
+    JSValue val = JS_Eval(g_js_ctx, (const char*)buf, size, filename, JS_EVAL_TYPE_GLOBAL);
     free(buf);
 
     if (JS_IsException(val)) {
