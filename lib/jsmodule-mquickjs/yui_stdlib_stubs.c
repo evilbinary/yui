@@ -155,3 +155,9 @@ void backend_get_windowsize(int* width, int* height) {
     if (width) *width = 800;
     if (height) *height = 480;
 }
+
+// screenshot 存根（生成头文件工具不需要运行时功能）
+int backend_screenshot(const char* path) {
+    (void)path;
+    return -1;
+}

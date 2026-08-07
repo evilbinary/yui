@@ -32,6 +32,9 @@ extern struct Layer* g_layer_root;
 
 
 static void check_timers(void);
+void js_module_pump_timers(void);
+
+extern void backend_register_update_callback(void (*callback)(void));
 
 
 extern const JSSTDLibraryDef js_yuistdlib;
@@ -47,7 +50,10 @@ int js_module_init(void)
 
 #if defined(YUI_ESP_PLATFORM)
     extern size_t heap_caps_get_free_size(int caps);
-    printf("JS: heap free=%u\n", (unsigned)heap_caps_get_free_size(4));
+    extern size_t heap_caps_get_largest_free_block(int caps);
+    printf("JS: heap free=%u largest=%u\n",
+           (unsigned)heap_caps_get_free_size(4),
+           (unsigned)heap_caps_get_largest_free_block(4));
 #endif
 
     g_js_mem = malloc(g_js_mem_size);
@@ -56,6 +62,11 @@ int js_module_init(void)
         return -1;
     }
     printf("JS: JS_MEM_POOL_SIZE=%u bytes\n", (unsigned)g_js_mem_size);
+#if defined(YUI_ESP_PLATFORM)
+    printf("JS: heap free after pool=%u largest=%u\n",
+           (unsigned)heap_caps_get_free_size(4),
+           (unsigned)heap_caps_get_largest_free_block(4));
+#endif
 
     g_js_ctx = JS_NewContext(g_js_mem, g_js_mem_size, &js_yuistdlib);
     if (!g_js_ctx) {
@@ -66,6 +77,9 @@ int js_module_init(void)
 
     js_module_register_api();
     js_module_init_layer_lifecycle();
+
+    /* 驱动 setTimeout/clearTimeout：注册到 backend 每帧 update 回调 */
+    backend_register_update_callback(js_module_pump_timers);
 
     printf("JS: JavaScript engine initialized\n");
     return 0;
@@ -268,7 +282,16 @@ int js_module_call_event(const char* event_name, Layer* layer)
 
 
 // 检查并触发定时器（内部静态函数）
+static int g_pump_calls = 0;
 static void check_timers(void)
 {
     if (!g_js_ctx) return;
+    if (g_pump_calls++ < 3) printf("JS: pump_timers NODEBUG\n");
+    js_run_timers(g_js_ctx);
+}
+
+// 供 UI 主循环周期性调用，驱动 setTimeout/setInterval
+void js_module_pump_timers(void)
+{
+    check_timers();
 }

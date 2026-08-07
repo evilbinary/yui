@@ -300,6 +300,9 @@ JSValue JS_Run(JSContext *ctx, JSValue val);
 JSValue JS_Eval(JSContext *ctx, const char *input, size_t input_len,
                 const char *filename, int eval_flags);
 void JS_GC(JSContext *ctx);
+/* 宿主周期性调用以执行到期定时器（setTimeout/clearTimeout），
+ * 非阻塞；由 js_module_pump_timers 间接驱动。 */
+void js_run_timers(JSContext *ctx);
 JSValue JS_NewStringLen(JSContext *ctx, const char *buf, size_t buf_len);
 JSValue JS_NewString(JSContext *ctx, const char *buf);
 const char *JS_ToCStringLen(JSContext *ctx, size_t *plen, JSValue val, JSCStringBuf *buf);

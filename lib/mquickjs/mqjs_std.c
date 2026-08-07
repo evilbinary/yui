@@ -220,6 +220,35 @@ static void run_timers(JSContext *ctx)
     }
 }
 
+/* 宿主(js_module / UI 主循环)周期性调用：非阻塞，仅执行到期定时器。 */
+void js_run_timers(JSContext *ctx)
+{
+    int64_t cur_time = get_time_ms();
+    static int dbg = 0;
+    if (dbg < 3) {
+        int n = 0;
+        for (int k = 0; k < MAX_TIMERS; k++)
+            if (js_timer_list[k].allocated) n++;
+        printf("JS: run_timers dbg%d active=%d\n", dbg++, n);
+    }
+    for (int i = 0; i < MAX_TIMERS; i++) {
+        JSTimer *th = &js_timer_list[i];
+        if (th->allocated && th->timeout - cur_time <= 0) {
+            printf("JS: run_timers firing slot%d\n", i);
+            if (JS_StackCheck(ctx, 2))
+                goto fail;
+            JS_PushArg(ctx, th->func.val);
+            JS_PushArg(ctx, JS_NULL);
+            JS_DeleteGCRef(ctx, &th->func);
+            th->allocated = FALSE;
+            if (JS_IsException(JS_Call(ctx, 0))) {
+            fail:
+                dump_error(ctx);
+            }
+        }
+    }
+}
+
 /* stdlib ROM table: 32-bit targets (JS_PTR64 undefined) use the
    32-bit table, which is also required by RISC-V (ilp32) since GCC
    cannot build the 64-bit self-referencing table on RV32. */

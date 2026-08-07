@@ -502,6 +502,20 @@ static JSValue js_yui_log(JSContext *ctx, JSValue *this_val, int argc, JSValue *
     return JS_UNDEFINED;
 }
 
+extern int backend_screenshot(const char* path);
+
+static JSValue js_screenshot(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+{
+    (void)this_val;
+    if (argc < 1 || !JS_IsString(ctx, argv[0])) {
+        return JS_NewInt32(ctx, -1);
+    }
+    JSCStringBuf cbuf;
+    const char* path = JS_ToCString(ctx, argv[0], &cbuf);
+    int rc = backend_screenshot(path);
+    return JS_NewInt32(ctx, rc);
+}
+
 static int append_layer_child(Layer* parent, Layer* child) {
     if (!parent || !child) return -1;
 
@@ -920,6 +934,7 @@ static const JSPropDef js_yui[] = {
     JS_CFUNC_DEF("log", 1, js_yui_log ),
     JS_CFUNC_DEF("gc", 0, js_yui_gc),
     JS_CFUNC_DEF("checkHeap", 1, js_yui_check_heap),
+    JS_CFUNC_DEF("screenshot", 1, js_screenshot),
     JS_CFUNC_DEF("setText", 1, js_set_text ),
     JS_CFUNC_DEF("getText", 1, js_get_text ),
     JS_CFUNC_DEF("getProperty", 2, js_get_property ),
