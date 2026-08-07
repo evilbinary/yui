@@ -23,7 +23,7 @@
 static JSContext* g_js_ctx = NULL;
 static uint8_t* g_js_mem = NULL;
 #ifndef JS_MEM_POOL_SIZE
-#define JS_MEM_POOL_SIZE (64 * 1024)
+#define JS_MEM_POOL_SIZE (200 * 1024)
 #endif
 static size_t g_js_mem_size = JS_MEM_POOL_SIZE;
 
