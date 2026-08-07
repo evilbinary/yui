@@ -534,7 +534,13 @@ def run_qemu(env, graphics=False):
         str(BUILD_DIR / 'bootloader' / 'bootloader.elf'),
     ]
     try:
-        result = subprocess.run(monitor_cmd, env=env, cwd=str(ESP32_DIR))
+        mon_env = dict(env)
+        # idf_monitor requires stdin to be a TTY; when driven non-interactively
+        # (make spawns us without a pty), opt into the monitor's test mode so it
+        # still streams the guest log instead of aborting.
+        if not sys.stdin.isatty():
+            mon_env['ESP_IDF_MONITOR_TEST'] = '1'
+        result = subprocess.run(monitor_cmd, env=mon_env, cwd=str(ESP32_DIR))
     finally:
         qemu_proc.terminate()
         try:
