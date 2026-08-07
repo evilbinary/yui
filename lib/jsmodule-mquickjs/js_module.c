@@ -199,8 +199,9 @@ int js_module_load_file(const char* filename)
             free(buf);
             return -1;
         }
-        free(buf);
+        /* main_func 引用 buf 内的字节码数据，必须先 JS_Run 再释放 */
         val = JS_Run(g_js_ctx, val);
+        free(buf);
     } else {
         if (buf) free(buf);
         buf = load_file(filename, &len);
