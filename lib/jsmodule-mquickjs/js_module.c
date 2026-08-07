@@ -185,12 +185,27 @@ int js_module_load_file(const char* filename)
     if (buf && JS_IsBytecode(buf, (size_t)len)) {
         is_bc = 1;
         printf("JS: Loading bytecode %s (len=%d)\n", bc_path, len);
-        if (JS_RelocateBytecode(g_js_ctx, buf, (size_t)len)) {
-            fprintf(stderr, "JS: Could not relocate bytecode %s\n", bc_path);
-            free(buf);
-            return -1;
+        fflush(stdout);
+        {
+            /* 手动 relocate（update_atoms=FALSE）：JS_RelocateBytecode 走
+               update_atoms=TRUE 的 atom 去重路径，在 ROM 标准库表存在时会把
+               字符串内容误判为指针并加偏移 -> Load access fault。跳过 atom
+               更新只做指针搬移，避免崩溃。 */
+            JSBytecodeHeader* hdr = (JSBytecodeHeader*)buf;
+            uint8_t* data_ptr = buf + sizeof(JSBytecodeHeader);
+            if (JS_RelocateBytecode2(g_js_ctx, hdr, data_ptr,
+                                     (uint32_t)(len - sizeof(JSBytecodeHeader)),
+                                     (uintptr_t)data_ptr, 0)) {
+                fprintf(stderr, "JS: Could not relocate bytecode %s\n", bc_path);
+                free(buf);
+                return -1;
+            }
         }
+        printf("JS: after relocate\n");
+        fflush(stdout);
         val = JS_LoadBytecode(g_js_ctx, buf);
+        printf("JS: after loadbytecode\n");
+        fflush(stdout);
         if (JS_IsException(val)) {
             JSValue exc = JS_GetException(g_js_ctx);
             fprintf(stderr, "JS: Error loading bytecode %s:\n", bc_path);
@@ -199,9 +214,11 @@ int js_module_load_file(const char* filename)
             free(buf);
             return -1;
         }
-        /* main_func 引用 buf 内的字节码数据，必须先 JS_Run 再释放 */
+        /* main_func 与 hdr->unique_strings 都引用 buf 内的字节码数据，且
+           JS_LoadBytecode 把 unique_strings 表指针存进 ctx->rom_atom_tables，
+           必须在 JSContext 生命周期内保持 buf 有效（README: "buf must be
+           allocated as long as the JSContext exists"）。因此不 free。 */
         val = JS_Run(g_js_ctx, val);
-        free(buf);
     } else {
         if (buf) free(buf);
         buf = load_file(filename, &len);
@@ -287,6 +304,8 @@ int js_module_call_event(const char* event_name, Layer* layer)
 
     JSValue global_obj = JS_GetGlobalObject(g_js_ctx);
     JSValue func = JS_GetPropertyStr(g_js_ctx, global_obj, func_name_buf);
+    printf("JS: call_event '%s' getprop is_func=%d\n", func_name_buf,
+           JS_IsFunction(g_js_ctx, func));
 
     if (JS_IsUndefined(func) || !JS_IsFunction(g_js_ctx, func)) {
         printf("JS: call_event '%s' not on global, try map/eval\n", func_name_buf);

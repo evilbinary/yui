@@ -42,6 +42,44 @@ if is_host_plat():
 
     after_build(after_build_host)
 
+    # PC 端字节码编译工具：用 js_yuistdlib 表（含 YUI/Socket atom）把 JS 编译
+    # 成 mquickjs 字节码，保证编译期解析的全局标识符与 ESP32 运行时一致。
+    # 必须用 32 位工具链（JSW=4）直接产出 32 位字节码：64 位主机 + -m32 的
+    # JS_PrepareBytecode64to32 会因 64/32 位表的 atom 顺序不同而错位，运行时
+    # 找不到 YUI 等全局对象。yui_stdlib_32.h 是 32 位表，需 32 位 gcc 编译。
+    def configure_bcgen_mingw32(target=None):
+        import os
+        mingw32 = r"E:\soft\msys2\mingw32"
+        if not os.path.isfile(os.path.join(mingw32, 'bin', 'gcc.exe')):
+            print("WARN: mingw32 toolchain not found at " + mingw32)
+            return
+        tool = get_toolchain_node()
+        if tool is None:
+            print("WARN: toolchain node not found, skip mingw32 override")
+            return
+        tool['cc'] = os.path.join(mingw32, 'bin', 'gcc.exe')
+        tool['cxx'] = os.path.join(mingw32, 'bin', 'g++.exe')
+        tool['ld'] = os.path.join(mingw32, 'bin', 'gcc.exe')
+        tool['ar'] = os.path.join(mingw32, 'bin', 'ar.exe')
+        os.environ['PATH'] = os.path.join(mingw32, 'bin') + os.pathsep + os.environ.get('PATH', '')
+
+    target("bc-gen")
+    set_kind("binary")
+    set_toolchain('gcc')
+    add_flags()
+    # 自包含 32 位引擎：不依赖已编译的 64 位 PC 库（工具链切换会污染依赖），
+    # 直接编译引擎源 + bc_gen.c。JSW=4 产出 32 位字节码，atom 与 ESP32 的
+    # yui_stdlib_32.h 严格一致（YUI/Socket 运行时可见）。
+    add_files('bc_gen.c',
+              '../mquickjs/cutils.c',
+              '../mquickjs/dtoa.c',
+              '../mquickjs/libm.c',
+              '../mquickjs/mquickjs.c',
+              '../cjson/cJSON.c')
+    add_includedirs('.', '..', '../jsmodule', public=true)
+    add_cflags(' -Isrc/ -I../jsmodule -I../cjson -DCONFIG_CLASS_SOCKET -DCONFIG_CLASS_YUI -DSTDLIB_BUILD -DYUI_BACKEND_EMBEDDED -DNO_MAIN ')
+    before_build(configure_bcgen_mingw32)
+
 
 # ESP32/STM32：32 位表（mqjs_stdlib_32.h / yui_stdlib_32.h）由 JS_PTR64 条件选择
 target("jsmodule-mquickjs")

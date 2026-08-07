@@ -117,7 +117,11 @@ int js_module_set_event(const char* layer_id, const char* event_name, const char
     return -1;
 }
 
-// mquickjs 无 JS_ToBool，yui_stdlib.c 中 renderFromJson 需要
+// mquickjs 无 JS_ToBool / JS_FreeCString / JS_NewNumber / JS_FreeValue /
+// JS_IsObject。默认由本文件提供桩；若调用方已 include mqjs_shim.c
+// （如 bc_gen.c），则定义 YUI_STDLIB_USE_SHIM 跳过，避免重复定义。
+#ifndef YUI_STDLIB_USE_SHIM
+
 int JS_ToBool(JSContext* ctx, JSValue val) {
     if (JS_IsBool(val)) {
         return JS_VALUE_GET_SPECIAL_VALUE(val) != 0;
@@ -128,23 +132,27 @@ int JS_ToBool(JSContext* ctx, JSValue val) {
     return !JS_IsNull(val) && !JS_IsUndefined(val);
 }
 
-// mquickjs 无 JS_FreeCString（JSCStringBuf 为栈缓冲，无需释放）；提供空实现
 void JS_FreeCString(JSContext* ctx, JSCStringBuf* buf) {
     (void)ctx;
     (void)buf;
 }
 
-// mquickjs 用 JS_NewFloat64 表示 number，无 JS_NewNumber
 JSValue JS_NewNumber(JSContext* ctx, double d) {
     return JS_NewFloat64(ctx, d);
 }
 
-// mquickjs 无 JS_IsObject；生成工具不依赖运行结果，返回 0
+void JS_FreeValue(JSContext* ctx, JSValue v) {
+    (void)ctx;
+    (void)v;
+}
+
 int JS_IsObject(JSContext* ctx, JSValue v) {
     (void)ctx;
     (void)v;
     return 0;
 }
+
+#endif // YUI_STDLIB_USE_SHIM
 
 // 属性 JSON 读取存根（生成头文件工具不需要运行时功能）
 cJSON* layer_get_property_as_json(Layer* layer, const char* key) {

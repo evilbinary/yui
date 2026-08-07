@@ -179,7 +179,7 @@ typedef struct JSROMClass {
     JSValue parent_class; /* JSROMClass or JS_NULL */
 } JSROMClass;
 
-#define N_ROM_ATOM_TABLES_MAX 2
+#define N_ROM_ATOM_TABLES_MAX 16
 
 /* must be large enough to have a negligible runtime cost and small
    enough to call the interrupt callback often. */

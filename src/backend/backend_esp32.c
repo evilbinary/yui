@@ -134,6 +134,9 @@ DFont* backend_esp32_load_font_from_flash(const char* partition_label, int size)
         /* mapped 指向 Flash，embed_font_load_from_memory 不复制、不释放 */
         s_font_mapped = mapped;
         s_font_mapped_size = part->size;
+        printf("YUI: font mmap addr=0x%08x size=%u (flash_offset=0x%x)\n",
+               (unsigned)(uintptr_t)mapped, (unsigned)part->size,
+               (unsigned)part->address);
     }
     return embed_font_load_from_memory(s_font_mapped, s_font_mapped_size, size, "normal");
 #else

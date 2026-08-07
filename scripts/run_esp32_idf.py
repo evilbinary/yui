@@ -426,9 +426,11 @@ def make_spiffs(env):
     #    Runtime js_module_load_file prefers the .bc over the .js source.
     pre = WORKSPACE / 'scripts' / 'precompile_js.py'
     if pre.is_file():
-        mqjs = shutil.which('mqjs') or str(WORKSPACE / 'scripts' / 'mqjs32' / 'mqjs32.exe')
-        print(f"Pre-compiling JS to bytecode with mqjs: {mqjs}", flush=True)
-        rc = subprocess.run([sys.executable, str(pre), '--mqjs', mqjs, '--out', str(staging)],
+        bcgen = (shutil.which('bc-gen') or
+                 str(WORKSPACE / 'scripts' / 'mqjs32' / 'bc-gen.exe') or
+                 str(WORKSPACE / 'build' / 'pc' / 'None' / 'None' / 'bc-gen.exe'))
+        print(f"Pre-compiling JS to bytecode with bc-gen: {bcgen}", flush=True)
+        rc = subprocess.run([sys.executable, str(pre), '--bcgen', bcgen, '--out', str(staging)],
                             cwd=str(WORKSPACE))
         if rc.returncode != 0:
             print("WARN: bytecode precompile skipped/failed (falling back to source)", file=sys.stderr)
