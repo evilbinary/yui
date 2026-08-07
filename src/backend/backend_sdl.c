@@ -16,10 +16,12 @@
 #include <stdint.h>
 #include <string.h>
 
-/* Compatibility: bundled SDL_ttf (< 2.20) lacks TTF_GlyphIsProvided32(Uint32);
-   fall back to the 16-bit API. Supplementary-plane codepoints (>0xFFFF) cannot
-   be queried reliably with the old API and are treated as absent. */
-#ifndef TTF_GlyphIsProvided32
+/* TTF_GlyphIsProvided32 是函数而非宏（SDL_ttf.h 声明 extern），
+   不能用 #ifndef 探测，必须用版本宏判断。
+   SDL_ttf >= 2.0.18 提供 32 位 API；更旧版本只有 16 位 API，
+   且 supplementary-plane codepoints(>0xFFFF) 无法可靠查询（如 emoji），
+   按缺失处理。 */
+#if !defined(SDL_TTF_VERSION_ATLEAST) || !SDL_TTF_VERSION_ATLEAST(2, 0, 18)
 #define TTF_GlyphIsProvided32(font, cp) TTF_GlyphIsProvided((font), (Uint16)(cp))
 #endif
 
