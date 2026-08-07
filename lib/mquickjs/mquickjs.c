@@ -12985,6 +12985,26 @@ JSValue JS_LoadBytecode(JSContext *ctx, const uint8_t *buf)
     return hdr->main_func;
 }
 
+/* Like JS_LoadBytecode but for a bytecode image whose pointers have already
+   been relocated to absolute addresses (e.g. split into a RAM skeleton that
+   points into flash for read-only blocks). Skips the
+   'hdr->base_addr == hdr + 1' check and the magic/version validation so the
+   scratch buffer need not live at the data base. The caller must keep the
+   RAM skeleton alive for the context lifetime. */
+JSValue JS_LoadBytecode2(JSContext *ctx, JSBytecodeHeader *hdr)
+{
+    if (ctx->unique_strings_len != 0)
+        return JS_ThrowInternalError(ctx, "no atom must be defined in RAM");
+    if (ctx->n_rom_atom_tables >= N_ROM_ATOM_TABLES_MAX)
+        return JS_ThrowInternalError(ctx, "too many rom atom tables");
+    if (hdr->magic != JS_BYTECODE_MAGIC)
+        return JS_ThrowInternalError(ctx, "invalid bytecode magic");
+    if (hdr->version != JS_BYTECODE_VERSION)
+        return JS_ThrowInternalError(ctx, "invalid bytecode version");
+    ctx->rom_atom_tables[ctx->n_rom_atom_tables++] = (JSValueArray *)JS_VALUE_TO_PTR(hdr->unique_strings);
+    return hdr->main_func;
+}
+
 /**********************************************************************/
 /* runtime */
 

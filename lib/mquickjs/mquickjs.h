@@ -365,6 +365,11 @@ int JS_RelocateBytecode(JSContext *ctx,
    it. warning: the bytecode is not checked so it should come from a
    trusted source. */
 JSValue JS_LoadBytecode(JSContext *ctx, const uint8_t *buf);
+/* Like JS_LoadBytecode, but for an image whose pointers are already
+   relocated to absolute addresses (RAM skeleton + flash read-only region).
+   Skips the base_addr location check. The caller must keep the skeleton
+   alive for the context lifetime. */
+JSValue JS_LoadBytecode2(JSContext *ctx, JSBytecodeHeader *hdr);
 
 /* debug functions */
 void JS_SetLogFunc(JSContext *ctx, JSWriteFunc *write_func);

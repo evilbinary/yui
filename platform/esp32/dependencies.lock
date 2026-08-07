@@ -36,11 +36,11 @@ dependencies:
   idf:
     source:
       type: idf
-    version: 5.5.5
+    version: 6.0.2
 direct_dependencies:
 - espressif/esp_lcd_qemu_rgb
 - espressif/esp_lcd_touch
 - espressif/esp_lcd_touch_cst816s
 manifest_hash: 463bd2bef19837d1f9d43a074f25fa46db763810225a1999adf727ebce47e004
 target: esp32c3
-version: 2.0.0
+version: 3.0.0

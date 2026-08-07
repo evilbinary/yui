@@ -38,10 +38,20 @@ extern void backend_register_update_callback(void (*callback)(void));
 
 
 extern const JSSTDLibraryDef js_yuistdlib;
-  
 extern uint8_t* load_file(const char *filename, int *plen);
 extern int hex_to_int(char c);
 extern const char* js_module_get_root(void);
+
+/* 拆分字节码只读区（flash XIP）基址：esp32 用 esp_partition_mmap 映射
+   bcrom 分区；其它平台无此能力返回 NULL。 */
+#if defined(YUI_ESP_PLATFORM)
+extern const void* backend_esp32_bc_rom_base(size_t* psize);
+#else
+__attribute__((weak)) const void* backend_esp32_bc_rom_base(size_t* psize) {
+    if (psize) *psize = 0;
+    return NULL;
+}
+#endif
 
 
 // 初始化 JS 引擎
@@ -164,6 +174,79 @@ static void js_bc_path(const char* filename, char* out, size_t out_sz)
     }
 }
 
+/* build_bcrom.py 生成的新格式：28B 头 + ram 区 + 重定位表 */
+#define BCRAM_MAGIC 0x53435242u  /* "BCRS" */
+
+typedef struct {
+    uint32_t magic;
+    uint16_t version;
+    uint16_t flags;
+    uint32_t ram_len;      /* 字节数（含 16B JSBytecodeHeader 副本） */
+    uint32_t rom_off;      /* 本文件只读区在 bcrom 分区内的偏移 */
+    uint32_t rom_len;
+    uint32_t fixup_count;
+} BcRamHeader;
+
+/* 加载拆分格式字节码：只把指针承载块（func/value_array）拷进 RAM，只读区
+   （string/byte_array/float64）留在 flash XIP，按重定位表把指针指向 RAM
+   或 flash 基址。返回需长期持有的 RAM 骨架（context 生命周期内有效）。 */
+static uint8_t* js_load_bytecode_split(JSContext* ctx, const uint8_t* buf, int len)
+{
+    BcRamHeader hdr;
+    uint8_t* ram;
+    const uint8_t* ram_src;
+    const uint8_t* fix;
+    const void* rom_base;
+    size_t rom_part_size = 0;
+    uint32_t i;
+
+    if (len < (int)sizeof(hdr)) {
+        fprintf(stderr, "JS: split bytecode too short\n");
+        return NULL;
+    }
+    memcpy(&hdr, buf, sizeof(hdr));
+    if (hdr.magic != BCRAM_MAGIC || hdr.ram_len == 0 ||
+        (int)sizeof(hdr) + (int)hdr.ram_len + (int)hdr.fixup_count * 8 > len) {
+        fprintf(stderr, "JS: invalid split bytecode header\n");
+        return NULL;
+    }
+
+    rom_base = backend_esp32_bc_rom_base(&rom_part_size);
+    if (!rom_base) {
+        fprintf(stderr, "JS: bcrom partition not mapped (flash bytecode needs XIP)\n");
+        return NULL;
+    }
+    if ((size_t)hdr.rom_off + hdr.rom_len > rom_part_size) {
+        fprintf(stderr, "JS: bcrom range out of partition (%u+%u > %u)\n",
+                (unsigned)hdr.rom_off, (unsigned)hdr.rom_len, (unsigned)rom_part_size);
+        return NULL;
+    }
+
+    ram = (uint8_t*)malloc(hdr.ram_len);
+    if (!ram) {
+        fprintf(stderr, "JS: out of memory for bytecode skeleton\n");
+        return NULL;
+    }
+    ram_src = buf + sizeof(hdr);
+    memcpy(ram, ram_src, hdr.ram_len);
+
+    /* 应用重定位：每个条目 = (site, toff)，toff bit31=1 表示目标在 ROM 区 */
+    fix = ram_src + hdr.ram_len;
+    for (i = 0; i < hdr.fixup_count; i++) {
+        uint32_t site, toff;
+        uintptr_t addr;
+        memcpy(&site, fix + i * 8, 4);
+        memcpy(&toff, fix + i * 8 + 4, 4);
+        addr = (toff & 0x80000000u)
+                   ? ((uintptr_t)rom_base + hdr.rom_off + (toff & 0x7fffffffu))
+                   : ((uintptr_t)ram + (toff & 0x7fffffffu));
+        /* JSValue 指针编码：值 = 地址 + 1 */
+        *(uint32_t*)(ram + site) = (uint32_t)(addr + 1);
+    }
+
+    return ram;
+}
+
 // 加载并执行 JS 文件（优先同目录 xxx.bc 预编译字节码，回退源码 eval）
 int js_module_load_file(const char* filename)
 {
@@ -182,7 +265,35 @@ int js_module_load_file(const char* filename)
 
     js_bc_path(filename, bc_path, sizeof(bc_path));
     buf = read_file_binary(bc_path, &len);
-    if (buf && JS_IsBytecode(buf, (size_t)len)) {
+    if (buf && len >= (int)sizeof(BcRamHeader) &&
+        *(const uint32_t*)buf == BCRAM_MAGIC) {
+        /* 拆分格式：RAM 骨架 + flash 只读区。只需保留 RAM 骨架 */
+        is_bc = 1;
+        printf("JS: Loading split bytecode %s (len=%d)\n", bc_path, len);
+        fflush(stdout);
+        {
+            uint8_t* ram = js_load_bytecode_split(g_js_ctx, buf, len);
+            free(buf);
+            if (!ram) {
+                return -1;
+            }
+            {
+                JSBytecodeHeader* hdr = (JSBytecodeHeader*)ram;
+                val = JS_LoadBytecode2(g_js_ctx, hdr);
+                if (JS_IsException(val)) {
+                    JSValue exc = JS_GetException(g_js_ctx);
+                    fprintf(stderr, "JS: Error loading split bytecode %s:\n", bc_path);
+                    JS_PrintValueF(g_js_ctx, exc, JS_DUMP_LONG);
+                    printf("\n");
+                    return -1;
+                }
+                printf("JS: split bytecode ready\n");
+                fflush(stdout);
+                /* ram 骨架需在 context 生命周期内保持，不 free */
+                val = JS_Run(g_js_ctx, val);
+            }
+        }
+    } else if (buf && JS_IsBytecode(buf, (size_t)len)) {
         is_bc = 1;
         printf("JS: Loading bytecode %s (len=%d)\n", bc_path, len);
         fflush(stdout);

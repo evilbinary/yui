@@ -109,6 +109,10 @@ static esp_partition_mmap_handle_t s_font_mmap_handle;
 /* 缓存已映射的字体分区数据，避免每次 load 重新 mmap（重复 mmap 会累积句柄） */
 static const void* s_font_mapped = NULL;
 static size_t s_font_mapped_size = 0;
+
+static esp_partition_mmap_handle_t s_bcrom_mmap_handle;
+static const void* s_bcrom_mapped = NULL;
+static size_t s_bcrom_mapped_size = 0;
 #endif
 
 /* 从 SPI Flash 分区映射 TTF（不占 RAM），适合子集化小字体。
@@ -141,6 +145,40 @@ DFont* backend_esp32_load_font_from_flash(const char* partition_label, int size)
     return embed_font_load_from_memory(s_font_mapped, s_font_mapped_size, size, "normal");
 #else
     (void)partition_label; (void)size;
+    return NULL;
+#endif
+}
+
+/* bcrom: 预编译 JS 字节码只读区（XIP）。返回 mmap 到的 flash 基址（不占 RAM）
+ * 或 NULL。partition 在 partitions.csv 中定义，ROM 数据由 build_bcrom.py 生成。 */
+const void* backend_esp32_bc_rom_base(size_t* psize) {
+#ifdef ESP_PLATFORM
+    if (!s_bcrom_mapped) {
+        const esp_partition_t* part;
+        const void* mapped;
+        esp_err_t err;
+        part = esp_partition_find_first(ESP_PARTITION_TYPE_DATA,
+                                        ESP_PARTITION_SUBTYPE_ANY, "bcrom");
+        if (!part) {
+            ESP_LOGE(YUI_E32_TAG, "bcrom partition not found");
+            return NULL;
+        }
+        err = esp_partition_mmap(part, 0, part->size, ESP_PARTITION_MMAP_DATA,
+                                 &mapped, &s_bcrom_mmap_handle);
+        if (err != ESP_OK) {
+            ESP_LOGE(YUI_E32_TAG, "bcrom mmap failed: %s", esp_err_to_name(err));
+            return NULL;
+        }
+        s_bcrom_mapped = mapped;
+        s_bcrom_mapped_size = part->size;
+        printf("YUI: bcrom mmap addr=0x%08x size=%u (flash_offset=0x%x)\n",
+               (unsigned)(uintptr_t)mapped, (unsigned)part->size,
+               (unsigned)part->address);
+    }
+    if (psize) *psize = s_bcrom_mapped_size;
+    return s_bcrom_mapped;
+#else
+    if (psize) *psize = 0;
     return NULL;
 #endif
 }

@@ -153,6 +153,7 @@ esp32-flash: esp32-build esp32-font esp32-spiffs
 	ESP32_PORT=$(ESP32_PORT) $(ESP32_IDF_WRAPPER) flash
 	ESP32_PORT=$(ESP32_PORT) $(ESP32_IDF_WRAPPER) write-font
 	ESP32_PORT=$(ESP32_PORT) $(ESP32_IDF_WRAPPER) write-spiffs
+	ESP32_PORT=$(ESP32_PORT) $(ESP32_IDF_WRAPPER) write-bcrom
 
 esp32-monitor:
 	$(ESP32_IDF_WRAPPER) -p $(ESP32_PORT) monitor

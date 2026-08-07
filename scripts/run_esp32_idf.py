@@ -273,7 +273,6 @@ def base_env():
 
 def run_idf(env, *args):
     """Run idf.py after activating ESP-IDF export/activate script."""
-    # On Windows, prefer PowerShell + export.ps1 when available.
     # Rationale: even when invoked from MSYS/Git Bash (MSYSTEM set), spawning
     # `bash -c` may resolve to WSL2's bash.exe (whose Ubuntu vhdx is often
     # missing), causing "Bash/Service/CreateInstance/MountDisk/HCS/ERROR_FILE_NOT_FOUND".
@@ -313,6 +312,11 @@ def run_idf(env, *args):
         f'idf.py {idf_args}'
     )
     return subprocess.run(['bash', '-c', cmd], env=env).returncode
+
+
+def packing_any(root, pattern):
+    """Return True if any file under root matches the glob pattern."""
+    return any(root.rglob(pattern))
 
 
 def read_partition_table(env):
@@ -365,6 +369,16 @@ def merge_qemu_flash(env):
             print(f"Merge SPIFFS '{spiffs_img.name}' at offset 0x{spiffs_off:x}", flush=True)
         else:
             print("WARN: no 'spiffs' partition in partition table, skipping spiffs merge", file=sys.stderr)
+
+    # Add bcrom partition (bytecode read-only region, mmap'ed by the runtime)
+    bcrom_bin = BUILD_DIR / 'bcrom.bin'
+    if bcrom_bin.exists():
+        if 'bcrom' in parts:
+            bcrom_off, _ = parts['bcrom']
+            cmd += [f'0x{bcrom_off:x}', str(bcrom_bin)]
+            print(f"Merge bcrom '{bcrom_bin.name}' at offset 0x{bcrom_off:x}", flush=True)
+        else:
+            print("WARN: no 'bcrom' partition in partition table, skipping bcrom merge", file=sys.stderr)
 
     result = subprocess.run(cmd, env=env, cwd=str(ESP32_DIR))
     if result.returncode != 0:
@@ -445,6 +459,21 @@ def make_spiffs(env):
                                 cwd=str(WORKSPACE))
             if rc.returncode != 0:
                 print("WARN: bytecode precompile failed (falling back to source)", file=sys.stderr)
+
+            # 4. split bytecode into RAM skeleton + flash read-only region (bcrom.bin)
+            #    After this, staged .bc are the tiny BCRS format; ROM lives in bcrom.
+            split = WORKSPACE / 'scripts' / 'build_bcrom.py'
+            bcrom_out = BUILD_DIR / 'bcrom.bin'
+            has_bc = packing_any(staging, '*.bc')
+            if not has_bc:
+                print("INFO: no .bc staged; skipping build_bcrom (source JS used)", flush=True)
+            else:
+                rc = subprocess.run([sys.executable, str(split),
+                                     '--staging', str(staging), '--out', str(bcrom_out)],
+                                    cwd=str(WORKSPACE))
+                if rc.returncode != 0:
+                    print("WARN: build_bcrom failed; keeping whole-.bc staging (fallback)",
+                          file=sys.stderr)
         else:
             print("WARN: no usable bc-gen host tool on this platform; precompile skipped (source used)",
                   file=sys.stderr)
@@ -588,6 +617,30 @@ def run_write_spiffs(env):
     sys.exit(result.returncode)
 
 
+def run_write_bcrom(env):
+    """Flash the bytecode read-only region (bcrom.bin) into the 'bcrom' data
+    partition on real hardware (XIP source for precompiled JS)."""
+    port = resolve_default_port()
+    rom = BUILD_DIR / 'bcrom.bin'
+    if not rom.exists():
+        print("ERROR: bcrom.bin not found, run 'make esp32-spiffs' first", file=sys.stderr)
+        sys.exit(1)
+    parts = read_partition_table(env)
+    if 'bcrom' not in parts:
+        print("ERROR: no 'bcrom' partition in partition table", file=sys.stderr)
+        sys.exit(1)
+    off, size = parts['bcrom']
+    if rom.stat().st_size > size:
+        print(f"ERROR: bcrom.bin ({rom.stat().st_size}) > partition size ({size})",
+              file=sys.stderr)
+        sys.exit(1)
+    print(f"Flashing bcrom to {port} at offset 0x{off:x} ...", flush=True)
+    cmd = [IDF_PYTHON, '-m', 'esptool', '--chip', 'esp32c3', '-p', port,
+           'write_flash', f'0x{off:x}', str(rom)]
+    result = subprocess.run(cmd, env=env, cwd=str(ESP32_DIR))
+    sys.exit(result.returncode)
+
+
 def main():
     args = sys.argv[1:]
     print(f"ESP-IDF: {IDF_PATH}", flush=True)
@@ -639,6 +692,11 @@ def main():
     # Write SPIFFS image into the spiffs partition (real hardware)
     if len(args) >= 1 and args[0] == 'write-spiffs':
         run_write_spiffs(env)
+        return
+
+    # Write bytecode ROM region into the bcrom partition (real hardware)
+    if len(args) >= 1 and args[0] == 'write-bcrom':
+        run_write_bcrom(env)
         return
 
     # QEMU: always merge font + SPIFFS into qemu_flash.bin first.
