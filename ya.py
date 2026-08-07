@@ -683,7 +683,10 @@ def add_flags():
                 '-I'+os.path.join(mingw64, 'include', 'SDL2'),
                 '-I.',
                 '-I./src/components',
-                '-I./src/'
+                '-I./src/',
+                # mquickjs 池太小会让 launcher 渲染 70+ apps 时
+                # 报 "InternalError: out of memory"（默认仅 200KB）。
+                '-DJS_MEM_POOL_SIZE=512*1024'
                 )
             add_ldflags(
             '-L'+os.path.join(mingw64, 'lib'),

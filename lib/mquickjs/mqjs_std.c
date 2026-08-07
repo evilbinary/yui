@@ -224,17 +224,9 @@ static void run_timers(JSContext *ctx)
 void js_run_timers(JSContext *ctx)
 {
     int64_t cur_time = get_time_ms();
-    static int dbg = 0;
-    if (dbg < 3) {
-        int n = 0;
-        for (int k = 0; k < MAX_TIMERS; k++)
-            if (js_timer_list[k].allocated) n++;
-        printf("JS: run_timers dbg%d active=%d\n", dbg++, n);
-    }
     for (int i = 0; i < MAX_TIMERS; i++) {
         JSTimer *th = &js_timer_list[i];
         if (th->allocated && th->timeout - cur_time <= 0) {
-            printf("JS: run_timers firing slot%d\n", i);
             if (JS_StackCheck(ctx, 2))
                 goto fail;
             JS_PushArg(ctx, th->func.val);

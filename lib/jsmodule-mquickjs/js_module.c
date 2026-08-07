@@ -282,11 +282,9 @@ int js_module_call_event(const char* event_name, Layer* layer)
 
 
 // 检查并触发定时器（内部静态函数）
-static int g_pump_calls = 0;
 static void check_timers(void)
 {
     if (!g_js_ctx) return;
-    if (g_pump_calls++ < 3) printf("JS: pump_timers NODEBUG\n");
     js_run_timers(g_js_ctx);
 }
 
