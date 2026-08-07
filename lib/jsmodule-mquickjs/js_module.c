@@ -50,10 +50,7 @@ int js_module_init(void)
 
 #if defined(YUI_ESP_PLATFORM)
     extern size_t heap_caps_get_free_size(int caps);
-    extern size_t heap_caps_get_largest_free_block(int caps);
-    printf("JS: heap free=%u largest=%u\n",
-           (unsigned)heap_caps_get_free_size(4),
-           (unsigned)heap_caps_get_largest_free_block(4));
+    printf("JS: heap free=%u\n", (unsigned)heap_caps_get_free_size(4));
 #endif
 
     g_js_mem = malloc(g_js_mem_size);
@@ -62,11 +59,6 @@ int js_module_init(void)
         return -1;
     }
     printf("JS: JS_MEM_POOL_SIZE=%u bytes\n", (unsigned)g_js_mem_size);
-#if defined(YUI_ESP_PLATFORM)
-    printf("JS: heap free after pool=%u largest=%u\n",
-           (unsigned)heap_caps_get_free_size(4),
-           (unsigned)heap_caps_get_largest_free_block(4));
-#endif
 
     g_js_ctx = JS_NewContext(g_js_mem, g_js_mem_size, &js_yuistdlib);
     if (!g_js_ctx) {
@@ -292,4 +284,8 @@ static void check_timers(void)
 void js_module_pump_timers(void)
 {
     check_timers();
+}
+
+void* js_module_get_context(void) {
+    return g_js_ctx;
 }

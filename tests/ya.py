@@ -28,6 +28,31 @@ def add_yui_unit_test(name):
         add_run()
     )
 
+def add_js_unit_test(name):
+    if get_plat() in ("esp32", "stm32"):
+        return  # mquickjs 测试为宿主二进制，嵌入式平台跳过
+    target(name)
+    (
+        add_deps("yui", "cjson", "cmocka", "jsmodule-mquickjs"),
+        add_rules("mode.debug", "mode.release"),
+        set_kind("binary"),
+        add_flags(),
+        add_files("unit/" + name + ".c"),
+        add_includedirs(
+            ".",
+            "../src",
+            "../lib/cmocka/include",
+            "../lib/jsmodule",
+            "../lib/jsmodule-mquickjs",
+            "../lib/mquickjs",
+        ),
+        add_run()
+    )
+
 _unit_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "unit")
 for _path in sorted(glob.glob(os.path.join(_unit_dir, "test_*.c"))):
-    add_yui_unit_test(os.path.splitext(os.path.basename(_path))[0])
+    _name = os.path.splitext(os.path.basename(_path))[0]
+    if _name == "test_js_timer":
+        add_js_unit_test(_name)
+    else:
+        add_yui_unit_test(_name)

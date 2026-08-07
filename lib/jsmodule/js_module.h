@@ -113,6 +113,9 @@ int js_module_set_event(const char* layer_id, const char* event_name, const char
 // YUI.call 桥接函数
 void* js_module_get_context(void);
 
+// 驱动 setTimeout/clearTimeout：周期调用以执行到期定时器（mquickjs）
+void js_module_pump_timers(void);
+
 #ifdef __cplusplus
 }
 #endif
