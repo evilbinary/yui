@@ -1565,7 +1565,6 @@ int backend_init(){
         printf("Error: Failed to create window: %s\n", SDL_GetError());
         return -1;
     }
-
     SDL_SetWindowMinimumSize(window, 900, 720);
 
     if (window && backend_is_headless()) {
@@ -2532,6 +2531,11 @@ void backend_get_windowsize(int* width,int * height){
 }
 
 void backend_set_windowsize(int width,int  height){
+    /* 同步最小尺寸：否则 SDL_SetWindowMinimumSize(900,720) 会把小窗口
+     * (如 watch-os 240x240) 钳制回 900x720，导致窗口与 app.json size 不一致 */
+    if (window && width > 0 && height > 0) {
+        SDL_SetWindowMinimumSize(window, width, height);
+    }
     SDL_SetWindowSize(window, width, height);
     backend_apply_display_scale();
 }
