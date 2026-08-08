@@ -1253,9 +1253,45 @@ char* js_module_read_file(const char* file_path) {
         return NULL;
     }
 
-    fseek(f, 0, SEEK_END);
-    file_size = ftell(f);
-    fseek(f, 0, SEEK_SET);
+    /* 默认用原始 ftell 逻辑（SPIFFS 对多数文件有效）；ftell 失败(<=0)时
+       回退到 stat()/fread 循环。 */
+    file_size = -1;
+    if (fseek(f, 0, SEEK_END) == 0) {
+        file_size = ftell(f);
+        fseek(f, 0, SEEK_SET);
+    }
+    if (file_size <= 0) {
+        /* 回退：优先 stat() 拿精确大小；失败则 fread 循环读到 EOF */
+        struct stat st;
+        if (stat(open_path, &st) == 0 && st.st_size > 0) {
+            file_size = st.st_size;
+        } else {
+            size_t cap = 4096;
+            size_t size = 0;
+            size_t n;
+            buffer = malloc(cap + 1);
+            if (!buffer) {
+                fclose(f);
+                return NULL;
+            }
+            while ((n = fread(buffer + size, 1, cap - size, f)) > 0) {
+                size += n;
+                if (size == cap) {
+                    char *tmp = realloc(buffer, cap * 2 + 1);
+                    if (!tmp) {
+                        free(buffer);
+                        fclose(f);
+                        return NULL;
+                    }
+                    buffer = tmp;
+                    cap *= 2;
+                }
+            }
+            buffer[size] = '\0';
+            fclose(f);
+            return buffer;
+        }
+    }
     if (file_size < 0) {
         fclose(f);
         return NULL;
