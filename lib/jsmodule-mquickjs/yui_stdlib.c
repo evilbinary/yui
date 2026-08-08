@@ -1664,14 +1664,6 @@ void js_module_register_yui_api(JSContext* ctx) {
                              (int)(sizeof(perf_methods) / sizeof(perf_methods[0])));
         yui_build_nested_api(ctx, yui_obj, "inspect", inspect_methods,
                              (int)(sizeof(inspect_methods) / sizeof(inspect_methods[0])));
-        {
-            JSValue p = JS_GetPropertyStr(ctx, yui_obj, "perf");
-            JSValue f = JS_IsUndefined(p) || JS_IsNull(p)
-                            ? JS_UNDEFINED
-                            : JS_GetPropertyStr(ctx, p, "enable");
-            printf("JS(YUI): nested perf.enable is_func=%d\n",
-                   (int)(JS_IsFunction(ctx, f) ? 1 : 0));
-        }
     }
     
     printf("JS(YUI): YUI API registration completed\n");
