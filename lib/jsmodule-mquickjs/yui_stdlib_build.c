@@ -5,6 +5,8 @@
 #include "js_socket.c"
 /* include game API */
 #include "js_game.c"
+#include "js_timer.c"
+#include "js_perf.c"
 
 #include "mqjs_stdlib.c"
 

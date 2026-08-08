@@ -5,6 +5,8 @@
 // #ifdef CONFIG_CLASS_YUI
 #include "js_socket.c"
 #include "js_game.c"
+#include "js_timer.c"
+#include "js_perf.c"
 #include "yui_stdlib.c"
 /* 32-bit targets (JS_PTR64 undefined, e.g. esp32/stm32) use the
    32-bit ROM table (yui_stdlib_32.h) since RV32 GCC cannot build the

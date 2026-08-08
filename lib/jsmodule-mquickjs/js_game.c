@@ -306,12 +306,6 @@ static JSValue js_game_input_mouse_pressed(JSContext* ctx, JSValue* this_val, in
     return JS_NewBool(game_input_mouse_pressed(button));
 }
 
-static JSValue js_game_get_dt(JSContext* ctx, JSValue* this_val, int argc, JSValue* argv)
-{
-    (void)this_val; (void)argc; (void)argv;
-    return JS_NewFloat64(ctx, game_time_dt());
-}
-
 static JSValue js_game_camera_follow(JSContext* ctx, JSValue* this_val, int argc, JSValue* argv)
 {
     const char* id;
@@ -545,23 +539,6 @@ static JSValue js_game_debug_boxes_enabled(JSContext* ctx, JSValue* this_val, in
     return JS_NewBool(game_debug_boxes_enabled());
 }
 
-static JSValue js_game_perf_get_stats(JSContext* ctx, JSValue* this_val, int argc, JSValue* argv)
-{
-    const GamePerfStats* st = game_perf_get_stats();
-    JSValue obj = JS_NewObject(ctx);
-    (void)this_val; (void)argc; (void)argv;
-    if (!st) {
-        return obj;
-    }
-    JS_SetPropertyStr(ctx, obj, "entities", JS_NewInt32(ctx, st->entities));
-    JS_SetPropertyStr(ctx, obj, "draws", JS_NewInt32(ctx, st->draws));
-    JS_SetPropertyStr(ctx, obj, "particles", JS_NewInt32(ctx, st->particles));
-    JS_SetPropertyStr(ctx, obj, "fps", JS_NewFloat64(ctx, st->fps));
-    JS_SetPropertyStr(ctx, obj, "updateMs", JS_NewFloat64(ctx, st->update_ms));
-    JS_SetPropertyStr(ctx, obj, "renderMs", JS_NewFloat64(ctx, st->render_ms));
-    return obj;
-}
-
 /* ====================== Game 相关的 JS 函数表 ====================== */
 
 static const JSPropDef js_game_input[] = {
@@ -576,15 +553,6 @@ static const JSPropDef js_game_input[] = {
 
 static const JSClassDef js_game_input_obj =
     JS_OBJECT_DEF("GameInput", js_game_input);
-
-static const JSPropDef js_game_time[] = {
-    JS_CFUNC_DEF("dt", 0, js_game_get_dt),
-    JS_CFUNC_DEF("getDt", 0, js_game_get_dt),
-    JS_PROP_END,
-};
-
-static const JSClassDef js_game_time_obj =
-    JS_OBJECT_DEF("GameTime", js_game_time);
 
 static const JSPropDef js_game_camera[] = {
     JS_CFUNC_DEF("follow", 1, js_game_camera_follow),
@@ -615,14 +583,6 @@ static const JSPropDef js_game_pool[] = {
 static const JSClassDef js_game_pool_obj =
     JS_OBJECT_DEF("GamePool", js_game_pool);
 
-static const JSPropDef js_game_perf[] = {
-    JS_CFUNC_DEF("getStats", 0, js_game_perf_get_stats),
-    JS_PROP_END,
-};
-
-static const JSClassDef js_game_perf_obj =
-    JS_OBJECT_DEF("GamePerf", js_game_perf);
-
 static const JSPropDef js_game_debug[] = {
     JS_CFUNC_DEF("setBoxes", 1, js_game_debug_set_boxes),
     JS_CFUNC_DEF("boxes", 0, js_game_debug_boxes_enabled),
@@ -644,11 +604,9 @@ static const JSPropDef js_game[] = {
     JS_CFUNC_DEF("playAnim", 2, js_game_play_anim),
     JS_CFUNC_DEF("spawnParticles", 1, js_game_spawn_particles),
     JS_PROP_CLASS_DEF("input", &js_game_input_obj),
-    JS_PROP_CLASS_DEF("time", &js_game_time_obj),
     JS_PROP_CLASS_DEF("camera", &js_game_camera_obj),
     JS_PROP_CLASS_DEF("audio", &js_game_audio_obj),
     JS_PROP_CLASS_DEF("pool", &js_game_pool_obj),
-    JS_PROP_CLASS_DEF("perf", &js_game_perf_obj),
     JS_PROP_CLASS_DEF("debug", &js_game_debug_obj),
     JS_PROP_END,
 };
