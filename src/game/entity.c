@@ -7,8 +7,22 @@
 #include <stdlib.h>
 #include <string.h>
 
-static GameEntity g_entities[GAME_MAX_ENTITIES];
+static GameEntity *g_entities[GAME_MAX_ENTITIES]; /* NULL = free slot */
 static int g_entity_count; /* high-water for iteration */
+
+static int entity_slot_of(const GameEntity *e)
+{
+    int i;
+    if (!e) {
+        return -1;
+    }
+    for (i = 0; i < GAME_MAX_ENTITIES; i++) {
+        if (g_entities[i] == e) {
+            return i;
+        }
+    }
+    return -1;
+}
 
 void game_entity_pool_init(void)
 {
@@ -20,12 +34,23 @@ void game_entity_pool_clear(void)
 {
     int i;
     for (i = 0; i < GAME_MAX_ENTITIES; i++) {
-        if (g_entities[i].alive && g_entities[i].texture) {
-            g_entities[i].texture = NULL;
+        if (g_entities[i]) {
+            if (g_entities[i]->alive && g_entities[i]->texture) {
+                g_entities[i]->texture = NULL;
+            }
+            free(g_entities[i]);
+            g_entities[i] = NULL;
         }
-        g_entities[i].alive = 0;
-        g_entities[i].pooled = 0;
-        g_entities[i].prefab[0] = '\0';
+    }
+    g_entity_count = 0;
+}
+
+void game_entity_pool_free(void)
+{
+    int i;
+    for (i = 0; i < GAME_MAX_ENTITIES; i++) {
+        free(g_entities[i]);
+        g_entities[i] = NULL;
     }
     g_entity_count = 0;
 }
@@ -34,31 +59,37 @@ GameEntity* game_entity_alloc(void)
 {
     int i;
     for (i = 0; i < GAME_MAX_ENTITIES; i++) {
-        if (!g_entities[i].alive && !g_entities[i].pooled) {
-            memset(&g_entities[i], 0, sizeof(GameEntity));
-            g_entities[i].alive = 1;
+        if (!g_entities[i] || (!g_entities[i]->alive && !g_entities[i]->pooled)) {
+            if (!g_entities[i]) {
+                g_entities[i] = calloc(1, sizeof(GameEntity));
+                if (!g_entities[i]) {
+                    return NULL;
+                }
+            }
+            memset(g_entities[i], 0, sizeof(GameEntity));
+            g_entities[i]->alive = 1;
             /* skip trace on fresh alloc defaults */
-            g_entities[i].w = 16;
-            g_entities[i].h = 16;
-            g_entities[i].color = (Color){200, 200, 200, 255};
+            g_entities[i]->w = 16;
+            g_entities[i]->h = 16;
+            g_entities[i]->color = (Color){200, 200, 200, 255};
             if (i + 1 > g_entity_count) {
                 g_entity_count = i + 1;
             }
-            return &g_entities[i];
+            return g_entities[i];
         }
     }
     /* Also reclaim pooled slots if needed */
     for (i = 0; i < GAME_MAX_ENTITIES; i++) {
-        if (!g_entities[i].alive) {
-            memset(&g_entities[i], 0, sizeof(GameEntity));
-            g_entities[i].alive = 1;
-            g_entities[i].w = 16;
-            g_entities[i].h = 16;
-            g_entities[i].color = (Color){200, 200, 200, 255};
+        if (g_entities[i] && !g_entities[i]->alive) {
+            memset(g_entities[i], 0, sizeof(GameEntity));
+            g_entities[i]->alive = 1;
+            g_entities[i]->w = 16;
+            g_entities[i]->h = 16;
+            g_entities[i]->color = (Color){200, 200, 200, 255};
             if (i + 1 > g_entity_count) {
                 g_entity_count = i + 1;
             }
-            return &g_entities[i];
+            return g_entities[i];
         }
     }
     return NULL;
@@ -66,14 +97,16 @@ GameEntity* game_entity_alloc(void)
 
 void game_entity_free(GameEntity* e)
 {
+    int slot;
     if (!e) {
         return;
     }
-    e->alive = 0;
-    e->pooled = 0;
-    e->texture = NULL;
-    e->id[0] = '\0';
-    e->prefab[0] = '\0';
+    slot = entity_slot_of(e);
+    if (slot < 0) {
+        return;
+    }
+    free(g_entities[slot]);
+    g_entities[slot] = NULL;
 }
 
 GameEntity* game_spawn(const char* id)
@@ -109,8 +142,9 @@ GameEntity* game_find(const char* id)
         return NULL;
     }
     for (i = 0; i < g_entity_count; i++) {
-        if (g_entities[i].alive && strcmp(g_entities[i].id, id) == 0) {
-            return &g_entities[i];
+        if (g_entities[i] && g_entities[i]->alive &&
+            strcmp(g_entities[i]->id, id) == 0) {
+            return g_entities[i];
         }
     }
     return NULL;
@@ -123,8 +157,9 @@ GameEntity* game_find_by_tag(const char* tag)
         return NULL;
     }
     for (i = 0; i < g_entity_count; i++) {
-        if (g_entities[i].alive && strcmp(g_entities[i].tag, tag) == 0) {
-            return &g_entities[i];
+        if (g_entities[i] && g_entities[i]->alive &&
+            strcmp(g_entities[i]->tag, tag) == 0) {
+            return g_entities[i];
         }
     }
     return NULL;
@@ -138,14 +173,15 @@ int game_find_all_by_tag(const char* tag, GameEntity** out, int max_out)
         return 0;
     }
     for (i = 0; i < g_entity_count && n < max_out; i++) {
-        if (g_entities[i].alive && strcmp(g_entities[i].tag, tag) == 0) {
-            out[n++] = &g_entities[i];
+        if (g_entities[i] && g_entities[i]->alive &&
+            strcmp(g_entities[i]->tag, tag) == 0) {
+            out[n++] = g_entities[i];
         }
     }
     return n;
 }
 
-GameEntity* game_entities(int* out_count)
+GameEntity** game_entities(int* out_count)
 {
     if (out_count) {
         *out_count = g_entity_count;
@@ -161,9 +197,9 @@ GameEntity* game_pool_acquire(const char* prefab)
         return game_spawn(NULL);
     }
     for (i = 0; i < g_entity_count; i++) {
-        if (!g_entities[i].alive && g_entities[i].pooled &&
-            strcmp(g_entities[i].prefab, prefab) == 0) {
-            e = &g_entities[i];
+        if (g_entities[i] && !g_entities[i]->alive && g_entities[i]->pooled &&
+            strcmp(g_entities[i]->prefab, prefab) == 0) {
+            e = g_entities[i];
             e->alive = 1;
             e->pooled = 0;
             e->vx = 0;

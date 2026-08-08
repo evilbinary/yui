@@ -18,12 +18,17 @@ typedef struct GameParticle {
     Color color;
 } GameParticle;
 
-static GameParticle g_parts[GAME_MAX_PARTICLES];
+static GameParticle *g_parts = NULL; /* heap allocated, contiguous array */
 static int g_part_draws;
 
 void game_particles_clear(void)
 {
-    memset(g_parts, 0, sizeof(g_parts));
+    if (!g_parts) {
+        g_parts = calloc(GAME_MAX_PARTICLES, sizeof(GameParticle));
+    }
+    if (g_parts) {
+        memset(g_parts, 0, sizeof(GameParticle) * GAME_MAX_PARTICLES);
+    }
     g_part_draws = 0;
 }
 
@@ -32,6 +37,9 @@ int game_spawn_particles(float x, float y, int count, Color color, float speed, 
     int spawned = 0;
     int i;
     int slot;
+    if (!g_parts) {
+        return 0;
+    }
     if (count < 1) {
         count = 1;
     }
@@ -69,6 +77,9 @@ int game_spawn_particles(float x, float y, int count, Color color, float speed, 
 void game_particles_update(float dt)
 {
     int i;
+    if (!g_parts) {
+        return;
+    }
     for (i = 0; i < GAME_MAX_PARTICLES; i++) {
         if (!g_parts[i].alive) {
             continue;
@@ -92,6 +103,9 @@ void game_particles_render(void)
     Color c;
     float a;
     g_part_draws = 0;
+    if (!g_parts) {
+        return;
+    }
     for (i = 0; i < GAME_MAX_PARTICLES; i++) {
         if (!g_parts[i].alive) {
             continue;

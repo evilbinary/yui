@@ -3,10 +3,8 @@
 /* include the full standard library too */
 /* include socket definitions */
 #include "js_socket.c"
-#ifdef YUI_WITH_GAME
 /* include game API */
 #include "js_game.c"
-#endif
 
 #include "js_timer.c"
 #include "js_perf.c"

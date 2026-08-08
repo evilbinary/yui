@@ -116,7 +116,7 @@ void game_update(float dt_override)
     float dt;
     int n = 0;
     int i;
-    GameEntity* all;
+    GameEntity** all;
     if (!g_inited || !g_enabled || g_paused) {
         return;
     }
@@ -128,8 +128,8 @@ void game_update(float dt_override)
     {
         int scene_gen = game_scene_generation();
         for (i = 0; i < n; i++) {
-            GameEntity* e = &all[i];
-            if (!e->alive) {
+            GameEntity* e = all[i];
+            if (!e || !e->alive) {
                 continue;
             }
             if (g_script_update && e->script[0]) {
@@ -160,7 +160,7 @@ void game_render(void)
     int n = 0;
     int i;
     int count = 0;
-    GameEntity* all;
+    GameEntity** all;
     GameEntity* sorted[GAME_MAX_ENTITIES];
     if (!g_inited || !g_enabled) {
         return;
@@ -170,8 +170,8 @@ void game_render(void)
     game_tilemap_render();
     all = game_entities(&n);
     for (i = 0; i < n; i++) {
-        if (all[i].alive) {
-            sorted[count++] = &all[i];
+        if (all[i] && all[i]->alive) {
+            sorted[count++] = all[i];
         }
     }
     if (count > 1) {

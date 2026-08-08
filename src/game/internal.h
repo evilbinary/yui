@@ -13,6 +13,7 @@ int game_input_mouse_pressed(int button);
 
 void game_entity_pool_init(void);
 void game_entity_pool_clear(void);
+void game_entity_pool_free(void);
 GameEntity* game_entity_alloc(void);
 void game_entity_free(GameEntity* e);
 

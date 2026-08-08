@@ -18,7 +18,7 @@ if is_host_plat():
               )
 
     add_includedirs('.', '..', '../jsmodule', public=true)
-    add_cflags(' -Isrc/ -I../jsmodule -DCONFIG_CLASS_SOCKET -DCONFIG_CLASS_YUI -DSTDLIB_BUILD -DYUI_BACKEND_EMBEDDED ')
+    add_cflags(' -Isrc/ -I../jsmodule -DCONFIG_CLASS_SOCKET -DCONFIG_CLASS_YUI -DSTDLIB_BUILD -DYUI_BACKEND_EMBEDDED -DYUI_WITH_GAME=1 ')
     def after_build_host(target):
         # target.on_run(target)
         import subprocess

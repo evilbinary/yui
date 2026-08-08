@@ -69,12 +69,12 @@ static void game_debug_dump_entities(void)
 {
     int n = 0;
     int i;
-    GameEntity* all = game_entities(&n);
+    GameEntity** all = game_entities(&n);
     printf("[game-debug] ---- entities (%d) ----\n", n);
     for (i = 0; i < n; i++) {
-        GameEntity* e = &all[i];
+        GameEntity* e = all[i];
         float cx, cy, cw, ch;
-        if (!e->alive) {
+        if (!e || !e->alive) {
             continue;
         }
         game_entity_world_aabb(e, &cx, &cy, &cw, &ch);
@@ -116,13 +116,13 @@ void game_debug_render(void)
 {
     int n = 0;
     int i;
-    GameEntity* all;
+    GameEntity** all;
     if (!g_debug_boxes) {
         return;
     }
     all = game_entities(&n);
     for (i = 0; i < n; i++) {
-        GameEntity* e = &all[i];
+        GameEntity* e = all[i];
         float sx, sy;
         float hx, hy, hw, hh;
         Rect sprite_r;
@@ -130,7 +130,7 @@ void game_debug_render(void)
         Color sprite_c = {0, 200, 255, 255};
         Color hit_c;
         char label[128];
-        if (!e->alive) {
+        if (!e || !e->alive) {
             continue;
         }
 

@@ -4,10 +4,7 @@
 
 // #ifdef CONFIG_CLASS_YUI
 #include "js_socket.c"
-#ifdef YUI_WITH_GAME
-
 #include "js_game.c"
-#endif
 #include "js_timer.c"
 #include "js_perf.c"
 

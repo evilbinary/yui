@@ -116,7 +116,7 @@ void game_destroy_by_id(const char* id);
 GameEntity* game_find(const char* id);
 GameEntity* game_find_by_tag(const char* tag);
 int game_find_all_by_tag(const char* tag, GameEntity** out, int max_out);
-GameEntity* game_entities(int* out_count);
+GameEntity** game_entities(int* out_count);
 
 /* Object pool: acquire by prefab tag, release back */
 GameEntity* game_pool_acquire(const char* prefab);

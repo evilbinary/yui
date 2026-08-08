@@ -31,11 +31,11 @@ void game_perf_end_render(int entity_draws)
     uint64_t dt = perf_now_ns() - g_ren_t0;
     int n = 0;
     int i;
-    GameEntity* all = game_entities(&n);
+    GameEntity** all = game_entities(&n);
     int alive = 0;
     const PerfFrameStats* fs = perf_get_frame_stats();
     for (i = 0; i < n; i++) {
-        if (all[i].alive) {
+        if (all[i] && all[i]->alive) {
             alive++;
         }
     }

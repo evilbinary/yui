@@ -96,7 +96,7 @@ static int game_entity_vs_solid(GameEntity* e, GameEntity* solid, float* out_nx,
 void game_move_and_collide(GameEntity* e, float dt)
 {
     int n = 0;
-    GameEntity* all;
+    GameEntity** all;
     int i;
     float nx;
     float ny;
@@ -109,10 +109,10 @@ void game_move_and_collide(GameEntity* e, float dt)
 
     all = game_entities(&n);
     for (i = 0; i < n; i++) {
-        if (!all[i].alive || &all[i] == e || !all[i].solid) {
+        if (!all[i] || !all[i]->alive || all[i] == e || !all[i]->solid) {
             continue;
         }
-        if (game_entity_vs_solid(e, &all[i], &nx, &ny)) {
+        if (game_entity_vs_solid(e, all[i], &nx, &ny)) {
             /* Triggers (bullets): die on solid hit — do not MTV-slide along walls. */
             if (e->trigger) {
                 e->vx = 0;
@@ -162,26 +162,26 @@ void game_trigger_update(void)
     int cur_count = 0;
     int n = 0;
     int i, j;
-    GameEntity* all = game_entities(&n);
+    GameEntity** all = game_entities(&n);
 
     for (i = 0; i < n; i++) {
-        if (!all[i].alive || !all[i].trigger) {
+        if (!all[i] || !all[i]->alive || !all[i]->trigger) {
             continue;
         }
         for (j = 0; j < n; j++) {
-            if (i == j || !all[j].alive) {
+            if (i == j || !all[j] || !all[j]->alive) {
                 continue;
             }
             /* Only emit once per unordered pair; prefer trigger entity as a */
-            if (j < i && all[j].trigger) {
+            if (j < i && all[j]->trigger) {
                 continue;
             }
-            if (!game_entities_overlap(&all[i], &all[j])) {
+            if (!game_entities_overlap(all[i], all[j])) {
                 continue;
             }
             if (cur_count < GAME_MAX_TRIGGER_PAIRS) {
-                cur[cur_count].a = &all[i];
-                cur[cur_count].b = &all[j];
+                cur[cur_count].a = all[i];
+                cur[cur_count].b = all[j];
                 cur[cur_count].active = 1;
                 cur_count++;
             }
