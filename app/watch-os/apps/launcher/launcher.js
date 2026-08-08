@@ -11,6 +11,11 @@ var BUBBLE_CY = BUBBLE_VP_H / 2;
 var BUBBLE_SPHERE_R = 160;
 var BUBBLE_EDGE = 36;
 var BUBBLE_CLIP_PAD = 8;
+/* 懒加载迟滞（按投影 scale）：投影会把远处气泡钳制进视口（scale≈0.28~0.4
+   的小点），无法用 clip 区分。改用 scale 判据：只建近处大气泡
+   （scale > CREATE），远处小点销毁（scale < DESTROY），中间保持现状。 */
+var BUBBLE_CREATE_SCALE = 0.55;
+var BUBBLE_DESTROY_SCALE = 0.42;
 var BUBBLE_ZOOM_MIN = 0.55;
 var BUBBLE_ZOOM_MAX = 1.45;
 var BUBBLE_SCROLL_RANGE = 220;
@@ -24,7 +29,7 @@ var LAUNCHER_COLS = 4;
 var LAUNCHER_BTN = 58;
 var LAUNCHER_SPACING = 10;
 
-var MOCK_LAUNCHER_COUNT = 8;
+var MOCK_LAUNCHER_COUNT = 48;
 var MOCK_LAUNCHER_ICONS = [
     "🎵", "📷", "📚", "🎮", "✈️", "🏠", "💡", "🔑",
     "🎁", "🧩", "🎯", "🚀", "🌙", "⭐", "🔥", "💎",
@@ -50,6 +55,7 @@ var bubbleReleaseTimer = null;
 var bubbleDragging = false;
 var bubbleLayoutPending = false;
 var bubbleLayoutDrag = false;
+var bubbleCreated = {};
 
 function bubbleRequestLayout(opts) {
     var dragging = opts && opts.dragging;
@@ -114,7 +120,6 @@ function setLauncherMode(mode) {
     if (isBubble) {
         layoutBubbleIcons();
     }
-    applyWatchTheme();
 }
 
 function rebuildLauncher(mode) {
@@ -324,26 +329,52 @@ function bubbleApplyRubberPan() {
 }
 
 function buildLauncherBubble(apps) {
-    var i, app, layerId;
+    var i;
 
     YUI.update({ target: "launcher_bubble", change: { children: null } });
 
-    for (i = 0; i < apps.length; i++) {
-        app = apps[i];
-        layerId = "launcher_app_" + app.id;
-        YUI.renderFromJson("launcher_bubble", JSON.stringify({
-            id: layerId,
-            type: "Button",
-            variant: "dock-flat",
-            text: app.icon,
-            size: [BUBBLE_D, BUBBLE_D],
-            position: [0, 0],
-            events: { onClick: "@onLauncherAppClick" }
-        }), true);
-        YUI.show(layerId);
-    }
+    /* 懒加载：不预建全部气泡，只记录状态，由 layoutBubbleIcons 按视口
+       动态创建/销毁（初始只建视口内可见的，随平移到来的再补建）。 */
+    bubbleCreated = {};
+    bubbleLastLayout = {};
+    bubbleDispSize = {};
 
     layoutBubbleIcons();
+}
+
+/* 为单个 app 懒创建气泡图层（若已创建则跳过） */
+function bubbleEnsureLayer(app) {
+    var layerId;
+    if (bubbleCreated[app.id]) {
+        return;
+    }
+    layerId = "launcher_app_" + app.id;
+    YUI.renderFromJson("launcher_bubble", JSON.stringify({
+        id: layerId,
+        type: "Button",
+        variant: "dock-flat",
+        text: app.icon,
+        size: [BUBBLE_D, BUBBLE_D],
+        position: [0, 0],
+        events: { onClick: "@onLauncherAppClick" }
+    }), true);
+    bubbleCreated[app.id] = true;
+    YUI.show(layerId);
+}
+
+/* 气泡离开视口足够远时销毁其图层并释放内存 */
+function bubbleRecycleLayer(app) {
+    var layerId, change;
+    if (!bubbleCreated[app.id]) {
+        return;
+    }
+    layerId = "launcher_app_" + app.id;
+    change = {};
+    change["children." + layerId] = null;
+    YUI.update({ target: "launcher_bubble", change: change });
+    delete bubbleCreated[app.id];
+    delete bubbleLastLayout[app.id];
+    delete bubbleDispSize[app.id];
 }
 
 function buildLauncherGrid(apps) {
@@ -416,6 +447,19 @@ function layoutBubbleIcons(opts) {
             size = 1;
         }
         vis = bubbleInClip(sx, sy, size) ? 1 : 0;
+
+        /* 懒加载：按投影 scale 判据，只确保近处（大）气泡已创建；远处小点
+           销毁释放内存；之间保持现状（迟滞防抖）。 */
+        if (proj.scale > BUBBLE_CREATE_SCALE) {
+            bubbleEnsureLayer(app);
+        } else if (bubbleCreated[app.id] &&
+                   proj.scale < BUBBLE_DESTROY_SCALE) {
+            bubbleRecycleLayer(app);
+        }
+        if (!bubbleCreated[app.id]) {
+            /* 尚未创建（或刚被回收）：没有图层可更新 */
+            continue;
+        }
 
         prev = bubbleLastLayout[app.id];
         if (prev &&
