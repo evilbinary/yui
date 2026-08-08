@@ -242,6 +242,7 @@ static void layer_init_strings(Layer* layer) {
   layer->label = NULL;
   layer->text = NULL;
   layer->text_size = 0;
+  layer->source = NULL;
 }
 
 static void layer_set_string(char** target, const char* value) {
@@ -316,6 +317,10 @@ static void layer_free_strings(Layer* layer) {
   if (layer->text) {
     free(layer->text);
     layer->text = NULL;
+  }
+  if (layer->source) {
+    free(layer->source);
+    layer->source = NULL;
   }
 }
 
@@ -838,7 +843,10 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
   // 解析资源路径
   cJSON* source = cJSON_GetObjectItem(json_obj, "source");
   if (source) {
-    strcpy(layer->source, source->valuestring);
+    if (layer->source) {
+      free(layer->source);
+    }
+    layer->source = strdup(source->valuestring);
     if (layer->type != IMAGE) {
       cJSON* sub = parse_json(source->valuestring);
       if (sub != NULL) {

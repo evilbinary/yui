@@ -611,7 +611,7 @@ typedef struct Layer {
     Color bg_color;
     int radius; // 圆角半径
     int padding[4]; // style.padding: top, right, bottom, left
-    char source[YUI_MAX_PATH];
+    char* source; /* 资源路径（IMAGE 等使用；按需分配，destroy 时释放） */
     Texture* texture;
     Layer** children;
     int child_count;

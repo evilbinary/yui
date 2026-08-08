@@ -66,8 +66,10 @@ void image_component_set_source(ImageComponent* component, const char* source) {
     component->source[YUI_MAX_PATH - 1] = '\0';
     
     // 更新layer的source属性
-    strncpy(component->layer->source, source, YUI_MAX_PATH - 1);
-    component->layer->source[YUI_MAX_PATH - 1] = '\0';
+    if (component->layer->source) {
+        free(component->layer->source);
+    }
+    component->layer->source = strdup(source);
     
     // 释放旧的纹理
     if (component->layer->texture) {
@@ -128,7 +130,7 @@ void image_component_render(Layer* layer) {
     
     ImageComponent* component = (ImageComponent*)layer->component;
     // 图片类型渲染：从文件路径加载并渲染图片（支持多种格式）
-    if (strlen(layer->source) > 0 && !layer->texture) {
+    if (layer->source && strlen(layer->source) > 0 && !layer->texture) {
         // 修改为使用image支持多种格式
         load_textures(layer);
     }

@@ -447,7 +447,7 @@ static void* lvgl_img_create(Layer* layer, cJSON* json)
     }
 
     component->obj = lv_img_create(lv_port_get_root());
-    source = layer->source[0] ? layer->source : lvgl_json_string(json, "source", "");
+    source = (layer->source && layer->source[0]) ? layer->source : lvgl_json_string(json, "source", "");
     if (source[0]) {
         lv_img_set_src(component->obj, source);
     } else {

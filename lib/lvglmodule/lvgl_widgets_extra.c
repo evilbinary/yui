@@ -498,7 +498,7 @@ static void* lvgl_imgbtn_create(Layer* layer, cJSON* json)
     }
 
     component->obj = lv_imgbtn_create(lv_port_get_root());
-    source = layer->source[0] ? layer->source : lvgl_json_string(json, "source", "");
+    source = (layer->source && layer->source[0]) ? layer->source : lvgl_json_string(json, "source", "");
     if (source[0]) {
         lv_imgbtn_set_src(component->obj, LV_IMGBTN_STATE_RELEASED, NULL, source, NULL);
     } else {

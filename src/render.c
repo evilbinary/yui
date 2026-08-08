@@ -15,7 +15,7 @@ static void render_rect_intersect(Rect* out, const Rect* a, const Rect* b);
 
 // ====================== 资源加载器 ======================
 void load_textures(Layer* root) {
-    if (root->type==IMAGE&& strlen(root->source) > 0) {
+    if (root->type==IMAGE && root->source && strlen(root->source) > 0) {
         // 检查是否为 data URI (base64)
         if (strncmp(root->source, "data:image/", 11) == 0) {
             // 查找 base64 标记
