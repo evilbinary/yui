@@ -231,7 +231,10 @@ static esp_lcd_panel_handle_t s_panel = NULL;
 static esp_lcd_touch_handle_t s_touch = NULL;
 
 /* 平台初始化（main.c）创建 LCD/触摸后注入到后端；后端渲染/轮询共用句柄。 */
-void backend_esp32_set_panel(esp_lcd_panel_handle_t p) { s_panel = p; }
+void backend_esp32_set_panel(esp_lcd_panel_handle_t p) {
+    s_panel = p;
+    printf("YUI: [dbg] panel injected=%p\n", (void*)p);
+}
 void backend_esp32_set_touch_handle(esp_lcd_touch_handle_t t) { s_touch = t; }
 /* 平台层（main.c）获取/分配 RGB565 framebuffer 后注入；后端只负责渲染写入。 */
 void backend_esp32_set_framebuffer(uint16_t* fb, int w, int h) {
@@ -439,7 +442,6 @@ static void spi_draw_line(int x, int y, int w, uint16_t px)
     for (i = 0; i < w; i++) s_spi_line[i] = px;
     esp_lcd_panel_draw_bitmap(s_panel, x, y, x + w, y + 1, s_spi_line);
 }
-
 static void spi_draw_line_buf(int x, int y, int w, const uint16_t* buf)
 {
     if (!s_panel || w <= 0 || !buf) return;
@@ -1181,6 +1183,12 @@ void backend_render_present(void) {
 #endif
 #else
     dirty_reset();
+#endif
+#ifdef ESP_PLATFORM
+    if (s_frame_count < 3) {
+        printf("YUI: [dbg] present frame=%d panel=%p fb=%p dirty=%d\n",
+               s_frame_count, (void*)s_panel, (void*)s_fb, s_has_dirty);
+    }
 #endif
 }
 

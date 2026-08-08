@@ -57,15 +57,15 @@
 #endif
 #endif
 
-#define EXAMPLE_LCD_PIXEL_CLOCK_HZ (27 * 1000 * 1000)
+#define EXAMPLE_LCD_PIXEL_CLOCK_HZ (10 * 1000 * 1000)
 #define EXAMPLE_LCD_BK_LIGHT_ON_LEVEL  0
 #define EXAMPLE_LCD_BK_LIGHT_OFF_LEVEL !EXAMPLE_LCD_BK_LIGHT_ON_LEVEL
 #define EXAMPLE_PIN_NUM_DATA0          6  /*!< for 1-line SPI, this also refereed as MOSI */
-#define EXAMPLE_PIN_NUM_PCLK           4
-#define EXAMPLE_PIN_NUM_CS             -1
-#define EXAMPLE_PIN_NUM_DC             8
-#define EXAMPLE_PIN_NUM_RST            9
-#define EXAMPLE_PIN_NUM_BK_LIGHT       10
+#define EXAMPLE_PIN_NUM_PCLK           4 //SPI时钟
+#define EXAMPLE_PIN_NUM_CS             -1 //CS脚
+#define EXAMPLE_PIN_NUM_DC             8 //DC脚
+#define EXAMPLE_PIN_NUM_RST            9 //RST脚
+#define EXAMPLE_PIN_NUM_BK_LIGHT       10 //BL脚
 
 // Using SPI2 in the example, as it also supports octal modes on some targets
 #define LCD_HOST       SPI2_HOST
@@ -194,7 +194,8 @@ static int esp32_lcd_init(void) {
         ESP_LOGW("yui-esp32", "esp_lcd_new_panel_st7789 failed (%s), running in headless mode", esp_err_to_name(ret));
         return 0;
     }
-    ESP_ERROR_CHECK(gpio_set_level(EXAMPLE_PIN_NUM_BK_LIGHT, EXAMPLE_LCD_BK_LIGHT_OFF_LEVEL));
+    printf("YUI: ST7789 panel created ok\n");
+    ESP_ERROR_CHECK(gpio_set_level(EXAMPLE_PIN_NUM_BK_LIGHT, EXAMPLE_LCD_BK_LIGHT_ON_LEVEL));
 
     esp_lcd_panel_reset(s_lcd_panel);
     vTaskDelay(pdMS_TO_TICKS(150));
@@ -203,14 +204,15 @@ static int esp32_lcd_init(void) {
     esp_lcd_panel_mirror(s_lcd_panel, true, false);
     esp_lcd_panel_disp_on_off(s_lcd_panel, true);
 
-    ESP_ERROR_CHECK(gpio_set_level(EXAMPLE_PIN_NUM_BK_LIGHT, EXAMPLE_LCD_BK_LIGHT_ON_LEVEL));
+    ESP_ERROR_CHECK(gpio_set_level(EXAMPLE_PIN_NUM_BK_LIGHT, EXAMPLE_LCD_BK_LIGHT_OFF_LEVEL));
 
     /* TEMP 测试：循环推红色测试图案 */
     static uint16_t red[240 * 240];
     for (;;) {
         for (int i = 0; i < 240 * 240; i++) red[i] = 0xF800;
-        esp_lcd_panel_draw_bitmap(s_lcd_panel, 0, 0, 240, 240, red);
-        printf("YUI: draw bitmap\n");
+        esp_err_t dr = esp_lcd_panel_draw_bitmap(s_lcd_panel, 0, 0, 240, 240, red);
+        printf("YUI: draw bitmap ret=%s\n", esp_err_to_name(dr));
+        vTaskDelay(pdMS_TO_TICKS(100));
     }
 
     if (EXAMPLE_PIN_NUM_BK_LIGHT >= 0) {
@@ -363,16 +365,7 @@ void app_main(void) {
     // Initialize the GPIO of backlight
     ESP_ERROR_CHECK(gpio_config(&bk_gpio_config));
 
-    spi_bus_config_t buscfg = {
-        .sclk_io_num = EXAMPLE_PIN_NUM_PCLK,
-        .mosi_io_num = EXAMPLE_PIN_NUM_DATA0,
-        .miso_io_num = -1,
-        .quadwp_io_num = -1,
-        .quadhd_io_num = -1,
-        .max_transfer_sz = PARALLEL_LINES * EXAMPLE_LCD_H_RES * 2 + 8
-    };
-
-    ESP_ERROR_CHECK(spi_bus_initialize(LCD_HOST, &buscfg, SPI_DMA_CH_AUTO));
+    /* SPI 总线由 esp32_lcd_init() 初始化（避免重复 spi_bus_initialize） */
 
 
     /* 模块丝印 gnd vcc scl sda res dc blk：无 CS 脚（内部固定选通，cs=-1）；
