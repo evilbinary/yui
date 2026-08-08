@@ -29,6 +29,7 @@
 #include "layer_lifecycle.h"
 #include "cJSON.h"
 #include "../../src/render.h"
+#include "../../src/backend.h"
 
 #ifndef STDLIB_BUILD
 #include "../../src/perf/perf.h"
@@ -928,7 +929,18 @@ static JSValue js_yui_check_heap(JSContext *ctx, JSValue *this_val, int argc, JS
     return JS_UNDEFINED;
 }
 
+static JSValue js_yui_exit(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+{
+    int code = 0;
+    (void)this_val;
+    if (argc > 0)
+        JS_ToInt32(ctx, &code, argv[0]);
+    backend_request_quit(code);
+    return JS_UNDEFINED;
+}
+
 static const JSPropDef js_yui[] = {
+    JS_CFUNC_DEF("exit", 1, js_yui_exit),
     JS_CFUNC_DEF("log", 1, js_yui_log ),
     JS_CFUNC_DEF("gc", 0, js_yui_gc),
     JS_CFUNC_DEF("checkHeap", 1, js_yui_check_heap),

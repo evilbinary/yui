@@ -150,7 +150,10 @@ def _discover_auto_json(directory):
         except Exception:
             continue
         if data.get("autoTest"):
-            cases.append(path)
+            binary = data.get("binary", "playground")
+            binaries = binary if isinstance(binary, list) else [binary]
+            for b in binaries:
+                cases.append((path, b))
     return cases
 
 
@@ -207,26 +210,30 @@ def run_unit(env, filt):
 
 
 def _run_playground_cases(label, cases, env, filt, frames=120, timeout=180):
-    cases = [p for p in cases if not filt or filt in os.path.basename(p)]
+    cases = [(p, b) for p, b in cases if not filt or filt in os.path.basename(p)]
     if not cases:
         print("[%s] no autoTest JSON" % label)
         return []
 
-    print("[%s] building playground..." % label)
-    if not _ya_build(["playground"], env):
-        return [(label, "playground", False, 0.0, "build failed")]
-
-    playground = _find_bin("playground")
-    if not playground:
-        print("[%s] FAIL playground binary not found" % label)
-        return [(label, "playground", False, 0.0, "binary not found")]
+    binaries = sorted(set(b for _, b in cases))
+    bin_paths = {}
+    for binary in binaries:
+        print("[%s] building %s..." % (label, binary))
+        if not _ya_build([binary], env):
+            return [(label, binary, False, 0.0, "build failed")]
+        path = _find_bin(binary)
+        if not path:
+            print("[%s] FAIL %s binary not found" % (label, binary))
+            return [(label, binary, False, 0.0, "binary not found")]
+        bin_paths[binary] = path
 
     results = []
-    for path in cases:
-        rel = os.path.relpath(path, ROOT).replace("\\", "/")
-        name = os.path.basename(path)
+    for json_path, binary in cases:
+        rel = os.path.relpath(json_path, ROOT).replace("\\", "/")
+        name = os.path.basename(json_path)
+        bin_path = bin_paths[binary]
         code, out, dt = _run(
-            [playground, "--auto", "--frames=%d" % frames, rel],
+            [bin_path, "--auto", "--frames=%d" % frames, rel],
             env,
             timeout=timeout,
         )

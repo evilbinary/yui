@@ -1,0 +1,14 @@
+{
+  "id": "timerPerfRoot",
+  "type": "View",
+  "size": [200, 100],
+  "autoTest": true,
+  "binary": ["playground", "playground-mqjs"],
+  "js": ["../lib/ytest.js", "test-timer-perf.js"],
+  "style": {
+    "bgColor": "#1e1e2e"
+  },
+  "events": {
+    "onLoad": "@onLoad"
+  }
+}
