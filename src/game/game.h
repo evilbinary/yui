@@ -17,11 +17,21 @@
 extern "C" {
 #endif
 
+#ifndef GAME_MAX_ENTITIES
 #define GAME_MAX_ENTITIES 128
+#endif
+#ifndef GAME_MAX_PARTICLES
 #define GAME_MAX_PARTICLES 256
+#endif
+#ifndef GAME_ID_LEN
 #define GAME_ID_LEN 64
+#endif
+#ifndef GAME_PATH_LEN
 #define GAME_PATH_LEN 256
+#endif
+#ifndef GAME_ANIM_FRAMES
 #define GAME_ANIM_FRAMES 16
+#endif
 
 typedef struct GameEntity {
     int alive;
