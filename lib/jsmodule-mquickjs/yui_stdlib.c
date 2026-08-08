@@ -931,11 +931,13 @@ static JSValue js_yui_check_heap(JSContext *ctx, JSValue *this_val, int argc, JS
 
 static JSValue js_yui_exit(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
 {
-    int code = 0;
     (void)this_val;
-    if (argc > 0)
-        JS_ToInt32(ctx, &code, argv[0]);
+#ifndef STDLIB_BUILD
+    int code = 0;
+    if (argc > 0 && JS_IsInt(argv[0]))
+        code = JS_VALUE_GET_INT(argv[0]);
     backend_request_quit(code);
+#endif
     return JS_UNDEFINED;
 }
 

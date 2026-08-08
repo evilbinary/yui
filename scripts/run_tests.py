@@ -218,6 +218,9 @@ def _run_playground_cases(label, cases, env, filt, frames=120, timeout=180):
     binaries = sorted(set(b for _, b in cases))
     bin_paths = {}
     for binary in binaries:
+        if "mqjs" in binary:
+            print("[%s] building yui-stdlib-host..." % label)
+            _ya_build(["yui-stdlib-host"], env)
         print("[%s] building %s..." % (label, binary))
         if not _ya_build([binary], env):
             return [(label, binary, False, 0.0, "build failed")]
