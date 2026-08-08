@@ -112,8 +112,10 @@ extern void js_module_register_socket_api(JSContext* ctx);
 #endif
 extern void js_module_register_yui_api(JSContext* ctx);
 extern void js_module_register_game_api(JSContext* ctx);
+#ifdef YUI_WITH_GAME
 extern void js_module_register_timer_api(JSContext* ctx);
 extern void js_module_register_perf_api(JSContext* ctx);
+#endif
 
 // 注册 C API 到 JS
 void js_module_register_api(void)
@@ -129,10 +131,12 @@ void js_module_register_api(void)
 #endif
     // Game API
     js_module_register_game_api(g_js_ctx);
+#ifdef YUI_WITH_GAME
     // Timer API
     js_module_register_timer_api(g_js_ctx);
     // Perf API
     js_module_register_perf_api(g_js_ctx);
+#endif
     
     printf("JS(Socket): Registered API function\n");
 }

@@ -92,6 +92,7 @@ int game_audio_play_sfx(const char* path)
 #endif
 }
 
+#if YUI_WITH_GAME_AUDIO
 static void game_audio_sfx_ended(void* pUserData, ma_sound* pSound)
 {
     (void)pUserData;
@@ -99,6 +100,7 @@ static void game_audio_sfx_ended(void* pUserData, ma_sound* pSound)
         ma_sound_uninit(pSound);
     }
 }
+#endif
 
 int game_audio_play_bgm(const char* path, int loop)
 {

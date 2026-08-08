@@ -18,8 +18,9 @@ add_files("input/*.c")
 add_files("backend/backend_common.c")
 
 if get_plat() == "esp32":
-    # ESP32 资源有限，禁用 game/audio（miniaudio 依赖 POSIX pthread/dlfcn）
-    add_cflags("-DYUI_WITH_GAME=0")
+    # ESP32 资源有限，编译 game 核心但禁用 audio（miniaudio 依赖 POSIX pthread/dlfcn）
+    add_files("game/*.c")
+    add_cflags("-DYUI_WITH_GAME=1")
     add_cflags("-DYUI_WITH_GAME_AUDIO=0")
 else:
     add_files("game/*.c")
