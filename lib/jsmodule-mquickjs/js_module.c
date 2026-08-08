@@ -187,65 +187,141 @@ typedef struct {
     uint32_t fixup_count;
 } BcRamHeader;
 
-/* 加载拆分格式字节码：只把指针承载块（func/value_array）拷进 RAM，只读区
-   （string/byte_array/float64）留在 flash XIP，按重定位表把指针指向 RAM
-   或 flash 基址。返回需长期持有的 RAM 骨架（context 生命周期内有效）。 */
-static uint8_t* js_load_bytecode_split(JSContext* ctx, const uint8_t* buf, int len)
+/* 轻量判断 bc_path 是否为 BCRS 拆分格式（只读 24B 头，不整文件读入 RAM） */
+static int js_bc_is_split(const char* bc_path)
+{
+    FILE* f;
+    BcRamHeader hdr;
+    long fsize;
+    int ret = 0;
+
+    f = fopen(bc_path, "rb");
+    if (!f) {
+        const char* root = js_module_get_root();
+        char path_buf[YUI_MAX_PATH];
+        if (root && root[0] && bc_path[0] != '/') {
+            snprintf(path_buf, sizeof(path_buf), "%s/%s", root, bc_path);
+            f = fopen(path_buf, "rb");
+        }
+    }
+    if (!f)
+        return 0;
+
+    if (fread(&hdr, 1, sizeof(hdr), f) == sizeof(hdr) &&
+        hdr.magic == BCRAM_MAGIC && hdr.ram_len != 0 &&
+        fseek(f, 0, SEEK_END) == 0 && (fsize = ftell(f)) >= 0 &&
+        (long)sizeof(hdr) + (long)hdr.ram_len + (long)hdr.fixup_count * 8 <= fsize)
+        ret = 1;
+
+    fclose(f);
+    return ret;
+}
+
+/* 加载拆分格式字节码：直接按需读文件（头 + RAM 骨架 + 流式 fixup），不再
+   把整个 .bc 文件读入 RAM。ROM 只读区（string/byte_array/float64）始终走
+   bcrom flash XIP（backend_esp32_bc_rom_base mmap），不进 RAM。
+   返回需长期持有的 RAM 骨架（context 生命周期内有效）。 */
+static uint8_t* js_load_bytecode_split(JSContext* ctx, const char* bc_path)
 {
     BcRamHeader hdr;
+    FILE* f;
     uint8_t* ram;
-    const uint8_t* ram_src;
-    const uint8_t* fix;
     const void* rom_base;
     size_t rom_part_size = 0;
     uint32_t i;
 
-    if (len < (int)sizeof(hdr)) {
+    f = fopen(bc_path, "rb");
+    if (!f) {
+        const char* root = js_module_get_root();
+        char path_buf[YUI_MAX_PATH];
+        if (root && root[0] && bc_path[0] != '/') {
+            snprintf(path_buf, sizeof(path_buf), "%s/%s", root, bc_path);
+            f = fopen(path_buf, "rb");
+        }
+        if (!f) {
+            fprintf(stderr, "JS: cannot open %s\n", bc_path);
+            return NULL;
+        }
+    }
+
+    if (fread(&hdr, 1, sizeof(hdr), f) != sizeof(hdr)) {
         fprintf(stderr, "JS: split bytecode too short\n");
+        fclose(f);
         return NULL;
     }
-    memcpy(&hdr, buf, sizeof(hdr));
-    if (hdr.magic != BCRAM_MAGIC || hdr.ram_len == 0 ||
-        (int)sizeof(hdr) + (int)hdr.ram_len + (int)hdr.fixup_count * 8 > len) {
+    if (hdr.magic != BCRAM_MAGIC || hdr.ram_len == 0) {
         fprintf(stderr, "JS: invalid split bytecode header\n");
+        fclose(f);
         return NULL;
     }
 
     rom_base = backend_esp32_bc_rom_base(&rom_part_size);
     if (!rom_base) {
         fprintf(stderr, "JS: bcrom partition not mapped (flash bytecode needs XIP)\n");
+        fclose(f);
         return NULL;
     }
     if ((size_t)hdr.rom_off + hdr.rom_len > rom_part_size) {
         fprintf(stderr, "JS: bcrom range out of partition (%u+%u > %u)\n",
                 (unsigned)hdr.rom_off, (unsigned)hdr.rom_len, (unsigned)rom_part_size);
+        fclose(f);
         return NULL;
     }
 
     ram = (uint8_t*)malloc(hdr.ram_len);
     if (!ram) {
         fprintf(stderr, "JS: out of memory for bytecode skeleton\n");
+        fclose(f);
         return NULL;
     }
-    ram_src = buf + sizeof(hdr);
-    memcpy(ram, ram_src, hdr.ram_len);
+    /* 跳过 24B 头，直接读 RAM 区到骨架 */
+    if (fread(ram, 1, hdr.ram_len, f) != hdr.ram_len) {
+        fprintf(stderr, "JS: short read of split RAM region\n");
+        free(ram);
+        fclose(f);
+        return NULL;
+    }
 
-    /* 应用重定位：每个条目 = (site, toff)，toff bit31=1 表示目标在 ROM 区 */
-    fix = ram_src + hdr.ram_len;
+    /* 流式读重定位表并应用：每个条目 = (site, toff)，toff bit31=1 表示目标在
+       ROM 区（bcrom XIP），否则在 RAM 骨架内 */
     for (i = 0; i < hdr.fixup_count; i++) {
         uint32_t site, toff;
         uintptr_t addr;
-        memcpy(&site, fix + i * 8, 4);
-        memcpy(&toff, fix + i * 8 + 4, 4);
+        if (fread(&site, 4, 1, f) != 1 || fread(&toff, 4, 1, f) != 1) {
+            fprintf(stderr, "JS: short read of fixup table\n");
+            free(ram);
+            fclose(f);
+            return NULL;
+        }
         addr = (toff & 0x80000000u)
                    ? ((uintptr_t)rom_base + hdr.rom_off + (toff & 0x7fffffffu))
                    : ((uintptr_t)ram + (toff & 0x7fffffffu));
         /* JSValue 指针编码：值 = 地址 + 1 */
         *(uint32_t*)(ram + site) = (uint32_t)(addr + 1);
     }
+    fclose(f);
+
+    /* 规范化字符串 atom：把字节码里的标识符/属性名字符串绑定到 ROM 标准库
+       表的规范字符串（JS_MakeUniqueString 语义，指针身份等值才匹配）。
+       先用真实的 data base 修正 base_addr，再以 offset=0 跑 update_atoms 遍，
+       只做去重、不改指针。若缺失，全局标识符（如 YUI）会因字符串对象不同而
+       解析失败 -> "variable 'YUI' is not defined"。 */
+    {
+        JSBytecodeHeader* ram_hdr = (JSBytecodeHeader*)ram;
+        ram_hdr->base_addr = (uintptr_t)(ram + sizeof(JSBytecodeHeader));
+        if (JS_RelocateBytecode2(ctx, ram_hdr, ram + sizeof(JSBytecodeHeader),
+                                 hdr.ram_len - sizeof(JSBytecodeHeader),
+                                 (uintptr_t)(ram + sizeof(JSBytecodeHeader)),
+                                 1)) {
+            fprintf(stderr, "JS: could not canonicalize split bytecode atoms\n");
+            free(ram);
+            return NULL;
+        }
+    }
 
     return ram;
 }
+
 
 // 加载并执行 JS 文件（优先同目录 xxx.bc 预编译字节码，回退源码 eval）
 int js_module_load_file(const char* filename)
@@ -264,21 +340,23 @@ int js_module_load_file(const char* filename)
     int is_bc = 0;
 
     js_bc_path(filename, bc_path, sizeof(bc_path));
-    buf = read_file_binary(bc_path, &len);
-    if (buf && len >= (int)sizeof(BcRamHeader) &&
-        *(const uint32_t*)buf == BCRAM_MAGIC) {
-        /* 拆分格式：RAM 骨架 + flash 只读区。只需保留 RAM 骨架 */
+    {
+        extern size_t heap_caps_get_free_size(int caps);
+        printf("DBG mem: before load %s free=%u\n", filename,
+               (unsigned)heap_caps_get_free_size(4));
+    }
+    if (js_bc_is_split(bc_path)) {
+        /* 拆分格式：直接按需读文件，只保留 RAM 骨架；ROM 区走 bcrom XIP */
         is_bc = 1;
-        printf("JS: Loading split bytecode %s (len=%d)\n", bc_path, len);
-        fflush(stdout);
         {
-            uint8_t* ram = js_load_bytecode_split(g_js_ctx, buf, len);
-            free(buf);
+            uint8_t* ram = js_load_bytecode_split(g_js_ctx, bc_path);
             if (!ram) {
                 return -1;
             }
             {
                 JSBytecodeHeader* hdr = (JSBytecodeHeader*)ram;
+                printf("JS: Loading split bytecode %s\n", bc_path);
+                fflush(stdout);
                 val = JS_LoadBytecode2(g_js_ctx, hdr);
                 if (JS_IsException(val)) {
                     JSValue exc = JS_GetException(g_js_ctx);
@@ -293,30 +371,26 @@ int js_module_load_file(const char* filename)
                 val = JS_Run(g_js_ctx, val);
             }
         }
-    } else if (buf && JS_IsBytecode(buf, (size_t)len)) {
+    } else {
+        buf = read_file_binary(bc_path, &len);
+        if (buf && JS_IsBytecode(buf, (size_t)len)) {
         is_bc = 1;
         printf("JS: Loading bytecode %s (len=%d)\n", bc_path, len);
         fflush(stdout);
         {
-            /* 手动 relocate（update_atoms=FALSE）：JS_RelocateBytecode 走
-               update_atoms=TRUE 的 atom 去重路径，在 ROM 标准库表存在时会把
-               字符串内容误判为指针并加偏移 -> Load access fault。跳过 atom
-               更新只做指针搬移，避免崩溃。 */
+            /* 手动 relocate（update_atoms=TRUE）：搬移指针并把字节码字符串
+               规范化到 ROM 标准库表（与 split 路径一致）。 */
             JSBytecodeHeader* hdr = (JSBytecodeHeader*)buf;
             uint8_t* data_ptr = buf + sizeof(JSBytecodeHeader);
             if (JS_RelocateBytecode2(g_js_ctx, hdr, data_ptr,
                                      (uint32_t)(len - sizeof(JSBytecodeHeader)),
-                                     (uintptr_t)data_ptr, 0)) {
+                                     (uintptr_t)data_ptr, 1)) {
                 fprintf(stderr, "JS: Could not relocate bytecode %s\n", bc_path);
                 free(buf);
                 return -1;
             }
         }
-        printf("JS: after relocate\n");
-        fflush(stdout);
         val = JS_LoadBytecode(g_js_ctx, buf);
-        printf("JS: after loadbytecode\n");
-        fflush(stdout);
         if (JS_IsException(val)) {
             JSValue exc = JS_GetException(g_js_ctx);
             fprintf(stderr, "JS: Error loading bytecode %s:\n", bc_path);
@@ -339,6 +413,7 @@ int js_module_load_file(const char* filename)
         val = JS_Eval(g_js_ctx, (const char*)buf, (size_t)len, filename, 0);
         free(buf);
     }
+    }
 
     if (JS_IsException(val)) {
         JSValue exc = JS_GetException(g_js_ctx);
@@ -350,6 +425,11 @@ int js_module_load_file(const char* filename)
 
     printf("JS: Successfully loaded %s, len=%d (%s)\n", filename, len,
            is_bc ? "bytecode" : "source");
+    {
+        extern size_t heap_caps_get_free_size(int caps);
+        printf("DBG mem: after load %s free=%u\n", filename,
+               (unsigned)heap_caps_get_free_size(4));
+    }
     return 0;
 }
 // 调用 JS 事件函数
