@@ -24,7 +24,7 @@ var LAUNCHER_COLS = 4;
 var LAUNCHER_BTN = 58;
 var LAUNCHER_SPACING = 10;
 
-var MOCK_LAUNCHER_COUNT = 48;
+var MOCK_LAUNCHER_COUNT = 8;
 var MOCK_LAUNCHER_ICONS = [
     "🎵", "📷", "📚", "🎮", "✈️", "🏠", "💡", "🔑",
     "🎁", "🧩", "🎯", "🚀", "🌙", "⭐", "🔥", "💎",
@@ -91,22 +91,20 @@ function getMockLauncherApps() {
 }
 
 function onLauncherLoad() {
-    rebuildLauncher();
     setLauncherMode(getWatchLauncherMode());
-    applyWatchTheme();
 }
 
 function onLauncherShow() {
-    if (!launcherBuilt) {
-        rebuildLauncher();
-    }
     setLauncherMode(getWatchLauncherMode());
-    applyWatchTheme();
 }
 
 function setLauncherMode(mode) {
     var isBubble = mode === "bubble";
+    var modeChanged = mode !== launcherMode;
     launcherMode = mode;
+    if (modeChanged || !launcherBuilt) {
+        rebuildLauncher(mode);
+    }
     YUI.update([
         { target: "page_launcher", change: { scrollable: isBubble ? 0 : 1 } },
         { target: "launcher_bubble", change: { visible: isBubble } },
@@ -119,9 +117,12 @@ function setLauncherMode(mode) {
     applyWatchTheme();
 }
 
-function rebuildLauncher() {
+function rebuildLauncher(mode) {
     if (typeof WatchAppRegistry === "undefined") {
         return;
+    }
+    if (mode !== "bubble" && mode !== "grid") {
+        mode = launcherMode;
     }
 
     var apps = bubblePreferCenterClock(
@@ -146,15 +147,25 @@ function rebuildLauncher() {
     bubbleLayoutDrag = false;
     YUI.setText("launcher_count", apps.length + " 个应用");
 
-    buildLauncherBubble(apps);
-    buildLauncherGrid(apps);
+    /* 只构建当前模式需要的视图：bubble 模式不建 grid（省内存），反之亦然。
+       另一个视图的图层清空以释放内存。 */
+    if (mode === "bubble") {
+        buildLauncherBubble(apps);
+        clearLauncherView("launcher_grid");
+    } else {
+        buildLauncherGrid(apps);
+        clearLauncherView("launcher_bubble");
+    }
     launcherBuilt = true;
+}
+
+function clearLauncherView(target) {
+    YUI.update({ target: target, change: { children: null } });
 }
 
 function rebuildLauncherGrid() {
     launcherBuilt = false;
-    rebuildLauncher();
-    setLauncherMode(getWatchLauncherMode());
+    setLauncherMode("grid");
 }
 
 function bubblePreferCenterClock(apps) {

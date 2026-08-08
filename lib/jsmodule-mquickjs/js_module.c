@@ -221,7 +221,7 @@ static int js_bc_is_split(const char* bc_path)
    把整个 .bc 文件读入 RAM。ROM 只读区（string/byte_array/float64）始终走
    bcrom flash XIP（backend_esp32_bc_rom_base mmap），不进 RAM。
    返回需长期持有的 RAM 骨架（context 生命周期内有效）。 */
-static uint8_t* js_load_bytecode_split(JSContext* ctx, const char* bc_path)
+static uint8_t* js_load_bytecode_split(JSContext* ctx, const char* bc_path, uint32_t* p_ram_len)
 {
     BcRamHeader hdr;
     FILE* f;
@@ -274,6 +274,8 @@ static uint8_t* js_load_bytecode_split(JSContext* ctx, const char* bc_path)
         fclose(f);
         return NULL;
     }
+    if (p_ram_len)
+        *p_ram_len = hdr.ram_len;
     /* 跳过 24B 头，直接读 RAM 区到骨架 */
     if (fread(ram, 1, hdr.ram_len, f) != hdr.ram_len) {
         fprintf(stderr, "JS: short read of split RAM region\n");
@@ -340,19 +342,16 @@ int js_module_load_file(const char* filename)
     int is_bc = 0;
 
     js_bc_path(filename, bc_path, sizeof(bc_path));
-    {
-        extern size_t heap_caps_get_free_size(int caps);
-        printf("DBG mem: before load %s free=%u\n", filename,
-               (unsigned)heap_caps_get_free_size(4));
-    }
     if (js_bc_is_split(bc_path)) {
         /* 拆分格式：直接按需读文件，只保留 RAM 骨架；ROM 区走 bcrom XIP */
         is_bc = 1;
         {
-            uint8_t* ram = js_load_bytecode_split(g_js_ctx, bc_path);
+            uint32_t ram_len = 0;
+            uint8_t* ram = js_load_bytecode_split(g_js_ctx, bc_path, &ram_len);
             if (!ram) {
                 return -1;
             }
+            len = (int)ram_len;
             {
                 JSBytecodeHeader* hdr = (JSBytecodeHeader*)ram;
                 printf("JS: Loading split bytecode %s\n", bc_path);
@@ -425,11 +424,6 @@ int js_module_load_file(const char* filename)
 
     printf("JS: Successfully loaded %s, len=%d (%s)\n", filename, len,
            is_bc ? "bytecode" : "source");
-    {
-        extern size_t heap_caps_get_free_size(int caps);
-        printf("DBG mem: after load %s free=%u\n", filename,
-               (unsigned)heap_caps_get_free_size(4));
-    }
     return 0;
 }
 // 调用 JS 事件函数
