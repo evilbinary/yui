@@ -50,55 +50,6 @@ float yui_density = 1.0f;
 float backend_get_density(void) { return yui_density > 0.0f ? yui_density : 1.0f; }
 void backend_set_density(float d) { if (d > 0.0f) yui_density = d; }
 
-/* ====================== 配置 ====================== */
-typedef struct {
-    int width;
-    int height;
-    int spi_host;       /* SPI_HOST / FSPI_HOST */
-    int mosi, sclk;     /* SPI 总线引脚 */
-    int cs, dc, rst, bl;
-    int freq_hz;        /* SPI 时钟 (Hz) */
-    int touch_i2c_host; /* -1 = 无触摸 */
-    int touch_sda, touch_scl, touch_addr, touch_int;
-} yui_esp32_config_t;
-
-static yui_esp32_config_t s_cfg = {
-    .width = 240, .height = 240,
-    /* ESP32-C3 仅 SPI2_HOST(=1)；经典 ESP32 也可用 SPI2。勿用 2（C3 上非法）。 */
-    .spi_host = 1,
-    .mosi = 6, .sclk = 4,
-    .cs = -1, .dc = 2, .rst = 7, .bl = 8,
-    .freq_hz = 40 * 1000 * 1000,
-    .touch_i2c_host = -1,
-    .touch_sda = -1, .touch_scl = -1, .touch_addr = 0x15, .touch_int = -1,
-};
-
-void backend_esp32_set_config(int width, int height,
-                              int spi_host, int cs, int dc, int rst, int bl,
-                              int freq_hz) {
-    s_cfg.width = width;
-    s_cfg.height = height;
-    s_cfg.spi_host = spi_host;
-    s_cfg.cs = cs;
-    s_cfg.dc = dc;
-    s_cfg.rst = rst;
-    s_cfg.bl = bl;
-    s_cfg.freq_hz = freq_hz > 0 ? freq_hz : 40 * 1000 * 1000;
-}
-
-void backend_esp32_set_spi_pins(int mosi, int sclk) {
-    s_cfg.mosi = mosi;
-    s_cfg.sclk = sclk;
-}
-
-void backend_esp32_set_touch(int i2c_host, int sda, int scl, int addr, int int_pin) {
-    s_cfg.touch_i2c_host = i2c_host;
-    s_cfg.touch_sda = sda;
-    s_cfg.touch_scl = scl;
-    s_cfg.touch_addr = addr;
-    s_cfg.touch_int = int_pin;
-}
-
 /* 0 = 仅软件 framebuffer（QEMU / 无屏）；1 = 初始化 SPI LCD + 触摸 */
 static int s_hw_display = 1;
 void backend_esp32_set_hw_display(int on) { s_hw_display = on ? 1 : 0; }
@@ -279,169 +230,18 @@ static int clip_get_current(Rect* out) {
 static esp_lcd_panel_handle_t s_panel = NULL;
 static esp_lcd_touch_handle_t s_touch = NULL;
 
+/* 平台初始化（main.c）创建 LCD/触摸后注入到后端；后端渲染/轮询共用句柄。 */
+void backend_esp32_set_panel(esp_lcd_panel_handle_t p) { s_panel = p; }
+void backend_esp32_set_touch_handle(esp_lcd_touch_handle_t t) { s_touch = t; }
+/* 平台层（main.c）获取/分配 RGB565 framebuffer 后注入；后端只负责渲染写入。 */
+void backend_esp32_set_framebuffer(uint16_t* fb, int w, int h) {
+    s_fb = fb;
+    s_fb_w = w;
+    s_fb_h = h;
+}
+
 static bool s_touch_active = false;
 static int s_touch_x = 0, s_touch_y = 0;
-
-static int esp32_lcd_init(void) {
-    spi_device_handle_t spi = NULL;
-    esp_lcd_panel_io_handle_t io_handle = NULL;
-    spi_bus_config_t buscfg;
-    esp_lcd_panel_io_spi_config_t io_config;
-    esp_lcd_panel_dev_config_t panel_config;
-    esp_err_t ret;
-
-#ifdef YUI_ESP32_QEMU
-    /* QEMU 虚拟 RGB 面板：专属 framebuffer（不占内部 RAM），由
-     * QEMU -display sdl 窗口实时扫描输出。分辨率与 s_cfg 一致（240x240）。
-     * direct_draw_point / esp32_flush_dirty 经 esp_lcd_panel_draw_bitmap
-     * 把 YUI 渲染像素写入该虚拟屏。 */
-    {
-        esp_lcd_rgb_qemu_config_t qcfg = {
-            .width = s_cfg.width,
-            .height = s_cfg.height,
-            .bpp = RGB_QEMU_BPP_16,
-        };
-        ret = esp_lcd_new_rgb_qemu(&qcfg, &s_panel);
-        if (ret != ESP_OK) {
-            ESP_LOGE(YUI_E32_TAG, "esp_lcd_new_rgb_qemu failed (%s)", esp_err_to_name(ret));
-            return -1;
-        }
-        esp_lcd_panel_reset(s_panel);
-        esp_lcd_panel_init(s_panel);
-        printf("YUI: QEMU virtual RGB panel %dx%d RGB565 ready\n", s_cfg.width, s_cfg.height);
-    }
-    return 0;
-#else
-    if (!s_hw_display) {
-        ESP_LOGI(YUI_E32_TAG, "hw display off: software framebuffer only");
-        return 0;
-    }
-
-    memset(&buscfg, 0, sizeof(buscfg));
-    buscfg.mosi_io_num = s_cfg.mosi;
-    buscfg.miso_io_num = -1;
-    buscfg.sclk_io_num = s_cfg.sclk;
-    buscfg.quadwp_io_num = -1;
-    buscfg.quadhd_io_num = -1;
-    buscfg.max_transfer_sz = s_cfg.width * s_cfg.height * 2 + 8;
-
-    ret = spi_bus_initialize((spi_host_device_t)s_cfg.spi_host, &buscfg, SPI_DMA_CH_AUTO);
-    if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {
-        ESP_LOGW(YUI_E32_TAG, "spi_bus_initialize failed (%s), running in headless mode", esp_err_to_name(ret));
-        return 0;  /* QEMU 或无 SPI 硬件时降级为虚拟 framebuffer */
-    }
-
-    memset(&io_config, 0, sizeof(io_config));
-    io_config.dc_gpio_num = s_cfg.dc;
-    io_config.cs_gpio_num = s_cfg.cs;
-    io_config.pclk_hz = s_cfg.freq_hz;
-    io_config.lcd_cmd_bits = 8;
-    io_config.lcd_param_bits = 8;
-    io_config.spi_mode = 0;
-    io_config.trans_queue_depth = 10;
-
-    ret = esp_lcd_new_panel_io_spi((esp_lcd_spi_bus_handle_t)s_cfg.spi_host, &io_config, &io_handle);
-    if (ret != ESP_OK) {
-        ESP_LOGW(YUI_E32_TAG, "esp_lcd_new_panel_io_spi failed (%s), running in headless mode", esp_err_to_name(ret));
-        return 0;  /* QEMU 或无 LCD 硬件时降级为虚拟 framebuffer */
-    }
-
-    memset(&panel_config, 0, sizeof(panel_config));
-    panel_config.reset_gpio_num = s_cfg.rst;
-    /* IDF 5+: color_space renamed to rgb_ele_order */
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
-    panel_config.rgb_ele_order = LCD_RGB_ELEMENT_ORDER_RGB;
-#else
-    panel_config.color_space = ESP_LCD_COLOR_SPACE_RGB;
-#endif
-    panel_config.bits_per_pixel = 16;
-
-    ret = esp_lcd_new_panel_st7789(io_handle, &panel_config, &s_panel);
-    if (ret != ESP_OK) {
-        ESP_LOGW(YUI_E32_TAG, "esp_lcd_new_panel_st7789 failed (%s), running in headless mode", esp_err_to_name(ret));
-        return 0;  /* QEMU 或无 ST7789 时降级为虚拟 framebuffer */
-    }
-
-    esp_lcd_panel_reset(s_panel);
-    esp_lcd_panel_init(s_panel);
-    esp_lcd_panel_mirror(s_panel, true, false);
-    esp_lcd_panel_disp_on_off(s_panel, true);
-
-    if (s_cfg.bl >= 0) {
-        gpio_set_direction((gpio_num_t)s_cfg.bl, GPIO_MODE_OUTPUT);
-        gpio_set_level((gpio_num_t)s_cfg.bl, 1);
-    }
-    return 0;
-#endif /* YUI_ESP32_QEMU (else 分支：真实 SPI LCD) */
-}
-
-/* 触摸芯片创建钩子（弱符号，默认无触摸）。
- * 平台层可强定义同名函数覆盖，例如 CST816S：
- *   esp_lcd_touch_new_i2c_cst816s(io, cfg, &t); */
-__attribute__((weak))
-esp_lcd_touch_handle_t yui_esp32_touch_create(esp_lcd_panel_io_handle_t io,
-                                              const esp_lcd_touch_config_t* cfg) {
-    (void)io; (void)cfg;
-    return NULL;
-}
-
-static int esp32_touch_init(void) {
-    esp_lcd_touch_config_t tcfg;
-    esp_lcd_touch_handle_t t = NULL;
-    if (!s_hw_display) return 0;
-    /* LCD 未起来时不必探触摸（避免无屏板子上刷 I2C 错误日志） */
-    if (!s_panel) return 0;
-    if (s_cfg.touch_i2c_host < 0 || s_cfg.touch_sda < 0) return 0;
-
-    /* I2C 总线（IDF 5.x 新驱动） */
-    i2c_master_bus_config_t bus_cfg = {
-        .i2c_port = (i2c_port_num_t)s_cfg.touch_i2c_host,
-        .sda_io_num = s_cfg.touch_sda,
-        .scl_io_num = s_cfg.touch_scl,
-        .clk_source = I2C_CLK_SRC_DEFAULT,
-        .glitch_ignore_cnt = 7,
-        .flags.enable_internal_pullup = true,
-    };
-    i2c_master_bus_handle_t bus = NULL;
-    if (i2c_new_master_bus(&bus_cfg, &bus) != ESP_OK) {
-        ESP_LOGW(YUI_E32_TAG, "touch i2c bus init failed, running without touch");
-        return 0;
-    }
-
-    /* 触摸用 panel IO（通用 I2C 寄存器式配置，芯片无关） */
-    esp_lcd_panel_io_i2c_config_t io_cfg = {
-        .dev_addr = s_cfg.touch_addr,
-        .scl_speed_hz = 400000,
-        .control_phase_bytes = 1,
-        .dc_bit_offset = 0,
-        .lcd_cmd_bits = 8,
-        .lcd_param_bits = 0,
-        .flags = {
-            .dc_low_on_data = 0,
-            .disable_control_phase = 1,
-        },
-    };
-    esp_lcd_panel_io_handle_t io = NULL;
-    if (esp_lcd_new_panel_io_i2c(bus, &io_cfg, &io) != ESP_OK) {
-        ESP_LOGW(YUI_E32_TAG, "touch panel io init failed, running without touch");
-        return 0;
-    }
-
-    memset(&tcfg, 0, sizeof(tcfg));
-    tcfg.x_max = s_cfg.width;
-    tcfg.y_max = s_cfg.height;
-    tcfg.rst_gpio_num = -1;
-    tcfg.int_gpio_num = s_cfg.touch_int;
-
-    /* 创建触摸芯片（由平台层钩子提供具体驱动实现） */
-    t = yui_esp32_touch_create(io, &tcfg);
-    if (t != NULL) {
-        s_touch = t;
-    } else {
-        ESP_LOGW(YUI_E32_TAG, "touch init failed, running without touch");
-    }
-    return 0;
-}
 
 static void esp32_flush_dirty(void) {
     if (!s_has_dirty || !s_panel || !s_fb) return;
@@ -558,48 +358,15 @@ int backend_init(void) {
     yui_component_registry_init();
     yui_components_register_builtin();
 
-    s_fb_w = s_cfg.width;
-    s_fb_h = s_cfg.height;
-
-#ifdef YUI_ESP32_QEMU
-    /* QEMU：先建虚拟 RGB 面板，再取专属 framebuffer（0x20000000，
-     * QEMU 提供的外部 RAM，不占内部 SRAM）。两种模式共用此指针：
-     *   - buffer=0（默认）：direct_draw_point 写 s_fb（纯内存写），
-     *     每帧在 present 时整帧推送；
-     *   - buffer=1：渲染路径直接写 s_fb，脏矩形推送。 */
-    if (esp32_lcd_init() != 0) {
-        printf("YUI: esp32_lcd_init failed\n");
-        return -1;
-    }
-    esp_lcd_rgb_qemu_get_frame_buffer(s_panel, (void**)&s_fb);
+    /* framebuffer 由平台层（main.c）获取/分配并经 backend_esp32_set_framebuffer
+     * 注入（含尺寸 s_fb_w/s_fb_h）；后端只做渲染写入，不负责平台相关的
+     * 内存/面板获取。direct draw 模式（LCD_BUFFER=0 且非 QEMU）渲染直写
+     * 面板，无软件 framebuffer。 */
+#if defined(YUI_ESP32_QEMU) || YUI_ESP32_LCD_BUFFER
     if (!s_fb) {
-        printf("YUI: esp_lcd_rgb_qemu_get_frame_buffer failed\n");
+        printf("YUI: framebuffer not injected (backend_esp32_set_framebuffer)\n");
         return -1;
     }
-    printf("YUI: QEMU framebuffer %p (%ux%u RGB565, dedicated RAM)\n",
-           (void*)s_fb, s_fb_w, s_fb_h);
-#else
-#if YUI_ESP32_LCD_BUFFER
-    s_fb = (uint16_t*)calloc((size_t)s_fb_w * s_fb_h, 2);
-    if (!s_fb) {
-#ifdef ESP_PLATFORM
-        printf("YUI: framebuffer calloc %ux%ux2=%u bytes failed, "
-               "free=%u largest=%u\n",
-               s_fb_w, s_fb_h, (unsigned)((size_t)s_fb_w * s_fb_h * 2),
-               (unsigned)heap_caps_get_free_size(MALLOC_CAP_8BIT),
-               (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
-#endif
-        return -1;
-    }
-#else
-    s_fb = NULL;
-    printf("YUI: LCD buffer disabled (YUI_ESP32_LCD_BUFFER=0), direct draw\n");
-#endif
-
-#ifdef ESP_PLATFORM
-    esp32_lcd_init();
-    esp32_touch_init();
-#endif
 #endif
     return 0;
 }
@@ -614,12 +381,8 @@ void backend_quit(void) {
         esp_lcd_panel_disp_on_off(s_panel, false);
     }
 #endif
-#ifdef YUI_ESP32_QEMU
-    /* QEMU 专属 framebuffer（0x20000000）是虚拟面板设备内存，非堆分配，不能 free */
+    /* framebuffer 归平台层（main.c）管理，backend 不负责释放 */
     s_fb = NULL;
-#else
-    if (s_fb) { free(s_fb); s_fb = NULL; }
-#endif
     #if YUI_ESP32_LCD_BUFFER
     yui_aa_cache_teardown();
 #endif
