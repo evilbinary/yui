@@ -53,6 +53,7 @@ target_link_libraries(${COMPONENT_LIB} PRIVATE
     # lwip 头宏，无裸符号）；--undefined=_socket 强制链接器提前拉入它，
     # 使 libjsmodule.a 中的 _socket/_connect/... 引用得以解析。
     -Wl,--undefined=_socket
+    -Wl,--undefined=game_init
     ${YUI_BUILD_DIR}/libyui.a
     ${YUI_BUILD_DIR}/libcjson.a
     ${YUI_BUILD_DIR}/libtsm.a

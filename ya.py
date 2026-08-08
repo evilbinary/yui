@@ -615,6 +615,8 @@ def add_flags():
             '-DYUI_LAYER_VARIANT_MAX=32',
             '-DYUI_LIFECYCLE_NAME_MAX=32',
             '-DYUI_ESP_PLATFORM=1',
+            '-DYUI_WITH_GAME=1',
+            '-DYUI_WITH_GAME_AUDIO=0',
             '-DJS_MEM_POOL_SIZE=84*1024',
         )
     elif is_plat("android"):

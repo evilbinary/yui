@@ -22,6 +22,9 @@ if get_plat() == "esp32":
     add_files("game/*.c")
     add_cflags("-DYUI_WITH_GAME=1")
     add_cflags("-DYUI_WITH_GAME_AUDIO=0")
+    # 静态数组压缩适配 400KB SRAM（GameEntity ~600B，128 个 ≈ 76KB）
+    add_cflags("-DGAME_MAX_ENTITIES=16")
+    add_cflags("-DGAME_MAX_PARTICLES=32")
 else:
     add_files("game/*.c")
     add_cflags("-DYUI_WITH_GAME=1")
