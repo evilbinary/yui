@@ -420,6 +420,7 @@ int js_module_load_file(const char* filename)
         if (buf) free(buf);
         buf = load_file(filename, &len);
         if (!buf) {
+            fprintf(stderr, "JS: Failed to load JS file %s\n", filename);
             return -1;
         }
         val = JS_Eval(g_js_ctx, (const char*)buf, (size_t)len, filename, 0);

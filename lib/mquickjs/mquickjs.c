@@ -531,17 +531,17 @@
  static void *js_malloc(JSContext *ctx, uint32_t size, int mtag)
  {
      JSMemBlockHeader *p;
- 
+
      if (size == 0)
          return NULL;
      size = (size + JSW - 1) & ~(JSW - 1);
- 
-     if (check_free_mem(ctx, ctx->stack_bottom, size))
-         return NULL;
+
+    if (check_free_mem(ctx, ctx->stack_bottom, size))
+        return NULL;
      
      p = (JSMemBlockHeader *)ctx->heap_free;
      ctx->heap_free += size;
- 
+
      p->mtag = mtag;
      p->gc_mark = 0;
      p->dummy = 0;
@@ -1963,10 +1963,10 @@
  
      a = 0;
      b = len - 1;
-     while (a <= b) {
-         m = (a + b) >> 1;
-         val1 = arr->arr[m];
-         r = js_string_compare(ctx, val, val1);
+    while (a <= b) {
+        m = (a + b) >> 1;
+        val1 = arr->arr[m];
+        r = js_string_compare(ctx, val, val1);
          if (r == 0) {
              /* found */
              *pidx = m;
@@ -2048,9 +2048,9 @@
          q->is_ascii = p->is_ascii;
          q->is_unique = TRUE;
          q->is_numeric = is_numeric;
-         arr = JS_VALUE_TO_PTR(ctx->unique_strings);
-         memmove(&arr->arr[a + 1], &arr->arr[a],
-                 sizeof(arr->arr[0]) * (ctx->unique_strings_len - a));
+        arr = JS_VALUE_TO_PTR(ctx->unique_strings);
+        memmove(&arr->arr[a + 1], &arr->arr[a],
+                sizeof(arr->arr[0]) * (ctx->unique_strings_len - a));
          new_str = JS_VALUE_FROM_PTR(q);
          arr->arr[a] = new_str;
          ctx->unique_strings_len++;
@@ -2942,8 +2942,8 @@ static JSValue get_special_prop(JSContext *ctx, JSValue val)
          first_free = pr1->hash_next >> 1;
      }
  
-     pr = (JSProperty *)&arr->arr[first_free];
-     pr->key = prop;
+    pr = (JSProperty *)&arr->arr[first_free];
+    pr->key = prop;
      pr->value = JS_UNDEFINED;
      pr->prop_type = JS_PROP_NORMAL;
      h = hash_prop(prop) & hash_mask;
@@ -7077,12 +7077,12 @@ static JSValue get_special_prop(JSContext *ctx, JSValue val)
          mtag_count[i] = 0;
      }
      tot_size = 0;
-     ptr = ctx->heap_base;
-     while (ptr < ctx->heap_free) {
-         int mtag, size, gc_mark;
-         mtag = ((JSMemBlockHeader *)ptr)->mtag;
-         gc_mark = ((JSMemBlockHeader *)ptr)->gc_mark;
-         size = get_mblock_size(ptr);
+    ptr = ctx->heap_base;
+    while (ptr < ctx->heap_free) {
+        int mtag, size, gc_mark;
+        mtag = ((JSMemBlockHeader *)ptr)->mtag;
+        gc_mark = ((JSMemBlockHeader *)ptr)->gc_mark;
+        size = get_mblock_size(ptr);
          mtag_mem_size[mtag] += size;
          mtag_count[mtag]++;
          tot_size += size;
@@ -12102,11 +12102,11 @@ static JSValue get_special_prop(JSContext *ctx, JSValue val)
          }
      }
      
-     /* mark all the memory blocks */
-     sp_end = ctx->class_proto + 2 * ctx->class_count;
-     for(sp = &ctx->current_exception; sp < sp_end; sp++) {
-         gc_mark_root(s, *sp);
-     }
+    /* mark all the memory blocks */
+    sp_end = ctx->class_proto + 2 * ctx->class_count;
+    for(sp = &ctx->unique_strings; sp < sp_end; sp++) {
+        gc_mark_root(s, *sp);
+    }
  
      for(sp = ctx->sp; sp < (JSValue *)ctx->stack_top; sp++) {
          gc_mark_root(s, *sp);
@@ -12398,18 +12398,18 @@ static JSValue get_special_prop(JSContext *ctx, JSValue val)
          gc_thread_pointer(ctx, &ps->byte_code);
      }
  
-     /* pass 1: thread the pointers and update the previous ones */
-     new_ptr = ctx->heap_base;
-     ptr = ctx->heap_base;
-     while (ptr < ctx->heap_free) {
-         gc_update_threaded_pointers(ctx, ptr, new_ptr);
-         size = get_mblock_size(ptr);
-         if (js_get_mtag(ptr) != JS_MTAG_FREE) {
-             gc_thread_block(ctx, ptr);
-             new_ptr += size;
-         }
-         ptr += size;
-     }
+    /* pass 1: thread the pointers and update the previous ones */
+    new_ptr = ctx->heap_base;
+    ptr = ctx->heap_base;
+    while (ptr < ctx->heap_free) {
+        gc_update_threaded_pointers(ctx, ptr, new_ptr);
+        size = get_mblock_size(ptr);
+        if (js_get_mtag(ptr) != JS_MTAG_FREE) {
+            gc_thread_block(ctx, ptr);
+            new_ptr += size;
+        }
+        ptr += size;
+    }
      
      /* pass 2: update the threaded pointers and move the block to its
         final position */
