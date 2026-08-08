@@ -87,6 +87,13 @@ if is_host_plat():
     target("bc-gen")
     set_kind("binary")
     set_toolchain('gcc')
+    # 隔离 32 位(-m32)对象到独立目录：bc-gen 与 64 位 mquickjs 静态库共用
+    # cutils.c/dtoa.c/libm.c，默认同一对象路径会互相覆盖（-m32 编译产物污染
+    # 64 位库，导致 PC 端 yui-stdlib-host / 测试链接报 i386 与 x86-64 不匹配）。
+    def bcgen_objdir(target=None):
+        if target is not None:
+            target['build-obj-dir'] = 'build/{plat}/{arch}/{mode}/objs32/'
+    on_config(bcgen_objdir)
     # 独立宿主工具，不调用全局 add_flags()（那会引入 SDL2/ASan 等 pc 后端依赖，
     # 且与 -m32 冲突）。bc-gen 只需引擎 + socket.c 胶水，下面显式给出全部编译选项。
     # 自包含 32 位引擎：不依赖已编译的 64 位 PC 库，直接编译引擎源 + bc_gen.c。
