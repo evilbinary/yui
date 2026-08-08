@@ -2767,10 +2767,10 @@ static void *stbtt__hheap_alloc(stbtt__hheap *hh, size_t size, void *userdata)
  return p;
  } else {
  if (hh->num_remaining_in_head_chunk == 0) {
-  int count = (size < 32 ? 200 : size < 128 ? 80 : 100);
-  stbtt__hheap_chunk *c = (stbtt__hheap_chunk *) STBTT_malloc(sizeof(stbtt__hheap_chunk) + size * count, userdata);
- if (c == NULL)
- return NULL;
+  int count = (size < 32 ? 32 : size < 128 ? 24 : 16);
+   stbtt__hheap_chunk *c = (stbtt__hheap_chunk *) STBTT_malloc(sizeof(stbtt__hheap_chunk) + size * count, userdata);
+  if (c == NULL)
+  return NULL;
  c->next = hh->head;
  hh->head = c;
  hh->num_remaining_in_head_chunk = count;
