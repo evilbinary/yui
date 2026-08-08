@@ -1603,8 +1603,44 @@ static JSValue js_yui_set_event(JSContext *ctx, JSValue *this_val, int argc, JSV
 static const JSClassDef js_yui_class =
 JS_CLASS_DEF("YUI", 1, js_yui_constructor, JS_CLASS_YUI, js_yui, js_yui_proto, NULL, js_yui_finalizer);
 
+// 把 stdlib 表里点号名的扁平属性（"perf.enable" 等）重组为嵌套对象
+// （YUI.perf.enable），与 jsmodule-quickjs 的 YUI.perf / YUI.inspect 形态一致。
+static void yui_build_nested_api(JSContext* ctx, JSValue yui_obj,
+                                 const char* group,
+                                 const char* const* methods, int count)
+{
+    JSGCRef obj_ref;
+    JSValue obj;
+    int i;
+
+    obj = JS_NewObject(ctx);
+    if (JS_IsException(obj)) {
+        return;
+    }
+    JS_PUSH_VALUE(ctx, obj);
+    for (i = 0; i < count; i++) {
+        char flat[64];
+        JSValue fn;
+        snprintf(flat, sizeof(flat), "%s.%s", group, methods[i]);
+        fn = JS_GetPropertyStr(ctx, yui_obj, flat);
+        if (!JS_IsException(fn) && !JS_IsUndefined(fn) && !JS_IsNull(fn)) {
+            JS_SetPropertyStr(ctx, obj, methods[i], fn);
+        }
+    }
+    JS_SetPropertyStr(ctx, yui_obj, group, obj);
+    JS_POP_VALUE(ctx, obj);
+}
+
 // 注册 YUI API 到 JS（导出函数，不使用 static）
 void js_module_register_yui_api(JSContext* ctx) {
+    static const char* const perf_methods[] = {
+        "enable", "disable", "reset", "setOverlay", "setTopN",
+        "setLogInterval", "watch", "unwatch", "clearWatch",
+        "getFrameStats", "getLayerStats"
+    };
+    static const char* const inspect_methods[] = {
+        "enable", "disable", "setLayer", "setShowBounds", "setShowInfo"
+    };
     if (!ctx) return;
     
     // 获取全局对象
@@ -1623,6 +1659,19 @@ void js_module_register_yui_api(JSContext* ctx) {
         printf("JS(YUI): YUI object not found, will be created by js_yuistdlib\n");
     } else {
         printf("JS(YUI): YUI object exists, functions should be available\n");
+        /* 把点号名扁平属性重组为嵌套对象（与 quickjs 的 YUI.perf / YUI.inspect 一致） */
+        yui_build_nested_api(ctx, yui_obj, "perf", perf_methods,
+                             (int)(sizeof(perf_methods) / sizeof(perf_methods[0])));
+        yui_build_nested_api(ctx, yui_obj, "inspect", inspect_methods,
+                             (int)(sizeof(inspect_methods) / sizeof(inspect_methods[0])));
+        {
+            JSValue p = JS_GetPropertyStr(ctx, yui_obj, "perf");
+            JSValue f = JS_IsUndefined(p) || JS_IsNull(p)
+                            ? JS_UNDEFINED
+                            : JS_GetPropertyStr(ctx, p, "enable");
+            printf("JS(YUI): nested perf.enable is_func=%d\n",
+                   (int)(JS_IsFunction(ctx, f) ? 1 : 0));
+        }
     }
     
     printf("JS(YUI): YUI API registration completed\n");
