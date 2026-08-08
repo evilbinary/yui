@@ -167,7 +167,7 @@ function takePhoto() {
 // 拍照闪光效果
 function flashEffect() {
     // 模拟闪光效果 - 短暂改变取景器背景色
-    var viewfinder = YUI.getView("viewfinder");
+    var viewfinder = YUI.find("viewfinder");
     if (viewfinder) {
         // 闪光
         updateLayerStyle("viewfinder", "bgColor", "#ffffff");

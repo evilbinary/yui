@@ -386,6 +386,7 @@ static const JSPropDef js_global_object[] = {
     
     JS_PROP_CLASS_DEF("YUI", &js_yui_class),
     JS_PROP_CLASS_DEF("Socket", &js_socket_class),
+    JS_PROP_CLASS_DEF("Game", &js_game_class),
 
 
     JS_CFUNC_DEF("gc", 0, js_gc),

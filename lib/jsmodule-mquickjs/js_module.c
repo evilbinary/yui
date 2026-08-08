@@ -111,6 +111,7 @@ void js_module_cleanup(void)
 extern void js_module_register_socket_api(JSContext* ctx);
 #endif
 extern void js_module_register_yui_api(JSContext* ctx);
+extern void js_module_register_game_api(JSContext* ctx);
 
 // 注册 C API 到 JS
 void js_module_register_api(void)
@@ -124,6 +125,8 @@ void js_module_register_api(void)
     // 调用统一的 Socket API 注册函数
     js_module_register_socket_api(g_js_ctx);
 #endif
+    // Game API
+    js_module_register_game_api(g_js_ctx);
     
     printf("JS(Socket): Registered API function\n");
 }

@@ -2486,7 +2486,9 @@
      return find_own_property_inlined(ctx, p, prop);
  }
  
- static JSValue get_special_prop(JSContext *ctx, JSValue val)
+ static JSValue stdlib_init_class(JSContext *ctx, const JSROMClass *class_def);
+
+static JSValue get_special_prop(JSContext *ctx, JSValue val)
  {
      int idx;
      /* 'prototype' or 'constructor' property in ROM */
@@ -2530,10 +2532,16 @@
                  goto no_prop;
              }
          }
-     } else {
-         p = JS_VALUE_TO_PTR(obj);
-     }
-     if (unlikely(p->mtag != JS_MTAG_OBJECT)) {
+    } else {
+        p = JS_VALUE_TO_PTR(obj);
+    }
+    if (unlikely(p->mtag == JS_MTAG_OBJECT && JS_IS_ROM_PTR(ctx, p))) {
+        obj = stdlib_init_class(ctx, (const JSROMClass *)p);
+        if (JS_IsException(obj))
+            return obj;
+        p = JS_VALUE_TO_PTR(obj);
+    }
+    if (unlikely(p->mtag != JS_MTAG_OBJECT)) {
          switch(p->mtag) {
          case JS_MTAG_FLOAT64:
              p = JS_VALUE_TO_PTR(ctx->class_proto[JS_CLASS_NUMBER]);
@@ -2605,9 +2613,9 @@
  
          pr = find_own_property(ctx, p, prop);
          if (pr) {
-             if (likely(pr->prop_type == JS_PROP_NORMAL)) {
-                 return pr->value;
-             } else if (pr->prop_type == JS_PROP_VARREF) {
+                if (likely(pr->prop_type == JS_PROP_NORMAL)) {
+                    return pr->value;
+                } else if (pr->prop_type == JS_PROP_VARREF) {
                  JSVarRef *pv = JS_VALUE_TO_PTR(pr->value);
                  /* always detached */
                  return pv->u.value;
@@ -5865,13 +5873,15 @@
                      /* fast case */
                      JSObject *p = JS_VALUE_TO_PTR(obj);
                      JSProperty *pr;
-                     if (unlikely(p->mtag != JS_MTAG_OBJECT))
-                         goto get_field_slow;
-                     for(;;) {
-                         /* no array check is necessary because 'prop' is
-                            guaranteed not to be a numeric property */
-                         /* XXX: slow due to short ints */
-                         pr = find_own_property_inlined(ctx, p, prop);
+                    if (unlikely(p->mtag != JS_MTAG_OBJECT))
+                        goto get_field_slow;
+                    if (unlikely(JS_IS_ROM_PTR(ctx, p)))
+                        goto get_field_slow;
+                    for(;;) {
+                        /* no array check is necessary because 'prop' is
+                           guaranteed not to be a numeric property */
+                        /* XXX: slow due to short ints */
+                        pr = find_own_property_inlined(ctx, p, prop);
                          if (pr) {
                              if (unlikely(pr->prop_type != JS_PROP_NORMAL)) {
                                  /* sp[0] is this_obj, obj is the current
@@ -5964,18 +5974,20 @@
                      /* fast case */
                      JSObject *p = JS_VALUE_TO_PTR(obj);
                      JSProperty *pr;
-                     if (unlikely(p->mtag != JS_MTAG_OBJECT))
-                         goto put_field_slow;
-                     /* no array check is necessary because 'prop' is
-                        guaranteed not to be a numeric property */
-                     /* XXX: slow due to short ints */
-                     pr = find_own_property_inlined(ctx, p, prop);
-                     if (unlikely(!pr))
-                         goto put_field_slow;
-                     if (unlikely(pr->prop_type != JS_PROP_NORMAL))
-                         goto put_field_slow;
-                     /* XXX: slow */
-                     if (unlikely(JS_IS_ROM_PTR(ctx, pr)))
+                    if (unlikely(p->mtag != JS_MTAG_OBJECT))
+                        goto put_field_slow;
+                    if (unlikely(JS_IS_ROM_PTR(ctx, p)))
+                        goto put_field_slow;
+                    /* no array check is necessary because 'prop' is
+                       guaranteed not to be a numeric property */
+                    /* XXX: slow due to short ints */
+                    pr = find_own_property_inlined(ctx, p, prop);
+                    if (unlikely(!pr))
+                        goto put_field_slow;
+                    if (unlikely(pr->prop_type != JS_PROP_NORMAL))
+                        goto put_field_slow;
+                    /* XXX: slow */
+                    if (unlikely(JS_IS_ROM_PTR(ctx, pr)))
                          goto put_field_slow;
                      pr->value = sp[0];
                      sp += 2;

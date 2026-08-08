@@ -5,6 +5,7 @@
 #include "../../src/layer.h"
 #include "../../src/layer_lifecycle.h"
 #include "../../src/theme_manager.h"
+#include "../../src/game/game.h"
 #include "../../lib/cjson/cJSON.h"
 #include "mquickjs.h"
 #include <stdlib.h>
@@ -168,4 +169,127 @@ void backend_get_windowsize(int* width, int* height) {
 int backend_screenshot(const char* path) {
     (void)path;
     return -1;
+}
+
+// Game 存根：js_game.c 参与 yui-stdlib-host 生成 ROM 表，但工具不需要 game 运行时
+void game_init(void) {
+}
+void game_shutdown(void) {
+}
+int game_load_scene_json(const char* path) {
+    (void)path;
+    return 0;
+}
+void game_clear_scene(void) {
+}
+GameEntity* game_spawn_from_json(cJSON* obj) {
+    (void)obj;
+    return NULL;
+}
+GameEntity* game_spawn(const char* id) {
+    (void)id;
+    return NULL;
+}
+void game_destroy(GameEntity* e) {
+    (void)e;
+}
+void game_destroy_by_id(const char* id) {
+    (void)id;
+}
+GameEntity* game_find(const char* id) {
+    (void)id;
+    return NULL;
+}
+GameEntity* game_find_by_tag(const char* tag) {
+    (void)tag;
+    return NULL;
+}
+int game_find_all_by_tag(const char* tag, GameEntity** out, int max_out) {
+    (void)tag;
+    (void)out;
+    (void)max_out;
+    return 0;
+}
+GameEntity* game_pool_acquire(const char* prefab) {
+    (void)prefab;
+    return NULL;
+}
+void game_pool_release(GameEntity* e) {
+    (void)e;
+}
+float game_time_dt(void) {
+    return 0;
+}
+int game_input_down(const char* name) {
+    (void)name;
+    return 0;
+}
+int game_input_pressed(const char* name) {
+    (void)name;
+    return 0;
+}
+float game_input_axis(const char* name) {
+    (void)name;
+    return 0;
+}
+void game_input_pointer(int* x, int* y) {
+    if (x) *x = 0;
+    if (y) *y = 0;
+}
+int game_input_mouse_down(int button) {
+    (void)button;
+    return 0;
+}
+int game_input_mouse_pressed(int button) {
+    (void)button;
+    return 0;
+}
+GameCamera* game_camera(void) {
+    return NULL;
+}
+void game_camera_set(float x, float y) {
+    (void)x; (void)y;
+}
+void game_camera_follow(const char* id) {
+    (void)id;
+}
+int game_entities_overlap(const GameEntity* a, const GameEntity* b) {
+    (void)a; (void)b;
+    return 0;
+}
+void game_set_trigger_fn(GameTriggerFn fn) {
+    (void)fn;
+}
+void game_set_script_update_fn(GameScriptUpdateFn fn) {
+    (void)fn;
+}
+int game_play_anim(GameEntity* e, const char* clip) {
+    (void)e; (void)clip;
+    return 0;
+}
+int game_audio_play_sfx(const char* path) {
+    (void)path;
+    return 0;
+}
+int game_audio_play_bgm(const char* path, int loop) {
+    (void)path; (void)loop;
+    return 0;
+}
+void game_audio_stop_bgm(void) {
+}
+int game_spawn_particles(float x, float y, int count, Color color, float speed, float life) {
+    (void)x; (void)y; (void)count; (void)color; (void)speed; (void)life;
+    return 0;
+}
+void game_debug_set_boxes(int enabled) {
+    (void)enabled;
+}
+int game_debug_boxes_enabled(void) {
+    return 0;
+}
+const GamePerfStats* game_perf_get_stats(void) {
+    return NULL;
+}
+int game_scene_generation(void) {
+    return 0;
 }
