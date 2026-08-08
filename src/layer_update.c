@@ -149,11 +149,13 @@ int yui_remove_all_children(Layer* parent) {
     for (int i = 0; i < parent->child_count; i++) {
         if (parent->children[i]) {
             destroy_layer(parent->children[i]);
-            parent->children[i] = NULL;
         }
     }
     
+    free(parent->children);
+    parent->children = NULL;
     parent->child_count = 0;
+    
     mark_layer_dirty(parent, DIRTY_CHILDREN | DIRTY_LAYOUT);
     
     return count;
