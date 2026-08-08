@@ -125,8 +125,10 @@ int yui_remove_child(Layer* parent, const char* child_id) {
     
     // 销毁子图层
     destroy_layer(parent->children[index]);
+    /* 销毁后立即置 NULL：事件分发遍历判 NULL 跳过，避免访问已释放的 child */
+    parent->children[index] = NULL;
     
-    // 移动后续元素
+    // 移动后续元素（压缩，保持数组无空洞；被销毁项已置 NULL 不影响后续遍历判空）
     for (int i = index; i < parent->child_count - 1; i++) {
         parent->children[i] = parent->children[i + 1];
     }
@@ -147,13 +149,11 @@ int yui_remove_all_children(Layer* parent) {
     for (int i = 0; i < parent->child_count; i++) {
         if (parent->children[i]) {
             destroy_layer(parent->children[i]);
+            parent->children[i] = NULL;
         }
     }
     
-    free(parent->children);
-    parent->children = NULL;
     parent->child_count = 0;
-    
     mark_layer_dirty(parent, DIRTY_CHILDREN | DIRTY_LAYOUT);
     
     return count;

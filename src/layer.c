@@ -1119,6 +1119,11 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
 void destroy_layer(Layer* layer) {
     if (!layer) return;
 
+    /* 若销毁的是当前聚焦层，清除全局 focused_layer，避免悬空指针 */
+    if (focused_layer == layer) {
+        focused_layer = NULL;
+    }
+
     layer_lifecycle_before_destroy(layer);
     
     // 递归销毁子图层
