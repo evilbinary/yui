@@ -283,7 +283,15 @@ static uint8_t* js_load_bytecode_split(JSContext* ctx, const char* bc_path, uint
 
     ram = (uint8_t*)malloc(hdr.ram_len);
     if (!ram) {
-        fprintf(stderr, "JS: out of memory for bytecode skeleton\n");
+        fprintf(stderr, "JS: out of memory for bytecode skeleton (ram_len=%u)\n",
+                (unsigned)hdr.ram_len);
+#if defined(YUI_ESP_PLATFORM)
+        extern size_t heap_caps_get_free_size(int caps);
+        extern size_t heap_caps_get_largest_free_block(int caps);
+        fprintf(stderr, "JS: sys free=%u largest=%u\n",
+                (unsigned)heap_caps_get_free_size(4),
+                (unsigned)heap_caps_get_largest_free_block(4));
+#endif
         fclose(f);
         return NULL;
     }
