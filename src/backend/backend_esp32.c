@@ -908,7 +908,7 @@ void backend_render_arc(int center_x, int center_y, int radius, float start_angl
  * 给出「自实心区向外」的每像素覆盖率（0..~240），再逐点 alpha 混合。
  * 仅在 framebuffer 路径（QEMU / buffer=1）编译启用。
  * ============================================================ */
-#define YUI_AA_CACHE_SIZE 8
+#define YUI_AA_CACHE_SIZE 32
 
 typedef struct {
     int radius;                     /* 0 = 空槽 */
