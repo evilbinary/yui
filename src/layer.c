@@ -863,7 +863,9 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
       if (handler_id[0] == '@') {
         lookup_name = handler_id + 1;
       }
-      strcpy(layer->event->click_name, lookup_name);
+      strncpy(layer->event->click_name, lookup_name,
+              sizeof(layer->event->click_name) - 1);
+      layer->event->click_name[sizeof(layer->event->click_name) - 1] = '\0';
 
       EventHandler handler = find_event_by_name(lookup_name);
       layer->event->click = handler;
@@ -880,7 +882,9 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
       if (handler_id[0] == '@') {
         lookup_name = handler_id + 1;
       }
-      strcpy(layer->event->scroll_name, lookup_name);
+      strncpy(layer->event->scroll_name, lookup_name,
+              sizeof(layer->event->scroll_name) - 1);
+      layer->event->scroll_name[sizeof(layer->event->scroll_name) - 1] = '\0';
 
       EventHandler handler = find_event_by_name(lookup_name);
       layer->event->scroll = handler;
@@ -897,7 +901,9 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
       if (handler_id[0] == '@') {
         lookup_name = handler_id + 1;
       }
-      strcpy(layer->event->touch_name, lookup_name);
+      strncpy(layer->event->touch_name, lookup_name,
+              sizeof(layer->event->touch_name) - 1);
+      layer->event->touch_name[sizeof(layer->event->touch_name) - 1] = '\0';
 
       EventHandler handler = find_event_by_name(lookup_name);
       layer->event->touch = handler;
@@ -913,7 +919,9 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
       if (handler_id[0] == '@') {
         lookup_name = handler_id + 1;
       }
-      strcpy(layer->event->resize_name, lookup_name);
+      strncpy(layer->event->resize_name, lookup_name,
+              sizeof(layer->event->resize_name) - 1);
+      layer->event->resize_name[sizeof(layer->event->resize_name) - 1] = '\0';
 
       EventHandler handler = find_event_by_name(lookup_name);
       if (handler) {

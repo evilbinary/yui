@@ -274,8 +274,8 @@ static void terminal_fire_command_event(TerminalComponent* comp) {
         comp->layer->event = calloc(1, sizeof(Event));
         if (!comp->layer->event) return;
     }
-    strncpy(comp->layer->event->click_name, comp->on_command_name, YUI_MAX_PATH - 1);
-    comp->layer->event->click_name[YUI_MAX_PATH - 1] = '\0';
+    strncpy(comp->layer->event->click_name,comp->on_command_name,sizeof(comp->layer->event->click_name) - 1);
+    comp->layer->event->click_name[sizeof(comp->layer->event->click_name) - 1] = '\0';
 
     handler = comp->on_command;
     if (!handler) {
@@ -295,8 +295,8 @@ static void terminal_fire_key_event(TerminalComponent* comp) {
         comp->layer->event = calloc(1, sizeof(Event));
         if (!comp->layer->event) return;
     }
-    strncpy(comp->layer->event->click_name, comp->on_key_name, YUI_MAX_PATH - 1);
-    comp->layer->event->click_name[YUI_MAX_PATH - 1] = '\0';
+    strncpy(comp->layer->event->click_name,comp->on_key_name,sizeof(comp->layer->event->click_name) - 1);
+    comp->layer->event->click_name[sizeof(comp->layer->event->click_name) - 1] = '\0';
 
     handler = comp->on_key;
     if (!handler) {

@@ -516,19 +516,25 @@ typedef struct {
 } EventEntry;
 
 
+/* 事件处理器名称缓冲：处理器名实际都很短（如 "@onLauncherAppClick"），
+   无需 YUI_MAX_PATH 那么大。缩小可省 sizeof(Event)（每个带事件图层约 768B）。 */
+#ifndef YUI_MAX_EVENT_NAME
+#define YUI_MAX_EVENT_NAME 64
+#endif
+
 typedef struct Event {
-    char click_name[YUI_MAX_PATH];
+    char click_name[YUI_MAX_EVENT_NAME];
     EventHandler click;
     EventHandler press;
     // 添加滚动事件回调函数指针
-    char scroll_name[YUI_MAX_PATH];
+    char scroll_name[YUI_MAX_EVENT_NAME];
     EventHandler scroll;
 
     // 合并的触屏事件
-    char touch_name[YUI_MAX_PATH];
+    char touch_name[YUI_MAX_EVENT_NAME];
     EventHandler touch;
 
-    char resize_name[YUI_MAX_PATH];
+    char resize_name[YUI_MAX_EVENT_NAME];
     void (*resize)(Layer* layer, const ResizeEvent* event);
 } Event;
 

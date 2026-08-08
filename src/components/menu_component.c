@@ -579,8 +579,8 @@ static void menu_item_click(MenuComponent* component, MenuItem* item) {
             }
         }
         if (component->layer->event) {
-            strncpy(component->layer->event->click_name, component->on_select_name, YUI_MAX_PATH - 1);
-            component->layer->event->click_name[YUI_MAX_PATH - 1] = '\0';
+            strncpy(component->layer->event->click_name,component->on_select_name,sizeof(component->layer->event->click_name) - 1);
+            component->layer->event->click_name[sizeof(component->layer->event->click_name) - 1] = '\0';
         }
 
         EventHandler handler = find_event_by_name(component->on_select_name);

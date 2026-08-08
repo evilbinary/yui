@@ -100,8 +100,8 @@ int js_module_set_layer_event(Layer* layer, const char* event_name, const char* 
     // 检查 click 事件
     if (strcmp(event_name, "click") == 0 || strcmp(event_name, "onClick") == 0) {
         if (event_func_name) {
-            strncpy(layer->event->click_name, event_func_name, YUI_MAX_PATH - 1);
-            layer->event->click_name[YUI_MAX_PATH - 1] = '\0';
+            strncpy(layer->event->click_name,event_func_name,sizeof(layer->event->click_name) - 1);
+            layer->event->click_name[sizeof(layer->event->click_name) - 1] = '\0';
         }
         layer->event->click = (EventHandler)event_handler;
         return 0;
@@ -114,8 +114,8 @@ int js_module_set_layer_event(Layer* layer, const char* event_name, const char* 
     // 检查 scroll 事件
     if (strcmp(event_name, "scroll") == 0 || strcmp(event_name, "onScroll") == 0) {
         if (event_func_name) {
-            strncpy(layer->event->scroll_name, event_func_name, YUI_MAX_PATH - 1);
-            layer->event->scroll_name[YUI_MAX_PATH - 1] = '\0';
+            strncpy(layer->event->scroll_name,event_func_name,sizeof(layer->event->scroll_name) - 1);
+            layer->event->scroll_name[sizeof(layer->event->scroll_name) - 1] = '\0';
         }
         layer->event->scroll = (EventHandler)event_handler;
         return 0;
@@ -123,8 +123,8 @@ int js_module_set_layer_event(Layer* layer, const char* event_name, const char* 
     // 检查 touch 事件
     if (strcmp(event_name, "touch") == 0 || strcmp(event_name, "onTouch") == 0) {
         if (event_func_name) {
-            strncpy(layer->event->touch_name, event_func_name, YUI_MAX_PATH - 1);
-            layer->event->touch_name[YUI_MAX_PATH - 1] = '\0';
+            strncpy(layer->event->touch_name,event_func_name,sizeof(layer->event->touch_name) - 1);
+            layer->event->touch_name[sizeof(layer->event->touch_name) - 1] = '\0';
         }
         layer->event->touch = (EventHandler)event_handler;
         return 0;
@@ -141,8 +141,8 @@ int js_module_set_layer_event(Layer* layer, const char* event_name, const char* 
     // 检查 resize 事件
     if (strcmp(event_name, "resize") == 0 || strcmp(event_name, "onResize") == 0) {
         if (event_func_name) {
-            strncpy(layer->event->resize_name, event_func_name, YUI_MAX_PATH - 1);
-            layer->event->resize_name[YUI_MAX_PATH - 1] = '\0';
+            strncpy(layer->event->resize_name,event_func_name,sizeof(layer->event->resize_name) - 1);
+            layer->event->resize_name[sizeof(layer->event->resize_name) - 1] = '\0';
         }
         layer->event->resize = js_layer_resize_handler;
         return 0;
@@ -308,7 +308,7 @@ void js_module_set_root(const char* root)
         g_js_root[0] = '\0';
         return;
     }
-    strncpy(g_js_root, root, YUI_MAX_PATH - 1);
+    strncpy(g_js_root,root,sizeof(g_js_root) - 1);
     g_js_root[YUI_MAX_PATH - 1] = '\0';
     strip_trailing_slash(g_js_root);
 }

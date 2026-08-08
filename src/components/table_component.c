@@ -1486,8 +1486,8 @@ static void table_dispatch_select(TableComponent* component, int index) {
         layer->event = calloc(1, sizeof(Event));
     }
     if (layer->event) {
-        strncpy(layer->event->click_name, component->on_select_name, YUI_MAX_PATH - 1);
-        layer->event->click_name[YUI_MAX_PATH - 1] = '\0';
+        strncpy(layer->event->click_name,component->on_select_name,sizeof(layer->event->click_name) - 1);
+        layer->event->click_name[sizeof(layer->event->click_name) - 1] = '\0';
     }
 
     layer_set_text(layer, item_json);

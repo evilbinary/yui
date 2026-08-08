@@ -1170,8 +1170,8 @@ int treeview_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
                         if (!layer->event) {
                             layer->event = calloc(1, sizeof(Event));
                         }
-                        strncpy(layer->event->click_name, component->on_expand_name, YUI_MAX_PATH - 1);
-                        layer->event->click_name[YUI_MAX_PATH - 1] = '\0';
+                        strncpy(layer->event->click_name,component->on_expand_name,sizeof(layer->event->click_name) - 1);
+                        layer->event->click_name[sizeof(layer->event->click_name) - 1] = '\0';
                         free(layer->text);
                         layer->text = strdup(node_json);
                         free(node_json);
@@ -1194,8 +1194,8 @@ int treeview_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
                         if (!layer->event) {
                             layer->event = calloc(1, sizeof(Event));
                         }
-                        strncpy(layer->event->click_name, component->on_select_name, YUI_MAX_PATH - 1);
-                        layer->event->click_name[YUI_MAX_PATH - 1] = '\0';
+                        strncpy(layer->event->click_name,component->on_select_name,sizeof(layer->event->click_name) - 1);
+                        layer->event->click_name[sizeof(layer->event->click_name) - 1] = '\0';
                         free(layer->text);
                         layer->text = strdup(node_json);
                         free(node_json);
