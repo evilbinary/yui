@@ -8,7 +8,7 @@
 #include <string.h>
 #include <stdio.h>
 
-#define GAME_TILEMAP_MAX_CELLS (128 * 128)
+#define GAME_TILEMAP_MAX_CELLS (64 * 64)
 
 typedef struct GameTilemap {
     int active;
@@ -17,7 +17,7 @@ typedef struct GameTilemap {
     int tile_w;
     int tile_h;
     int solid_nonzero; /* non-zero tiles are solid */
-    int tiles[GAME_TILEMAP_MAX_CELLS];
+    int* tiles;        /* heap allocated, cols*rows ints */
     char src[GAME_PATH_LEN];
     Texture* texture;
     int tileset_cols; /* frames per row in tileset; 0 = colored rects */
@@ -27,7 +27,11 @@ static GameTilemap g_tm;
 
 void game_tilemap_clear(void)
 {
-    memset(&g_tm, 0, sizeof(g_tm));
+    free(g_tm.tiles);
+    g_tm.tiles = NULL;
+    g_tm.active = 0;
+    g_tm.cols = 0;
+    g_tm.rows = 0;
     g_tm.solid_nonzero = 1;
 }
 
@@ -80,6 +84,15 @@ int game_tilemap_load_from_json(cJSON* node)
     g_tm.cols = cJSON_IsArray(row) ? cJSON_GetArraySize(row) : 0;
     if (g_tm.cols <= 0 || g_tm.rows * g_tm.cols > GAME_TILEMAP_MAX_CELLS) {
         printf("Game tilemap: invalid size %dx%d\n", g_tm.cols, g_tm.rows);
+        return 0;
+    }
+    /* 懒分配：仅在加载真实 tilemap 时按实际尺寸 malloc */
+    if (!g_tm.tiles) {
+        g_tm.tiles = calloc((size_t)(g_tm.rows * g_tm.cols), sizeof(int));
+    }
+    if (!g_tm.tiles) {
+        printf("Game tilemap: out of memory for %dx%d tiles\n",
+               g_tm.cols, g_tm.rows);
         return 0;
     }
     for (r = 0; r < g_tm.rows; r++) {

@@ -617,7 +617,7 @@ def add_flags():
             '-DYUI_ESP_PLATFORM=1',
             '-DYUI_WITH_GAME=1',
             '-DYUI_WITH_GAME_AUDIO=0',
-            '-DJS_MEM_POOL_SIZE=84*1024',
+            '-DJS_MEM_POOL_SIZE=64*1024',
         )
     elif is_plat("android"):
         set_toolchain('gcc')
