@@ -595,6 +595,7 @@ void backend_render_clear_color(unsigned char r, unsigned char g, unsigned char 
 
 void backend_render_line(int x1, int y1, int x2, int y2, Color color) {
     int dx, dy, sx, sy, err, e2;
+    int pts_cnt = 0;
     Rect clip;
 #if YUI_ESP32_LCD_BUFFER
     if (!s_fb) return;
@@ -618,6 +619,12 @@ void backend_render_line(int x1, int y1, int x2, int y2, Color color) {
             }
 #else
             if (color.a > 0) direct_draw_point(x1, y1, color);
+            /* 真机直写是逐点 1x1 SPI，长线/圆弧会占满 CPU 不吃狗；
+             * 每 64 点让出一次调度，使 IDLE 能喂看门狗。 */
+            if (++pts_cnt >= 64) {
+                pts_cnt = 0;
+                vTaskDelay(1);
+            }
 #endif
         }
         if (x1 == x2 && y1 == y2) break;
@@ -655,34 +662,46 @@ static int rounded_rect_radius(const Rect* rect, int radius) {
 }
 
 void backend_render_arc(int center_x, int center_y, int radius, float start_angle, float end_angle, Color color, int line_width) {
-    float step = 0.1f;
+    /* ESP32-C3 无 FPU，软浮点 sin/cos 极慢：step 太大点太疏、太小浮点爆炸。
+     * 折中 0.2°，且每个角度只算一次 sin/cos，逐点画（在线真机的 direct 模式）
+     * 并每 64 点让出调度喂看门狗。线段化的同心圆循环去掉，直接按角度点阵。 */
+    float step = 0.2f;
     int half;
+    int pts_cnt = 0;
+    int wo_min, wo_max, wo;
+    Rect clip;
     if (radius <= 0 || color.a == 0) return;
     if (start_angle > end_angle) { float t = start_angle; start_angle = end_angle; end_angle = t; }
-    if (line_width <= 1) {
-        float prev_x = center_x + radius * cosf(start_angle);
-        float prev_y = center_y + radius * sinf(start_angle);
-        for (float a = start_angle + step; a <= end_angle; a += step) {
-            float x = center_x + radius * cosf(a);
-            float y = center_y + radius * sinf(a);
-            backend_render_line((int)prev_x, (int)prev_y, (int)x, (int)y, color);
-            prev_x = x; prev_y = y;
-        }
-        return;
-    }
-    /* 线宽 >1：围绕同一圆心叠加同心圆弧（同一原点下各半径带宽恒定） */
     half = line_width / 2;
-    for (int wo = -half; wo <= (line_width - 1 - half); wo++) {
-        int rad = radius + wo;
-        float prev_x, prev_y;
-        if (rad <= 0) continue;
-        prev_x = center_x + rad * cosf(start_angle);
-        prev_y = center_y + rad * sinf(start_angle);
-        for (float a = start_angle + step; a <= end_angle; a += step) {
-            float x = center_x + rad * cosf(a);
-            float y = center_y + rad * sinf(a);
-            backend_render_line((int)prev_x, (int)prev_y, (int)x, (int)y, color);
-            prev_x = x; prev_y = y;
+    wo_min = -half;
+    wo_max = line_width - 1 - half;
+    clip_get_current(&clip);
+    for (float a = start_angle; a <= end_angle; a += step) {
+        float ca = cosf(a), sa = sinf(a);
+        for (wo = wo_min; wo <= wo_max; wo++) {
+            int rad = radius + wo;
+            int x, y;
+            if (rad <= 0) continue;
+            x = center_x + (int)(rad * ca);
+            y = center_y + (int)(rad * sa);
+            if (x < clip.x || x >= clip.x + clip.w || y < clip.y || y >= clip.y + clip.h) continue;
+#if YUI_ESP32_LCD_BUFFER
+            if (s_fb) {
+                if (color.a == 255) {
+                    s_fb[y * s_fb_w + x] = color_to_rgb565(color);
+                } else if (color.a > 0) {
+                    Color d = rgb565_to_color(s_fb[y * s_fb_w + x]);
+                    unsigned a2 = color.a;
+                    d.r = (unsigned char)((d.r * (255 - a2) + color.r * a2) / 255);
+                    d.g = (unsigned char)((d.g * (255 - a2) + color.g * a2) / 255);
+                    d.b = (unsigned char)((d.b * (255 - a2) + color.b * a2) / 255);
+                    s_fb[y * s_fb_w + x] = color_to_rgb565(d);
+                }
+            }
+#else
+            if (color.a > 0) direct_draw_point(x, y, color);
+            if (++pts_cnt >= 64) { pts_cnt = 0; vTaskDelay(1); }
+#endif
         }
     }
 }
