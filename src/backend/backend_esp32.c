@@ -907,7 +907,7 @@ static void rounded_rect_fill(Rect* rect, Color color, int radius) {
             rounded_row_aa(x, py, w, r, corner, aa, color);
         } else {
             /* 覆盖率缓存失败：退回按行 inset 硬边填充 */
-            int inset = (int)(r - sqrtf((float)r * r - (float)(r - corner) * (r - corner)));
+            int inset = (int)(r - sqrtf((float)r * r - (float)(corner + 1) * (corner + 1)));
             int run_w;
             if (inset < 0) inset = 0;
             run_w = w - 2 * inset;
@@ -934,7 +934,7 @@ static void rounded_rect_fill(Rect* rect, Color color, int radius) {
             Rect row = {x, py, w, 1};
             backend_render_fill_rect(&row, color);
         } else {
-            int inset = (int)(r - sqrtf((float)r * r - (float)(r - corner) * (r - corner)));
+            int inset = (int)(r - sqrtf((float)r * r - (float)(corner + 1) * (corner + 1)));
             int run_w;
             if (inset < 0) inset = 0;
             run_w = w - 2 * inset;
