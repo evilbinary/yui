@@ -697,6 +697,10 @@ void app_main(void) {
     layout_layer(ui_root);
     printf("YUI: enter main loop\n");
 
+    /* 直写模式：仅注入屏幕尺寸供 clip/脏矩形计算（fb=NULL 走 blit 回调，
+     * 不分配 framebuffer）。否则 s_fb_w=0 会把根层背景 fill 裁剪掉。 */
+    backend_esp32_set_framebuffer(NULL, YUI_SCREEN_WIDTH, YUI_SCREEN_HEIGHT);
+
     /* 7. 主循环（内部不返回） */
     backend_run(ui_root);
     js_module_cleanup();  // 清理 JS 引擎
