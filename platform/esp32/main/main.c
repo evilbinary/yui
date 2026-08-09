@@ -58,7 +58,7 @@
 #endif
 
 #define EXAMPLE_LCD_PIXEL_CLOCK_HZ (10 * 1000 * 1000)
-#define EXAMPLE_LCD_BK_LIGHT_ON_LEVEL  0
+#define EXAMPLE_LCD_BK_LIGHT_ON_LEVEL  1
 #define EXAMPLE_LCD_BK_LIGHT_OFF_LEVEL !EXAMPLE_LCD_BK_LIGHT_ON_LEVEL
 #define EXAMPLE_PIN_NUM_DATA0          6  /*!< for 1-line SPI, this also refereed as MOSI */
 #define EXAMPLE_PIN_NUM_PCLK           4 //SPI时钟
@@ -171,7 +171,7 @@ static int esp32_lcd_init(void) {
     io_config.pclk_hz = YUI_LCD_FREQ_HZ;
     io_config.lcd_cmd_bits = 8;
     io_config.lcd_param_bits = 8;
-    io_config.spi_mode = 0;
+    io_config.spi_mode = 3; /* 与官方 tjpgd 例程一致：mode 3 模拟 Intel 8080 时序 */
     io_config.trans_queue_depth = 10;
 
     ret = esp_lcd_new_panel_io_spi((esp_lcd_spi_bus_handle_t)YUI_LCD_SPI_HOST, &io_config, &io_handle);
@@ -195,24 +195,34 @@ static int esp32_lcd_init(void) {
         return 0;
     }
     printf("YUI: ST7789 panel created ok\n");
-    ESP_ERROR_CHECK(gpio_set_level(EXAMPLE_PIN_NUM_BK_LIGHT, EXAMPLE_LCD_BK_LIGHT_ON_LEVEL));
+    ESP_ERROR_CHECK(gpio_set_level(EXAMPLE_PIN_NUM_BK_LIGHT, EXAMPLE_LCD_BK_LIGHT_OFF_LEVEL));
 
     esp_lcd_panel_reset(s_lcd_panel);
     vTaskDelay(pdMS_TO_TICKS(150));
-    esp_lcd_panel_init(s_lcd_panel);
-    esp_lcd_panel_invert_color(s_lcd_panel, true);
-    esp_lcd_panel_mirror(s_lcd_panel, true, false);
-    esp_lcd_panel_disp_on_off(s_lcd_panel, true);
+    printf("YUI: [dbg] init=%s\n", esp_err_to_name(esp_lcd_panel_init(s_lcd_panel)));
+    printf("YUI: [dbg] invert=%s\n", esp_err_to_name(esp_lcd_panel_invert_color(s_lcd_panel, false)));
+    printf("YUI: [dbg] mirror=%s\n", esp_err_to_name(esp_lcd_panel_mirror(s_lcd_panel, false, false)));
+    printf("YUI: [dbg] disp_on=%s\n", esp_err_to_name(esp_lcd_panel_disp_on_off(s_lcd_panel, true)));
 
-    ESP_ERROR_CHECK(gpio_set_level(EXAMPLE_PIN_NUM_BK_LIGHT, EXAMPLE_LCD_BK_LIGHT_OFF_LEVEL));
+    /* 读 ST7789 面板 ID（0x04 读命令）验证 SPI+面板通信：
+     * 能读到 ID（如 0x85/0x54/0x78）→ 通信正常，黑屏是显示配置问题；
+     * 读不到/全 0 → SPI 或接线（尤其 CS）问题。 */
+    {
+        uint8_t id[3] = {0, 0, 0};
+        esp_err_t rd = esp_lcd_panel_io_rx_param(io_handle, 0x04, id, sizeof(id));
+        printf("YUI: panel ID read ret=%s id=%02x%02x%02x\n",
+               esp_err_to_name(rd), id[0], id[1], id[2]);
+    }
 
-    /* TEMP 测试：循环推红色测试图案 */
-    static uint16_t red[240 * 240];
+    ESP_ERROR_CHECK(gpio_set_level(EXAMPLE_PIN_NUM_BK_LIGHT, EXAMPLE_LCD_BK_LIGHT_ON_LEVEL));
+
+    /* TEMP 测试：只画白色，验证最基础显示 */
+    static uint16_t wfb[240 * 240];
     for (;;) {
-        for (int i = 0; i < 240 * 240; i++) red[i] = 0xF800;
-        esp_err_t dr = esp_lcd_panel_draw_bitmap(s_lcd_panel, 0, 0, 240, 240, red);
-        printf("YUI: draw bitmap ret=%s\n", esp_err_to_name(dr));
-        vTaskDelay(pdMS_TO_TICKS(100));
+        for (int i = 0; i < 240 * 240; i++) wfb[i] = 0xFFFF;
+        esp_err_t dr = esp_lcd_panel_draw_bitmap(s_lcd_panel, 0, 0, 240, 240, wfb);
+        printf("YUI: draw WHITE ret=%s\n", esp_err_to_name(dr));
+        vTaskDelay(pdMS_TO_TICKS(200));
     }
 
     if (EXAMPLE_PIN_NUM_BK_LIGHT >= 0) {
