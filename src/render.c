@@ -327,8 +327,14 @@ static void render_layer_impl(Layer* layer, int force) {
         if (layer->backdrop_filter) {
             backend_render_backdrop_filter(&layer->rect, layer->blur_radius, layer->saturation, layer->brightness);
         }
-        if (layer->bg_gradient.enabled || layer->bg_color.a > 0 ||
-            layer->shadow.enabled || layer_border_visible(&layer->border)) {
+        /* root 背景只在首帧绘制（一次性），之后静态 UI 脏刷新不重绘整屏背景，
+         * 避免每次时钟更新整屏刷（闪）。子容器/按钮自带不透明背景自擦除。 */
+        int draw_root_bg = 1;
+#if YUI_LAYER_DIRTY_SKIP
+        if (is_root && s_rendered_once) draw_root_bg = 0;
+#endif
+        if (draw_root_bg && (layer->bg_gradient.enabled || layer->bg_color.a > 0 ||
+            layer->shadow.enabled || layer_border_visible(&layer->border))) {
             render_layer_background(layer, NULL);
         }
     }
@@ -344,7 +350,10 @@ static void render_layer_impl(Layer* layer, int force) {
 
     /* 当前层绘制了会覆盖子层的背景/边框时，子层必须重绘（不能脏跳过） */
 #if YUI_LAYER_DIRTY_SKIP
-    int force_children = force || layer_paints_over_children(layer);
+    /* root 背景首帧后不重绘，也不强制全树重绘（否则动态更新整屏刷） */
+    int root_bg_skipped = 0;
+    if (is_root && s_rendered_once) root_bg_skipped = 1;
+    int force_children = (force || layer_paints_over_children(layer)) && !root_bg_skipped;
 #else
     int force_children = force;
 #endif
