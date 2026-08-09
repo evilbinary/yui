@@ -550,10 +550,7 @@ void backend_render_fill_rect(Rect* rect, Color color) {
         uint16_t px = color_to_rgb565(color);
         for (y = r.y; y < r.y + r.h; y++) {
             spi_draw_line(r.x, y, r.w, px);
-            if (((y - r.y) & 15) == 15) {
-                /* 让出 CPU，使 IDLE 能喂狗（main 未加入 TWDT，勿调 esp_task_wdt_reset） */
-                vTaskDelay(1);
-            }
+
         }
     }
 #else
@@ -620,10 +617,11 @@ void backend_render_line(int x1, int y1, int x2, int y2, Color color) {
 #else
             if (color.a > 0) direct_draw_point(x1, y1, color);
             /* 真机直写是逐点 1x1 SPI，长线/圆弧会占满 CPU 不吃狗；
-             * 每 64 点让出一次调度，使 IDLE 能喂看门狗。 */
+             * 每 64 点让出一次调度，使 IDLE 能喂看门狗。（vTaskDelay(0)=让出
+             * 一个时间片；用 (1) 会每次睡 10ms 拖慢整帧。） */
             if (++pts_cnt >= 64) {
                 pts_cnt = 0;
-                vTaskDelay(1);
+                vTaskDelay(0);
             }
 #endif
         }
@@ -700,7 +698,7 @@ void backend_render_arc(int center_x, int center_y, int radius, float start_angl
             }
 #else
             if (color.a > 0) direct_draw_point(x, y, color);
-            if (++pts_cnt >= 64) { pts_cnt = 0; vTaskDelay(1); }
+            if (++pts_cnt >= 64) { pts_cnt = 0; vTaskDelay(0); }
 #endif
         }
     }
@@ -1110,7 +1108,7 @@ void backend_render_text_copy(Texture* texture, const Rect* srcrect, const Rect*
         if (run_n > 0) {
             spi_draw_line_buf(dst.x + run_x0, dst.y + y, run_n, s_spi_line);
         }
-        if ((y & 15) == 15) vTaskDelay(1);
+        if ((y & 15) == 15) vTaskDelay(0);
     }
 #else
     /* 直接写屏：逐点绘制（无混合读回，仅按 alpha 跳过透明像素） */
@@ -1274,6 +1272,7 @@ void backend_tick(Layer* ui_root) {
 #ifdef ESP_PLATFORM
     PointerEvent ev;
     int has_event = 0;
+    int64_t t0 = esp_timer_get_time();
     esp32_touch_poll(&ev, &has_event);
     if (has_event) handle_pointer_event(ui_root, &ev);
 #endif
@@ -1284,6 +1283,15 @@ void backend_tick(Layer* ui_root) {
     if (ui_root) render_layer(ui_root);
     popup_manager_render();
     backend_render_present();
+#ifdef ESP_PLATFORM
+#ifndef YUI_ESP32_QEMU
+    if ((s_frame_count % 10) == 0) {
+        int64_t dt = esp_timer_get_time() - t0;
+        printf("YUI: frame %3d render=%lldms heap=%d\n",
+               s_frame_count, dt / 1000, (int)esp_get_free_heap_size());
+    }
+#endif
+#endif
 #ifdef YUI_ESP32_QEMU
     if (s_frame_count == 0) {
         /* 首帧调试：检查 framebuffer 是否被写入 */

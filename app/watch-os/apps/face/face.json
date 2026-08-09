@@ -38,44 +38,7 @@
                     "text": "10:09",
                     "size": [200, 80]
                 },
-                {
-                    "id": "activity_rings",
-                    "type": "View",
-                    "size": [200, 88],
-                    "layout": { "type": "horizontal", "spacing": 16, "align": "center", "justifyContent": "center" },
-                    "children": [
-                        {
-                            "id": "ring_move",
-                            "type": "Progress",
-                            "size": [56, 56],
-                            "shape": "circle",
-                            "value": 75,
-                            "showPercentage": false,
-                            "fillColor": "#FA114F",
-                            "style": { "bgColor": "#1C1C1E", "circleWidth": 6 }
-                        },
-                        {
-                            "id": "ring_exercise",
-                            "type": "Progress",
-                            "size": [76, 76],
-                            "shape": "circle",
-                            "value": 60,
-                            "showPercentage": false,
-                            "fillColor": "#30D158",
-                            "style": { "bgColor": "#1C1C1E", "circleWidth": 7 }
-                        },
-                        {
-                            "id": "ring_stand",
-                            "type": "Progress",
-                            "size": [56, 56],
-                            "shape": "circle",
-                            "value": 90,
-                            "showPercentage": false,
-                            "fillColor": "#00D4FF",
-                            "style": { "bgColor": "#1C1C1E", "circleWidth": 6 }
-                        }
-                    ]
-                },
+               
                 {
                     "id": "complication_row",
                     "type": "View",
