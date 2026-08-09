@@ -157,6 +157,21 @@ const void* backend_esp32_bc_rom_base(size_t* psize) {
 
 static uint16_t* s_fb = NULL;       /* RGB565 */
 static int s_fb_w = 0, s_fb_h = 0;
+/* 分段 framebuffer：8BIT 堆最大连续块 ~114KB < 115200（240x240x2），
+ * 无法一次分配整屏。改为按 40 行一段分配（每段 ~19.2KB），访问走
+ * fb_row(y) 行指针；esp32_flush_dirty 按行 run 逐段推屏。 */
+#define YUI_FB_SEG_ROWS 40
+static uint16_t* s_fb_seg[6];
+static int s_fb_seg_count = 0;
+static inline uint16_t* fb_row(int y) {
+    if (s_fb_seg_count > 0) {
+        int seg = y / YUI_FB_SEG_ROWS;
+        int off = (y % YUI_FB_SEG_ROWS) * s_fb_w;
+        if (seg >= s_fb_seg_count) seg = s_fb_seg_count - 1;
+        return s_fb_seg[seg] + off;
+    }
+    return s_fb + (size_t)y * s_fb_w;
+}
 
 /* 脏区域合并 */
 static Rect s_dirty = {0, 0, 0, 0};
@@ -236,11 +251,33 @@ void backend_esp32_set_panel(esp_lcd_panel_handle_t p) {
     printf("YUI: [dbg] panel injected=%p\n", (void*)p);
 }
 void backend_esp32_set_touch_handle(esp_lcd_touch_handle_t t) { s_touch = t; }
-/* 平台层（main.c）获取/分配 RGB565 framebuffer 后注入；后端只负责渲染写入。 */
+/* 平台层（main.c）获取/分配 RGB565 framebuffer 后注入；后端只负责渲染写入。
+ * fb 为 NULL 时用分段形式：随后调用 backend_esp32_set_framebuffer_seg 填入各段。 */
 void backend_esp32_set_framebuffer(uint16_t* fb, int w, int h) {
     s_fb = fb;
     s_fb_w = w;
     s_fb_h = h;
+    s_fb_seg_count = 0;
+}
+/* 分段 framebuffer：最多 6 段，每段 YUI_FB_SEG_ROWS 行。s_fb 置 NULL。 */
+void backend_esp32_set_framebuffer_seg(uint16_t* seg0, uint16_t* seg1,
+                                       uint16_t* seg2, uint16_t* seg3,
+                                       uint16_t* seg4, uint16_t* seg5, int w, int h) {
+    s_fb = NULL;
+    s_fb_w = w;
+    s_fb_h = h;
+    s_fb_seg[0] = seg0;
+    s_fb_seg[1] = seg1;
+    s_fb_seg[2] = seg2;
+    s_fb_seg[3] = seg3;
+    s_fb_seg[4] = seg4;
+    s_fb_seg[5] = seg5;
+    s_fb_seg_count = 1;
+    if (seg1) s_fb_seg_count++;
+    if (seg2) s_fb_seg_count++;
+    if (seg3) s_fb_seg_count++;
+    if (seg4) s_fb_seg_count++;
+    if (seg5) s_fb_seg_count++;
 }
 
 /* 可选"像素块直推"回调：真机改用裸 SPI 驱动 ST7789（esp_lcd 层不兼容该面板）
@@ -248,10 +285,22 @@ void backend_esp32_set_framebuffer(uint16_t* fb, int w, int h) {
  * 回调签名：(x, y, w, h, 源矩形左上角 RGB565 指针)。 */
 typedef void (*esp32_blit_rect_fn)(int x, int y, int w, int h, const uint16_t* px);
 static esp32_blit_rect_fn s_blit_rect = NULL;
+static int64_t s_frame_written_px = 0;
 void backend_esp32_set_blit_rect(esp32_blit_rect_fn fn) { s_blit_rect = fn; }
 
 /* 像素块落屏统一入口：有 blit 回调（raw SPI 驱动）走回调，否则走 esp_lcd。 */
 static void panel_blit(int x, int y, int w, int h, const uint16_t* buf) {
+#ifndef YUI_ESP32_QEMU
+    if (w > 0 && h > 0) {
+        s_frame_written_px += (int64_t)w * h;
+        if (s_blit_rect) {
+            s_blit_rect(x, y, w, h, buf);
+        } else if (s_panel) {
+            esp_lcd_panel_draw_bitmap(s_panel, x, y, x + w, y + h, buf);
+        }
+        return;
+    }
+#endif
     if (s_blit_rect) {
         s_blit_rect(x, y, w, h, buf);
     } else if (s_panel) {
@@ -263,7 +312,30 @@ static bool s_touch_active = false;
 static int s_touch_x = 0, s_touch_y = 0;
 
 static void esp32_flush_dirty(void) {
-    if (!s_has_dirty || !s_fb) return;
+    if (!s_has_dirty) return;
+    if (!s_fb && s_fb_seg_count == 0) { dirty_reset(); return; }
+    /* 分段 framebuffer：按段边界拆分成行 run，保证每 run 内行连续可一次推。 */
+    if (s_fb_seg_count > 0) {
+        int y = s_dirty.y;
+        int y_end = s_dirty.y + s_dirty.h;
+        while (y < y_end) {
+            int seg = y / YUI_FB_SEG_ROWS;
+            int block_end = (seg + 1) * YUI_FB_SEG_ROWS;
+            int run_h = (y_end < block_end ? y_end : block_end) - y;
+            if (run_h > 0) {
+                const uint16_t* px = fb_row(y) + s_dirty.x;
+                if (s_blit_rect) {
+                    s_blit_rect(s_dirty.x, y, s_dirty.w, run_h, px);
+                } else if (s_panel) {
+                    esp_lcd_panel_draw_bitmap(s_panel, s_dirty.x, y,
+                                              s_dirty.x + s_dirty.w, y + run_h, px);
+                }
+            }
+            y += run_h;
+        }
+        dirty_reset();
+        return;
+    }
     if (s_blit_rect) {
         s_blit_rect(s_dirty.x, s_dirty.y, s_dirty.w, s_dirty.h,
                     s_fb + s_dirty.y * s_fb_w + s_dirty.x);
@@ -387,9 +459,10 @@ int backend_init(void) {
      * 内存/面板获取。direct draw 模式（LCD_BUFFER=0 且非 QEMU）渲染直写
      * 面板，无软件 framebuffer。 */
 #if defined(YUI_ESP32_QEMU) || YUI_ESP32_LCD_BUFFER
-    if (!s_fb) {
-        printf("YUI: framebuffer not injected (backend_esp32_set_framebuffer)\n");
-        return -1;
+    if (!s_fb && s_fb_seg_count == 0) {
+        /* 允许 framebuffer 延迟注入：真机在 UI 构建完成、进入主循环前
+         * 才分配，避免 apps 加载阶段挤占内存。 */
+        printf("YUI: framebuffer not injected yet (will be set before main loop)\n");
     }
 #endif
     return 0;
@@ -454,7 +527,21 @@ void backend_render_text_destroy(Texture* texture) {
 #if defined(ESP_PLATFORM) && !defined(YUI_ESP32_QEMU) && !YUI_ESP32_LCD_BUFFER
 #define YUI_SPI_LINE_MAX 320
 static uint16_t s_spi_line[YUI_SPI_LINE_MAX];
+static uint16_t s_spi_block[YUI_SPI_LINE_MAX * 16];
 
+/* fill 纯色大块：合并为 16 行块 SPI 事务，避免每行一次 setcol/ramwr 开销 */
+static void spi_draw_block(int x, int y, int w, int h, uint16_t px)
+{
+    int row, i;
+    if ((!s_blit_rect && !s_panel) || w <= 0 || h <= 0) return;
+    if (w > YUI_SPI_LINE_MAX) w = YUI_SPI_LINE_MAX;
+    for (i = 0; i < w * 16; i++) s_spi_block[i] = px;
+    while (h > 0) {
+        int hh = h > 16 ? 16 : h;
+        panel_blit(x, y, w, hh, s_spi_block);
+        y += hh; h -= hh;
+    }
+}
 static void spi_draw_line(int x, int y, int w, uint16_t px)
 {
     int i;
@@ -494,8 +581,8 @@ static void direct_draw_point(int x, int y, Color c)
 #if YUI_ESP32_LCD_BUFFER
 static void backend_draw_point_aa(int x, int y, Color c) {
     uint16_t* p;
-    if (!s_fb || x < 0 || y < 0 || x >= s_fb_w || y >= s_fb_h) return;
-    p = &s_fb[y * s_fb_w + x];
+    if ((!s_fb && s_fb_seg_count == 0) || x < 0 || y < 0 || x >= s_fb_w || y >= s_fb_h) return;
+    p = fb_row(y) + x;
     if (c.a == 255) {
         *p = color_to_rgb565(c);
     } else if (c.a > 0) {
@@ -521,18 +608,18 @@ void backend_render_fill_rect(Rect* rect, Color color) {
 
 #if YUI_ESP32_LCD_BUFFER
     uint16_t px;
-    if (!s_fb) return;
+    if (!s_fb && s_fb_seg_count == 0) return;
     px = color_to_rgb565(color);
     /* alpha 混合 */
     if (color.a == 255) {
         for (y = r.y; y < r.y + r.h; y++) {
-            uint16_t* row = s_fb + y * s_fb_w + r.x;
+            uint16_t* row = fb_row(y) + r.x;
             for (x = 0; x < r.w; x++) row[x] = px;
         }
     } else if (color.a > 0) {
         unsigned a = color.a;
         for (y = r.y; y < r.y + r.h; y++) {
-            uint16_t* row = s_fb + y * s_fb_w + r.x;
+            uint16_t* row = fb_row(y) + r.x;
             for (x = 0; x < r.w; x++) {
                 Color d = rgb565_to_color(row[x]);
                 d.r = (unsigned char)((d.r * (255 - a) + color.r * a) / 255);
@@ -544,14 +631,11 @@ void backend_render_fill_rect(Rect* rect, Color color) {
     }
     dirty_add(r.x, r.y, r.w, r.h);
 #elif defined(ESP_PLATFORM) && !defined(YUI_ESP32_QEMU)
-    /* 行缓冲一次 SPI：避免 1x1 写屏触发 task_wdt */
+    /* 16 行块 SPI 事务：一次 RAMWR 传多行，避免逐行 SPI 开销 */
     if (color.a == 0 || (!s_blit_rect && !s_panel)) return;
     {
         uint16_t px = color_to_rgb565(color);
-        for (y = r.y; y < r.y + r.h; y++) {
-            spi_draw_line(r.x, y, r.w, px);
-
-        }
+        spi_draw_block(r.x, r.y, r.w, r.h, px);
     }
 #else
     /* QEMU / stub：逐点（QEMU 写内存；无面板为空操作） */
@@ -595,7 +679,7 @@ void backend_render_line(int x1, int y1, int x2, int y2, Color color) {
     int pts_cnt = 0;
     Rect clip;
 #if YUI_ESP32_LCD_BUFFER
-    if (!s_fb) return;
+    if (!s_fb && s_fb_seg_count == 0) return;
 #endif
     clip_get_current(&clip);
     dx = abs(x2 - x1); dy = abs(y2 - y1);
@@ -605,14 +689,14 @@ void backend_render_line(int x1, int y1, int x2, int y2, Color color) {
         if (x1 >= clip.x && x1 < clip.x + clip.w && y1 >= clip.y && y1 < clip.y + clip.h) {
 #if YUI_ESP32_LCD_BUFFER
             if (color.a == 255) {
-                s_fb[y1 * s_fb_w + x1] = color_to_rgb565(color);
+                fb_row(y1)[x1] = color_to_rgb565(color);
             } else if (color.a > 0) {
-                Color d = rgb565_to_color(s_fb[y1 * s_fb_w + x1]);
+                Color d = rgb565_to_color(fb_row(y1)[x1]);
                 unsigned a = color.a;
                 d.r = (unsigned char)((d.r * (255 - a) + color.r * a) / 255);
                 d.g = (unsigned char)((d.g * (255 - a) + color.g * a) / 255);
                 d.b = (unsigned char)((d.b * (255 - a) + color.b * a) / 255);
-                s_fb[y1 * s_fb_w + x1] = color_to_rgb565(d);
+                fb_row(y1)[x1] = color_to_rgb565(d);
             }
 #else
             if (color.a > 0) direct_draw_point(x1, y1, color);
@@ -660,40 +744,58 @@ static int rounded_rect_radius(const Rect* rect, int radius) {
 }
 
 void backend_render_arc(int center_x, int center_y, int radius, float start_angle, float end_angle, Color color, int line_width) {
-    /* ESP32-C3 无 FPU，软浮点 sin/cos 极慢：step 太大点太疏、太小浮点爆炸。
-     * 折中 0.2°，且每个角度只算一次 sin/cos，逐点画（在线真机的 direct 模式）
-     * 并每 64 点让出调度喂看门狗。线段化的同心圆循环去掉，直接按角度点阵。 */
-    float step = 0.2f;
+    /* ESP32-C3 无 FPU，软浮点 sin/cos 极慢。这里用运行时初始化一次的整数
+     * sin 表（0.5°/档，14 位定点），每帧 arc 全程纯整数查表，无浮点。
+     * step 0.5° 在 240x240 屏上足够密。 */
+    static int16_t sin_tab[720];
+    static int sin_tab_ready = 0;
+    int step_idx = 1;  /* 0.5° */
     int half;
     int pts_cnt = 0;
     int wo_min, wo_max, wo;
     Rect clip;
+    int a0, a1, a;
     if (radius <= 0 || color.a == 0) return;
-    if (start_angle > end_angle) { float t = start_angle; start_angle = end_angle; end_angle = t; }
+
+    if (!sin_tab_ready) {
+        int i;
+        for (i = 0; i < 720; i++) {
+            sin_tab[i] = (int16_t)(sinf((float)i * 0.5f * 3.14159265358979f / 180.0f) * (float)(1 << 14));
+        }
+        sin_tab_ready = 1;
+    }
+    /* 角度范围：float→ 0.5° 档索引（取整），处理 wrap */
+    a0 = (int)start_angle * 2;
+    a1 = (int)end_angle * 2;
+    if (a0 > a1) { int t = a0; a0 = a1; a1 = t; }
+    if (a0 < 0) a0 += 720;
+    if (a1 < 0) a1 += 720;
+    a0 %= 720; a1 %= 720;
     half = line_width / 2;
     wo_min = -half;
     wo_max = line_width - 1 - half;
     clip_get_current(&clip);
-    for (float a = start_angle; a <= end_angle; a += step) {
-        float ca = cosf(a), sa = sinf(a);
+    for (a = a0; a <= a1; a += step_idx) {
+        int s = sin_tab[a % 720];
+        int c = sin_tab[(a + 180) % 720];   /* cos = sin(a+90°) */
         for (wo = wo_min; wo <= wo_max; wo++) {
             int rad = radius + wo;
             int x, y;
             if (rad <= 0) continue;
-            x = center_x + (int)(rad * ca);
-            y = center_y + (int)(rad * sa);
+            x = center_x + (int)((int64_t)rad * c >> 14);
+            y = center_y + (int)((int64_t)rad * s >> 14);
             if (x < clip.x || x >= clip.x + clip.w || y < clip.y || y >= clip.y + clip.h) continue;
 #if YUI_ESP32_LCD_BUFFER
-            if (s_fb) {
+            if (s_fb || s_fb_seg_count > 0) {
                 if (color.a == 255) {
-                    s_fb[y * s_fb_w + x] = color_to_rgb565(color);
+                    fb_row(y)[x] = color_to_rgb565(color);
                 } else if (color.a > 0) {
-                    Color d = rgb565_to_color(s_fb[y * s_fb_w + x]);
+                    Color d = rgb565_to_color(fb_row(y)[x]);
                     unsigned a2 = color.a;
                     d.r = (unsigned char)((d.r * (255 - a2) + color.r * a2) / 255);
                     d.g = (unsigned char)((d.g * (255 - a2) + color.g * a2) / 255);
                     d.b = (unsigned char)((d.b * (255 - a2) + color.b * a2) / 255);
-                    s_fb[y * s_fb_w + x] = color_to_rgb565(d);
+                    fb_row(y)[x] = color_to_rgb565(d);
                 }
             }
 #else
@@ -932,9 +1034,9 @@ static void rounded_rect_fill(Rect* rect, Color color, int radius) {
                 Rect row = {x + inset, py, run_w, 1};
                 backend_render_fill_rect(&row, color);
             }
-        }
+}
     }
-    }
+}
 #else
     /* 直写模式（真实 LCD 无 framebuffer，buffer=0）：逐点画抗锯齿边缘像素
      * 意味着每像素一次 1x1 SPI 写，会拖垮主任务触发 task WDT。
@@ -1047,7 +1149,7 @@ void backend_render_text_copy(Texture* texture, const Rect* srcrect, const Rect*
     if (dst.w <= 0 || dst.h <= 0) return;
 
 #if YUI_ESP32_LCD_BUFFER
-    if (!s_fb) return;
+    if (!s_fb && s_fb_seg_count == 0) return;
     for (y = 0; y < dst.h; y++) {
         int sy = src_r.y + (y * src_r.h) / (dstrect->h > 0 ? dstrect->h : 1);
         if (sy < 0 || sy >= sh) continue;
@@ -1060,14 +1162,14 @@ void backend_render_text_copy(Texture* texture, const Rect* srcrect, const Rect*
             a = src[si + 3];
             if (a == 0) continue;
             if (a == 255) {
-                s_fb[(dst.y + y) * s_fb_w + (dst.x + x)] =
+                fb_row(dst.y + y)[dst.x + x] =
                     color_to_rgb565((Color){src[si], src[si+1], src[si+2], 255});
             } else {
-                Color dc = rgb565_to_color(s_fb[(dst.y + y) * s_fb_w + (dst.x + x)]);
+                Color dc = rgb565_to_color(fb_row(dst.y + y)[dst.x + x]);
                 dc.r = (unsigned char)((dc.r * (255 - a) + src[si] * a) / 255);
                 dc.g = (unsigned char)((dc.g * (255 - a) + src[si+1] * a) / 255);
                 dc.b = (unsigned char)((dc.b * (255 - a) + src[si+2] * a) / 255);
-                s_fb[(dst.y + y) * s_fb_w + (dst.x + x)] = color_to_rgb565(dc);
+                fb_row(dst.y + y)[dst.x + x] = color_to_rgb565(dc);
             }
         }
     }
@@ -1279,19 +1381,24 @@ void backend_tick(Layer* ui_root) {
     for (i = 0; i < s_update_cb_count; i++) {
         if (s_update_cb[i]) s_update_cb[i]();
     }
-    backend_render_clear_color(30, 60, 120, 255);
+    // backend_render_clear_color(30, 60, 120, 255);
+    if (s_frame_count == 0) {
+        /* 根层透明 + 不每帧 clear：首帧必须把 GRAM 初始化成全黑，
+         * 否则 LCD 未写入区域保持出厂灰/白，产生「灰黑交替刷屏」观感。 */
+        Rect full;
+        full.x = 0; full.y = 0; full.w = s_fb_w; full.h = s_fb_h;
+        backend_render_fill_rect(&full, (Color){0, 0, 0, 255});
+    }
     if (ui_root) render_layer(ui_root);
+    { int64_t t_frame = esp_timer_get_time() - t0;
     popup_manager_render();
     backend_render_present();
-#ifdef ESP_PLATFORM
-#ifndef YUI_ESP32_QEMU
-    if ((s_frame_count % 10) == 0) {
-        int64_t dt = esp_timer_get_time() - t0;
-        printf("YUI: frame %3d render=%lldms heap=%d\n",
-               s_frame_count, dt / 1000, (int)esp_get_free_heap_size());
+    /* 仅绘制帧打印（静态帧 0ms 会刷屏 UART，跳过） */
+    if (t_frame > 1000) {
+        printf("YUI: frm=%lldms px=%lld\n",
+               (long long)(t_frame / 1000), s_frame_written_px);
     }
-#endif
-#endif
+    s_frame_written_px = 0; }
 #ifdef YUI_ESP32_QEMU
     if (s_frame_count == 0) {
         /* 首帧调试：检查 framebuffer 是否被写入 */
@@ -1311,8 +1418,7 @@ void backend_tick(Layer* ui_root) {
         }
     }
 #else 
-    if ((s_frame_count % 10) == 0) printf("YUI: lcd frame %d done\n", s_frame_count);
-
+    (void)t0;
 #endif
 }
 

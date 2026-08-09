@@ -61,8 +61,13 @@ int parse_int_array(cJSON* array, int* a, int* b) {
 // ====================== 脏标记管理 ======================
 
 void mark_layer_dirty(Layer* layer, unsigned int flags) {
+    Layer* p;
     if (!layer) return;
-    layer->dirty_flags |= flags;
+    /* 向上传播到所有祖先：父层的 dirty 表示「自身或后代有变化」，
+     * 渲染管线据此决定该子树是否需要重绘。 */
+    for (p = layer; p != NULL; p = p->parent) {
+        p->dirty_flags |= flags;
+    }
 }
 
 void clear_dirty_flags(Layer* layer) {

@@ -57,7 +57,7 @@
 #endif
 #endif
 
-#define EXAMPLE_LCD_PIXEL_CLOCK_HZ (40 * 1000 * 1000)
+#define EXAMPLE_LCD_PIXEL_CLOCK_HZ (27 * 1000 * 1000)
 #define EXAMPLE_LCD_BK_LIGHT_ON_LEVEL  1
 #define EXAMPLE_LCD_BK_LIGHT_OFF_LEVEL !EXAMPLE_LCD_BK_LIGHT_ON_LEVEL
 #define EXAMPLE_PIN_NUM_DATA0          6  /*!< for 1-line SPI, this also refereed as MOSI */
@@ -114,6 +114,9 @@ esp_lcd_touch_handle_t yui_esp32_touch_create(esp_lcd_panel_io_handle_t io,
 extern void backend_esp32_set_panel(esp_lcd_panel_handle_t p);
 extern void backend_esp32_set_touch_handle(esp_lcd_touch_handle_t t);
 extern void backend_esp32_set_framebuffer(uint16_t* fb, int w, int h);
+extern void backend_esp32_set_framebuffer_seg(uint16_t* seg0, uint16_t* seg1,
+                                              uint16_t* seg2, uint16_t* seg3,
+                                              uint16_t* seg4, uint16_t* seg5, int w, int h);
 extern void backend_esp32_set_blit_rect(void (*fn)(int x, int y, int w, int h, const uint16_t* px));
 extern int  backend_esp32_get_hw_display(void);
 
@@ -164,18 +167,25 @@ static void raw_write_encode(spi_transaction_t* t, const void* data, size_t byte
     t->tx_buffer = data;
 }
 
-static void raw_cmd(uint8_t byte_cmd) {
-    gpio_set_level((gpio_num_t)s_raw_dc_pin, 0);
-    spi_transaction_t t;
-    raw_write_encode(&t, &byte_cmd, 1);
-    spi_device_polling_transmit(s_raw_spi, &t);
-}
-
 static void raw_data_b(const void* buf, size_t len) {
     gpio_set_level((gpio_num_t)s_raw_dc_pin, 1);
     spi_transaction_t t;
     raw_write_encode(&t, buf, len);
-    spi_device_polling_transmit(s_raw_spi, &t);
+    esp_err_t e = spi_device_polling_transmit(s_raw_spi, &t);
+    if (e != ESP_OK) {
+        static int err_shown = 0;
+        if (!err_shown) { err_shown = 1; printf("YUI: raw_data_b spi err=%s len=%d\n", esp_err_to_name(e), (int)len); }
+    }
+}
+static void raw_cmd(uint8_t byte_cmd) {
+    gpio_set_level((gpio_num_t)s_raw_dc_pin, 0);
+    spi_transaction_t t;
+    raw_write_encode(&t, &byte_cmd, 1);
+    esp_err_t e = spi_device_polling_transmit(s_raw_spi, &t);
+    if (e != ESP_OK) {
+        static int err_shown = 0;
+        if (!err_shown) { err_shown = 1; printf("YUI: raw_cmd err=%s cmd=0x%02x\n", esp_err_to_name(e), byte_cmd); }
+    }
 }
 
 static void raw_rst(void) {
@@ -250,7 +260,7 @@ static void raw_draw_rect(int x, int y, int w, int h, const uint16_t* px) {
 static void raw_lcd_init(void) {
     /* 调用方已初始化 SPI bus；这里只 add device + 初始化 GPIO + 面板初始化 */
     spi_device_interface_config_t devcfg = {
-        .clock_speed_hz = 27 * 1000 * 1000,
+        .clock_speed_hz = YUI_LCD_FREQ_HZ,
         .mode = 3,
         .spics_io_num = -1,
         .queue_size = 8,
@@ -523,7 +533,7 @@ void app_main(void) {
     /* 触摸参数见 esp32_touch_init() 内宏（YUI_TOUCH_*）；C3 无触摸硬件默认不探测 */
 #endif
 
-    /* 1. 平台初始化 LCD/触摸（硬件相关，由平台层负责），并把句柄注入后端。 */
+    /* 2. 平台初始化 LCD/触摸（硬件相关，由平台层负责），并把句柄注入后端。 */
     if (esp32_lcd_init() != 0) {
         printf("YUI: esp32_lcd_init failed\n");
         return;
@@ -533,38 +543,6 @@ void app_main(void) {
 
     // esp32_touch_init();
     // backend_esp32_set_touch_handle(s_lcd_touch);
-
-    /* framebuffer：QEMU 从虚拟面板取专属显存，真机 buffer 模式堆分配 */
-    {
-        uint16_t* fb = NULL;
-        int fb_w = YUI_SCREEN_WIDTH, fb_h = YUI_SCREEN_HEIGHT;
-#ifdef YUI_ESP32_QEMU
-        esp_lcd_rgb_qemu_get_frame_buffer(s_lcd_panel, (void**)&fb);
-        if (!fb) {
-            printf("YUI: esp_lcd_rgb_qemu_get_frame_buffer failed\n");
-            return;
-        }
-        printf("YUI: QEMU framebuffer %p (%dx%d RGB565, dedicated RAM)\n",
-               (void*)fb, fb_w, fb_h);
-#else
-#if YUI_ESP32_LCD_BUFFER
-        fb = (uint16_t*)calloc((size_t)fb_w * fb_h, 2);
-        if (!fb) {
-            printf("YUI: framebuffer calloc %ux%ux2=%u bytes failed, "
-                   "free=%u largest=%u\n",
-                   fb_w, fb_h, (unsigned)((size_t)fb_w * fb_h * 2),
-                   (unsigned)heap_caps_get_free_size(MALLOC_CAP_8BIT),
-                   (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
-            return;
-        }
-#else
-        printf("YUI: LCD buffer disabled (direct draw), free=%u largest=%u\n",
-               (unsigned)heap_caps_get_free_size(MALLOC_CAP_8BIT),
-               (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
-#endif
-#endif
-        backend_esp32_set_framebuffer(fb, fb_w, fb_h);
-    }
 
     /* 2. 初始化后端 + 弹层管理。
      *    必须在 SPIFFS 挂载之前：framebuffer calloc(115KB) 需要尽量干净的堆，

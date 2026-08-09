@@ -22,6 +22,7 @@
             "id": "watch_face_container",
             "type": "View",
             "flex": 1,
+            "style": { "bgColor": "#121212" },
             "layout": { "type": "vertical", "spacing": 8, "align": "center" },
             "children": [
                 {

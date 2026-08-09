@@ -30,6 +30,7 @@
             "type": "View",
             "variant": "toolbar",
             "size": [0, 24],
+            "style": { "bgColor": "#121212" },
             "layout": {
                 "type": "horizontal",
                 "spacing": 0,

@@ -43,6 +43,10 @@ target_compile_definitions(${COMPONENT_LIB} PRIVATE
 if(DEFINED ENV{YUI_ESP32_QEMU})
     target_compile_definitions(${COMPONENT_LIB} PRIVATE YUI_ESP32_QEMU=1)
     message(STATUS "YUI: QEMU build (software framebuffer only)")
+else()
+    # 真机直写模式：无 framebuffer（C3 内存不够 115KB），靠 layer 级
+    # 脏刷新（只重绘变化的 layer）减少每帧 SPI 量。
+    message(STATUS "YUI: real-LCD build (direct draw + layer dirty skip)")
 endif()
 
 # 链接 ya 编译的 yui 核心库（按实际 set-target 调整 arch 目录）

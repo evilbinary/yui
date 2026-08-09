@@ -4,6 +4,7 @@
 #include "animate.h"
 #include "perf/perf.h"
 #include "util.h"
+#include "layer_update.h"
 #include <limits.h>
 #include <math.h>
 
@@ -234,7 +235,43 @@ void render_layer_background(Layer* layer, const Color* override_bg) {
 }
 
 // ====================== 渲染管线 ======================
-void render_layer(Layer* layer) {
+/* 脏刷新仅适用于「目标持久」的真机直写后端（ESP32/STM32 直写 LCD，
+ * 帧间画面自然保持）。SDL/移动等每帧 SDL_RenderClear 清空渲染器的平台
+ * 必须全量渲染，否则跳过会导致窗口空白。 */
+#if defined(YUI_BACKEND_EMBEDDED)
+#define YUI_LAYER_DIRTY_SKIP 1
+#else
+#define YUI_LAYER_DIRTY_SKIP 0
+#endif
+
+#if YUI_LAYER_DIRTY_SKIP
+static int s_rendered_once = 0; /* 首帧全量渲染过一次后启用脏跳过 */
+#endif
+
+#if YUI_LAYER_DIRTY_SKIP
+/* 该层是否有进行中的动画（需每帧推进并重绘） */
+static int layer_has_active_animation(const Layer* layer) {
+    const Animation* a;
+    if (!layer) return 0;
+    a = layer->animation;
+    return a && (a->state == ANIMATION_STATE_RUNNING || a->repeat_type == ANIMATION_REPEAT_INFINITE);
+}
+#endif
+
+#if YUI_LAYER_DIRTY_SKIP
+/* 该层绘制后是否可能覆盖并抹掉子层旧像素（不透明背景/阴影/边框/渐变）。
+ * 若是，其子层必须重绘，不能脏跳过。 */
+static int layer_paints_over_children(const Layer* layer) {
+    if (!layer) return 0;
+    if (layer->bg_color.a == 255) return 1;
+    if (layer->bg_gradient.enabled) return 1;
+    if (layer->shadow.enabled) return 1;
+    if (layer_border_visible(&layer->border)) return 1;
+    return 0;
+}
+#endif
+
+static void render_layer_impl(Layer* layer, int force) {
     if (!layer) {
         printf("render_layer: layer is NULL\n");
         return;
@@ -242,6 +279,19 @@ void render_layer(Layer* layer) {
     if (layer->visible == IN_VISIBLE) {
         return;
     }
+
+    /* 脏刷新：首帧过后，非强制、无 dirty、无进行中动画的层跳过整棵子树，
+     * 避免静态 UI 每帧全量重绘（真机直写模式这是 SPI 刷屏与闪烁根源）。 */
+#if YUI_LAYER_DIRTY_SKIP
+    if (!force && s_rendered_once && layer->dirty_flags == DIRTY_NONE &&
+        !layer_has_active_animation(layer)) {
+        return;
+    }
+#endif
+
+#if YUI_LAYER_DIRTY_SKIP
+    int is_root = (layer->parent == NULL);
+#endif
 
     /* Fully clipped layers must not render or replace the parent clip.
      * Layers with a custom render function may draw outside their own rect
@@ -292,6 +342,13 @@ void render_layer(Layer* layer) {
         return;
     }
 
+    /* 当前层绘制了会覆盖子层的背景/边框时，子层必须重绘（不能脏跳过） */
+#if YUI_LAYER_DIRTY_SKIP
+    int force_children = force || layer_paints_over_children(layer);
+#else
+    int force_children = force;
+#endif
+
     for (int i = 0; i < layer->child_count; i++) {
         if (!layer->children) {
             printf("render_layer: layer->children is NULL for layer %s\n", layer->id);
@@ -304,11 +361,11 @@ void render_layer(Layer* layer) {
         if (layer->children[i]->visible == IN_VISIBLE) {
             continue;
         }
-        render_layer(layer->children[i]);
+        render_layer_impl(layer->children[i], force_children);
     }
 
     if (layer->sub != NULL) {
-        render_layer(layer->sub);
+        render_layer_impl(layer->sub, force_children);
     }
 
     if (perf_on) {
@@ -341,6 +398,21 @@ void render_layer(Layer* layer) {
     backend_render_text_destroy(text_texture);
     backend_render_rect(&layer->rect, (Color){strlen(layer->id) * 40 % 255, 0, 0, 255});
 #endif
+
+#if YUI_LAYER_DIRTY_SKIP
+    /* 绘制完成：清除该层 dirty。根层完成后启用脏跳过（首帧全量渲染）。 */
+    if (layer->dirty_flags != DIRTY_NONE) {
+        layer->dirty_flags = DIRTY_NONE;
+    }
+    if (is_root) {
+        s_rendered_once = 1;
+    }
+#endif
+}
+
+/* 公开入口：每帧由 backend_tick 调用，force=0 启用脏跳过 */
+void render_layer(Layer* layer) {
+    render_layer_impl(layer, 0);
 }
 
 static void render_layer_inspect(Layer* layer) {
