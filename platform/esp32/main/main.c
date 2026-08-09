@@ -187,16 +187,22 @@ static void raw_rst(void) {
     vTaskDelay(pdMS_TO_TICKS(120));
 }
 
+static inline uint16_t raw_swap16(uint16_t v) {
+    return (uint16_t)((v >> 8) | (uint16_t)(v << 8));
+}
+
 static void raw_draw_full(uint16_t color) {
-    static uint16_t chunk[240 * 16];
+    static uint16_t chunk[EXAMPLE_LCD_H_RES * 16];
+    uint16_t px = raw_swap16(color);
     /* CASET */
-    uint8_t set[] = {0x00, 0x00, 0x00, 0xEF};
+    uint8_t set[] = {0x00, 0x00,
+                     (uint8_t)((EXAMPLE_LCD_H_RES - 1) >> 8), (uint8_t)(EXAMPLE_LCD_H_RES - 1)};
     raw_cmd(0x2A); raw_data_b(set, sizeof(set));
     /* 每 16 行发一次 CASET+RAMWR（避免单事务过大） */
-    for (int y = 0; y < 240; y += 16) {
+    for (int y = 0; y < EXAMPLE_LCD_V_RES; y += 16) {
         uint8_t rs[] = { (uint8_t)(y >> 8), (uint8_t)y, (uint8_t)((y + 15) >> 8), (uint8_t)(y + 15) };
         raw_cmd(0x2B); raw_data_b(rs, sizeof(rs)); /* RASET */
-        for (int i = 0; i < 240 * 16; i++) chunk[i] = color;
+        for (int i = 0; i < EXAMPLE_LCD_H_RES * 16; i++) chunk[i] = px;
         raw_cmd(0x2C); /* RAMWR */
         raw_data_b(chunk, sizeof(chunk));
     }
@@ -204,12 +210,17 @@ static void raw_draw_full(uint16_t color) {
 
 /* 推一块 RGB565 矩形到屏幕（x,y 为源屏左上角，w/h 为宽高，px 指向矩形源）。
  * 按 16 行切块：每块 CASET/RASET/RAMWR，避免单事务超过 SPI 缓冲。 */
+/* 推一块 RGB565 矩形到屏幕（x,y 为源屏左上角，w/h 为宽高，px 指向矩形源）。
+ * 按 16 行切块：每块 CASET/RASET/RAMWR，避免单事务超过 SPI 缓冲。
+ * ST7789 按16bpp高位字节在先接收（big-endian 字节序），ESP32 uint16 内存是
+ * 小端（低字节在前），发送前必须逐像素交换字节，否则颜色错乱（如绿色变品红）。
+ */
 static void raw_draw_rect(int x, int y, int w, int h, const uint16_t* px) {
     int x1 = x + w - 1;
     int y1 = y + h - 1;
     if (x1 < 0 || y1 < 0) return;
-    if (x1 > 239) x1 = 239;
-    if (y1 > 239) y1 = 239;
+    if (x1 > EXAMPLE_LCD_H_RES - 1) x1 = EXAMPLE_LCD_H_RES - 1;
+    if (y1 > EXAMPLE_LCD_V_RES - 1) y1 = EXAMPLE_LCD_V_RES - 1;
     if (x < 0) x = 0;
     if (y < 0) y = 0;
 
@@ -223,11 +234,13 @@ static void raw_draw_rect(int x, int y, int w, int h, const uint16_t* px) {
         if (r2 > y1) r2 = y1;
         uint8_t rs[] = { (uint8_t)(row >> 8), (uint8_t)row, (uint8_t)(r2 >> 8), (uint8_t)r2 };
         raw_cmd(0x2B); raw_data_b(rs, sizeof(rs)); /* RASET */
-        /* 块内每一行复制到连续 DMA buffer（行间不连续 + 可能部分裁剪） */
-        static uint16_t chunk2[240 * 16];
+        /* 块内每一行复制 + 字节交换到连续 DMA buffer（行间不连续 + 可能部分裁剪） */
+        static uint16_t chunk2[EXAMPLE_LCD_H_RES * 16];
         int hh = r2 - row + 1;
         for (int yy = 0; yy < hh; yy++) {
-            memcpy(chunk2 + (size_t)yy * w, px + (size_t)(row + yy - y) * w, (size_t)w * 2);
+            const uint16_t* srcrow = px + (size_t)(row + yy - y) * w;
+            uint16_t* dstrow = chunk2 + (size_t)yy * w;
+            for (int xx = 0; xx < w; xx++) dstrow[xx] = raw_swap16(srcrow[xx]);
         }
         raw_cmd(0x2C); /* RAMWR */
         raw_data_b(chunk2, (size_t)w * (size_t)hh * 2);
