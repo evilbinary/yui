@@ -57,7 +57,7 @@
 #endif
 #endif
 
-#define EXAMPLE_LCD_PIXEL_CLOCK_HZ (10 * 1000 * 1000)
+#define EXAMPLE_LCD_PIXEL_CLOCK_HZ (40 * 1000 * 1000)
 #define EXAMPLE_LCD_BK_LIGHT_ON_LEVEL  1
 #define EXAMPLE_LCD_BK_LIGHT_OFF_LEVEL !EXAMPLE_LCD_BK_LIGHT_ON_LEVEL
 #define EXAMPLE_PIN_NUM_DATA0          6  /*!< for 1-line SPI, this also refereed as MOSI */
@@ -114,17 +114,189 @@ esp_lcd_touch_handle_t yui_esp32_touch_create(esp_lcd_panel_io_handle_t io,
 extern void backend_esp32_set_panel(esp_lcd_panel_handle_t p);
 extern void backend_esp32_set_touch_handle(esp_lcd_touch_handle_t t);
 extern void backend_esp32_set_framebuffer(uint16_t* fb, int w, int h);
+extern void backend_esp32_set_blit_rect(void (*fn)(int x, int y, int w, int h, const uint16_t* px));
 extern int  backend_esp32_get_hw_display(void);
 
 static esp_lcd_panel_handle_t s_lcd_panel = NULL;
 static esp_lcd_touch_handle_t s_lcd_touch = NULL;
 
+/* 完整 ST7789 初始化：补充 esp_lcd 极简序列缺失的电源/帧率/Gamma/INVON，
+ * 寄存器值取自 TFT_eSPI ST7789_Init.h（用户已验证本地能点亮）。 */
+static void st7789_full_init(esp_lcd_panel_io_handle_t io) {
+    esp_lcd_panel_io_tx_param(io, 0x11, NULL, 0); /* SLPOUT */
+    vTaskDelay(pdMS_TO_TICKS(120));
+    esp_lcd_panel_io_tx_param(io, 0x13, NULL, 0); /* NORON */
+    esp_lcd_panel_io_tx_param(io, 0x36, (uint8_t[]){0x08}, 1); /* MADCTL BGR */
+    esp_lcd_panel_io_tx_param(io, 0xB6, (uint8_t[]){0x0A, 0x82}, 2);
+    esp_lcd_panel_io_tx_param(io, 0xB0, (uint8_t[]){0x00, 0xE0}, 2); /* RAMCTRL 5-6bit */
+    esp_lcd_panel_io_tx_param(io, 0x3A, (uint8_t[]){0x55}, 1); /* COLMOD */
+    vTaskDelay(pdMS_TO_TICKS(10));
+    esp_lcd_panel_io_tx_param(io, 0xB2, (uint8_t[]){0x0C, 0x0C, 0x00, 0x33, 0x33}, 5); /* PORCTRL */
+    esp_lcd_panel_io_tx_param(io, 0xB7, (uint8_t[]){0x35}, 1); /* GCTRL */
+    esp_lcd_panel_io_tx_param(io, 0xBB, (uint8_t[]){0x28}, 1); /* VCOMS */
+    esp_lcd_panel_io_tx_param(io, 0xC0, (uint8_t[]){0x0C}, 1); /* LCMCTRL */
+    esp_lcd_panel_io_tx_param(io, 0xC2, (uint8_t[]){0x01, 0xFF}, 2); /* VDVVRHEN */
+    esp_lcd_panel_io_tx_param(io, 0xC3, (uint8_t[]){0x10}, 1); /* VRHS */
+    esp_lcd_panel_io_tx_param(io, 0xC4, (uint8_t[]){0x20}, 1); /* VDVSET */
+    esp_lcd_panel_io_tx_param(io, 0xC6, (uint8_t[]){0x0F}, 1); /* FRCTR2 */
+    esp_lcd_panel_io_tx_param(io, 0xD0, (uint8_t[]){0xA4, 0xA1}, 2); /* PWCTRL1 */
+    esp_lcd_panel_io_tx_param(io, 0xE0, (uint8_t[]) { /* PVGAMCTRL */
+        0xD0, 0x00, 0x02, 0x07, 0x0A, 0x28, 0x32, 0x44, 0x42, 0x06, 0x0E, 0x12, 0x14, 0x17}, 14);
+    esp_lcd_panel_io_tx_param(io, 0xE1, (uint8_t[]) { /* NVGAMCTRL */
+        0xD0, 0x00, 0x02, 0x07, 0x0A, 0x28, 0x31, 0x54, 0x47, 0x0E, 0x1C, 0x17, 0x1B, 0x1E}, 14);
+    esp_lcd_panel_io_tx_param(io, 0x21, NULL, 0); /* INVON */
+    esp_lcd_panel_io_tx_param(io, 0x29, NULL, 0); /* DISPON */
+    vTaskDelay(pdMS_TO_TICKS(120));
+    printf("YUI: ST7789 full TFT_eSPI init applied\n");
+}
+
+
+/* ===================== 裸 SPI 复刻 TFT_eSPI（临时排查 LCD 用） =====================
+ * TFT_eSPI 在用户 Arduino 上能点亮（SCLK=4 MOSI=6 DC=8 RST=9 CS 接地），
+ * 这里用同一套引脚+Mode3+寄存器序列，绕开 esp_lcd 层，验证面板本体。 */
+static spi_device_handle_t s_raw_spi = NULL;
+static int s_raw_dc_pin = -1;
+static int s_raw_rst_pin = -1;
+
+static void raw_write_encode(spi_transaction_t* t, const void* data, size_t bytes) {
+    memset(t, 0, sizeof(*t));
+    t->length = bytes * 8;
+    t->tx_buffer = data;
+}
+
+static void raw_cmd(uint8_t byte_cmd) {
+    gpio_set_level((gpio_num_t)s_raw_dc_pin, 0);
+    spi_transaction_t t;
+    raw_write_encode(&t, &byte_cmd, 1);
+    spi_device_polling_transmit(s_raw_spi, &t);
+}
+
+static void raw_data_b(const void* buf, size_t len) {
+    gpio_set_level((gpio_num_t)s_raw_dc_pin, 1);
+    spi_transaction_t t;
+    raw_write_encode(&t, buf, len);
+    spi_device_polling_transmit(s_raw_spi, &t);
+}
+
+static void raw_rst(void) {
+    gpio_set_level((gpio_num_t)s_raw_rst_pin, 1);
+    vTaskDelay(pdMS_TO_TICKS(10));
+    gpio_set_level((gpio_num_t)s_raw_rst_pin, 0);
+    vTaskDelay(pdMS_TO_TICKS(20));
+    gpio_set_level((gpio_num_t)s_raw_rst_pin, 1);
+    vTaskDelay(pdMS_TO_TICKS(120));
+}
+
+static void raw_draw_full(uint16_t color) {
+    static uint16_t chunk[240 * 16];
+    /* CASET */
+    uint8_t set[] = {0x00, 0x00, 0x00, 0xEF};
+    raw_cmd(0x2A); raw_data_b(set, sizeof(set));
+    /* 每 16 行发一次 CASET+RAMWR（避免单事务过大） */
+    for (int y = 0; y < 240; y += 16) {
+        uint8_t rs[] = { (uint8_t)(y >> 8), (uint8_t)y, (uint8_t)((y + 15) >> 8), (uint8_t)(y + 15) };
+        raw_cmd(0x2B); raw_data_b(rs, sizeof(rs)); /* RASET */
+        for (int i = 0; i < 240 * 16; i++) chunk[i] = color;
+        raw_cmd(0x2C); /* RAMWR */
+        raw_data_b(chunk, sizeof(chunk));
+    }
+}
+
+/* 推一块 RGB565 矩形到屏幕（x,y 为源屏左上角，w/h 为宽高，px 指向矩形源）。
+ * 按 16 行切块：每块 CASET/RASET/RAMWR，避免单事务超过 SPI 缓冲。 */
+static void raw_draw_rect(int x, int y, int w, int h, const uint16_t* px) {
+    int x1 = x + w - 1;
+    int y1 = y + h - 1;
+    if (x1 < 0 || y1 < 0) return;
+    if (x1 > 239) x1 = 239;
+    if (y1 > 239) y1 = 239;
+    if (x < 0) x = 0;
+    if (y < 0) y = 0;
+
+    uint8_t set[] = {
+        (uint8_t)(x >> 8), (uint8_t)x,
+        (uint8_t)(x1 >> 8), (uint8_t)x1
+    };
+    raw_cmd(0x2A); raw_data_b(set, sizeof(set));
+    for (int row = y; row <= y1; row += 16) {
+        int r2 = row + 15;
+        if (r2 > y1) r2 = y1;
+        uint8_t rs[] = { (uint8_t)(row >> 8), (uint8_t)row, (uint8_t)(r2 >> 8), (uint8_t)r2 };
+        raw_cmd(0x2B); raw_data_b(rs, sizeof(rs)); /* RASET */
+        /* 块内每一行复制到连续 DMA buffer（行间不连续 + 可能部分裁剪） */
+        static uint16_t chunk2[240 * 16];
+        int hh = r2 - row + 1;
+        for (int yy = 0; yy < hh; yy++) {
+            memcpy(chunk2 + (size_t)yy * w, px + (size_t)(row + yy - y) * w, (size_t)w * 2);
+        }
+        raw_cmd(0x2C); /* RAMWR */
+        raw_data_b(chunk2, (size_t)w * (size_t)hh * 2);
+    }
+}
+
+static void raw_lcd_init(void) {
+    /* 调用方已初始化 SPI bus；这里只 add device + 初始化 GPIO + 面板初始化 */
+    spi_device_interface_config_t devcfg = {
+        .clock_speed_hz = 27 * 1000 * 1000,
+        .mode = 3,
+        .spics_io_num = -1,
+        .queue_size = 8,
+        .flags = SPI_DEVICE_NO_DUMMY,
+    };
+    ESP_ERROR_CHECK(spi_bus_add_device((spi_host_device_t)YUI_LCD_SPI_HOST, &devcfg, &s_raw_spi));
+
+    s_raw_dc_pin = EXAMPLE_PIN_NUM_DC;
+    s_raw_rst_pin = EXAMPLE_PIN_NUM_RST;
+    gpio_set_direction((gpio_num_t)s_raw_dc_pin, GPIO_MODE_OUTPUT);
+    gpio_set_direction((gpio_num_t)s_raw_rst_pin, GPIO_MODE_OUTPUT);
+    gpio_set_level((gpio_num_t)s_raw_dc_pin, 0);
+
+    if (EXAMPLE_PIN_NUM_BK_LIGHT >= 0) {
+        gpio_set_direction((gpio_num_t)EXAMPLE_PIN_NUM_BK_LIGHT, GPIO_MODE_OUTPUT);
+        gpio_set_level((gpio_num_t)EXAMPLE_PIN_NUM_BK_LIGHT, 0);
+    }
+
+    raw_rst();
+
+    /* ================= ▼ ST7789 初始化（逐条对齐 TFT_eSPI ST7789_Init.h） ▼ ================= */
+    raw_cmd(0x11); /* SLPOUT  （复位后断言>5ms,延120ms） */
+    vTaskDelay(pdMS_TO_TICKS(120));
+    raw_cmd(0x13); /* NORON   */
+raw_cmd(0x36); /* MADCTL */
+    { uint8_t d = 0x08; raw_data_b(&d, 1); }  /* BGR */
+    raw_cmd(0xB6); { uint8_t d[] = {0x0A, 0x82}; raw_data_b(d, sizeof(d)); }
+    raw_cmd(0xB0); { uint8_t d[] = {0x00, 0xE0}; raw_data_b(d, sizeof(d)); } /* RAMCTRL 5-6bit */
+    raw_cmd(0x3A); { uint8_t d = 0x55; raw_data_b(&d, 1); } /* COLMOD */
+    vTaskDelay(pdMS_TO_TICKS(10));
+    raw_cmd(0xB2); { uint8_t d[] = {0x0C, 0x0C, 0x00, 0x33, 0x33}; raw_data_b(d, sizeof(d)); }
+    raw_cmd(0xB7); { uint8_t d = 0x35; raw_data_b(&d, 1); }
+    raw_cmd(0xBB); { uint8_t d = 0x28; raw_data_b(&d, 1); }
+    raw_cmd(0xC0); { uint8_t d = 0x0C; raw_data_b(&d, 1); }
+    raw_cmd(0xC2); { uint8_t d[] = {0x01, 0xFF}; raw_data_b(d, sizeof(d)); }
+    raw_cmd(0xC3); { uint8_t d = 0x10; raw_data_b(&d, 1); }
+    raw_cmd(0xC4); { uint8_t d = 0x20; raw_data_b(&d, 1); }
+    raw_cmd(0xC6); { uint8_t d = 0x0F; raw_data_b(&d, 1); }
+    raw_cmd(0xD0); { uint8_t d[] = {0xA4, 0xA1}; raw_data_b(d, sizeof(d)); }
+    raw_cmd(0xE0); { uint8_t d[] = {0xD0,0x00,0x02,0x07,0x0A,0x28,0x32,0x44,0x42,0x06,0x0E,0x12,0x14,0x17}; raw_data_b(d, sizeof(d)); }
+    raw_cmd(0xE1); { uint8_t d[] = {0xD0,0x00,0x02,0x07,0x0A,0x28,0x31,0x54,0x47,0x0E,0x1C,0x17,0x1B,0x1E}; raw_data_b(d, sizeof(d)); }
+    raw_cmd(0x21); /* INVON  */
+    raw_cmd(0x29); /* DISPON */
+    vTaskDelay(pdMS_TO_TICKS(120));
+
+    if (EXAMPLE_PIN_NUM_BK_LIGHT >= 0) gpio_set_level((gpio_num_t)EXAMPLE_PIN_NUM_BK_LIGHT, 1);
+    printf("YUI: raw ST7789 init ok, TFT_eSPI-equivalent\n");
+
+    /* 一次性清屏为深灰，避免启动瞬间残留随机显存 */
+    raw_draw_full(0x2104);
+
+    /* 把矩形推送回调注入后端（esp_lcd 层不兼容此面板，走裸 SPI） */
+    backend_esp32_set_blit_rect(raw_draw_rect);
+    printf("YUI: raw blit callback registered\n");
+}
+
+
 static int esp32_lcd_init(void) {
-    spi_device_handle_t spi = NULL;
-    esp_lcd_panel_io_handle_t io_handle = NULL;
     spi_bus_config_t buscfg;
-    esp_lcd_panel_io_spi_config_t io_config;
-    esp_lcd_panel_dev_config_t panel_config;
     esp_err_t ret;
 
 #ifdef YUI_ESP32_QEMU
@@ -157,7 +329,7 @@ static int esp32_lcd_init(void) {
     buscfg.sclk_io_num = EXAMPLE_PIN_NUM_PCLK;
     buscfg.quadwp_io_num = -1;
     buscfg.quadhd_io_num = -1;
-    buscfg.max_transfer_sz = YUI_SCREEN_WIDTH * YUI_SCREEN_HEIGHT * 2 + 8;
+    buscfg.max_transfer_sz = YUI_SCREEN_WIDTH * (16 * 2 + 1) + 8;
 
     ret = spi_bus_initialize((spi_host_device_t)YUI_LCD_SPI_HOST, &buscfg, SPI_DMA_CH_AUTO);
     if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {
@@ -165,73 +337,13 @@ static int esp32_lcd_init(void) {
         return 0;
     }
 
-    memset(&io_config, 0, sizeof(io_config));
-    io_config.dc_gpio_num = EXAMPLE_PIN_NUM_DC;
-    io_config.cs_gpio_num = EXAMPLE_PIN_NUM_CS;
-    io_config.pclk_hz = YUI_LCD_FREQ_HZ;
-    io_config.lcd_cmd_bits = 8;
-    io_config.lcd_param_bits = 8;
-    io_config.spi_mode = 3; /* 与官方 tjpgd 例程一致：mode 3 模拟 Intel 8080 时序 */
-    io_config.trans_queue_depth = 10;
-
-    ret = esp_lcd_new_panel_io_spi((esp_lcd_spi_bus_handle_t)YUI_LCD_SPI_HOST, &io_config, &io_handle);
-    if (ret != ESP_OK) {
-        ESP_LOGW("yui-esp32", "esp_lcd_new_panel_io_spi failed (%s), running in headless mode", esp_err_to_name(ret));
-        return 0;
-    }
-
-    memset(&panel_config, 0, sizeof(panel_config));
-    panel_config.reset_gpio_num = EXAMPLE_PIN_NUM_RST;
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
-    panel_config.rgb_ele_order = LCD_RGB_ELEMENT_ORDER_RGB;
-#else
-    panel_config.color_space = ESP_LCD_COLOR_SPACE_RGB;
-#endif
-    panel_config.bits_per_pixel = 16;
-
-    ret = esp_lcd_new_panel_st7789(io_handle, &panel_config, &s_lcd_panel);
-    if (ret != ESP_OK) {
-        ESP_LOGW("yui-esp32", "esp_lcd_new_panel_st7789 failed (%s), running in headless mode", esp_err_to_name(ret));
-        return 0;
-    }
-    printf("YUI: ST7789 panel created ok\n");
-    ESP_ERROR_CHECK(gpio_set_level(EXAMPLE_PIN_NUM_BK_LIGHT, EXAMPLE_LCD_BK_LIGHT_OFF_LEVEL));
-
-    esp_lcd_panel_reset(s_lcd_panel);
-    vTaskDelay(pdMS_TO_TICKS(150));
-    printf("YUI: [dbg] init=%s\n", esp_err_to_name(esp_lcd_panel_init(s_lcd_panel)));
-    printf("YUI: [dbg] invert=%s\n", esp_err_to_name(esp_lcd_panel_invert_color(s_lcd_panel, false)));
-    printf("YUI: [dbg] mirror=%s\n", esp_err_to_name(esp_lcd_panel_mirror(s_lcd_panel, false, false)));
-    printf("YUI: [dbg] disp_on=%s\n", esp_err_to_name(esp_lcd_panel_disp_on_off(s_lcd_panel, true)));
-
-    /* 读 ST7789 面板 ID（0x04 读命令）验证 SPI+面板通信：
-     * 能读到 ID（如 0x85/0x54/0x78）→ 通信正常，黑屏是显示配置问题；
-     * 读不到/全 0 → SPI 或接线（尤其 CS）问题。 */
-    {
-        uint8_t id[3] = {0, 0, 0};
-        esp_err_t rd = esp_lcd_panel_io_rx_param(io_handle, 0x04, id, sizeof(id));
-        printf("YUI: panel ID read ret=%s id=%02x%02x%02x\n",
-               esp_err_to_name(rd), id[0], id[1], id[2]);
-    }
-
-    ESP_ERROR_CHECK(gpio_set_level(EXAMPLE_PIN_NUM_BK_LIGHT, EXAMPLE_LCD_BK_LIGHT_ON_LEVEL));
-
-    /* TEMP 测试：只画白色，验证最基础显示 */
-    static uint16_t wfb[240 * 240];
-    for (;;) {
-        for (int i = 0; i < 240 * 240; i++) wfb[i] = 0xFFFF;
-        esp_err_t dr = esp_lcd_panel_draw_bitmap(s_lcd_panel, 0, 0, 240, 240, wfb);
-        printf("YUI: draw WHITE ret=%s\n", esp_err_to_name(dr));
-        vTaskDelay(pdMS_TO_TICKS(200));
-    }
-
-    if (EXAMPLE_PIN_NUM_BK_LIGHT >= 0) {
-        gpio_set_direction((gpio_num_t)EXAMPLE_PIN_NUM_BK_LIGHT, GPIO_MODE_OUTPUT);
-        gpio_set_level((gpio_num_t)EXAMPLE_PIN_NUM_BK_LIGHT, 1);
-    }
+    /* 裸 SPI 复刻 TFT_eSPI 驱动 ST7789（esp_lcd 层与面板不兼容） */
+    raw_lcd_init();
     return 0;
 #endif
 }
+
+
 
 static int esp32_touch_init(void) {
     esp_lcd_touch_config_t tcfg;
@@ -403,9 +515,11 @@ void app_main(void) {
         printf("YUI: esp32_lcd_init failed\n");
         return;
     }
-    esp32_touch_init();
+
     backend_esp32_set_panel(s_lcd_panel);
-    backend_esp32_set_touch_handle(s_lcd_touch);
+
+    // esp32_touch_init();
+    // backend_esp32_set_touch_handle(s_lcd_touch);
 
     /* framebuffer：QEMU 从虚拟面板取专属显存，真机 buffer 模式堆分配 */
     {

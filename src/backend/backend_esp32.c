@@ -243,14 +243,35 @@ void backend_esp32_set_framebuffer(uint16_t* fb, int w, int h) {
     s_fb_h = h;
 }
 
+/* 可选"像素块直推"回调：真机改用裸 SPI 驱动 ST7789（esp_lcd 层不兼容该面板）
+ * 时，由平台层注入，esp32_flush_dirty 优先走它而跳过 esp_lcd_panel_draw_bitmap。
+ * 回调签名：(x, y, w, h, 源矩形左上角 RGB565 指针)。 */
+typedef void (*esp32_blit_rect_fn)(int x, int y, int w, int h, const uint16_t* px);
+static esp32_blit_rect_fn s_blit_rect = NULL;
+void backend_esp32_set_blit_rect(esp32_blit_rect_fn fn) { s_blit_rect = fn; }
+
+/* 像素块落屏统一入口：有 blit 回调（raw SPI 驱动）走回调，否则走 esp_lcd。 */
+static void panel_blit(int x, int y, int w, int h, const uint16_t* buf) {
+    if (s_blit_rect) {
+        s_blit_rect(x, y, w, h, buf);
+    } else if (s_panel) {
+        esp_lcd_panel_draw_bitmap(s_panel, x, y, x + w, y + h, buf);
+    }
+}
+
 static bool s_touch_active = false;
 static int s_touch_x = 0, s_touch_y = 0;
 
 static void esp32_flush_dirty(void) {
-    if (!s_has_dirty || !s_panel || !s_fb) return;
-    esp_lcd_panel_draw_bitmap(s_panel, s_dirty.x, s_dirty.y,
-                              s_dirty.x + s_dirty.w, s_dirty.y + s_dirty.h,
-                              s_fb + s_dirty.y * s_fb_w + s_dirty.x);
+    if (!s_has_dirty || !s_fb) return;
+    if (s_blit_rect) {
+        s_blit_rect(s_dirty.x, s_dirty.y, s_dirty.w, s_dirty.h,
+                    s_fb + s_dirty.y * s_fb_w + s_dirty.x);
+    } else if (s_panel) {
+        esp_lcd_panel_draw_bitmap(s_panel, s_dirty.x, s_dirty.y,
+                                  s_dirty.x + s_dirty.w, s_dirty.y + s_dirty.h,
+                                  s_fb + s_dirty.y * s_fb_w + s_dirty.x);
+    }
     dirty_reset();
 }
 
@@ -437,16 +458,16 @@ static uint16_t s_spi_line[YUI_SPI_LINE_MAX];
 static void spi_draw_line(int x, int y, int w, uint16_t px)
 {
     int i;
-    if (!s_panel || w <= 0) return;
+    if ((!s_blit_rect && !s_panel) || w <= 0) return;
     if (w > YUI_SPI_LINE_MAX) w = YUI_SPI_LINE_MAX;
     for (i = 0; i < w; i++) s_spi_line[i] = px;
-    esp_lcd_panel_draw_bitmap(s_panel, x, y, x + w, y + 1, s_spi_line);
+    panel_blit(x, y, w, 1, s_spi_line);
 }
 static void spi_draw_line_buf(int x, int y, int w, const uint16_t* buf)
 {
-    if (!s_panel || w <= 0 || !buf) return;
+    if ((!s_blit_rect && !s_panel) || w <= 0 || !buf) return;
     if (w > YUI_SPI_LINE_MAX) w = YUI_SPI_LINE_MAX;
-    esp_lcd_panel_draw_bitmap(s_panel, x, y, x + w, y + 1, buf);
+    panel_blit(x, y, w, 1, buf);
 }
 #endif
 
@@ -460,9 +481,9 @@ static void direct_draw_point(int x, int y, Color c)
 #elif defined(ESP_PLATFORM)
     /* 真实 LCD：单点 SPI 极慢，仅用于少量点绘；大面积走 spi_draw_line */
     uint16_t px;
-    if (!s_panel) return;
+    if (!s_blit_rect && !s_panel) return;
     px = color_to_rgb565(c);
-    esp_lcd_panel_draw_bitmap(s_panel, x, y, x + 1, y + 1, &px);
+    panel_blit(x, y, 1, 1, &px);
 #else
     (void)x; (void)y; (void)c;
 #endif
@@ -524,7 +545,7 @@ void backend_render_fill_rect(Rect* rect, Color color) {
     dirty_add(r.x, r.y, r.w, r.h);
 #elif defined(ESP_PLATFORM) && !defined(YUI_ESP32_QEMU)
     /* 行缓冲一次 SPI：避免 1x1 写屏触发 task_wdt */
-    if (color.a == 0 || !s_panel) return;
+    if (color.a == 0 || (!s_blit_rect && !s_panel)) return;
     {
         uint16_t px = color_to_rgb565(color);
         for (y = r.y; y < r.y + r.h; y++) {
@@ -1036,7 +1057,7 @@ void backend_render_text_copy(Texture* texture, const Rect* srcrect, const Rect*
     dirty_add(dst.x, dst.y, dst.w, dst.h);
 #elif defined(ESP_PLATFORM) && !defined(YUI_ESP32_QEMU)
     /* 行缓冲 SPI：先合成一行 RGB565，再一次 draw_bitmap */
-    if (!s_panel) return;
+    if (!s_blit_rect && !s_panel) return;
     for (y = 0; y < dst.h; y++) {
         int sy = src_r.y + (y * src_r.h) / (dstrect->h > 0 ? dstrect->h : 1);
         int run_x0 = -1, run_n = 0;
