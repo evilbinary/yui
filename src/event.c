@@ -4,6 +4,7 @@
 #include "popup_manager.h"
 #include "component_registry.h"
 #include "input/state.h"
+#include "layer_update.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
@@ -302,8 +303,9 @@ static void handler_virtical_scroll_event(Layer* layer, int scroll_delta) {
         if (layer->event && layer->event->scroll) {
             EVENT_INVOKE(layer->event->scroll, layer);
         }
-        // 重新布局子元素
+        // 重新布局子元素并标记脏区域，确保渲染更新画面
         layout_layer(layer);
+        mark_layer_dirty(layer, DIRTY_LAYOUT);
     }
 }
 
@@ -337,8 +339,9 @@ static void handle_horizontal_scroll_event(Layer* layer, int scroll_delta) {
         if (layer->event && layer->event->scroll) {
             EVENT_INVOKE(layer->event->scroll, layer);
         }
-        // 重新布局子元素
+        // 重新布局子元素并标记脏区域，确保渲染更新画面
         layout_layer(layer);
+        mark_layer_dirty(layer, DIRTY_LAYOUT);
     }
 }
 
