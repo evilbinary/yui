@@ -2158,18 +2158,24 @@ JSValue js_list_dir(JSContext* ctx, JSValueConst this_val, int argc, JSValueCons
         else need_free = 1;
     }
 
-    /* 与 js_module_read_file 相同的路径解析：相对路径尝试 root/path */
+    /* 与 js_module_read_file 相同的路径解析：先原样，再 root/path */
     const char* root = js_module_get_root();
     char resolved[1024];
     const char* open_dir = NULL;
 
     if (dir_path[0] == '/') {
         open_dir = dir_path;
-    } else if (root && root[0]) {
-        snprintf(resolved, sizeof(resolved), "%s/%s", root, dir_path);
-        open_dir = resolved;
     } else {
-        open_dir = dir_path;
+        DIR* dir_test = opendir(dir_path);
+        if (dir_test) {
+            closedir(dir_test);
+            open_dir = dir_path;
+        } else if (root && root[0]) {
+            snprintf(resolved, sizeof(resolved), "%s/%s", root, dir_path);
+            open_dir = resolved;
+        } else {
+            open_dir = dir_path;
+        }
     }
 
     DIR* dir = opendir(open_dir);
