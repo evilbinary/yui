@@ -58,6 +58,41 @@ static int g_request_quit = 0;
 static int g_exit_code = 0;
 static int g_headless = -1; /* -1 = unset (read YUI_HEADLESS), 0/1 = explicit */
 
+/* DIRTY 模式持久画布：渲染到纹理，整帧 blit 到屏幕（双缓冲的 backbuffer
+ * 在 present 后内容未定义，直接画上去会闪）。 */
+static SDL_Texture* g_canvas = NULL;
+static int g_canvas_w = 0;
+static int g_canvas_h = 0;
+
+static int sdl_ensure_canvas(void) {
+    int w = 0, h = 0;
+    SDL_GetWindowSize(window, &w, &h);
+    if (w <= 0 || h <= 0) {
+        return 0;
+    }
+    if (g_canvas && g_canvas_w == w && g_canvas_h == h) {
+        return 1;
+    }
+    if (g_canvas) {
+        SDL_DestroyTexture(g_canvas);
+        g_canvas = NULL;
+    }
+    g_canvas = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888,
+                                 SDL_TEXTUREACCESS_TARGET, w, h);
+    if (!g_canvas) {
+        printf("canvas: CreateTexture failed: %s\n", SDL_GetError());
+        return 0;
+    }
+    g_canvas_w = w;
+    g_canvas_h = h;
+    /* 首次创建时清空，避免未初始内容上屏 */
+    SDL_SetRenderTarget(renderer, g_canvas);
+    SDL_SetRenderDrawColor(renderer, 30, 30, 30, 255);
+    SDL_RenderClear(renderer);
+    SDL_SetRenderTarget(renderer, NULL);
+    return 1;
+}
+
 static YuiRenderMode g_render_mode = YUI_RENDER_MODE_DIRTY;
 
 void backend_set_render_mode(YuiRenderMode mode)
@@ -931,8 +966,13 @@ void backend_main_loop(void) {
     game_update(-1.0f);
 #endif
 
-    SDL_SetRenderDrawColor(renderer, 30, 30, 30, 255);
-    SDL_RenderClear(renderer);
+    if (g_render_mode == YUI_RENDER_MODE_FULL) {
+        SDL_SetRenderDrawColor(renderer, 30, 30, 30, 255);
+        SDL_RenderClear(renderer);
+    } else {
+        sdl_ensure_canvas();
+        SDL_SetRenderTarget(renderer, g_canvas);
+    }
 
     perf_frame_begin();
     perf_render_tree_begin();
@@ -947,6 +987,11 @@ void backend_main_loop(void) {
     // 渲染弹出层
     popup_manager_render();
     perf_frame_end();
+
+    if (g_render_mode == YUI_RENDER_MODE_DIRTY) {
+        SDL_SetRenderTarget(renderer, NULL);
+        SDL_RenderCopy(renderer, g_canvas, NULL, NULL);
+    }
 
     SDL_RenderPresent(renderer);
 }
@@ -1582,6 +1627,16 @@ int backend_init(){
 #if defined(__linux__) && !defined(LINUX)
     SDL_SetWindowMinimumSize(window, 900, 720);
 #endif
+
+    /* 调试窗口置于屏幕右下角，避免遮挡/频繁切换 */
+    {
+        SDL_DisplayMode dm;
+        if (SDL_GetCurrentDisplayMode(0, &dm) == 0) {
+            int w = 0, h = 0;
+            SDL_GetWindowSize(window, &w, &h);
+            SDL_SetWindowPosition(window, dm.w - w - 40, dm.h - h - 80);
+        }
+    }
 
     if (window && backend_is_headless()) {
         SDL_HideWindow(window);
@@ -2225,6 +2280,10 @@ void backend_run(Layer* ui_root){
         if (g_render_mode == YUI_RENDER_MODE_FULL) {
             SDL_SetRenderDrawColor(renderer, 30, 30, 30, 255);
             SDL_RenderClear(renderer);
+        } else {
+            /* DIRTY：画到持久画布，下方整帧 blit 到屏幕 */
+            sdl_ensure_canvas();
+            SDL_SetRenderTarget(renderer, g_canvas);
         }
 
         perf_frame_begin();
@@ -2240,6 +2299,11 @@ void backend_run(Layer* ui_root){
         // 渲染弹出层
         popup_manager_render();
         perf_frame_end();
+
+        if (g_render_mode == YUI_RENDER_MODE_DIRTY) {
+            SDL_SetRenderTarget(renderer, NULL);
+            SDL_RenderCopy(renderer, g_canvas, NULL, NULL);
+        }
 
         SDL_RenderPresent(renderer);
 
@@ -2297,6 +2361,9 @@ void backend_tick(Layer* ui_root) {
     if (g_render_mode == YUI_RENDER_MODE_FULL) {
         SDL_SetRenderDrawColor(renderer, 30, 30, 30, 255);
         SDL_RenderClear(renderer);
+    } else {
+        sdl_ensure_canvas();
+        SDL_SetRenderTarget(renderer, g_canvas);
     }
 
     perf_frame_begin();
@@ -2310,6 +2377,11 @@ void backend_tick(Layer* ui_root) {
     perf_draw_overlay(ui_root);
     popup_manager_render();
     perf_frame_end();
+
+    if (g_render_mode == YUI_RENDER_MODE_DIRTY) {
+        SDL_SetRenderTarget(renderer, NULL);
+        SDL_RenderCopy(renderer, g_canvas, NULL, NULL);
+    }
 
     SDL_RenderPresent(renderer);
 }
