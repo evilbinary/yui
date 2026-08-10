@@ -442,6 +442,11 @@ static int s_exit_code = 0;
 static int s_should_quit = 0;
 static int s_headless = 0;
 
+static YuiRenderMode s_render_mode = YUI_RENDER_MODE_DIRTY;
+
+void backend_set_render_mode(YuiRenderMode mode) { s_render_mode = mode; }
+YuiRenderMode backend_get_render_mode(void) { return s_render_mode; }
+
 void backend_set_auto_frames(int f) { s_auto_frames = f; }
 void backend_request_quit(int c) { s_exit_code = c; s_should_quit = 1; }
 int backend_get_exit_code(void) { return s_exit_code; }

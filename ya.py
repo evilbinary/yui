@@ -171,7 +171,18 @@ def configure_emscripten_toolchain(target=None):
     if "EM_FROZEN_CACHE" not in os.environ:
         os.environ["EM_FROZEN_CACHE"] = ""
     if not os.environ.get("EM_CACHE"):
-        cache_dir = os.path.join(os.path.expanduser("~"), ".emscripten_cache")
+        # emcc ports build does os.path.relpath(emsdk_source, cache_dir); on
+        # Windows a cross-drive relpath raises ValueError. Keep the cache on
+        # the same drive as the emsdk install.
+        cache_dir = None
+        for env_key in ("EMSCRIPTEN", "EMSDK"):
+            val = os.environ.get(env_key)
+            if val and os.path.isdir(val):
+                base = val if env_key == "EMSDK" else os.path.dirname(val)
+                cache_dir = os.path.join(base, ".emscripten_cache")
+                break
+        if not cache_dir:
+            cache_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".cache", "emscripten")
         os.makedirs(cache_dir, exist_ok=True)
         os.environ["EM_CACHE"] = cache_dir
     if not os.environ.get("EM_PORTS"):

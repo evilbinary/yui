@@ -37,6 +37,18 @@
 #define MAX_UPDATE_CALLBACKS 8
 
 // ====================== 全局渲染器 ======================
+static YuiRenderMode g_render_mode = YUI_RENDER_MODE_DIRTY;
+
+void backend_set_render_mode(YuiRenderMode mode)
+{
+    g_render_mode = mode;
+}
+
+YuiRenderMode backend_get_render_mode(void)
+{
+    return g_render_mode;
+}
+
 extern LTDC_HandleTypeDef hltdc;
 extern DMA2D_HandleTypeDef hdma2d;
 
@@ -553,7 +565,9 @@ void backend_run(Layer* ui_root) {
         }
         
         // 渲染UI
-        backend_render_clear_color(255, 255, 255, 255); // 白色背景
+        if (g_render_mode == YUI_RENDER_MODE_FULL) {
+            backend_render_clear_color(255, 255, 255, 255); // 白色背景
+        }
         
         if (ui_root->render) {
             ui_root->render(ui_root);

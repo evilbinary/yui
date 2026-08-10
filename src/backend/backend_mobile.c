@@ -628,6 +628,18 @@ static void mobile_apply_backdrop_tone(unsigned char* data, int count,
 #define MAX_TOUCHES 10
 #define SWIPE_THRESHOLD_PX 32
 
+static YuiRenderMode g_render_mode = YUI_RENDER_MODE_DIRTY;
+
+void backend_set_render_mode(YuiRenderMode mode)
+{
+    g_render_mode = mode;
+}
+
+YuiRenderMode backend_get_render_mode(void)
+{
+    return g_render_mode;
+}
+
 float yui_density = 1.0f;
 
 float backend_get_density(void) {
@@ -1271,7 +1283,9 @@ void backend_tick(Layer* ui_root) {
         }
     }
 
-    backend_render_clear_color(30, 30, 30, 255);
+    if (g_render_mode == YUI_RENDER_MODE_FULL) {
+        backend_render_clear_color(30, 30, 30, 255);
+    }
     perf_frame_begin();
     perf_render_tree_begin();
     render_layer(ui_root);

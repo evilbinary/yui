@@ -3,6 +3,17 @@
 
 #include "layer.h"
 
+/* 渲染模式：控制 render.c 的绘制范围与后端清屏策略 */
+typedef enum {
+    /* 全量模式：每帧清屏 + 全树渲染（SDL/移动端传统行为） */
+    YUI_RENDER_MODE_FULL = 0,
+    /* 脏模式：按层 dirty 标志跳过无变化子树，目标持久（LCD 直写/省电） */
+    YUI_RENDER_MODE_DIRTY = 1,
+} YuiRenderMode;
+
+void backend_set_render_mode(YuiRenderMode mode);
+YuiRenderMode backend_get_render_mode(void);
+
 extern float yui_density;
 
 float backend_get_density(void);

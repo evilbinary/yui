@@ -58,6 +58,18 @@ static int g_request_quit = 0;
 static int g_exit_code = 0;
 static int g_headless = -1; /* -1 = unset (read YUI_HEADLESS), 0/1 = explicit */
 
+static YuiRenderMode g_render_mode = YUI_RENDER_MODE_DIRTY;
+
+void backend_set_render_mode(YuiRenderMode mode)
+{
+    g_render_mode = mode;
+}
+
+YuiRenderMode backend_get_render_mode(void)
+{
+    return g_render_mode;
+}
+
 void backend_set_headless(int on)
 {
     g_headless = on ? 1 : 0;
@@ -2210,8 +2222,10 @@ void backend_run(Layer* ui_root){
         game_update(-1.0f);
 #endif
 
-        SDL_SetRenderDrawColor(renderer, 30, 30, 30, 255);
-        SDL_RenderClear(renderer);
+        if (g_render_mode == YUI_RENDER_MODE_FULL) {
+            SDL_SetRenderDrawColor(renderer, 30, 30, 30, 255);
+            SDL_RenderClear(renderer);
+        }
 
         perf_frame_begin();
         perf_render_tree_begin();
@@ -2280,8 +2294,10 @@ void backend_tick(Layer* ui_root) {
     game_update(-1.0f);
 #endif
 
-    SDL_SetRenderDrawColor(renderer, 30, 30, 30, 255);
-    SDL_RenderClear(renderer);
+    if (g_render_mode == YUI_RENDER_MODE_FULL) {
+        SDL_SetRenderDrawColor(renderer, 30, 30, 30, 255);
+        SDL_RenderClear(renderer);
+    }
 
     perf_frame_begin();
     perf_render_tree_begin();
