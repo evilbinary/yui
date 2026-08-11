@@ -1629,14 +1629,14 @@ int backend_init(){
 #endif
 
     /* 调试窗口置于屏幕右下角，避免遮挡/频繁切换 */
-    {
-        SDL_DisplayMode dm;
-        if (SDL_GetCurrentDisplayMode(0, &dm) == 0) {
-            int w = 0, h = 0;
-            SDL_GetWindowSize(window, &w, &h);
-            SDL_SetWindowPosition(window, dm.w - w - 40, dm.h - h - 80);
-        }
-    }
+    // {
+    //     SDL_DisplayMode dm;
+    //     if (SDL_GetCurrentDisplayMode(0, &dm) == 0) {
+    //         int w = 0, h = 0;
+    //         SDL_GetWindowSize(window, &w, &h);
+    //         SDL_SetWindowPosition(window, dm.w - w - 40, dm.h - h - 80);
+    //     }
+    // }
 
     if (window && backend_is_headless()) {
         SDL_HideWindow(window);
