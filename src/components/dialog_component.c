@@ -976,9 +976,13 @@ int dialog_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
 
     if (event->phase == POINTER_MOVE) {
         if (component->dragging) {
+            Rect old_rect = layer->rect;
             layer->rect.x = event->x - component->drag_offset_x;
             layer->rect.y = event->y - component->drag_offset_y;
             dialog_clamp_to_window(layer);
+            if (old_rect.x != layer->rect.x || old_rect.y != layer->rect.y) {
+                render_request_redraw_rect(component->layer, old_rect); /* 局部擦除旧位置 */
+            }
             return 0;
         }
         if (component->scrollbar_dragging && has_scrollbar) {

@@ -237,8 +237,64 @@ void render_layer_background(Layer* layer, const Color* override_bg) {
 // ====================== 渲染管线 ======================
 /* 脏刷新模式：运行时由 backend_set_render_mode 切换。
  * FULL  模式：每帧清屏 + 全树渲染（SDL/移动端）。
- * DIRTY 模式：目标持久（直写 LCD），按层 dirty 标志跳过无变化子树。 */
-static int s_rendered_once = 0; /* 首帧全量渲染过一次后启用脏跳过 */
+ * DIRTY 模式：目标持久（直写 LCD），按层 dirty 标志跳过无变化子树。
+ *
+ * 每棵渲染树（窗口）持有独立 RenderCtx（root->render_ctx），
+ * 多窗口各自渲染不串扰。s_rendered_once 等状态全部放 ctx 中。 */
+
+/* 为图层所在树获取/创建渲染上下文。沿 parent 上溯到 root，取 root 的 ctx
+ * （root->render_ctx 为 NULL 时分配）。传入 popup 层等树外图层时独立挂其自身。 */
+RenderCtx* render_ctx_get(Layer* layer) {
+    if (!layer) return NULL;
+    while (layer->parent) layer = layer->parent;
+    if (!layer->render_ctx) {
+        layer->render_ctx = (RenderCtx*)calloc(1, sizeof(RenderCtx));
+    }
+    return layer->render_ctx;
+}
+
+/* 供 backend 或组件在销毁 root 树时释放渲染上下文。
+ * 非 root 层继承父层 ctx，只解除引用不释放；root 层负责释放。 */
+void render_ctx_free(Layer* layer) {
+    if (!layer) return;
+    if (layer->parent && layer->render_ctx == layer->parent->render_ctx) {
+        layer->render_ctx = NULL;
+        return;
+    }
+    if (layer->render_ctx) {
+        free(layer->render_ctx);
+        layer->render_ctx = NULL;
+    }
+}
+
+void render_request_full_redraw(Layer* root) {
+    RenderCtx* ctx = render_ctx_get(root);
+    if (ctx) ctx->force_full_redraw = 1;
+}
+
+void render_request_redraw_rect(Layer* root, Rect r) {
+    RenderCtx* ctx = render_ctx_get(root);
+    if (ctx && ctx->redraw_rect_count < 4) {
+        ctx->redraw_rects[ctx->redraw_rect_count++] = r;
+    }
+}
+
+/* 层 rect 是否与任一局部重绘区域相交（相交则强制重绘该层） */
+static int layer_intersects_redraw_rect(const RenderCtx* ctx, const Rect* layer_rect) {
+    if (ctx->local_rect_active) {
+        Rect inter;
+        render_rect_intersect(&inter, layer_rect, &ctx->local_rect);
+        return inter.w > 0 && inter.h > 0;
+    }
+    for (int i = 0; i < ctx->redraw_rect_count; i++) {
+        Rect inter;
+        render_rect_intersect(&inter, layer_rect, &ctx->redraw_rects[i]);
+        if (inter.w > 0 && inter.h > 0) {
+            return 1;
+        }
+    }
+    return 0;
+}
 
 static int render_dirty_mode(void) {
     return backend_get_render_mode() == YUI_RENDER_MODE_DIRTY;
@@ -263,7 +319,7 @@ static int layer_paints_over_children(const Layer* layer) {
     return 0;
 }
 
-static void render_layer_impl(Layer* layer, int force) {
+static void render_layer_impl(Layer* layer, int force, RenderCtx* ctx) {
     if (!layer) {
         printf("render_layer: layer is NULL\n");
         return;
@@ -273,8 +329,15 @@ static void render_layer_impl(Layer* layer, int force) {
     }
 
     /* 脏刷新：DIRTY 模式下，首帧过后，非强制、无 dirty、无进行中动画的层跳过整棵子树，
-     * 避免静态 UI 每帧全量重绘（真机直写模式这是 SPI 刷屏与闪烁根源）。 */
-    if (render_dirty_mode() && !force && s_rendered_once && layer->dirty_flags == DIRTY_NONE &&
+     * 避免静态 UI 每帧全量重绘（真机直写模式这是 SPI 刷屏与闪烁根源）。
+     * 局部重绘（render_layer_rect）：与区域不相交的层跳过，相交层强制重绘。 */
+    if (ctx->force_full_redraw) force = 1;
+    if (ctx->local_rect_active) {
+        if (!layer_intersects_redraw_rect(ctx, &layer->rect)) {
+            return; /* 区域外：整棵子树跳过 */
+        }
+        force = 1; /* 区域内：强制重绘 */
+    } else if (render_dirty_mode() && !force && ctx->rendered_once && layer->dirty_flags == DIRTY_NONE &&
         !layer_has_active_animation(layer)) {
         return;
     }
@@ -320,12 +383,22 @@ static void render_layer_impl(Layer* layer, int force) {
          * 来擦除子层旧位置残留像素（canvas/真机持久目标无自动擦除）；
          * 纯文本/样式变化（如时钟秒更新）保持不重绘整屏背景。 */
         int draw_root_bg = 1;
-        if (render_dirty_mode() && is_root && s_rendered_once) {
+        if (render_dirty_mode() && is_root && ctx->rendered_once && !ctx->force_full_redraw &&
+            !ctx->local_rect_active) {
             draw_root_bg = (layer->dirty_flags & (DIRTY_RECT | DIRTY_LAYOUT | DIRTY_CHILDREN)) ? 1 : 0;
         }
         if (draw_root_bg && (layer->bg_gradient.enabled || layer->bg_color.a > 0 ||
             layer->shadow.enabled || layer_border_visible(&layer->border))) {
-            render_layer_background(layer, NULL);
+            if (ctx->local_rect_active) {
+                /* 局部重绘：背景 clip 到区域，只擦除区域内的旧像素 */
+                Rect prev_clip;
+                if (render_clip_push(&ctx->local_rect, &prev_clip)) {
+                    render_layer_background(layer, NULL);
+                    render_clip_pop(&prev_clip);
+                }
+            } else {
+                render_layer_background(layer, NULL);
+            }
         }
     }
 
@@ -341,7 +414,8 @@ static void render_layer_impl(Layer* layer, int force) {
     /* 当前层绘制了会覆盖子层的背景/边框时，子层必须重绘（不能脏跳过） */
     /* DIRTY 模式下 root 背景首帧后不重绘，也不强制全树重绘（否则动态更新整屏刷） */
     int root_bg_skipped = 0;
-    if (render_dirty_mode() && is_root && s_rendered_once) {
+    if (render_dirty_mode() && is_root && ctx->rendered_once && !ctx->force_full_redraw &&
+        !ctx->local_rect_active) {
         root_bg_skipped = !(layer->dirty_flags & (DIRTY_RECT | DIRTY_LAYOUT | DIRTY_CHILDREN));
     }
     int force_children = (force || layer_paints_over_children(layer)) && !root_bg_skipped;
@@ -358,11 +432,11 @@ static void render_layer_impl(Layer* layer, int force) {
         if (layer->children[i]->visible == IN_VISIBLE) {
             continue;
         }
-        render_layer_impl(layer->children[i], force_children);
+        render_layer_impl(layer->children[i], force_children, ctx);
     }
 
     if (layer->sub != NULL) {
-        render_layer_impl(layer->sub, force_children);
+        render_layer_impl(layer->sub, force_children, ctx);
     }
 
     if (perf_on) {
@@ -400,14 +474,35 @@ static void render_layer_impl(Layer* layer, int force) {
     if (layer->dirty_flags != DIRTY_NONE) {
         layer->dirty_flags = DIRTY_NONE;
     }
-    if (is_root) {
-        s_rendered_once = 1;
-    }
 }
 
-/* 公开入口：每帧由 backend_tick 调用，force=0 启用脏跳过 */
+/* 公开入口：每帧由 backend_tick 调用，force=0 启用脏跳过。
+ * 先对请求的局部区域逐个重绘（擦除 popup 移动后旧位置），再正常渲染。 */
 void render_layer(Layer* layer) {
-    render_layer_impl(layer, 0);
+    RenderCtx* ctx = render_ctx_get(layer);
+    if (!ctx) return;
+    ctx->force_full_redraw = 0; /* 请求只生效一帧 */
+    for (int i = 0; i < ctx->redraw_rect_count; i++) {
+        ctx->local_rect = ctx->redraw_rects[i];
+        ctx->local_rect_active = 1;
+        render_layer_impl(layer, 0, ctx);
+    }
+    ctx->local_rect_active = 0;
+    ctx->redraw_rect_count = 0;
+    render_layer_impl(layer, 0, ctx);
+    ctx->rendered_once = 1;
+}
+
+/* 局部渲染：只绘制 layer 树中与 rect 相交的层。区域外子树整棵跳过，
+ * root 背景 clip 到区域擦除旧像素。用于移动/增删后的局部刷新。 */
+void render_layer_rect(Layer* layer, Rect rect) {
+    if (!layer) return;
+    RenderCtx* ctx = render_ctx_get(layer);
+    if (!ctx) return;
+    ctx->local_rect = rect;
+    ctx->local_rect_active = 1;
+    render_layer_impl(layer, 0, ctx);
+    ctx->local_rect_active = 0;
 }
 
 static void render_layer_inspect(Layer* layer) {

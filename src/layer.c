@@ -7,6 +7,7 @@
 #include "theme_manager.h"
 #include "theme.h"
 #include "backend.h"
+#include "render.h"
 #include "component_registry.h"
 #include "log.h"
 #include "perf/perf.h"
@@ -1216,6 +1217,7 @@ void destroy_layer(Layer* layer) {
 
     layer_free_strings(layer);
     perf_layer_destroyed(layer);
+    render_ctx_free(layer);
     free(layer);
 }
 

@@ -6,6 +6,9 @@
 #include <string.h>
 #include "cJSON.h"
 
+/* 渲染上下文前向声明（完整定义见 render.h） */
+struct RenderCtx;
+
 /* 嵌入式后端共用无 SDL 的类型系统（YuiTexture/YuiFont）：
    esp32/stm32 定义 YUI_BACKEND_EMBEDDED；android/ios 的 YUI_BACKEND_MOBILE 统一到这里 */
 #if defined(YUI_BACKEND_MOBILE)
@@ -722,6 +725,10 @@ typedef struct Layer {
     
     // 增量更新支持：脏标记
     unsigned int dirty_flags; // 标记哪些属性被修改
+
+    /* 渲染上下文（每棵渲染树独立）：root 层持有分配后的 RenderCtx，
+     * 子层创建时继承父层指针。多窗口/多树各自渲染不串扰。 */
+    struct RenderCtx* render_ctx;
 
     // inspect
     int inspect_enabled;     // 是否启用Inspect调试模式
