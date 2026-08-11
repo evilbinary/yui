@@ -333,12 +333,19 @@ static void render_layer_impl(Layer* layer, int force, RenderCtx* ctx) {
      * 局部重绘（render_layer_rect）：与区域不相交的层跳过，相交层强制重绘。 */
     if (ctx->force_full_redraw) force = 1;
     if (ctx->local_rect_active) {
+        /* 动画层跳过局部渲染：它由正常渲染阶段绘制当前位置，
+         * 避免在旧位置被 force 重绘而把刚擦除的残留又填回去。 */
+        if (layer_has_active_animation(layer)) {
+            return;
+        }
         if (!layer_intersects_redraw_rect(ctx, &layer->rect)) {
             return; /* 区域外：整棵子树跳过 */
         }
         force = 1; /* 区域内：强制重绘 */
     } else if (render_dirty_mode() && !force && ctx->rendered_once && layer->dirty_flags == DIRTY_NONE &&
-        !layer_has_active_animation(layer)) {
+        !layer_has_active_animation(layer) &&
+        !(layer->parent == NULL && ctx->animation_count > 0)) {
+        /* 本树有运行动画时 root 放行遍历，使动画层能每帧推进并重绘 */
         return;
     }
 
@@ -493,6 +500,27 @@ void render_layer(Layer* layer) {
     ctx->redraw_rect_count = 0;
     render_layer_impl(layer, 0, ctx);
     ctx->rendered_once = 1;
+}
+
+/* 动画进入运行态：所在树 ctx 计数 +1（animation_start / resume 调用） */
+void render_animation_started(Layer* layer) {
+    RenderCtx* ctx;
+    if (!layer) return;
+    ctx = render_ctx_get(layer);
+    if (ctx) {
+        ctx->animation_count++;
+    }
+}
+
+/* 动画离开运行态：所在树 ctx 计数 -1（stop / pause / 完成 / 替换 / 层销毁调用，
+ * 仅当动画处于 RUNNING 状态才回退，避免 COMPLETED 后又 stop 造成负数） */
+void render_animation_released(Layer* layer) {
+    RenderCtx* ctx;
+    if (!layer || !layer->animation) return;
+    ctx = render_ctx_get(layer);
+    if (ctx && layer->animation->state == ANIMATION_STATE_RUNNING && ctx->animation_count > 0) {
+        ctx->animation_count--;
+    }
 }
 
 /* 局部渲染：只绘制 layer 树中与 rect 相交的层。区域外子树整棵跳过，

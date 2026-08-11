@@ -22,6 +22,7 @@ typedef struct RenderCtx {
     Rect redraw_rects[4];      /* popup 移动等局部擦除区域（屏幕坐标） */
     int local_rect_active;     /* 正在做局部渲染 */
     Rect local_rect;           /* 局部渲染区域（屏幕坐标） */
+    int animation_count;       /* 本树运行中动画数（start/暂停/完成/停时维护，渲染时不扫描） */
 } RenderCtx;
 
 /* 为 root 树获取/创建渲染上下文（root->render_ctx 为 NULL 时分配） */
@@ -41,6 +42,12 @@ void render_request_redraw_rect(Layer* root, Rect r);
 /* 局部渲染：只绘制 layer 树中与 rect 相交的层（用于移动/增删后局部刷新）。
  * 不相交子树跳过，root 背景 clip 到区域擦除旧像素。 */
 void render_layer_rect(Layer* layer, Rect rect);
+
+/* 动画进入运行态：所在树 ctx 计数 +1（animation_start / resume 调用） */
+void render_animation_started(Layer* layer);
+/* 动画离开运行态：所在树 ctx 计数 -1（stop / pause / 完成 / 替换 / 层销毁调用，
+ * 仅当动画处于 RUNNING 状态才回退） */
+void render_animation_released(Layer* layer);
 
 // 添加滚动条渲染函数声明
 void render_scrollbar(Layer* layer);

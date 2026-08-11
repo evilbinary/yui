@@ -1,4 +1,6 @@
 #include "animate.h"
+#include "render.h"
+#include "layer_update.h"
 
 #include <math.h>
 
@@ -100,6 +102,12 @@ void animation_start(Layer* layer, Animation* animation) {
         return;
     }
     
+    // 替换同层已有动画：先回退计数并释放，保证"一层一动画"计数一致
+    if (layer->animation && layer->animation != animation) {
+        render_animation_released(layer);
+        free(layer->animation);
+    }
+    
     // 保存图层的当前状态作为动画的起始值
     animation->start_x = layer->rect.x;
     animation->start_y = layer->rect.y;
@@ -121,6 +129,9 @@ void animation_start(Layer* layer, Animation* animation) {
     
     // 将动画附加到图层
     layer->animation = animation;
+
+    // DIRTY 模式：进入运行态，所在树 ctx 计数 +1，渲染时 root 放行遍历
+    render_animation_started(layer);
 }
 
 // 停止动画
@@ -132,6 +143,7 @@ void animation_stop(Layer* layer) {
     // 如果填充模式不是FORWARDS或BOTH，则将图层恢复到初始状态
     if (layer->animation->fill_mode != ANIMATION_FILL_FORWARDS && 
         layer->animation->fill_mode != ANIMATION_FILL_BOTH) {
+        Rect old_rect = layer->rect;
         layer->rect.x = layer->animation->start_x;
         layer->rect.y = layer->animation->start_y;
         layer->rect.w = layer->animation->start_width;
@@ -139,9 +151,25 @@ void animation_stop(Layer* layer) {
         layer->color.a = layer->animation->start_opacity * 255.0f;
         layer->rotation = layer->animation->start_rotation;
         // 缩放值可以根据实际实现进行恢复
+        if (old_rect.x != layer->rect.x || old_rect.y != layer->rect.y ||
+            old_rect.w != layer->rect.w || old_rect.h != layer->rect.h) {
+            /* DIRTY 模式：恢复初值导致位置/尺寸变化，须擦除动画末位置残留并重绘 */
+            Rect r = layer->rect;
+            int left = old_rect.x < r.x ? old_rect.x : r.x;
+            int top = old_rect.y < r.y ? old_rect.y : r.y;
+            int right = (old_rect.x + old_rect.w) > (r.x + r.w) ? (old_rect.x + old_rect.w) : (r.x + r.w);
+            int bottom = (old_rect.y + old_rect.h) > (r.y + r.h) ? (old_rect.y + old_rect.h) : (r.y + r.h);
+            r.x = left;
+            r.y = top;
+            r.w = right - left;
+            r.h = bottom - top;
+            render_request_redraw_rect(layer, r);
+            mark_layer_dirty(layer, DIRTY_LAYOUT_RECT);
+        }
     }
     
-    // 释放动画资源
+    // 释放动画资源（离开运行态：计数回退）
+    render_animation_released(layer);
     free(layer->animation);
     layer->animation = NULL;
 }
@@ -153,6 +181,7 @@ void animation_pause(Layer* layer) {
     }
     
     if (layer->animation->state == ANIMATION_STATE_RUNNING) {
+        render_animation_released(layer);
         layer->animation->state = ANIMATION_STATE_PAUSED;
     }
 }
@@ -165,6 +194,7 @@ void animation_resume(Layer* layer) {
     
     if (layer->animation->state == ANIMATION_STATE_PAUSED) {
         layer->animation->state = ANIMATION_STATE_RUNNING;
+        render_animation_started(layer);
     }
 }
 
@@ -249,6 +279,7 @@ void animation_update(Layer* layer, float delta_time) {
             animation->state = ANIMATION_STATE_RUNNING;
         } else {
             animation->progress = 1.0f;
+            render_animation_released(layer);
             animation->state = ANIMATION_STATE_COMPLETED;
             
             // 如果有完成回调，则调用它
@@ -266,26 +297,33 @@ void animation_update(Layer* layer, float delta_time) {
     
     // 计算缓动后的进度
     float eased_progress = animation->easing_func(animation->progress);
-    
-    // 应用所有属性的动画
+
+    // 应用所有属性的动画，并跟踪哪些属性实际发生了变化（DIRTY 渲染下需要触发重绘）
+    Rect old_rect = layer->rect;
+    int rect_changed = 0;
+
     // X坐标
     if (animation->target_x != animation->start_x) {
         layer->rect.x = interpolate_with_easing(animation->start_x, animation->target_x, eased_progress, animation->easing_func);
+        rect_changed = 1;
     }
     
     // Y坐标
     if (animation->target_y != animation->start_y) {
         layer->rect.y = interpolate_with_easing(animation->start_y, animation->target_y, eased_progress, animation->easing_func);
+        rect_changed = 1;
     }
     
     // 宽度
     if (animation->target_width != animation->start_width) {
         layer->rect.w = interpolate_with_easing(animation->start_width, animation->target_width, eased_progress, animation->easing_func);
+        rect_changed = 1;
     }
     
     // 高度
     if (animation->target_height != animation->start_height) {
         layer->rect.h = interpolate_with_easing(animation->start_height, animation->target_height, eased_progress, animation->easing_func);
+        rect_changed = 1;
     }
     
     // 透明度
@@ -301,6 +339,23 @@ void animation_update(Layer* layer, float delta_time) {
     
     // 缩放值可以根据实际实现进行处理
     // ...
+
+    /* DIRTY 模式：推进后标记重绘（传播到 root 使整树可遍历），
+     * 位置/尺寸变化时请求局部重绘旧位置与新位置合并区域（擦除残留 + 画新位置）。 */
+    mark_layer_dirty(layer, DIRTY_LAYOUT_RECT);
+    if (rect_changed && (layer->rect.x != old_rect.x || layer->rect.y != old_rect.y ||
+                         layer->rect.w != old_rect.w || layer->rect.h != old_rect.h)) {
+        Rect r = layer->rect;
+        int left = old_rect.x < r.x ? old_rect.x : r.x;
+        int top = old_rect.y < r.y ? old_rect.y : r.y;
+        int right = (old_rect.x + old_rect.w) > (r.x + r.w) ? (old_rect.x + old_rect.w) : (r.x + r.w);
+        int bottom = (old_rect.y + old_rect.h) > (r.y + r.h) ? (old_rect.y + old_rect.h) : (r.y + r.h);
+        r.x = left;
+        r.y = top;
+        r.w = right - left;
+        r.h = bottom - top;
+        render_request_redraw_rect(layer, r);
+    }
 }
 
 // 设置动画目标属性

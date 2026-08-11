@@ -1150,6 +1150,7 @@ void destroy_layer(Layer* layer) {
     
     // 销毁动画
     if (layer->animation) {
+        render_animation_released(layer);
         free(layer->animation);
         layer->animation = NULL;
     }
