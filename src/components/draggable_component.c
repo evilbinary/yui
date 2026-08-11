@@ -538,7 +538,7 @@ int draggable_component_handle_pointer_event(Layer* layer, PointerEvent* event)
         if (old_rect.x != layer->rect.x || old_rect.y != layer->rect.y) {
             /* DIRTY 模式：局部擦除旧位置残留，标记布局位置变化触发自身重绘。 */
             render_request_redraw_rect(layer, old_rect);
-            mark_layer_dirty(layer, DIRTY_LAYOUT_POSITION);
+            mark_layer_dirty(layer, DIRTY_LAYOUT_RECT);
         }
         return 1;
     }
