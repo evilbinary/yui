@@ -470,8 +470,10 @@ static void render_layer_impl(Layer* layer, int force, RenderCtx* ctx) {
     backend_render_rect(&layer->rect, (Color){strlen(layer->id) * 40 % 255, 0, 0, 255});
 #endif
 
-/* 绘制完成：清除该层 dirty。根层完成后启用脏跳过（首帧全量渲染）。 */
-    if (layer->dirty_flags != DIRTY_NONE) {
+/* 绘制完成：清除该层 dirty。局部渲染（render_layer_rect / 擦除旧位置）期间
+ * 只重绘了区域内像素，不清 dirty——否则正常渲染阶段会因 dirty==0 跳过该层，
+ * 区域外的内容（如刚打开的对话框主体）永远画不出来。 */
+    if (!ctx->local_rect_active && layer->dirty_flags != DIRTY_NONE) {
         layer->dirty_flags = DIRTY_NONE;
     }
 }
