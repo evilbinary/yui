@@ -5,6 +5,7 @@
 #include "component_registry.h"
 #include "input/state.h"
 #include "layer_update.h"
+#include "render.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
@@ -707,6 +708,9 @@ static void process_layer_scrollbar(Layer* layer, int mouse_x, int mouse_y, SDL_
                 if (layer->layout_manager && layer->child_count > 0) {
                     layout_layer(layer);
                 }
+                /* DIRTY 模式：拖动后局部重绘（滚动条自身 + 内容区域） */
+                render_request_redraw_rect(layer, layer->rect);
+                mark_layer_dirty(layer, DIRTY_LAYOUT_RECT);
             }
         }
     }
@@ -758,6 +762,9 @@ static void process_layer_scrollbar(Layer* layer, int mouse_x, int mouse_y, SDL_
                 if (layer->layout_manager && layer->child_count > 0) {
                     layout_layer(layer);
                 }
+                /* DIRTY 模式：拖动后局部重绘（滚动条自身 + 内容区域） */
+                render_request_redraw_rect(layer, layer->rect);
+                mark_layer_dirty(layer, DIRTY_LAYOUT_RECT);
             }
         }
     }
@@ -812,6 +819,9 @@ static void process_layer_scrollbar(Layer* layer, int mouse_x, int mouse_y, SDL_
                 if (layer->layout_manager && layer->child_count > 0) {
                     layout_layer(layer);
                 }
+                /* DIRTY 模式：拖动后局部重绘（滚动条自身 + 内容区域） */
+                render_request_redraw_rect(layer, layer->rect);
+                mark_layer_dirty(layer, DIRTY_LAYOUT_RECT);
             }
         }
     }
