@@ -687,11 +687,30 @@ int menu_component_handle_key_event(Layer* layer, KeyEvent* event) {
     return 0;
 }
 
+/* 请求局部擦除完整菜单区域（标题 + 项数×项高）。
+ * 内联展开的菜单 layer rect 被父布局压缩为标题大小，展开时菜单项绘制在该 rect
+ * 之外，仅擦 popup->layer->rect 会残留；此处按组件实际菜单尺寸请求擦除。 */
+static void menu_request_full_erase(PopupLayer* popup) {
+    if (!popup || !popup->layer) return;
+    MenuComponent* component = (MenuComponent*)popup->layer->component;
+    if (!component) return;
+    int mw = component->content_width > 0 ? component->content_width : component->min_width;
+    if (mw <= 0) return;
+    int title_h = (popup->layer->text && strlen(popup->layer->text) > 0) ? component->item_height : 0;
+    Rect r;
+    r.x = popup->layer->rect.x;
+    r.y = popup->layer->rect.y;
+    r.w = mw;
+    r.h = title_h + component->item_count * component->item_height;
+    render_request_redraw_rect(popup->layer, r);
+}
+
 // 内联展开菜单关闭回调
 static void menu_inline_close_callback(PopupLayer* popup) {
     if (!popup || !popup->layer) return;
     MenuComponent* component = (MenuComponent*)popup->layer->component;
     if (component) {
+        menu_request_full_erase(popup);
         component->expanded = 0;
         component->hovered_item = -1;
         menu_update_hit_rect(component);
@@ -1009,6 +1028,7 @@ static void menu_popup_close_callback(PopupLayer* popup) {
     
     MenuComponent* component = (MenuComponent*)layer->component;
     if (component) {
+        menu_request_full_erase(popup);
         component->is_popup = 0;
         // 注意：popup_layer 会在 popup_manager 中被释放，不要在这里再次设置为NULL
         // component->popup_layer = NULL;
