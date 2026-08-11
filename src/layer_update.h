@@ -17,6 +17,7 @@ extern "C" {
 #define DIRTY_VISIBLE    0x0010  // 可见性变化
 #define DIRTY_STYLE      0x0020  // 样式变化
 #define DIRTY_LAYOUT     0x0040  // 布局变化
+#define DIRTY_LAYOUT_RECT 0x0080  // 布局位置/尺寸变化（拖动移动等）
 #define DIRTY_ALL        0xFFFF
 
 // ====================== 主要 API ======================

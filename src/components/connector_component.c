@@ -4,6 +4,7 @@
 #include "../event.h"
 #include "../layout.h"
 #include "../layer.h"
+#include "../render.h"
 #include "../util.h"
 #include <math.h>
 #include <stdio.h>
@@ -1460,6 +1461,11 @@ static int connector_capture_handle_mouse(Layer* layer, PointerEvent* event)
                                             &to_anchor)) {
             g_connector_drag.hover_layer = to_layer;
             g_connector_drag.hover_anchor = to_anchor;
+        }
+        /* DIRTY 模式下 capture 层静态跳过、预览不更新；每 move 请求局部重绘
+         * canvas 区域（背景擦除旧预览 + 重绘内容 + 画新预览）。 */
+        if (g_connector_drag.canvas) {
+            render_request_redraw_rect(g_connector_drag.canvas, g_connector_drag.canvas->rect);
         }
         return 1;
     }
