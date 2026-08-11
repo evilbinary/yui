@@ -79,7 +79,7 @@ static void show_tooltip(LabelComponent* comp, int mouse_x, int mouse_y) {
     tl->text = strdup(full_text);
     tl->render = tooltip_layer_render;
 
-    PopupLayer* popup = popup_layer_create(tl, POPUP_TYPE_TOOLTIP, 100);
+    PopupLayer* popup = popup_layer_create(tl, POPUP_TYPE_TOOLTIP, 100, layer);
     if (popup && popup_manager_add(popup)) {
         comp->tooltip_popup = tl;
     } else {

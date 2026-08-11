@@ -382,7 +382,8 @@ bool dialog_component_show(DialogComponent* component, int x, int y) {
     
     // 创建弹出层并添加到弹出管理器
     PopupLayer* popup = popup_layer_create(component->popup_layer, POPUP_TYPE_DIALOG, 
-                                          component->is_modal ? 200 : 150);
+                                          component->is_modal ? 200 : 150,
+                                          component->layer);
     if (!popup) {
         free(component->popup_layer);
         component->popup_layer = NULL;

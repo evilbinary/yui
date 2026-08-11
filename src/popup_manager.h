@@ -21,6 +21,7 @@ typedef struct PopupLayer {
     bool auto_close;
     void (*close_callback)(struct PopupLayer* popup);
     struct PopupLayer* next;
+    Layer* root;   // 所属渲染树 root（关闭时向该树请求局部擦除）
 } PopupLayer;
 
 // 弹出层管理器
@@ -67,7 +68,7 @@ bool popup_manager_is_point_in_popups(int x, int y);
 bool popup_manager_contains_layer(Layer* layer);
 
 // 创建弹出层辅助函数
-PopupLayer* popup_layer_create(Layer* layer, PopupType type, int priority);
+PopupLayer* popup_layer_create(Layer* layer, PopupType type, int priority, Layer* root);
 void popup_layer_destroy(PopupLayer* popup);
 
 #endif // POPUP_MANAGER_H

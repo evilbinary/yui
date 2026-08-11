@@ -1,11 +1,21 @@
 #include "popup_manager.h"
 #include "event.h"
 #include "backend.h"
+#include "render.h"
 #include <stdlib.h>
 #include <string.h>
 
 // 全局弹出层管理器
 PopupManager* g_popup_manager = NULL;
+
+/* 弹出层关闭前：向所属树请求局部重绘，擦除 popup 最后位置像素
+ * （DIRTY 持久目标下 root 背景跳过，旧 popup 残留需要显式擦除）。
+ * 同时解除 popup 层对 root 渲染上下文的借用，避免其释放时误释放 root ctx。 */
+static void popup_erase_and_release(PopupLayer* popup) {
+    if (!popup || !popup->layer) return;
+    render_request_redraw_rect(popup->layer, popup->layer->rect);
+    popup->layer->render_ctx = NULL;
+}
 
 void popup_manager_init(void) {
     if (g_popup_manager) {
@@ -104,6 +114,9 @@ bool popup_manager_remove(Layer* layer) {
                 next_to_free->close_callback(next_to_free);
             }
             
+            // 请求局部擦除 popup 最后位置，并解除 root ctx 借用
+            popup_erase_and_release(next_to_free);
+            
             // 释放内存
             free(next_to_free);
             return true;
@@ -133,6 +146,8 @@ void popup_manager_close_all(void) {
         if (current->close_callback) {
             current->close_callback(current);
         }
+        
+        popup_erase_and_release(current);
         
         free(current);
         current = next;
@@ -165,6 +180,8 @@ void popup_manager_close_by_type(PopupType type) {
             if (to_remove->close_callback) {
                 to_remove->close_callback(to_remove);
             }
+            
+            popup_erase_and_release(to_remove);
             
             free(to_remove);
         } else {
@@ -384,7 +401,7 @@ bool popup_manager_is_point_in_popups(int x, int y) {
     return false;
 }
 
-PopupLayer* popup_layer_create(Layer* layer, PopupType type, int priority) {
+PopupLayer* popup_layer_create(Layer* layer, PopupType type, int priority, Layer* root) {
     if (!layer) return NULL;
     
     PopupLayer* popup = (PopupLayer*)malloc(sizeof(PopupLayer));
@@ -396,6 +413,13 @@ PopupLayer* popup_layer_create(Layer* layer, PopupType type, int priority) {
     popup->priority = priority;
     popup->auto_close = true;
     popup->next = NULL;
+    popup->root = root;
+    
+    /* 借用所属树（root 层）的渲染上下文：popup 关闭时向该树请求局部擦除。
+     * root 为 NULL 时跳过（popup 独立渲染，不参与擦除）。 */
+    if (root) {
+        layer->render_ctx = render_ctx_get(root);
+    }
     
     return popup;
 }

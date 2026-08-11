@@ -778,7 +778,7 @@ void select_component_expand(SelectComponent* component) {
     component->just_expanded = 1;
 
     if (!popup_manager_contains_layer(component->dropdown_layer)) {
-        PopupLayer* popup = popup_layer_create(component->dropdown_layer, POPUP_TYPE_DROPDOWN, 100);
+        PopupLayer* popup = popup_layer_create(component->dropdown_layer, POPUP_TYPE_DROPDOWN, 100, component->layer);
         if (popup) {
             popup->auto_close = false;
             popup->close_callback = select_component_popup_close_callback;

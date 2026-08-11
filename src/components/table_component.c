@@ -325,7 +325,7 @@ static void table_show_tooltip(TableComponent* component, Layer* layer,
     }
     tl->render = table_tooltip_layer_render;
 
-    PopupLayer* popup = popup_layer_create(tl, POPUP_TYPE_TOOLTIP, 100);
+    PopupLayer* popup = popup_layer_create(tl, POPUP_TYPE_TOOLTIP, 100, layer);
     if (popup && popup_manager_add(popup)) {
         component->tooltip_popup = tl;
     } else {

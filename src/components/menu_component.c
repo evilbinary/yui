@@ -798,7 +798,7 @@ int menu_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
                 component->hovered_item = -1;
                 menu_update_hit_rect(component);
 
-                PopupLayer* popup = popup_layer_create(layer, POPUP_TYPE_MENU, 100);
+                PopupLayer* popup = popup_layer_create(layer, POPUP_TYPE_MENU, 100, layer);
                 if (popup) {
                     popup->auto_close = true;
                     popup->close_callback = menu_inline_close_callback;
@@ -1052,7 +1052,7 @@ bool menu_component_show_popup(MenuComponent* component, int x, int y) {
     component->popup_layer->handle_key_event = menu_component_handle_key_event;
     
     // 创建弹出层并添加到弹出管理器
-    PopupLayer* popup = popup_layer_create(component->popup_layer, POPUP_TYPE_MENU, 100);
+    PopupLayer* popup = popup_layer_create(component->popup_layer, POPUP_TYPE_MENU, 100, component->layer);
     if (!popup) {
         free(component->popup_layer);
         component->popup_layer = NULL;
