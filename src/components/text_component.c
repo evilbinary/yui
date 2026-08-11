@@ -2950,6 +2950,8 @@ static void text_component_focus(TextComponent* component) {
         };
         backend_set_text_input_rect(&rect);
     }
+    /* DIRTY 模式：聚焦状态/光标变化需重绘 */
+    mark_layer_dirty(layer, DIRTY_TEXT);
 }
 
 static void text_component_blur(TextComponent* component) {
@@ -2961,6 +2963,8 @@ static void text_component_blur(TextComponent* component) {
         focused_layer = NULL;
     }
     backend_stop_text_input();
+    /* DIRTY 模式：失焦状态变化需重绘 */
+    mark_layer_dirty(layer, DIRTY_TEXT);
 }
 
 // 处理鼠标事件
@@ -3020,6 +3024,8 @@ int text_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
             component->is_selecting = 1;
             component->pending_line_select = (event->phase == POINTER_DOUBLE_TAP);
             text_component_update_scroll_for_cursor(component);
+            /* DIRTY 模式：点击设置光标/选中后需重绘 */
+            mark_layer_dirty(layer, DIRTY_TEXT);
             return 1;
         }
 
@@ -3028,6 +3034,7 @@ int text_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
             component->selection_end = -1;
             component->is_selecting = 0;
             component->pending_line_select = 0;
+            mark_layer_dirty(layer, DIRTY_TEXT);
         } else if (focused_layer == layer) {
             component->selection_start = -1;
             component->selection_end = -1;
@@ -3070,6 +3077,8 @@ int text_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
         
         // 更新滚动位置，确保光标可见
         text_component_update_scroll_for_cursor(component);
+        /* DIRTY 模式：拖动扩展选中后需重绘 */
+        mark_layer_dirty(layer, DIRTY_TEXT);
     }
     // 鼠标释放 - 结束选择
     else if (event->phase == POINTER_UP && event->button == SDL_BUTTON_LEFT) {
