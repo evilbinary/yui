@@ -3,6 +3,7 @@
 
 #if YUI_WITH_GAME
 
+#include "../backend.h"
 #include "../event.h"
 #include <stdlib.h>
 #include <string.h>
@@ -10,6 +11,24 @@
 static int g_inited;
 static int g_enabled = 1;
 static int g_paused;
+static YuiRenderMode g_saved_render_mode = YUI_RENDER_MODE_DIRTY;
+static int g_render_mode_overridden;
+
+/* 游戏内容每帧全变且无条件绘制到持久画布，脏模式会留残影：
+   进入游戏强制 FULL（每帧清屏+全量重绘），退出时恢复原模式。 */
+void game_apply_render_mode(int active)
+{
+    if (active) {
+        if (!g_render_mode_overridden) {
+            g_saved_render_mode = backend_get_render_mode();
+            backend_set_render_mode(YUI_RENDER_MODE_FULL);
+            g_render_mode_overridden = 1;
+        }
+    } else if (g_render_mode_overridden) {
+        backend_set_render_mode(g_saved_render_mode);
+        g_render_mode_overridden = 0;
+    }
+}
 static int g_focus_seen;
 static GameScriptUpdateFn g_script_update;
 static int g_entity_draws;
@@ -53,6 +72,7 @@ void game_init(void)
     g_enabled = 1;
     g_paused = 0;
     g_focus_seen = 0;
+    g_render_mode_overridden = 0;
     register_window_event_listener(game_on_window_event);
     g_inited = 1;
 }
@@ -67,6 +87,7 @@ void game_shutdown(void)
     game_audio_shutdown();
     g_script_update = NULL;
     g_paused = 0;
+    game_apply_render_mode(0);
     g_inited = 0;
 }
 
@@ -78,6 +99,7 @@ int game_is_active(void)
 void game_set_enabled(int on)
 {
     g_enabled = on ? 1 : 0;
+    game_apply_render_mode(g_enabled);
 }
 
 void game_set_paused(int on)

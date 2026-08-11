@@ -27,6 +27,9 @@ void game_collide_resolve_solids(GameEntity* e, float dt);
 
 void game_anim_apply_json(GameEntity* e, cJSON* anim);
 
+/* 游戏进行时强制 FULL（每帧清屏+全量重绘，避免脏画布残影），退出恢复原模式 */
+void game_apply_render_mode(int active);
+
 void game_perf_begin_update(void);
 void game_perf_end_update(void);
 void game_perf_begin_render(void);

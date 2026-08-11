@@ -24,6 +24,7 @@ void game_clear_scene(void)
     game_particles_clear();
     g_scene_active = 0;
     g_scene_gen++;
+    game_apply_render_mode(0);
 }
 
 static void game_apply_sprite(GameEntity* e, const char* path)
@@ -255,6 +256,7 @@ int game_load_scene_json(const char* path)
 
     cJSON_Delete(root);
     g_scene_active = 1;
+    game_apply_render_mode(1);
     printf("Game: loaded scene %s\n", path);
     return 1;
 }
