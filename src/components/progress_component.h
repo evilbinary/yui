@@ -22,6 +22,7 @@ typedef struct {
     float target_progress; // 目标进度 (用于动画)
     float animation_speed; // 动画速度 (0.0-1.0)
     int animating;         // 是否正在进行动画
+    int animation_enabled; // 是否启用动画 (JSON: "animation")
     ProgressShape shape;   // 进度条形状
     ProgressDirection direction; // 进度条方向（用于长条形）
     Color fill_color;      // 填充颜色

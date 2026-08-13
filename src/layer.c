@@ -941,7 +941,7 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
 
   // 解析动画属性配置
   cJSON* animation = cJSON_GetObjectItem(json_obj, "animation");
-  if (animation) {
+  if (animation && cJSON_IsObject(animation)) {
     // 解析持续时间
     float duration = 1.0f;  // 默认1秒
     if (cJSON_HasObjectItem(animation, "duration")) {
