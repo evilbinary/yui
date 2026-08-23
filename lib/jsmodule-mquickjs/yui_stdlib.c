@@ -687,26 +687,11 @@ static JSValue js_list_dir(JSContext *ctx, JSValue *this_val, int argc, JSValue 
     snprintf(dir_copy, sizeof(dir_copy), "%s", dir);
     dir = dir_copy;
 
-    /* 与 js_module_read_file 相同的路径解析：先原样，再 root/path */
-    const char* root = js_module_get_root();
+    /* 与 js_module_read_file 相同：原样 → page_dir/ → root/ */
     char resolved[YUI_MAX_PATH];
-    const char* open_dir = NULL;
-    DIR* dir_test;
-
-    if (dir[0] == '/') {
-        open_dir = dir;
-    } else {
-        dir_test = opendir(dir);
-        if (dir_test) {
-            closedir(dir_test);
-            open_dir = dir;
-        } else if (root && root[0]) {
-            snprintf(resolved, sizeof(resolved), "%s/%s", root, dir);
-            open_dir = resolved;
-        } else {
-            open_dir = dir;
-        }
-    }
+    const char* open_dir = dir;
+    if (js_module_resolve_path(dir, resolved, sizeof(resolved)) == 0)
+        open_dir = resolved;
 
     dp = opendir(open_dir);
 

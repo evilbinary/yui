@@ -291,6 +291,12 @@ static EventHandler get_event_handler_by_type(const char* event_type)
 // 嵌入式 SPIFFS 挂载在 /spiffs 时设为 "/spiffs"；宿主桌面资源在
 // "app/watch-os" 时设为 "app/watch-os"。相对路径解析统一为 原样 -> root/。
 static char g_js_root[YUI_MAX_PATH] = "";
+/* 当前 JSON 所在目录。launcher 嵌套 renderFromJson("app/watch-os/app.json")
+   时，JS 相对路径 apps/face/face.json 相对此目录，而不是首次设置的 g_js_root。 */
+static char g_js_page_dir[YUI_MAX_PATH] = "";
+
+static int js_path_exists(const char* path);
+static void js_module_maybe_set_page_dir(const char* json_file_path);
 
 static void strip_trailing_slash(char* s)
 {
@@ -786,6 +792,27 @@ static int collect_js_recursive(cJSON* json, const char* json_dir)
     return collected;
 }
 
+static void js_module_prepare_json_dir(const char* json_file_path, int append,
+                                       char* json_dir, size_t max_len)
+{
+    char resolved[YUI_PATH_MAX];
+
+    if (json_file_path && json_file_path[0] != '\0') {
+        js_module_maybe_set_page_dir(json_file_path);
+        if (js_module_resolve_path(json_file_path, resolved, sizeof(resolved)) == 0)
+            get_file_dir(resolved, json_dir, max_len);
+        else
+            get_file_dir(json_file_path, json_dir, max_len);
+    } else if (append) {
+        strcpy(json_dir, ".");
+    } else {
+        strcpy(json_dir, "app/mquickjs");
+    }
+
+    if (g_js_root[0] == '\0')
+        js_module_set_root(json_dir);
+}
+
 // 阶段 1：从 JSON 收集 JS 文件路径 + 注册事件。可在 JS 引擎初始化前调用。
 int js_module_collect_from_json(cJSON* root_json, const char* json_file_path, int append)
 {
@@ -799,20 +826,7 @@ int js_module_collect_from_json(cJSON* root_json, const char* json_file_path, in
     }
 
     char json_dir[YUI_PATH_MAX];
-    if (json_file_path && json_file_path[0] != '\0') {
-        get_file_dir(json_file_path, json_dir, YUI_PATH_MAX);
-    } else if (append) {
-        strcpy(json_dir, ".");
-    } else {
-        strcpy(json_dir, "app/mquickjs");
-    }
-
-    /* 未显式设置 root 时，默认以 json 所在目录为基准：
-       apps/、themes/、readFile(...) 等相对路径直接相对 app.json 解析。
-       显式 set_root（如 esp32 的 "/spiffs"）优先，不覆盖。 */
-    if (g_js_root[0] == '\0') {
-        js_module_set_root(json_dir);
-    }
+    js_module_prepare_json_dir(json_file_path, append, json_dir, YUI_PATH_MAX);
 
     LOGD("js", "%s JS from JSON directory: %s", append ? "Appending" : "Loading", json_dir);
 
@@ -910,18 +924,7 @@ int js_module_load_from_json(cJSON* root_json, const char* json_file_path, int a
     }
 
     char json_dir[YUI_PATH_MAX];
-    if (json_file_path && json_file_path[0] != '\0') {
-        get_file_dir(json_file_path, json_dir, YUI_PATH_MAX);
-    } else if (append) {
-        strcpy(json_dir, ".");
-    } else {
-        strcpy(json_dir, "app/mquickjs");
-    }
-
-    /* 与 collect 阶段一致：未显式设置 root 时默认 json 所在目录 */
-    if (g_js_root[0] == '\0') {
-        js_module_set_root(json_dir);
-    }
+    js_module_prepare_json_dir(json_file_path, append, json_dir, YUI_PATH_MAX);
 
     LOGD("js", "%s JS from JSON directory: %s", append ? "Appending" : "Loading", json_dir);
 
@@ -1204,7 +1207,22 @@ static int js_path_exists(const char* path)
     return stat(path, &st) == 0;
 }
 
-/* 解析可读路径：原样 → base_path/ → fs_root/。成功写入 out 并返回 0。 */
+/* JSON 路径在磁盘上真实存在时记下其所在目录。嵌套页的相对路径
+   （apps/face/face.json）相对 CWD 不存在，不覆盖，以免冲掉 watch-os 目录。 */
+static void js_module_maybe_set_page_dir(const char* json_file_path)
+{
+    char json_dir[YUI_PATH_MAX];
+
+    if (!json_file_path || !json_file_path[0]) return;
+    if (!js_path_exists(json_file_path)) return;
+
+    get_file_dir(json_file_path, json_dir, sizeof(json_dir));
+    strip_trailing_slash(json_dir);
+    strncpy(g_js_page_dir, json_dir, sizeof(g_js_page_dir) - 1);
+    g_js_page_dir[sizeof(g_js_page_dir) - 1] = '\0';
+}
+
+/* 解析可读路径：原样 → page_dir/ → root/。成功写入 out 并返回 0。 */
 int js_module_resolve_path(const char* in, char* out, size_t out_sz)
 {
     char path_buf[YUI_PATH_MAX];
@@ -1218,6 +1236,15 @@ int js_module_resolve_path(const char* in, char* out, size_t out_sz)
     }
     if (in[0] == '/') return -1;
 
+    if (g_js_page_dir[0]) {
+        snprintf(path_buf, sizeof(path_buf), "%s/%s", g_js_page_dir, in);
+        if (js_path_exists(path_buf)) {
+            strncpy(out, path_buf, out_sz - 1);
+            out[out_sz - 1] = '\0';
+            return 0;
+        }
+    }
+
     /* 仅绝对 root 参与 ../ 上跳 clamp；相对 root 只用于 resolve/read 前缀 */
     if (g_js_root[0]) {
         snprintf(path_buf, sizeof(path_buf), "%s/%s", g_js_root, in);
@@ -1230,7 +1257,7 @@ int js_module_resolve_path(const char* in, char* out, size_t out_sz)
     return -1;
 }
 
-/* 相对路径：先原样，再 root/（通用，各平台相同）。 */
+/* 相对路径：先原样，再 page_dir/，再 root/（通用，各平台相同）。 */
 char* js_module_read_file(const char* file_path) {
     char path_buf[YUI_PATH_MAX];
     const char* open_path = file_path;
@@ -1243,7 +1270,11 @@ char* js_module_read_file(const char* file_path) {
 
     f = js_try_fopen(file_path, &open_path);
     if (!f && file_path[0] != '/') {
-        if (g_js_root[0]) {
+        if (g_js_page_dir[0]) {
+            snprintf(path_buf, sizeof(path_buf), "%s/%s", g_js_page_dir, file_path);
+            f = js_try_fopen(path_buf, &open_path);
+        }
+        if (!f && g_js_root[0]) {
             snprintf(path_buf, sizeof(path_buf), "%s/%s", g_js_root, file_path);
             f = js_try_fopen(path_buf, &open_path);
         }

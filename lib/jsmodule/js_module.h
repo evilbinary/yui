@@ -102,7 +102,7 @@ const char* js_module_get_select_value(const char* layer_id);
 // 文件读取函数，用于JavaScript环境
 char* js_module_read_file(const char* file_path);
 
-/* 解析可读路径：原样 → base_path/ → fs_root/。成功写入 out 并返回 0。 */
+/* 解析可读路径：原样 → 当前 JSON 目录/ → root/。成功写入 out 并返回 0。 */
 int js_module_resolve_path(const char* in, char* out, size_t out_sz);
 
 // 按 layout_base 等比缩放根布局并调整窗口尺寸
