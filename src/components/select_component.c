@@ -570,6 +570,11 @@ void select_component_set_selected(SelectComponent* component, int index) {
     if (component->expanded) {
         select_component_collapse(component);
     }
+
+    /* DIRTY 模式：闭合框仍显示旧文案，须标脏才能重绘选中项 */
+    if (component->layer) {
+        mark_layer_dirty(component->layer, DIRTY_TEXT | DIRTY_STYLE);
+    }
     
     // 调用回调函数
     if (old_index != index && component->on_selection_changed) {
@@ -815,6 +820,10 @@ void select_component_collapse(SelectComponent* component) {
 
         popup_manager_remove(dropdown_layer);
         free(dropdown_layer);
+    }
+
+    if (component->layer) {
+        mark_layer_dirty(component->layer, DIRTY_STYLE);
     }
 }
 
