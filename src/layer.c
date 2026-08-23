@@ -336,6 +336,12 @@ void layer_set_text(Layer* layer, const char* value) {
   if (!layer) {
     return;
   }
+  if (value && layer->text && strcmp(layer->text, value) == 0) {
+    return;
+  }
+  if (!value && !layer->text) {
+    return;
+  }
   layer_set_text_with_size(layer, value);
   mark_layer_dirty(layer, DIRTY_TEXT);
 }

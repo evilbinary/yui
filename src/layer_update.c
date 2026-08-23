@@ -80,7 +80,6 @@ void clear_dirty_flags(Layer* layer) {
 void yui_set_text(Layer* layer, const char* text) {
     if (!layer || !text) return;
     layer_set_text(layer, text);
-    mark_layer_dirty(layer, DIRTY_TEXT);
 }
 
 void yui_set_bg_color(Layer* layer, const char* color) {

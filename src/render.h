@@ -67,4 +67,8 @@ Texture* render_text(Layer* layer,const char* text, Color color);
 /* 绘制图层阴影 + 背景（纯色或渐变）。override_bg 非空时覆盖 layer->bg_color */
 void render_layer_background(Layer* layer, const Color* override_bg);
 
+/* 上一帧 render_layer 统计：visit=进入绘制的层，skip=脏跳过的子树根，draw=真正画了背景/组件的层 */
+void render_last_stats(int* visit, int* skip, int* draw, unsigned* root_dirty, int* root_aref);
+const char* render_last_draw_id(int i);
+
 #endif

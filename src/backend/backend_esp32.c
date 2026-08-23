@@ -1388,12 +1388,28 @@ void backend_tick(Layer* ui_root) {
     }
     if (ui_root) render_layer(ui_root);
     { int64_t t_frame = esp_timer_get_time() - t0;
+    int visit = 0, skip = 0, draw = 0, root_aref = 0;
+    unsigned root_dirty = 0;
     popup_manager_render();
     backend_render_present();
-    /* 仅绘制帧打印（静态帧 0ms 会刷屏 UART，跳过） */
-    if (t_frame > 1000) {
-        printf("YUI: frm=%lldms px=%lld\n",
-               (long long)(t_frame / 1000), s_frame_written_px);
+    render_last_stats(&visit, &skip, &draw, &root_dirty, &root_aref);
+    /* 慢帧必打；快帧前几帧 + 每 30 帧打一次，确认脏跳过是否生效 */
+    if (t_frame > 1000 || s_frame_count < 4 || (s_frame_count % 30) == 0) {
+        const char* d0 = render_last_draw_id(0);
+        printf("YUI: frm=%lldms px=%lld visit=%d skip=%d draw=%d dirty=%x aref=%d\n",
+               (long long)(t_frame / 1000), s_frame_written_px,
+               visit, skip, draw, root_dirty, root_aref);
+        if (d0) {
+            printf("YUI: draw %s %s %s %s %s %s %s %s\n",
+                   d0,
+                   render_last_draw_id(1) ? render_last_draw_id(1) : "",
+                   render_last_draw_id(2) ? render_last_draw_id(2) : "",
+                   render_last_draw_id(3) ? render_last_draw_id(3) : "",
+                   render_last_draw_id(4) ? render_last_draw_id(4) : "",
+                   render_last_draw_id(5) ? render_last_draw_id(5) : "",
+                   render_last_draw_id(6) ? render_last_draw_id(6) : "",
+                   render_last_draw_id(7) ? render_last_draw_id(7) : "");
+        }
     }
     s_frame_written_px = 0; }
 #ifdef YUI_ESP32_QEMU
