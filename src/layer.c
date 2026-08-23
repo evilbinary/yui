@@ -1196,13 +1196,34 @@ void destroy_layer(Layer* layer) {
         layer->scrollbar_h = NULL;
     }
     
-    // 释放自有 font/assets（与父层共享时不释放）
-    if (layer->font && (!layer->parent || layer->font != layer->parent->font)) {
-        free(layer->font);
+    /* 主题改 fontSize 会给当前层拷一份 Font，子孙仍可能指向更上层同一块。
+     * 销毁时沿祖先链判断共享，只比直接父层会误释放 launcher 根字体。 */
+    if (layer->font) {
+        int shared = 0;
+        Layer* p;
+        for (p = layer->parent; p; p = p->parent) {
+            if (p->font == layer->font) {
+                shared = 1;
+                break;
+            }
+        }
+        if (!shared) {
+            free(layer->font);
+        }
         layer->font = NULL;
     }
-    if (layer->assets && (!layer->parent || layer->assets != layer->parent->assets)) {
-        free(layer->assets);
+    if (layer->assets) {
+        int shared = 0;
+        Layer* p;
+        for (p = layer->parent; p; p = p->parent) {
+            if (p->assets == layer->assets) {
+                shared = 1;
+                break;
+            }
+        }
+        if (!shared) {
+            free(layer->assets);
+        }
         layer->assets = NULL;
     }
 

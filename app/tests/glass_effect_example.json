@@ -42,7 +42,7 @@
         },
         {
           "id": "glass_button",
-          "type": "button",
+          "type": "Button",
           "rect": [0, 0, 200, 50],
           "text": "毛玻璃按钮",
           "style": {
