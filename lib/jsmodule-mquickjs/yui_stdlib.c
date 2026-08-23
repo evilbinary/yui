@@ -690,10 +690,22 @@ static JSValue js_list_dir(JSContext *ctx, JSValue *this_val, int argc, JSValue 
     /* 与 js_module_read_file 相同：原样 → page_dir/ → root/ */
     char resolved[YUI_MAX_PATH];
     const char* open_dir = dir;
+    const char* filter_prefix = NULL;
     if (js_module_resolve_path(dir, resolved, sizeof(resolved)) == 0)
         open_dir = resolved;
 
     dp = opendir(open_dir);
+    if (!dp) {
+        /* SPIFFS 无真实子目录：opendir("/spiffs/apps") 失败，改开 root 再按前缀过滤 */
+        const char* root = js_module_get_root();
+        if (root && root[0] && dir[0] != '/') {
+            dp = opendir(root);
+            if (dp) {
+                filter_prefix = dir;
+                open_dir = root;
+            }
+        }
+    }
 
     if (!dp) {
         return JS_NULL;
@@ -720,24 +732,35 @@ static JSValue js_list_dir(JSContext *ctx, JSValue *this_val, int argc, JSValue 
             if (strcmp(de->d_name, ".") == 0 || strcmp(de->d_name, "..") == 0) {
                 continue;
             }
+            const char* entry_name = de->d_name;
+            if (filter_prefix) {
+                size_t plen = strlen(filter_prefix);
+                if (strncmp(entry_name, filter_prefix, plen) != 0)
+                    continue;
+                if (entry_name[plen] == '\0')
+                    continue;
+                if (entry_name[plen] != '/')
+                    continue;
+                entry_name += plen + 1;
+            }
             /* SPIFFS 是扁平文件系统：readdir 只返回实际文件，且名称带
                子目录前缀（如 "alarm/alarm.js"）。这里把第一个路径段
                合成成虚拟目录项（去重），让 listDir 表现和真实目录一致。 */
-            const char* slash = strchr(de->d_name, '/');
+            const char* slash = strchr(entry_name, '/');
             const char* leaf;
             int virt_dir = 0;
             char seg[256];
             if (slash) {
-                size_t seg_len = (size_t)(slash - de->d_name);
+                size_t seg_len = (size_t)(slash - entry_name);
                 if (seg_len == 0 || seg_len >= sizeof(seg)) {
                     continue;
                 }
-                memcpy(seg, de->d_name, seg_len);
+                memcpy(seg, entry_name, seg_len);
                 seg[seg_len] = '\0';
                 leaf = seg;
                 virt_dir = 1;
             } else {
-                leaf = de->d_name;
+                leaf = entry_name;
             }
 
             /* 虚拟目录去重：已在 names 中出现过的段跳过 */

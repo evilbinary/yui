@@ -697,9 +697,19 @@ void app_main(void) {
     layout_layer(ui_root);
     printf("YUI: enter main loop\n");
 
-    /* 直写模式：仅注入屏幕尺寸供 clip/脏矩形计算（fb=NULL 走 blit 回调，
-     * 不分配 framebuffer）。否则 s_fb_w=0 会把根层背景 fill 裁剪掉。 */
+    /* QEMU：把虚拟 RGB 面板的专属显存（0x20000000，不占 SRAM）注入 s_fb。
+     * 真机直写模式：仅注入尺寸（fb=NULL 走 blit），否则 s_fb_w=0 会裁掉 fill。 */
+#ifdef YUI_ESP32_QEMU
+    {
+        void* qfb = NULL;
+        if (s_lcd_panel)
+            esp_lcd_rgb_qemu_get_frame_buffer(s_lcd_panel, &qfb);
+        backend_esp32_set_framebuffer((uint16_t*)qfb, YUI_SCREEN_WIDTH, YUI_SCREEN_HEIGHT);
+        printf("YUI: QEMU framebuffer injected %p\n", qfb);
+    }
+#else
     backend_esp32_set_framebuffer(NULL, YUI_SCREEN_WIDTH, YUI_SCREEN_HEIGHT);
+#endif
 
     /* 7. 主循环（内部不返回） */
     backend_run(ui_root);

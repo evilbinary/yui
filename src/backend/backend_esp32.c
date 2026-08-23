@@ -1408,11 +1408,15 @@ void backend_tick(Layer* ui_root) {
     if (s_frame_count == 0) {
         /* 首帧调试：检查 framebuffer 是否被写入 */
         int i, nonzero = 0;
-        for (i = 0; i < s_fb_w * s_fb_h; i++) {
-            if (s_fb[i] != 0) { nonzero++; }
+        if (!s_fb) {
+            printf("YUI: fb debug: s_fb is NULL (w=%d h=%d)\n", s_fb_w, s_fb_h);
+        } else {
+            for (i = 0; i < s_fb_w * s_fb_h; i++) {
+                if (s_fb[i] != 0) { nonzero++; }
+            }
+            printf("YUI: fb debug: %d/%d nonzero pixels, fb[0]=0x%04x fb[100]=0x%04x\n",
+                   nonzero, s_fb_w * s_fb_h, s_fb[0], s_fb[100]);
         }
-        printf("YUI: fb debug: %d/%d nonzero pixels, fb[0]=0x%04x fb[100]=0x%04x\n",
-               nonzero, s_fb_w * s_fb_h, s_fb[0], s_fb[100]);
     }
     if ((s_frame_count % 10) == 0) printf("YUI: frame %d done\n", s_frame_count);
     if (s_frame_count == 2 && s_fb && s_fb_w > 0) {
