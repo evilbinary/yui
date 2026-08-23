@@ -342,11 +342,9 @@ static void render_layer_impl(Layer* layer, int force, RenderCtx* ctx) {
         return;
     }
 
-    /* 脏刷新：DIRTY 模式下，首帧过后，非强制、无 dirty、无进行中动画的层跳过绘制。
-     * 若子孙仍有动画（animating_ref>0）则继续遍历子树——只放行 root 不够，
-     * playground 把 progress-demo 挂在 page_outlet 下时，中间 View 会把动画层整棵跳过。
-     * 局部重绘（render_layer_rect）：与区域不相交的层跳过，相交层强制重绘。 */
-    int skip_draw = 0;
+    /* 脏刷新：DIRTY 模式下，首帧过后，非强制、无 dirty、无进行中动画的层跳过整棵子树。
+     * 子孙有动画时 animating_ref>0，本层照常绘制（含背景和子层），不能只遍历不画，
+     * 否则不透明父 View 会把同级 Button/文本盖掉或永远跳过。 */
     if (ctx->force_full_redraw) force = 1;
     if (ctx->local_rect_active) {
         /* 动画层跳过局部渲染：它由正常渲染阶段绘制当前位置，
@@ -359,11 +357,8 @@ static void render_layer_impl(Layer* layer, int force, RenderCtx* ctx) {
         }
         force = 1; /* 区域内：强制重绘 */
     } else if (render_dirty_mode() && !force && ctx->rendered_once && layer->dirty_flags == DIRTY_NONE &&
-        !layer_has_active_animation(layer)) {
-        if (layer->animating_ref <= 0) {
-            return;
-        }
-        skip_draw = 1;
+        !layer_has_active_animation(layer) && layer->animating_ref <= 0) {
+        return;
     }
 
     int is_root = (layer->parent == NULL);
@@ -389,41 +384,39 @@ static void render_layer_impl(Layer* layer, int force, RenderCtx* ctx) {
     uint64_t self_ns = 0;
     uint64_t t0 = perf_on ? perf_now_ns() : 0;
 
-    if (!skip_draw) {
-        layer_update_animation(layer);
+    layer_update_animation(layer);
 
-        const YuiComponentOps* ops = yui_type_get_ops(layer->type);
-        if (ops && (ops->flags & YUI_COMP_LVGL_WIDGET)) {
-            if (layer->layout) {
-                layer->layout(layer);
-            }
-        } else if (layer->render != NULL) {
-            layer->render(layer);
-        } else if (layer->type == VIEW) {
-            if (layer->backdrop_filter) {
-                backend_render_backdrop_filter(&layer->rect, layer->blur_radius, layer->saturation, layer->brightness);
-            }
-            /* root 背景：DIRTY 模式下，若本轮 root 带有几何/结构脏（RECT/LAYOUT/CHILDREN
-             * 会随 mark_layer_dirty 传播到 root），说明有子层移动/增删，必须重画背景
-             * 来擦除子层旧位置残留像素（canvas/真机持久目标无自动擦除）；
-             * 纯文本/样式变化（如时钟秒更新）保持不重绘整屏背景。 */
-            int draw_root_bg = 1;
-            if (render_dirty_mode() && is_root && ctx->rendered_once && !ctx->force_full_redraw &&
-                !ctx->local_rect_active) {
-                draw_root_bg = (layer->dirty_flags & (DIRTY_RECT | DIRTY_LAYOUT | DIRTY_CHILDREN)) ? 1 : 0;
-            }
-            if (draw_root_bg && (layer->bg_gradient.enabled || layer->bg_color.a > 0 ||
-                layer->shadow.enabled || layer_border_visible(&layer->border))) {
-                if (ctx->local_rect_active) {
-                    /* 局部重绘：背景 clip 到区域，只擦除区域内的旧像素 */
-                    Rect prev_clip_bg;
-                    if (render_clip_push(&ctx->local_rect, &prev_clip_bg)) {
-                        render_layer_background(layer, NULL);
-                        render_clip_pop(&prev_clip_bg);
-                    }
-                } else {
+    const YuiComponentOps* ops = yui_type_get_ops(layer->type);
+    if (ops && (ops->flags & YUI_COMP_LVGL_WIDGET)) {
+        if (layer->layout) {
+            layer->layout(layer);
+        }
+    } else if (layer->render != NULL) {
+        layer->render(layer);
+    } else if (layer->type == VIEW) {
+        if (layer->backdrop_filter) {
+            backend_render_backdrop_filter(&layer->rect, layer->blur_radius, layer->saturation, layer->brightness);
+        }
+        /* root 背景：DIRTY 模式下，若本轮 root 带有几何/结构脏（RECT/LAYOUT/CHILDREN
+         * 会随 mark_layer_dirty 传播到 root），说明有子层移动/增删，必须重画背景
+         * 来擦除子层旧位置残留像素（canvas/真机持久目标无自动擦除）；
+         * 纯文本/样式变化（如时钟秒更新）保持不重绘整屏背景。 */
+        int draw_root_bg = 1;
+        if (render_dirty_mode() && is_root && ctx->rendered_once && !ctx->force_full_redraw &&
+            !ctx->local_rect_active) {
+            draw_root_bg = (layer->dirty_flags & (DIRTY_RECT | DIRTY_LAYOUT | DIRTY_CHILDREN)) ? 1 : 0;
+        }
+        if (draw_root_bg && (layer->bg_gradient.enabled || layer->bg_color.a > 0 ||
+            layer->shadow.enabled || layer_border_visible(&layer->border))) {
+            if (ctx->local_rect_active) {
+                /* 局部重绘：背景 clip 到区域，只擦除区域内的旧像素 */
+                Rect prev_clip_bg;
+                if (render_clip_push(&ctx->local_rect, &prev_clip_bg)) {
                     render_layer_background(layer, NULL);
+                    render_clip_pop(&prev_clip_bg);
                 }
+            } else {
+                render_layer_background(layer, NULL);
             }
         }
     }
@@ -444,11 +437,9 @@ static void render_layer_impl(Layer* layer, int force, RenderCtx* ctx) {
         !ctx->local_rect_active) {
         root_bg_skipped = !(layer->dirty_flags & (DIRTY_RECT | DIRTY_LAYOUT | DIRTY_CHILDREN));
     }
-    /* skip_draw 时本层未重绘背景，不能 force 子层（否则等于整页刷） */
-    int force_children = skip_draw ? 0
-        : ((force || layer_paints_over_children(layer) ||
+    int force_children = (force || layer_paints_over_children(layer) ||
             (layer->dirty_flags & (DIRTY_RECT | DIRTY_LAYOUT | DIRTY_LAYOUT_RECT | DIRTY_CHILDREN))) &&
-           !root_bg_skipped);
+           !root_bg_skipped;
 
     for (int i = 0; i < layer->child_count; i++) {
         if (!layer->children) {
@@ -473,18 +464,16 @@ static void render_layer_impl(Layer* layer, int force, RenderCtx* ctx) {
         t0 = perf_now_ns();
     }
 
-    if (!skip_draw) {
-        if ((layer->scrollable == 1 || layer->scrollable == 3) && layer->scrollbar_v && layer->scrollbar_v->visible) {
-            render_vertical_scrollbar(layer);
-        }
+    if ((layer->scrollable == 1 || layer->scrollable == 3) && layer->scrollbar_v && layer->scrollbar_v->visible) {
+        render_vertical_scrollbar(layer);
+    }
 
-        if ((layer->scrollable == 2 || layer->scrollable == 3) && layer->scrollbar_h && layer->scrollbar_h->visible) {
-            render_horizontal_scrollbar(layer);
-        }
+    if ((layer->scrollable == 2 || layer->scrollable == 3) && layer->scrollbar_h && layer->scrollbar_h->visible) {
+        render_horizontal_scrollbar(layer);
+    }
 
-        if (layer->scrollable && layer->scrollbar && layer->scrollbar->visible) {
-            render_scrollbar(layer);
-        }
+    if (layer->scrollable && layer->scrollbar && layer->scrollbar->visible) {
+        render_scrollbar(layer);
     }
 
     if (perf_on) {
