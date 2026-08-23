@@ -308,6 +308,20 @@ static int layer_has_active_animation(const Layer* layer) {
     return a && (a->state == ANIMATION_STATE_RUNNING || a->repeat_type == ANIMATION_REPEAT_INFINITE);
 }
 
+static void animating_ref_inc(Layer* layer) {
+    for (; layer; layer = layer->parent) {
+        layer->animating_ref++;
+    }
+}
+
+static void animating_ref_dec(Layer* layer) {
+    for (; layer; layer = layer->parent) {
+        if (layer->animating_ref > 0) {
+            layer->animating_ref--;
+        }
+    }
+}
+
 /* 该层绘制后是否可能覆盖并抹掉子层旧像素（不透明背景/阴影/边框/渐变）。
  * 若是，其子层必须重绘，不能脏跳过。 */
 static int layer_paints_over_children(const Layer* layer) {
@@ -328,9 +342,11 @@ static void render_layer_impl(Layer* layer, int force, RenderCtx* ctx) {
         return;
     }
 
-    /* 脏刷新：DIRTY 模式下，首帧过后，非强制、无 dirty、无进行中动画的层跳过整棵子树，
-     * 避免静态 UI 每帧全量重绘（真机直写模式这是 SPI 刷屏与闪烁根源）。
+    /* 脏刷新：DIRTY 模式下，首帧过后，非强制、无 dirty、无进行中动画的层跳过绘制。
+     * 若子孙仍有动画（animating_ref>0）则继续遍历子树——只放行 root 不够，
+     * playground 把 progress-demo 挂在 page_outlet 下时，中间 View 会把动画层整棵跳过。
      * 局部重绘（render_layer_rect）：与区域不相交的层跳过，相交层强制重绘。 */
+    int skip_draw = 0;
     if (ctx->force_full_redraw) force = 1;
     if (ctx->local_rect_active) {
         /* 动画层跳过局部渲染：它由正常渲染阶段绘制当前位置，
@@ -343,10 +359,11 @@ static void render_layer_impl(Layer* layer, int force, RenderCtx* ctx) {
         }
         force = 1; /* 区域内：强制重绘 */
     } else if (render_dirty_mode() && !force && ctx->rendered_once && layer->dirty_flags == DIRTY_NONE &&
-        !layer_has_active_animation(layer) &&
-        !(layer->parent == NULL && ctx->animation_count > 0)) {
-        /* 本树有运行动画时 root 放行遍历，使动画层能每帧推进并重绘 */
-        return;
+        !layer_has_active_animation(layer)) {
+        if (layer->animating_ref <= 0) {
+            return;
+        }
+        skip_draw = 1;
     }
 
     int is_root = (layer->parent == NULL);
@@ -372,39 +389,41 @@ static void render_layer_impl(Layer* layer, int force, RenderCtx* ctx) {
     uint64_t self_ns = 0;
     uint64_t t0 = perf_on ? perf_now_ns() : 0;
 
-    layer_update_animation(layer);
+    if (!skip_draw) {
+        layer_update_animation(layer);
 
-    const YuiComponentOps* ops = yui_type_get_ops(layer->type);
-    if (ops && (ops->flags & YUI_COMP_LVGL_WIDGET)) {
-        if (layer->layout) {
-            layer->layout(layer);
-        }
-    } else if (layer->render != NULL) {
-        layer->render(layer);
-    } else if (layer->type == VIEW) {
-        if (layer->backdrop_filter) {
-            backend_render_backdrop_filter(&layer->rect, layer->blur_radius, layer->saturation, layer->brightness);
-        }
-        /* root 背景：DIRTY 模式下，若本轮 root 带有几何/结构脏（RECT/LAYOUT/CHILDREN
-         * 会随 mark_layer_dirty 传播到 root），说明有子层移动/增删，必须重画背景
-         * 来擦除子层旧位置残留像素（canvas/真机持久目标无自动擦除）；
-         * 纯文本/样式变化（如时钟秒更新）保持不重绘整屏背景。 */
-        int draw_root_bg = 1;
-        if (render_dirty_mode() && is_root && ctx->rendered_once && !ctx->force_full_redraw &&
-            !ctx->local_rect_active) {
-            draw_root_bg = (layer->dirty_flags & (DIRTY_RECT | DIRTY_LAYOUT | DIRTY_CHILDREN)) ? 1 : 0;
-        }
-        if (draw_root_bg && (layer->bg_gradient.enabled || layer->bg_color.a > 0 ||
-            layer->shadow.enabled || layer_border_visible(&layer->border))) {
-            if (ctx->local_rect_active) {
-                /* 局部重绘：背景 clip 到区域，只擦除区域内的旧像素 */
-                Rect prev_clip;
-                if (render_clip_push(&ctx->local_rect, &prev_clip)) {
+        const YuiComponentOps* ops = yui_type_get_ops(layer->type);
+        if (ops && (ops->flags & YUI_COMP_LVGL_WIDGET)) {
+            if (layer->layout) {
+                layer->layout(layer);
+            }
+        } else if (layer->render != NULL) {
+            layer->render(layer);
+        } else if (layer->type == VIEW) {
+            if (layer->backdrop_filter) {
+                backend_render_backdrop_filter(&layer->rect, layer->blur_radius, layer->saturation, layer->brightness);
+            }
+            /* root 背景：DIRTY 模式下，若本轮 root 带有几何/结构脏（RECT/LAYOUT/CHILDREN
+             * 会随 mark_layer_dirty 传播到 root），说明有子层移动/增删，必须重画背景
+             * 来擦除子层旧位置残留像素（canvas/真机持久目标无自动擦除）；
+             * 纯文本/样式变化（如时钟秒更新）保持不重绘整屏背景。 */
+            int draw_root_bg = 1;
+            if (render_dirty_mode() && is_root && ctx->rendered_once && !ctx->force_full_redraw &&
+                !ctx->local_rect_active) {
+                draw_root_bg = (layer->dirty_flags & (DIRTY_RECT | DIRTY_LAYOUT | DIRTY_CHILDREN)) ? 1 : 0;
+            }
+            if (draw_root_bg && (layer->bg_gradient.enabled || layer->bg_color.a > 0 ||
+                layer->shadow.enabled || layer_border_visible(&layer->border))) {
+                if (ctx->local_rect_active) {
+                    /* 局部重绘：背景 clip 到区域，只擦除区域内的旧像素 */
+                    Rect prev_clip_bg;
+                    if (render_clip_push(&ctx->local_rect, &prev_clip_bg)) {
+                        render_layer_background(layer, NULL);
+                        render_clip_pop(&prev_clip_bg);
+                    }
+                } else {
                     render_layer_background(layer, NULL);
-                    render_clip_pop(&prev_clip);
                 }
-            } else {
-                render_layer_background(layer, NULL);
             }
         }
     }
@@ -425,7 +444,9 @@ static void render_layer_impl(Layer* layer, int force, RenderCtx* ctx) {
         !ctx->local_rect_active) {
         root_bg_skipped = !(layer->dirty_flags & (DIRTY_RECT | DIRTY_LAYOUT | DIRTY_CHILDREN));
     }
-    int force_children = (force || layer_paints_over_children(layer)) && !root_bg_skipped;
+    /* skip_draw 时本层未重绘背景，不能 force 子层（否则等于整页刷） */
+    int force_children = skip_draw ? 0
+        : ((force || layer_paints_over_children(layer)) && !root_bg_skipped);
 
     for (int i = 0; i < layer->child_count; i++) {
         if (!layer->children) {
@@ -450,16 +471,18 @@ static void render_layer_impl(Layer* layer, int force, RenderCtx* ctx) {
         t0 = perf_now_ns();
     }
 
-    if ((layer->scrollable == 1 || layer->scrollable == 3) && layer->scrollbar_v && layer->scrollbar_v->visible) {
-        render_vertical_scrollbar(layer);
-    }
+    if (!skip_draw) {
+        if ((layer->scrollable == 1 || layer->scrollable == 3) && layer->scrollbar_v && layer->scrollbar_v->visible) {
+            render_vertical_scrollbar(layer);
+        }
 
-    if ((layer->scrollable == 2 || layer->scrollable == 3) && layer->scrollbar_h && layer->scrollbar_h->visible) {
-        render_horizontal_scrollbar(layer);
-    }
+        if ((layer->scrollable == 2 || layer->scrollable == 3) && layer->scrollbar_h && layer->scrollbar_h->visible) {
+            render_horizontal_scrollbar(layer);
+        }
 
-    if (layer->scrollable && layer->scrollbar && layer->scrollbar->visible) {
-        render_scrollbar(layer);
+        if (layer->scrollable && layer->scrollbar && layer->scrollbar->visible) {
+            render_scrollbar(layer);
+        }
     }
 
     if (perf_on) {
@@ -510,6 +533,7 @@ void render_animation_started(Layer* layer) {
     if (ctx) {
         ctx->animation_count++;
     }
+    animating_ref_inc(layer);
 }
 
 /* 动画离开运行态：所在树 ctx 计数 -1（stop / pause / 完成 / 替换 / 层销毁调用，
@@ -517,10 +541,14 @@ void render_animation_started(Layer* layer) {
 void render_animation_released(Layer* layer) {
     RenderCtx* ctx;
     if (!layer || !layer->animation) return;
+    if (layer->animation->state != ANIMATION_STATE_RUNNING) {
+        return;
+    }
     ctx = render_ctx_get(layer);
-    if (ctx && layer->animation->state == ANIMATION_STATE_RUNNING && ctx->animation_count > 0) {
+    if (ctx && ctx->animation_count > 0) {
         ctx->animation_count--;
     }
+    animating_ref_dec(layer);
 }
 
 /* 局部渲染：只绘制 layer 树中与 rect 相交的层。区域外子树整棵跳过，
