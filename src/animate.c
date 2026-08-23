@@ -442,3 +442,29 @@ void animation_set_reverse_on_repeat(Animation* animation, bool reverse_on_repea
     }
     animation->reverse_on_repeat = reverse_on_repeat;
 }
+
+void animation_keep_alive(Layer* layer) {
+    Animation* anim;
+    if (!layer || layer->animation) {
+        return;
+    }
+    anim = animation_create(0.1f, ease_in_out_quad);
+    if (!anim) {
+        return;
+    }
+    animation_set_target(anim, ANIMATION_PROPERTY_X, (float)layer->rect.x);
+    animation_set_target(anim, ANIMATION_PROPERTY_Y, (float)layer->rect.y);
+    animation_set_target(anim, ANIMATION_PROPERTY_WIDTH, (float)layer->rect.w);
+    animation_set_target(anim, ANIMATION_PROPERTY_HEIGHT, (float)layer->rect.h);
+    animation_set_target(anim, ANIMATION_PROPERTY_OPACITY, layer->color.a / 255.0f);
+    animation_set_target(anim, ANIMATION_PROPERTY_ROTATION, layer->rotation);
+    animation_set_repeat_type(anim, ANIMATION_REPEAT_INFINITE);
+    animation_start(layer, anim);
+}
+
+void animation_stop_keep_alive(Layer* layer) {
+    if (!layer || !layer->animation) {
+        return;
+    }
+    animation_stop(layer);
+}

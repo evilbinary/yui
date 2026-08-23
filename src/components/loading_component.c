@@ -3,6 +3,7 @@
 #include "../backend.h"
 #include "../util.h"
 #include "../layer_update.h"
+#include "../animate.h"
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -60,6 +61,9 @@ LoadingComponent* loading_component_create(Layer* layer)
     layer->render = loading_component_render;
     layer->on_destroy = loading_layer_destroy;
     layer->set_style = loading_component_apply_theme_style;
+
+    /* DIRTY 模式：Loading 每帧都在变，挂 keep-alive 避免被脏跳过 */
+    animation_keep_alive(layer);
 
     return component;
 }
@@ -244,6 +248,18 @@ static void loading_render_text(LoadingComponent* component, Layer* layer)
     backend_render_text_destroy(text_texture);
 }
 
+static Color loading_erase_color(Layer* layer)
+{
+    Layer* p = layer ? layer->parent : NULL;
+    while (p) {
+        if (p->bg_color.a == 255) {
+            return p->bg_color;
+        }
+        p = p->parent;
+    }
+    return (Color){255, 255, 255, 255};
+}
+
 void loading_component_render(Layer* layer)
 {
     if (!layer || !layer->component) {
@@ -253,11 +269,15 @@ void loading_component_render(Layer* layer)
     LoadingComponent* component = (LoadingComponent*)layer->component;
     int has_text = layer->text && layer->text[0];
     int indicator_h = has_text ? (layer->rect.h * 2) / 3 : layer->rect.h;
+    Color erase;
+    int size;
+    int cx;
+    int cy;
     if (indicator_h < 8) {
         indicator_h = layer->rect.h;
     }
 
-    int size = indicator_h;
+    size = indicator_h;
     if (layer->rect.w < size) {
         size = layer->rect.w;
     }
@@ -265,8 +285,16 @@ void loading_component_render(Layer* layer)
         return;
     }
 
-    int cx = layer->rect.x + layer->rect.w / 2;
-    int cy = layer->rect.y + indicator_h / 2;
+    /* 脏模式持久画布：先擦掉上一帧的圆弧/圆点，再画当前帧 */
+    erase = loading_erase_color(layer);
+    if (layer->radius > 0) {
+        backend_render_rounded_rect(&layer->rect, erase, layer->radius);
+    } else {
+        backend_render_fill_rect(&layer->rect, erase);
+    }
+
+    cx = layer->rect.x + layer->rect.w / 2;
+    cy = layer->rect.y + indicator_h / 2;
 
     if (component->variant == LOADING_VARIANT_DOTS) {
         loading_render_dots(component, layer, cx, cy, size);

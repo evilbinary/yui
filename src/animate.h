@@ -107,6 +107,10 @@ void animation_set_repeat_type(Animation* animation, AnimationRepeatType repeat_
 void animation_set_repeat_count(Animation* animation, int repeat_count);
 void animation_set_reverse_on_repeat(Animation* animation, bool reverse_on_repeat);
 
+/* DIRTY 模式：挂无限 identity 动画，使本层每帧推进并重绘（Progress / Loading） */
+void animation_keep_alive(Layer* layer);
+void animation_stop_keep_alive(Layer* layer);
+
 // 图层动画更新函数（使用默认delta_time值的简化版本）
 void layer_update_animation(Layer* layer);
 

@@ -14,9 +14,6 @@
 #define printf
 
 static void progress_component_apply_theme_style(Layer* layer, cJSON* style);
-static void progress_start_keepalive(Layer* layer);
-static void progress_stop_keepalive(Layer* layer);
-
 static void progress_layer_destroy(Layer* layer) {
     if (!layer || !layer->component) {
         return;
@@ -262,11 +259,11 @@ void progress_component_set_progress(ProgressComponent* component, float progres
     if (component->animation_enabled) {
         component->animating = 1;
         /* DIRTY 模式：挂 keep-alive 动画，保证动画期间每帧渲染 */
-        progress_start_keepalive(component->layer);
+        animation_keep_alive(component->layer);
     } else {
         component->progress = progress;
         component->animating = 0;
-        progress_stop_keepalive(component->layer);
+        animation_stop_keep_alive(component->layer);
     }
     /* 触发至少一次重绘 */
     if (component->layer) {
@@ -347,31 +344,6 @@ void progress_component_set_circle_width(ProgressComponent* component, int width
     }
 }
 
-/* DIRTY 模式 keep-alive：动画期间在层上挂一个无限重复、属性目标=当前值
- * 的 Animation。由 animate.c 的机制驱动渲染：
- *  - layer->animation 非空且 RUNNING/INFINITE → layer_has_active_animation 为真，本层不被脏跳过
- *  - animation_start 调用 render_animation_started → ctx->animation_count+1，root 放行遍历
- * 动画结束（animating→0）时调用 animation_stop 释放，恢复正常脏跳过。 */
-static void progress_start_keepalive(Layer* layer) {
-    Animation* anim;
-    if (!layer || layer->animation) return; /* 已有动画（含用户配置）则不重复挂载 */
-    anim = animation_create(0.1f, ease_in_out_quad);
-    if (!anim) return;
-    animation_set_target(anim, ANIMATION_PROPERTY_X, layer->rect.x);
-    animation_set_target(anim, ANIMATION_PROPERTY_Y, layer->rect.y);
-    animation_set_target(anim, ANIMATION_PROPERTY_WIDTH, layer->rect.w);
-    animation_set_target(anim, ANIMATION_PROPERTY_HEIGHT, layer->rect.h);
-    animation_set_target(anim, ANIMATION_PROPERTY_OPACITY, layer->color.a / 255.0f);
-    animation_set_target(anim, ANIMATION_PROPERTY_ROTATION, layer->rotation);
-    animation_set_repeat_type(anim, ANIMATION_REPEAT_INFINITE);
-    animation_start(layer, anim);
-}
-
-static void progress_stop_keepalive(Layer* layer) {
-    if (!layer || !layer->animation) return;
-    animation_stop(layer);
-}
-
 // 渲染进度条组件
 void progress_component_render(Layer* layer) {
     if (!layer || !layer->component) {
@@ -390,7 +362,7 @@ void progress_component_render(Layer* layer) {
             component->progress = component->target_progress;
             component->animating = 0;
             /* DIRTY 模式：动画完成，释放 keep-alive，恢复脏跳过 */
-            progress_stop_keepalive(layer);
+            animation_stop_keep_alive(layer);
         } else {
             // 否则，根据动画速度更新进度
             component->progress += diff * component->animation_speed;
