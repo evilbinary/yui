@@ -438,7 +438,8 @@ static void render_layer_impl(Layer* layer, int force, RenderCtx* ctx) {
         root_bg_skipped = !(layer->dirty_flags & (DIRTY_RECT | DIRTY_LAYOUT | DIRTY_CHILDREN));
     }
     int force_children = (force || layer_paints_over_children(layer) ||
-            (layer->dirty_flags & (DIRTY_RECT | DIRTY_LAYOUT | DIRTY_LAYOUT_RECT | DIRTY_CHILDREN))) &&
+            (layer->dirty_flags & (DIRTY_RECT | DIRTY_LAYOUT | DIRTY_LAYOUT_RECT |
+                                   DIRTY_CHILDREN | DIRTY_COLOR | DIRTY_STYLE | DIRTY_TEXT))) &&
            !root_bg_skipped;
 
     for (int i = 0; i < layer->child_count; i++) {

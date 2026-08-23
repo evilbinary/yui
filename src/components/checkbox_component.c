@@ -195,6 +195,9 @@ void checkbox_component_set_checked(CheckboxComponent* component, int checked) {
         } else {
             CLEAR_STATE(component->layer, LAYER_STATE_ACTIVE);
         }
+        if (component->layer) {
+            mark_layer_dirty(component->layer, DIRTY_STYLE | DIRTY_COLOR);
+        }
     }
 }
 
@@ -309,7 +312,7 @@ int checkbox_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
             layer->state &= ~LAYER_STATE_ACTIVE; // 只清除激活位，保留其他位
         }
 
-        mark_layer_dirty(layer, DIRTY_COLOR);
+        mark_layer_dirty(layer, DIRTY_STYLE | DIRTY_COLOR);
 
         // 如果有点击事件回调，调用它
         if (layer->event && layer->event->click) {

@@ -1,5 +1,6 @@
 #include "../render.h"
 #include "../backend.h"
+#include "../layer_update.h"
 #include <stdlib.h>
 #include <string.h>
 #include "radiobox_component.h"
@@ -104,8 +105,10 @@ void radiobox_component_set_checked(RadioboxComponent* component, int checked) {
             radiobox_set_group_checked(component->group_id, component);
         } else {
             component->checked = 0;
-            // 清除图层状态，确保重绘
             CLEAR_STATE(component->layer, LAYER_STATE_ACTIVE);
+            if (component->layer) {
+                mark_layer_dirty(component->layer, DIRTY_STYLE | DIRTY_COLOR);
+            }
         }
     }
 }
@@ -412,10 +415,12 @@ void radiobox_set_group_checked(const char* group_id, RadioboxComponent* compone
         radio->checked = 0;
         // 清除图层激活状态，确保重绘，但保留禁用状态
         radio->layer->state &= ~LAYER_STATE_ACTIVE; // 只清除激活位，保留其他位
+        mark_layer_dirty(radio->layer, DIRTY_STYLE | DIRTY_COLOR);
     }
     
     // 设置指定单选框为选中状态
     component->checked = 1;
     // 设置图层激活状态，确保重绘，但保留禁用状态
     component->layer->state |= LAYER_STATE_ACTIVE; // 只设置激活位，保留其他位
+    mark_layer_dirty(component->layer, DIRTY_STYLE | DIRTY_COLOR);
 }
