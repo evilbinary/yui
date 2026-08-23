@@ -58,11 +58,16 @@ static int g_request_quit = 0;
 static int g_exit_code = 0;
 static int g_headless = -1; /* -1 = unset (read YUI_HEADLESS), 0/1 = explicit */
 
-/* DIRTY 模式持久画布：渲染到纹理，整帧 blit 到屏幕（双缓冲的 backbuffer
- * 在 present 后内容未定义，直接画上去会闪）。 */
+/* DIRTY 模式持久画布：GPU 双缓冲 present 后 backbuffer 内容未定义，
+ * 必须画到纹理再整帧 blit。软件渲染器的窗口 surface 本身持久，
+ * 再走离屏纹理等于每帧多一次整屏 blit（YiYiYa 上就是 gui: blit）。 */
 static SDL_Texture* g_canvas = NULL;
 static int g_canvas_w = 0;
 static int g_canvas_h = 0;
+static int g_sdl_persistent_fb = 0;
+static int g_sdl_presented_once = 0;
+static int g_need_full_present = 0;
+static YuiRenderMode g_render_mode = YUI_RENDER_MODE_DIRTY;
 
 static int sdl_ensure_canvas(void) {
     int w = 0, h = 0;
@@ -93,7 +98,41 @@ static int sdl_ensure_canvas(void) {
     return 1;
 }
 
-static YuiRenderMode g_render_mode = YUI_RENDER_MODE_DIRTY;
+static void sdl_begin_frame(void) {
+    if (g_render_mode == YUI_RENDER_MODE_FULL) {
+        SDL_SetRenderDrawColor(renderer, 30, 30, 30, 255);
+        SDL_RenderClear(renderer);
+        return;
+    }
+    /* 软件/直写：像素落在窗口 surface 上，跳过离屏 canvas。 */
+    if (g_sdl_persistent_fb) {
+        return;
+    }
+    sdl_ensure_canvas();
+    SDL_SetRenderTarget(renderer, g_canvas);
+}
+
+/* DIRTY 且整树被跳过时不要 Present：软件路径 Present 会整屏 blit 到 LCD。 */
+static void sdl_end_frame(void) {
+    int visit = 0;
+    int draw = 0;
+
+    render_last_stats(&visit, NULL, &draw, NULL, NULL);
+    if (g_render_mode == YUI_RENDER_MODE_DIRTY && g_sdl_presented_once &&
+        !g_need_full_present && visit == 0 && draw == 0 &&
+        !perf_is_enabled() &&
+        !(g_popup_manager && g_popup_manager->active_popups)) {
+        return;
+    }
+    g_need_full_present = 0;
+
+    if (g_render_mode == YUI_RENDER_MODE_DIRTY && !g_sdl_persistent_fb && g_canvas) {
+        SDL_SetRenderTarget(renderer, NULL);
+        SDL_RenderCopy(renderer, g_canvas, NULL, NULL);
+    }
+    SDL_RenderPresent(renderer);
+    g_sdl_presented_once = 1;
+}
 
 void backend_set_render_mode(YuiRenderMode mode)
 {
@@ -426,25 +465,18 @@ static DFont* backend_get_fallback_font_for(DFont* primary) {
 // 返回渲染应使用的单一字体；返回 NULL 表示文本需要混合排版。
 // out_fallback 始终接收 fallback 字体（混合路径需要），调用方自行判 NULL。
 static DFont* backend_resolve_render_font(DFont* primary, const char* text, DFont** out_fallback) {
-    DFont* fallback;
+    DFont* fallback = NULL;
     const char* cursor;
     int all_in_primary = 1;
-    int all_in_fallback = 1;
+    int missing_covered = 1;
     int any_in_primary = 0;
+    int any_missing = 0;
 
     if (out_fallback) {
         *out_fallback = NULL;
     }
 
     if (!primary || !text || !backend_has_font_fallback()) {
-        return primary;
-    }
-
-    fallback = backend_get_fallback_font_for(primary);
-    if (out_fallback) {
-        *out_fallback = fallback;
-    }
-    if (!fallback || fallback == primary) {
         return primary;
     }
 
@@ -457,12 +489,28 @@ static DFont* backend_resolve_render_font(DFont* primary, const char* text, DFon
         }
         if (TTF_GlyphIsProvided32(primary, codepoint)) {
             any_in_primary = 1;
-        } else {
-            all_in_primary = 0;
+            continue;
+        }
+        /* 主字体已覆盖的字不要去查 fallback：打开/扫描 CJK 字库极慢 */
+        any_missing = 1;
+        all_in_primary = 0;
+        if (!fallback) {
+            fallback = backend_get_fallback_font_for(primary);
+            if (out_fallback) {
+                *out_fallback = fallback;
+            }
+            if (!fallback || fallback == primary) {
+                missing_covered = 0;
+                break;
+            }
         }
         if (!TTF_GlyphIsProvided32(fallback, codepoint)) {
-            all_in_fallback = 0;
+            missing_covered = 0;
         }
+    }
+
+    if (out_fallback && !*out_fallback) {
+        *out_fallback = fallback;
     }
 
     if (all_in_primary) {
@@ -470,10 +518,13 @@ static DFont* backend_resolve_render_font(DFont* primary, const char* text, DFon
     }
     // 仅当主字体完全缺字时才整串用 fallback（如纯 emoji）。
     // emoji 字体通常也含 ASCII，不能因 all_in_fallback 就把 "🔋 85%" 整串交给 fallback，否则数字会乱码。
-    if (all_in_fallback && !any_in_primary) {
+    if (any_missing && missing_covered && !any_in_primary && fallback) {
         return fallback;
     }
-    return NULL;  // 混合：需要分段合成
+    if (any_missing && fallback && fallback != primary) {
+        return NULL;  // 混合：需要分段合成
+    }
+    return primary;
 }
 
 static DFont* backend_pick_font_for_codepoint(DFont* primary, DFont* fallback, Uint32 codepoint) {
@@ -852,6 +903,7 @@ static void backend_handle_window_resize(Layer* root) {
     if (w <= 0 || h <= 0) return;
     backend_apply_display_scale();
     resize_callback(root, w, h);
+    g_need_full_present = 1;
 }
 
 #ifdef YUI_WIN32_NATIVE
@@ -931,6 +983,9 @@ static void sdl_handle_window_event(Layer* root, const SDL_Event* event) {
         backend_refresh_window_chrome();
         break;
     case WINDOW_EXPOSED:
+        g_need_full_present = 1;
+        backend_refresh_window_chrome();
+        break;
     case WINDOW_MOVED:
         backend_refresh_window_chrome();
         break;
@@ -966,13 +1021,7 @@ void backend_main_loop(void) {
     game_update(-1.0f);
 #endif
 
-    if (g_render_mode == YUI_RENDER_MODE_FULL) {
-        SDL_SetRenderDrawColor(renderer, 30, 30, 30, 255);
-        SDL_RenderClear(renderer);
-    } else {
-        sdl_ensure_canvas();
-        SDL_SetRenderTarget(renderer, g_canvas);
-    }
+    sdl_begin_frame();
 
     perf_frame_begin();
     perf_render_tree_begin();
@@ -988,12 +1037,7 @@ void backend_main_loop(void) {
     popup_manager_render();
     perf_frame_end();
 
-    if (g_render_mode == YUI_RENDER_MODE_DIRTY) {
-        SDL_SetRenderTarget(renderer, NULL);
-        SDL_RenderCopy(renderer, g_canvas, NULL, NULL);
-    }
-
-    SDL_RenderPresent(renderer);
+    sdl_end_frame();
 }
 #endif
 
@@ -1707,7 +1751,15 @@ int backend_init(){
             printf("%s ", SDL_GetPixelFormatName(format));
         }
         printf("\n");
+        /* 软件渲染：窗口 framebuffer 持久，DIRTY 直画即可，勿再离屏整屏 blit */
+        g_sdl_persistent_fb = (renderer_info.flags & SDL_RENDERER_SOFTWARE) ? 1 : 0;
+        if (g_sdl_persistent_fb) {
+            printf("  DIRTY present: persistent software fb (skip offscreen blit)\n");
+        }
     }
+#if defined(__YIYIYA__)
+    g_sdl_persistent_fb = 1;
+#endif
     
     // 启用透明度混合
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
@@ -2277,14 +2329,7 @@ void backend_run(Layer* ui_root){
         game_update(-1.0f);
 #endif
 
-        if (g_render_mode == YUI_RENDER_MODE_FULL) {
-            SDL_SetRenderDrawColor(renderer, 30, 30, 30, 255);
-            SDL_RenderClear(renderer);
-        } else {
-            /* DIRTY：画到持久画布，下方整帧 blit 到屏幕 */
-            sdl_ensure_canvas();
-            SDL_SetRenderTarget(renderer, g_canvas);
-        }
+        sdl_begin_frame();
 
         perf_frame_begin();
         perf_render_tree_begin();
@@ -2300,12 +2345,7 @@ void backend_run(Layer* ui_root){
         popup_manager_render();
         perf_frame_end();
 
-        if (g_render_mode == YUI_RENDER_MODE_DIRTY) {
-            SDL_SetRenderTarget(renderer, NULL);
-            SDL_RenderCopy(renderer, g_canvas, NULL, NULL);
-        }
-
-        SDL_RenderPresent(renderer);
+        sdl_end_frame();
 
 #ifdef YUI_WIN32_NATIVE
         // 第一帧渲染后重新应用暗色（此时窗口已完全显示）
@@ -2358,13 +2398,7 @@ void backend_tick(Layer* ui_root) {
     game_update(-1.0f);
 #endif
 
-    if (g_render_mode == YUI_RENDER_MODE_FULL) {
-        SDL_SetRenderDrawColor(renderer, 30, 30, 30, 255);
-        SDL_RenderClear(renderer);
-    } else {
-        sdl_ensure_canvas();
-        SDL_SetRenderTarget(renderer, g_canvas);
-    }
+    sdl_begin_frame();
 
     perf_frame_begin();
     perf_render_tree_begin();
@@ -2378,12 +2412,7 @@ void backend_tick(Layer* ui_root) {
     popup_manager_render();
     perf_frame_end();
 
-    if (g_render_mode == YUI_RENDER_MODE_DIRTY) {
-        SDL_SetRenderTarget(renderer, NULL);
-        SDL_RenderCopy(renderer, g_canvas, NULL, NULL);
-    }
-
-    SDL_RenderPresent(renderer);
+    sdl_end_frame();
 }
 
 DFont* backend_load_font(char* font_path,int size){
