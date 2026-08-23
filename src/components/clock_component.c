@@ -2,6 +2,7 @@
 #include "../backend.h"
 #include "../event.h"
 #include "../util.h"
+#include "../animate.h"
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -47,6 +48,9 @@ ClockComponent* clock_component_create(Layer* layer) {
     layer->component = component;
     layer->render = clock_component_render;
     layer->on_destroy = clock_layer_destroy;
+
+    /* DIRTY 模式：指针每秒都在变，挂 keep-alive 避免被脏跳过 */
+    animation_keep_alive(layer);
     
     return component;
 }
