@@ -13,6 +13,7 @@
 #endif
 
 static int layout_scale_value(int value, float yui_density);
+static void layout_apply_absolute(Layer* layer);
 
 static int layout_layer_is_grid(const Layer* layer)
 {
@@ -230,6 +231,51 @@ static Scrollbar* clone_scrollbar(const Scrollbar* src) {
     }
     memcpy(copy, src, sizeof(Scrollbar));
     return copy;
+}
+
+static void layout_apply_absolute(Layer* layer)
+{
+    float sx = 1.0f;
+    float sy = 1.0f;
+    int i;
+
+    if (!layer || !layer->children) {
+        return;
+    }
+
+    if (layer->layout_base_valid && layer->layout_base_rect.w > 0) {
+        sx = (float)layer->rect.w / (float)layer->layout_base_rect.w;
+    }
+    if (layer->layout_base_valid && layer->layout_base_rect.h > 0) {
+        sy = (float)layer->rect.h / (float)layer->layout_base_rect.h;
+    }
+
+    for (i = 0; i < layer->child_count; i++) {
+        Layer* child = layer->children[i];
+        int rel_x;
+        int rel_y;
+
+        if (!child || child->visible == IN_VISIBLE) {
+            continue;
+        }
+
+        if (!child->layout_base_valid) {
+            child->layout_base_rect = child->rect;
+            child->layout_base_valid = 1;
+        }
+
+        rel_x = layout_scale_value(child->layout_base_rect.x, sx);
+        rel_y = layout_scale_value(child->layout_base_rect.y, sy);
+        child->rect.x = layer->rect.x + rel_x;
+        child->rect.y = layer->rect.y + rel_y;
+
+        if (layer->scrollable == 1 || layer->scrollable == 3) {
+            child->rect.y -= layer->scroll_offset;
+        }
+        if (layer->scrollable == 2 || layer->scrollable == 3) {
+            child->rect.x -= layer->scroll_offset_x;
+        }
+    }
 }
 
 void layout_layer(Layer* layer){
@@ -605,46 +651,13 @@ void layout_layer(Layer* layer){
                 child->rect.y = layer->rect.y + padding_top + (content_height - child->rect.h) / 2;
             }
         } else if (layer->layout_manager->type == LAYOUT_ABSOLUTE) {
-            float sx = 1.0f;
-            float sy = 1.0f;
-            if (layer->layout_base_valid && layer->layout_base_rect.w > 0) {
-                sx = (float)layer->rect.w / (float)layer->layout_base_rect.w;
-            }
-            if (layer->layout_base_valid && layer->layout_base_rect.h > 0) {
-                sy = (float)layer->rect.h / (float)layer->layout_base_rect.h;
-            }
-
-            for (int i = 0; i < layer->child_count; i++) {
-                Layer* child = layer->children[i];
-                int rel_x;
-                int rel_y;
-
-                if (!child || child->visible == IN_VISIBLE) {
-                    continue;
-                }
-
-                if (!child->layout_base_valid) {
-                    child->layout_base_rect = child->rect;
-                    child->layout_base_valid = 1;
-                }
-
-                rel_x = layout_scale_value(child->layout_base_rect.x, sx);
-                rel_y = layout_scale_value(child->layout_base_rect.y, sy);
-                child->rect.x = layer->rect.x + rel_x;
-                child->rect.y = layer->rect.y + rel_y;
-
-                if (layer->scrollable == 1 || layer->scrollable == 3) {
-                    child->rect.y -= layer->scroll_offset;
-                }
-                if (layer->scrollable == 2 || layer->scrollable == 3) {
-                    child->rect.x -= layer->scroll_offset_x;
-                }
-            }
+            layout_apply_absolute(layer);
         }
     } else if (layer->layout_manager) {
         layout_trace("layout_layer: layer %s has layout_manager but no children\n", layer->id ? layer->id : "(null)");
     } else if (layer->child_count > 0) {
-        layout_trace("layout_layer: layer %s has children but no layout_manager\n", layer->id ? layer->id : "(null)");
+        /* 无 layout 字段时子坐标相对本层。嵌入 launcher page_outlet 居中后，子树才能跟着走。 */
+        layout_apply_absolute(layer);
     }
 
     if (layer->type == LAYER_LIST) {

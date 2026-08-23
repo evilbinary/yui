@@ -196,8 +196,8 @@ function onDemoClick(layerId) {
     var appId = json.id || "page_outlet";
     YUI.hide("launcher_content");
     YUI.show("btn_back");
-    YUI.renderFromJson("page_outlet", raw, false, demo.jsonPath);
     YUI.show("page_outlet");
+    YUI.renderFromJson("page_outlet", raw, false, demo.jsonPath);
     YUI.show(appId);
     currentAppId = appId;
     YUI.setText("launcher_title", demo.title);

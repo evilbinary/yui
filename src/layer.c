@@ -591,6 +591,27 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
     layer->rect.h = layer->fixed_height;  // 同时设置rect.h
   }
 
+  /* rect: [x, y, w, h] — glass 等示例用绝对坐标，嵌入 launcher 时作相对父层的基准 */
+  {
+    cJSON* rect = cJSON_GetObjectItem(json_obj, "rect");
+    if (rect && cJSON_IsArray(rect) && cJSON_GetArraySize(rect) >= 4) {
+      cJSON* rx = cJSON_GetArrayItem(rect, 0);
+      cJSON* ry = cJSON_GetArrayItem(rect, 1);
+      cJSON* rw = cJSON_GetArrayItem(rect, 2);
+      cJSON* rh = cJSON_GetArrayItem(rect, 3);
+      if (rx && cJSON_IsNumber(rx)) layer->rect.x = rx->valueint;
+      if (ry && cJSON_IsNumber(ry)) layer->rect.y = ry->valueint;
+      if (rw && cJSON_IsNumber(rw)) {
+        layer->rect.w = rw->valueint;
+        layer->fixed_width = layer->rect.w;
+      }
+      if (rh && cJSON_IsNumber(rh)) {
+        layer->rect.h = rh->valueint;
+        layer->fixed_height = layer->rect.h;
+      }
+    }
+  }
+
   // 解析弹性比例
   if (cJSON_HasObjectItem(json_obj, "flex")) {
     layer->flex_ratio =

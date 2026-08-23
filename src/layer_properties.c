@@ -210,6 +210,29 @@ static int handle_size(Layer* layer, cJSON* value, int is_creating) {
     return 1;
 }
 
+static int handle_rect(Layer* layer, cJSON* value, int is_creating) {
+    if (!cJSON_IsArray(value) || cJSON_GetArraySize(value) < 4) return 0;
+    cJSON* rx = cJSON_GetArrayItem(value, 0);
+    cJSON* ry = cJSON_GetArrayItem(value, 1);
+    cJSON* rw = cJSON_GetArrayItem(value, 2);
+    cJSON* rh = cJSON_GetArrayItem(value, 3);
+    if (!rx || !ry || !rw || !rh) return 0;
+    if (!cJSON_IsNumber(rx) || !cJSON_IsNumber(ry) ||
+        !cJSON_IsNumber(rw) || !cJSON_IsNumber(rh)) {
+        return 0;
+    }
+    layer->rect.x = rx->valueint;
+    layer->rect.y = ry->valueint;
+    layer->rect.w = rw->valueint;
+    layer->rect.h = rh->valueint;
+    layer->fixed_width = layer->rect.w;
+    layer->fixed_height = layer->rect.h;
+    if (!is_creating) {
+        mark_layer_dirty(layer, DIRTY_RECT | DIRTY_LAYOUT);
+    }
+    return 1;
+}
+
 static int handle_position(Layer* layer, cJSON* value, int is_creating) {
     if (!cJSON_IsArray(value)) return 0;
     int x, y;
@@ -561,6 +584,7 @@ static const PropertyHandlerEntry property_handlers[] = {
     // 尺寸和位置属性
     {"size", handle_size},
     {"position", handle_position},
+    {"rect", handle_rect},
     {"animation", handle_animation},
     {"width", handle_width},
     {"height", handle_height},

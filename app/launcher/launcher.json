@@ -105,7 +105,12 @@
       "type": "View",
       "visible": false,
       "flex": 1,
-      "layout": { "type": "center", "align": "center" },
+      "layout": {
+        "type": "vertical",
+        "align": "center",
+        "justifyContent": "center",
+        "padding": [0, 0, 0, 0]
+      },
       "children": []
     }
   ]
