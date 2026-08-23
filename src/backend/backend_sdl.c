@@ -393,11 +393,26 @@ static void backend_texture_cache_store_entry(int cache_index, uint64_t key_hash
 }
 
 static char g_font_fallback_path[YUI_MAX_PATH] = "";
+#define YUI_FALLBACK_FONT_CACHE 8
+static DFont* s_fb_font[YUI_FALLBACK_FONT_CACHE];
+static int s_fb_px[YUI_FALLBACK_FONT_CACHE];
+static int s_fb_n;
+static char s_fb_path[YUI_MAX_PATH];
+
+static void backend_fallback_font_cache_reset(void) {
+    s_fb_n = 0;
+    s_fb_path[0] = '\0';
+    memset(s_fb_font, 0, sizeof(s_fb_font));
+}
 
 void backend_set_font_fallback_path(const char* path) {
     if (!path) {
         g_font_fallback_path[0] = '\0';
+        backend_fallback_font_cache_reset();
         return;
+    }
+    if (strcmp(g_font_fallback_path, path) != 0) {
+        backend_fallback_font_cache_reset();
     }
     strncpy(g_font_fallback_path, path, sizeof(g_font_fallback_path) - 1);
     g_font_fallback_path[sizeof(g_font_fallback_path) - 1] = '\0';
@@ -423,6 +438,7 @@ static int backend_get_font_size(DFont* font) {
     return 16;
 }
 
+/* ColorEmoji 按字号反复 TTF_OpenFont 极慢；全 UI 共用一个 face，绘制时按 dst 缩放。 */
 static DFont* backend_get_fallback_font_for(DFont* primary) {
     DFont* fallback;
 
@@ -431,15 +447,12 @@ static DFont* backend_get_fallback_font_for(DFont* primary) {
     }
 
 #ifdef __EMSCRIPTEN__
-    /* wasm: CBDT 彩色 emoji 字体无法用 SDL_ttf 可靠渲染，改由浏览器 Canvas 处理 */
+    /* wasm: CBDT 彩色 emoji 改由浏览器 Canvas 处理 */
     if (g_font_fallback_path[0] &&
         (strstr(g_font_fallback_path, "ColorEmoji") != NULL ||
          strstr(g_font_fallback_path, "NotoEmoji") != NULL)) {
         return NULL;
     }
-#endif
-
-#ifdef __EMSCRIPTEN__
     if (g_font_fallback_path[0]) {
         fallback = backend_load_font_with_weight(g_font_fallback_path,
                                                  backend_get_font_size(primary), "normal");
@@ -457,10 +470,34 @@ static DFont* backend_get_fallback_font_for(DFont* primary) {
     if (fallback) {
         return fallback;
     }
+    return NULL;
+#else
+    {
+        int want = backend_get_font_size(primary);
+        int i;
+        if (strcmp(s_fb_path, g_font_fallback_path) != 0) {
+            backend_fallback_font_cache_reset();
+            strncpy(s_fb_path, g_font_fallback_path, sizeof(s_fb_path) - 1);
+            s_fb_path[sizeof(s_fb_path) - 1] = '\0';
+        }
+        for (i = 0; i < s_fb_n; i++) {
+            if (s_fb_px[i] == want && s_fb_font[i]) {
+                return s_fb_font[i];
+            }
+        }
+        fallback = backend_load_font_with_weight(g_font_fallback_path, want, "normal");
+        if (fallback && s_fb_n < YUI_FALLBACK_FONT_CACHE) {
+            s_fb_font[s_fb_n] = fallback;
+            s_fb_px[s_fb_n] = want;
+            s_fb_n++;
+        }
+        return fallback;
+    }
 #endif
-
-    return backend_load_font_with_weight(g_font_fallback_path, backend_get_font_size(primary), "normal");
 }
+
+static int backend_simple_symbol_codepoint(const char* text, Uint32* out_cp);
+static int backend_is_simple_symbol_codepoint(Uint32 cp);
 
 // 返回渲染应使用的单一字体；返回 NULL 表示文本需要混合排版。
 // out_fallback 始终接收 fallback 字体（混合路径需要），调用方自行判 NULL。
@@ -480,12 +517,35 @@ static DFont* backend_resolve_render_font(DFont* primary, const char* text, DFon
         return primary;
     }
 
+    /* ASCII 一定在 Roboto/主字体里，不要为测宽去扫 cmap / 打开 emoji 字库 */
+    {
+        const unsigned char* p = (const unsigned char*)text;
+        int ascii = 1;
+        while (*p) {
+            if (*p >= 0x80) {
+                ascii = 0;
+                break;
+            }
+            p++;
+        }
+        if (ascii) {
+            return primary;
+        }
+    }
+    if (backend_simple_symbol_codepoint(text, NULL)) {
+        return primary;
+    }
+
     cursor = text;
     while (*cursor) {
         Uint32 codepoint = 0;
 
         if (!utf8_decode_codepoint(&cursor, &codepoint)) {
             break;
+        }
+        if (codepoint < 0x80u || backend_is_simple_symbol_codepoint(codepoint)) {
+            any_in_primary = 1;
+            continue;
         }
         if (TTF_GlyphIsProvided32(primary, codepoint)) {
             any_in_primary = 1;
@@ -525,6 +585,84 @@ static DFont* backend_resolve_render_font(DFont* primary, const char* text, DFon
         return NULL;  // 混合：需要分段合成
     }
     return primary;
+}
+
+static int backend_is_simple_symbol_codepoint(Uint32 cp) {
+    return cp == 0x2022u || cp == 0x25CFu || cp == 0x25CBu ||
+           cp == 0x00B7u || cp == 0x2219u || cp == 0x30FBu;
+}
+
+/* ● • 等指示点：不走 NotoColorEmoji（OpenFont 可达 1.5s+），画一个圆点纹理 */
+static SDL_Texture* backend_make_symbol_texture(Uint32 cp, int px, Color color) {
+    int size, r, cx, cy, x, y, filled;
+    SDL_Surface* surf;
+    SDL_Texture* tex;
+    Uint32* pixels;
+    Uint32 argb;
+
+    size = px > 4 ? px : 8;
+    if (size > 128) size = 128;
+    filled = (cp != 0x25CBu);
+    r = size / 2 - 1;
+    if (r < 1) r = 1;
+    cx = size / 2;
+    cy = size / 2;
+
+    surf = SDL_CreateRGBSurfaceWithFormat(0, size, size, 32, SDL_PIXELFORMAT_ARGB8888);
+    if (!surf) {
+        return NULL;
+    }
+    SDL_FillRect(surf, NULL, SDL_MapRGBA(surf->format, 0, 0, 0, 0));
+    SDL_LockSurface(surf);
+    pixels = (Uint32*)surf->pixels;
+    argb = ((Uint32)color.a << 24) | ((Uint32)color.r << 16) |
+           ((Uint32)color.g << 8) | (Uint32)color.b;
+    for (y = 0; y < size; y++) {
+        for (x = 0; x < size; x++) {
+            int dx = x - cx;
+            int dy = y - cy;
+            int d2 = dx * dx + dy * dy;
+            int on = 0;
+            if (filled) {
+                on = d2 <= r * r;
+            } else {
+                int r2 = r * r;
+                int ri = r - 1;
+                if (ri < 1) ri = 1;
+                on = d2 <= r2 && d2 >= ri * ri;
+            }
+            if (on) {
+                pixels[y * (surf->pitch / 4) + x] = argb;
+            }
+        }
+    }
+    SDL_UnlockSurface(surf);
+    tex = SDL_CreateTextureFromSurface(renderer, surf);
+    SDL_FreeSurface(surf);
+    if (tex) {
+        SDL_SetTextureBlendMode(tex, SDL_BLENDMODE_BLEND);
+    }
+    return tex;
+}
+
+static int backend_simple_symbol_codepoint(const char* text, Uint32* out_cp) {
+    const char* next;
+    Uint32 cp = 0;
+
+    if (!text || !text[0]) {
+        return 0;
+    }
+    next = text;
+    if (!utf8_decode_codepoint(&next, &cp) || *next) {
+        return 0;
+    }
+    if (!backend_is_simple_symbol_codepoint(cp)) {
+        return 0;
+    }
+    if (out_cp) {
+        *out_cp = cp;
+    }
+    return 1;
 }
 
 static DFont* backend_pick_font_for_codepoint(DFont* primary, DFont* fallback, Uint32 codepoint) {
@@ -1254,6 +1392,7 @@ void cleanup_font_cache() {
         font_cache[i].weight[0] = '\0';
     }
     printf("Font cache cleanup completed\n");
+    backend_fallback_font_cache_reset();
 }
 
 // 在缓存中查找字体（使用哈希表）
@@ -2741,6 +2880,10 @@ int backend_measure_text_width(DFont* font, const char* text) {
         return 0;
     }
 
+    if (backend_simple_symbol_codepoint(text, NULL)) {
+        return backend_get_font_size(font);
+    }
+
     render_font = backend_resolve_render_font(font, text, &fallback);
     if (render_font) {
         if (TTF_SizeUTF8(render_font, text, &w, &h) == 0 && w > 0) {
@@ -2847,6 +2990,19 @@ Texture* backend_render_texture(DFont* font,const char* text,Color color){
                                                         &cached_width, &cached_height);
     if (cached_texture) {
         return cached_texture;
+    }
+
+    {
+        Uint32 scp = 0;
+        if (backend_simple_symbol_codepoint(text, &scp)) {
+            SDL_Texture* sym = backend_make_symbol_texture(scp, font_size_px, color);
+            if (sym) {
+                int width = 0, height = 0;
+                SDL_QueryTexture(sym, NULL, NULL, &width, &height);
+                add_texture_to_cache(font, text, color, font_size_px, sym, width, height, 0);
+                return sym;
+            }
+        }
     }
 
 #ifdef __EMSCRIPTEN__

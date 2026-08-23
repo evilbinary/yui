@@ -192,6 +192,9 @@ void slider_component_set_value(SliderComponent* component, float value) {
     
     component->value = value;
     
+    if (component->layer) {
+        mark_layer_dirty(component->layer, DIRTY_STYLE | DIRTY_COLOR);
+    }
     // 调用回调函数
     if (old_value != value && component->on_value_changed) {
         component->on_value_changed(value, component->user_data);

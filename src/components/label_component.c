@@ -297,19 +297,24 @@ void label_component_render(Layer* layer) {
         return;
     }
 
-    // --- 仅有文本（原逻辑不变） ---
+    // --- 仅有文本：先栅格化，用纹理宽度判断省略号（避免先 SizeUTF8 再 FT_Load_Glyph 两遍） ---
     if (!has_icon) {
         component->has_overflow = 0;
-        const char* display_text = original_text;
-
-        if (layer->font && layer->font->default_font) {
-            Uint32 tm0 = backend_get_ticks();
-            /* 量宽只走 hmetrics，不要为测量再栅格化一张黑字纹理 */
-            int tw = backend_measure_text_width(layer->font->default_font, original_text);
-            t_measure = backend_get_ticks() - tm0;
-            int avail_w = layer->rect.w - (layer->rect.w > 10 ? 10 : 0);
-            if (tw > avail_w) {
-                    component->has_overflow = 1;
+        int avail_w = layer->rect.w - (layer->rect.w > 10 ? 10 : 0);
+        Uint32 tr0 = backend_get_ticks();
+        Texture* text_texture = render_text(layer, original_text, text_color);
+        t_raster = backend_get_ticks() - tr0;
+        if (text_texture) {
+            int text_width, text_height;
+            backend_query_texture(text_texture, NULL, NULL, &text_width, &text_height);
+            int nat_w = text_width / density;
+            int nat_h = text_height / density;
+            if (nat_w > avail_w && layer->font && layer->font->default_font) {
+                component->has_overflow = 1;
+                backend_render_text_destroy(text_texture);
+                text_texture = NULL;
+                {
+                    Uint32 tm0 = backend_get_ticks();
                     int byte_len = (int)strlen(original_text);
                     char* truncated = malloc((size_t)byte_len + 4);
                     while (byte_len > 0) {
@@ -323,46 +328,22 @@ void label_component_render(Layer* layer) {
                         }
                         byte_len = utf8_prev_prefix_bytes(original_text, safe_len);
                     }
+                    t_measure = backend_get_ticks() - tm0;
                     if (byte_len > 0) {
-                        Texture* final_tex = render_text(layer, truncated, text_color);
-                        if (final_tex) {
-                            int ftw, fth;
-                            backend_query_texture(final_tex, NULL, NULL, &ftw, &fth);
-                            Rect text_rect;
-                            text_rect.h = fth / density;
-                            text_rect.w = ftw / density;
-                            text_rect.y = layer->rect.y + (layer->rect.h - text_rect.h) / 2;
-                            switch (component->text_alignment) {
-                                case LAYOUT_LEFT:
-                                case LAYOUT_ALIGN_LEFT:
-                                    text_rect.x = layer->rect.x + 5; break;
-                                case LAYOUT_RIGHT:
-                                case LAYOUT_ALIGN_RIGHT:
-                                    text_rect.x = layer->rect.x + layer->rect.w - text_rect.w - 5; break;
-                                default:
-                                    text_rect.x = layer->rect.x + (layer->rect.w - text_rect.w) / 2; break;
-                            }
-                            if (text_rect.x < layer->rect.x) text_rect.x = layer->rect.x;
-                            if (text_rect.y < layer->rect.y) text_rect.y = layer->rect.y;
-                            backend_render_text_copy(final_tex, NULL, &text_rect);
-                            backend_render_text_destroy(final_tex);
-                        }
-                        display_text = NULL;
+                        tr0 = backend_get_ticks();
+                        text_texture = render_text(layer, truncated, text_color);
+                        t_raster += backend_get_ticks() - tr0;
                     }
                     free(truncated);
+                }
+                if (text_texture) {
+                    backend_query_texture(text_texture, NULL, NULL, &text_width, &text_height);
+                    nat_w = text_width / density;
+                    nat_h = text_height / density;
+                }
             }
-        }
-
-        if (display_text) {
-            Uint32 tr0 = backend_get_ticks();
-            Texture* text_texture = render_text(layer, display_text, text_color);
-            t_raster = backend_get_ticks() - tr0;
             if (text_texture) {
-                int text_width, text_height;
-                backend_query_texture(text_texture, NULL, NULL, &text_width, &text_height);
                 Rect text_rect;
-                int nat_w = text_width / density;
-                int nat_h = text_height / density;
                 text_rect.w = nat_w;
                 text_rect.h = nat_h;
                 text_rect.y = layer->rect.y + (layer->rect.h - text_rect.h) / 2;
