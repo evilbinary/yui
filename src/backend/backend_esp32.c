@@ -135,14 +135,8 @@ const void* backend_esp32_bc_rom_base(size_t* psize) {
 }
 
 /* 编译期宏：是否启用 LCD 软件 framebuffer（RGB565，240x240 约 115KB）。
- *   - 默认 0（不启用）：不分配 s_fb，backend_render_* 不跳过，而是经
- *     direct_draw_point 逐点直写 LCD；无面板（QEMU/headless）时像素落点
- *     为空操作，但渲染调用链（组件渲染/字体光栅化/逐像素循环）完整执行。
- *     RAM 占用最小，适合真实 LCD 硬件与内存紧张场景。
- *   - 定义 YUI_ESP32_LCD_BUFFER=1 时分配 s_fb，backend_render_* 写入
- *     framebuffer，经脏矩形批量推送（esp32_flush_dirty）。
- *   - QEMU 构建（YUI_ESP32_QEMU）强制为 1，但 s_fb 不 calloc——指向虚拟
- *     RGB 面板的专属 framebuffer（不占内部 SRAM），见 backend_init。 */
+ *   - 默认 0（不启用）：不分配 s_fb，backend_render_* 经 blit 直写 LCD。
+ *   - QEMU 强制为 1，s_fb 指向虚拟 RGB 面板显存。 */
 #ifdef YUI_ESP32_QEMU
 #ifndef YUI_ESP32_LCD_BUFFER
 #define YUI_ESP32_LCD_BUFFER 1
@@ -314,7 +308,6 @@ static int s_touch_x = 0, s_touch_y = 0;
 static void esp32_flush_dirty(void) {
     if (!s_has_dirty) return;
     if (!s_fb && s_fb_seg_count == 0) { dirty_reset(); return; }
-    /* 分段 framebuffer：按段边界拆分成行 run，保证每 run 内行连续可一次推。 */
     if (s_fb_seg_count > 0) {
         int y = s_dirty.y;
         int y_end = s_dirty.y + s_dirty.h;
@@ -1386,7 +1379,6 @@ void backend_tick(Layer* ui_root) {
     for (i = 0; i < s_update_cb_count; i++) {
         if (s_update_cb[i]) s_update_cb[i]();
     }
-    // backend_render_clear_color(30, 60, 120, 255);
     if (s_frame_count == 0) {
         /* 根层透明 + 不每帧 clear：首帧必须把 GRAM 初始化成全黑，
          * 否则 LCD 未写入区域保持出厂灰/白，产生「灰黑交替刷屏」观感。 */

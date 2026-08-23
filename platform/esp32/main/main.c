@@ -219,8 +219,6 @@ static void raw_draw_full(uint16_t color) {
 }
 
 /* 推一块 RGB565 矩形到屏幕（x,y 为源屏左上角，w/h 为宽高，px 指向矩形源）。
- * 按 16 行切块：每块 CASET/RASET/RAMWR，避免单事务超过 SPI 缓冲。 */
-/* 推一块 RGB565 矩形到屏幕（x,y 为源屏左上角，w/h 为宽高，px 指向矩形源）。
  * 按 16 行切块：每块 CASET/RASET/RAMWR，避免单事务超过 SPI 缓冲。
  * ST7789 按16bpp高位字节在先接收（big-endian 字节序），ESP32 uint16 内存是
  * 小端（低字节在前），发送前必须逐像素交换字节，否则颜色错乱（如绿色变品红）。
@@ -697,8 +695,8 @@ void app_main(void) {
     layout_layer(ui_root);
     printf("YUI: enter main loop\n");
 
-    /* QEMU：把虚拟 RGB 面板的专属显存（0x20000000，不占 SRAM）注入 s_fb。
-     * 真机直写模式：仅注入尺寸（fb=NULL 走 blit），否则 s_fb_w=0 会裁掉 fill。 */
+    /* QEMU：把虚拟 RGB 面板的专属显存注入 s_fb。
+     * 真机直写：只注入尺寸（fb=NULL 走 blit），否则 s_fb_w=0 会裁掉 fill。 */
 #ifdef YUI_ESP32_QEMU
     {
         void* qfb = NULL;
