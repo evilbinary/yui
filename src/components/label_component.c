@@ -223,6 +223,8 @@ void label_component_render(Layer* layer) {
     if (!layer || !layer->component) return;
 
     LabelComponent* component = (LabelComponent*)layer->component;
+    Uint32 t0 = backend_get_ticks();
+    Uint32 t_erase = 0, t_measure = 0, t_raster = 0, t_blit = 0;
 
     /* 文字变化时父 View 不再整块重刷，须在 Label 自己的 rect 里擦旧字 */
     if (layer->bg_color.a > 0) {
@@ -240,6 +242,7 @@ void label_component_render(Layer* layer) {
             backend_render_fill_rect(&layer->rect, p->bg_color);
         }
     }
+    t_erase = backend_get_ticks() - t0;
 
     const char* original_text = layer_get_text(layer);
     int has_text = original_text && original_text[0] != '\0';
@@ -300,14 +303,12 @@ void label_component_render(Layer* layer) {
         const char* display_text = original_text;
 
         if (layer->font && layer->font->default_font) {
-            Texture* tex = backend_render_texture(layer->font->default_font, original_text, (Color){0,0,0,255});
-            if (tex) {
-                int tw;
-                backend_query_texture(tex, NULL, NULL, &tw, NULL);
-                backend_render_text_destroy(tex);
-
-                int avail_w = layer->rect.w - (layer->rect.w > 10 ? 10 : 0);
-                if (tw / density > avail_w) {
+            Uint32 tm0 = backend_get_ticks();
+            /* 量宽只走 hmetrics，不要为测量再栅格化一张黑字纹理 */
+            int tw = backend_measure_text_width(layer->font->default_font, original_text);
+            t_measure = backend_get_ticks() - tm0;
+            int avail_w = layer->rect.w - (layer->rect.w > 10 ? 10 : 0);
+            if (tw > avail_w) {
                     component->has_overflow = 1;
                     int byte_len = (int)strlen(original_text);
                     char* truncated = malloc((size_t)byte_len + 4);
@@ -317,12 +318,8 @@ void label_component_render(Layer* layer) {
                         memcpy(truncated, original_text, (size_t)safe_len);
                         truncated[safe_len] = '\0';
                         strcat(truncated, "...");
-                        Texture* short_tex = backend_render_texture(layer->font->default_font, truncated, (Color){0,0,0,255});
-                        if (short_tex) {
-                            int stw;
-                            backend_query_texture(short_tex, NULL, NULL, &stw, NULL);
-                            backend_render_text_destroy(short_tex);
-                            if (stw / density <= avail_w) break;
+                        if (backend_measure_text_width(layer->font->default_font, truncated) <= avail_w) {
+                            break;
                         }
                         byte_len = utf8_prev_prefix_bytes(original_text, safe_len);
                     }
@@ -353,12 +350,13 @@ void label_component_render(Layer* layer) {
                         display_text = NULL;
                     }
                     free(truncated);
-                }
             }
         }
 
         if (display_text) {
+            Uint32 tr0 = backend_get_ticks();
             Texture* text_texture = render_text(layer, display_text, text_color);
+            t_raster = backend_get_ticks() - tr0;
             if (text_texture) {
                 int text_width, text_height;
                 backend_query_texture(text_texture, NULL, NULL, &text_width, &text_height);
@@ -393,7 +391,9 @@ void label_component_render(Layer* layer) {
                     if (text_rect.w < 1) text_rect.w = 1;
                     text_rect.y = layer->rect.y;
                 }
+                Uint32 tb0 = backend_get_ticks();
                 backend_render_text_copy(text_texture, NULL, &text_rect);
+                t_blit = backend_get_ticks() - tb0;
                 backend_render_text_destroy(text_texture);
             }
         }
@@ -404,6 +404,16 @@ void label_component_render(Layer* layer) {
                 int mx, my;
                 backend_get_pointer_state(&mx, &my);
                 show_tooltip(component, mx, my);
+            }
+        }
+        {
+            Uint32 total = backend_get_ticks() - t0;
+            if (total >= 8) {
+                const char* lid = layer->id ? layer->id : "?";
+                const char* txt = original_text ? original_text : "";
+                printf("YUI: label %s erase=%ums measure=%ums raster=%ums blit=%ums total=%ums %dx%d \"%s\"\n",
+                       lid, (unsigned)t_erase, (unsigned)t_measure, (unsigned)t_raster, (unsigned)t_blit,
+                       (unsigned)total, layer->rect.w, layer->rect.h, txt);
             }
         }
         return;
@@ -436,14 +446,9 @@ void label_component_render(Layer* layer) {
     {
         int need_trunc = 0;
         if (layer->font && layer->font->default_font) {
-            Texture* mt = backend_render_texture(layer->font->default_font, original_text, (Color){0,0,0,255});
-            if (mt) {
-                int mw;
-                backend_query_texture(mt, NULL, NULL, &mw, NULL);
-                backend_render_text_destroy(mt);
-                if (mw / density > avail_text_w) {
-                    need_trunc = 1;
-                }
+            int mw = backend_measure_text_width(layer->font->default_font, original_text);
+            if (mw > avail_text_w) {
+                need_trunc = 1;
             }
         }
 
@@ -456,12 +461,8 @@ void label_component_render(Layer* layer) {
                 memcpy(truncated, original_text, (size_t)safe_len);
                 truncated[safe_len] = '\0';
                 strcat(truncated, "...");
-                Texture* st = backend_render_texture(layer->font->default_font, truncated, (Color){0,0,0,255});
-                if (st) {
-                    int sw;
-                    backend_query_texture(st, NULL, NULL, &sw, NULL);
-                    backend_render_text_destroy(st);
-                    if (sw / density <= avail_text_w) break;
+                if (backend_measure_text_width(layer->font->default_font, truncated) <= avail_text_w) {
+                    break;
                 }
                 byte_len = utf8_prev_prefix_bytes(original_text, safe_len);
             }

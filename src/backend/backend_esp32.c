@@ -526,6 +526,9 @@ void backend_render_text_destroy(Texture* texture) {
 #define YUI_SPI_LINE_MAX 320
 static uint16_t s_spi_line[YUI_SPI_LINE_MAX];
 static uint16_t s_spi_block[YUI_SPI_LINE_MAX * 16];
+/* Label 先 fill 再 blit 字：透明像素用这次底色填，整行一次 SPI，避免字形镂空拆事务 */
+static uint16_t s_text_backdrop_px;
+static int s_text_backdrop_valid;
 
 /* fill 纯色大块：合并为 16 行块 SPI 事务，避免每行一次 setcol/ramwr 开销 */
 static void spi_draw_block(int x, int y, int w, int h, uint16_t px)
@@ -633,6 +636,10 @@ void backend_render_fill_rect(Rect* rect, Color color) {
     if (color.a == 0 || (!s_blit_rect && !s_panel)) return;
     {
         uint16_t px = color_to_rgb565(color);
+        if (color.a == 255) {
+            s_text_backdrop_px = px;
+            s_text_backdrop_valid = 1;
+        }
         spi_draw_block(r.x, r.y, r.w, r.h, px);
     }
 #else
@@ -1173,8 +1180,44 @@ void backend_render_text_copy(Texture* texture, const Rect* srcrect, const Rect*
     }
     dirty_add(dst.x, dst.y, dst.w, dst.h);
 #elif defined(ESP_PLATFORM) && !defined(YUI_ESP32_QEMU)
-    /* 行缓冲 SPI：先合成一行 RGB565，再一次 draw_bitmap */
+    /* 有底色时按 16 行块合成 RGB565（透明处填 backdrop），一次 RAMWR 多行。
+     * 无底色则退回按不透明 run 拆行，避免把未擦除区域写成黑块。 */
     if (!s_blit_rect && !s_panel) return;
+    if (s_text_backdrop_valid && dst.w > 0 && dst.w <= YUI_SPI_LINE_MAX) {
+        int row;
+        uint16_t bg = s_text_backdrop_px;
+        for (row = 0; row < dst.h; row += 16) {
+            int hh = dst.h - row;
+            int yy, xx;
+            if (hh > 16) hh = 16;
+            for (yy = 0; yy < hh; yy++) {
+                int sy = src_r.y + ((row + yy) * src_r.h) / (dstrect->h > 0 ? dstrect->h : 1);
+                uint16_t* out = s_spi_block + (size_t)yy * dst.w;
+                if (sy < 0 || sy >= sh) {
+                    for (xx = 0; xx < dst.w; xx++) out[xx] = bg;
+                    continue;
+                }
+                for (xx = 0; xx < dst.w; xx++) {
+                    int sx = src_r.x + (xx * src_r.w) / (dstrect->w > 0 ? dstrect->w : 1);
+                    size_t si;
+                    unsigned a;
+                    if (sx < 0 || sx >= sw) {
+                        out[xx] = bg;
+                        continue;
+                    }
+                    si = ((size_t)sy * sw + sx) * 4;
+                    a = src[si + 3];
+                    if (a == 0) {
+                        out[xx] = bg;
+                    } else {
+                        out[xx] = color_to_rgb565(
+                            (Color){src[si], src[si + 1], src[si + 2], 255});
+                    }
+                }
+            }
+            panel_blit(dst.x, dst.y + row, dst.w, hh, s_spi_block);
+        }
+    } else {
     for (y = 0; y < dst.h; y++) {
         int sy = src_r.y + (y * src_r.h) / (dstrect->h > 0 ? dstrect->h : 1);
         int run_x0 = -1, run_n = 0;
@@ -1209,6 +1252,7 @@ void backend_render_text_copy(Texture* texture, const Rect* srcrect, const Rect*
             spi_draw_line_buf(dst.x + run_x0, dst.y + y, run_n, s_spi_line);
         }
         if ((y & 15) == 15) vTaskDelay(0);
+    }
     }
 #else
     /* 直接写屏：逐点绘制（无混合读回，仅按 alpha 跳过透明像素） */

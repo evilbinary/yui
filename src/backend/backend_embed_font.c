@@ -150,6 +150,73 @@ static void cache_store(Texture* tex, DFont* font, const char* text, Color color
     g_cache[slot].last_used = ++g_cache_tick;
 }
 
+/* 字形灰度缓存：时钟每分钟只换一两个数字，避免反复 stbtt_GetCodepointBitmap */
+#define EMBED_GLYPH_CACHE_SLOTS 16
+typedef struct {
+    EmbedFont* ef;
+    int cp;
+    unsigned char* bits;
+    int w, h;
+    uint32_t last_used;
+} EmbedGlyphSlot;
+static EmbedGlyphSlot g_glyphs[EMBED_GLYPH_CACHE_SLOTS];
+static uint32_t g_glyph_tick;
+
+static void glyph_cache_evict(int i) {
+    if (g_glyphs[i].bits) {
+        stbtt_FreeBitmap(g_glyphs[i].bits, NULL);
+        g_glyphs[i].bits = NULL;
+    }
+    g_glyphs[i].ef = NULL;
+    g_glyphs[i].cp = 0;
+}
+
+static void glyph_cache_drop_font(EmbedFont* ef) {
+    int i;
+    for (i = 0; i < EMBED_GLYPH_CACHE_SLOTS; i++) {
+        if (g_glyphs[i].ef == ef) {
+            glyph_cache_evict(i);
+        }
+    }
+}
+
+static unsigned char* glyph_cache_get(EmbedFont* ef, int cp, int* gw, int* gh) {
+    int i;
+    int victim = 0;
+    uint32_t oldest = 0xFFFFFFFFu;
+    unsigned char* bm;
+    int w = 0, h = 0;
+
+    for (i = 0; i < EMBED_GLYPH_CACHE_SLOTS; i++) {
+        if (g_glyphs[i].ef == ef && g_glyphs[i].cp == cp && g_glyphs[i].bits) {
+            g_glyphs[i].last_used = ++g_glyph_tick;
+            *gw = g_glyphs[i].w;
+            *gh = g_glyphs[i].h;
+            return g_glyphs[i].bits;
+        }
+        if (!g_glyphs[i].bits) {
+            victim = i;
+            oldest = 0;
+        } else if (g_glyphs[i].last_used < oldest) {
+            oldest = g_glyphs[i].last_used;
+            victim = i;
+        }
+    }
+
+    bm = stbtt_GetCodepointBitmap(&ef->info, ef->scale, ef->scale, cp, &w, &h, 0, 0);
+    if (!bm) return NULL;
+    glyph_cache_evict(victim);
+    g_glyphs[victim].ef = ef;
+    g_glyphs[victim].cp = cp;
+    g_glyphs[victim].bits = bm;
+    g_glyphs[victim].w = w;
+    g_glyphs[victim].h = h;
+    g_glyphs[victim].last_used = ++g_glyph_tick;
+    *gw = w;
+    *gh = h;
+    return bm;
+}
+
 /* ====================== 文件读取 ====================== */
 static unsigned char* embed_read_file(const char* path, size_t* out_size) {
     FILE* f;
@@ -262,6 +329,7 @@ void embed_font_free(DFont* font) {
     if (!font) return;
     ef = (EmbedFont*)font->priv;
     if (ef) {
+        glyph_cache_drop_font(ef);
         if (ef->owns_data && ef->data) free(ef->data);
         free(ef);
     }
@@ -368,7 +436,7 @@ Texture* embed_font_render_nocache(DFont* font, const char* text, Color color) {
         stbtt_GetCodepointHMetrics(&ef->info, cp, &advance, &lsb);
         stbtt_GetCodepointBitmapBox(&ef->info, cp, ef->scale, ef->scale, &x0, &y0, &x1, &y1);
         gw = x1 - x0; gh = y1 - y0;
-        glyph_bitmap = stbtt_GetCodepointBitmap(&ef->info, ef->scale, ef->scale, cp, &gw, &gh, 0, 0);
+        glyph_bitmap = glyph_cache_get(ef, cp, &gw, &gh);
         if (glyph_bitmap) {
             dst_x = pen_x + x0 - min_x;
             dst_y = baseline + y0 - min_y;
@@ -388,7 +456,6 @@ Texture* embed_font_render_nocache(DFont* font, const char* text, Color color) {
                     bitmap[dst_index + 3] = (unsigned char)((alpha * color.a) / 255);
                 }
             }
-            stbtt_FreeBitmap(glyph_bitmap, NULL);
         }
         pen_x += (int)(advance * ef->scale);
     }
