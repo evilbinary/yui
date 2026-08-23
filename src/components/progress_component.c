@@ -30,6 +30,18 @@ static void render_circle_arc(int center_x, int center_y, int radius, int start_
     backend_render_arc(center_x, center_y, radius, (float)start_angle, (float)end_angle, color, line_width);
 }
 
+/* 圆环中空处应露出父层背景。DIRTY 模式下每帧只画新百分比，必须先擦掉旧字。 */
+static Color progress_hole_color(Layer* layer) {
+    Layer* p = layer ? layer->parent : NULL;
+    while (p) {
+        if (p->bg_color.a == 255) {
+            return p->bg_color;
+        }
+        p = p->parent;
+    }
+    return (Color){255, 255, 255, 255};
+}
+
 // 创建进度条组件
 ProgressComponent* progress_component_create(Layer* layer) {
     if (!layer) {
@@ -397,6 +409,21 @@ void progress_component_render(Layer* layer) {
         if (radius <= 0) {
             return; // 半径太小，无法绘制
         }
+
+        /* 先填满内圆（父层底色），擦除上一帧百分比，避免脏模式文字重叠 */
+        {
+            int inner_r = radius - component->circle_width;
+            if (inner_r < 4) {
+                inner_r = 4;
+            }
+            Rect hole_rect = {
+                center_x - inner_r,
+                center_y - inner_r,
+                inner_r * 2,
+                inner_r * 2
+            };
+            backend_render_rounded_rect(&hole_rect, progress_hole_color(layer), inner_r);
+        }
         
         // 绘制背景圆环（灰色）
         render_circle_arc(center_x, center_y, radius, 0, 360, layer->bg_color, component->circle_width);
@@ -461,7 +488,9 @@ void progress_component_render(Layer* layer) {
             if (layer->color.a > 0) {
                 text_color = layer->color;
             } else {
-                text_color = (Color){255, 255, 255, 255}; // 默认白色
+                Color hole = progress_hole_color(layer);
+                int lum = (hole.r * 299 + hole.g * 587 + hole.b * 114) / 1000;
+                text_color = lum > 140 ? (Color){0, 0, 0, 255} : (Color){255, 255, 255, 255};
             }
         } else {
             text_color = (Color){0, 0, 0, 255};
