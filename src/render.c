@@ -446,7 +446,9 @@ static void render_layer_impl(Layer* layer, int force, RenderCtx* ctx) {
     }
     /* skip_draw 时本层未重绘背景，不能 force 子层（否则等于整页刷） */
     int force_children = skip_draw ? 0
-        : ((force || layer_paints_over_children(layer)) && !root_bg_skipped);
+        : ((force || layer_paints_over_children(layer) ||
+            (layer->dirty_flags & (DIRTY_RECT | DIRTY_LAYOUT | DIRTY_LAYOUT_RECT | DIRTY_CHILDREN))) &&
+           !root_bg_skipped);
 
     for (int i = 0; i < layer->child_count; i++) {
         if (!layer->children) {
