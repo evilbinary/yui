@@ -129,20 +129,39 @@ function readMeta(path, fallback) {
 }
 // ---------- Grid UI ----------
 
+function gridAvailWidth() {
+    var w = YUI.getProperty("launcher_content", "width") || 0;
+    if (w < 50) w = YUI.getProperty("launcher_root", "width") || 0;
+    if (w < 50) {
+        var win = YUI.getWindowSize();
+        w = (win && win.width) || 600;
+    }
+    /* launcher_content padding [8,12,8,12] */
+    return Math.max(CELL_MIN * 2, w - 24);
+}
+
 function buildGrid(gridId, demos) {
     if (demos.length === 0) return;
-    var win = YUI.getWindowSize();
-    var contentW = YUI.getProperty("launcher_content", "width") || win.width || 600;
-    YUI.log('contentW = ' + contentW);
-    var pad = 24;
-    var availW = Math.max(200, contentW - pad);
-    var cols = Math.max(2, Math.min(8, Math.floor(availW / CELL_MIN)));
+    var availW = gridAvailWidth();
+    var cols = Math.max(2, Math.min(8, Math.floor((availW + GRID_SPACING) / (CELL_MIN + GRID_SPACING))));
     var cell = Math.floor((availW - GRID_SPACING * (cols - 1)) / cols);
-    cell = Math.min(cell, CELL_MAX);
-    var gridW = cols * cell + (cols - 1) * GRID_SPACING;
+    if (cell > CELL_MAX) {
+        cols = Math.max(2, Math.min(8, Math.floor((availW + GRID_SPACING) / (CELL_MAX + GRID_SPACING))));
+        cell = Math.floor((availW - GRID_SPACING * (cols - 1)) / cols);
+    }
+    if (cell < 1) cell = CELL_MIN;
     var rows = Math.ceil(demos.length / cols);
     var gridH = rows * cell + (rows - 1) * GRID_SPACING;
-    YUI.update({ target: gridId, change: { width: gridW, height: gridH, children: null } });
+    /* width=0：跟父层撑满，避免 onLoad 时把 oversized 宽写成 fixed_width */
+    YUI.update({
+        target: gridId,
+        change: {
+            width: 0,
+            height: gridH,
+            layout: { type: "grid", columns: cols, gap: GRID_SPACING },
+            children: null
+        }
+    });
     for (var i = 0; i < demos.length; i++) {
         var d = demos[i];
         var key = "dm_" + i + "_" + d._cat;
