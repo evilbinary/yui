@@ -685,11 +685,113 @@ static int backend_text_fits_font(DFont* font, const char* text) {
     return TTF_SizeUTF8(font, text, &w, &h) == 0 && w > 0 && h > 0;
 }
 
-static SDL_Surface* backend_render_blended_utf8(DFont* font, const char* text, SDL_Color color) {
-    if (!backend_text_fits_font(font, text)) {
+#define YUI_FONT_BLOB_SLOTS 8
+typedef struct {
+    char path[YUI_MAX_PATH];
+    unsigned char* data;
+    int size;
+} FontBlob;
+static FontBlob s_font_blobs[YUI_FONT_BLOB_SLOTS];
+
+static int backend_font_blob_get(const char* path, const void** out, int* out_len) {
+    int i, empty = -1, n;
+    SDL_RWops* rw;
+    unsigned char* buf;
+
+    if (!path || !path[0]) {
+        return 0;
+    }
+    for (i = 0; i < YUI_FONT_BLOB_SLOTS; i++) {
+        if (s_font_blobs[i].data && strcmp(s_font_blobs[i].path, path) == 0) {
+            *out = s_font_blobs[i].data;
+            *out_len = s_font_blobs[i].size;
+            return 1;
+        }
+        if (!s_font_blobs[i].data && empty < 0) {
+            empty = i;
+        }
+    }
+    if (empty < 0) {
+        empty = 0;
+        free(s_font_blobs[0].data);
+        s_font_blobs[0].data = NULL;
+    }
+    rw = SDL_RWFromFile(path, "rb");
+    if (!rw) {
+        return 0;
+    }
+    n = (int)SDL_RWsize(rw);
+    if (n <= 0) {
+        SDL_RWclose(rw);
+        return 0;
+    }
+    buf = (unsigned char*)malloc((size_t)n);
+    if (!buf) {
+        SDL_RWclose(rw);
+        return 0;
+    }
+    if ((int)SDL_RWread(rw, buf, 1, (size_t)n) != n) {
+        free(buf);
+        SDL_RWclose(rw);
+        return 0;
+    }
+    SDL_RWclose(rw);
+    strncpy(s_font_blobs[empty].path, path, sizeof(s_font_blobs[empty].path) - 1);
+    s_font_blobs[empty].path[sizeof(s_font_blobs[empty].path) - 1] = '\0';
+    s_font_blobs[empty].data = buf;
+    s_font_blobs[empty].size = n;
+    *out = buf;
+    *out_len = n;
+    return 1;
+}
+
+static void backend_apply_font_options(TTF_Font* font) {
+    if (!font) {
+        return;
+    }
+#if defined(__YIYIYA__)
+    /* T113：autohinter + 灰度 AA 每个字形可达数百毫秒；关 hinting/kerning */
+    TTF_SetFontHinting(font, TTF_HINTING_NONE);
+    TTF_SetFontKerning(font, 0);
+#else
+    TTF_SetFontHinting(font, TTF_HINTING_LIGHT);
+#endif
+    TTF_SetFontOutline(font, 0);
+}
+
+static TTF_Font* backend_open_ttf(const char* path, int pt) {
+    const void* data = NULL;
+    int len = 0;
+    SDL_RWops* rw;
+    TTF_Font* font;
+
+    if (!path || pt <= 0) {
         return NULL;
     }
+    if (!backend_font_blob_get(path, &data, &len)) {
+        return NULL;
+    }
+    rw = SDL_RWFromConstMem(data, len);
+    if (!rw) {
+        return NULL;
+    }
+    font = TTF_OpenFontRW(rw, 1, pt);
+    if (font) {
+        backend_apply_font_options(font);
+    }
+    return font;
+}
+
+static SDL_Surface* backend_render_blended_utf8(DFont* font, const char* text, SDL_Color color) {
+    if (!font || !text || !text[0]) {
+        return NULL;
+    }
+    /* 不要先 SizeUTF8 再 Render：SDL_ttf 内部还会 Size 一遍，T113 上等于每个字形 FT_Load_Glyph 两次 */
+#if defined(__YIYIYA__)
+    return TTF_RenderUTF8_Solid(font, text, color);
+#else
     return TTF_RenderUTF8_Blended(font, text, color);
+#endif
 }
 
 #ifdef __EMSCRIPTEN__
@@ -1390,6 +1492,12 @@ void cleanup_font_cache() {
         font_cache[i].font_path[0] = '\0';
         font_cache[i].size = 0;
         font_cache[i].weight[0] = '\0';
+    }
+    for (int b = 0; b < YUI_FONT_BLOB_SLOTS; b++) {
+        free(s_font_blobs[b].data);
+        s_font_blobs[b].data = NULL;
+        s_font_blobs[b].size = 0;
+        s_font_blobs[b].path[0] = '\0';
     }
     printf("Font cache cleanup completed\n");
     backend_fallback_font_cache_reset();
@@ -2639,6 +2747,9 @@ static TTF_Font* emscripten_open_font_file(const char* path, int size)
     }
 
     font = TTF_OpenFontRW(rw, 1, size * yui_density);
+    if (font) {
+        backend_apply_font_options(font);
+    }
     return font;
 }
 #endif
@@ -2707,18 +2818,18 @@ DFont* backend_load_font_with_weight(char* font_path,int size,const char* weight
                 snprintf(full_path, sizeof(full_path), "%.*s-Bold%s", base_len, font_path, ext);
             }
         }
-        default_font = TTF_OpenFont(full_path, size*yui_density);
+        default_font = backend_open_ttf(full_path, size*yui_density);
 
         // 如果粗体字体不存在，尝试其他粗体字体
         if (!default_font) {
-            default_font = TTF_OpenFont("assets/Roboto-Bold.ttf", size*yui_density);
+            default_font = backend_open_ttf("assets/Roboto-Bold.ttf", size*yui_density);
         }
         if (!default_font) {
-            default_font = TTF_OpenFont("app/assets/Roboto-Bold.ttf", size*yui_density);
+            default_font = backend_open_ttf("app/assets/Roboto-Bold.ttf", size*yui_density);
         }
         if (!default_font) {
             // 如果找不到粗体字体文件，使用normal字体并设置样式
-            default_font = TTF_OpenFont(font_path, size*yui_density);
+            default_font = backend_open_ttf(font_path, size*yui_density);
             if (default_font) {
                 TTF_SetFontStyle(default_font, TTF_STYLE_BOLD);
             }
@@ -2733,23 +2844,23 @@ DFont* backend_load_font_with_weight(char* font_path,int size,const char* weight
                 snprintf(full_path, sizeof(full_path), "%.*s-Light%s", base_len, font_path, ext);
             }
         }
-        default_font = TTF_OpenFont(full_path, size*yui_density);
+        default_font = backend_open_ttf(full_path, size*yui_density);
 
         if (!default_font) {
-            default_font = TTF_OpenFont("assets/Roboto-Light.ttf", size*yui_density);
+            default_font = backend_open_ttf("assets/Roboto-Light.ttf", size*yui_density);
         }
         if (!default_font) {
-            default_font = TTF_OpenFont("app/assets/Roboto-Light.ttf", size*yui_density);
+            default_font = backend_open_ttf("app/assets/Roboto-Light.ttf", size*yui_density);
         }
         if (!default_font) {
-            default_font = TTF_OpenFont(font_path, size*yui_density);
+            default_font = backend_open_ttf(font_path, size*yui_density);
             if (default_font) {
                 TTF_SetFontStyle(default_font, TTF_STYLE_NORMAL);
             }
         }
     } else {
         // normal或其他情况，使用普通字体
-        default_font = TTF_OpenFont(font_path,size*yui_density);
+        default_font = backend_open_ttf(font_path,size*yui_density);
     }
 #endif
 
@@ -2758,15 +2869,15 @@ DFont* backend_load_font_with_weight(char* font_path,int size,const char* weight
 #ifndef __EMSCRIPTEN__
         printf("Warning: Could not load font '%s', trying fallback fonts\n", font_path);
         // 非 Emscripten 环境下的备用字体
-        default_font = TTF_OpenFont("arial.ttf",size*yui_density);
+        default_font = backend_open_ttf("arial.ttf",size*yui_density);
         if (!default_font) {
-            default_font = TTF_OpenFont("Arial.ttf",size*yui_density);
+            default_font = backend_open_ttf("Arial.ttf",size*yui_density);
         }
         if (!default_font) {
-            default_font = TTF_OpenFont("assets/Roboto-Regular.ttf",size*yui_density);
+            default_font = backend_open_ttf("assets/Roboto-Regular.ttf",size*yui_density);
         }
         if (!default_font) {
-            default_font = TTF_OpenFont("app/assets/Roboto-Regular.ttf",size*yui_density);
+            default_font = backend_open_ttf("app/assets/Roboto-Regular.ttf",size*yui_density);
         }
 #else
         // Emscripten 环境的备用字体已经在上面的 SDL_RWops 代码中处理了
@@ -2775,8 +2886,7 @@ DFont* backend_load_font_with_weight(char* font_path,int size,const char* weight
     }
     
     if (default_font) {
-        TTF_SetFontHinting(default_font, TTF_HINTING_LIGHT); 
-        TTF_SetFontOutline(default_font, 0); // 无轮廓
+        backend_apply_font_options(default_font);
         
         add_font_to_cache(font_path, size, weight, default_font);
         LOGD("font", "opened: %s (size: %d, weight: %s) -> %p",
