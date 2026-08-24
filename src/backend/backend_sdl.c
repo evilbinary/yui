@@ -37,6 +37,11 @@
 #include <emscripten.h>
 #endif
 
+#if defined(__YIYIYA__)
+#include <ft2build.h>
+#include FT_FREETYPE_H
+#endif
+
 #define WINDOW_WIDTH 1000
 #define MAX_TOUCHES 10
 #define MAX_UPDATE_CALLBACKS 16
@@ -821,25 +826,12 @@ static TTF_Font* backend_open_ttf(const char* path, int pt) {
     return font;
 }
 
-static SDL_Surface* backend_render_blended_utf8(DFont* font, const char* text, SDL_Color color) {
-    if (!font || !text || !text[0]) {
-        return NULL;
-    }
-    /* 不要先 SizeUTF8 再 Render：SDL_ttf 内部还会 Size 一遍，T113 上等于每个字形 FT_Load_Glyph 两次 */
-#if defined(__YIYIYA__)
-    return TTF_RenderUTF8_Solid(font, text, color);
-#else
-    return TTF_RenderUTF8_Blended(font, text, color);
-#endif
-}
-
-#ifdef __EMSCRIPTEN__
-
 static int backend_is_emoji_codepoint(Uint32 codepoint) {
     return (codepoint >= 0x1F300 && codepoint <= 0x1FAFF)
         || (codepoint >= 0x2600 && codepoint <= 0x27BF)
         || (codepoint >= 0x2300 && codepoint <= 0x23FF)
         || (codepoint >= 0x2B50 && codepoint <= 0x2B55)
+        || (codepoint >= 0x1F000 && codepoint <= 0x1F2FF)
         || codepoint == 0x2764;
 }
 
@@ -866,6 +858,286 @@ static int backend_text_contains_emoji(const char* text) {
     }
     return 0;
 }
+
+static int backend_text_is_emoji_only(const char* text) {
+    const char* cursor = text;
+    int any = 0;
+
+    if (!text || !text[0]) {
+        return 0;
+    }
+    while (*cursor) {
+        Uint32 codepoint = 0;
+        if (!utf8_decode_codepoint(&cursor, &codepoint)) {
+            return 0;
+        }
+        if (codepoint == 0xFE0F || codepoint == 0x200D || codepoint == 0x20E3) {
+            continue;
+        }
+        if (backend_is_emoji_codepoint(codepoint)) {
+            any = 1;
+            continue;
+        }
+        return 0;
+    }
+    return any;
+}
+
+#if defined(__YIYIYA__)
+/* 不经过 SDL_ttf：旧 TTF_RenderUTF8_Solid 会把 CBDT 画成方块，且 GlyphIsProvided 只有 16 位。 */
+static FT_Library s_ft_lib;
+static FT_Face s_ft_emoji;
+static char s_ft_emoji_path[YUI_MAX_PATH];
+static unsigned char* s_ft_emoji_mem;
+static int s_ft_emoji_mem_len;
+static int s_ft_emoji_strike = -1;
+static int s_ft_emoji_fail_logged;
+
+static int backend_ensure_ft_emoji(void) {
+    const void* data = NULL;
+    int len = 0;
+
+    if (!g_font_fallback_path[0]) {
+        return 0;
+    }
+    if (s_ft_emoji && strcmp(s_ft_emoji_path, g_font_fallback_path) == 0) {
+        return 1;
+    }
+    if (s_ft_emoji) {
+        FT_Done_Face(s_ft_emoji);
+        s_ft_emoji = NULL;
+        s_ft_emoji_strike = -1;
+    }
+    if (s_ft_emoji_mem) {
+        free(s_ft_emoji_mem);
+        s_ft_emoji_mem = NULL;
+        s_ft_emoji_mem_len = 0;
+    }
+    if (!s_ft_lib) {
+        if (FT_Init_FreeType(&s_ft_lib) != 0) {
+            return 0;
+        }
+    }
+    if (!backend_font_blob_get(g_font_fallback_path, &data, &len) || !data || len <= 0) {
+        if (!s_ft_emoji_fail_logged) {
+            s_ft_emoji_fail_logged = 1;
+            printf("YUI: ColorEmoji file not found: %s\n", g_font_fallback_path);
+        }
+        return 0;
+    }
+    /* FT_New_Memory_Face 不拷贝缓冲，不能和通用 blob 槽共用（会被挤掉） */
+    s_ft_emoji_mem = (unsigned char*)malloc((size_t)len);
+    if (!s_ft_emoji_mem) {
+        return 0;
+    }
+    memcpy(s_ft_emoji_mem, data, (size_t)len);
+    s_ft_emoji_mem_len = len;
+    if (FT_New_Memory_Face(s_ft_lib, s_ft_emoji_mem, s_ft_emoji_mem_len, 0, &s_ft_emoji) != 0) {
+        free(s_ft_emoji_mem);
+        s_ft_emoji_mem = NULL;
+        s_ft_emoji = NULL;
+        if (!s_ft_emoji_fail_logged) {
+            s_ft_emoji_fail_logged = 1;
+            printf("YUI: FT_New_Memory_Face failed for %s\n", g_font_fallback_path);
+        }
+        return 0;
+    }
+    strncpy(s_ft_emoji_path, g_font_fallback_path, sizeof(s_ft_emoji_path) - 1);
+    s_ft_emoji_path[sizeof(s_ft_emoji_path) - 1] = '\0';
+    s_ft_emoji_strike = -1;
+    return 1;
+}
+
+static void backend_ft_emoji_select_px(int want) {
+    int i, best = 0, bestd = 1 << 30;
+
+    if (!s_ft_emoji) {
+        return;
+    }
+    if (s_ft_emoji->num_fixed_sizes <= 0) {
+        FT_Set_Pixel_Sizes(s_ft_emoji, 0, (FT_UInt)(want > 0 ? want : 16));
+        return;
+    }
+    if (want < 1) {
+        want = 16;
+    }
+    for (i = 0; i < s_ft_emoji->num_fixed_sizes; i++) {
+        int h = s_ft_emoji->available_sizes[i].height;
+        int d = h > want ? h - want : want - h;
+        if (d < bestd) {
+            bestd = d;
+            best = i;
+        }
+    }
+    if (s_ft_emoji_strike != best) {
+        FT_Select_Size(s_ft_emoji, best);
+        s_ft_emoji_strike = best;
+    }
+}
+
+static SDL_Surface* backend_ft_copy_glyph_bgra(int dst_px) {
+    FT_GlyphSlot slot;
+    FT_Bitmap* bm;
+    SDL_Surface* surf;
+    SDL_Surface* scaled;
+    int x, y, sw, sh;
+    Uint32* pixels;
+
+    slot = s_ft_emoji->glyph;
+    if (slot->format != FT_GLYPH_FORMAT_BITMAP) {
+        if (FT_Render_Glyph(slot, FT_RENDER_MODE_NORMAL) != 0) {
+            return NULL;
+        }
+    }
+    bm = &slot->bitmap;
+    sw = (int)bm->width;
+    sh = (int)bm->rows;
+    if (sw <= 0 || sh <= 0) {
+        return NULL;
+    }
+    surf = SDL_CreateRGBSurfaceWithFormat(0, sw, sh, 32, SDL_PIXELFORMAT_ARGB8888);
+    if (!surf) {
+        return NULL;
+    }
+    SDL_FillRect(surf, NULL, 0);
+    if (SDL_LockSurface(surf) != 0) {
+        SDL_FreeSurface(surf);
+        return NULL;
+    }
+    pixels = (Uint32*)surf->pixels;
+    if (bm->pixel_mode == FT_PIXEL_MODE_BGRA) {
+        for (y = 0; y < sh; y++) {
+            const unsigned char* src = bm->buffer + y * bm->pitch;
+            Uint32* dst = pixels + y * (surf->pitch / 4);
+            for (x = 0; x < sw; x++) {
+                unsigned char b = src[0], g = src[1], r = src[2], a = src[3];
+                src += 4;
+                dst[x] = ((Uint32)a << 24) | ((Uint32)r << 16) | ((Uint32)g << 8) | b;
+            }
+        }
+    } else if (bm->pixel_mode == FT_PIXEL_MODE_GRAY) {
+        for (y = 0; y < sh; y++) {
+            const unsigned char* src = bm->buffer + y * bm->pitch;
+            Uint32* dst = pixels + y * (surf->pitch / 4);
+            for (x = 0; x < sw; x++) {
+                unsigned char a = src[x];
+                dst[x] = ((Uint32)a << 24) | 0x00FFFFFFu;
+            }
+        }
+    } else {
+        SDL_UnlockSurface(surf);
+        SDL_FreeSurface(surf);
+        return NULL;
+    }
+    SDL_UnlockSurface(surf);
+
+    if (dst_px > 0 && sh != dst_px) {
+        int dw = sw * dst_px / sh;
+        SDL_Rect dr;
+        if (dw < 1) {
+            dw = 1;
+        }
+        scaled = SDL_CreateRGBSurfaceWithFormat(0, dw, dst_px, 32, SDL_PIXELFORMAT_ARGB8888);
+        if (!scaled) {
+            return surf;
+        }
+        SDL_FillRect(scaled, NULL, 0);
+        SDL_SetSurfaceBlendMode(surf, SDL_BLENDMODE_NONE);
+        dr.x = 0;
+        dr.y = 0;
+        dr.w = dw;
+        dr.h = dst_px;
+        SDL_BlitScaled(surf, NULL, scaled, &dr);
+        SDL_FreeSurface(surf);
+        return scaled;
+    }
+    return surf;
+}
+
+static SDL_Surface* backend_render_ft_color_emoji_utf8(const char* text, int dst_px) {
+    const char* cursor;
+    SDL_Surface* parts[32];
+    int n = 0, i, total_w = 0, max_h = 0, x = 0;
+    SDL_Surface* out;
+
+    if (!backend_text_is_emoji_only(text) || !backend_ensure_ft_emoji()) {
+        return NULL;
+    }
+    backend_ft_emoji_select_px(dst_px > 0 ? dst_px : 16);
+    cursor = text;
+    while (*cursor && n < 32) {
+        Uint32 cp = 0;
+        if (!utf8_decode_codepoint(&cursor, &cp)) {
+            break;
+        }
+        if (cp == 0xFE0F || cp == 0x200D || cp == 0x20E3) {
+            continue;
+        }
+        if (FT_Load_Char(s_ft_emoji, cp, FT_LOAD_COLOR) != 0) {
+            int j;
+            for (j = 0; j < n; j++) {
+                SDL_FreeSurface(parts[j]);
+            }
+            if (!s_ft_emoji_fail_logged) {
+                s_ft_emoji_fail_logged = 1;
+                printf("YUI: FT_Load_Char U+%X failed (ColorEmoji needs freetype PNG)\n",
+                       (unsigned)cp);
+            }
+            return NULL;
+        }
+        parts[n] = backend_ft_copy_glyph_bgra(dst_px);
+        if (!parts[n]) {
+            int j;
+            for (j = 0; j < n; j++) {
+                SDL_FreeSurface(parts[j]);
+            }
+            return NULL;
+        }
+        total_w += parts[n]->w;
+        if (parts[n]->h > max_h) {
+            max_h = parts[n]->h;
+        }
+        n++;
+    }
+    if (n <= 0 || total_w <= 0 || max_h <= 0) {
+        return NULL;
+    }
+    out = SDL_CreateRGBSurfaceWithFormat(0, total_w, max_h, 32, SDL_PIXELFORMAT_ARGB8888);
+    if (!out) {
+        for (i = 0; i < n; i++) {
+            SDL_FreeSurface(parts[i]);
+        }
+        return NULL;
+    }
+    SDL_FillRect(out, NULL, 0);
+    for (i = 0; i < n; i++) {
+        SDL_Rect dr;
+        dr.x = x;
+        dr.y = (max_h - parts[i]->h) / 2;
+        dr.w = parts[i]->w;
+        dr.h = parts[i]->h;
+        SDL_SetSurfaceBlendMode(parts[i], SDL_BLENDMODE_BLEND);
+        SDL_BlitSurface(parts[i], NULL, out, &dr);
+        x += parts[i]->w;
+        SDL_FreeSurface(parts[i]);
+    }
+    return out;
+}
+#endif
+
+static SDL_Surface* backend_render_blended_utf8(DFont* font, const char* text, SDL_Color color) {
+    if (!font || !text || !text[0]) {
+        return NULL;
+    }
+    /* 不要先 SizeUTF8 再 Render：SDL_ttf 内部还会 Size 一遍，T113 上等于每个字形 FT_Load_Glyph 两次 */
+#if defined(__YIYIYA__)
+    return TTF_RenderUTF8_Solid(font, text, color);
+#else
+    return TTF_RenderUTF8_Blended(font, text, color);
+#endif
+}
+
+#ifdef __EMSCRIPTEN__
 
 /* 用浏览器系统 emoji 字体渲染，返回 malloc 的 RGBA 像素（调用方 free） */
 EM_JS(int, emscripten_render_emoji_rgba, (const char* utf8, int font_px, int* out_w, int* out_h), {
@@ -3158,6 +3430,24 @@ Texture* backend_render_texture(DFont* font,const char* text,Color color){
             }
         }
     }
+
+#if defined(__YIYIYA__)
+    if (backend_text_is_emoji_only(text)) {
+        SDL_Surface* es = backend_render_ft_color_emoji_utf8(text, font_size_px);
+        if (es) {
+            SDL_Texture* etex = SDL_CreateTextureFromSurface(renderer, es);
+            SDL_FreeSurface(es);
+            if (etex) {
+                int width = 0, height = 0;
+                SDL_SetTextureBlendMode(etex, SDL_BLENDMODE_BLEND);
+                SDL_SetTextureScaleMode(etex, SDL_ScaleModeBest);
+                SDL_QueryTexture(etex, NULL, NULL, &width, &height);
+                add_texture_to_cache(font, text, color, font_size_px, etex, width, height, 0);
+                return etex;
+            }
+        }
+    }
+#endif
 
 #ifdef __EMSCRIPTEN__
     {
