@@ -112,17 +112,55 @@ static void sdl_begin_frame(void) {
     SDL_SetRenderTarget(renderer, g_canvas);
 }
 
-/* DIRTY 且整树被跳过时不要 Present：软件路径 Present 会整屏 blit 到 LCD。 */
-static void sdl_end_frame(void) {
+/* DIRTY 且本帧没有组件像素变化时不要 Present：软件路径 Present 会整屏 blit 到 LCD。
+ * visit>0+draw=0 常见于隐藏页 keep-alive 仍占 animating_ref、祖先被下钻但不画。 */
+static int sdl_end_frame(void) {
     int visit = 0;
+    int skip = 0;
     int draw = 0;
+    int aref = 0;
+    unsigned dirty = 0;
+    int popups;
+    int skip_present;
+    static int s_stat_n;
+    static int s_stat_visit;
+    static int s_stat_skip;
+    static int s_stat_draw;
+    static int s_stat_present;
+    static int s_stat_skip_p;
+    static int s_stat_aref;
 
-    render_last_stats(&visit, NULL, &draw, NULL, NULL);
-    if (g_render_mode == YUI_RENDER_MODE_DIRTY && g_sdl_presented_once &&
-        !g_need_full_present && visit == 0 && draw == 0 &&
-        !perf_is_enabled() &&
-        !(g_popup_manager && g_popup_manager->active_popups)) {
-        return;
+    render_last_stats(&visit, &skip, &draw, &dirty, &aref);
+    popups = (g_popup_manager && g_popup_manager->active_popups) ? 1 : 0;
+    skip_present = (g_render_mode == YUI_RENDER_MODE_DIRTY && g_sdl_presented_once &&
+        !g_need_full_present && draw == 0 &&
+        !perf_overlay_enabled() && !popups);
+
+    s_stat_n++;
+    s_stat_visit += visit;
+    s_stat_skip += skip;
+    s_stat_draw += draw;
+    s_stat_aref += aref;
+    if (skip_present) {
+        s_stat_skip_p++;
+    } else {
+        s_stat_present++;
+    }
+    if (s_stat_n >= 60) {
+        printf("YUI: 60frm visit=%d skip=%d draw=%d present=%d skip_p=%d dirty=%x aref=%d\n",
+               s_stat_visit, s_stat_skip, s_stat_draw, s_stat_present, s_stat_skip_p,
+               dirty, s_stat_aref);
+        s_stat_n = 0;
+        s_stat_visit = 0;
+        s_stat_skip = 0;
+        s_stat_draw = 0;
+        s_stat_present = 0;
+        s_stat_skip_p = 0;
+        s_stat_aref = 0;
+    }
+
+    if (skip_present) {
+        return 0;
     }
     g_need_full_present = 0;
 
@@ -132,6 +170,7 @@ static void sdl_end_frame(void) {
     }
     SDL_RenderPresent(renderer);
     g_sdl_presented_once = 1;
+    return 1;
 }
 
 void backend_set_render_mode(YuiRenderMode mode)
@@ -2592,7 +2631,7 @@ void backend_run(Layer* ui_root){
         popup_manager_render();
         perf_frame_end();
 
-        sdl_end_frame();
+        int presented = sdl_end_frame();
 
 #ifdef YUI_WIN32_NATIVE
         // 第一帧渲染后重新应用暗色（此时窗口已完全显示）
@@ -2615,7 +2654,12 @@ void backend_run(Layer* ui_root){
             }
         }
 
+#ifdef __YIYIYA__
+        SDL_Delay(presented ? 16 : 50);
+#else
+        (void)presented;
         SDL_Delay(16);
+#endif
     }
 #endif
 

@@ -48,6 +48,8 @@ void render_animation_started(Layer* layer);
 /* 动画离开运行态：所在树 ctx 计数 -1（stop / pause / 完成 / 替换 / 层销毁调用，
  * 仅当动画处于 RUNNING 状态才回退） */
 void render_animation_released(Layer* layer);
+/* 显示/隐藏后：隐藏子树里的运行中动画不再占用祖先 animating_ref */
+void render_sync_animation_refs(Layer* layer);
 
 // 添加滚动条渲染函数声明
 void render_scrollbar(Layer* layer);

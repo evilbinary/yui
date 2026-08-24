@@ -18,6 +18,7 @@ Layer* layer_resolve_path(Layer* root, const char* path);
 int layer_show(Layer* layer, int recursive);
 int layer_hide(Layer* layer);
 void layer_set_visible(Layer* layer, int visible);
+int layer_is_effectively_visible(const Layer* layer);
 Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent);
 Layer* layer_create_from_json(cJSON* json_obj, Layer* parent) ;
 Layer* layer_create(Layer* root_layer, int x, int y, int width, int height);

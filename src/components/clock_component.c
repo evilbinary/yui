@@ -2,11 +2,71 @@
 #include "../backend.h"
 #include "../event.h"
 #include "../util.h"
-#include "../animate.h"
+#include "../layer_update.h"
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 #include <math.h>
+
+#define CLOCK_MAX_TICK 8
+static ClockComponent* s_clock_tick_list[CLOCK_MAX_TICK];
+static int s_clock_tick_n;
+static int s_clock_tick_registered;
+
+static int clock_layer_on_screen(const Layer* layer) {
+    return layer_is_effectively_visible(layer);
+}
+
+static void clock_tick_all(void) {
+    int i;
+    for (i = 0; i < s_clock_tick_n; i++) {
+        ClockComponent* component = s_clock_tick_list[i];
+        int old_h, old_m, old_s;
+        if (!component || !component->layer || !clock_layer_on_screen(component->layer)) {
+            continue;
+        }
+        old_h = component->hour;
+        old_m = component->minute;
+        old_s = component->second;
+        clock_component_update_time(component);
+        if (component->smooth_second ||
+            old_h != component->hour || old_m != component->minute || old_s != component->second) {
+            mark_layer_dirty(component->layer, DIRTY_STYLE);
+        }
+    }
+}
+
+static void clock_tick_register(ClockComponent* component) {
+    int i;
+    if (!component) {
+        return;
+    }
+    for (i = 0; i < s_clock_tick_n; i++) {
+        if (s_clock_tick_list[i] == component) {
+            return;
+        }
+    }
+    if (s_clock_tick_n >= CLOCK_MAX_TICK) {
+        return;
+    }
+    s_clock_tick_list[s_clock_tick_n++] = component;
+    if (!s_clock_tick_registered) {
+        backend_register_update_callback(clock_tick_all);
+        s_clock_tick_registered = 1;
+    }
+}
+
+static void clock_tick_unregister(ClockComponent* component) {
+    int i;
+    for (i = 0; i < s_clock_tick_n; i++) {
+        if (s_clock_tick_list[i] != component) {
+            continue;
+        }
+        s_clock_tick_list[i] = s_clock_tick_list[s_clock_tick_n - 1];
+        s_clock_tick_n--;
+        return;
+    }
+}
 
 static void clock_layer_destroy(Layer* layer) {
     if (!layer || !layer->component) {
@@ -49,8 +109,8 @@ ClockComponent* clock_component_create(Layer* layer) {
     layer->render = clock_component_render;
     layer->on_destroy = clock_layer_destroy;
 
-    /* DIRTY 模式：指针每秒都在变，挂 keep-alive 避免被脏跳过 */
-    animation_keep_alive(layer);
+    /* 可见时按秒（或平滑秒针按帧）标脏，避免 identity keep-alive 占满 animating_ref */
+    clock_tick_register(component);
     
     return component;
 }
@@ -58,6 +118,7 @@ ClockComponent* clock_component_create(Layer* layer) {
 // 销毁时钟组件
 void clock_component_destroy(ClockComponent* component) {
     if (!component) return;
+    clock_tick_unregister(component);
     free(component);
 }
 

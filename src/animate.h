@@ -73,6 +73,8 @@ typedef struct Animation {
     int repeat_count;           // 重复次数
     int current_repeats;        // 当前已重复次数
     bool reverse_on_repeat;     // 重复时是否反向播放
+    bool keep_alive;            /* identity 动画：只为每帧绘制，不改几何 */
+    bool ref_held;              /* animating_ref 是否已计入祖先 */
     
     // 动画完成回调函数
     void (*on_complete)(Layer* layer);

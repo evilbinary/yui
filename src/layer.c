@@ -1343,6 +1343,15 @@ Layer* layer_resolve_path(Layer* root, const char* path)
     return root;
 }
 
+int layer_is_effectively_visible(const Layer* layer) {
+    for (; layer; layer = layer->parent) {
+        if (layer->visible == IN_VISIBLE) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
 int layer_show(Layer* layer, int recursive) {
     if (!layer) {
         return 0;

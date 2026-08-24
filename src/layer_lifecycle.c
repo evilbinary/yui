@@ -4,6 +4,7 @@
 #include "layout.h"
 #include "layer.h"
 #include "layer_update.h"
+#include "render.h"
 #include "ytype.h"
 
 #include <stdio.h>
@@ -195,6 +196,8 @@ void layer_set_visible(Layer* layer, int visible) {
     if (!was_visible && new_visible == VISIBLE) {
         layer_lifecycle_on_show(layer);
     }
+
+    render_sync_animation_refs(layer);
 
     if (layer->parent && !yui_update_is_batching()) {
         layout_layer(layer->parent);

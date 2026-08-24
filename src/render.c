@@ -391,6 +391,29 @@ static void render_layer_impl(Layer* layer, int force, RenderCtx* ctx) {
         !layer_has_active_animation(layer) && layer->animating_ref <= 0) {
         s_rl_skip++;
         return;
+    } else if (render_dirty_mode() && !force && ctx->rendered_once && layer->dirty_flags == DIRTY_NONE &&
+        !layer_has_active_animation(layer) && layer->animating_ref > 0) {
+        /* 仅子孙在动：不画本层背景，避免 keep-alive 把整屏不透明 View 每帧重刷。 */
+        int i;
+        s_rl_visit++;
+        if (!layer->parent) {
+            s_rl_root_dirty = layer->dirty_flags;
+            s_rl_root_aref = layer->animating_ref;
+        }
+        layer_update_animation(layer);
+        for (i = 0; i < layer->child_count; i++) {
+            if (!layer->children || !layer->children[i]) {
+                continue;
+            }
+            if (layer->children[i]->visible == IN_VISIBLE) {
+                continue;
+            }
+            render_layer_impl(layer->children[i], 0, ctx);
+        }
+        if (layer->sub != NULL) {
+            render_layer_impl(layer->sub, 0, ctx);
+        }
+        return;
     }
 
     s_rl_visit++;
@@ -440,7 +463,7 @@ static void render_layer_impl(Layer* layer, int force, RenderCtx* ctx) {
         if (render_dirty_mode() && ctx->rendered_once && !ctx->force_full_redraw &&
             !ctx->local_rect_active) {
             draw_cover_bg = (layer->dirty_flags & (DIRTY_RECT | DIRTY_LAYOUT | DIRTY_LAYOUT_RECT |
-                                                   DIRTY_CHILDREN | DIRTY_COLOR | DIRTY_STYLE)) ? 1 : 0;
+                                                   DIRTY_CHILDREN | DIRTY_VISIBLE | DIRTY_COLOR | DIRTY_STYLE)) ? 1 : 0;
         }
         if (draw_cover_bg && (layer->bg_gradient.enabled || layer->bg_color.a > 0 ||
             layer->shadow.enabled || layer_border_visible(&layer->border))) {
@@ -474,11 +497,14 @@ static void render_layer_impl(Layer* layer, int force, RenderCtx* ctx) {
     if (render_dirty_mode() && ctx->rendered_once && !ctx->force_full_redraw &&
         !ctx->local_rect_active) {
         skip_cover_bg = !(layer->dirty_flags & (DIRTY_RECT | DIRTY_LAYOUT | DIRTY_LAYOUT_RECT |
-                                                DIRTY_CHILDREN | DIRTY_COLOR | DIRTY_STYLE));
+                                                DIRTY_CHILDREN | DIRTY_VISIBLE | DIRTY_COLOR | DIRTY_STYLE));
     }
     int painted_over = !skip_cover_bg && layer_paints_over_children(layer);
+    /* DIRTY_VISIBLE：页面 show/hide 只标在该层和祖先上，子孙仍是 DIRTY_NONE。
+     * 持久 FB 上还是上一页像素，必须强制子树重绘，否则启动器等 keepAlive 页空白。 */
     int force_children = force || painted_over ||
-            (layer->dirty_flags & (DIRTY_RECT | DIRTY_LAYOUT | DIRTY_LAYOUT_RECT | DIRTY_CHILDREN));
+            (layer->dirty_flags & (DIRTY_RECT | DIRTY_LAYOUT | DIRTY_LAYOUT_RECT |
+                                   DIRTY_CHILDREN | DIRTY_VISIBLE));
 
     for (int i = 0; i < layer->child_count; i++) {
         if (!layer->children) {
@@ -564,12 +590,14 @@ void render_layer(Layer* layer) {
 /* 动画进入运行态：所在树 ctx 计数 +1（animation_start / resume 调用） */
 void render_animation_started(Layer* layer) {
     RenderCtx* ctx;
-    if (!layer) return;
+    if (!layer || !layer->animation) return;
+    if (layer->animation->ref_held) return;
     ctx = render_ctx_get(layer);
     if (ctx) {
         ctx->animation_count++;
     }
     animating_ref_inc(layer);
+    layer->animation->ref_held = true;
 }
 
 /* 动画离开运行态：所在树 ctx 计数 -1（stop / pause / 完成 / 替换 / 层销毁调用，
@@ -577,7 +605,9 @@ void render_animation_started(Layer* layer) {
 void render_animation_released(Layer* layer) {
     RenderCtx* ctx;
     if (!layer || !layer->animation) return;
+    if (!layer->animation->ref_held) return;
     if (layer->animation->state != ANIMATION_STATE_RUNNING) {
+        layer->animation->ref_held = false;
         return;
     }
     ctx = render_ctx_get(layer);
@@ -585,6 +615,31 @@ void render_animation_released(Layer* layer) {
         ctx->animation_count--;
     }
     animating_ref_dec(layer);
+    layer->animation->ref_held = false;
+}
+
+static void render_sync_animation_refs_walk(Layer* layer) {
+    int i;
+    if (!layer) return;
+    if (layer->animation && layer->animation->state == ANIMATION_STATE_RUNNING) {
+        if (layer_is_effectively_visible(layer)) {
+            render_animation_started(layer);
+        } else {
+            render_animation_released(layer);
+        }
+    }
+    if (layer->children) {
+        for (i = 0; i < layer->child_count; i++) {
+            render_sync_animation_refs_walk(layer->children[i]);
+        }
+    }
+    if (layer->sub) {
+        render_sync_animation_refs_walk(layer->sub);
+    }
+}
+
+void render_sync_animation_refs(Layer* layer) {
+    render_sync_animation_refs_walk(layer);
 }
 
 /* 局部渲染：只绘制 layer 树中与 rect 相交的层。区域外子树整棵跳过，

@@ -1,5 +1,6 @@
 #include "animate.h"
 #include "render.h"
+#include "layer.h"
 #include "layer_update.h"
 
 #include <math.h>
@@ -92,6 +93,8 @@ Animation* animation_create(float duration, float (*easing_func)(float)) {
     animation->repeat_count = 0;
     animation->current_repeats = 0;
     animation->reverse_on_repeat = false;
+    animation->keep_alive = false;
+    animation->ref_held = false;
     
     return animation;
 }
@@ -130,8 +133,11 @@ void animation_start(Layer* layer, Animation* animation) {
     // 将动画附加到图层
     layer->animation = animation;
 
-    // DIRTY 模式：进入运行态，所在树 ctx 计数 +1，渲染时 root 放行遍历
+    // DIRTY 模式：进入运行态；隐藏层不占用祖先 animating_ref
     render_animation_started(layer);
+    if (!layer_is_effectively_visible(layer)) {
+        render_animation_released(layer);
+    }
 }
 
 // 停止动画
@@ -195,6 +201,9 @@ void animation_resume(Layer* layer) {
     if (layer->animation->state == ANIMATION_STATE_PAUSED) {
         layer->animation->state = ANIMATION_STATE_RUNNING;
         render_animation_started(layer);
+        if (!layer_is_effectively_visible(layer)) {
+            render_animation_released(layer);
+        }
     }
 }
 
@@ -340,6 +349,11 @@ void animation_update(Layer* layer, float delta_time) {
     // 缩放值可以根据实际实现进行处理
     // ...
 
+    /* keep-alive 不改像素，切勿每帧 DIRTY_LAYOUT_RECT 传到 root（会整树 force 重绘）。 */
+    if (animation->keep_alive) {
+        return;
+    }
+
     /* DIRTY 模式：推进后标记重绘（传播到 root 使整树可遍历），
      * 位置/尺寸变化时请求局部重绘旧位置与新位置合并区域（擦除残留 + 画新位置）。 */
     mark_layer_dirty(layer, DIRTY_LAYOUT_RECT);
@@ -459,6 +473,7 @@ void animation_keep_alive(Layer* layer) {
     animation_set_target(anim, ANIMATION_PROPERTY_OPACITY, layer->color.a / 255.0f);
     animation_set_target(anim, ANIMATION_PROPERTY_ROTATION, layer->rotation);
     animation_set_repeat_type(anim, ANIMATION_REPEAT_INFINITE);
+    anim->keep_alive = true;
     animation_start(layer, anim);
 }
 
