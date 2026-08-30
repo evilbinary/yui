@@ -2946,6 +2946,7 @@ void backend_tick(Layer* ui_root) {
 
     while (SDL_PollEvent(&event)) {
         if (event.type == SDL_QUIT) {
+            backend_request_quit(0);
             return;
         }
         handle_event(ui_root, &event);
