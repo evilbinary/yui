@@ -519,9 +519,11 @@ def add_flags():
         tool=get_toolchain_node()
         tool['ld']='gcc'
         add_cflags(
+            '-fPIC',
             '-fsanitize=address',
         )
         add_ldflags(
+            '-fPIC',
             '-fsanitize=address',
         )
 
