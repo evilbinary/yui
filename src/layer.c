@@ -499,8 +499,11 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
     } else if (styleFont && styleFont->valuestring) {
       strncpy(layer->font->path, styleFont->valuestring, YUI_MAX_PATH - 1);
       layer->font->path[YUI_MAX_PATH - 1] = '\0';
+    } else if (parent && parent->font && parent->font->path[0]) {
+      strncpy(layer->font->path, parent->font->path, YUI_MAX_PATH - 1);
+      layer->font->path[YUI_MAX_PATH - 1] = '\0';
     } else {
-      strcpy(layer->font->path, "Roboto-Regular.ttf");  // 默认字体
+      strcpy(layer->font->path, "Roboto-Regular.ttf");
     }
     
     // 设置字体大小（优先级：直接属性 > style > 默认）

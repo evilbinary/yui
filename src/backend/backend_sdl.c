@@ -152,9 +152,9 @@ static int sdl_end_frame(void) {
         s_stat_present++;
     }
     if (s_stat_n >= 60) {
-        printf("YUI: 60frm visit=%d skip=%d draw=%d present=%d skip_p=%d dirty=%x aref=%d\n",
-               s_stat_visit, s_stat_skip, s_stat_draw, s_stat_present, s_stat_skip_p,
-               dirty, s_stat_aref);
+        // printf("YUI: 60frm visit=%d skip=%d draw=%d present=%d skip_p=%d dirty=%x aref=%d\n",
+        //        s_stat_visit, s_stat_skip, s_stat_draw, s_stat_present, s_stat_skip_p,
+        //        dirty, s_stat_aref);
         s_stat_n = 0;
         s_stat_visit = 0;
         s_stat_skip = 0;
