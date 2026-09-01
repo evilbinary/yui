@@ -247,6 +247,7 @@ ThemeRule* theme_rule_create_from_json(cJSON* json) {
     if (bg_color_obj && cJSON_IsString(bg_color_obj)) {
         printf("[Theme] Parsing bgColor: %s\n", bg_color_obj->valuestring);
         parse_color(bg_color_obj->valuestring, &rule->bg_color);
+        rule->has_bg_color = 1;
         printf("[Theme] Parsed bgColor RGBA: %d, %d, %d, %d\n", rule->bg_color.r, rule->bg_color.g, rule->bg_color.b, rule->bg_color.a);
     }
     
@@ -614,18 +615,11 @@ void theme_merge_style(ThemeRule* rule, Layer* layer) {
         mark_layer_dirty(layer, DIRTY_COLOR);
     }
     
-    // 背景颜色（主题总是覆盖图层背景色）
-    {
-        printf("[Theme] Applying bg_color to layer id='%s' (rule bg_color RGBA=%d,%d,%d,%d, old bg_color RGBA=%d,%d,%d,%d)\n", 
-               layer->id, rule->bg_color.r, rule->bg_color.g, rule->bg_color.b, rule->bg_color.a,
-               layer->bg_color.r, layer->bg_color.g, layer->bg_color.b, layer->bg_color.a);
+    // 背景：仅当规则写了 bgColor 才覆盖。未写则保持图层原值（默认 a=0 不绘制）。
+    // transparent 也算写了：has_bg_color=1 且 a=0，明确不铺底。
+    if (rule->has_bg_color) {
         layer->bg_color = rule->bg_color;
-        printf("[Theme] Layer bg_color set to RGBA=%d,%d,%d,%d\n", 
-               layer->bg_color.r, layer->bg_color.g, layer->bg_color.b, layer->bg_color.a);
-        
-        // 标记图层需要重绘
         mark_layer_dirty(layer, DIRTY_COLOR);
-        printf("[Theme] Layer marked dirty for redraw: id='%s'\n", layer->id);
     }
     
     // 圆角半径

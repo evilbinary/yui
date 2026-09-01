@@ -763,13 +763,8 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
     layer->layout_manager->type = LAYOUT_VERTICAL;
   }
 
-  // 默认背景颜色（含不透明，否则 render 因 a==0 跳过填色）
-  if (layer->bg_color.a == 0) {
-    layer->bg_color.r = 0xF5;
-    layer->bg_color.g = 0xF5;
-    layer->bg_color.b = 0xF5;
-    layer->bg_color.a = 0xFF;
-  }
+  /* 默认透明：不填 #F5F5F5。底色由 JSON/主题显式 bgColor 决定，
+   * 子层叠在父层上；脏刷新时由不透明祖先擦除。 */
   // 解析样式
   if (style) {
     if (cJSON_HasObjectItem(style, "color")) {

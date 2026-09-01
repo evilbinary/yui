@@ -19,6 +19,7 @@ typedef struct ThemeRule {
     // 样式属性
     Color color;                  // 文字颜色
     Color bg_color;               // 背景颜色
+    int has_bg_color;             // 规则是否写了 bgColor（含 transparent）
     int font_size;                // 字体大小
     char font_weight[20];         // 字体粗细
     int radius;                   // 圆角半径
