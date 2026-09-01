@@ -413,7 +413,7 @@ int default_layer_handle_pointer_event(Layer* layer, PointerEvent* event) {
 
     if (point_in_rect(mouse_pos, layer->rect)) {
         if (layer->state != LAYER_STATE_FOCUSED && layer->state != LAYER_STATE_DISABLED) {
-            if (event->phase == POINTER_DOWN) {
+            if (event->phase == POINTER_DOWN || event->phase == POINTER_DOUBLE_TAP) {
                 layer->state = LAYER_STATE_PRESSED;
             } else if (event->phase == POINTER_MOVE) {
                 layer->state = LAYER_STATE_HOVER;
@@ -445,7 +445,8 @@ int default_layer_handle_pointer_event(Layer* layer, PointerEvent* event) {
             }
         }
     }
-    if (event->phase == POINTER_DOWN || event->phase == POINTER_UP) {
+    if (event->phase == POINTER_DOWN || event->phase == POINTER_DOUBLE_TAP ||
+        event->phase == POINTER_UP) {
         if (point_in_rect(mouse_pos, layer->rect)) {
             if (layer->pointer_passthrough) {
                 return 0;

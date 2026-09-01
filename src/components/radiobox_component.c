@@ -193,7 +193,8 @@ int radiobox_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
         event->y >= layer->rect.y && 
         event->y < layer->rect.y + layer->rect.h);
     // 处理鼠标点击事件
-    if (event->button == BUTTON_LEFT && event->phase == POINTER_DOWN && is_inside) {
+    if (event->button == BUTTON_LEFT && is_inside &&
+        (event->phase == POINTER_DOWN || event->phase == POINTER_DOUBLE_TAP)) {
         // 选中当前单选框，取消同组内其他单选框的选中状态
         radiobox_set_group_checked(component->group_id, component);
 

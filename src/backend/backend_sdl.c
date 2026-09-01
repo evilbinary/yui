@@ -2589,7 +2589,8 @@ void handle_event(Layer* root, SDL_Event* event) {
             PointerPhase phase = POINTER_MOVE;
             if (event->type == SDL_MOUSEBUTTONDOWN) {
                 phase = (clicks >= 2) ? POINTER_DOUBLE_TAP : POINTER_DOWN;
-                if (button == SDL_BUTTON_LEFT && phase == POINTER_DOWN) {
+                if (button == SDL_BUTTON_LEFT &&
+                    (phase == POINTER_DOWN || phase == POINTER_DOUBLE_TAP)) {
                     pointer_drag_active = 1;
                     pointer_start_x = mouse_x;
                     pointer_start_y = mouse_y;

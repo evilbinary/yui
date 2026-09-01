@@ -377,9 +377,11 @@ int button_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
         mark_layer_dirty(layer, DIRTY_TEXT | DIRTY_COLOR);
     }
 
-    if (event->phase == POINTER_DOWN) {
+    if (event->phase == POINTER_DOWN || event->phase == POINTER_DOUBLE_TAP) {
+        /* SDL 把快速第二次按下标成 clicks>=2 → DOUBLE_TAP，仍视为一次新按下 */
         if (is_inside) {
             button_begin_pointer(component, layer, event->x, event->y);
+            return 1;
         }
     } else if (event->phase == POINTER_MOVE) {
         /* 拖出按钮区域或超过 slop：取消点击（避免松手落在另一按钮上误开） */
