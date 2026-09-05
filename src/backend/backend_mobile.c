@@ -34,6 +34,7 @@ extern void android_clipboard_set_text(const char* text);
 
 static int g_window_w = MOBILE_DEFAULT_W;
 static int g_window_h = MOBILE_DEFAULT_H;
+static YuiRenderMode g_render_mode = YUI_RENDER_MODE_DIRTY;
 
 #ifdef __ANDROID__
 #include <android/native_window.h>
@@ -46,6 +47,19 @@ static EGLContext g_egl_context = EGL_NO_CONTEXT;
 static ANativeWindow* g_egl_window = NULL;
 static GLuint g_color_program = 0;
 static int g_egl_ready = 0;
+
+/* DIRTY 持久画布：EGL 双缓冲 swap 后 backbuffer 未定义，必须画到 FBO 再整帧 blit。
+ * 否则脏刷新只补局部时另一块缓冲会闪回旧帧。 */
+static GLuint g_canvas_fbo = 0;
+static GLuint g_canvas_tex = 0;
+static int g_canvas_w = 0;
+static int g_canvas_h = 0;
+static GLuint g_blit_program = 0;
+static GLint g_blit_a_pos_loc = -1;
+static GLint g_blit_a_uv_loc = -1;
+static GLint g_blit_u_tex_loc = -1;
+static int g_mobile_presented_once = 0;
+static int g_need_full_present = 0;
 
 /* Cached GL locations (set once after shader link) */
 static GLint g_u_offset_loc = -1;
@@ -170,6 +184,203 @@ static int mobile_init_gl(void) {
     return 1;
 }
 
+static void mobile_destroy_canvas(void) {
+    if (g_canvas_fbo) {
+        glDeleteFramebuffers(1, &g_canvas_fbo);
+        g_canvas_fbo = 0;
+    }
+    if (g_canvas_tex) {
+        glDeleteTextures(1, &g_canvas_tex);
+        g_canvas_tex = 0;
+    }
+    g_canvas_w = 0;
+    g_canvas_h = 0;
+}
+
+static int mobile_ensure_blit_program(void) {
+    const char* vs =
+        "attribute vec2 aPos;\n"
+        "attribute vec2 aUV;\n"
+        "varying vec2 vUV;\n"
+        "void main() {\n"
+        "  vUV = aUV;\n"
+        "  gl_Position = vec4(aPos, 0.0, 1.0);\n"
+        "}\n";
+    const char* fs =
+        "precision mediump float;\n"
+        "uniform sampler2D uTex;\n"
+        "varying vec2 vUV;\n"
+        "void main() { gl_FragColor = texture2D(uTex, vUV); }\n";
+    GLuint vsh;
+    GLuint fsh;
+    GLint linked = 0;
+
+    if (g_blit_program != 0) {
+        return 1;
+    }
+    vsh = mobile_compile_shader(GL_VERTEX_SHADER, vs);
+    fsh = mobile_compile_shader(GL_FRAGMENT_SHADER, fs);
+    if (!vsh || !fsh) {
+        if (vsh) glDeleteShader(vsh);
+        if (fsh) glDeleteShader(fsh);
+        return 0;
+    }
+    g_blit_program = glCreateProgram();
+    glAttachShader(g_blit_program, vsh);
+    glAttachShader(g_blit_program, fsh);
+    glLinkProgram(g_blit_program);
+    glGetProgramiv(g_blit_program, GL_LINK_STATUS, &linked);
+    glDeleteShader(vsh);
+    glDeleteShader(fsh);
+    if (!linked) {
+        glDeleteProgram(g_blit_program);
+        g_blit_program = 0;
+        return 0;
+    }
+    g_blit_a_pos_loc = glGetAttribLocation(g_blit_program, "aPos");
+    g_blit_a_uv_loc = glGetAttribLocation(g_blit_program, "aUV");
+    g_blit_u_tex_loc = glGetUniformLocation(g_blit_program, "uTex");
+    return 1;
+}
+
+static int mobile_ensure_canvas(void) {
+    GLenum status;
+
+    if (g_window_w <= 0 || g_window_h <= 0) {
+        return 0;
+    }
+    if (g_canvas_fbo && g_canvas_w == g_window_w && g_canvas_h == g_window_h) {
+        return 1;
+    }
+    if (!mobile_ensure_blit_program()) {
+        return 0;
+    }
+
+    mobile_destroy_canvas();
+
+    glGenTextures(1, &g_canvas_tex);
+    glBindTexture(GL_TEXTURE_2D, g_canvas_tex);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, g_window_w, g_window_h, 0,
+                 GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    glGenFramebuffers(1, &g_canvas_fbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, g_canvas_fbo);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                           g_canvas_tex, 0);
+    status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    if (status != GL_FRAMEBUFFER_COMPLETE) {
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        mobile_destroy_canvas();
+        return 0;
+    }
+
+    glViewport(0, 0, g_window_w, g_window_h);
+    glDisable(GL_SCISSOR_TEST);
+    glClearColor(30.0f / 255.0f, 30.0f / 255.0f, 30.0f / 255.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    g_canvas_w = g_window_w;
+    g_canvas_h = g_window_h;
+    g_mobile_presented_once = 0;
+    g_need_full_present = 1;
+    return 1;
+}
+
+static void mobile_begin_frame(void) {
+    if (!g_egl_ready) {
+        return;
+    }
+    if (g_render_mode == YUI_RENDER_MODE_FULL) {
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glViewport(0, 0, g_window_w, g_window_h);
+        return;
+    }
+    if (!mobile_ensure_canvas()) {
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        return;
+    }
+    glBindFramebuffer(GL_FRAMEBUFFER, g_canvas_fbo);
+    glViewport(0, 0, g_window_w, g_window_h);
+}
+
+static void mobile_blit_canvas_to_screen(void) {
+    const float verts[] = {
+        -1.0f, -1.0f,  0.0f, 0.0f,
+         1.0f, -1.0f,  1.0f, 0.0f,
+        -1.0f,  1.0f,  0.0f, 1.0f,
+         1.0f,  1.0f,  1.0f, 1.0f,
+    };
+
+    if (!g_canvas_tex || !g_blit_program) {
+        return;
+    }
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glViewport(0, 0, g_window_w, g_window_h);
+    glDisable(GL_SCISSOR_TEST);
+    glDisable(GL_BLEND);
+
+    glUseProgram(g_blit_program);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, g_canvas_tex);
+    glUniform1i(g_blit_u_tex_loc, 0);
+    glEnableVertexAttribArray((GLuint)g_blit_a_pos_loc);
+    glEnableVertexAttribArray((GLuint)g_blit_a_uv_loc);
+    glVertexAttribPointer((GLuint)g_blit_a_pos_loc, 2, GL_FLOAT, GL_FALSE,
+                          4 * sizeof(float), verts);
+    glVertexAttribPointer((GLuint)g_blit_a_uv_loc, 2, GL_FLOAT, GL_FALSE,
+                          4 * sizeof(float), verts + 2);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glDisableVertexAttribArray((GLuint)g_blit_a_pos_loc);
+    glDisableVertexAttribArray((GLuint)g_blit_a_uv_loc);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+}
+
+/* DIRTY 且本帧无像素变化时跳过 swap，避免无意义的整屏 blit。 */
+static int mobile_end_frame(void) {
+    int visit = 0;
+    int skip = 0;
+    int draw = 0;
+    int aref = 0;
+    unsigned dirty = 0;
+    int popups;
+    int skip_present;
+
+    render_last_stats(&visit, &skip, &draw, &dirty, &aref);
+    popups = (g_popup_manager && g_popup_manager->active_popups) ? 1 : 0;
+    skip_present = (g_render_mode == YUI_RENDER_MODE_DIRTY && g_mobile_presented_once &&
+                    !g_need_full_present && draw == 0 &&
+                    !perf_overlay_enabled() && !popups);
+
+    if (skip_present) {
+        /* 仍绑回默认 FB，避免后续读写落在已解绑的 FBO 状态上 */
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        return 0;
+    }
+    g_need_full_present = 0;
+
+    if (g_render_mode == YUI_RENDER_MODE_DIRTY && g_canvas_fbo) {
+        mobile_blit_canvas_to_screen();
+    } else {
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
+
+    if (g_egl_display != EGL_NO_DISPLAY && g_egl_surface != EGL_NO_SURFACE) {
+        eglSwapBuffers(g_egl_display, g_egl_surface);
+    }
+    g_mobile_presented_once = 1;
+    return 1;
+}
+
 static int mobile_egl_init(ANativeWindow* window) {
     const EGLint cfg_attribs[] = {
         EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
@@ -222,13 +433,31 @@ static int mobile_egl_init(ANativeWindow* window) {
         return 0;
     }
     glViewport(0, 0, g_window_w, g_window_h);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     mobile_init_text_gl();
+    mobile_ensure_canvas();
     g_egl_ready = 1;
     return 1;
 }
 
 static void mobile_egl_shutdown(void) {
     if (g_egl_display != EGL_NO_DISPLAY) {
+        /* GL 对象须在 context 仍 current 时释放 */
+        mobile_destroy_canvas();
+        if (g_blit_program) {
+            glDeleteProgram(g_blit_program);
+            g_blit_program = 0;
+        }
+        if (g_color_program) {
+            glDeleteProgram(g_color_program);
+            g_color_program = 0;
+        }
+        if (g_arc_program) {
+            glDeleteProgram(g_arc_program);
+            g_arc_program = 0;
+        }
+        mobile_shutdown_text_gl();
         eglMakeCurrent(g_egl_display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
         if (g_egl_context != EGL_NO_CONTEXT) {
             eglDestroyContext(g_egl_display, g_egl_context);
@@ -245,8 +474,8 @@ static void mobile_egl_shutdown(void) {
         ANativeWindow_release(g_egl_window);
         g_egl_window = NULL;
     }
-    g_color_program = 0;
-    mobile_shutdown_text_gl();
+    g_mobile_presented_once = 0;
+    g_need_full_present = 0;
     g_egl_ready = 0;
 }
 
@@ -627,8 +856,6 @@ static void mobile_apply_backdrop_tone(unsigned char* data, int count,
 #define MAX_UPDATE_CALLBACKS 16
 #define MAX_TOUCHES 10
 #define SWIPE_THRESHOLD_PX 32
-
-static YuiRenderMode g_render_mode = YUI_RENDER_MODE_DIRTY;
 
 void backend_set_render_mode(YuiRenderMode mode)
 {
@@ -1101,15 +1328,26 @@ void backend_get_windowsize(int* width, int* height) {
 }
 
 void backend_set_windowsize(int width, int height) {
-    if (width > 0) {
+    int changed = 0;
+    if (width > 0 && width != g_window_w) {
         g_window_w = width;
+        changed = 1;
     }
-    if (height > 0) {
+    if (height > 0 && height != g_window_h) {
         g_window_h = height;
+        changed = 1;
     }
 #ifdef __ANDROID__
     if (g_egl_ready) {
         glViewport(0, 0, g_window_w, g_window_h);
+        if (changed) {
+            /* 尺寸变了：重建持久 FBO，下一帧全量重绘 */
+            mobile_destroy_canvas();
+            g_need_full_present = 1;
+            if (g_ui_root) {
+                render_request_full_redraw(g_ui_root);
+            }
+        }
     }
 #elif defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE
     ios_metal_resize(g_window_w, g_window_h);
@@ -1134,8 +1372,8 @@ void backend_set_minimum_windowsize(int width, int height) {
 
 void backend_render_present(void) {
 #ifdef __ANDROID__
-    if (g_egl_ready && g_egl_display != EGL_NO_DISPLAY) {
-        eglSwapBuffers(g_egl_display, g_egl_surface);
+    if (g_egl_ready) {
+        mobile_end_frame();
     }
 #elif defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE
     ios_metal_present();
@@ -1167,9 +1405,14 @@ void backend_render_clear_color(unsigned char r, unsigned char g, unsigned char 
                                 unsigned char a) {
 #ifdef __ANDROID__
     if (g_egl_ready) {
+        /* DIRTY 帧内清屏应对准持久 FBO，否则擦的是未定义的 backbuffer */
+        if (g_render_mode == YUI_RENDER_MODE_DIRTY && g_canvas_fbo) {
+            glBindFramebuffer(GL_FRAMEBUFFER, g_canvas_fbo);
+        }
         glDisable(GL_SCISSOR_TEST);
         glClearColor(r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f);
         glClear(GL_COLOR_BUFFER_BIT);
+        g_need_full_present = 1;
     }
 #elif defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE
     ios_metal_clear(r, g, b, a);
@@ -1283,6 +1526,9 @@ void backend_tick(Layer* ui_root) {
         }
     }
 
+#ifdef __ANDROID__
+    mobile_begin_frame();
+#endif
     if (g_render_mode == YUI_RENDER_MODE_FULL) {
         backend_render_clear_color(30, 30, 30, 255);
     }
@@ -1397,7 +1643,11 @@ int backend_screenshot(const char* path) {
         return -2;
     }
 
-    backend_render_clear_color(30, 30, 30, 255);
+    mobile_begin_frame();
+    glDisable(GL_SCISSOR_TEST);
+    glClearColor(30.0f / 255.0f, 30.0f / 255.0f, 30.0f / 255.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+    render_request_full_redraw(g_ui_root);
     render_layer(g_ui_root);
     render_inspect_overlay(g_ui_root);
     popup_manager_render();
@@ -1408,6 +1658,9 @@ int backend_screenshot(const char* path) {
         return -3;
     }
 
+    if (g_render_mode == YUI_RENDER_MODE_DIRTY && g_canvas_fbo) {
+        glBindFramebuffer(GL_FRAMEBUFFER, g_canvas_fbo);
+    }
     glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
 
     row = (unsigned char*)malloc((size_t)row_bytes);
