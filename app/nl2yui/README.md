@@ -19,15 +19,14 @@ app/nl2yui/
 
 ## 环境
 
+直接用本机 Python / 已有 PyTorch 即可，不必强制 venv。
+
 ```bash
 cd app/nl2yui
-python -m venv .venv
-# Windows: .venv\Scripts\activate
-source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-有 NVIDIA GPU 时建议装对应 CUDA 版 `torch`（见 https://pytorch.org）。CPU 可训，但 0.5B 也会较慢。
+`requirements.txt` 里的 `torch` 若本机已装，pip 一般会跳过。有 NVIDIA GPU 时建议本机已是对应 CUDA 版 `torch`。
 
 ## 一键流程
 
