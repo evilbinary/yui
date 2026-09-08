@@ -90,7 +90,8 @@ CPU：把 `--batch-size 1`，并加 `--device cpu`（见 `train.py`）。
 
 ## 产出
 
-- `output/nl2yui-lora/`：LoRA adapter（可直接 `eval.py` / PEFT 加载）
-- `output/nl2yui-lora/merged/`：`--merge` 后的完整模型，可再转 GGUF 做手机/CPU 推理
+- `output/nl2yui-lora-0.5b/`：0.5B LoRA（推荐）
+- `output/nl2yui-lora-0.5b/merged/`：合并后的完整 0.5B，适合本地/手机
+- `output/nl2yui-lora/`：早期 1.5B 实验（可忽略）
 
 导出 GGUF（需另装 llama.cpp 转换脚本）不在本目录内，见设计文档推理章节。

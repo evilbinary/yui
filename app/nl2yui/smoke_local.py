@@ -13,7 +13,7 @@ from prompt import build_inference_messages
 from schema import parse_model_json, validate_output
 
 ROOT = Path(__file__).resolve().parent
-MODEL = ROOT / "output" / "nl2yui-lora" / "merged"
+MODEL = ROOT / "output" / "nl2yui-lora-0.5b" / "merged"
 
 CASES = [
     {
@@ -31,6 +31,16 @@ CASES = [
         "context": "productPrice:Label:¥299, buyBtn:Button:立即购买, productStock:Label:库存 12",
         "message": "价格改成 ¥199",
     },
+    {
+        "mode": "full",
+        "context": "(none)",
+        "message": "做一个登录页",
+    },
+    {
+        "mode": "full",
+        "context": "(none)",
+        "message": "做一个设置页",
+    },
 ]
 
 
@@ -43,7 +53,7 @@ def main() -> int:
     model = AutoModelForCausalLM.from_pretrained(
         str(MODEL),
         trust_remote_code=True,
-        torch_dtype=torch.float16,
+        torch_dtype=torch.float32,
         low_cpu_mem_usage=True,
     )
     model.eval()
@@ -55,10 +65,11 @@ def main() -> int:
         prompt = tok.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True)
         inputs = tok(prompt, return_tensors="pt")
         t0 = time.perf_counter()
+        max_new = 384 if ex.get("mode") == "full" else 128
         with torch.inference_mode():
             out = model.generate(
                 **inputs,
-                max_new_tokens=128,
+                max_new_tokens=max_new,
                 do_sample=False,
                 pad_token_id=tok.pad_token_id or tok.eos_token_id,
             )
@@ -69,7 +80,7 @@ def main() -> int:
             pred = parse_model_json(text)
             errs = validate_output(pred)
             status = "OK" if not errs else f"SCHEMA {errs[:2]}"
-            shown = json.dumps(pred, ensure_ascii=False)[:240]
+            shown = json.dumps(pred, ensure_ascii=False)[:400]
         except Exception as e:
             status = f"PARSE {e}"
             shown = text.replace("\n", " ")[:240]
