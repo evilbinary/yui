@@ -308,7 +308,7 @@ user: 把标题改成欢迎
 
 ### V0：SFT only
 
-实现代码在 [`app/nl2yui/`](../app/nl2yui/README.md)：`synthesize.py` 扩增数据，`train.py` LoRA 微调，`eval.py` 评测。
+实现代码在 [`app/nl2yui/`](../app/nl2yui/README.md)：`synthesize.py` 扩增数据，`train.py` LoRA 微调，`eval.py` 评测，`serve.py` 提供 `POST /api/nl2yui`。
 
 - 基座：0.5B–1.5B instruct  
 - 损失：仅对 `output` JSON token 计算（instruction masking）  

@@ -41,6 +41,26 @@ python synthesize.py -n 3000 --page-ratio 0.7
 
 常见页面原型（`pages.py`）：登录、设置、消息列表、表单、聊天助手、启动器网格、加载遮罩、确认对话框、商品详情、空状态。
 
+## 推理 API
+
+```bash
+cd app/nl2yui
+# 默认加载 output/nl2yui-lora-0.5b/merged
+python serve.py --device auto --port 8765
+```
+
+```bash
+# 增量
+curl -s http://127.0.0.1:8765/api/nl2yui -H "Content-Type: application/json" \
+  -d '{"mode":"update","context":"loginBtn:Button:登录","message":"登录按钮改成登录中并禁用"}'
+
+# 全量（完整 UI 树，字段 ui）
+curl -s http://127.0.0.1:8765/api/nl2yui -H "Content-Type: application/json" \
+  -d '{"mode":"full","message":"做一个登录页"}'
+```
+
+远程 GPU 示例：`chenty@192.168.0.23` 上 `~/develop/nl2yui`，`python serve.py --device cuda --port 8765`。
+
 ## 一键流程
 
 ```bash

@@ -11,3 +11,5 @@ sentencepiece>=0.2.0
 protobuf>=4.25.0
 tqdm>=4.66.0
 jsonschema>=4.22.0
+flask>=2.3.0
+flask-cors>=4.0.0
