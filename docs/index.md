@@ -12,6 +12,7 @@
 - [架构设计文档](architecture.md) - 系统架构、模块关系和设计原理
 - [Platform 层设计](platform-design.md) - PC / Android / iOS / Web 宿主层、libyui 集成、Skia 移动端方案（草案）
 - [LVGL Backend 与组件注册设计](lvgl-backend-design.md) - LVGL 后端、component_registry、lvglmodule 方案（草案）
+- [NL → YUI JSON 小模型设计](nl2yui-small-model-design.md) - 一句话生成增量 JSON，目标 ≥100 tok/s（草案）
 - [功能特性说明](feature.md) - 框架核心功能详细介绍
 
 ### 🎨 UI 开发
