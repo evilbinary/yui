@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Synthesize NL → YUI JSON SFT data from seeds + templates."""
+"""Synthesize NL → YUI JSON SFT data from seeds + atomic/page templates."""
 
 from __future__ import annotations
 
@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from pages import page_scenarios  # noqa: E402
 from schema import validate_example  # noqa: E402
 
 DEFAULT_SEEDS = ROOT / "data" / "seeds.jsonl"
@@ -35,8 +36,24 @@ IDS = [
     ("mainDialog", "Dialog", None),
 ]
 
-TEXTS_CN = ["欢迎", "成功", "失败", "加载中", "请稍候", "下一步", "完成", "重试", "设置", "你好"]
-TEXTS_EN = ["Welcome", "OK", "Error", "Loading", "Next", "Done", "Retry", "Settings", "Hello"]
+TEXTS_CN = [
+    "欢迎",
+    "成功",
+    "失败",
+    "加载中",
+    "请稍候",
+    "下一步",
+    "完成",
+    "重试",
+    "设置",
+    "你好",
+    "提交",
+    "取消",
+    "保存",
+    "删除",
+    "登录",
+]
+TEXTS_EN = ["Welcome", "OK", "Error", "Loading", "Next", "Done", "Retry", "Settings", "Hello", "Save"]
 COLORS = ["#4caf50", "#f44336", "#2196f3", "#89b4fa", "#cdd6f4", "#a6e3a1", "#f9e2af", "#fab387"]
 
 
@@ -70,8 +87,8 @@ def pick_id(rng: random.Random, types: set[str] | None = None) -> tuple[str, str
     return rng.choice(pool)
 
 
-def templates(rng: random.Random) -> Iterator[dict[str, Any]]:
-    # --- change text ---
+def atomic_templates(rng: random.Random) -> Iterator[dict[str, Any]]:
+    """Low-level property / create / batch ops (not tied to a full page)."""
     for lang in ("cn", "en"):
         cid, ctype, _ = pick_id(rng, {"Label", "Button"})
         new_text = rng.choice(TEXTS_CN if lang == "cn" else TEXTS_EN)
@@ -80,13 +97,9 @@ def templates(rng: random.Random) -> Iterator[dict[str, Any]]:
                 f"把 {cid} 的文字改成{new_text}",
                 f"将{cid}文本设为{new_text}",
                 f"{cid} 显示「{new_text}」",
-                f"标题改成{new_text}" if "title" in cid.lower() or ctype == "Label" else f"按钮改成{new_text}",
             ]
         else:
-            msgs = [
-                f"Set {cid} text to {new_text}",
-                f"Change {cid} to say {new_text}",
-            ]
+            msgs = [f"Set {cid} text to {new_text}", f"Change {cid} to say {new_text}"]
         yield {
             "mode": "update",
             "context": default_context(rng, [(cid, ctype, "旧文案")]),
@@ -94,21 +107,19 @@ def templates(rng: random.Random) -> Iterator[dict[str, Any]]:
             "output": dumps_out([{"target": cid, "change": {"text": new_text}}]),
         }
 
-    # --- change color ---
     cid, ctype, _ = pick_id(rng, {"Label", "Button"})
     color = rng.choice(COLORS)
+    change: dict[str, Any] = {"color": color}
     msg = rng.choice(
         [
-            f"把 {cid} 改成绿色" if color == "#4caf50" else f"把 {cid} 文字颜色设为 {color}",
+            f"把 {cid} 文字颜色设为 {color}",
             f"{cid} 颜色 {color}",
             f"Set {cid} color to {color}",
         ]
     )
-    change: dict[str, Any] = {"color": color}
     if rng.random() < 0.35:
-        change["text"] = rng.choice(TEXTS_CN)
-        if "成功" in change["text"] or change["text"] == "OK":
-            msg = f"把 {cid} 改成成功，颜色 {color}"
+        change["text"] = rng.choice(["成功", "失败", "OK", "Error"])
+        msg = f"把 {cid} 改成{change['text']}，颜色 {color}"
     yield {
         "mode": "update",
         "context": default_context(rng, [(cid, ctype, None)]),
@@ -116,10 +127,8 @@ def templates(rng: random.Random) -> Iterator[dict[str, Any]]:
         "output": dumps_out([{"target": cid, "change": change}]),
     }
 
-    # --- visibility ---
     cid, ctype, _ = pick_id(rng, {"Button", "Label", "Dialog", "View"})
-    hide = rng.random() < 0.6
-    if hide:
+    if rng.random() < 0.6:
         msg = rng.choice([f"隐藏 {cid}", f"不要显示 {cid}", f"Hide {cid}"])
         change = {"visible": False} if rng.random() < 0.5 else {"visible": None}
     else:
@@ -132,7 +141,6 @@ def templates(rng: random.Random) -> Iterator[dict[str, Any]]:
         "output": dumps_out([{"target": cid, "change": change}]),
     }
 
-    # --- bgColor / enabled ---
     cid, ctype, _ = pick_id(rng, {"Button", "View"})
     bg = rng.choice(COLORS)
     yield {
@@ -141,33 +149,30 @@ def templates(rng: random.Random) -> Iterator[dict[str, Any]]:
         "message": rng.choice([f"{cid} 背景改成 {bg}", f"Set {cid} bgColor to {bg}"]),
         "output": dumps_out([{"target": cid, "change": {"bgColor": bg}}]),
     }
+
     cid, ctype, _ = pick_id(rng, {"Button", "Input"})
+    enable = rng.random() < 0.4
     yield {
         "mode": "update",
         "context": default_context(rng, [(cid, ctype, None)]),
-        "message": rng.choice([f"禁用 {cid}", f"Disable {cid}"]),
-        "output": dumps_out([{"target": cid, "change": {"enabled": False}}]),
+        "message": rng.choice(
+            [f"启用 {cid}", f"Enable {cid}"] if enable else [f"禁用 {cid}", f"Disable {cid}"]
+        ),
+        "output": dumps_out([{"target": cid, "change": {"enabled": enable}}]),
     }
 
-    # --- create Label / Button / Loading ---
     parent = rng.choice(["panel", "loadPanel", "listRoot"])
     new_id = f"gen_{rng.randint(1, 9999)}"
     kind = rng.choice(["Label", "Button", "Loading"])
     if kind == "Label":
         text = rng.choice(TEXTS_CN)
-        child = {
+        child: dict[str, Any] = {
             "id": new_id,
             "type": "Label",
             "text": text,
             "style": {"color": rng.choice(COLORS), "fontSize": rng.choice([12, 14, 16])},
         }
-        msg = rng.choice(
-            [
-                f"在 {parent} 里加一个标签写{text}",
-                f"往 {parent} 追加 Label「{text}」",
-                f"Add a label {text} under {parent}",
-            ]
-        )
+        msg = rng.choice([f"在 {parent} 里加一个标签写{text}", f"Add a label {text} under {parent}"])
     elif kind == "Button":
         text = rng.choice(TEXTS_CN)
         child = {
@@ -178,12 +183,7 @@ def templates(rng: random.Random) -> Iterator[dict[str, Any]]:
             "style": {"bgColor": rng.choice(COLORS), "color": "#1e1e2e", "borderRadius": 6},
             "events": {"onClick": "@onGenClick"},
         }
-        msg = rng.choice(
-            [
-                f"在 {parent} 增加按钮 {text}",
-                f"Add button {text} to {parent}",
-            ]
-        )
+        msg = rng.choice([f"在 {parent} 增加按钮 {text}", f"Add button {text} to {parent}"])
     else:
         child = {
             "id": new_id,
@@ -196,13 +196,7 @@ def templates(rng: random.Random) -> Iterator[dict[str, Any]]:
             "strokeWidth": 4,
             "speed": 1.0,
         }
-        msg = rng.choice(
-            [
-                f"在 {parent} 里加一个加载中",
-                f"给 {parent} 加 Loading",
-                f"Add a loading spinner to {parent}",
-            ]
-        )
+        msg = rng.choice([f"在 {parent} 里加一个加载中", f"Add a loading spinner to {parent}"])
     yield {
         "mode": "update",
         "context": default_context(rng, [(parent, "View", None)]),
@@ -210,7 +204,6 @@ def templates(rng: random.Random) -> Iterator[dict[str, Any]]:
         "output": dumps_out([{"target": parent, "change": {"children": [child]}}]),
     }
 
-    # --- clear children ---
     parent = rng.choice(["panel", "gridRoot", "listRoot"])
     yield {
         "mode": "update",
@@ -219,7 +212,6 @@ def templates(rng: random.Random) -> Iterator[dict[str, Any]]:
         "output": dumps_out([{"target": parent, "change": {"children": None}}]),
     }
 
-    # --- layout ---
     parent = rng.choice(["panel", "loadPanel"])
     layout = {
         "type": rng.choice(["vertical", "horizontal"]),
@@ -238,17 +230,14 @@ def templates(rng: random.Random) -> Iterator[dict[str, Any]]:
         "output": dumps_out([{"target": parent, "change": {"layout": layout}}]),
     }
 
-    # --- progress value ---
-    cid = "progressBar"
     val = rng.randint(0, 100)
     yield {
         "mode": "update",
-        "context": default_context(rng, [(cid, "Progress", None)]),
+        "context": default_context(rng, [("progressBar", "Progress", None)]),
         "message": rng.choice([f"进度条设为 {val}%", f"Set progress to {val}"]),
-        "output": dumps_out([{"target": cid, "change": {"value": val}}]),
+        "output": dumps_out([{"target": "progressBar", "change": {"value": val}}]),
     }
 
-    # --- batch ---
     a, b = rng.sample([x for x in IDS if x[1] in {"Label", "Button"}], 2)
     t1, t2 = rng.choice(TEXTS_CN), rng.choice(TEXTS_CN)
     yield {
@@ -268,57 +257,13 @@ def templates(rng: random.Random) -> Iterator[dict[str, Any]]:
         ),
     }
 
-    # --- full mini tree ---
-    title = rng.choice(TEXTS_CN)
-    btn = rng.choice(TEXTS_CN)
-    root_id = "screenRoot"
-    yield {
-        "mode": "full",
-        "context": "(none)",
-        "message": rng.choice(
-            [
-                f"做一个竖排面板，标题{title}，一个{btn}按钮",
-                f"Create a vertical panel with title {title} and button {btn}",
-            ]
-        ),
-        "output": dumps_out(
-            [
-                {
-                    "target": "canvas",
-                    "change": {
-                        "children": [
-                            {
-                                "id": root_id,
-                                "type": "View",
-                                "layout": {"type": "vertical", "spacing": 10, "padding": [12]},
-                                "style": {"bgColor": "#1e1e2e"},
-                                "children": [
-                                    {
-                                        "id": "fullTitle",
-                                        "type": "Label",
-                                        "text": title,
-                                        "style": {"color": "#cdd6f4", "fontSize": 18},
-                                    },
-                                    {
-                                        "id": "fullBtn",
-                                        "type": "Button",
-                                        "text": btn,
-                                        "size": [120, 36],
-                                        "style": {
-                                            "bgColor": "#89b4fa",
-                                            "color": "#1e1e2e",
-                                            "borderRadius": 6,
-                                        },
-                                        "events": {"onClick": "@onFullClick"},
-                                    },
-                                ],
-                            }
-                        ]
-                    },
-                }
-            ]
-        ),
-    }
+
+def templates(rng: random.Random, *, page_ratio: float = 0.65) -> Iterator[dict[str, Any]]:
+    """Mix page scenarios (majority) with atomic ops."""
+    if rng.random() < page_ratio:
+        yield from page_scenarios(rng)
+    else:
+        yield from atomic_templates(rng)
 
 
 def load_jsonl(path: Path) -> list[dict[str, Any]]:
@@ -338,10 +283,12 @@ def write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as f:
         for row in rows:
-            f.write(json.dumps(row, ensure_ascii=False) + "\n")
+            # Drop training-only meta if present
+            clean = {k: v for k, v in row.items() if k != "meta"}
+            f.write(json.dumps(clean, ensure_ascii=False) + "\n")
 
 
-def synthesize(n: int, seed: int, seeds_path: Path) -> list[dict[str, Any]]:
+def synthesize(n: int, seed: int, seeds_path: Path, page_ratio: float) -> list[dict[str, Any]]:
     rng = random.Random(seed)
     rows = load_jsonl(seeds_path)
     for ex in rows:
@@ -349,15 +296,23 @@ def synthesize(n: int, seed: int, seeds_path: Path) -> list[dict[str, Any]]:
         if errs:
             raise SystemExit(f"invalid seed: {errs} :: {ex}")
 
+    skipped = 0
     while len(rows) < n:
-        for ex in templates(rng):
+        batch = list(templates(rng, page_ratio=page_ratio))
+        rng.shuffle(batch)
+        for ex in batch:
             errs = validate_example(ex)
             if errs:
+                skipped += 1
+                if skipped <= 5:
+                    print(f"skip invalid: {errs[:2]} :: {ex.get('message')}", file=sys.stderr)
                 continue
             rows.append(ex)
             if len(rows) >= n:
                 break
     rng.shuffle(rows)
+    if skipped:
+        print(f"skipped {skipped} invalid synthesized rows", file=sys.stderr)
     return rows[:n]
 
 
@@ -383,9 +338,15 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--out", type=Path, default=DEFAULT_OUT)
     p.add_argument("--eval-out", type=Path, default=ROOT / "data" / "eval.jsonl")
     p.add_argument("--eval-ratio", type=float, default=0.1)
+    p.add_argument(
+        "--page-ratio",
+        type=float,
+        default=0.65,
+        help="probability to draw from page scenarios vs atomic ops",
+    )
     args = p.parse_args(argv)
 
-    rows = synthesize(args.n, args.seed, args.seeds)
+    rows = synthesize(args.n, args.seed, args.seeds, args.page_ratio)
     train, ev = split_train_eval(rows, args.eval_ratio, args.seed + 1)
     write_jsonl(args.out, train)
     write_jsonl(args.eval_out, ev)

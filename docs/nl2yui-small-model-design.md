@@ -277,9 +277,11 @@ user: 把标题改成欢迎
 ### 来源
 
 1. **金标种子**：从 `docs/json-update-examples.md`、`app/tests/test-*.js`、`app/playground` 抽取真实 `YUI.update` 片段  
-2. **模板扩增**：对每种意图（改字、改色、显隐、追加 Button/Label/Loading、清 children、改 layout）写 20–50 条模板，替换 id/文案/颜色  
+2. **模板扩增**：对每种意图（改字、改色、显隐、追加 Button/Label/Loading、清 children、改 layout）写模板；另有 **常见页面原型**（登录/设置/消息/表单/聊天/启动器/加载/对话框/商品/空状态）见 [`app/nl2yui/pages.py`](../app/nl2yui/pages.py)  
 3. **反向生成**：已有 UI JSON → 用规则或大模型（一次性离线）写中文指令，再人工抽检  
 4. **难例**：错误 id、歧义（「那个按钮」）、多 target 批量、null 删除
+
+实现：`python app/nl2yui/build_seeds.py` → `python app/nl2yui/synthesize.py -n 3000 --page-ratio 0.7`
 
 ### 规模建议
 

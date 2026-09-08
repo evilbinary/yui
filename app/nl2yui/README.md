@@ -28,13 +28,26 @@ pip install -r requirements.txt
 
 `requirements.txt` 里的 `torch` 若本机已装，pip 一般会跳过。有 NVIDIA GPU 时建议本机已是对应 CUDA 版 `torch`。
 
+## 数据
+
+```bash
+# 重建金标种子（原子操作 + 10 类常见页面）
+python build_seeds.py
+
+# 合成训练集（默认约 65–70% 页面场景，其余原子改属性）
+python synthesize.py -n 3000 --page-ratio 0.7
+```
+
+常见页面原型（`pages.py`）：登录、设置、消息列表、表单、聊天助手、启动器网格、加载遮罩、确认对话框、商品详情、空状态。
+
 ## 一键流程
 
 ```bash
 cd app/nl2yui
 
-# 1) 合成约 3000 条（含 seeds，划分 10% eval）
-python synthesize.py -n 3000
+# 1) 金标种子 + 合成约 3000 条（含常见页面场景）
+python build_seeds.py
+python synthesize.py -n 3000 --page-ratio 0.7
 
 # 2) LoRA 微调（默认 Qwen2.5-0.5B-Instruct）
 python train.py --model Qwen/Qwen2.5-0.5B-Instruct --out output/nl2yui-lora
