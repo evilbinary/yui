@@ -107,7 +107,7 @@ ids: titleLabel:Label:"你好", okBtn:Button:"确定", panel:View
 }
 ```
 
-**全量（`mode=full`，限深）**：单根 `View` 树，字段遵循 [`json-format-spec.md`](json-format-spec.md)。
+**全量（`mode=full`）**：一口气输出完整 UI 树（单根 `View`/`Grid` 等），字段遵循 [`json-format-spec.md`](json-format-spec.md)，**不要**包在 `updates` 里。
 
 ### 示例对（训练/评测用）
 
