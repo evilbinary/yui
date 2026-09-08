@@ -12,6 +12,7 @@ import time
 import traceback
 import sys
 import os
+import urllib.request
 from datetime import datetime
 
 from openai import OpenAI
@@ -134,6 +135,91 @@ View, Panel, Button, Input, Label, Image, List, Grid, Progress, Loading, Checkbo
 - 不要追求「科技感/好看」而增加装饰字段
 - 不要输出与 UI 无关的说明文字
 """
+
+# 本地小模型 nl2yui（默认走远程 GPU serve；设 NL2YUI_ENABLED=0 回退 DeepSeek）
+NL2YUI_URL = os.environ.get("NL2YUI_URL", "http://192.168.0.23:8765").rstrip("/")
+NL2YUI_ENABLED = os.environ.get("NL2YUI_ENABLED", "1") != "0"
+
+
+def _parse_json_maybe(value):
+    if isinstance(value, str):
+        try:
+            return json.loads(value)
+        except Exception:
+            return value
+    return value
+
+
+def extract_nl2yui_context(json_config, max_nodes=48):
+    """从当前编辑器 JSON 提取 id/type/text 摘要，供 update 模式消歧。"""
+    root = _parse_json_maybe(json_config)
+    nodes = []
+
+    def walk(node):
+        if len(nodes) >= max_nodes:
+            return
+        if isinstance(node, list):
+            for item in node:
+                walk(item)
+            return
+        if not isinstance(node, dict):
+            return
+        # 已是 updates 数组形态时，只记 target
+        if "target" in node and "change" in node:
+            tid = node.get("target")
+            if tid:
+                nodes.append(str(tid))
+            return
+        cid = node.get("id")
+        ctype = node.get("type")
+        if cid and ctype:
+            text = node.get("text") or node.get("placeholder") or ""
+            if isinstance(text, str) and text.strip():
+                nodes.append(f"{cid}:{ctype}:{text.strip()[:24]}")
+            else:
+                nodes.append(f"{cid}:{ctype}")
+        for child in node.get("children") or []:
+            walk(child)
+
+    if isinstance(root, dict) and "updates" in root:
+        walk(root.get("updates"))
+    else:
+        walk(root)
+    return "\n".join(nodes)
+
+
+def call_nl2yui(message, mode, json_config=None, timeout=60):
+    """调用 app/nl2yui/serve.py：update → updates；full → ui。失败返回 None。"""
+    if not NL2YUI_ENABLED or not NL2YUI_URL:
+        return None
+    payload = {
+        "message": message,
+        "mode": mode,
+        "max_new_tokens": 512 if mode == "full" else 256,
+    }
+    if mode == "update" and json_config is not None:
+        ctx = extract_nl2yui_context(json_config)
+        if ctx:
+            payload["context"] = ctx
+    url = f"{NL2YUI_URL}/api/nl2yui"
+    body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+    req = urllib.request.Request(
+        url,
+        data=body,
+        headers={"Content-Type": "application/json; charset=utf-8"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+        if data.get("status") not in ("ok", "success"):
+            print(f"[nl2yui] error response: {data}")
+            return None
+        print(f"[nl2yui] mode={mode} usage={data.get('usage')}")
+        return data
+    except Exception as err:
+        print(f"[nl2yui] request failed: {type(err).__name__}: {err}")
+        return None
 
 
 # 模拟数据存储（实际应用中应该使用数据库）
@@ -297,7 +383,10 @@ def get_status():
         "timestamp": datetime.now().isoformat(),
         "message_count": len(message_history),
         "supports_incremental": True,
-        "supports_full": True
+        "supports_full": True,
+        "backend": "nl2yui" if NL2YUI_ENABLED else "openai",
+        "nl2yui_url": NL2YUI_URL if NL2YUI_ENABLED else None,
+        "nl2yui_enabled": NL2YUI_ENABLED,
     })
 
 @app.route('/api/message/incremental', methods=['POST'])
@@ -402,35 +491,46 @@ def _stream_incremental_updates(message, json_config):
     lower_msg = message.lower()
     config_text = _normalize_json_config(json_config)
     full_content = ""
+    updates = []
 
-    try:
-        print(f"[DEBUG] SSE stream calling AI API with model: {model}")
-        stream = client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": config_text + ' ' + incremental_system_prompt},
-                {"role": "user", "content": message}
-            ],
-            stream=True,
-        )
+    # 优先走本地小模型；无流式时整段推理后伪流式推送
+    nl = call_nl2yui(message, "update", json_config)
+    if nl and isinstance(nl.get("updates"), list) and nl["updates"]:
+        updates = nl["updates"]
+        preview = json.dumps({"updates": updates}, ensure_ascii=False)
+        for ch in preview:
+            yield _sse_event("token", {"delta": ch})
+            time.sleep(0.004)
+    else:
+        try:
+            print(f"[DEBUG] SSE stream calling AI API with model: {model}")
+            stream = client.chat.completions.create(
+                model=model,
+                messages=[
+                    {"role": "system", "content": config_text + ' ' + incremental_system_prompt},
+                    {"role": "user", "content": message}
+                ],
+                stream=True,
+            )
 
-        for chunk in stream:
-            choice = chunk.choices[0]
-            delta = ""
-            if choice.delta and getattr(choice.delta, "content", None):
-                delta = choice.delta.content
-            if delta:
-                full_content += delta
-                yield _sse_event("token", {"delta": delta})
+            for chunk in stream:
+                choice = chunk.choices[0]
+                delta = ""
+                if choice.delta and getattr(choice.delta, "content", None):
+                    delta = choice.delta.content
+                if delta:
+                    full_content += delta
+                    yield _sse_event("token", {"delta": delta})
 
-        print(f"[DEBUG] SSE stream completed, content length: {len(full_content)}")
-    except Exception as ai_err:
-        print(f"[ERROR] SSE AI stream failed: {type(ai_err).__name__}: {ai_err}")
-        print(traceback.format_exc())
-        yield _sse_event("error", {"error": str(ai_err)})
-        full_content = ""
+            print(f"[DEBUG] SSE stream completed, content length: {len(full_content)}")
+        except Exception as ai_err:
+            print(f"[ERROR] SSE AI stream failed: {type(ai_err).__name__}: {ai_err}")
+            print(traceback.format_exc())
+            yield _sse_event("error", {"error": str(ai_err)})
+            full_content = ""
 
-    updates = parse_incremental_content(full_content)
+        updates = parse_incremental_content(full_content)
+
     if not updates:
         updates = _fallback_incremental_updates(message, lower_msg)
         preview = json.dumps(updates, ensure_ascii=False)
@@ -605,6 +705,10 @@ def generate_incremental_updates(message, json_config):
     """
     updates = []
     lower_msg = message.lower()
+
+    nl = call_nl2yui(message, "update", json_config)
+    if nl and isinstance(nl.get("updates"), list) and nl["updates"]:
+        return nl["updates"]
     
     try:
         print(f"[DEBUG] Calling AI API with model: {model}")
@@ -687,8 +791,11 @@ def generate_full_ui_state(message, json_config):
     """
     生成完整的UI状态（符合 json-format-spec.md 规范的组件树结构）
     """
-    lower_msg = message.lower()
     print(f"Processing message: {message}")
+
+    nl = call_nl2yui(message, "full", json_config)
+    if nl and isinstance(nl.get("ui"), dict) and nl["ui"].get("type"):
+        return nl["ui"]
 
     try:
         print(f"[DEBUG] Calling AI API with model: {model}")
@@ -787,6 +894,9 @@ if __name__ == '__main__':
     print("YUI Playground API Server")
     print("=" * 60)
     print("Server is running on http://localhost:5000")
+    print(f"Backend: {'nl2yui @ ' + NL2YUI_URL if NL2YUI_ENABLED else 'openai/deepseek'}")
+    print("  NL2YUI_ENABLED=0  → 回退大模型")
+    print("  NL2YUI_URL=http://host:8765  → 小模型服务地址")
     print("\nAvailable endpoints:")
     print("  POST /api/message/incremental         - 增量更新接口")
     print("  POST /api/message/incremental/stream  - 增量更新 SSE 流式接口")

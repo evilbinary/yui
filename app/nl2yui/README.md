@@ -61,6 +61,22 @@ curl -s http://127.0.0.1:8765/api/nl2yui -H "Content-Type: application/json" \
 
 远程 GPU 示例：`chenty@192.168.0.23` 上 `~/develop/nl2yui`，`python serve.py --device cuda --port 8765`。
 
+## Playground 接入
+
+Playground `api-server.py` 默认把增量/全量请求转发到小模型：
+
+```bash
+# 远端已起 serve.py 后，本机起 Playground API（默认 NL2YUI_URL=http://192.168.0.23:8765）
+cd app/playground
+python api-server.py
+
+# 回退 DeepSeek
+set NL2YUI_ENABLED=0
+python api-server.py
+```
+
+`GET /api/status` 会显示 `backend: nl2yui` 与 `nl2yui_url`。
+
 ## 一键流程
 
 ```bash
