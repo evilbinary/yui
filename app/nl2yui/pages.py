@@ -382,15 +382,14 @@ def context_of(page: dict[str, Any], rng: random.Random | None = None, k: int | 
     return ", ".join(parts)
 
 
+def full_page_json(page: dict[str, Any]) -> dict[str, Any]:
+    """mode=full gold: complete UI tree (not wrapped in updates)."""
+    return copy.deepcopy(page)
+
+
+# Back-compat alias
 def full_page_update(page: dict[str, Any]) -> dict[str, Any]:
-    return {
-        "updates": [
-            {
-                "target": "canvas",
-                "change": {"children": [copy.deepcopy(page)]},
-            }
-        ]
-    }
+    return full_page_json(page)
 
 
 def page_scenarios(rng: random.Random) -> Iterator[dict[str, Any]]:
@@ -414,7 +413,7 @@ def page_scenarios(rng: random.Random) -> Iterator[dict[str, Any]]:
         "mode": "full",
         "context": "(none)",
         "message": rng.choice(titles[name]),
-        "output": full_page_update(page),
+        "output": full_page_json(page),
         "meta": {"page": name, "kind": "full"},
     }
 

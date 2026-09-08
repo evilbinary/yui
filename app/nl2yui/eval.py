@@ -149,7 +149,7 @@ def main(argv: list[str] | None = None) -> int:
             pred = None
 
         if pred is not None:
-            errs = validate_output(pred)
+            errs = validate_output(pred, mode=ex.get("mode", "update"))
             if not errs:
                 schema_ok += 1
             if canonical(pred) == canonical(gold):

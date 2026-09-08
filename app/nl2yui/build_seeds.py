@@ -7,7 +7,7 @@ import json
 import random
 from pathlib import Path
 
-from pages import PAGE_BUILDERS, full_page_update, page_scenarios
+from pages import PAGE_BUILDERS, full_page_json, page_scenarios
 from schema import validate_example
 
 ROOT = Path(__file__).resolve().parent
@@ -124,7 +124,7 @@ def main() -> int:
                 "mode": "full",
                 "context": "(none)",
                 "message": TITLES[name],
-                "output": full_page_update(builder()),
+                "output": full_page_json(builder()),
             }
         )
 

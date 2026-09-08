@@ -119,8 +119,8 @@ def _check_change(change: Any, path: str, errors: list[str]) -> None:
                     _check_component(child, f"{path}.children[{i}]", errors)
 
 
-def validate_output(obj: Any) -> list[str]:
-    """Return list of error strings; empty means OK."""
+def validate_updates(obj: Any) -> list[str]:
+    """Validate incremental {updates:[...]} output."""
     errors: list[str] = []
     if not isinstance(obj, dict):
         return ["root must be object"]
@@ -148,10 +148,35 @@ def validate_output(obj: Any) -> list[str]:
     return errors
 
 
+def validate_full_tree(obj: Any) -> list[str]:
+    """Validate mode=full: one complete UI root component (not updates)."""
+    if not isinstance(obj, dict):
+        return ["full root must be object"]
+    if "updates" in obj:
+        return ["full mode must NOT use updates; emit a complete UI tree"]
+    if "type" not in obj:
+        return ["full root missing type"]
+    if obj.get("type") not in ALLOWED_TYPES:
+        return [f"full root type {obj.get('type')!r} not in whitelist"]
+    if "id" not in obj or not isinstance(obj["id"], str) or not obj["id"]:
+        return ["full root missing id"]
+    errors: list[str] = []
+    _check_component(obj, "root", errors)
+    return errors
+
+
+def validate_output(obj: Any, mode: str = "update") -> list[str]:
+    """Return list of error strings; empty means OK. Mode-aware."""
+    if (mode or "update") == "full":
+        return validate_full_tree(obj)
+    return validate_updates(obj)
+
+
 def validate_example(example: dict[str, Any]) -> list[str]:
     errors: list[str] = []
     if not example.get("message"):
         errors.append("missing message")
+    mode = example.get("mode", "update")
     output = example.get("output")
     if output is None:
         errors.append("missing output")
@@ -161,5 +186,5 @@ def validate_example(example: dict[str, Any]) -> list[str]:
                 output = json.loads(output)
             except json.JSONDecodeError as e:
                 return errors + [f"output not JSON: {e}"]
-        errors.extend(validate_output(output))
+        errors.extend(validate_output(output, mode=mode))
     return errors

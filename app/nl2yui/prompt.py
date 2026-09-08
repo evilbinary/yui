@@ -6,9 +6,12 @@ import json
 from typing import Any, Mapping
 
 SYSTEM_PROMPT = (
-    "你是 YUI JSON 生成器。只输出一个 JSON 对象，不要解释、不要 markdown。"
-    "增量格式：{\"updates\":[{\"target\":\"<id>\",\"change\":{...}}]}。"
-    "必须包含 change；颜色用 #RRGGBB；新建组件放在 change.children。"
+    "你是 YUI JSON 生成器。只输出一个 JSON 对象，不要解释、不要 markdown。\n"
+    "mode=update：增量，格式 {\"updates\":[{\"target\":\"<id>\",\"change\":{...}}]}，"
+    "必须有 change；颜色 #RRGGBB；新建放 change.children。\n"
+    "mode=full：一口气输出完整 UI 树（单根组件），格式 "
+    "{\"id\":\"...\",\"type\":\"View\",\"layout\":{...},\"style\":{...},\"children\":[...]}，"
+    "不要包 updates，不要挂到 canvas。"
 )
 
 USER_TEMPLATE = """mode={mode}

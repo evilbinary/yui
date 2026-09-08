@@ -78,14 +78,14 @@ def main() -> int:
         text = tok.decode(new, skip_special_tokens=True)
         try:
             pred = parse_model_json(text)
-            errs = validate_output(pred)
+            errs = validate_output(pred, mode=ex.get("mode", "update"))
             status = "OK" if not errs else f"SCHEMA {errs[:2]}"
-            shown = json.dumps(pred, ensure_ascii=False)
+            shown = json.dumps(pred, ensure_ascii=False)[:500]
         except Exception as e:
             status = f"PARSE {e}"
-            shown = text.replace("\n", " ")[:240]
+            shown = text.replace("\n", " ")[:400]
         print("=" * 60)
-        print(f"[{i}] {ex['message']}")
+        print(f"[{i}] mode={ex.get('mode', 'update')} | {ex['message']}")
         print(f"pred: {shown}")
         print(f"status: {status}  ({dt:.1f}s, {int(new.numel())} tok)")
     return 0
