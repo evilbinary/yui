@@ -80,7 +80,7 @@ def main() -> int:
             pred = parse_model_json(text)
             errs = validate_output(pred)
             status = "OK" if not errs else f"SCHEMA {errs[:2]}"
-            shown = json.dumps(pred, ensure_ascii=False)[:400]
+            shown = json.dumps(pred, ensure_ascii=False)
         except Exception as e:
             status = f"PARSE {e}"
             shown = text.replace("\n", " ")[:240]
