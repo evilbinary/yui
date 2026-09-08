@@ -28,6 +28,7 @@ pip install -r requirements.txt
 
 `requirements.txt` 里的 `torch` 若本机已装，pip 一般会跳过。有 NVIDIA GPU 时建议本机已是对应 CUDA 版 `torch`。
 
+
 ## 数据
 
 ```bash

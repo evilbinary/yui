@@ -186,17 +186,18 @@ def main(argv: list[str] | None = None) -> int:
             sft_kwargs["evaluation_strategy"] = sft_kwargs.pop("eval_strategy")
         sft_args = SFTConfig(**sft_kwargs)
 
-    trainer = SFTTrainer(
-        model=model,
-        args=sft_args,
-        train_dataset=train_ds,
-        eval_dataset=eval_ds,
-        tokenizer=tokenizer,
-        peft_config=peft_config,
-        dataset_text_field="text",
-        max_seq_length=args.max_seq_len,
-        packing=False,
-    )
+    # TRL 0.14+: text field / max_seq_length live on SFTConfig; tokenizer -> processing_class
+    trainer_kwargs: dict[str, Any] = {
+        "model": model,
+        "args": sft_args,
+        "train_dataset": train_ds,
+        "eval_dataset": eval_ds,
+        "peft_config": peft_config,
+    }
+    try:
+        trainer = SFTTrainer(**trainer_kwargs, processing_class=tokenizer)
+    except TypeError:
+        trainer = SFTTrainer(**trainer_kwargs, tokenizer=tokenizer)
 
     print(
         f"device={'cuda' if use_cuda else ('mps' if use_mps else 'cpu')} "
