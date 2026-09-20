@@ -1,0 +1,173 @@
+{
+    "id": "page_player",
+    "title": "运行中",
+    "js": ["player.js"],
+    "type": "View",
+    "variant": "surface",
+    "flex": 1,
+    "layout": { "type": "vertical", "spacing": 8, "padding": [8, 16, 8, 16] },
+    "events": { "onLoad": "@onPlayerLoad", "onShow": "@onPlayerShow", "onHide": "@onPlayerHide" },
+    "children": [
+        {
+            "id": "player_header",
+            "type": "View",
+            "variant": "card",
+            "size": [592, 46],
+            "layout": {
+                "type": "horizontal",
+                "spacing": 10,
+                "padding": [6, 10, 6, 10],
+                "align": "center"
+            },
+            "children": [
+                { "id": "player_icon", "type": "Label", "text": "🎮", "size": [32, 32] },
+                {
+                    "id": "player_title_box",
+                    "type": "View",
+                    "flex": 1,
+                    "size": [0, 34],
+                    "layout": { "type": "vertical", "spacing": 0, "justifyContent": "center" },
+                    "children": [
+                        { "id": "player_title", "type": "Label", "variant": "heading", "text": "—", "size": [360, 18], "textAlign": "left" },
+                        { "id": "player_sub", "type": "Label", "variant": "caption", "text": "—", "size": [360, 14], "textAlign": "left" }
+                    ]
+                },
+                { "id": "btn_player_exit", "type": "Button", "variant": "danger", "text": "退出", "size": [64, 30], "events": { "onClick": "@onPlayerExit" } }
+            ]
+        },
+        {
+            "id": "player_screen",
+            "type": "View",
+            "variant": "screen",
+            "flex": 1,
+            "size": [592, 0],
+            "layout": {
+                "type": "vertical",
+                "spacing": 8,
+                "padding": [16, 16, 16, 16],
+                "align": "center",
+                "justifyContent": "center"
+            },
+            "children": [
+                { "id": "player_boot_icon", "type": "Label", "text": "🕹", "size": [64, 56] },
+                { "id": "player_boot_text", "type": "Label", "variant": "subtitle", "text": "正在加载模拟核心…", "size": [500, 18] },
+                {
+                    "id": "player_boot_track", "variant": "bar-track",
+                    "type": "View",
+                    "size": [420, 10],
+                    "style": { "bgColor": "#131B2E", "borderRadius": 5 },
+                    "children": [
+                        { "id": "player_boot_fill", "variant": "bar-fill", "type": "View", "size": [0, 10], "style": { "bgColor": "#38BDF8", "borderRadius": 5 } }
+                    ]
+                },
+                { "id": "player_boot_pct", "type": "Label", "variant": "caption", "text": "0%", "size": [500, 14] },
+                { "id": "player_running", "type": "Label", "variant": "heading", "text": "▶ 运行中 · 60 FPS", "size": [500, 20], "visible": false },
+                { "id": "player_screen_tip", "type": "Label", "variant": "caption", "text": "此处为模拟器画面区域（libretro 前端输出）", "size": [500, 14] }
+            ]
+        },
+        {
+            "id": "player_hud",
+            "type": "View",
+            "size": [592, 54],
+            "layout": { "type": "horizontal", "spacing": 8 },
+            "children": [
+                {
+                    "id": "hud_battery_card",
+                    "type": "View",
+                    "variant": "stat-card",
+                    "size": [142, 54],
+                    "layout": { "type": "vertical", "spacing": 2, "padding": [7, 9, 7, 9] },
+                    "children": [
+                        { "id": "player_fps", "type": "Label", "variant": "heading", "text": "— FPS", "size": [124, 16], "textAlign": "left" },
+                        { "id": "player_fps_label", "type": "Label", "variant": "stat-label", "text": "帧率", "size": [124, 12], "textAlign": "left" },
+                        {
+                            "id": "player_fps_track", "variant": "bar-track",
+                            "type": "View",
+                            "size": [124, 6],
+                            "style": { "bgColor": "#1B2440", "borderRadius": 3 },
+                            "children": [
+                                { "id": "player_fps_fill", "variant": "bar-fill", "type": "View", "size": [0, 6], "style": { "bgColor": "#34D399", "borderRadius": 3 } }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "hud_time_card",
+                    "type": "View",
+                    "variant": "stat-card",
+                    "size": [142, 54],
+                    "layout": { "type": "vertical", "spacing": 2, "padding": [7, 9, 7, 9] },
+                    "children": [
+                        { "id": "player_hud_time", "type": "Label", "variant": "heading", "text": "10:09", "size": [124, 16], "textAlign": "left" },
+                        { "id": "player_hud_time_label", "type": "Label", "variant": "stat-label", "text": "当前时间", "size": [124, 12], "textAlign": "left" },
+                        {
+                            "id": "player_hud_time_track", "variant": "bar-track",
+                            "type": "View",
+                            "size": [124, 6],
+                            "style": { "bgColor": "#1B2440", "borderRadius": 3 },
+                            "children": [
+                                { "id": "player_hud_time_fill", "variant": "bar-fill", "type": "View", "size": [62, 6], "style": { "bgColor": "#38BDF8", "borderRadius": 3 } }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "hud_bat_card",
+                    "type": "View",
+                    "variant": "stat-card",
+                    "size": [142, 54],
+                    "layout": { "type": "vertical", "spacing": 2, "padding": [7, 9, 7, 9] },
+                    "children": [
+                        { "id": "player_hud_battery", "type": "Label", "variant": "heading", "text": "85%", "size": [124, 16], "textAlign": "left" },
+                        { "id": "player_hud_battery_label", "type": "Label", "variant": "stat-label", "text": "剩余电量", "size": [124, 12], "textAlign": "left" },
+                        {
+                            "id": "player_hud_battery_track", "variant": "bar-track",
+                            "type": "View",
+                            "size": [124, 6],
+                            "style": { "bgColor": "#1B2440", "borderRadius": 3 },
+                            "children": [
+                                { "id": "player_hud_battery_fill", "variant": "bar-fill", "type": "View", "size": [105, 6], "style": { "bgColor": "#FACC15", "borderRadius": 3 } }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "hud_play_card",
+                    "type": "View",
+                    "variant": "stat-card",
+                    "size": [142, 54],
+                    "layout": { "type": "vertical", "spacing": 2, "padding": [7, 9, 7, 9] },
+                    "children": [
+                        { "id": "player_hud_play", "type": "Label", "variant": "heading", "text": "0 分钟", "size": [124, 16], "textAlign": "left" },
+                        { "id": "player_hud_play_label", "type": "Label", "variant": "stat-label", "text": "本次时长", "size": [124, 12], "textAlign": "left" },
+                        {
+                            "id": "player_hud_play_track", "variant": "bar-track",
+                            "type": "View",
+                            "size": [124, 6],
+                            "style": { "bgColor": "#1B2440", "borderRadius": 3 },
+                            "children": [
+                                { "id": "player_hud_play_fill", "variant": "bar-fill", "type": "View", "size": [0, 6], "style": { "bgColor": "#A78BFA", "borderRadius": 3 } }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "player_keys",
+            "type": "View",
+            "size": [592, 30],
+            "layout": { "type": "horizontal", "spacing": 6, "align": "center" },
+            "children": [
+                { "id": "key_a", "type": "Button", "variant": "key", "text": "Ⓐ", "size": [46, 26], "events": { "onClick": "@onPlayerKeyA" } },
+                { "id": "key_b", "type": "Button", "variant": "key", "text": "Ⓑ", "size": [46, 26], "events": { "onClick": "@onPlayerKeyB" } },
+                { "id": "key_x", "type": "Button", "variant": "key", "text": "Ⓧ", "size": [46, 26], "events": { "onClick": "@onPlayerKeyX" } },
+                { "id": "key_y", "type": "Button", "variant": "key", "text": "Ⓨ", "size": [46, 26], "events": { "onClick": "@onPlayerKeyY" } },
+                { "id": "player_key_gap", "type": "View", "flex": 1, "size": [0, 26] },
+                { "id": "btn_player_save", "type": "Button", "variant": "secondary", "text": "快存", "size": [56, 26], "events": { "onClick": "@onPlayerSave" } },
+                { "id": "btn_player_load", "type": "Button", "variant": "secondary", "text": "快读", "size": [56, 26], "events": { "onClick": "@onPlayerQuickLoad" } },
+                { "id": "btn_player_pause", "type": "Button", "variant": "pill", "text": "暂停", "size": [56, 26], "events": { "onClick": "@onPlayerPause" } }
+            ]
+        }
+    ]
+}

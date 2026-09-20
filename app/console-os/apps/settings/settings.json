@@ -1,0 +1,126 @@
+{
+    "id": "page_settings",
+    "title": "设置",
+    "js": ["settings.js"],
+    "type": "View",
+    "variant": "surface",
+    "flex": 1,
+    "scrollable": 1,
+    "layout": { "type": "vertical", "spacing": 8, "padding": [8, 16, 8, 16] },
+    "events": { "onLoad": "@onSettingsLoad", "onShow": "@onSettingsShow" },
+    "children": [
+        {
+            "id": "settings_header",
+            "type": "View",
+            "size": [592, 38],
+            "layout": { "type": "horizontal", "spacing": 8, "align": "center" },
+            "children": [
+                {
+                    "id": "settings_title_box",
+                    "type": "View",
+                    "flex": 1,
+                    "size": [0, 36],
+                    "layout": { "type": "vertical", "spacing": 0, "justifyContent": "center" },
+                    "children": [
+                        { "id": "settings_title", "type": "Label", "variant": "title", "text": "系统设置", "size": [200, 20], "textAlign": "left" },
+                        { "id": "settings_sub", "type": "Label", "variant": "caption", "text": "外观 / 声音 / 模拟器加载", "size": [400, 14], "textAlign": "left" }
+                    ]
+                },
+                { "id": "btn_settings_back", "type": "Button", "variant": "primary", "text": "返回桌面", "size": [80, 30], "events": { "onClick": "@goConsoleBack" } }
+            ]
+        },
+        {
+            "id": "settings_row_theme",
+            "type": "View",
+            "variant": "list-row",
+            "size": [592, 46],
+            "layout": { "type": "horizontal", "spacing": 8, "padding": [8, 12, 8, 12], "align": "center" },
+            "children": [
+                { "id": "settings_theme_name", "type": "Label", "variant": "body", "text": "外观主题", "size": [120, 16], "textAlign": "left" },
+                { "id": "settings_theme_value", "type": "Label", "variant": "caption", "text": "当前：暗色", "flex": 1, "size": [0, 16], "textAlign": "left" },
+                { "id": "btn_settings_theme", "type": "Button", "variant": "pill", "text": "切换主题", "size": [84, 28], "events": { "onClick": "@onSettingsToggleTheme" } }
+            ]
+        },
+        {
+            "id": "settings_row_volume",
+            "type": "View",
+            "variant": "list-row",
+            "size": [592, 46],
+            "layout": { "type": "horizontal", "spacing": 8, "padding": [8, 12, 8, 12], "align": "center" },
+            "children": [
+                { "id": "settings_volume_name", "type": "Label", "variant": "body", "text": "音量", "size": [56, 16], "textAlign": "left" },
+                {
+                    "id": "settings_volume_track", "variant": "bar-track",
+                    "type": "View",
+                    "size": [120, 6],
+                    "style": { "bgColor": "#1B2440", "borderRadius": 3 },
+                    "children": [
+                        { "id": "settings_volume_fill", "variant": "bar-fill", "type": "View", "size": [84, 6], "style": { "bgColor": "#38BDF8", "borderRadius": 3 } }
+                    ]
+                },
+                { "id": "settings_volume_value", "type": "Label", "variant": "caption", "text": "70%", "flex": 1, "size": [0, 16], "textAlign": "left" },
+                { "id": "btn_volume_down", "type": "Button", "variant": "secondary", "text": "−", "size": [28, 28], "events": { "onClick": "@onSettingsVolumeDown" } },
+                { "id": "btn_volume_up", "type": "Button", "variant": "secondary", "text": "＋", "size": [28, 28], "events": { "onClick": "@onSettingsVolumeUp" } }
+            ]
+        },
+        {
+            "id": "settings_row_brightness",
+            "type": "View",
+            "variant": "list-row",
+            "size": [592, 46],
+            "layout": { "type": "horizontal", "spacing": 8, "padding": [8, 12, 8, 12], "align": "center" },
+            "children": [
+                { "id": "settings_brightness_name", "type": "Label", "variant": "body", "text": "亮度", "size": [56, 16], "textAlign": "left" },
+                {
+                    "id": "settings_brightness_track", "variant": "bar-track",
+                    "type": "View",
+                    "size": [120, 6],
+                    "style": { "bgColor": "#1B2440", "borderRadius": 3 },
+                    "children": [
+                        { "id": "settings_brightness_fill", "variant": "bar-fill", "type": "View", "size": [96, 6], "style": { "bgColor": "#FACC15", "borderRadius": 3 } }
+                    ]
+                },
+                { "id": "settings_brightness_value", "type": "Label", "variant": "caption", "text": "80%", "flex": 1, "size": [0, 16], "textAlign": "left" },
+                { "id": "btn_brightness_down", "type": "Button", "variant": "secondary", "text": "−", "size": [28, 28], "events": { "onClick": "@onSettingsBrightnessDown" } },
+                { "id": "btn_brightness_up", "type": "Button", "variant": "secondary", "text": "＋", "size": [28, 28], "events": { "onClick": "@onSettingsBrightnessUp" } }
+            ]
+        },
+        {
+            "id": "settings_row_emulator",
+            "type": "View",
+            "variant": "list-row",
+            "size": [592, 46],
+            "layout": { "type": "horizontal", "spacing": 8, "padding": [8, 12, 8, 12], "align": "center" },
+            "children": [
+                { "id": "settings_emulator_name", "type": "Label", "variant": "body", "text": "模拟器加载", "size": [100, 16], "textAlign": "left" },
+                { "id": "settings_emulator_value", "type": "Label", "variant": "caption", "text": "emulators/ · 0 个", "flex": 1, "size": [0, 16], "textAlign": "left" },
+                { "id": "btn_settings_rescan", "type": "Button", "variant": "pill", "text": "重新扫描", "size": [84, 28], "events": { "onClick": "@onSettingsRescan" } }
+            ]
+        },
+        {
+            "id": "settings_row_recent",
+            "type": "View",
+            "variant": "list-row",
+            "size": [592, 46],
+            "layout": { "type": "horizontal", "spacing": 8, "padding": [8, 12, 8, 12], "align": "center" },
+            "children": [
+                { "id": "settings_recent_name", "type": "Label", "variant": "body", "text": "最近游玩", "size": [100, 16], "textAlign": "left" },
+                { "id": "settings_recent_value", "type": "Label", "variant": "caption", "text": "0 条记录", "flex": 1, "size": [0, 16], "textAlign": "left" },
+                { "id": "btn_settings_clear_recent", "type": "Button", "variant": "danger", "text": "清空记录", "size": [84, 28], "events": { "onClick": "@onSettingsClearRecent" } }
+            ]
+        },
+        {
+            "id": "settings_about_card",
+            "type": "View",
+            "variant": "card",
+            "size": [592, 84],
+            "layout": { "type": "vertical", "spacing": 3, "padding": [10, 12, 10, 12] },
+            "children": [
+                { "id": "settings_about_title", "type": "Label", "variant": "heading", "text": "YUI Game OS", "size": [300, 18], "textAlign": "left" },
+                { "id": "settings_about_ver", "type": "Label", "variant": "caption", "text": "v0.1.0 · 动态模拟器加载 · YUI 框架", "size": [560, 14], "textAlign": "left" },
+                { "id": "settings_about_hint", "type": "Label", "variant": "caption", "text": "新增模拟器：在 emulators/ 下建 <id>/<id>.json 并放入 ROM，桌面即会自动出现图标。", "size": [560, 14], "textAlign": "left" },
+                { "id": "settings_about_status", "type": "Label", "variant": "caption", "text": "就绪", "size": [560, 14], "textAlign": "left" }
+            ]
+        }
+    ]
+}

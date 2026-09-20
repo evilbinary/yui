@@ -1,0 +1,204 @@
+{
+    "id": "page_desktop",
+    "title": "桌面",
+    "js": ["desktop.js"],
+    "type": "View",
+    "variant": "surface",
+    "flex": 1,
+    "scrollable": 1,
+    "layout": { "type": "vertical", "spacing": 8, "padding": [8, 16, 10, 16] },
+    "events": { "onLoad": "@onDesktopLoad", "onShow": "@onDesktopShow" },
+    "children": [
+        {
+            "id": "desktop_hero",
+            "type": "View",
+            "variant": "hero",
+            "size": [592, 92],
+            "layout": {
+                "type": "horizontal",
+                "spacing": 8,
+                "padding": [10, 12, 10, 12],
+                "align": "center"
+            },
+            "children": [
+                {
+                    "id": "hero_clock",
+                    "type": "View",
+                    "flex": 1,
+                    "size": [0, 72],
+                    "layout": { "type": "vertical", "spacing": 0, "justifyContent": "center" },
+                    "children": [
+                        { "id": "hero_date", "type": "Label", "variant": "date", "text": "2026年9月21日 周一", "size": [186, 16], "textAlign": "left" },
+                        { "id": "hero_time", "type": "Label", "variant": "clock", "text": "10:09", "size": [186, 42], "textAlign": "left" },
+                        { "id": "hero_sub", "type": "Label", "variant": "caption", "text": "YUI GAME OS · 待机", "size": [186, 14], "textAlign": "left" }
+                    ]
+                },
+                {
+                    "id": "hero_card_battery",
+                    "type": "View",
+                    "variant": "stat-card",
+                    "size": [118, 72],
+                    "layout": { "type": "vertical", "spacing": 3, "padding": [8, 8, 8, 8] },
+                    "children": [
+                        {
+                            "id": "hero_battery_row",
+                            "type": "View",
+                            "size": [102, 18],
+                            "layout": { "type": "horizontal", "spacing": 4, "align": "center" },
+                            "children": [
+                                { "id": "hero_battery_icon", "type": "Label", "variant": "caption", "text": "🔋", "size": [16, 16] },
+                                { "id": "hero_battery_value", "type": "Label", "variant": "stat-value", "text": "85%", "size": [78, 18], "textAlign": "left" }
+                            ]
+                        },
+                        { "id": "hero_battery_label", "type": "Label", "variant": "stat-label", "text": "剩余 6 小时", "size": [102, 12], "textAlign": "left" },
+                        {
+                            "id": "hero_battery_track", "variant": "bar-track",
+                            "type": "View",
+                            "size": [102, 6],
+                            "style": { "bgColor": "#1B2440", "borderRadius": 3 },
+                            "children": [
+                                { "id": "hero_battery_fill", "variant": "bar-fill", "type": "View", "size": [87, 6], "style": { "bgColor": "#34D399", "borderRadius": 3 } }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "hero_card_storage",
+                    "type": "View",
+                    "variant": "stat-card",
+                    "size": [118, 72],
+                    "layout": { "type": "vertical", "spacing": 3, "padding": [8, 8, 8, 8] },
+                    "children": [
+                        {
+                            "id": "hero_storage_row",
+                            "type": "View",
+                            "size": [102, 18],
+                            "layout": { "type": "horizontal", "spacing": 4, "align": "center" },
+                            "children": [
+                                { "id": "hero_storage_icon", "type": "Label", "variant": "caption", "text": "💾", "size": [16, 16] },
+                                { "id": "hero_storage_value", "type": "Label", "variant": "stat-value", "text": "42G", "size": [78, 18], "textAlign": "left" }
+                            ]
+                        },
+                        { "id": "hero_storage_label", "type": "Label", "variant": "stat-label", "text": "可用 / 共 64G", "size": [102, 12], "textAlign": "left" },
+                        {
+                            "id": "hero_storage_track", "variant": "bar-track",
+                            "type": "View",
+                            "size": [102, 6],
+                            "style": { "bgColor": "#1B2440", "borderRadius": 3 },
+                            "children": [
+                                { "id": "hero_storage_fill", "variant": "bar-fill", "type": "View", "size": [35, 6], "style": { "bgColor": "#38BDF8", "borderRadius": 3 } }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "hero_card_system",
+                    "type": "View",
+                    "variant": "stat-card",
+                    "size": [118, 72],
+                    "layout": { "type": "vertical", "spacing": 3, "padding": [8, 8, 8, 8] },
+                    "children": [
+                        {
+                            "id": "hero_system_row",
+                            "type": "View",
+                            "size": [102, 18],
+                            "layout": { "type": "horizontal", "spacing": 4, "align": "center" },
+                            "children": [
+                                { "id": "hero_system_icon", "type": "Label", "variant": "caption", "text": "🔊", "size": [16, 16] },
+                                { "id": "hero_system_value", "type": "Label", "variant": "stat-value", "text": "70%", "size": [78, 18], "textAlign": "left" }
+                            ]
+                        },
+                        { "id": "hero_system_label", "type": "Label", "variant": "stat-label", "text": "亮度 80% · 38°C", "size": [102, 12], "textAlign": "left" },
+                        {
+                            "id": "hero_system_track", "variant": "bar-track",
+                            "type": "View",
+                            "size": [102, 6],
+                            "style": { "bgColor": "#1B2440", "borderRadius": 3 },
+                            "children": [
+                                { "id": "hero_system_fill", "variant": "bar-fill", "type": "View", "size": [71, 6], "style": { "bgColor": "#FACC15", "borderRadius": 3 } }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "desktop_section_emu",
+            "type": "View",
+            "size": [592, 18],
+            "layout": { "type": "horizontal", "spacing": 8, "align": "center" },
+            "children": [
+                { "id": "desktop_emu_title", "type": "Label", "variant": "overline", "text": "模拟器", "size": [60, 16], "textAlign": "left" },
+                { "id": "desktop_emu_count", "type": "Label", "variant": "caption", "text": "正在加载…", "flex": 1, "size": [0, 16], "textAlign": "left" },
+                { "id": "btn_desktop_scan", "type": "Button", "variant": "ghost", "text": "重新扫描", "size": [74, 18], "events": { "onClick": "@onDesktopRescan" } },
+                { "id": "btn_desktop_library", "type": "Button", "variant": "pill", "text": "游戏库", "size": [64, 18], "events": { "onClick": "@openLibraryPage" } }
+            ]
+        },
+        {
+            "id": "emu_grid",
+            "type": "Grid",
+            "width": 592,
+            "height": 78,
+            "layout": { "columns": 6, "gap": 8 },
+            "children": []
+        },
+        {
+            "id": "desktop_section_recent",
+            "type": "View",
+            "size": [592, 18],
+            "layout": { "type": "horizontal", "spacing": 8, "align": "center" },
+            "children": [
+                { "id": "desktop_recent_title", "type": "Label", "variant": "overline", "text": "最近游玩", "size": [90, 16], "textAlign": "left" },
+                { "id": "desktop_recent_hint", "type": "Label", "variant": "caption", "text": "继续上次进度", "flex": 1, "size": [0, 16], "textAlign": "left" },
+                { "id": "btn_desktop_clear_recent", "type": "Button", "variant": "ghost", "text": "清空", "size": [48, 18], "events": { "onClick": "@onDesktopClearRecent" } }
+            ]
+        },
+        {
+            "id": "desktop_recent",
+            "type": "View",
+            "size": [592, 80],
+            "layout": { "type": "horizontal", "spacing": 8 },
+            "children": [
+                {
+                    "id": "recent_card_0",
+                    "type": "View",
+                    "variant": "card",
+                    "size": [192, 80],
+                    "layout": { "type": "vertical", "spacing": 3, "padding": [9, 11, 9, 11] },
+                    "events": { "onClick": "@onRecentCardClick" },
+                    "children": [
+                        { "id": "recent_0_tag", "type": "Label", "variant": "overline", "text": "—", "size": [170, 13], "textAlign": "left" },
+                        { "id": "recent_0_title", "type": "Label", "variant": "heading", "text": "—", "size": [170, 18], "textAlign": "left" },
+                        { "id": "recent_0_meta", "type": "Label", "variant": "caption", "text": "—", "size": [170, 16], "textAlign": "left" }
+                    ]
+                },
+                {
+                    "id": "recent_card_1",
+                    "type": "View",
+                    "variant": "card",
+                    "size": [192, 80],
+                    "layout": { "type": "vertical", "spacing": 3, "padding": [9, 11, 9, 11] },
+                    "events": { "onClick": "@onRecentCardClick" },
+                    "children": [
+                        { "id": "recent_1_tag", "type": "Label", "variant": "overline", "text": "—", "size": [170, 13], "textAlign": "left" },
+                        { "id": "recent_1_title", "type": "Label", "variant": "heading", "text": "—", "size": [170, 18], "textAlign": "left" },
+                        { "id": "recent_1_meta", "type": "Label", "variant": "caption", "text": "—", "size": [170, 16], "textAlign": "left" }
+                    ]
+                },
+                {
+                    "id": "recent_card_2",
+                    "type": "View",
+                    "variant": "card",
+                    "size": [192, 80],
+                    "layout": { "type": "vertical", "spacing": 3, "padding": [9, 11, 9, 11] },
+                    "events": { "onClick": "@onRecentCardClick" },
+                    "children": [
+                        { "id": "recent_2_tag", "type": "Label", "variant": "overline", "text": "—", "size": [170, 13], "textAlign": "left" },
+                        { "id": "recent_2_title", "type": "Label", "variant": "heading", "text": "—", "size": [170, 18], "textAlign": "left" },
+                        { "id": "recent_2_meta", "type": "Label", "variant": "caption", "text": "—", "size": [170, 16], "textAlign": "left" }
+                    ]
+                }
+            ]
+        }
+    ]
+}

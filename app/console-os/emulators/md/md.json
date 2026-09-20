@@ -1,0 +1,19 @@
+{
+  "id": "md",
+  "title": "世嘉 MD",
+  "short": "MD",
+  "icon": "🌀",
+  "subtitle": "Sega Mega Drive / Genesis",
+  "core": "genesis_plus_gx",
+  "systems": ["MD", "GEN", "SMS"],
+  "exts": ["md", "bin", "gen", "smd"],
+  "accent": "#38BDF8",
+  "order": 50,
+  "bio": "FM 音源的锐利音色，速度感十足的动作游戏阵容。",
+  "roms": [
+    { "title": "刺猬索尼克 2", "region": "US", "year": 1992, "size": "1 MB" },
+    { "title": "怒之铁拳 2", "region": "US", "year": 1992, "size": "2 MB" },
+    { "title": "光明与黑暗 续战篇", "region": "JP", "year": 1993, "size": "2 MB" },
+    { "title": "幽游白书 魔强统一战", "region": "JP", "year": 1994, "size": "4 MB" }
+  ]
+}

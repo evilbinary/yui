@@ -1,0 +1,19 @@
+{
+  "id": "arcade",
+  "title": "街机",
+  "short": "ARC",
+  "icon": "🕹",
+  "subtitle": "Arcade · MAME / FBNeo",
+  "core": "fbneo",
+  "systems": ["CPS1", "CPS2", "NEOGEO"],
+  "exts": ["zip", "7z"],
+  "accent": "#FACC15",
+  "order": 70,
+  "bio": "投币开打，双人对战与高分榜的街机厅记忆。",
+  "roms": [
+    { "title": "合金弹头 3", "region": "JP", "year": 2000, "size": "40 MB" },
+    { "title": "拳皇 98", "region": "JP", "year": 1998, "size": "34 MB" },
+    { "title": "三国志 II 吞食天地", "region": "JP", "year": 1992, "size": "4 MB" },
+    { "title": "泡泡龙", "region": "JP", "year": 1994, "size": "8 MB" }
+  ]
+}

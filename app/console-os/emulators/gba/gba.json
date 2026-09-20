@@ -1,0 +1,19 @@
+{
+  "id": "gba",
+  "title": "Game Boy Advance",
+  "short": "GBA",
+  "icon": "🐉",
+  "subtitle": "Nintendo Game Boy Advance",
+  "core": "mgba",
+  "systems": ["GBA"],
+  "exts": ["gba", "agb"],
+  "accent": "#F59E0B",
+  "order": 40,
+  "bio": "32 位掌机，横版与 RPG 的黄金组合。",
+  "roms": [
+    { "title": "口袋妖怪 绿宝石", "region": "JP", "year": 2004, "size": "16 MB" },
+    { "title": "黄金太阳", "region": "JP", "year": 2001, "size": "8 MB" },
+    { "title": "晓月圆舞曲", "region": "JP", "year": 2003, "size": "8 MB" },
+    { "title": "烈火之剑", "region": "JP", "year": 2003, "size": "16 MB" }
+  ]
+}

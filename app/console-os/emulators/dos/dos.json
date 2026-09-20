@@ -1,0 +1,19 @@
+{
+  "id": "dos",
+  "title": "DOS 游戏",
+  "short": "DOS",
+  "icon": "💾",
+  "subtitle": "MS-DOS · DOSBox",
+  "core": "dosbox-pure",
+  "systems": ["DOS"],
+  "exts": ["exe", "com", "bat", "zip", "iso"],
+  "accent": "#94A3B8",
+  "order": 120,
+  "bio": "软盘与命令行，PC 游戏最初的模样。",
+  "roms": [
+    { "title": "仙剑奇侠传", "region": "CN", "year": 1995, "size": "20 MB" },
+    { "title": "红色警戒", "region": "US", "year": 1996, "size": "60 MB" },
+    { "title": "大航海时代 II", "region": "JP", "year": 1994, "size": "12 MB" },
+    { "title": "三国志 IV", "region": "JP", "year": 1994, "size": "10 MB" }
+  ]
+}

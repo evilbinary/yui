@@ -1,0 +1,19 @@
+{
+  "id": "gb",
+  "title": "Game Boy",
+  "short": "GB",
+  "icon": "🐢",
+  "subtitle": "Nintendo Game Boy",
+  "core": "gambatte",
+  "systems": ["GB", "GBC"],
+  "exts": ["gb", "gbc"],
+  "accent": "#34D399",
+  "order": 30,
+  "bio": "灰绿四阶屏，装得下整个童年。",
+  "roms": [
+    { "title": "俄罗斯方块", "region": "JP", "year": 1989, "size": "32 KB" },
+    { "title": "精灵宝可梦 红", "region": "JP", "year": 1996, "size": "512 KB" },
+    { "title": "梦见岛", "region": "JP", "year": 1993, "size": "512 KB" },
+    { "title": "瓦力欧乐园", "region": "JP", "year": 1994, "size": "512 KB" }
+  ]
+}

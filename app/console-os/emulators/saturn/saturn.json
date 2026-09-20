@@ -1,0 +1,18 @@
+{
+  "id": "saturn",
+  "title": "世嘉土星",
+  "short": "SS",
+  "icon": "🪐",
+  "subtitle": "Sega Saturn",
+  "core": "yabause",
+  "systems": ["SS"],
+  "exts": ["cue", "bin", "iso", "chd"],
+  "accent": "#FB923C",
+  "order": 110,
+  "bio": "2D 与格斗游戏素质极高，街机移植的大本营。",
+  "roms": [
+    { "title": "守护英雄", "region": "JP", "year": 1997, "size": "300 MB" },
+    { "title": "光明力量 III", "region": "JP", "year": 1997, "size": "400 MB" },
+    { "title": "樱花大战", "region": "JP", "year": 1996, "size": "500 MB" }
+  ]
+}

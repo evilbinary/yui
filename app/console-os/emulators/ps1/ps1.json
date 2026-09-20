@@ -1,0 +1,19 @@
+{
+  "id": "ps1",
+  "title": "PlayStation",
+  "short": "PS1",
+  "icon": "💿",
+  "subtitle": "Sony PlayStation",
+  "core": "pcsx_rearmed",
+  "systems": ["PS1"],
+  "exts": ["bin", "cue", "img", "chd", "pbp"],
+  "accent": "#8B5CF6",
+  "order": 80,
+  "bio": "光盘时代开端，CG 与 3D 叙事的第一次冲击。",
+  "roms": [
+    { "title": "最终幻想 VII", "region": "JP", "year": 1997, "size": "1.3 GB" },
+    { "title": "月下夜想曲", "region": "JP", "year": 1997, "size": "340 MB" },
+    { "title": "洛克人 X4", "region": "JP", "year": 1997, "size": "380 MB" },
+    { "title": "铁拳 3", "region": "JP", "year": 1997, "size": "560 MB" }
+  ]
+}

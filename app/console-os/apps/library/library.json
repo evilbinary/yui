@@ -1,0 +1,66 @@
+{
+    "id": "page_library",
+    "title": "游戏库",
+    "js": ["library.js"],
+    "type": "View",
+    "variant": "surface",
+    "flex": 1,
+    "layout": { "type": "vertical", "spacing": 8, "padding": [8, 16, 8, 16] },
+    "events": { "onLoad": "@onLibraryLoad", "onShow": "@onLibraryShow" },
+    "children": [
+        {
+            "id": "library_header",
+            "type": "View",
+            "size": [592, 40],
+            "layout": { "type": "horizontal", "spacing": 8, "align": "center" },
+            "children": [
+                {
+                    "id": "library_title_box",
+                    "type": "View",
+                    "flex": 1,
+                    "size": [0, 38],
+                    "layout": { "type": "vertical", "spacing": 0, "justifyContent": "center" },
+                    "children": [
+                        { "id": "library_title", "type": "Label", "variant": "title", "text": "游戏库", "size": [300, 22], "textAlign": "left" },
+                        { "id": "library_sub", "type": "Label", "variant": "caption", "text": "全部模拟器游戏汇总", "size": [400, 14], "textAlign": "left" }
+                    ]
+                },
+                { "id": "btn_library_scan", "type": "Button", "variant": "secondary", "text": "重新扫描", "size": [80, 30], "events": { "onClick": "@onLibraryRescan" } },
+                { "id": "btn_library_back", "type": "Button", "variant": "primary", "text": "返回桌面", "size": [80, 30], "events": { "onClick": "@goConsoleBack" } }
+            ]
+        },
+        {
+            "id": "library_filters",
+            "type": "View",
+            "size": [592, 26],
+            "layout": { "type": "horizontal", "spacing": 6, "align": "center" },
+            "children": [
+                { "id": "btn_lib_filter_all", "type": "Button", "variant": "pill", "text": "全部核心", "size": [72, 24], "events": { "onClick": "@onLibraryFilterAll" } },
+                { "id": "btn_lib_filter_recent", "type": "Button", "variant": "secondary", "text": "最近游玩", "size": [72, 24], "events": { "onClick": "@onLibraryFilterRecent" } },
+                { "id": "btn_lib_filter_emu", "type": "Button", "variant": "secondary", "text": "筛选：全部", "size": [120, 24], "events": { "onClick": "@onLibraryCycleEmulator" } },
+                { "id": "library_filter_hint", "type": "Label", "variant": "caption", "text": "点击「筛选」按模拟器轮换", "flex": 1, "size": [0, 16], "textAlign": "left" },
+                { "id": "library_stats", "type": "Label", "variant": "caption", "text": "0 个游戏", "size": [150, 16], "textAlign": "right" }
+            ]
+        },
+        {
+            "id": "library_list",
+            "type": "List",
+            "flex": 1,
+            "scrollable": 1,
+            "data": [],
+            "events": { "onSelect": "@onLibraryItemSelect" },
+            "itemTemplate": {
+                "type": "Button",
+                "variant": "list-item",
+                "icon": "${icon}",
+                "text": "${line}",
+                "iconSize": 16,
+                "fontSize": 12,
+                "textAlign": "left",
+                "style": { "bgColor": "#141C30", "color": "#E6EAF5", "borderRadius": 10 },
+                "size": [592, 34]
+            },
+            "layout": { "type": "vertical", "spacing": 4 }
+        }
+    ]
+}

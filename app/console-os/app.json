@@ -1,0 +1,135 @@
+{
+    "id": "console_os",
+    "icon": "🎮",
+    "type": "View",
+    "variant": "console-shell",
+    "assets": "app/assets",
+    "font": "Roboto-Regular.ttf",
+    "fontFallback": "NotoColorEmoji.ttf",
+    "size": [640, 480],
+    "text": "YUI Game OS",
+    "js": [
+        "../lib/router.js",
+        "../lib/theme.js",
+        "lib/emulator-registry.js",
+        "app.js"
+    ],
+    "layout": {
+        "type": "vertical",
+        "spacing": 0,
+        "padding": [0, 0, 0, 0]
+    },
+    "events": {
+        "onLoad": "@onConsoleLoad",
+        "onShow": "@onConsoleShow",
+        "onTouch": "@onConsoleTouch"
+    },
+    "children": [
+        {
+            "id": "status_bar",
+            "type": "View",
+            "variant": "toolbar",
+            "size": [0, 30],
+            "layout": {
+                "type": "horizontal",
+                "spacing": 8,
+                "padding": [0, 14, 0, 14],
+                "align": "center"
+            },
+            "children": [
+                {
+                    "id": "status_logo",
+                    "type": "Label",
+                    "variant": "overline",
+                    "text": "🎮 YUI GAME OS",
+                    "size": [150, 16],
+                    "textAlign": "left"
+                },
+                {
+                    "id": "status_time",
+                    "type": "Label",
+                    "variant": "status-time",
+                    "text": "10:09",
+                    "flex": 1,
+                    "size": [0, 18],
+                    "textAlign": "center"
+                },
+                {
+                    "id": "status_wifi",
+                    "type": "Label",
+                    "variant": "status-icon",
+                    "text": "📶 HOME-5G",
+                    "size": [92, 16]
+                },
+                {
+                    "id": "status_volume",
+                    "type": "Label",
+                    "variant": "status-icon",
+                    "text": "🔊 70%",
+                    "size": [54, 16]
+                },
+                {
+                    "id": "status_storage",
+                    "type": "Label",
+                    "variant": "status-icon",
+                    "text": "💾 22/64G",
+                    "size": [74, 16]
+                },
+                {
+                    "id": "status_battery",
+                    "type": "Button",
+                    "variant": "status-btn",
+                    "text": "🔋 85%",
+                    "size": [76, 20],
+                    "events": { "onClick": "@openBatteryPage" }
+                },
+                {
+                    "id": "btn_settings",
+                    "type": "Button",
+                    "variant": "status-btn",
+                    "text": "⚙",
+                    "size": [26, 20],
+                    "events": { "onClick": "@openSettingsPage" }
+                }
+            ]
+        },
+        {
+            "id": "page_outlet",
+            "type": "View",
+            "variant": "surface",
+            "flex": 1,
+            "layout": { "type": "vertical" }
+        },
+        {
+            "id": "hint_bar",
+            "type": "View",
+            "variant": "toolbar",
+            "size": [0, 26],
+            "layout": {
+                "type": "horizontal",
+                "spacing": 10,
+                "padding": [0, 14, 0, 14],
+                "align": "center"
+            },
+            "children": [
+                {
+                    "id": "hint_text",
+                    "type": "Label",
+                    "variant": "hint",
+                    "text": "Ⓐ 打开模拟器    Ⓑ 返回    Ⓧ 游戏库",
+                    "flex": 1,
+                    "size": [0, 16],
+                    "textAlign": "left"
+                },
+                {
+                    "id": "hint_count",
+                    "type": "Label",
+                    "variant": "hint",
+                    "text": "0 个模拟器",
+                    "size": [160, 16],
+                    "textAlign": "right"
+                }
+            ]
+        }
+    ]
+}

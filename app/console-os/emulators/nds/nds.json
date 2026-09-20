@@ -1,0 +1,19 @@
+{
+  "id": "nds",
+  "title": "Nintendo DS",
+  "short": "NDS",
+  "icon": "🖊",
+  "subtitle": "Nintendo DS",
+  "core": "melonds",
+  "systems": ["NDS"],
+  "exts": ["nds", "dsi", "srl"],
+  "accent": "#2DD4BF",
+  "order": 100,
+  "bio": "双屏与触控笔，把解谜和养成玩出了新花样。",
+  "roms": [
+    { "title": "新超级马里奥兄弟", "region": "JP", "year": 2006, "size": "32 MB" },
+    { "title": "口袋妖怪 心金", "region": "JP", "year": 2009, "size": "128 MB" },
+    { "title": "逆转裁判 复苏的逆转", "region": "JP", "year": 2005, "size": "64 MB" },
+    { "title": "雷顿教授 不可思议的小镇", "region": "JP", "year": 2007, "size": "128 MB" }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "id": "psp",
+  "title": "PlayStation Portable",
+  "short": "PSP",
+  "icon": "🎬",
+  "subtitle": "Sony PSP",
+  "core": "ppsspp",
+  "systems": ["PSP"],
+  "exts": ["iso", "cso", "pbp"],
+  "accent": "#60A5FA",
+  "order": 90,
+  "bio": "掌上 3D 与联机狩猎，画质接近家用机。",
+  "roms": [
+    { "title": "怪物猎人 便携版 3rd", "region": "JP", "year": 2010, "size": "1.1 GB" },
+    { "title": "战神 斯巴达之魂", "region": "US", "year": 2010, "size": "1.5 GB" },
+    { "title": "女神异闻录 3 携带版", "region": "JP", "year": 2009, "size": "1.2 GB" }
+  ]
+}

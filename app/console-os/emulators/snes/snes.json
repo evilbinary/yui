@@ -1,0 +1,19 @@
+{
+  "id": "snes",
+  "title": "超级任天堂",
+  "short": "SFC",
+  "icon": "🦔",
+  "subtitle": "Super Famicom / SNES",
+  "core": "snes9x",
+  "systems": ["SFC", "SNES"],
+  "exts": ["sfc", "smc", "fig"],
+  "accent": "#A78BFA",
+  "order": 20,
+  "bio": "16 位巅峰，Mode 7 与环绕音效的黄金年代。",
+  "roms": [
+    { "title": "超级马里奥世界", "region": "JP", "year": 1990, "size": "512 KB" },
+    { "title": "众神的三角力量", "region": "JP", "year": 1991, "size": "1 MB" },
+    { "title": "星际火狐", "region": "US", "year": 1993, "size": "1 MB" },
+    { "title": "超级银河战士", "region": "US", "year": 1994, "size": "2 MB" }
+  ]
+}

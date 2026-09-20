@@ -1,0 +1,19 @@
+{
+  "id": "n64",
+  "title": "Nintendo 64",
+  "short": "N64",
+  "icon": "🚀",
+  "subtitle": "Nintendo 64",
+  "core": "mupen64plus",
+  "systems": ["N64"],
+  "exts": ["z64", "n64", "v64"],
+  "accent": "#F472B6",
+  "order": 60,
+  "bio": "3D 游戏启蒙，模拟摇杆与四人对战。",
+  "roms": [
+    { "title": "超级马里奥 64", "region": "US", "year": 1996, "size": "8 MB" },
+    { "title": "时之笛", "region": "JP", "year": 1998, "size": "32 MB" },
+    { "title": "马里奥赛车 64", "region": "JP", "year": 1997, "size": "8 MB" },
+    { "title": "星之卡比 64", "region": "JP", "year": 2000, "size": "32 MB" }
+  ]
+}

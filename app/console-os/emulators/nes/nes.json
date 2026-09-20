@@ -1,0 +1,19 @@
+{
+  "id": "nes",
+  "title": "红白机",
+  "short": "FC",
+  "icon": "🎮",
+  "subtitle": "Nintendo Famicom / NES",
+  "core": "fceumm",
+  "systems": ["FC", "NES"],
+  "exts": ["nes", "fds", "unf"],
+  "accent": "#FF6B6B",
+  "order": 10,
+  "bio": "8 位经典，十字键与 AB 双键定义了一个时代。",
+  "roms": [
+    { "title": "超级马里奥兄弟", "region": "JP", "year": 1985, "size": "40 KB" },
+    { "title": "塞尔达传说", "region": "JP", "year": 1986, "size": "128 KB" },
+    { "title": "魂斗罗", "region": "JP", "year": 1988, "size": "128 KB" },
+    { "title": "双截龙 II", "region": "JP", "year": 1988, "size": "256 KB" }
+  ]
+}
