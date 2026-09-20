@@ -223,8 +223,6 @@ function onDesktopClearRecent() {
 
 function onDesktopRescan() {
     var n = rescanConsoleEmulators();
-    desktopBuilt = false;
-    rebuildDesktopGrid();
     refreshDesktopHero();
     setConsoleHint("已重新扫描 " + EmulatorRegistry.root + "/ · 加载 " + n + " 个模拟器");
 }

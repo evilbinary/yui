@@ -6,18 +6,18 @@
   "wifi": "HOME-5G",
   "recent": [
     {
+      "emu": "gba",
+      "icon": "🐉",
+      "title": "口袋妖怪 绿宝石",
+      "meta": "GBA · 本次新增",
+      "when": "刚刚"
+    },
+    {
       "emu": "nes",
       "icon": "🎮",
       "title": "超级马里奥兄弟",
       "meta": "FC · 本次新增",
       "when": "刚刚"
-    },
-    {
-      "emu": "gba",
-      "icon": "🐉",
-      "title": "口袋妖怪 绿宝石",
-      "meta": "GBA · 156 小时",
-      "when": "2 小时前"
     },
     {
       "emu": "arcade",
