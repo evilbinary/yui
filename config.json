@@ -1,0 +1,30 @@
+{
+  "themeMode": "dark",
+  "gridColumns": 6,
+  "volume": 70,
+  "brightness": 80,
+  "wifi": "HOME-5G",
+  "recent": [
+    {
+      "emu": "nes",
+      "icon": "🎮",
+      "title": "超级马里奥兄弟",
+      "meta": "FC · 本次新增",
+      "when": "刚刚"
+    },
+    {
+      "emu": "gba",
+      "icon": "🐉",
+      "title": "口袋妖怪 绿宝石",
+      "meta": "GBA · 156 小时",
+      "when": "2 小时前"
+    },
+    {
+      "emu": "arcade",
+      "icon": "🕹",
+      "title": "合金弹头 3",
+      "meta": "街机 · 12 小时",
+      "when": "3 天前"
+    }
+  ]
+}

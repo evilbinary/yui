@@ -28,6 +28,18 @@ watch-os: build-watch-os
 watch-os-mqjs: build-watch-os-mqjs
 	ya -r watch-os-mqjs --  app/watch-os/app.json
 
+build-console-os:
+	ya -b console-os
+
+console-os: build-console-os
+	ya -r console-os --  app/console-os/app.json
+
+build-console-os-mqjs:
+	ya -b console-os-mqjs
+
+console-os-mqjs: build-console-os-mqjs
+	ya -r console-os-mqjs --  app/console-os/app.json
+
 build-lvgl:
 	ya -b lvgl-sdl -p lvgl
 
