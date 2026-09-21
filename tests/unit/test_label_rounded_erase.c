@@ -137,6 +137,49 @@ static void test_label_erase_respects_parent_radius(void **state)
     destroy_layer(parent);
 }
 
+/* Label 擦除不应覆盖祖先边框（焦点边框的直线/圆角） */
+static void test_label_erase_respects_parent_border(void **state)
+{
+    Layer *parent;
+    Layer *label;
+    Pix p;
+
+    (void)state;
+
+    parent = layer_create(NULL, 0, 0, 100, 60);
+    assert_non_null(parent);
+    parent->type = VIEW;
+    parent->visible = VISIBLE;
+    parent->bg_color = (Color){0, 0, 200, 255};
+    parent->radius = 16;
+    parent->border.width = 2;
+    parent->border.style = LAYER_BORDER_SOLID;
+    parent->border.color = (Color){255, 200, 0, 255};
+
+    label = layer_create(parent, 2, 40, 96, 20);
+    assert_non_null(label);
+    label->type = LABEL;
+    label->visible = VISIBLE;
+    label_component_create_from_json(label, NULL);
+    layer_set_text(label, "x");
+
+    parent->children = (Layer **)malloc(sizeof(Layer *));
+    assert_non_null(parent->children);
+    parent->children[0] = label;
+    parent->child_count = 1;
+
+    render_layer(parent);
+
+    /* 底边中间应保留黄色边框 */
+    assert_int_equal(read_pixel(50, 59, &p), 0);
+    expect_close("border_bottom", 50, 59, p, 255, 200, 0, 40);
+    /* 内部仍是父蓝色 */
+    assert_int_equal(read_pixel(50, 20, &p), 0);
+    expect_close("border_inside", 50, 20, p, 0, 0, 200, 30);
+
+    destroy_layer(parent);
+}
+
 int main(int argc, char **argv)
 {
     (void)argc;
@@ -147,6 +190,8 @@ int main(int argc, char **argv)
     }
     const struct CMUnitTest tests[] = {
         cmocka_unit_test_setup_teardown(test_label_erase_respects_parent_radius,
+                                        setup_target, teardown_target),
+        cmocka_unit_test_setup_teardown(test_label_erase_respects_parent_border,
                                         setup_target, teardown_target),
     };
     int rc = cmocka_run_group_tests(tests, NULL, NULL);
