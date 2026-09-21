@@ -30,8 +30,22 @@ var Console = {
     recent: []
 };
 
-var CONSOLE_CONFIG_PATH = "config.json";
 var CONSOLE_THEME_DIR = "themes";
+
+/* 配置文件：优先用包内路径，避免写进程 CWD（老版本 watch-os 会误写 ./config.json） */
+var CONSOLE_CONFIG_PATH = "app/console-os/config.json";
+var CONSOLE_CONFIG_PATH_FALLBACK = "config.json";
+var consoleConfigPathInUse = null;
+
+function consoleConfigPath() {
+    if (consoleConfigPathInUse) return consoleConfigPathInUse;
+    if (typeof YUI.readFile === "function" && YUI.readFile(CONSOLE_CONFIG_PATH)) {
+        consoleConfigPathInUse = CONSOLE_CONFIG_PATH;
+    } else {
+        consoleConfigPathInUse = CONSOLE_CONFIG_PATH_FALLBACK;
+    }
+    return consoleConfigPathInUse;
+}
 
 var consoleClockTimer = null;
 var consoleBatteryTimer = null;
@@ -54,7 +68,7 @@ function loadConsoleConfig() {
     if (typeof YUI.readFile !== "function") {
         return cfg;
     }
-    var raw = YUI.readFile(CONSOLE_CONFIG_PATH);
+    var raw = YUI.readFile(consoleConfigPath());
     if (!raw) {
         return cfg;
     }
@@ -79,7 +93,7 @@ function saveConsoleConfig() {
         wifi: Console.wifi,
         recent: Console.recent
     };
-    return YUI.writeFile(CONSOLE_CONFIG_PATH, JSON.stringify(cfg, null, 2));
+    return YUI.writeFile(consoleConfigPath(), JSON.stringify(cfg, null, 2));
 }
 
 function applyConsoleConfig(cfg) {
@@ -194,6 +208,13 @@ function consoleMonthDayText() {
 
 function formatConsoleNumber(n) {
     return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
+/* Label 宽度超 rect.w-10 会被截断成 "…" 并在悬停时弹出 tooltip，这里先按字数收敛 */
+function consoleShortText(text, max) {
+    if (!text) return "";
+    if (text.length <= max) return text;
+    return text.substring(0, max) + "…";
 }
 
 /* ==================== 电量 / 存储 / 常用信息 ==================== */
@@ -490,6 +511,8 @@ function initConsoleApps() {
 function onConsoleLoad() {
     YUI.log("[console] onConsoleLoad");
     applyConsoleConfig(loadConsoleConfig());
+    YUI.log("[console] config: " + consoleConfigPath()
+        + " (recent " + Console.recent.length + ", theme " + Console.themeMode + ")");
     applyConsoleTheme();
     initConsoleApps();
 

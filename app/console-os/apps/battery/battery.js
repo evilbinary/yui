@@ -115,10 +115,10 @@ function refreshBatteryUI() {
 
     YUI.setText("battery_pct", Console.battery + "%");
     YUI.setText("battery_state", Console.charging
-        ? "充电中 · 约 25 分钟充满"
+        ? "充电中"
         : (batterySaver ? "省电模式" : (Console.battery <= 15 ? "电量偏低" : "正常使用")));
     YUI.setText("battery_estimate", Console.charging
-        ? "预计 25 分钟后满电"
+        ? "约 25 分钟满电"
         : "剩余约 " + (Math.round(Console.battery * 0.07 * 10) / 10) + " 小时");
     YUI.setText("btn_battery_saver", batterySaver ? "退出省电" : "省电模式");
     YUI.setText("battery_sub", "锂聚合物 4000 mAh · " + Console.wifi

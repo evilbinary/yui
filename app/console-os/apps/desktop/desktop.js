@@ -80,7 +80,8 @@ function rebuildDesktopGrid() {
                     id: "emu_name_" + emu.id,
                     type: "Label",
                     variant: "tile-title",
-                    text: emu.title,
+                    /* 磁贴只有 84 宽（Label 溢出判据 rect.w-10），长名改用简称避免触发 tooltip */
+                    text: emu.title.length <= 6 ? emu.title : emu.short,
                     size: [84, 13],
                     textAlign: "center"
                 },
@@ -155,10 +156,10 @@ function refreshDesktopHero() {
     YUI.setText("hero_date", consoleFullDateText());
 
     if (Console.running) {
-        YUI.setText("hero_sub", "运行中 · " + Console.running.emuTitle + " · " + Console.running.rom);
+        YUI.setText("hero_sub", "运行中 · " + consoleShortText(Console.running.emuTitle, 10));
     } else {
         YUI.setText("hero_sub", "YUI GAME OS v" + Console.version
-            + " · 已加载 " + Console.emulators.length + " 个模拟器");
+            + " · " + Console.emulators.length + " 个模拟器");
     }
 
     YUI.setText("hero_battery_icon", consoleBatteryIcon());
@@ -193,8 +194,8 @@ function refreshDesktopRecent() {
         }
         YUI.show(card);
         YUI.setText("recent_" + i + "_tag", entry.icon + " " + entry.when);
-        YUI.setText("recent_" + i + "_title", entry.title);
-        YUI.setText("recent_" + i + "_meta", entry.meta);
+        YUI.setText("recent_" + i + "_title", consoleShortText(entry.title, 8));
+        YUI.setText("recent_" + i + "_meta", consoleShortText(entry.meta, 12));
     }
     YUI.show("desktop_recent");
 }

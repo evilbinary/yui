@@ -75,7 +75,7 @@
                             "size": [102, 18],
                             "layout": { "type": "horizontal", "spacing": 4, "align": "center" },
                             "children": [
-                                { "id": "hero_storage_icon", "type": "Label", "variant": "caption", "text": "💾", "size": [16, 16] },
+                                { "id": "hero_storage_icon", "type": "Button", "variant": "icon-chip", "text": "💾", "size": [16, 16] },
                                 { "id": "hero_storage_value", "type": "Label", "variant": "stat-value", "text": "42G", "size": [78, 18], "textAlign": "left" }
                             ]
                         },
@@ -104,7 +104,7 @@
                             "size": [102, 18],
                             "layout": { "type": "horizontal", "spacing": 4, "align": "center" },
                             "children": [
-                                { "id": "hero_system_icon", "type": "Label", "variant": "caption", "text": "🔊", "size": [16, 16] },
+                                { "id": "hero_system_icon", "type": "Button", "variant": "icon-chip", "text": "🔊", "size": [16, 16] },
                                 { "id": "hero_system_value", "type": "Label", "variant": "stat-value", "text": "70%", "size": [78, 18], "textAlign": "left" }
                             ]
                         },
