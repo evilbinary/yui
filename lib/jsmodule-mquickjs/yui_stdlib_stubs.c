@@ -4,6 +4,7 @@
 
 #include "../../src/layer.h"
 #include "../../src/layer_lifecycle.h"
+#include "../../src/focus.h"
 #include "../../src/theme_manager.h"
 #include "../../src/game/game.h"
 #include "../../lib/cjson/cJSON.h"
@@ -53,6 +54,27 @@ int layer_hide(Layer* layer) {
 
 void layer_lifecycle_before_destroy(Layer* layer) {
 }
+
+// 焦点系统存根
+int focus_set(Layer* layer) {
+    (void)layer;
+    return 0;
+}
+
+int focus_move(Layer* root, FocusDirection dir) {
+    (void)root;
+    (void)dir;
+    return 0;
+}
+
+void focus_clear(void) {
+}
+
+Layer* focus_get(void) {
+    return NULL;
+}
+
+int yui_last_key_code = 0;
 
 // JSON 更新存根
 int yui_update(Layer* root, const char* update_json) {
