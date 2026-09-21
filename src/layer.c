@@ -1154,6 +1154,19 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
 
   yui_component_instantiate(layer, json_obj, parent, &has_custom_children);
 
+  /* 焦点属性在组件实例化之后应用：组件默认可能把自己设为可聚焦，
+     显式 JSON focusable/focusChildren 应能覆盖该默认值。 */
+  {
+    cJSON* focusable = cJSON_GetObjectItem(json_obj, "focusable");
+    if (focusable) {
+      layer->focusable = cJSON_IsTrue(focusable) ? 1 : 0;
+    }
+    cJSON* focus_children = cJSON_GetObjectItem(json_obj, "focusChildren");
+    if (focus_children) {
+      layer->focus_children = cJSON_IsTrue(focus_children) ? 1 : 0;
+    }
+  }
+
   const YuiComponentOps* type_ops = yui_type_get_ops(layer->type);
   if (type_ops && (type_ops->flags & YUI_COMP_SKIP_CHILDREN)) {
     skip_children = 1;

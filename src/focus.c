@@ -187,10 +187,6 @@ int focus_set(Layer* layer)
     if (layer == g_focus) {
         return 0;
     }
-    if (getenv("YUI_DEBUG_FOCUS")) {
-        fprintf(stderr, "YUI: focus_set '%s' (old '%s')\n",
-                layer ? layer->id : "(null)", g_focus ? g_focus->id : "(null)");
-    }
 
     old = g_focus;
     if (old) {
@@ -276,8 +272,8 @@ static void focus_eval_candidate(FocusSearch* s, Layer* layer)
             return;
     }
 
-    /* 有投影重叠的候选优先，其次主方向更近、再垂直偏移更小 */
-    score = primary + (overlap ? secondary / 2 : secondary * 2 + 1000000L);
+    /* 投影有重叠：只看主方向距离（列表/网格按行列走）；无重叠：叠加垂直偏移惩罚 */
+    score = overlap ? primary : primary + secondary * 2 + 1000000L;
     if (s->best == NULL || score < s->best_score ||
         (score == s->best_score &&
          (primary < s->best_primary ||
@@ -476,6 +472,11 @@ void focus_on_layer_show(Layer* layer)
         if (!is_page || focus_is_within_subtree(g_focus, layer)) {
             return;
         }
+    }
+    /* 显示层自身可聚焦（如磁贴）：直接聚焦自身 */
+    if (focus_is_focusable(layer) && !focus_is_group(layer)) {
+        focus_set(layer);
+        return;
     }
     /* 优先恢复该页上次焦点 */
     remembered = focus_memory_get(layer);
