@@ -83,7 +83,7 @@ function rebuildDesktopGrid() {
                     id: "emu_cover_" + emu.id,
                     type: "Image",
                     source: "covers/" + emu.id + ".png",
-                    imageMode: "aspectFit",
+                    style: { "mode": "fit" },
                     size: [DESKTOP_TILE_COVER_W, DESKTOP_TILE_COVER_H],
                     events: { onClick: "@onDesktopTileClick" }
                 },
