@@ -239,7 +239,17 @@ void label_component_render(Layer* layer) {
             p = p->parent;
         }
         if (p) {
-            backend_render_fill_rect(&layer->rect, p->bg_color);
+            if (p->radius > 0) {
+                /* 祖先有圆角：按祖先圆角形状擦除（裁剪到 Label rect），
+                 * 避免把祖先圆角区域填成直角、露出尖角。 */
+                Rect prev_clip;
+                if (render_clip_push(&layer->rect, &prev_clip)) {
+                    backend_render_rounded_rect(&p->rect, p->bg_color, p->radius);
+                    render_clip_pop(&prev_clip);
+                }
+            } else {
+                backend_render_fill_rect(&layer->rect, p->bg_color);
+            }
         }
     }
     t_erase = backend_get_ticks() - t0;
