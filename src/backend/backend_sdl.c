@@ -4198,7 +4198,8 @@ static void yui_draw_rounded_rect_direct(SDL_Renderer* renderer, int x, int y, i
     if (r > w / 2) r = w / 2;
     if (r > h / 2) r = h / 2;
 
-    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+    /* 混合模式由调用者设置：直接绘制到主表面用 BLEND，
+     * 烘焙到透明纹理用 NONE（否则 target 上会写入预乘色，blit 出黑边）。 */
 
     if (r <= 0) {
         SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
@@ -4263,6 +4264,7 @@ void draw_rounded_rect(SDL_Renderer* renderer, int x, int y, int w, int h, int r
         return;
     }
 
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
     yui_draw_rounded_rect_direct(renderer, x, y, w, h, r, color);
 }
 
@@ -4419,7 +4421,10 @@ static SDL_Texture* yui_rounded_rect_texture_get(int w, int h, int radius, SDL_C
     }
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
     SDL_RenderClear(renderer);
+    /* 烘焙到透明纹理：用 NONE 直写非预乘颜色，避免 target 混合写入预乘色导致 blit 黑边 */
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
     yui_draw_rounded_rect_direct(renderer, 0, 0, w, h, radius, color);
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
     SDL_SetRenderTarget(renderer, prev);
 
     if (clip_on) SDL_RenderSetClipRect(renderer, &prev_clip);
