@@ -7,10 +7,10 @@
  */
 
 var DESKTOP_TILE_W = 140;
-var DESKTOP_TILE_H = 132;
+var DESKTOP_TILE_H = 156;
 var DESKTOP_TILE_GAP = 10;
 var DESKTOP_TILE_COVER_W = 128;
-var DESKTOP_TILE_COVER_H = 72;
+var DESKTOP_TILE_COVER_H = 96;
 var DESKTOP_COLUMNS = 4;
 var DESKTOP_GRID_WIDTH = 592;
 
@@ -83,7 +83,7 @@ function rebuildDesktopGrid() {
                     id: "emu_cover_" + emu.id,
                     type: "Image",
                     source: "covers/" + emu.id + ".png",
-                    imageMode: "aspectFill",
+                    imageMode: "aspectFit",
                     size: [DESKTOP_TILE_COVER_W, DESKTOP_TILE_COVER_H],
                     events: { onClick: "@onDesktopTileClick" }
                 },

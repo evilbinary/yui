@@ -13,6 +13,7 @@
             "id": "desktop_hero",
             "type": "View",
             "variant": "hero",
+            "focusable": true,
             "size": [592, 112],
             "layout": {
                 "type": "horizontal",
@@ -138,7 +139,7 @@
             "id": "emu_grid",
             "type": "Grid",
             "width": 592,
-            "height": 132,
+            "height": 156,
             "layout": { "columns": 4, "gap": 10 },
             "children": []
         },

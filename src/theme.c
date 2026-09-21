@@ -345,7 +345,10 @@ ThemeRule* theme_rule_create_from_json(cJSON* json) {
          * 为标量字段的键(颜色/字号/边距等)无需保留:dark/light 主题 191 个
          * style 键全部是标量,深拷贝 68 份纯属浪费,置 NULL 省 ~25KB。 */
         rule->style_json = NULL;
-        if (!theme_style_all_scalar(style_obj) || theme_selector_has_state(rule->selector)) {
+        /* 含 bgColor 的规则必须保留 style_json：Button 等组件需通过 set_style
+         * 同步 bg_transparent/状态色，否则 transparent 会被回退成默认色。 */
+        if (!theme_style_all_scalar(style_obj) || theme_selector_has_state(rule->selector) ||
+            cJSON_HasObjectItem(style_obj, "bgColor")) {
             rule->style_json = cJSON_Duplicate(style_obj, 1);
         }
     }
