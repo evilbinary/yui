@@ -553,7 +553,7 @@ int list_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
         }
         component->touch_scrolled = 0;
         component->pressed_index = inside ? index : -1;
-        component->hovered_index = inside ? index : -1;
+        list_set_hover(component, inside ? index : -1);
         return 1;
     }
 
