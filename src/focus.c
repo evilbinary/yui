@@ -187,6 +187,10 @@ int focus_set(Layer* layer)
     if (layer == g_focus) {
         return 0;
     }
+    if (getenv("YUI_DEBUG_FOCUS")) {
+        fprintf(stderr, "YUI: focus_set '%s' (old '%s')\n",
+                layer ? layer->id : "(null)", g_focus ? g_focus->id : "(null)");
+    }
 
     old = g_focus;
     if (old) {
@@ -434,10 +438,11 @@ void focus_scroll_into_view(Layer* layer)
 
         top = p->rect.y;
         bottom = p->rect.y + p->rect.h;
+        /* 正数内容下移，负数内容上移（与 scroll_offset 反向） */
         if (layer->rect.y < top) {
             layout_scroll_vertical(p, top - layer->rect.y);
         } else if (layer->rect.y + layer->rect.h > bottom) {
-            layout_scroll_vertical(p, (layer->rect.y + layer->rect.h) - bottom);
+            layout_scroll_vertical(p, -((layer->rect.y + layer->rect.h) - bottom));
         }
     }
 }

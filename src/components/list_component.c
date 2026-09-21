@@ -6,6 +6,7 @@
 #include "../layout.h"
 #include "../render.h"
 #include "../util.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -458,6 +459,11 @@ void list_component_render(Layer* layer) {
 
     int count = list_component_get_item_count(component);
     int focused = (layer->state & LAYER_STATE_FOCUSED) ? 1 : 0;
+    if (getenv("YUI_DEBUG_FOCUS")) {
+        fprintf(stderr, "YUI: list '%s' render state=%u focused=%d fidx=%d hov=%d\n",
+                layer->id, layer->state, focused, component->focused_index,
+                component->hovered_index);
+    }
     if (focused && component->focused_index < 0 && count > 0) {
         component->focused_index = 0;
     }
@@ -579,10 +585,12 @@ static void list_ensure_index_visible(ListComponent* component, int index) {
 
     top = layer->rect.y;
     bottom = layer->rect.y + layer->rect.h;
+    /* layout_scroll_vertical 的 delta 为“内容下移量”：正数使内容下移（显示上方），
+     * 负数使内容上移（显示下方），与 scroll_offset 反向。 */
     if (item_rect.y < top) {
         layout_scroll_vertical(layer, top - item_rect.y);
     } else if (item_rect.y + item_rect.h > bottom) {
-        layout_scroll_vertical(layer, (item_rect.y + item_rect.h) - bottom);
+        layout_scroll_vertical(layer, -((item_rect.y + item_rect.h) - bottom));
     }
 }
 
@@ -608,12 +616,9 @@ int list_component_handle_key_event(Layer* layer, KeyEvent* event) {
         case SDLK_DOWN: {
             int last = count - 1;
             int next = component->focused_index < 0 ? 0 : component->focused_index + 1;
-            if (next > last) next = last;
-            /* 已在末项且无法继续下滚：不消费，让焦点移到列表下方 */
-            if (component->focused_index >= last) {
-                int max_offset = layer->content_height - layer->rect.h;
-                if (max_offset < 0) max_offset = 0;
-                if (layer->scroll_offset >= max_offset) return 0;
+            /* 末项：保持焦点不丢失（消费按键但不移动） */
+            if (next > last) {
+                return 1;
             }
             component->focused_index = next;
             list_ensure_index_visible(component, next);
