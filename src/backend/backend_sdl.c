@@ -4454,7 +4454,7 @@ static void yui_draw_vertical_gradient_fast(int x, int y, int w, int h, int radi
         if (!aa) r = 0;
     }
 
-    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+    /* 混合模式由调用者设置（主表面 BLEND / 纹理烘焙 NONE） */
     strip = (h >= 96) ? 4 : ((h >= 48) ? 2 : 1);
 
     for (int py = 0; py < h; ) {
@@ -4497,7 +4497,7 @@ static void yui_draw_horizontal_gradient_fast(int x, int y, int w, int h, int ra
         if (!aa) r = 0;
     }
 
-    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+    /* 混合模式由调用者设置（主表面 BLEND / 纹理烘焙 NONE） */
     strip = (w >= 96) ? 4 : ((w >= 48) ? 2 : 1);
 
     if (r <= 0) {
@@ -4873,11 +4873,14 @@ static SDL_Texture* yui_gradient_texture_get(int w, int h, int radius, int verti
     }
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
     SDL_RenderClear(renderer);
+    /* 烘焙到透明纹理用 NONE 直写非预乘色，避免圆角 blit 黑边 */
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
     if (vertical) {
         yui_draw_vertical_gradient_fast(0, 0, w, h, radius, colors, n);
     } else {
         yui_draw_horizontal_gradient_fast(0, 0, w, h, radius, colors, n);
     }
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
     SDL_SetRenderTarget(renderer, prev);
 
     g_style_fx[slot].tex = tex;
@@ -4916,6 +4919,7 @@ void backend_render_rounded_gradient(const Rect* rect, int radius, int vertical,
         return;
     }
 
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
     if (vertical) {
         yui_draw_vertical_gradient_fast(x, y, w, h, r, colors, count);
     } else {
