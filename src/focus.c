@@ -426,6 +426,7 @@ void focus_scroll_into_view(Layer* layer)
 {
     Layer* p;
     if (!layer) return;
+    if (getenv("YUI_NO_FOCUS_SCROLL")) return;
     for (p = layer->parent; p; p = p->parent) {
         int top;
         int bottom;
@@ -467,17 +468,17 @@ void focus_on_layer_show(Layer* layer)
     int is_page;
     if (!layer) return;
 
-    /* 路由页（声明了 onShow）显示时把焦点收进该页；普通元素显示不抢焦点 */
+    /* 只有路由页（声明了 onShow）显示时才初始化焦点；
+     * 普通元素显示不改焦点（动态网格/列表逐个 show 时布局尚未稳定，
+     * 此时聚焦会因临时尺寸误触发滚动）。 */
     is_page = (layer->lifecycle_flags & LIFECYCLE_ON_SHOW) != 0;
+    if (!is_page) {
+        return;
+    }
     if (g_focus && focus_is_focusable(g_focus) && focus_is_within_scope(g_focus)) {
-        if (!is_page || focus_is_within_subtree(g_focus, layer)) {
+        if (focus_is_within_subtree(g_focus, layer)) {
             return;
         }
-    }
-    /* 显示层自身可聚焦（如磁贴）：直接聚焦自身 */
-    if (focus_is_focusable(layer) && !focus_is_group(layer)) {
-        focus_set(layer);
-        return;
     }
     /* 优先恢复该页上次焦点 */
     remembered = focus_memory_get(layer);

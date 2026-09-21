@@ -6,11 +6,12 @@
  * - 底部：最近游玩
  */
 
-var DESKTOP_TILE_W = 92;
-var DESKTOP_TILE_H = 78;
-var DESKTOP_TILE_GAP = 8;
-var DESKTOP_TILE_ICON = 46;
-var DESKTOP_COLUMNS = 6;
+var DESKTOP_TILE_W = 140;
+var DESKTOP_TILE_H = 132;
+var DESKTOP_TILE_GAP = 10;
+var DESKTOP_TILE_COVER_W = 128;
+var DESKTOP_TILE_COVER_H = 72;
+var DESKTOP_COLUMNS = 4;
 var DESKTOP_GRID_WIDTH = 592;
 
 var desktopBuilt = false;
@@ -30,6 +31,16 @@ function onDesktopShow() {
     }
     refreshDesktopHero();
     refreshDesktopRecent();
+    focusDesktopSelectedTile();
+}
+
+/* 桌面初始焦点放到当前选中的模拟器磁贴，而不是顶部工具栏按钮 */
+function focusDesktopSelectedTile() {
+    if (typeof YUI.focus !== "function") return;
+    var id = "emu_tile_" + Console.selectedEmulator;
+    if (Console.selectedEmulator && YUI.find(id)) {
+        YUI.focus(id);
+    }
 }
 
 /* ==================== 图标网格 ==================== */
@@ -57,33 +68,31 @@ function rebuildDesktopGrid() {
         YUI.renderFromJson("emu_grid", JSON.stringify({
             id: tileId,
             type: "View",
-            variant: "tile",
+            variant: active ? "tile-active" : "tile",
             focusable: true,
             size: [DESKTOP_TILE_W, DESKTOP_TILE_H],
             layout: {
                 type: "vertical",
-                spacing: 2,
-                padding: [6, 4, 4, 4],
-                align: "center",
-                justifyContent: "center"
+                spacing: 4,
+                padding: [6, 6, 6, 6],
+                align: "center"
             },
             events: { onClick: "@onDesktopTileClick" },
             children: [
                 {
-                    id: "emu_icon_" + emu.id,
-                    type: "Button",
-                    variant: active ? "tile-icon-active" : "tile-icon",
-                    text: emu.icon,
-                    size: [DESKTOP_TILE_ICON, DESKTOP_TILE_ICON],
+                    id: "emu_cover_" + emu.id,
+                    type: "Image",
+                    source: "covers/" + emu.id + ".png",
+                    imageMode: "aspectFill",
+                    size: [DESKTOP_TILE_COVER_W, DESKTOP_TILE_COVER_H],
                     events: { onClick: "@onDesktopTileClick" }
                 },
                 {
                     id: "emu_name_" + emu.id,
                     type: "Label",
                     variant: "tile-title",
-                    /* 磁贴只有 84 宽（Label 溢出判据 rect.w-10），长名改用简称避免触发 tooltip */
-                    text: emu.title.length <= 6 ? emu.title : emu.short,
-                    size: [84, 13],
+                    text: emu.title.length <= 8 ? emu.title : emu.short,
+                    size: [128, 24],
                     textAlign: "center"
                 },
                 {
@@ -91,7 +100,7 @@ function rebuildDesktopGrid() {
                     type: "Label",
                     variant: "stat-label",
                     text: romCount + " 个游戏",
-                    size: [84, 10],
+                    size: [128, 16],
                     textAlign: "center"
                 }
             ]
@@ -124,7 +133,7 @@ function onDesktopTileClick(layerId) {
 }
 
 function desktopEmuIdFromLayer(layerId) {
-    var prefixes = ["emu_tile_", "emu_icon_", "emu_name_", "emu_roms_"];
+    var prefixes = ["emu_tile_", "emu_cover_", "emu_name_", "emu_roms_"];
     for (var i = 0; i < prefixes.length; i++) {
         var p = prefixes[i];
         if (layerId.indexOf(p) === 0) {
@@ -141,8 +150,8 @@ function refreshDesktopGridSelection() {
     for (var i = 0; i < Console.emulators.length; i++) {
         var emu = Console.emulators[i];
         updates.push({
-            target: "emu_icon_" + emu.id,
-            change: { variant: emu.id === Console.selectedEmulator ? "tile-icon-active" : "tile-icon" }
+            target: "emu_tile_" + emu.id,
+            change: { variant: emu.id === Console.selectedEmulator ? "tile-active" : "tile" }
         });
     }
     if (updates.length > 0) {
