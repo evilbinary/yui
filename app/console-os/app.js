@@ -397,6 +397,14 @@ function goConsoleBack() {
     applyConsoleTheme();
 }
 
+/* 应用级按键：Esc/手柄 B 返回 */
+function onConsoleKey(layerId) {
+    var code = (typeof YUI.keyCode === "function") ? YUI.keyCode() : 0;
+    if (code === 27) {
+        goConsoleBack();
+    }
+}
+
 function onConsoleTouch(layerId, event) {
     var type = event ? event.type : null;
     if (type !== "swipe") return;

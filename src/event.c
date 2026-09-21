@@ -395,8 +395,8 @@ void handle_key_event(Layer* layer, KeyEvent* event) {
     if (focus_handle_key(layer, event)) {
         return;
     }
-    /* 仍未消费：交给根层 onKey（应用级返回键等） */
-    if (layer->event && layer->event->key) {
+    /* 仍未消费：交给根层 onKey（应用级返回键等），仅按下时触发一次 */
+    if (event->type == KEY_EVENT_DOWN && layer->event && layer->event->key) {
         EVENT_INVOKE(layer->event->key, layer);
     }
 }

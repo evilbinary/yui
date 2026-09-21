@@ -33,8 +33,10 @@
             "id": "settings_row_theme",
             "type": "View",
             "variant": "list-row",
+            "focusable": true,
             "size": [592, 46],
             "layout": { "type": "horizontal", "spacing": 8, "padding": [8, 12, 8, 12], "align": "center" },
+            "events": { "onClick": "@onSettingsToggleTheme" },
             "children": [
                 { "id": "settings_theme_name", "type": "Label", "variant": "body", "text": "外观主题", "size": [120, 16], "textAlign": "left" },
                 { "id": "settings_theme_value", "type": "Label", "variant": "caption", "text": "当前：暗色", "flex": 1, "size": [0, 16], "textAlign": "left" },
@@ -45,6 +47,8 @@
             "id": "settings_row_volume",
             "type": "View",
             "variant": "list-row",
+            "focusable": true,
+            "focusChildren": true,
             "size": [592, 46],
             "layout": { "type": "horizontal", "spacing": 8, "padding": [8, 12, 8, 12], "align": "center" },
             "children": [
@@ -67,6 +71,8 @@
             "id": "settings_row_brightness",
             "type": "View",
             "variant": "list-row",
+            "focusable": true,
+            "focusChildren": true,
             "size": [592, 46],
             "layout": { "type": "horizontal", "spacing": 8, "padding": [8, 12, 8, 12], "align": "center" },
             "children": [
@@ -89,8 +95,10 @@
             "id": "settings_row_emulator",
             "type": "View",
             "variant": "list-row",
+            "focusable": true,
             "size": [592, 46],
             "layout": { "type": "horizontal", "spacing": 8, "padding": [8, 12, 8, 12], "align": "center" },
+            "events": { "onClick": "@onSettingsRescan" },
             "children": [
                 { "id": "settings_emulator_name", "type": "Label", "variant": "body", "text": "模拟器加载", "size": [100, 16], "textAlign": "left" },
                 { "id": "settings_emulator_value", "type": "Label", "variant": "caption", "text": "emulators/ · 0 个", "flex": 1, "size": [0, 16], "textAlign": "left" },
@@ -101,8 +109,10 @@
             "id": "settings_row_recent",
             "type": "View",
             "variant": "list-row",
+            "focusable": true,
             "size": [592, 46],
             "layout": { "type": "horizontal", "spacing": 8, "padding": [8, 12, 8, 12], "align": "center" },
+            "events": { "onClick": "@onSettingsClearRecent" },
             "children": [
                 { "id": "settings_recent_name", "type": "Label", "variant": "body", "text": "最近游玩", "size": [100, 16], "textAlign": "left" },
                 { "id": "settings_recent_value", "type": "Label", "variant": "caption", "text": "0 条记录", "flex": 1, "size": [0, 16], "textAlign": "left" },

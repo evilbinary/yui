@@ -22,7 +22,8 @@
     "events": {
         "onLoad": "@onConsoleLoad",
         "onShow": "@onConsoleShow",
-        "onTouch": "@onConsoleTouch"
+        "onTouch": "@onConsoleTouch",
+        "onKey": "@onConsoleKey"
     },
     "children": [
         {

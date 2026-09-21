@@ -63,6 +63,9 @@
     { "selector": "#player_screen", "style": { "bgColor": "#04060D", "borderRadius": 12 } },
     { "selector": "#player_fps", "style": { "color": "#34D399", "fontSize": 12, "fontWeight": "bold" } },
     { "selector": "#emu_hero_title", "style": { "color": "#FFFFFF", "fontSize": 18, "fontWeight": "bold" } },
-    { "selector": "#battery_pct", "style": { "color": "#FFFFFF", "fontSize": 34, "fontWeight": "bold" } }
+    { "selector": "#battery_pct", "style": { "color": "#FFFFFF", "fontSize": 34, "fontWeight": "bold" } },
+
+    { "selector": "View:focused", "style": { "borderColor": "#38BDF8", "borderWidth": 2 } },
+    { "selector": "Button:focused", "style": { "bgColor": "#25406B", "borderColor": "#38BDF8", "borderWidth": 2 } }
   ]
 }

@@ -7,6 +7,7 @@
 #include "focus.h"
 #include "layer.h"
 #include "layer_update.h"
+#include "layer_lifecycle.h"
 #include "layout.h"
 #include "theme_manager.h"
 #include "component_registry.h"
@@ -118,6 +119,16 @@ int focus_is_within_scope(const Layer* layer)
     return 0;
 }
 
+static int focus_is_within_subtree(const Layer* layer, const Layer* root)
+{
+    const Layer* p;
+    if (!layer || !root) return 0;
+    for (p = layer; p; p = p->parent) {
+        if (p == root) return 1;
+    }
+    return 0;
+}
+
 static int focus_has_focusable_ancestor(const Layer* layer, const Layer* scope)
 {
     const Layer* p;
@@ -175,6 +186,10 @@ int focus_set(Layer* layer)
     }
     if (layer == g_focus) {
         return 0;
+    }
+    if (getenv("YUI_DEBUG_FOCUS")) {
+        fprintf(stderr, "YUI: focus_set '%s' (old '%s')\n",
+                layer ? layer->id : "(null)", g_focus ? g_focus->id : "(null)");
     }
 
     old = g_focus;
@@ -360,6 +375,11 @@ int focus_handle_key(Layer* root, KeyEvent* event)
         case SDLK_RETURN:
         case SDLK_KP_ENTER:
         case SDLK_SPACE:
+            /* Button/Input/List 等自带 handle_key_event，激活由组件在 UP 时触发，
+             * 这里只处理纯 View 等无按键处理器的焦点层，避免双触发。 */
+            if (g_focus && g_focus->handle_key_event) {
+                return 0;
+            }
             return focus_activate();
         default:
             return 0;
@@ -447,13 +467,20 @@ void focus_on_layer_destroy(Layer* layer)
 void focus_on_layer_show(Layer* layer)
 {
     Layer* remembered;
+    int is_page;
     if (!layer) return;
+
+    /* 路由页（声明了 onShow）显示时把焦点收进该页；普通元素显示不抢焦点 */
+    is_page = (layer->lifecycle_flags & LIFECYCLE_ON_SHOW) != 0;
     if (g_focus && focus_is_focusable(g_focus) && focus_is_within_scope(g_focus)) {
-        return;
+        if (!is_page || focus_is_within_subtree(g_focus, layer)) {
+            return;
+        }
     }
     /* 优先恢复该页上次焦点 */
     remembered = focus_memory_get(layer);
-    if (remembered && focus_is_focusable(remembered)) {
+    if (remembered && focus_is_focusable(remembered) &&
+        focus_is_within_subtree(remembered, layer)) {
         focus_set(remembered);
         return;
     }

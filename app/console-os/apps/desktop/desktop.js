@@ -58,6 +58,7 @@ function rebuildDesktopGrid() {
             id: tileId,
             type: "View",
             variant: "tile",
+            focusable: true,
             size: [DESKTOP_TILE_W, DESKTOP_TILE_H],
             layout: {
                 type: "vertical",
