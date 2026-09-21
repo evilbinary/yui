@@ -3,9 +3,9 @@
     "icon": "🎮",
     "type": "View",
     "variant": "console-shell",
-    "assets": "app/console-os",
-    "font": "../assets/Roboto-Regular.ttf",
-    "fontFallback": "../assets/NotoColorEmoji.ttf",
+    "assets": "app/assets",
+    "font": "Roboto-Regular.ttf",
+    "fontFallback": "NotoColorEmoji.ttf",
     "size": [640, 480],
     "text": "YUI Game OS",
     "js": [

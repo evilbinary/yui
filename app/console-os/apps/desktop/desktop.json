@@ -139,7 +139,7 @@
             "id": "emu_grid",
             "type": "Grid",
             "width": 592,
-            "height": 156,
+            "height": 140,
             "layout": { "columns": 4, "gap": 10 },
             "children": []
         },

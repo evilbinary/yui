@@ -7,10 +7,10 @@
  */
 
 var DESKTOP_TILE_W = 140;
-var DESKTOP_TILE_H = 156;
+var DESKTOP_TILE_H = 140;
 var DESKTOP_TILE_GAP = 10;
 var DESKTOP_TILE_COVER_W = 128;
-var DESKTOP_TILE_COVER_H = 96;
+var DESKTOP_TILE_COVER_H = 86;
 var DESKTOP_COLUMNS = 4;
 var DESKTOP_GRID_WIDTH = 592;
 
@@ -74,7 +74,7 @@ function rebuildDesktopGrid() {
             layout: {
                 type: "vertical",
                 spacing: 4,
-                padding: [6, 6, 6, 6],
+                padding: [5, 6, 5, 6],
                 align: "center"
             },
             events: { onClick: "@onDesktopTileClick" },
@@ -92,7 +92,7 @@ function rebuildDesktopGrid() {
                     type: "Label",
                     variant: "tile-title",
                     text: emu.title.length <= 8 ? emu.title : emu.short,
-                    size: [128, 24],
+                    size: [128, 20],
                     textAlign: "center"
                 },
                 {
