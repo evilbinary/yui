@@ -4,5 +4,13 @@
   "volume": 50,
   "brightness": 60,
   "wifi": "HOME-5G",
-  "recent": []
+  "recent": [
+    {
+      "emu": "nes",
+      "icon": "🎮",
+      "title": "超级马里奥兄弟",
+      "meta": "FC · 本次新增",
+      "when": "刚刚"
+    }
+  ]
 }

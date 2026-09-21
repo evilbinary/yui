@@ -253,6 +253,7 @@ ListComponent* list_component_create(Layer* layer) {
     component->spacing = 4;
     component->hovered_index = -1;
     component->pressed_index = -1;
+    component->focused_index = -1;
 
     layer->component = component;
     layer->render = list_component_render;
@@ -456,9 +457,17 @@ void list_component_render(Layer* layer) {
     }
 
     int count = list_component_get_item_count(component);
+    int focused = (layer->state & LAYER_STATE_FOCUSED) ? 1 : 0;
+    if (focused && component->focused_index < 0 && count > 0) {
+        component->focused_index = 0;
+    }
+    if (component->focused_index >= count) {
+        component->focused_index = count > 0 ? count - 1 : -1;
+    }
     for (int i = 0; i < count; i++) {
-        list_render_item(component, i,
-                         component->hovered_index == i,
+        int is_highlight = (component->hovered_index == i) ||
+                           (focused && component->focused_index == i);
+        list_render_item(component, i, is_highlight,
                          component->pressed_index == i);
     }
 
@@ -557,35 +566,71 @@ static int list_can_vertical_pan(const Layer* layer) {
     return layer->content_height > visible_height;
 }
 
+/* 把聚焦项滚动到可见区域 */
+static void list_ensure_index_visible(ListComponent* component, int index) {
+    Layer* layer = component->layer;
+    Rect item_rect;
+    int top;
+    int bottom;
+    if (!layer || index < 0) return;
+
+    list_component_update_content_size(component);
+    list_get_item_rect(component, index, &item_rect);
+
+    top = layer->rect.y;
+    bottom = layer->rect.y + layer->rect.h;
+    if (item_rect.y < top) {
+        layout_scroll_vertical(layer, top - item_rect.y);
+    } else if (item_rect.y + item_rect.h > bottom) {
+        layout_scroll_vertical(layer, (item_rect.y + item_rect.h) - bottom);
+    }
+}
+
 int list_component_handle_key_event(Layer* layer, KeyEvent* event) {
     if (!layer || !event || !layer->component) return 0;
 
     ListComponent* component = (ListComponent*)layer->component;
     if (event->type != KEY_EVENT_DOWN) return 0;
 
-    int step = component->item_height + list_get_spacing(component);
-    if (step <= 0) step = component->item_height;
+    int count = list_component_get_item_count(component);
+    if (count <= 0) return 0;
 
     switch (event->data.key.key_code) {
-        case SDLK_UP:
-            layer->scroll_offset -= step;
-            if (layer->scroll_offset < 0) layer->scroll_offset = 0;
+        case SDLK_UP: {
+            int next = component->focused_index <= 0 ? 0 : component->focused_index - 1;
+            /* 已在首项：不消费，让焦点移到列表上方 */
+            if (component->focused_index <= 0 && layer->scroll_offset <= 0) return 0;
+            component->focused_index = next;
+            list_ensure_index_visible(component, next);
+            mark_layer_dirty(layer, DIRTY_COLOR | DIRTY_TEXT);
             return 1;
-        case SDLK_DOWN:
-            layer->scroll_offset += step;
-            {
+        }
+        case SDLK_DOWN: {
+            int last = count - 1;
+            int next = component->focused_index < 0 ? 0 : component->focused_index + 1;
+            if (next > last) next = last;
+            /* 已在末项且无法继续下滚：不消费，让焦点移到列表下方 */
+            if (component->focused_index >= last) {
                 int max_offset = layer->content_height - layer->rect.h;
                 if (max_offset < 0) max_offset = 0;
-                if (layer->scroll_offset > max_offset) layer->scroll_offset = max_offset;
+                if (layer->scroll_offset >= max_offset) return 0;
             }
+            component->focused_index = next;
+            list_ensure_index_visible(component, next);
+            mark_layer_dirty(layer, DIRTY_COLOR | DIRTY_TEXT);
             return 1;
+        }
         case SDLK_RETURN:
-        case SDLK_SPACE:
-            if (component->hovered_index >= 0) {
-                list_dispatch_select(component, component->hovered_index);
+        case SDLK_SPACE: {
+            int index = component->focused_index >= 0
+                            ? component->focused_index
+                            : component->hovered_index;
+            if (index >= 0) {
+                list_dispatch_select(component, index);
                 return 1;
             }
             return 0;
+        }
         default:
             return 0;
     }
