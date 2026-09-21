@@ -187,10 +187,6 @@ int focus_set(Layer* layer)
     if (layer == g_focus) {
         return 0;
     }
-    if (getenv("YUI_DEBUG_FOCUS")) {
-        fprintf(stderr, "YUI: focus_set '%s' (old '%s')\n",
-                layer ? layer->id : "(null)", g_focus ? g_focus->id : "(null)");
-    }
 
     old = g_focus;
     if (old) {

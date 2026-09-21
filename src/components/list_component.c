@@ -459,21 +459,21 @@ void list_component_render(Layer* layer) {
 
     int count = list_component_get_item_count(component);
     int focused = (layer->state & LAYER_STATE_FOCUSED) ? 1 : 0;
-    if (getenv("YUI_DEBUG_FOCUS")) {
-        fprintf(stderr, "YUI: list '%s' render state=%u focused=%d fidx=%d hov=%d\n",
-                layer->id, layer->state, focused, component->focused_index,
-                component->hovered_index);
-    }
-    if (focused && component->focused_index < 0 && count > 0) {
-        component->focused_index = 0;
-    }
-    if (component->focused_index >= count) {
-        component->focused_index = count > 0 ? count - 1 : -1;
+    int active = -1;
+    if (focused) {
+        if (component->focused_index < 0 && count > 0) {
+            component->focused_index = 0;
+        }
+        if (component->focused_index >= count) {
+            component->focused_index = count > 0 ? count - 1 : -1;
+        }
+        /* 有键盘焦点时只显示键盘焦点项，避免鼠标 hover 造成两个高亮 */
+        active = component->focused_index;
+    } else {
+        active = component->hovered_index;
     }
     for (int i = 0; i < count; i++) {
-        int is_highlight = (component->hovered_index == i) ||
-                           (focused && component->focused_index == i);
-        list_render_item(component, i, is_highlight,
+        list_render_item(component, i, i == active,
                          component->pressed_index == i);
     }
 
@@ -481,6 +481,19 @@ void list_component_render(Layer* layer) {
 }
 
 static int list_can_vertical_pan(const Layer* layer);
+
+/* 鼠标 hover：若列表已聚焦，同步键盘焦点项，避免出现两个高亮 */
+static void list_set_hover(ListComponent* component, int index) {
+    Layer* layer;
+    if (!component) return;
+    component->hovered_index = index;
+    layer = component->layer;
+    if (layer && (layer->state & LAYER_STATE_FOCUSED) && index >= 0 &&
+        component->focused_index != index) {
+        component->focused_index = index;
+        mark_layer_dirty(layer, DIRTY_COLOR | DIRTY_TEXT);
+    }
+}
 
 int list_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
     if (!layer || !event || !layer->component) return 0;
@@ -498,9 +511,18 @@ int list_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
         return 0;
     }
 
+    /* 鼠标滚轮：List 不是 View/Grid，默认滚动处理不会接管，这里自行滚动 */
+    if (event->phase == POINTER_WHEEL) {
+        if (!in_layer) {
+            return 0;
+        }
+        list_component_handle_scroll_event(layer, event->delta_y);
+        return 1;
+    }
+
     if (event->phase == POINTER_MOVE) {
         if (event->device == POINTER_DEVICE_TOUCH && event->finger_count > 1) {
-            component->hovered_index = inside ? index : -1;
+            list_set_hover(component, inside ? index : -1);
             return inside || can_pan || tracking;
         }
         int adx = event->delta_x < 0 ? -event->delta_x : event->delta_x;
@@ -514,7 +536,7 @@ int list_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
             }
         }
 
-        component->hovered_index = inside ? index : -1;
+        list_set_hover(component, inside ? index : -1);
         if (!inside || component->pressed_index < 0) {
             if (!inside) component->pressed_index = -1;
         }
