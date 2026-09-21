@@ -51,3 +51,7 @@ platform/android/local.properties
 .espressif-cache/*
 .ccache/*
 platform/esp32/dependencies.lock
+app/nl2yui/.venv/
+app/nl2yui/output/
+app/nl2yui/data/train.jsonl
+app/nl2yui/data/eval.jsonl

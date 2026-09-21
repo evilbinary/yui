@@ -1,0 +1,97 @@
+# NL → YUI JSON 小模型训练
+
+对应设计：[docs/nl2yui-small-model-design.md](../../docs/nl2yui-small-model-design.md)
+
+用现成小 Instruct 基座做 **LoRA SFT**（不是从头训），数据为「一句话 + context → `{updates:[...]}`」。
+
+## 目录
+
+```text
+app/nl2yui/
+  prompt.py       # system/user 模板
+  schema.py       # 输出校验（白名单）
+  synthesize.py   # 种子 + 模板扩增 → train/eval jsonl
+  train.py        # LoRA SFT
+  eval.py         # Parse / Schema / Exact + tok/s
+  data/seeds.jsonl
+  requirements.txt
+```
+
+## 环境
+
+直接用本机 Python / 已有 PyTorch 即可，不必强制 venv。
+
+```bash
+cd app/nl2yui
+pip install -r requirements.txt
+```
+
+`requirements.txt` 里的 `torch` 若本机已装，pip 一般会跳过。有 NVIDIA GPU 时建议本机已是对应 CUDA 版 `torch`。
+
+
+## 数据
+
+```bash
+# 重建金标种子（原子操作 + 10 类常见页面）
+python build_seeds.py
+
+# 合成训练集（默认约 65–70% 页面场景，其余原子改属性）
+python synthesize.py -n 3000 --page-ratio 0.7
+```
+
+常见页面原型（`pages.py`）：登录、设置、消息列表、表单、聊天助手、启动器网格、加载遮罩、确认对话框、商品详情、空状态。
+
+## 一键流程
+
+```bash
+cd app/nl2yui
+
+# 1) 金标种子 + 合成约 3000 条（含常见页面场景）
+python build_seeds.py
+python synthesize.py -n 3000 --page-ratio 0.7
+
+# 2) LoRA 微调（默认 Qwen2.5-0.5B-Instruct）
+python train.py --model Qwen/Qwen2.5-0.5B-Instruct --out output/nl2yui-lora
+
+# 可选：合并权重，便于 llama.cpp 再量化
+python train.py --merge --out output/nl2yui-lora
+
+# 3) 评测
+python eval.py --model output/nl2yui-lora --limit 100
+```
+
+换 1.5B：
+
+```bash
+python train.py --model Qwen/Qwen2.5-1.5B-Instruct --batch-size 2 --grad-accum 8
+```
+
+## 数据格式
+
+每行一个 JSON：
+
+```json
+{
+  "mode": "update",
+  "context": "titleLabel:Label:你好, okBtn:Button:确定",
+  "message": "把标题改成欢迎",
+  "output": { "updates": [ { "target": "titleLabel", "change": { "text": "欢迎" } } ] }
+}
+```
+
+## 显存经验
+
+| 基座 | LoRA + batch | 约需显存 |
+|------|----------------|----------|
+| 0.5B | bs=4, accum=4 | ~4–6 GB |
+| 1.5B | bs=2, accum=8 | ~8–12 GB |
+
+CPU：把 `--batch-size 1`，并加 `--device cpu`（见 `train.py`）。
+
+## 产出
+
+- `output/nl2yui-lora-0.5b/`：0.5B LoRA（推荐）
+- `output/nl2yui-lora-0.5b/merged/`：合并后的完整 0.5B，适合本地/手机
+- `output/nl2yui-lora/`：早期 1.5B 实验（可忽略）
+
+导出 GGUF（需另装 llama.cpp 转换脚本）不在本目录内，见设计文档推理章节。

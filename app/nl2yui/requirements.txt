@@ -1,0 +1,13 @@
+# NL → YUI JSON SFT (CPU/GPU)
+# torch 本机已有可跳过；勿用本文件强行覆盖已装的 CUDA/CPU 版
+torch>=2.0.0
+transformers>=4.40.0,<4.47
+accelerate>=0.28.0,<1.0
+peft>=0.11.0,<0.14
+datasets>=2.18.0,<3.0
+trl>=0.9.0,<0.12
+safetensors>=0.4.0
+sentencepiece>=0.2.0
+protobuf>=4.25.0
+tqdm>=4.66.0
+jsonschema>=4.22.0
