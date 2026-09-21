@@ -9,6 +9,7 @@
 #include "backend.h"
 #include "render.h"
 #include "component_registry.h"
+#include "focus.h"
 #include "log.h"
 #include "perf/perf.h"
 
@@ -962,6 +963,55 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
         layer->event->resize = (void (*)(Layer*, const ResizeEvent*))handler;
       }
     }
+    // 解析焦点事件
+    if (cJSON_HasObjectItem(events, "onFocus")) {
+      if (!layer->event) {
+        layer->event = malloc(sizeof(Event));
+        memset(layer->event, 0, sizeof(Event));
+      }
+      const char* handler_id =
+          cJSON_GetObjectItem(events, "onFocus")->valuestring;
+      const char* lookup_name = handler_id;
+      if (handler_id[0] == '@') {
+        lookup_name = handler_id + 1;
+      }
+      strncpy(layer->event->focus_name, lookup_name,
+              sizeof(layer->event->focus_name) - 1);
+      layer->event->focus_name[sizeof(layer->event->focus_name) - 1] = '\0';
+      layer->event->focus = find_event_by_name(lookup_name);
+    }
+    if (cJSON_HasObjectItem(events, "onBlur")) {
+      if (!layer->event) {
+        layer->event = malloc(sizeof(Event));
+        memset(layer->event, 0, sizeof(Event));
+      }
+      const char* handler_id =
+          cJSON_GetObjectItem(events, "onBlur")->valuestring;
+      const char* lookup_name = handler_id;
+      if (handler_id[0] == '@') {
+        lookup_name = handler_id + 1;
+      }
+      strncpy(layer->event->blur_name, lookup_name,
+              sizeof(layer->event->blur_name) - 1);
+      layer->event->blur_name[sizeof(layer->event->blur_name) - 1] = '\0';
+      layer->event->blur = find_event_by_name(lookup_name);
+    }
+    if (cJSON_HasObjectItem(events, "onKey")) {
+      if (!layer->event) {
+        layer->event = malloc(sizeof(Event));
+        memset(layer->event, 0, sizeof(Event));
+      }
+      const char* handler_id =
+          cJSON_GetObjectItem(events, "onKey")->valuestring;
+      const char* lookup_name = handler_id;
+      if (handler_id[0] == '@') {
+        lookup_name = handler_id + 1;
+      }
+      strncpy(layer->event->key_name, lookup_name,
+              sizeof(layer->event->key_name) - 1);
+      layer->event->key_name[sizeof(layer->event->key_name) - 1] = '\0';
+      layer->event->key = find_event_by_name(lookup_name);
+    }
   }
 
   // 解析动画属性配置
@@ -1145,10 +1195,8 @@ Layer* parse_layer_from_json(Layer* layer,cJSON* json_obj, Layer* parent) {
 void destroy_layer(Layer* layer) {
     if (!layer) return;
 
-    /* 若销毁的是当前聚焦层，清除全局 focused_layer，避免悬空指针 */
-    if (focused_layer == layer) {
-        focused_layer = NULL;
-    }
+    /* 若销毁的是当前聚焦层，清除焦点引用，避免悬空指针 */
+    focus_on_layer_destroy(layer);
 
     layer_lifecycle_before_destroy(layer);
     

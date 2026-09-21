@@ -147,6 +147,33 @@ int js_module_set_layer_event(Layer* layer, const char* event_name, const char* 
         layer->event->resize = js_layer_resize_handler;
         return 0;
     }
+    // 检查 focus 事件
+    if (strcmp(event_name, "focus") == 0 || strcmp(event_name, "onFocus") == 0) {
+        if (event_func_name) {
+            strncpy(layer->event->focus_name,event_func_name,sizeof(layer->event->focus_name) - 1);
+            layer->event->focus_name[sizeof(layer->event->focus_name) - 1] = '\0';
+        }
+        layer->event->focus = (EventHandler)event_handler;
+        return 0;
+    }
+    // 检查 blur 事件
+    if (strcmp(event_name, "blur") == 0 || strcmp(event_name, "onBlur") == 0) {
+        if (event_func_name) {
+            strncpy(layer->event->blur_name,event_func_name,sizeof(layer->event->blur_name) - 1);
+            layer->event->blur_name[sizeof(layer->event->blur_name) - 1] = '\0';
+        }
+        layer->event->blur = (EventHandler)event_handler;
+        return 0;
+    }
+    // 检查 key 事件
+    if (strcmp(event_name, "key") == 0 || strcmp(event_name, "onKey") == 0) {
+        if (event_func_name) {
+            strncpy(layer->event->key_name,event_func_name,sizeof(layer->event->key_name) - 1);
+            layer->event->key_name[sizeof(layer->event->key_name) - 1] = '\0';
+        }
+        layer->event->key = (EventHandler)event_handler;
+        return 0;
+    }
 
 
     return -1;
@@ -239,6 +266,48 @@ static void* js_module_change_event(void* data)
     return NULL;
 }
 
+// Focus 事件包装函数
+static void* js_module_focus_event(void* data)
+{
+    Layer* layer = (Layer*)data;
+    if (layer) {
+        if (layer->event && layer->event->focus_name[0] != '\0') {
+            js_module_call_event(layer->event->focus_name, layer);
+        } else {
+            js_module_call_layer_event(layer->id, "onFocus");
+        }
+    }
+    return NULL;
+}
+
+// Blur 事件包装函数
+static void* js_module_blur_event(void* data)
+{
+    Layer* layer = (Layer*)data;
+    if (layer) {
+        if (layer->event && layer->event->blur_name[0] != '\0') {
+            js_module_call_event(layer->event->blur_name, layer);
+        } else {
+            js_module_call_layer_event(layer->id, "onBlur");
+        }
+    }
+    return NULL;
+}
+
+// Key 事件包装函数
+static void* js_module_key_event(void* data)
+{
+    Layer* layer = (Layer*)data;
+    if (layer) {
+        if (layer->event && layer->event->key_name[0] != '\0') {
+            js_module_call_event(layer->event->key_name, layer);
+        } else {
+            js_module_call_layer_event(layer->id, "onKey");
+        }
+    }
+    return NULL;
+}
+
 static void js_layer_resize_handler(Layer* layer, const ResizeEvent* event)
 {
     if (!layer || !event) return;
@@ -275,6 +344,12 @@ static EventHandler get_event_handler_by_type(const char* event_type)
         return js_module_change_event;
     } else if (strcmp(event_type, "resize") == 0 || strcmp(event_type, "onResize") == 0) {
         return NULL;
+    } else if (strcmp(event_type, "focus") == 0 || strcmp(event_type, "onFocus") == 0) {
+        return js_module_focus_event;
+    } else if (strcmp(event_type, "blur") == 0 || strcmp(event_type, "onBlur") == 0) {
+        return js_module_blur_event;
+    } else if (strcmp(event_type, "key") == 0 || strcmp(event_type, "onKey") == 0) {
+        return js_module_key_event;
     } else if (strcmp(event_type, "onSelect") == 0 || strcmp(event_type, "onExpand") == 0 ||
                strcmp(event_type, "onSelectionChanged") == 0) {
         /* 组件自定义事件，由 register_js_event_mapping 注册全局 handler */

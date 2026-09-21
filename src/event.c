@@ -6,6 +6,7 @@
 #include "input/state.h"
 #include "layer_update.h"
 #include "render.h"
+#include "focus.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
@@ -347,41 +348,57 @@ static void handle_horizontal_scroll_event(Layer* layer, int scroll_delta) {
     }
 }
 
-// 处理键盘事件
-static void handle_key_event_tree(Layer* layer, KeyEvent* event) {
+// 处理键盘事件，返回 1 表示已被消费
+static int handle_key_event_tree(Layer* layer, KeyEvent* event) {
     if (!layer || !event) {
-        return;
+        return 0;
     }
 
     // 优先处理popup层的键盘事件
     if (popup_manager_handle_key_event(event)) {
-        return;
+        return 1;
     }
 
     // 如果当前图层就是焦点图层且有键盘事件处理函数，则处理事件
     if (focused_layer == layer && layer->handle_key_event) {
-        if (layer->handle_key_event(layer, event)) return;
+        if (layer->handle_key_event(layer, event)) return 1;
     }
 
     // 递归处理子图层的键盘事件，寻找焦点图层
     for (int i = 0; i < layer->child_count; i++) {
         if (layer->children[i]) {
-            handle_key_event_tree(layer->children[i], event);
+            if (handle_key_event_tree(layer->children[i], event)) return 1;
         }
     }
 
     // 处理sub图层的键盘事件
     if (layer->sub) {
-        handle_key_event_tree(layer->sub, event);
+        if (handle_key_event_tree(layer->sub, event)) return 1;
     }
+    return 0;
 }
+
+int yui_last_key_code = 0;
+int yui_last_key_type = 0;
 
 void handle_key_event(Layer* layer, KeyEvent* event) {
     if (!layer || !event) {
         return;
     }
+    yui_last_key_code = event->data.key.key_code;
+    yui_last_key_type = event->type;
     notify_key_listeners(event);
-    handle_key_event_tree(layer, event);
+    /* 组件（List/Input/Text 等）优先消费；未消费的方向键/确认键交给焦点导航 */
+    if (handle_key_event_tree(layer, event)) {
+        return;
+    }
+    if (focus_handle_key(layer, event)) {
+        return;
+    }
+    /* 仍未消费：交给根层 onKey（应用级返回键等） */
+    if (layer->event && layer->event->key) {
+        EVENT_INVOKE(layer->event->key, layer);
+    }
 }
 
 // 递归检查指定位置是否有子图层可以处理点击事件
@@ -623,11 +640,7 @@ int handle_pointer_event(Layer* layer, PointerEvent* event) {
     if (point_in_rect(pos, layer->rect)) {
         if (!child_has_focus && layer->focusable && layer->visible == VISIBLE &&
             (pe->phase == POINTER_DOWN || pe->phase == POINTER_DOUBLE_TAP)) {
-            if (focused_layer && focused_layer != layer) {
-                focused_layer->state = LAYER_STATE_NORMAL;
-            }
-            focused_layer = layer;
-            layer->state = LAYER_STATE_FOCUSED;
+            focus_set(layer);
         }
     }
 

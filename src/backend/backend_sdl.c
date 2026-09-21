@@ -6,6 +6,7 @@
 #include "ytype.h"
 #include "util.h"
 #include "popup_manager.h"
+#include "focus.h"
 #include "screenshot.h"
 #include "game/game.h"
 #include "input/state.h"
@@ -57,6 +58,89 @@ SDL_Window* window=NULL;
 DFont* default_font=NULL;
 Layer* g_ui_root = NULL;
 int g_running=0;
+
+/* ==================== 游戏手柄 ==================== */
+#define YUI_MAX_GAMEPADS 4
+static SDL_GameController* g_gamepads[YUI_MAX_GAMEPADS];
+static int g_pad_dir_held[4]; /* left, right, up, down */
+static Uint32 g_pad_repeat_at;
+
+static void backend_gamepad_add(int device_index) {
+    int i;
+    if (!SDL_IsGameController(device_index)) return;
+    for (i = 0; i < YUI_MAX_GAMEPADS; i++) {
+        if (!g_gamepads[i]) {
+            g_gamepads[i] = SDL_GameControllerOpen(device_index);
+            if (g_gamepads[i]) {
+                printf("Gamepad connected: %s\n", SDL_GameControllerName(g_gamepads[i]));
+            }
+            break;
+        }
+    }
+}
+
+static void backend_gamepad_remove(int instance_id) {
+    int i;
+    for (i = 0; i < YUI_MAX_GAMEPADS; i++) {
+        if (g_gamepads[i] &&
+            SDL_JoystickInstanceID(SDL_GameControllerGetJoystick(g_gamepads[i])) == instance_id) {
+            SDL_GameControllerClose(g_gamepads[i]);
+            g_gamepads[i] = NULL;
+            break;
+        }
+    }
+}
+
+static int backend_gamepad_keycode(Uint8 button) {
+    switch (button) {
+        case SDL_CONTROLLER_BUTTON_DPAD_LEFT: return SDLK_LEFT;
+        case SDL_CONTROLLER_BUTTON_DPAD_RIGHT: return SDLK_RIGHT;
+        case SDL_CONTROLLER_BUTTON_DPAD_UP: return SDLK_UP;
+        case SDL_CONTROLLER_BUTTON_DPAD_DOWN: return SDLK_DOWN;
+        case SDL_CONTROLLER_BUTTON_A: return SDLK_RETURN;
+        case SDL_CONTROLLER_BUTTON_B: return SDLK_ESCAPE;
+        case SDL_CONTROLLER_BUTTON_X: return SDLK_x;
+        case SDL_CONTROLLER_BUTTON_Y: return SDLK_y;
+        case SDL_CONTROLLER_BUTTON_START: return SDLK_RETURN;
+        case SDL_CONTROLLER_BUTTON_BACK: return SDLK_ESCAPE;
+        default: return 0;
+    }
+}
+
+static void backend_gamepad_send_key(Layer* root, int key_code, int down) {
+    KeyEvent ke;
+    memset(&ke, 0, sizeof(ke));
+    ke.type = down ? KEY_EVENT_DOWN : KEY_EVENT_UP;
+    ke.data.key.key_code = key_code;
+    handle_key_event(root, &ke);
+}
+
+static void backend_gamepad_dir(Layer* root, int dir, int down) {
+    if (dir < 0 || dir > 3) return;
+    if (down == g_pad_dir_held[dir]) return;
+    g_pad_dir_held[dir] = down;
+    if (down) {
+        focus_move(root, (FocusDirection)(FOCUS_DIR_LEFT + dir));
+        g_pad_repeat_at = SDL_GetTicks() + 300;
+    }
+}
+
+/* 每帧推进：按住方向键/摇杆时重复移动焦点 */
+static void backend_gamepad_update(Layer* root) {
+    Uint32 now = SDL_GetTicks();
+    int any = 0;
+    int i;
+    if (now < g_pad_repeat_at) return;
+    for (i = 0; i < 4; i++) {
+        if (g_pad_dir_held[i]) {
+            focus_move(root, (FocusDirection)(FOCUS_DIR_LEFT + i));
+            any = 1;
+        }
+    }
+    if (any) {
+        g_pad_repeat_at = now + 80;
+    }
+}
 
 static int g_auto_frames = -1; /* -1 = run forever */  
 static int g_request_quit = 0;
@@ -2169,7 +2253,14 @@ int backend_init(){
     SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "0");
 
     // 初始化SDL
-    SDL_Init(SDL_INIT_VIDEO);
+    SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER);
+
+    /* 打开已连接的手柄 */
+    memset(g_gamepads, 0, sizeof(g_gamepads));
+    memset(g_pad_dir_held, 0, sizeof(g_pad_dir_held));
+    for (int gi = 0; gi < SDL_NumJoysticks(); gi++) {
+        backend_gamepad_add(gi);
+    }
 
     // 启用 IME UI 显示（候选词窗口）
     SDL_SetHint(SDL_HINT_IME_SHOW_UI, "1");
@@ -2523,6 +2614,46 @@ int pointInLayer(SDL_Point* point, Layer* layer) {
 void handle_event(Layer* root, SDL_Event* event) {
     if (event->type == SDL_WINDOWEVENT) {
         sdl_handle_window_event(root, event);
+        return;
+    }
+
+    // 手柄：方向键/左摇杆移动焦点，A/B/X/Y 映射为按键
+    if (event->type == SDL_CONTROLLERDEVICEADDED) {
+        backend_gamepad_add(event->cdevice.which);
+        return;
+    }
+    if (event->type == SDL_CONTROLLERDEVICEREMOVED) {
+        backend_gamepad_remove(event->cdevice.which);
+        return;
+    }
+    if (event->type == SDL_CONTROLLERBUTTONDOWN || event->type == SDL_CONTROLLERBUTTONUP) {
+        int down = (event->type == SDL_CONTROLLERBUTTONDOWN);
+        switch (event->cbutton.button) {
+            case SDL_CONTROLLER_BUTTON_DPAD_LEFT:
+                backend_gamepad_dir(root, 0, down); return;
+            case SDL_CONTROLLER_BUTTON_DPAD_RIGHT:
+                backend_gamepad_dir(root, 1, down); return;
+            case SDL_CONTROLLER_BUTTON_DPAD_UP:
+                backend_gamepad_dir(root, 2, down); return;
+            case SDL_CONTROLLER_BUTTON_DPAD_DOWN:
+                backend_gamepad_dir(root, 3, down); return;
+            default: {
+                int kc = backend_gamepad_keycode(event->cbutton.button);
+                if (kc) backend_gamepad_send_key(root, kc, down);
+                return;
+            }
+        }
+    }
+    if (event->type == SDL_CONTROLLERAXISMOTION) {
+        const int DEADZONE = 16384;
+        int v = event->caxis.value;
+        if (event->caxis.axis == SDL_CONTROLLER_AXIS_LEFTX) {
+            backend_gamepad_dir(root, 0, v < -DEADZONE);
+            backend_gamepad_dir(root, 1, v > DEADZONE);
+        } else if (event->caxis.axis == SDL_CONTROLLER_AXIS_LEFTY) {
+            backend_gamepad_dir(root, 2, v < -DEADZONE);
+            backend_gamepad_dir(root, 3, v > DEADZONE);
+        }
         return;
     }
 
@@ -2884,6 +3015,8 @@ void backend_run(Layer* ui_root){
             }
         }
 
+        backend_gamepad_update(ui_root);
+
 #if YUI_WITH_GAME
         game_update(-1.0f);
 #endif
@@ -2958,6 +3091,8 @@ void backend_tick(Layer* ui_root) {
             update_callbacks[i]();
         }
     }
+
+    backend_gamepad_update(ui_root);
 
 #if YUI_WITH_GAME
     game_update(-1.0f);

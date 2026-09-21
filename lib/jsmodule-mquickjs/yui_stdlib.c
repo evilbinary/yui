@@ -30,6 +30,7 @@
 #include "cJSON.h"
 #include "../../src/render.h"
 #include "../../src/backend.h"
+#include "../../src/focus.h"
 
 #ifndef STDLIB_BUILD
 #include "../../src/perf/perf.h"
@@ -474,6 +475,70 @@ static JSValue js_show(JSContext *ctx, JSValue *this_val, int argc, JSValue *arg
     }
 
     return JS_UNDEFINED;
+}
+
+// 设置焦点到指定图层
+static JSValue js_focus(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+{
+    JSCStringBuf buf;
+    const char* layer_id;
+    (void)this_val;
+    if (argc < 1) return JS_UNDEFINED;
+    layer_id = JS_ToCString(ctx, argv[0], &buf);
+    if (layer_id && g_layer_root) {
+        Layer* layer = find_layer_by_id(g_layer_root, layer_id);
+        if (layer) {
+            focus_set(layer);
+        }
+    }
+    return JS_UNDEFINED;
+}
+
+// 按方向移动焦点："left"/"right"/"up"/"down"
+static JSValue js_focus_move(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+{
+    JSCStringBuf buf;
+    const char* dir = NULL;
+    FocusDirection d = FOCUS_DIR_NONE;
+    int moved = 0;
+    (void)this_val;
+    if (argc >= 1) {
+        dir = JS_ToCString(ctx, argv[0], &buf);
+    }
+    if (dir) {
+        if (strcmp(dir, "left") == 0) d = FOCUS_DIR_LEFT;
+        else if (strcmp(dir, "right") == 0) d = FOCUS_DIR_RIGHT;
+        else if (strcmp(dir, "up") == 0) d = FOCUS_DIR_UP;
+        else if (strcmp(dir, "down") == 0) d = FOCUS_DIR_DOWN;
+    }
+    if (d != FOCUS_DIR_NONE) {
+        moved = focus_move(g_layer_root, d);
+    }
+    return JS_NewInt32(ctx, moved);
+}
+
+// 清除焦点
+static JSValue js_focus_clear(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+{
+    (void)ctx; (void)this_val; (void)argc; (void)argv;
+    focus_clear();
+    return JS_UNDEFINED;
+}
+
+// 获取当前焦点图层 id
+static JSValue js_focus_get(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+{
+    Layer* layer = focus_get();
+    (void)this_val; (void)argc; (void)argv;
+    return JS_NewString(ctx, (layer && layer->id[0]) ? layer->id : "");
+}
+
+// 最近一次未消费按键的键码
+static JSValue js_key_code(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+{
+    extern int yui_last_key_code;
+    (void)this_val; (void)argc; (void)argv;
+    return JS_NewInt32(ctx, yui_last_key_code);
 }
 
 // 获取窗口大小
@@ -963,6 +1028,11 @@ static const JSPropDef js_yui[] = {
     JS_CFUNC_DEF("setBgColor", 1, js_set_bg_color ),
     JS_CFUNC_DEF("hide", 1, js_hide ),
     JS_CFUNC_DEF("show", 1, js_show ),
+    JS_CFUNC_DEF("focus", 1, js_focus ),
+    JS_CFUNC_DEF("focusMove", 1, js_focus_move ),
+    JS_CFUNC_DEF("focusClear", 0, js_focus_clear ),
+    JS_CFUNC_DEF("focusGet", 0, js_focus_get ),
+    JS_CFUNC_DEF("keyCode", 0, js_key_code ),
     JS_CFUNC_DEF("getWindowSize", 0, js_get_window_size ),
     JS_CFUNC_DEF("renderFromJson", 3, js_render_from_json ),
     JS_CFUNC_DEF("readFile", 1, js_read_file ),

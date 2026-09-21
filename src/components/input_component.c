@@ -4,6 +4,7 @@
 #include "../event.h"
 #include "../layer.h"
 #include "../layer_update.h"
+#include "../focus.h"
 #include "../util.h"
 #include <stdlib.h>
 #include <string.h>
@@ -19,11 +20,7 @@ static void input_component_focus(InputComponent* component) {
     if (!component || !component->layer) return;
     Layer* layer = component->layer;
 
-    if (focused_layer && focused_layer != layer) {
-        CLEAR_STATE(focused_layer, LAYER_STATE_FOCUSED);
-    }
-    focused_layer = layer;
-    SET_STATE(layer, LAYER_STATE_FOCUSED);
+    focus_set(layer);
 
     backend_start_text_input();
     Rect rect = {
@@ -39,9 +36,8 @@ static void input_component_blur(InputComponent* component) {
     if (!component || !component->layer) return;
     Layer* layer = component->layer;
 
-    CLEAR_STATE(layer, LAYER_STATE_FOCUSED);
-    if (focused_layer == layer) {
-        focused_layer = NULL;
+    if (focus_get() == layer) {
+        focus_clear();
     }
     backend_stop_text_input();
 }

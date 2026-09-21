@@ -5,6 +5,7 @@
 #include "layer.h"
 #include "layer_update.h"
 #include "render.h"
+#include "focus.h"
 #include "ytype.h"
 
 #include <stdio.h>
@@ -183,6 +184,7 @@ void layer_set_visible(Layer* layer, int visible) {
     int was_visible = (layer->visible == VISIBLE);
 
     if (was_visible) {
+        focus_on_layer_hide(layer);
         layer_lifecycle_on_hide_visible(layer);
     }
 
@@ -201,5 +203,10 @@ void layer_set_visible(Layer* layer, int visible) {
 
     if (layer->parent && !yui_update_is_batching()) {
         layout_layer(layer->parent);
+    }
+
+    /* 布局完成后再初始化焦点，保证可聚焦层已有有效 rect */
+    if (!was_visible && new_visible == VISIBLE) {
+        focus_on_layer_show(layer);
     }
 }

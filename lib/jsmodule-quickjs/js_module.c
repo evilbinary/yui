@@ -6,6 +6,7 @@
 #include "../../src/layer_update.h"
 #include "../../src/layer_lifecycle.h"
 #include "../../src/render.h"
+#include "../../src/focus.h"
 #include "../../src/theme_manager.h"
 #include "../../src/components/text_component.h"
 #include "js_socket.h"
@@ -290,6 +291,49 @@ static JSValue js_show(JSContext *ctx, JSValueConst this_val, int argc, JSValueC
 
     JS_FreeCString(ctx, layer_id);
     return JS_UNDEFINED;
+}
+
+// 按方向移动焦点："left"/"right"/"up"/"down"
+static JSValue js_focus_move(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    const char* dir = argc >= 1 ? JS_ToCString(ctx, argv[0]) : NULL;
+    FocusDirection d = FOCUS_DIR_NONE;
+    if (dir) {
+        if (strcmp(dir, "left") == 0) d = FOCUS_DIR_LEFT;
+        else if (strcmp(dir, "right") == 0) d = FOCUS_DIR_RIGHT;
+        else if (strcmp(dir, "up") == 0) d = FOCUS_DIR_UP;
+        else if (strcmp(dir, "down") == 0) d = FOCUS_DIR_DOWN;
+    }
+    int moved = 0;
+    if (d != FOCUS_DIR_NONE) {
+        moved = focus_move(g_layer_root, d);
+    }
+    if (dir) JS_FreeCString(ctx, dir);
+    return JS_NewInt32(ctx, moved);
+}
+
+// 清除焦点
+static JSValue js_focus_clear(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    (void)ctx; (void)this_val; (void)argc; (void)argv;
+    focus_clear();
+    return JS_UNDEFINED;
+}
+
+// 获取当前焦点图层 id
+static JSValue js_focus_get(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    Layer* layer = focus_get();
+    (void)this_val; (void)argc; (void)argv;
+    return JS_NewString(ctx, (layer && layer->id[0]) ? layer->id : "");
+}
+
+// 最近一次未消费按键的键码
+static JSValue js_key_code(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    extern int yui_last_key_code;
+    (void)this_val; (void)argc; (void)argv;
+    return JS_NewInt32(ctx, yui_last_key_code);
 }
 
 // 获取窗口大小
@@ -1452,6 +1496,10 @@ void js_module_register_api(void)
     JS_SetPropertyStr(g_js_ctx, yui_obj, "setBgColor", JS_NewCFunction(g_js_ctx, js_set_bg_color, "setBgColor", 2));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "hide", JS_NewCFunction(g_js_ctx, js_hide, "hide", 1));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "show", JS_NewCFunction(g_js_ctx, js_show, "show", 1));
+    JS_SetPropertyStr(g_js_ctx, yui_obj, "focusMove", JS_NewCFunction(g_js_ctx, js_focus_move, "focusMove", 1));
+    JS_SetPropertyStr(g_js_ctx, yui_obj, "focusClear", JS_NewCFunction(g_js_ctx, js_focus_clear, "focusClear", 0));
+    JS_SetPropertyStr(g_js_ctx, yui_obj, "focusGet", JS_NewCFunction(g_js_ctx, js_focus_get, "focusGet", 0));
+    JS_SetPropertyStr(g_js_ctx, yui_obj, "keyCode", JS_NewCFunction(g_js_ctx, js_key_code, "keyCode", 0));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "getWindowSize", JS_NewCFunction(g_js_ctx, js_get_window_size, "getWindowSize", 0));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "renderFromJson", JS_NewCFunction(g_js_ctx, js_render_from_json, "renderFromJson", 3));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "update", JS_NewCFunction(g_js_ctx, js_update, "update", 1));
@@ -2205,15 +2253,7 @@ JSValue js_focus(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
 
     if (!layer) return JS_UNDEFINED;
 
-    // 清除旧焦点图层状态
-    extern Layer* focused_layer;
-    if (focused_layer && focused_layer != layer) {
-        CLEAR_STATE(focused_layer, LAYER_STATE_FOCUSED);
-    }
-
-    // 设置新焦点
-    focused_layer = layer;
-    SET_STATE(layer, LAYER_STATE_FOCUSED);
+    focus_set(layer);
 
     return JS_UNDEFINED;
 }
