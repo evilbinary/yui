@@ -122,7 +122,6 @@ static void test_arrow_moves_and_scrolls(void **state)
     list->data = NULL;
     focus_clear();
     destroy_layer(root);
-    render_ctx_free(root);
 }
 
 static void test_wheel_scrolls(void **state)
@@ -159,7 +158,6 @@ static void test_wheel_scrolls(void **state)
     list->data = NULL;
     focus_clear();
     destroy_layer(root);
-    render_ctx_free(root);
 }
 
 int main(int argc, char **argv)
