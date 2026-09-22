@@ -62,7 +62,7 @@ function onEmulatorRomSelect(layerId) {
     if (!emu) return;
 
     YUI.log("[emulator] select " + emu.id + " / " + item.title);
-    launchEmulatorRom(emu.id, item.title);
+    launchEmulatorRom(emu.id, item.title, item.path || "");
 }
 
 function onEmulatorLaunchFirst() {
@@ -73,10 +73,10 @@ function onEmulatorLaunchFirst() {
         YUI.setText("emu_list_count", "目录 " + emu.romDir + " 为空，请放入 ROM 文件");
         return;
     }
-    launchEmulatorRom(emu.id, roms[0].title);
+    launchEmulatorRom(emu.id, roms[0].title, roms[0].path || "");
 }
 
 /* 加载模拟器：按设置选择外部进程 / 全屏 / 页面内嵌 */
-function launchEmulatorRom(emuId, romTitle) {
-    consoleLaunchAndRun(emuId, romTitle);
+function launchEmulatorRom(emuId, romTitle, romPath) {
+    consoleLaunchAndRun(emuId, romTitle, romPath);
 }

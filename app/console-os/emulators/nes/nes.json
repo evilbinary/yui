@@ -5,7 +5,7 @@
   "icon": "🎮",
   "subtitle": "Nintendo Famicom / NES",
   "core": "fceumm",
-  "exec": "",
+  "exec": "infones",
   "systems": [
     "FC",
     "NES"

@@ -171,7 +171,7 @@ function cycleConsoleRunMode() {
 }
 
 /* 按设置启动模拟器：外部进程成功返回 "external"；不可用/失败回退 "fullscreen" */
-function consoleRunEmulator(emuId) {
+function consoleRunEmulator(emuId, romPath) {
     var mode = Console.emulatorRunMode || "external";
     if (mode !== "external") {
         return mode;
@@ -180,6 +180,9 @@ function consoleRunEmulator(emuId) {
     var cmd = emu ? (emu.exec || emu.core || "") : "";
     if (!cmd || typeof YUI.spawn !== "function") {
         return "fullscreen";
+    }
+    if (romPath) {
+        cmd = cmd + " " + consoleShellQuote(romPath);
     }
     YUI.log("[console] spawn external: " + cmd);
     var rc = YUI.spawn(cmd);
@@ -191,10 +194,10 @@ function consoleRunEmulator(emuId) {
 }
 
 /* 启动游戏：记录运行状态，按模式决定外部进程或进入播放页 */
-function consoleLaunchAndRun(emuId, romTitle) {
-    if (!consoleLaunchRom(emuId, romTitle)) return;
+function consoleLaunchAndRun(emuId, romTitle, romPath) {
+    if (!consoleLaunchRom(emuId, romTitle, romPath)) return;
 
-    var mode = consoleRunEmulator(emuId);
+    var mode = consoleRunEmulator(emuId, romPath);
     if (mode === "external") {
         setConsoleHint("已启动外部模拟器进程 · " + romTitle);
         return;
@@ -530,7 +533,7 @@ function consoleSelectedEmulator() {
     return null;
 }
 
-function consoleLaunchRom(emuId, romTitle) {
+function consoleLaunchRom(emuId, romTitle, romPath) {
     var emu = EmulatorRegistry.findById(emuId);
     if (!emu) return false;
     Console.running = {
@@ -539,10 +542,17 @@ function consoleLaunchRom(emuId, romTitle) {
         emuIcon: emu.icon,
         core: emu.core,
         rom: romTitle,
+        romPath: romPath || "",
         startedAt: Date.now()
     };
-    YUI.log("[console] launch " + emu.title + " / " + romTitle);
+    YUI.log("[console] launch " + emu.title + " / " + romTitle
+        + (romPath ? (" <" + romPath + ">") : ""));
     return true;
+}
+
+/* shell 参数引用：空格/特殊字符安全 */
+function consoleShellQuote(s) {
+    return "\"" + String(s).replace(/"/g, "\\\"") + "\"";
 }
 
 function consolePushRecent(emuId, romTitle) {
