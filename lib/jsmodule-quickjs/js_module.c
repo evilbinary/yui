@@ -336,6 +336,21 @@ static JSValue js_key_code(JSContext *ctx, JSValueConst this_val, int argc, JSVa
     return JS_NewInt32(ctx, yui_last_key_code);
 }
 
+// 启动外部程序（PC）；嵌入式返回 -1
+static JSValue js_spawn(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    int rc = -1;
+    (void)this_val;
+    if (argc >= 1) {
+        const char* cmd = JS_ToCString(ctx, argv[0]);
+        if (cmd) {
+            rc = backend_spawn(cmd);
+            JS_FreeCString(ctx, cmd);
+        }
+    }
+    return JS_NewInt32(ctx, rc);
+}
+
 // 获取窗口大小
 static JSValue js_get_window_size(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
@@ -1500,6 +1515,7 @@ void js_module_register_api(void)
     JS_SetPropertyStr(g_js_ctx, yui_obj, "focusClear", JS_NewCFunction(g_js_ctx, js_focus_clear, "focusClear", 0));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "focusGet", JS_NewCFunction(g_js_ctx, js_focus_get, "focusGet", 0));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "keyCode", JS_NewCFunction(g_js_ctx, js_key_code, "keyCode", 0));
+    JS_SetPropertyStr(g_js_ctx, yui_obj, "spawn", JS_NewCFunction(g_js_ctx, js_spawn, "spawn", 1));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "getWindowSize", JS_NewCFunction(g_js_ctx, js_get_window_size, "getWindowSize", 0));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "renderFromJson", JS_NewCFunction(g_js_ctx, js_render_from_json, "renderFromJson", 3));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "update", JS_NewCFunction(g_js_ctx, js_update, "update", 1));

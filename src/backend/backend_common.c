@@ -2,6 +2,20 @@
 #include "../backend.h"
 #include <math.h>
 #include <string.h>
+#include <stdlib.h>
+
+/* 启动外部程序：宿主平台用 system()（阻塞到程序退出），嵌入式不可用返回 -1。 */
+int backend_spawn(const char* cmd) {
+    if (!cmd || !cmd[0]) {
+        return -1;
+    }
+#if defined(__linux__) || defined(__APPLE__) || defined(_WIN32)
+    return system(cmd);
+#else
+    (void)cmd;
+    return -1;
+#endif
+}
 
 typedef struct {
     float x;

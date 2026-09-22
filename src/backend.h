@@ -136,6 +136,10 @@ void backend_texture_cache_warmup(DFont* font, const char** texts, int count, Co
 // 截取当前 UI 为 PNG（桌面 SDL；失败返回负值）
 int backend_screenshot(const char* path);
 
+/* 启动外部程序（PC/Linux/macOS/Windows）。cmd 为 shell 命令。
+ * 宿主平台返回 system() 的结果（阻塞直到程序退出），嵌入式返回 -1。 */
+int backend_spawn(const char* cmd);
+
 // 设置当前 UI 根图层（在 backend_run 之前即可截图）
 void backend_set_ui_root(Layer* root);
 

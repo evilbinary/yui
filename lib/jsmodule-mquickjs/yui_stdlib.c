@@ -541,6 +541,21 @@ static JSValue js_key_code(JSContext *ctx, JSValue *this_val, int argc, JSValue 
     return JS_NewInt32(ctx, yui_last_key_code);
 }
 
+// 启动外部程序（PC）；嵌入式返回 -1
+static JSValue js_spawn(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+{
+    JSCStringBuf buf;
+    int rc = -1;
+    (void)this_val;
+    if (argc >= 1) {
+        const char* cmd = JS_ToCString(ctx, argv[0], &buf);
+        if (cmd) {
+            rc = backend_spawn(cmd);
+        }
+    }
+    return JS_NewInt32(ctx, rc);
+}
+
 // 获取窗口大小
 static JSValue js_get_window_size(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
 {
@@ -1033,6 +1048,7 @@ static const JSPropDef js_yui[] = {
     JS_CFUNC_DEF("focusClear", 0, js_focus_clear ),
     JS_CFUNC_DEF("focusGet", 0, js_focus_get ),
     JS_CFUNC_DEF("keyCode", 0, js_key_code ),
+    JS_CFUNC_DEF("spawn", 1, js_spawn ),
     JS_CFUNC_DEF("getWindowSize", 0, js_get_window_size ),
     JS_CFUNC_DEF("renderFromJson", 3, js_render_from_json ),
     JS_CFUNC_DEF("readFile", 1, js_read_file ),
