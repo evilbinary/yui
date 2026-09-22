@@ -5,6 +5,7 @@
   "icon": "🐢",
   "subtitle": "Nintendo Game Boy",
   "core": "gambatte",
+  "exec": "",
   "systems": ["GB", "GBC"],
   "exts": ["gb", "gbc"],
   "accent": "#34D399",

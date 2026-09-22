@@ -125,6 +125,8 @@ var EmulatorRegistry = {
             icon: meta.icon || "🎮",
             subtitle: meta.subtitle || "",
             core: meta.core || id,
+            /* 外部进程可执行文件/命令（external 模式优先用它，缺省回退 core） */
+            exec: meta.exec || "",
             systems: meta.systems || [],
             exts: meta.exts || [],
             romDir: meta.romDir || (this.romRoot + "/" + id),

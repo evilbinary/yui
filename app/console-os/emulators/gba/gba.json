@@ -5,6 +5,7 @@
   "icon": "🐉",
   "subtitle": "Nintendo Game Boy Advance",
   "core": "mgba",
+  "exec": "",
   "systems": ["GBA"],
   "exts": ["gba", "agb"],
   "accent": "#F59E0B",

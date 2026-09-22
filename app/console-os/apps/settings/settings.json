@@ -44,6 +44,20 @@
             ]
         },
         {
+            "id": "settings_row_runmode",
+            "type": "View",
+            "variant": "list-row",
+            "focusable": true,
+            "size": [592, 46],
+            "layout": { "type": "horizontal", "spacing": 8, "padding": [8, 12, 8, 12], "align": "center" },
+            "events": { "onClick": "@onSettingsCycleRunMode" },
+            "children": [
+                { "id": "settings_runmode_name", "type": "Label", "variant": "body", "text": "模拟器运行", "size": [120, 16], "textAlign": "left" },
+                { "id": "settings_runmode_value", "type": "Label", "variant": "caption", "text": "外部进程", "flex": 1, "size": [0, 16], "textAlign": "left" },
+                { "id": "btn_settings_runmode", "type": "Button", "variant": "pill", "text": "切换方式", "size": [84, 28], "events": { "onClick": "@onSettingsCycleRunMode" } }
+            ]
+        },
+        {
             "id": "settings_row_volume",
             "type": "View",
             "variant": "list-row",

@@ -5,6 +5,7 @@
   "icon": "🦔",
   "subtitle": "Super Famicom / SNES",
   "core": "snes9x",
+  "exec": "",
   "systems": ["SFC", "SNES"],
   "exts": ["sfc", "smc", "fig"],
   "accent": "#A78BFA",

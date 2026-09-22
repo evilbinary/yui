@@ -5,6 +5,7 @@
   "icon": "🚀",
   "subtitle": "Nintendo 64",
   "core": "mupen64plus",
+  "exec": "",
   "systems": ["N64"],
   "exts": ["z64", "n64", "v64"],
   "accent": "#F472B6",

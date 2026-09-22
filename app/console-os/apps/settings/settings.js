@@ -16,6 +16,9 @@ function refreshSettingsUI() {
     YUI.setText("settings_theme_value", "当前：" + getConsoleThemeLabel()
         + "（" + Console.themeMode + ".json）");
 
+    YUI.setText("settings_runmode_value", "当前：" + getConsoleRunModeLabel()
+        + "（" + Console.emulatorRunMode + "）");
+
     YUI.setText("settings_volume_value", Console.volume + "%");
     consoleSetBar("settings_volume_fill", consoleBarWidth(Console.volume, 120), 6, "#38BDF8");
 
@@ -39,6 +42,13 @@ function onSettingsToggleTheme() {
     var mode = switchConsoleTheme();
     refreshSettingsUI();
     setConsoleHint("主题已切换为" + (mode === "dark" ? "暗色" : "亮色"));
+}
+
+/* 模拟器运行方式：外部进程 → 全屏运行 → 页面内嵌 循环 */
+function onSettingsCycleRunMode() {
+    var mode = cycleConsoleRunMode();
+    refreshSettingsUI();
+    setConsoleHint("模拟器运行方式：" + getConsoleRunModeLabel() + "（" + mode + "）");
 }
 
 /* ==================== 音量 / 亮度 ==================== */

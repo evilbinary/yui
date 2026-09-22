@@ -8,6 +8,8 @@
 var Console = {
     version: "0.1.0",
     themeMode: "dark",
+    /* 模拟器运行方式：external(外部进程,默认) / fullscreen(全屏页面) / embedded(页面内嵌) */
+    emulatorRunMode: "external",
 
     /* 系统状态（桌面常用信息） */
     battery: 85,
@@ -87,6 +89,7 @@ function saveConsoleConfig() {
     }
     var cfg = {
         themeMode: Console.themeMode,
+        emulatorRunMode: Console.emulatorRunMode,
         gridColumns: 6,
         volume: Console.volume,
         brightness: Console.brightness,
@@ -100,6 +103,10 @@ function applyConsoleConfig(cfg) {
     if (!cfg) return;
     if (cfg.themeMode === "light" || cfg.themeMode === "dark") {
         Console.themeMode = cfg.themeMode;
+    }
+    if (cfg.emulatorRunMode === "external" || cfg.emulatorRunMode === "fullscreen" ||
+        cfg.emulatorRunMode === "embedded") {
+        Console.emulatorRunMode = cfg.emulatorRunMode;
     }
     if (typeof cfg.volume === "number") Console.volume = cfg.volume;
     if (typeof cfg.brightness === "number") Console.brightness = cfg.brightness;
@@ -141,6 +148,64 @@ function switchConsoleTheme() {
 
 function getConsoleThemeLabel() {
     return Console.themeMode === "dark" ? "暗色" : "亮色";
+}
+
+/* ==================== 模拟器运行方式 ==================== */
+
+function getConsoleRunModeLabel() {
+    if (Console.emulatorRunMode === "embedded") return "页面内嵌";
+    if (Console.emulatorRunMode === "fullscreen") return "全屏运行";
+    return "外部进程";
+}
+
+function cycleConsoleRunMode() {
+    if (Console.emulatorRunMode === "external") {
+        Console.emulatorRunMode = "fullscreen";
+    } else if (Console.emulatorRunMode === "fullscreen") {
+        Console.emulatorRunMode = "embedded";
+    } else {
+        Console.emulatorRunMode = "external";
+    }
+    saveConsoleConfig();
+    return Console.emulatorRunMode;
+}
+
+/* 按设置启动模拟器：外部进程成功返回 "external"；不可用/失败回退 "fullscreen" */
+function consoleRunEmulator(emuId) {
+    var mode = Console.emulatorRunMode || "external";
+    if (mode !== "external") {
+        return mode;
+    }
+    var emu = EmulatorRegistry.findById(emuId);
+    var cmd = emu ? (emu.exec || emu.core || "") : "";
+    if (!cmd || typeof YUI.spawn !== "function") {
+        return "fullscreen";
+    }
+    YUI.log("[console] spawn external: " + cmd);
+    var rc = YUI.spawn(cmd);
+    if (rc === 0) {
+        return "external";
+    }
+    YUI.log("[console] spawn failed rc=" + rc + ", fallback fullscreen");
+    return "fullscreen";
+}
+
+/* 启动游戏：记录运行状态，按模式决定外部进程或进入播放页 */
+function consoleLaunchAndRun(emuId, romTitle) {
+    if (!consoleLaunchRom(emuId, romTitle)) return;
+
+    var mode = consoleRunEmulator(emuId);
+    if (mode === "external") {
+        setConsoleHint("已启动外部模拟器进程 · " + romTitle);
+        return;
+    }
+
+    var route = YUI.currentRoute ? YUI.currentRoute() : null;
+    if (route && route.path === "/player") {
+        if (typeof restartPlayerBoot === "function") restartPlayerBoot();
+        return;
+    }
+    openConsolePage("/player");
 }
 
 /* ==================== 时间与日期 ==================== */

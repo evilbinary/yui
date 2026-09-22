@@ -5,6 +5,7 @@
   "icon": "🕹",
   "subtitle": "Arcade · MAME / FBNeo",
   "core": "fbneo",
+  "exec": "",
   "systems": ["CPS1", "CPS2", "NEOGEO"],
   "exts": ["zip", "7z"],
   "accent": "#FACC15",

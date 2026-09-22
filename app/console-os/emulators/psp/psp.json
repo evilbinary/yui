@@ -5,6 +5,7 @@
   "icon": "🎬",
   "subtitle": "Sony PSP",
   "core": "ppsspp",
+  "exec": "",
   "systems": ["PSP"],
   "exts": ["iso", "cso", "pbp"],
   "accent": "#60A5FA",

@@ -5,6 +5,7 @@
   "icon": "🌀",
   "subtitle": "Sega Mega Drive / Genesis",
   "core": "genesis_plus_gx",
+  "exec": "",
   "systems": ["MD", "GEN", "SMS"],
   "exts": ["md", "bin", "gen", "smd"],
   "accent": "#38BDF8",

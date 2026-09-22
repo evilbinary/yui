@@ -26,12 +26,34 @@ function onPlayerLoad() {
 
 function onPlayerShow() {
     applyConsoleTheme();
+    applyPlayerDisplayMode();
     refreshPlayerUI();
     restartPlayerBoot();
 }
 
 function onPlayerHide() {
     playerStopTimers();
+    restorePlayerChrome();
+}
+
+/* 全屏模式：隐藏页面信息栏/HUD/按键栏与状态栏，让画面区域占满 */
+function applyPlayerDisplayMode() {
+    var fullscreen = Console.emulatorRunMode === "fullscreen";
+    var ids = ["player_header", "player_hud", "player_keys", "status_bar", "hint_bar"];
+    for (var i = 0; i < ids.length; i++) {
+        if (fullscreen) {
+            YUI.hide(ids[i]);
+        } else {
+            YUI.show(ids[i]);
+        }
+    }
+}
+
+function restorePlayerChrome() {
+    var ids = ["player_header", "player_hud", "player_keys", "status_bar", "hint_bar"];
+    for (var i = 0; i < ids.length; i++) {
+        YUI.show(ids[i]);
+    }
 }
 
 function playerStopTimers() {

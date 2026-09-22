@@ -5,6 +5,7 @@
   "icon": "💿",
   "subtitle": "Sony PlayStation",
   "core": "pcsx_rearmed",
+  "exec": "",
   "systems": ["PS1"],
   "exts": ["bin", "cue", "img", "chd", "pbp"],
   "accent": "#8B5CF6",

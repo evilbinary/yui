@@ -76,14 +76,7 @@ function onEmulatorLaunchFirst() {
     launchEmulatorRom(emu.id, roms[0].title);
 }
 
-/* 加载模拟器：记录运行状态 → 写入最近记录 → 进入运行界面 */
+/* 加载模拟器：按设置选择外部进程 / 全屏 / 页面内嵌 */
 function launchEmulatorRom(emuId, romTitle) {
-    if (!consoleLaunchRom(emuId, romTitle)) return;
-
-    var route = YUI.currentRoute ? YUI.currentRoute() : null;
-    if (route && route.path === "/player") {
-        if (typeof restartPlayerBoot === "function") restartPlayerBoot();
-        return;
-    }
-    openConsolePage("/player");
+    consoleLaunchAndRun(emuId, romTitle);
 }

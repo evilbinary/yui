@@ -5,6 +5,7 @@
   "icon": "💾",
   "subtitle": "MS-DOS · DOSBox",
   "core": "dosbox-pure",
+  "exec": "",
   "systems": ["DOS"],
   "exts": ["exe", "com", "bat", "zip", "iso"],
   "accent": "#94A3B8",

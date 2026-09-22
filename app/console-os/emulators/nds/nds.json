@@ -5,6 +5,7 @@
   "icon": "🖊",
   "subtitle": "Nintendo DS",
   "core": "melonds",
+  "exec": "",
   "systems": ["NDS"],
   "exts": ["nds", "dsi", "srl"],
   "accent": "#2DD4BF",

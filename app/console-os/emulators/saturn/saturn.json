@@ -5,6 +5,7 @@
   "icon": "🪐",
   "subtitle": "Sega Saturn",
   "core": "yabause",
+  "exec": "",
   "systems": ["SS"],
   "exts": ["cue", "bin", "iso", "chd"],
   "accent": "#FB923C",

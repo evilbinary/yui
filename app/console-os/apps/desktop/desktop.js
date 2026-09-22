@@ -220,8 +220,7 @@ function onRecentCardClick(layerId) {
     if (!entry) return;
 
     if (!consoleSelectEmulator(entry.emu)) return;
-    consoleLaunchRom(entry.emu, entry.title);
-    openConsolePage("/player");
+    consoleLaunchAndRun(entry.emu, entry.title);
 }
 
 function onDesktopClearRecent() {
