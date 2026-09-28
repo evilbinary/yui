@@ -23,7 +23,12 @@
 #define MA_NO_ENCODING
 #define MA_NO_GENERATION
 #define MINIAUDIO_IMPLEMENTATION
+
+#define Point __CarbonPoint
+#define Rect  __CarbonRect
 #include "../../lib/miniaudio/miniaudio.h"
+#undef Point
+#undef Rect
 
 static ma_engine g_engine;
 static int g_engine_ok;
