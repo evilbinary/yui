@@ -2254,6 +2254,11 @@ int backend_init(){
 
     // 初始化SDL
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER);
+    /* YiYiYa: 打开手柄/控制器事件态 —— SDL2 不像 SDL1 那样在 PumpEvents 里自动
+       刷新手柄状态，不开的话要按很久才拿到一次方向变化 ✗。开启后 PumpEvents
+       每帧都会刷；主循环里另有显式 SDL_GameControllerUpdate() 兜底 ✓。 */
+    SDL_JoystickEventState(SDL_ENABLE);
+    SDL_GameControllerEventState(SDL_ENABLE);
 
     /* 打开已连接的手柄 */
     memset(g_gamepads, 0, sizeof(g_gamepads));
@@ -2407,7 +2412,11 @@ int backend_init(){
         }
     }
 #if defined(__YIYIYA__)
-    g_sdl_persistent_fb = 1;
+    /* YiYiYa: 不能假设窗口 surface 跨帧持久。本机（GPU 渲染器）走的是
+       “离屏画布 + 每帧整帧拷贝”，DIRTY 局部重绘因此始终正确、不闪；
+       若在这里假定持久（直写 surface 并跳过拷贝），局部更新会被内核的
+       翻页/光标等打扰，表现为“按一下整页闪一下”。改为与主机一致：0。 */
+    g_sdl_persistent_fb = 0;
 #endif
     
     // 启用透明度混合
@@ -3003,6 +3012,11 @@ void backend_run(Layer* ui_root){
             break;
         }
 
+        /* YiYiYa: 每帧显式刷新手柄状态。本应用初始化了 SDL_INIT_GAMECONTROLLER，
+           但 SDL2 不会自动刷（SDL1 的 PumpEvents 会 ✓），不刷的话方向变化要一秒
+           以上才被应用看到 ✗。每帧刷一次，延迟降到 1 帧 ✓。 */
+        SDL_GameControllerUpdate();
+
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) running = 0;
             handle_event(ui_root, &event);
@@ -3077,6 +3091,9 @@ void backend_tick(Layer* ui_root) {
     if (!ui_root || !renderer) {
         return;
     }
+
+    /* YiYiYa: 同 backend_run —— 每帧显式刷新手柄状态（SDL2 不会自动刷） */
+    SDL_GameControllerUpdate();
 
     while (SDL_PollEvent(&event)) {
         if (event.type == SDL_QUIT) {

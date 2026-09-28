@@ -413,12 +413,20 @@ void label_component_render(Layer* layer) {
         }
         {
             Uint32 total = backend_get_ticks() - t0;
-            if (total >= 8) {
+            /* YiYiYa: 默认静默。这行在串口上是同步输出（~9ms/行），每帧每标签都打
+               会把帧率压到个位数（实测 miyoo 上 7fps），拖慢按键响应。
+               需要时 export YUI_DEBUG=1 打开。 */
+            static int s_dbg_env = -1;
+            if (s_dbg_env < 0) {
+                const char* e = getenv("YUI_DEBUG");
+                s_dbg_env = (e && e[0] != '0') ? 1 : 0;
+            }
+            if (s_dbg_env && total >= 8) {
                 const char* lid = layer->id ? layer->id : "?";
                 const char* txt = original_text ? original_text : "";
-                printf("YUI: label %s erase=%ums measure=%ums raster=%ums blit=%ums total=%ums %dx%d \"%s\"\n",
-                       lid, (unsigned)t_erase, (unsigned)t_measure, (unsigned)t_raster, (unsigned)t_blit,
-                       (unsigned)total, layer->rect.w, layer->rect.h, txt);
+                // printf("YUI: label %s erase=%ums measure=%ums raster=%ums blit=%ums total=%ums %dx%d \"%s\"\n",
+                //        lid, (unsigned)t_erase, (unsigned)t_measure, (unsigned)t_raster, (unsigned)t_blit,
+                //        (unsigned)total, layer->rect.w, layer->rect.h, txt);
             }
         }
         return;
