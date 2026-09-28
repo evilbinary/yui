@@ -115,12 +115,27 @@ static void backend_gamepad_send_key(Layer* root, int key_code, int down) {
     handle_key_event(root, &ke);
 }
 
+/* YiYiYa: 手柄方向【当成方向键派发】✓
+ * handle_key_event() 的顺序正是我们要的：先给焦点组件（List 会推进选中项并
+ * focus_scroll_into_view 滚动到可见 ✓），组件没消费才走 focus_handle_key
+ * （控件之间的焦点导航 ✓）。之前直接 focus_move ⇒ 列表只动焦点、不滚动 item ✗ */
+static void backend_pad_do_move(Layer* root, int dir) {
+    KeyEvent ev;
+    memset(&ev, 0, sizeof(ev));
+    ev.type = KEY_EVENT_DOWN;
+    ev.data.key.key_code = (dir == 0) ? SDLK_LEFT
+                         : (dir == 1) ? SDLK_RIGHT
+                         : (dir == 2) ? SDLK_UP
+                                      : SDLK_DOWN;
+    handle_key_event(root, &ev);
+}
+
 static void backend_gamepad_dir(Layer* root, int dir, int down) {
     if (dir < 0 || dir > 3) return;
     if (down == g_pad_dir_held[dir]) return;
     g_pad_dir_held[dir] = down;
     if (down) {
-        focus_move(root, (FocusDirection)(FOCUS_DIR_LEFT + dir));
+        backend_pad_do_move(root, dir);
         g_pad_repeat_at = SDL_GetTicks() + 300;
     }
 }
@@ -133,7 +148,7 @@ static void backend_gamepad_update(Layer* root) {
     if (now < g_pad_repeat_at) return;
     for (i = 0; i < 4; i++) {
         if (g_pad_dir_held[i]) {
-            focus_move(root, (FocusDirection)(FOCUS_DIR_LEFT + i));
+            backend_pad_do_move(root, i);
             any = 1;
         }
     }
@@ -521,7 +536,7 @@ static void backend_texture_cache_store_entry(int cache_index, uint64_t key_hash
 }
 
 static char g_font_fallback_path[YUI_MAX_PATH] = "";
-#define YUI_FALLBACK_FONT_CACHE 8
+#define YUI_FALLBACK_FONT_CACHE 32
 static DFont* s_fb_font[YUI_FALLBACK_FONT_CACHE];
 static int s_fb_px[YUI_FALLBACK_FONT_CACHE];
 static int s_fb_n;
@@ -892,6 +907,7 @@ static TTF_Font* backend_open_ttf(const char* path, int pt) {
     int len = 0;
     SDL_RWops* rw;
     TTF_Font* font;
+    unsigned t0 = backend_get_ticks();
 
     if (!path || pt <= 0) {
         return NULL;
@@ -906,6 +922,16 @@ static TTF_Font* backend_open_ttf(const char* path, int pt) {
     font = TTF_OpenFontRW(rw, 1, pt);
     if (font) {
         backend_apply_font_options(font);
+    }
+    /* YiYiYa: 诊断——只有"真正打开字体"（缓存未命中）才会走到这里。
+       只打印 >=20ms 的，便于找出启动时是谁在吞时间（见 main.c 的
+       "YUI: startup fonts …ms"）✓ */
+    {
+        unsigned dt = backend_get_ticks() - t0;
+        if (dt >= 20) {
+            printf("YUI: font open %s pt=%d %ums %s\n", path, pt, dt,
+                   font ? "ok" : "FAIL");
+        }
     }
     return font;
 }
@@ -1905,7 +1931,7 @@ TTF_Font* find_font_in_cache(const char* font_path, int size, const char* weight
     int probe = start;
     int probes = 0;
     
-    while (probes < 8) {
+    while (probes < 32) {
         if (font_cache[probe].font && font_cache[probe].hash == hash &&
             strcmp(font_cache[probe].font_path, font_path) == 0 &&
             font_cache[probe].size == size &&
