@@ -62,6 +62,8 @@ int g_running=0;
 /* ==================== 游戏手柄 ==================== */
 #define YUI_MAX_GAMEPADS 4
 static SDL_GameController* g_gamepads[YUI_MAX_GAMEPADS];
+/* YiYiYa: 手柄方向诊断打印开关（0=默认静默） */
+#define YUI_PAD_DIAG 0
 static int g_pad_dir_held[4]; /* left, right, up, down */
 static Uint32 g_pad_repeat_at;
 
@@ -115,6 +117,9 @@ static void backend_gamepad_send_key(Layer* root, int key_code, int down) {
     handle_key_event(root, &ke);
 }
 
+/* YiYiYa: 诊断——最近一次手柄方向变化的时刻，用来量"方向变化 → 屏幕真正刷新"的延迟 */
+static Uint32 g_pad_move_t = 0;
+
 /* YiYiYa: 手柄方向【当成方向键派发】✓
  * handle_key_event() 的顺序正是我们要的：先给焦点组件（List 会推进选中项并
  * focus_scroll_into_view 滚动到可见 ✓），组件没消费才走 focus_handle_key
@@ -134,6 +139,10 @@ static void backend_gamepad_dir(Layer* root, int dir, int down) {
     if (dir < 0 || dir > 3) return;
     if (down == g_pad_dir_held[dir]) return;
     g_pad_dir_held[dir] = down;
+    /* YiYiYa: 诊断打印——UI 侧【真正响应方向】的时刻（SDL ms），
+       与内核 [tick]、SDL YIYIYA2 的 t= 一起看，可定位是哪一跳慢。 */
+    g_pad_move_t = SDL_GetTicks();
+    if (YUI_PAD_DIAG) printf("YUI: pad dir=%d down=%d t=%u\n", dir, down, (unsigned)g_pad_move_t);
     if (down) {
         backend_pad_do_move(root, dir);
         g_pad_repeat_at = SDL_GetTicks() + 300;
@@ -274,6 +283,12 @@ static int sdl_end_frame(void) {
     }
     SDL_RenderPresent(renderer);
     g_sdl_presented_once = 1;
+    /* YiYiYa: 诊断——"方向变化 → 屏幕真正刷新"的延迟（用户感知的就是这一段） */
+    if (g_pad_move_t != 0) {
+        Uint32 now = SDL_GetTicks();
+        if (YUI_PAD_DIAG) printf("YUI: pad->present %ums\n", (unsigned)(now - g_pad_move_t));
+        g_pad_move_t = 0;
+    }
     return 1;
 }
 
@@ -488,14 +503,16 @@ static int backend_texture_cache_pick_evict_index(uint64_t key_hash) {
     int probe = start;
     int empty_slot = -1;
     int lru_slot = -1;
-    Uint32 oldest_time = SDL_GetTicks();
+    Uint32 oldest_time = 0xFFFFFFFFu; /* YiYiYa: 最大初值，保证一定能选出一个 ✓ */
     int probes = 0;
-    
-    // 探测寻找空槽或 LRU 条目
-    while (probes < 16) {  // 探测最多 16 个位置
+
+    /* YiYiYa: 遍历【全部】槽位 —— 原来只探 16 个 ✗，可能返回 -1 ⇒ 调用者
+     * SDL_DestroyTexture(texture) 但之后的绘制仍引用它 ⇒ 画面出现错乱/放大的
+     * 纹理（"移动时飘出放大的 texture"）。全表扫描 + 兜底 ⇒ 绝不返回 -1 ✓。 */
+    while (probes < TEXTURE_CACHE_SIZE) {
         if (!texture_cache[probe].texture) {
             empty_slot = probe;
-            break;  // 找到空槽，直接使用
+            break; /* 找到空槽 ✓ */
         }
         if (!texture_cache[probe].pinned && texture_cache[probe].last_used < oldest_time) {
             oldest_time = texture_cache[probe].last_used;
@@ -505,9 +522,10 @@ static int backend_texture_cache_pick_evict_index(uint64_t key_hash) {
         probes++;
         if (probe == start) break;
     }
-    
-    // 优先使用空槽，否则使用 LRU 位置
-    return empty_slot >= 0 ? empty_slot : lru_slot;
+
+    if (empty_slot >= 0) return empty_slot;
+    if (lru_slot >= 0) return lru_slot;
+    return start; /* 兜底：全部 pinned ⇒ 覆盖起点，绝不返回 -1 ✓ */
 }
 
 static void backend_texture_cache_store_entry(int cache_index, uint64_t key_hash, DFont* font,
@@ -1844,10 +1862,6 @@ void add_texture_to_cache(DFont* font, const char* text, Color color, int font_s
     if (font_size <= 0) {
         font_size = backend_get_font_size(font);
     }
-    if (!pinned && backend_text_cache_volatile(text)) {
-        return;
-    }
-
     key_hash = backend_texture_cache_make_hash(font, font_size, color, text);
     cache_index = backend_texture_cache_find_index(key_hash, font, font_size, color, text);
     if (cache_index >= 0) {
@@ -2281,8 +2295,9 @@ int backend_init(){
     // 初始化SDL
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER);
     /* YiYiYa: 打开手柄/控制器事件态 —— SDL2 不像 SDL1 那样在 PumpEvents 里自动
-       刷新手柄状态，不开的话要按很久才拿到一次方向变化 ✗。开启后 PumpEvents
-       每帧都会刷；主循环里另有显式 SDL_GameControllerUpdate() 兜底 ✓。 */
+       刷新手柄状态（这正是 testjoystick(SDL1) 跟手、yui(SDL2) 慢的原因 ✗）。
+       开启后 PumpEvents 每帧都会刷；主循环里另有显式 SDL_GameControllerUpdate()
+       兜底 ✓。四个里任意一个生效都能让手柄每帧刷新 ✓。 */
     SDL_JoystickEventState(SDL_ENABLE);
     SDL_GameControllerEventState(SDL_ENABLE);
 
@@ -2441,7 +2456,8 @@ int backend_init(){
     /* YiYiYa: 不能假设窗口 surface 跨帧持久。本机（GPU 渲染器）走的是
        “离屏画布 + 每帧整帧拷贝”，DIRTY 局部重绘因此始终正确、不闪；
        若在这里假定持久（直写 surface 并跳过拷贝），局部更新会被内核的
-       翻页/光标等打扰，表现为“按一下整页闪一下”。改为与主机一致：0。 */
+       翻页/光标等打扰，表现为“按一下整页闪一下”。改为与主机一致：0 ⇒
+       走离屏画布 + 整帧拷贝。 */
     g_sdl_persistent_fb = 0;
 #endif
     
@@ -3038,9 +3054,12 @@ void backend_run(Layer* ui_root){
             break;
         }
 
-        /* YiYiYa: 每帧显式刷新手柄状态。本应用初始化了 SDL_INIT_GAMECONTROLLER，
-           但 SDL2 不会自动刷（SDL1 的 PumpEvents 会 ✓），不刷的话方向变化要一秒
-           以上才被应用看到 ✗。每帧刷一次，延迟降到 1 帧 ✓。 */
+        /* YiYiYa: 每帧显式刷新手柄状态。
+         * 本应用 SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER) 之后
+         * 从未调用 SDL_GameControllerUpdate()，也没开事件态 ⇒ SDL2 不会自动
+         * 刷新手柄状态（SDL1 的 PumpEvents 会自动刷，SDL2 不会 ✗）——实测要
+         * 1 秒以上才拿到方向键，且按下/松开被挤在一起读走 ✗。
+         * 这里每帧刷一次，延迟降到 1 帧（~16ms）✓。 */
         SDL_GameControllerUpdate();
 
         while (SDL_PollEvent(&event)) {

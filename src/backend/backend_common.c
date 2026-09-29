@@ -3,18 +3,42 @@
 #include <math.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
+#include <errno.h>
 
-/* 启动外部程序：宿主平台用 system()（阻塞到程序退出），嵌入式不可用返回 -1。 */
+#if defined(__unix__) || defined(__APPLE__)
+#include <sys/wait.h>
+#endif
+
+/* 启动外部程序（阻塞到程序退出），返回其退出码；失败返回 -1，并打印原因。
+ * system() 是标准库函数，所有平台都用它；POSIX 下额外解析 wait status 得到真实退出码。 */
 int backend_spawn(const char* cmd) {
+    int rc;
     if (!cmd || !cmd[0]) {
+        fprintf(stderr, "backend_spawn: empty command\n");
         return -1;
     }
-#if defined(__linux__) || defined(__APPLE__) || defined(_WIN32)
-    return system(cmd);
-#else
-    (void)cmd;
-    return -1;
+    rc = system(cmd);
+    if (rc == -1) {
+        fprintf(stderr, "backend_spawn: system failed: %s\n", strerror(errno));
+        return -1;
+    }
+#if defined(__unix__) || defined(__APPLE__)
+    if (WIFEXITED(rc)) {
+        int code = WEXITSTATUS(rc);
+        if (code == 127) {
+            fprintf(stderr, "backend_spawn: command not found: %s\n", cmd);
+        } else if (code != 0) {
+            fprintf(stderr, "backend_spawn: command exited with code %d: %s\n", code, cmd);
+        }
+        return code;
+    }
+    if (WIFSIGNALED(rc)) {
+        fprintf(stderr, "backend_spawn: killed by signal %d: %s\n", WTERMSIG(rc), cmd);
+        return -1;
+    }
 #endif
+    return rc;
 }
 
 typedef struct {

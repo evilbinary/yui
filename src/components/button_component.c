@@ -297,6 +297,9 @@ void button_component_set_text(ButtonComponent* component, const char* text) {
 
 // 设置图标路径
 void button_component_set_icon_path(ButtonComponent* component, const char* path) {
+    if (component != NULL) {
+        component->icon_load_failed = 0; /* 换图标后可重试 ✓ */
+    }
     if (!component || !path) return;
     if (component->icon_path) free(component->icon_path);
     if (component->icon_text) { free(component->icon_text); component->icon_text = NULL; }
@@ -527,8 +530,18 @@ void button_component_render(Layer* layer) {
     int icon_w = 0, icon_h = 0;
     int icon_tex_owned = 0;
     int icon_is_path = 0;
-    if (component->icon_path && !component->icon_tex) {
-        component->icon_tex = backend_load_texture(component->icon_path);
+    if (component->icon_path && !component->icon_tex && !component->icon_load_failed) {
+        /* YiYiYa·修复：① 只有看起来像文件路径才尝试加载（emoji/"🎮" 不是路径 ✗）；
+         * ② 失败只试一次 —— 原先失败后 icon_tex 仍为 NULL ⇒ 每帧重试 IMG_Load
+         *    ⇒ libpng/SDL_image 失败路径每帧 malloc 一个 32KB group 不释放
+         *    ⇒ 90MB 池几十秒耗尽 ⇒ valloc failed / ya_sbrk oom 卡死 ✗✗ */
+        if (strchr(component->icon_path, '.') || strchr(component->icon_path, '/') ||
+            strchr(component->icon_path, '\\')) {
+            component->icon_tex = backend_load_texture(component->icon_path);
+        }
+        if (!component->icon_tex) {
+            component->icon_load_failed = 1;
+        }
     }
     if (component->icon_tex) {
         icon_tex = component->icon_tex;

@@ -26,9 +26,12 @@ typedef struct TreeNode {
     char* collapse_icon_path; // path to SVG/image for expanded icon
     Texture* expand_icon_tex;   // cached texture for expand
     Texture* collapse_icon_tex; // cached texture for collapse
+    int expand_icon_failed;     // YiYiYa: 加载失败标记（防每帧重试 ⇒ 内存暴涨）
+    int collapse_icon_failed;
     char* icon;       // file path to SVG/image, or programmatic ID (e.g. "database", "table")
     char* icon_text;  // icon text rendered before node label (e.g. "📊", "⚡")
     Texture* icon_tex;  // cached texture for icon
+    int icon_load_failed; // YiYiYa: 加载失败标记（防每帧重试 ⇒ 内存暴涨）
 } TreeNode;
 
 // 树视图组件

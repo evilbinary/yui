@@ -8,6 +8,8 @@
 #include "../util.h"
 #include <stdio.h>
 #include <stdlib.h>
+/* YiYiYa: 列表按键诊断打印开关（0=默认静默） */
+#define YUI_LIST_DIAG 0
 #include <string.h>
 
 static int list_get_padding(const Layer* layer, int index) {
@@ -618,6 +620,13 @@ static void list_ensure_index_visible(ListComponent* component, int index) {
 
 int list_component_handle_key_event(Layer* layer, KeyEvent* event) {
     if (!layer || !event || !layer->component) return 0;
+
+    /* YiYiYa: 诊断——列表收到键盘事件的时刻（与 SDL 侧的 t= 同一个毫秒钟），
+       用它减去 "YIYIYA pump key=… t=" 就是"xwin事件→SDL→列表"这跳的延迟。 */
+    if (event->type == KEY_EVENT_DOWN) {
+        if (YUI_LIST_DIAG) printf("YUI: list key=%d t=%u\n", (int)event->data.key.key_code,
+               (unsigned)backend_get_ticks());
+    }
 
     ListComponent* component = (ListComponent*)layer->component;
     if (event->type != KEY_EVENT_DOWN) return 0;
