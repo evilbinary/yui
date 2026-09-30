@@ -58,6 +58,8 @@ SDL_Window* window=NULL;
 DFont* default_font=NULL;
 Layer* g_ui_root = NULL;
 int g_running=0;
+/* YiYiYa: HOME 退出开关（默认关 —— console-os 桌面按 HOME 不退出） */
+static int g_home_quit_enable = 0;
 
 /* ==================== 游戏手柄 ==================== */
 #define YUI_MAX_GAMEPADS 4
@@ -326,6 +328,11 @@ void backend_set_auto_frames(int frames)
     g_auto_frames = frames;
     g_request_quit = 0;
     g_exit_code = 0;
+}
+
+void backend_set_home_quit(int enable)
+{
+    g_home_quit_enable = enable ? 1 : 0;
 }
 
 void backend_request_quit(int exit_code)
@@ -910,13 +917,10 @@ static void backend_apply_font_options(TTF_Font* font) {
     if (!font) {
         return;
     }
-#if defined(__YIYIYA__)
-    /* T113：autohinter + 灰度 AA 每个字形可达数百毫秒；关 hinting/kerning */
-    TTF_SetFontHinting(font, TTF_HINTING_NONE);
-    TTF_SetFontKerning(font, 0);
-#else
+    /* YiYiYa: 曾为 T113 性能关 hinting/kerning（小字号字形定位差 ⇒ 更糊 ✗）。
+     * 统一 LIGHT hinting + kerning（清晰度优先，性能影响很小 ✓）。 */
     TTF_SetFontHinting(font, TTF_HINTING_LIGHT);
-#endif
+    TTF_SetFontKerning(font, 1);
     TTF_SetFontOutline(font, 0);
 }
 
@@ -1258,11 +1262,10 @@ static SDL_Surface* backend_render_blended_utf8(DFont* font, const char* text, S
         return NULL;
     }
     /* 不要先 SizeUTF8 再 Render：SDL_ttf 内部还会 Size 一遍，T113 上等于每个字形 FT_Load_Glyph 两次 */
-#if defined(__YIYIYA__)
-    return TTF_RenderUTF8_Solid(font, text, color);
-#else
+    /* YiYiYa: 曾为 T113 性能用 Solid（1-bit、无抗锯齿 ⇒ 字体锯齿多/发糊 ✗）。
+     * 现在 miyoo 等平台性能足够，统一 Blended（灰度 AA，平滑 ✓）。
+     * 若某平台字形渲染又变慢，可在此按平台条件回退到 Solid。 */
     return TTF_RenderUTF8_Blended(font, text, color);
-#endif
 }
 
 #ifdef __EMSCRIPTEN__
@@ -2663,6 +2666,23 @@ int pointInLayer(SDL_Point* point, Layer* layer) {
 }
 
 void handle_event(Layer* root, SDL_Event* event) {
+    /* YiYiYa: HOME 键退出 —— 掌机 HOME（YIYIYA SDL 后端 button 14）按下时
+     * 请求退出整个应用（所有 ymain 应用通用：带参启动的应用退出后回
+     * console-os；console-os 自身退出回 shell）。SDL_QUIT 走的也是
+     * backend_request_quit(0)，行为一致 ✓。 */
+    /* 【诊断·可删】joystick 原始事件（定位 HOME 退出链路：事件有没有来/开关值） */
+    if (event->type == SDL_JOYBUTTONDOWN || event->type == SDL_JOYBUTTONUP) {
+        printf("YUI: JOY btn=%d %s home_quit=%d\n",
+               event->jbutton.button,
+               event->type == SDL_JOYBUTTONDOWN ? "down" : "up",
+               g_home_quit_enable);
+    }
+    if (g_home_quit_enable &&
+        event->type == SDL_JOYBUTTONDOWN && event->jbutton.button == 14) {
+        printf("YUI: HOME pressed, quit\n");
+        backend_request_quit(0);
+        return;
+    }
     if (event->type == SDL_WINDOWEVENT) {
         sdl_handle_window_event(root, event);
         return;

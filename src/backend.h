@@ -70,6 +70,10 @@ void backend_tick(Layer* ui_root);
 /* Auto-test helpers: quit after N frames (-1 = forever), or request quit with exit code */
 void backend_set_auto_frames(int frames);
 void backend_request_quit(int exit_code);
+/* YiYiYa: HOME 键退出开关（默认 0=不退出）。
+ * 由应用入口设置：ymain 带参数（应用模式）时开启；
+ * console-os 桌面（不带参数）保持关闭 —— 桌面按 HOME 不退出 ✓。 */
+void backend_set_home_quit(int enable);
 int backend_get_exit_code(void);
 int backend_should_quit(void);
 

@@ -170,7 +170,8 @@ function cycleConsoleRunMode() {
     return Console.emulatorRunMode;
 }
 
-/* 按设置启动模拟器：外部进程成功返回 "external"；不可用/失败回退 "fullscreen" */
+/* 按设置启动模拟器：只要外部进程【跑过】就返回 "external"（不再因返回码
+ * 回退 fullscreen/运行页）；仅配置为内置或环境不可用（无命令/无 ROM）才回退。 */
 function consoleRunEmulator(emuId, romPath) {
     var mode = Console.emulatorRunMode || "external";
     if (mode !== "external") {
@@ -181,16 +182,29 @@ function consoleRunEmulator(emuId, romPath) {
     if (!cmd || typeof YUI.spawn !== "function") {
         return "fullscreen";
     }
+    /* 没有真实 ROM 路径就不走外部进程：
+       listRoms() 返回两类条目 —— romDir 下扫描到的真实文件带 path，
+       而 gb.json 这类配置里的内置演示条目（俄罗斯方块等）没有 path 字段。
+       对 demo 条目 spawn 会得到不带参数的 `/bin/gnuboy`，它打印完 banner
+       就退出、system() 返回 -1（日志：backend_spawn: system failed），
+       还会顺着失败路径把 yui 拖进异常。走内嵌 fullscreen。 */
+    if (!romPath) {
+        YUI.log("[console] no rom path, skip external spawn: " + cmd);
+        return "fullscreen";
+    }
     if (romPath) {
         cmd = cmd + " " + consoleShellQuote(romPath);
     }
     YUI.log("[console] spawn external: " + cmd);
     var rc = YUI.spawn(cmd);
-    if (rc === 0) {
-        return "external";
+    /* YiYiYa: 外部进程【运行过之后不进运行页面】—— spawn 是阻塞的，返回时
+     * 外部模拟器已经退出；player 页是给"内置 fullscreen 回退"用的，外部跑过
+     * 再叠一层反而干扰。rc!=0 只记录日志（含本内核 system() 返回码怪癖
+     * rc=-1、游戏自身非 0 退出），不再回退 fullscreen。 */
+    if (rc !== 0) {
+        YUI.log("[console] spawn rc=" + rc + " (external ran, no player page)");
     }
-    YUI.log("[console] spawn failed rc=" + rc + ", fallback fullscreen");
-    return "fullscreen";
+    return "external";
 }
 
 /* 启动游戏：记录运行状态，按模式决定外部进程或进入播放页 */
@@ -199,7 +213,8 @@ function consoleLaunchAndRun(emuId, romTitle, romPath) {
 
     var mode = consoleRunEmulator(emuId, romPath);
     if (mode === "external") {
-        setConsoleHint("已启动外部模拟器进程 · " + romTitle);
+        /* spawn 阻塞到外部进程退出，返回时提示"运行结束"更准确 */
+        setConsoleHint("外部模拟器运行结束 · " + romTitle);
         return;
     }
 
@@ -456,11 +471,10 @@ function goConsoleBack() {
         updateConsoleChrome();
         return;
     }
-    if (typeof Router !== "undefined" && Router.canBack()) {
-        YUI.back();
-    } else {
-        YUI.navigate("/");
-    }
+    /* YiYiYa·修复：直接回桌面 —— 原来用 Router.canBack()/YUI.back() 会把历史
+     * 回退到 /player（刚退出的游戏页）⇒ 表现为"按返回桌面回不去"✗。
+     * 按钮/Ⓑ 的语义就是"返回桌面"，直接 navigate("/") ✓。 */
+    YUI.navigate("/");
     updateConsoleChrome();
     applyConsoleTheme();
 }
@@ -555,13 +569,18 @@ function consoleShellQuote(s) {
     return "\"" + String(s).replace(/"/g, "\\\"") + "\"";
 }
 
-function consolePushRecent(emuId, romTitle) {
+function consolePushRecent(emuId, romTitle, romPath) {
     var emu = EmulatorRegistry.findById(emuId);
     if (!emu) return;
     var entry = {
         emu: emu.id,
         icon: emu.icon,
         title: romTitle,
+        /* 必须把 ROM 路径一起存下来：desktop 的"最近游玩"卡片启动时
+           只拿得到这里的 entry。少了它，consoleRunEmulator 收到的
+           romPath 是 undefined ⇒ spawn 出不带参数的 `/bin/gnuboy`
+           （日志：spawn external: /bin/gnuboy，后面没有路径）。 */
+        path: romPath || "",
         meta: emu.short + " · 本次新增",
         when: "刚刚"
     };

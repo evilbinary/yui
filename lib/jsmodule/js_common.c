@@ -217,6 +217,22 @@ static void* js_module_click_event(void* data)
     Layer* layer = (Layer*)data;
     if (layer) {
         printf("JS: Click event on layer '%s'\n", layer->id);
+        /* YiYiYa: 优先走 Layer 字段 click_name —— 注册时 js_module_set_layer_event
+         * 已把去 @ 的函数名写进 layer->event->click_name，它【不依赖 g_js_event_map】。
+         * 动态渲染的层（desktop 的 emu_tile_* 等）只在渲染时注册一次；页面切换/
+         * 重渲染会让事件表被清空或表满 ⇒ 只查表就静默失败（实测：点击只打印
+         * "Click event on layer ..."，回调不执行、tile 不进 ✗）。
+         * click_name 是全局函数名（JS_EVAL_TYPE_GLOBAL 加载）或内联代码，
+         * js_module_call_event 两种都能执行 ✓；失败再回落原有查表路径。 */
+        if (layer->event && layer->event->click_name[0] != '\0') {
+            const char* name = layer->event->click_name;
+            if (js_module_trigger_event(name, layer) == 0) {
+                return NULL;
+            }
+            if (js_module_call_event(name, layer) == 0) {
+                return NULL;
+            }
+        }
         js_module_call_layer_event(layer->id, "onClick");
     }
     return NULL;
