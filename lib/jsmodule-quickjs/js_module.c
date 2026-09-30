@@ -22,8 +22,6 @@
 #include <time.h>
 #include <ctype.h>
 #include <unistd.h>
-#include <fcntl.h>
-#include <sys/ioctl.h>
 #include <dirent.h>
 #include <sys/stat.h>
 #include "../../lib/cjson/cJSON.h"
@@ -339,17 +337,13 @@ static JSValue js_key_code(JSContext *ctx, JSValueConst this_val, int argc, JSVa
 }
 
 // 启动外部程序（PC）；嵌入式返回 -1
-/* YiYiYa: 系统音量（软件音量：内核 dsp write 乘系数）。
- *   YUI.setVolume(0..100)  -> 实际生效值
- *   YUI.getVolume()        -> 0..100（失败 -1）
- * ioctl 号与 duck/modules/sound/sound.h 的 SNDCTL_DSP_SETVOLUME 对齐 ✓ */
-#define YUI_SNDCTL_DSP_SETVOLUME 100
-#define YUI_SNDCTL_DSP_GETVOLUME 101
-
+/* YiYiYa: 系统音量 —— jsmodule 只做绑定，实际走 backend 抽象层
+ * （backend_set_volume/backend_get_volume，见 backend_common.c）✓。
+ *   YUI.setVolume(0..100)  -> 实际生效值（无设备时仍返回请求值）
+ *   YUI.getVolume()        -> 0..100（失败 -1） */
 static JSValue js_set_volume(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     int v = 0;
-    int fd;
     (void)this_val;
     if (argc < 1) {
         return JS_NewInt32(ctx, -1);
@@ -359,27 +353,18 @@ static JSValue js_set_volume(JSContext *ctx, JSValueConst this_val, int argc, JS
     }
     if (v < 0) v = 0;
     if (v > 100) v = 100;
-    fd = open("/dev/dsp", O_WRONLY);
-    if (fd >= 0) {
-        ioctl(fd, YUI_SNDCTL_DSP_SETVOLUME, &v);
-        close(fd);
+    {
+        int r = backend_set_volume(v);
+        return JS_NewInt32(ctx, (r < 0) ? v : r);
     }
-    return JS_NewInt32(ctx, v);
 }
 
 static JSValue js_get_volume(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
-    int v = -1;
-    int fd;
     (void)this_val;
     (void)argc;
     (void)argv;
-    fd = open("/dev/dsp", O_WRONLY);
-    if (fd >= 0) {
-        ioctl(fd, YUI_SNDCTL_DSP_GETVOLUME, &v);
-        close(fd);
-    }
-    return JS_NewInt32(ctx, v);
+    return JS_NewInt32(ctx, backend_get_volume());
 }
 
 static JSValue js_spawn(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)

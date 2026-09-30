@@ -8,7 +8,57 @@
 
 #if defined(__unix__) || defined(__APPLE__)
 #include <sys/wait.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/ioctl.h>
 #endif
+
+/* YiYiYa: 系统音量 —— 软件音量（内核 dsp write 乘系数）。
+ * ioctl 号与 duck/modules/sound/sound.h 的 SNDCTL_DSP_SETVOLUME 对齐；
+ * 无 /dev/dsp（桌面开发等）时静默失败：set/get 均返回 -1 ✓。 */
+#define BACKEND_SNDCTL_DSP_SETVOLUME 100
+#define BACKEND_SNDCTL_DSP_GETVOLUME 101
+
+int backend_set_volume(int volume) {
+#if defined(__unix__) || defined(__APPLE__)
+    int fd;
+    int v = volume;
+    if (v < 0) v = 0;
+    if (v > 100) v = 100;
+    fd = open("/dev/dsp", O_WRONLY);
+    if (fd < 0) {
+        return -1;
+    }
+    if (ioctl(fd, BACKEND_SNDCTL_DSP_SETVOLUME, &v) < 0) {
+        close(fd);
+        return -1;
+    }
+    close(fd);
+    return v;
+#else
+    (void)volume;
+    return -1;
+#endif
+}
+
+int backend_get_volume(void) {
+#if defined(__unix__) || defined(__APPLE__)
+    int fd;
+    int v = -1;
+    fd = open("/dev/dsp", O_WRONLY);
+    if (fd < 0) {
+        return -1;
+    }
+    if (ioctl(fd, BACKEND_SNDCTL_DSP_GETVOLUME, &v) < 0) {
+        close(fd);
+        return -1;
+    }
+    close(fd);
+    return v;
+#else
+    return -1;
+#endif
+}
 
 /* 启动外部程序（阻塞到程序退出），返回其退出码；失败返回 -1，并打印原因。
  * system() 是标准库函数，所有平台都用它；POSIX 下额外解析 wait status 得到真实退出码。 */

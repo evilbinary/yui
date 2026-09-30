@@ -74,6 +74,11 @@ void backend_request_quit(int exit_code);
  * 由应用入口设置：ymain 带参数（应用模式）时开启；
  * console-os 桌面（不带参数）保持关闭 —— 桌面按 HOME 不退出 ✓。 */
 void backend_set_home_quit(int enable);
+/* YiYiYa: 系统音量（0..100）—— 软件音量（内核 dsp write 乘系数）。
+ * 通用实现见 backend_common.c（走 /dev/dsp 的 SNDCTL_DSP_SETVOLUME）；
+ * 平台无支持时 set 返回 -1 / get 返回 -1 ✓。 */
+int backend_set_volume(int volume);
+int backend_get_volume(void);
 int backend_get_exit_code(void);
 int backend_should_quit(void);
 
