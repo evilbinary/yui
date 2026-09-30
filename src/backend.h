@@ -79,6 +79,10 @@ void backend_set_home_quit(int enable);
  * 平台无支持时 set 返回 -1 / get 返回 -1 ✓。 */
 int backend_set_volume(int volume);
 int backend_get_volume(void);
+/* YiYiYa: 屏幕亮度（0..100）—— 走 /dev/fb 的 VGA_IOC_SET/GET_BRIGHTNESS
+ * （与 duck/modules/vga/vga.h 对齐）；平台无支持时 set/get 均返回 -1 ✓。 */
+int backend_set_brightness(int brightness);
+int backend_get_brightness(void);
 int backend_get_exit_code(void);
 int backend_should_quit(void);
 

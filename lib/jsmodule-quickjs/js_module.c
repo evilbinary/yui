@@ -367,6 +367,35 @@ static JSValue js_get_volume(JSContext *ctx, JSValueConst this_val, int argc, JS
     return JS_NewInt32(ctx, backend_get_volume());
 }
 
+/* YiYiYa: 屏幕亮度 —— 同音量，走 backend 抽象层 ✓。
+ *   YUI.setBrightness(0..100)  -> 实际生效值（无设备时仍返回请求值）
+ *   YUI.getBrightness()        -> 0..100（失败 -1） */
+static JSValue js_set_brightness(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    int v = 0;
+    (void)this_val;
+    if (argc < 1) {
+        return JS_NewInt32(ctx, -1);
+    }
+    if (JS_ToInt32(ctx, &v, argv[0]) < 0) {
+        return JS_NewInt32(ctx, -1);
+    }
+    if (v < 0) v = 0;
+    if (v > 100) v = 100;
+    {
+        int r = backend_set_brightness(v);
+        return JS_NewInt32(ctx, (r < 0) ? v : r);
+    }
+}
+
+static JSValue js_get_brightness(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    (void)this_val;
+    (void)argc;
+    (void)argv;
+    return JS_NewInt32(ctx, backend_get_brightness());
+}
+
 static JSValue js_spawn(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
 {
     int rc = -1;
@@ -1569,6 +1598,8 @@ void js_module_register_api(void)
     JS_SetPropertyStr(g_js_ctx, yui_obj, "spawn", JS_NewCFunction(g_js_ctx, js_spawn, "spawn", 2));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "setVolume", JS_NewCFunction(g_js_ctx, js_set_volume, "setVolume", 1));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "getVolume", JS_NewCFunction(g_js_ctx, js_get_volume, "getVolume", 0));
+    JS_SetPropertyStr(g_js_ctx, yui_obj, "setBrightness", JS_NewCFunction(g_js_ctx, js_set_brightness, "setBrightness", 1));
+    JS_SetPropertyStr(g_js_ctx, yui_obj, "getBrightness", JS_NewCFunction(g_js_ctx, js_get_brightness, "getBrightness", 0));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "getWindowSize", JS_NewCFunction(g_js_ctx, js_get_window_size, "getWindowSize", 0));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "renderFromJson", JS_NewCFunction(g_js_ctx, js_render_from_json, "renderFromJson", 3));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "update", JS_NewCFunction(g_js_ctx, js_update, "update", 1));

@@ -18,6 +18,9 @@
  * 无 /dev/dsp（桌面开发等）时静默失败：set/get 均返回 -1 ✓。 */
 #define BACKEND_SNDCTL_DSP_SETVOLUME 100
 #define BACKEND_SNDCTL_DSP_GETVOLUME 101
+/* 与 duck/modules/vga/vga.h 的 VGA_IOC_SET/GET_BRIGHTNESS 对齐（magic 'v'，11/12） */
+#define BACKEND_VGA_IOC_SET_BRIGHTNESS _IOW('v', 11, int)
+#define BACKEND_VGA_IOC_GET_BRIGHTNESS _IOW('v', 12, int)
 
 int backend_set_volume(int volume) {
 #if defined(__unix__) || defined(__APPLE__)
@@ -53,6 +56,47 @@ int backend_get_volume(void) {
         close(fd);
         return -1;
     }
+    close(fd);
+    return v;
+#else
+    return -1;
+#endif
+}
+
+/* YiYiYa: 屏幕亮度 —— 走 /dev/fb 的 VGA_IOC_SET/GET_BRIGHTNESS（值传参，
+ * 与 vga_ioctl 的 va_arg(void*) 读法一致 ✓）；无 /dev/fb 时返回 -1 ✓。 */
+int backend_set_brightness(int brightness) {
+#if defined(__unix__) || defined(__APPLE__)
+    int fd;
+    int v = brightness;
+    int r;
+    if (v < 0) v = 0;
+    if (v > 100) v = 100;
+    fd = open("/dev/fb", O_RDWR);
+    if (fd < 0) {
+        return -1;
+    }
+    r = ioctl(fd, BACKEND_VGA_IOC_SET_BRIGHTNESS, v);
+    close(fd);
+    if (r < 0) {
+        return -1;
+    }
+    return v;
+#else
+    (void)brightness;
+    return -1;
+#endif
+}
+
+int backend_get_brightness(void) {
+#if defined(__unix__) || defined(__APPLE__)
+    int fd;
+    int v;
+    fd = open("/dev/fb", O_RDWR);
+    if (fd < 0) {
+        return -1;
+    }
+    v = ioctl(fd, BACKEND_VGA_IOC_GET_BRIGHTNESS, 0);
     close(fd);
     return v;
 #else
