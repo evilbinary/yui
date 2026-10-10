@@ -1,0 +1,211 @@
+{
+    "id": "page_battery",
+    "title": "电量",
+    "js": ["battery.js"],
+    "type": "View",
+    "variant": "surface",
+    "flex": 1,
+    "scrollable": 1,
+    "layout": { "type": "vertical", "spacing": 8, "padding": [8, 16, 8, 16] },
+    "events": { "onLoad": "@onBatteryLoad", "onShow": "@onBatteryShow" },
+    "children": [
+        {
+            "id": "battery_header",
+            "type": "View",
+            "size": [592, 38],
+            "layout": { "type": "horizontal", "spacing": 8, "align": "center" },
+            "children": [
+                {
+                    "id": "battery_title_box",
+                    "type": "View",
+                    "flex": 1,
+                    "size": [0, 36],
+                    "layout": { "type": "vertical", "spacing": 0, "justifyContent": "center" },
+                    "children": [
+                        { "id": "battery_title", "type": "Label", "variant": "title", "text": "电池", "size": [200, 20], "textAlign": "left" },
+                        { "id": "battery_sub", "type": "Label", "variant": "caption", "text": "锂聚合物 4000 mAh · 待机 18 小时", "size": [400, 14], "textAlign": "left" }
+                    ]
+                },
+                { "id": "btn_battery_toggle_charge", "type": "Button", "variant": "secondary", "text": "模拟充电", "size": [84, 30], "events": { "onClick": "@onBatteryToggleCharge" } },
+                { "id": "btn_battery_back", "type": "Button", "variant": "primary", "text": "返回桌面", "size": [80, 30], "events": { "onClick": "@goConsoleBack" } }
+            ]
+        },
+        {
+            "id": "battery_main",
+            "type": "View",
+            "size": [592, 150],
+            "layout": { "type": "horizontal", "spacing": 8 },
+            "children": [
+                {
+                    "id": "battery_hero",
+                    "type": "View",
+                    "variant": "hero",
+                    "size": [240, 150],
+                    "layout": { "type": "horizontal", "spacing": 8, "padding": [8, 10, 8, 10], "align": "center" },
+                    "children": [
+                        {
+                            "id": "battery_ring_box",
+                            "type": "View",
+                            "size": [118, 118],
+                            "children": []
+                        },
+                        {
+                            "id": "battery_hero_info",
+                            "type": "View",
+                            "flex": 1,
+                            "size": [0, 118],
+                            "layout": { "type": "vertical", "spacing": 3, "justifyContent": "center" },
+                            "children": [
+                                { "id": "battery_pct", "type": "Label", "variant": "heading", "text": "85%", "size": [92, 32], "textAlign": "left" },
+                                { "id": "battery_state", "type": "Label", "variant": "caption", "text": "正常使用", "size": [92, 14], "textAlign": "left" },
+                                { "id": "battery_estimate", "type": "Label", "variant": "caption", "text": "剩余约 6 小时", "size": [92, 14], "textAlign": "left" },
+                                { "id": "btn_battery_saver", "type": "Button", "variant": "pill", "text": "省电模式", "size": [92, 26], "events": { "onClick": "@onBatterySaver" } }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "battery_stats_col",
+                    "type": "View",
+                    "size": [344, 150],
+                    "layout": { "type": "vertical", "spacing": 8 },
+                    "children": [
+                        {
+                            "id": "battery_row_a",
+                            "type": "View",
+                            "size": [344, 71],
+                            "layout": { "type": "horizontal", "spacing": 8 },
+                            "children": [
+                                {
+                                    "id": "battery_volt_card",
+                                    "type": "View",
+                                    "variant": "stat-card",
+                                    "size": [168, 71],
+                                    "layout": { "type": "vertical", "spacing": 2, "padding": [8, 9, 8, 9] },
+                                    "children": [
+                                        { "id": "battery_volt_value", "type": "Label", "variant": "heading", "text": "3.92 V", "size": [150, 18], "textAlign": "left" },
+                                        { "id": "battery_volt_label", "type": "Label", "variant": "stat-label", "text": "电池电压", "size": [150, 12], "textAlign": "left" },
+                                        {
+                                            "id": "battery_volt_track", "variant": "bar-track",
+                                            "type": "View",
+                                            "size": [150, 6],
+                                            "style": { "bgColor": "#1B2440", "borderRadius": 3 },
+                                            "children": [
+                                                { "id": "battery_volt_fill", "variant": "bar-fill", "type": "View", "size": [120, 6], "style": { "bgColor": "#38BDF8", "borderRadius": 3 } }
+                                            ]
+                                        }
+                                    ]
+                                },
+                                {
+                                    "id": "battery_temp_card",
+                                    "type": "View",
+                                    "variant": "stat-card",
+                                    "size": [168, 71],
+                                    "layout": { "type": "vertical", "spacing": 2, "padding": [8, 9, 8, 9] },
+                                    "children": [
+                                        { "id": "battery_temp_value", "type": "Label", "variant": "heading", "text": "38°C", "size": [150, 18], "textAlign": "left" },
+                                        { "id": "battery_temp_label", "type": "Label", "variant": "stat-label", "text": "电池温度", "size": [150, 12], "textAlign": "left" },
+                                        {
+                                            "id": "battery_temp_track", "variant": "bar-track",
+                                            "type": "View",
+                                            "size": [150, 6],
+                                            "style": { "bgColor": "#1B2440", "borderRadius": 3 },
+                                            "children": [
+                                                { "id": "battery_temp_fill", "variant": "bar-fill", "type": "View", "size": [80, 6], "style": { "bgColor": "#FACC15", "borderRadius": 3 } }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            "id": "battery_row_b",
+                            "type": "View",
+                            "size": [344, 71],
+                            "layout": { "type": "horizontal", "spacing": 8 },
+                            "children": [
+                                {
+                                    "id": "battery_cycle_card",
+                                    "type": "View",
+                                    "variant": "stat-card",
+                                    "size": [168, 71],
+                                    "layout": { "type": "vertical", "spacing": 2, "padding": [8, 9, 8, 9] },
+                                    "children": [
+                                        { "id": "battery_cycle_value", "type": "Label", "variant": "heading", "text": "213 次", "size": [150, 18], "textAlign": "left" },
+                                        { "id": "battery_cycle_label", "type": "Label", "variant": "stat-label", "text": "循环次数 / 寿命 80%", "size": [150, 12], "textAlign": "left" },
+                                        {
+                                            "id": "battery_cycle_track", "variant": "bar-track",
+                                            "type": "View",
+                                            "size": [150, 6],
+                                            "style": { "bgColor": "#1B2440", "borderRadius": 3 },
+                                            "children": [
+                                                { "id": "battery_cycle_fill", "variant": "bar-fill", "type": "View", "size": [42, 6], "style": { "bgColor": "#34D399", "borderRadius": 3 } }
+                                            ]
+                                        }
+                                    ]
+                                },
+                                {
+                                    "id": "battery_health_card",
+                                    "type": "View",
+                                    "variant": "stat-card",
+                                    "size": [168, 71],
+                                    "layout": { "type": "vertical", "spacing": 2, "padding": [8, 9, 8, 9] },
+                                    "children": [
+                                        { "id": "battery_health_value", "type": "Label", "variant": "heading", "text": "96%", "size": [150, 18], "textAlign": "left" },
+                                        { "id": "battery_health_label", "type": "Label", "variant": "stat-label", "text": "健康度 · 本次已用 2 小时", "size": [150, 12], "textAlign": "left" },
+                                        {
+                                            "id": "battery_health_track", "variant": "bar-track",
+                                            "type": "View",
+                                            "size": [150, 6],
+                                            "style": { "bgColor": "#1B2440", "borderRadius": 3 },
+                                            "children": [
+                                                { "id": "battery_health_fill", "variant": "bar-fill", "type": "View", "size": [144, 6], "style": { "bgColor": "#A78BFA", "borderRadius": 3 } }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "battery_chart_card",
+            "type": "View",
+            "variant": "card",
+            "size": [592, 116],
+            "layout": { "type": "vertical", "spacing": 6, "padding": [8, 10, 8, 10] },
+            "children": [
+                {
+                    "id": "battery_chart_head",
+                    "type": "View",
+                    "size": [572, 16],
+                    "layout": { "type": "horizontal", "spacing": 8, "align": "center" },
+                    "children": [
+                        { "id": "battery_chart_title", "type": "Label", "variant": "overline", "text": "电量曲线 · 近 12 小时", "size": [200, 16], "textAlign": "left" },
+                        { "id": "battery_chart_peak", "type": "Label", "variant": "caption", "text": "峰值 —", "flex": 1, "size": [0, 16], "textAlign": "left" },
+                        { "id": "battery_chart_now", "type": "Label", "variant": "caption", "text": "当前 85%", "size": [110, 16], "textAlign": "right" }
+                    ]
+                },
+                {
+                    "id": "battery_chart_bars",
+                    "type": "View",
+                    "size": [572, 72],
+                    "layout": { "type": "horizontal", "spacing": 6 },
+                    "children": []
+                }
+            ]
+        },
+        {
+            "id": "battery_tip_row",
+            "type": "View",
+            "size": [592, 24],
+            "layout": { "type": "horizontal", "spacing": 8, "align": "center" },
+            "children": [
+                { "id": "battery_tip", "type": "Label", "variant": "caption", "text": "低电量（≤15%）时桌面与状态栏会变为红色提示", "flex": 1, "size": [0, 16], "textAlign": "left" },
+                { "id": "btn_battery_refresh", "type": "Button", "variant": "secondary", "text": "刷新", "size": [56, 22], "events": { "onClick": "@onBatteryRefresh" } }
+            ]
+        }
+    ]
+}

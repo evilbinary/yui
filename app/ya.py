@@ -237,6 +237,27 @@ if is_host_plat():
         add_run()
     )
 
+    # 游戏机桌面：模拟器加载 + 桌面/游戏库/运行界面
+    target("console-os")
+    (
+        add_deps("socket","yui","quickjs","jsmodule-quickjs","yaml2json"),
+        add_rules("mode.debug", "mode.release"),
+        set_kind("binary"),
+        add_flags(),
+        add_files("console-os/main.c"),
+        add_run()
+    )
+
+    target("console-os-mqjs")
+    (
+        add_deps("socket","yui","mquickjs","jsmodule-mquickjs","yaml2json"),
+        add_rules("mode.debug", "mode.release"),
+        set_kind("binary"),
+        add_flags(),
+        add_files("console-os/main.c"),
+        add_run()
+    )
+
 
     target("db")
     (

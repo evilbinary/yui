@@ -2,6 +2,7 @@
 #include "event.h"
 #include "backend.h"
 #include "render.h"
+#include "focus.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -79,7 +80,12 @@ bool popup_manager_add(PopupLayer* popup) {
     
     // 更新顶部弹出层
     g_popup_manager->top_popup = g_popup_manager->active_popups;
-    
+
+    /* Dialog 打开：把焦点限制在对话框内，关闭时恢复 */
+    if (popup->type == POPUP_TYPE_DIALOG) {
+        focus_push_scope(popup->layer);
+    }
+
     return true;
 }
 
@@ -114,6 +120,10 @@ bool popup_manager_remove(Layer* layer) {
                 next_to_free->close_callback(next_to_free);
             }
             
+            if (next_to_free->type == POPUP_TYPE_DIALOG) {
+                focus_pop_scope(next_to_free->layer);
+            }
+
             // 请求局部擦除 popup 最后位置，并解除 root ctx 借用
             popup_erase_and_release(next_to_free);
             
@@ -146,7 +156,11 @@ void popup_manager_close_all(void) {
         if (current->close_callback) {
             current->close_callback(current);
         }
-        
+
+        if (current->type == POPUP_TYPE_DIALOG) {
+            focus_pop_scope(current->layer);
+        }
+
         popup_erase_and_release(current);
         
         free(current);
@@ -180,7 +194,11 @@ void popup_manager_close_by_type(PopupType type) {
             if (to_remove->close_callback) {
                 to_remove->close_callback(to_remove);
             }
-            
+
+            if (to_remove->type == POPUP_TYPE_DIALOG) {
+                focus_pop_scope(to_remove->layer);
+            }
+
             popup_erase_and_release(to_remove);
             
             free(to_remove);

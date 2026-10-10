@@ -6,6 +6,7 @@
 #include "../../src/layer_update.h"
 #include "../../src/layer_lifecycle.h"
 #include "../../src/render.h"
+#include "../../src/focus.h"
 #include "../../src/theme_manager.h"
 #include "../../src/components/text_component.h"
 #include "js_socket.h"
@@ -290,6 +291,144 @@ static JSValue js_show(JSContext *ctx, JSValueConst this_val, int argc, JSValueC
 
     JS_FreeCString(ctx, layer_id);
     return JS_UNDEFINED;
+}
+
+// 按方向移动焦点："left"/"right"/"up"/"down"
+static JSValue js_focus_move(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    const char* dir = argc >= 1 ? JS_ToCString(ctx, argv[0]) : NULL;
+    FocusDirection d = FOCUS_DIR_NONE;
+    if (dir) {
+        if (strcmp(dir, "left") == 0) d = FOCUS_DIR_LEFT;
+        else if (strcmp(dir, "right") == 0) d = FOCUS_DIR_RIGHT;
+        else if (strcmp(dir, "up") == 0) d = FOCUS_DIR_UP;
+        else if (strcmp(dir, "down") == 0) d = FOCUS_DIR_DOWN;
+    }
+    int moved = 0;
+    if (d != FOCUS_DIR_NONE) {
+        moved = focus_move(g_layer_root, d);
+    }
+    if (dir) JS_FreeCString(ctx, dir);
+    return JS_NewInt32(ctx, moved);
+}
+
+// 清除焦点
+static JSValue js_focus_clear(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    (void)ctx; (void)this_val; (void)argc; (void)argv;
+    focus_clear();
+    return JS_UNDEFINED;
+}
+
+// 获取当前焦点图层 id
+static JSValue js_focus_get(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    Layer* layer = focus_get();
+    (void)this_val; (void)argc; (void)argv;
+    return JS_NewString(ctx, (layer && layer->id[0]) ? layer->id : "");
+}
+
+// 最近一次未消费按键的键码
+static JSValue js_key_code(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    extern int yui_last_key_code;
+    (void)this_val; (void)argc; (void)argv;
+    return JS_NewInt32(ctx, yui_last_key_code);
+}
+
+// 启动外部程序（PC）；嵌入式返回 -1
+/* YiYiYa: 系统音量 —— jsmodule 只做绑定，实际走 backend 抽象层
+ * （backend_set_volume/backend_get_volume，见 backend_common.c）✓。
+ *   YUI.setVolume(0..100)  -> 实际生效值（无设备时仍返回请求值）
+ *   YUI.getVolume()        -> 0..100（失败 -1） */
+static JSValue js_set_volume(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    int v = 0;
+    (void)this_val;
+    if (argc < 1) {
+        return JS_NewInt32(ctx, -1);
+    }
+    if (JS_ToInt32(ctx, &v, argv[0]) < 0) {
+        return JS_NewInt32(ctx, -1);
+    }
+    if (v < 0) v = 0;
+    if (v > 100) v = 100;
+    {
+        int r = backend_set_volume(v);
+        return JS_NewInt32(ctx, (r < 0) ? v : r);
+    }
+}
+
+static JSValue js_get_volume(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    (void)this_val;
+    (void)argc;
+    (void)argv;
+    return JS_NewInt32(ctx, backend_get_volume());
+}
+
+/* YiYiYa: 屏幕亮度 —— 同音量，走 backend 抽象层 ✓。
+ *   YUI.setBrightness(0..100)  -> 实际生效值（无设备时仍返回请求值）
+ *   YUI.getBrightness()        -> 0..100（失败 -1） */
+static JSValue js_set_brightness(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    int v = 0;
+    (void)this_val;
+    if (argc < 1) {
+        return JS_NewInt32(ctx, -1);
+    }
+    if (JS_ToInt32(ctx, &v, argv[0]) < 0) {
+        return JS_NewInt32(ctx, -1);
+    }
+    if (v < 0) v = 0;
+    if (v > 100) v = 100;
+    {
+        int r = backend_set_brightness(v);
+        return JS_NewInt32(ctx, (r < 0) ? v : r);
+    }
+}
+
+static JSValue js_get_brightness(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    (void)this_val;
+    (void)argc;
+    (void)argv;
+    return JS_NewInt32(ctx, backend_get_brightness());
+}
+
+static JSValue js_spawn(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv)
+{
+    int rc = -1;
+    (void)this_val;
+    if (argc >= 1) {
+        const char* cmd = JS_ToCString(ctx, argv[0]);
+        const char* cwd = NULL;
+        if (argc >= 2 && !JS_IsUndefined(argv[1]) && !JS_IsNull(argv[1])) {
+            cwd = JS_ToCString(ctx, argv[1]);
+        }
+        if (cmd) {
+            /* YiYiYa: 可选工作目录 —— native 应用要在自身目录里跑，才能找到
+             * 同目录资源（如 doom 的 doom1.wad）。system() 期间 chdir，
+             * 返回后恢复原目录 ✓。 */
+            char old_cwd[512];
+            int have_old = 0;
+            if (cwd && cwd[0]) {
+                if (getcwd(old_cwd, sizeof(old_cwd)) != NULL) {
+                    have_old = 1;
+                }
+                chdir(cwd);
+            }
+            rc = backend_spawn(cmd);
+            if (have_old) {
+                chdir(old_cwd);
+            }
+            JS_FreeCString(ctx, cmd);
+        }
+        if (cwd) {
+            JS_FreeCString(ctx, cwd);
+        }
+    }
+    return JS_NewInt32(ctx, rc);
 }
 
 // 获取窗口大小
@@ -1452,6 +1591,15 @@ void js_module_register_api(void)
     JS_SetPropertyStr(g_js_ctx, yui_obj, "setBgColor", JS_NewCFunction(g_js_ctx, js_set_bg_color, "setBgColor", 2));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "hide", JS_NewCFunction(g_js_ctx, js_hide, "hide", 1));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "show", JS_NewCFunction(g_js_ctx, js_show, "show", 1));
+    JS_SetPropertyStr(g_js_ctx, yui_obj, "focusMove", JS_NewCFunction(g_js_ctx, js_focus_move, "focusMove", 1));
+    JS_SetPropertyStr(g_js_ctx, yui_obj, "focusClear", JS_NewCFunction(g_js_ctx, js_focus_clear, "focusClear", 0));
+    JS_SetPropertyStr(g_js_ctx, yui_obj, "focusGet", JS_NewCFunction(g_js_ctx, js_focus_get, "focusGet", 0));
+    JS_SetPropertyStr(g_js_ctx, yui_obj, "keyCode", JS_NewCFunction(g_js_ctx, js_key_code, "keyCode", 0));
+    JS_SetPropertyStr(g_js_ctx, yui_obj, "spawn", JS_NewCFunction(g_js_ctx, js_spawn, "spawn", 2));
+    JS_SetPropertyStr(g_js_ctx, yui_obj, "setVolume", JS_NewCFunction(g_js_ctx, js_set_volume, "setVolume", 1));
+    JS_SetPropertyStr(g_js_ctx, yui_obj, "getVolume", JS_NewCFunction(g_js_ctx, js_get_volume, "getVolume", 0));
+    JS_SetPropertyStr(g_js_ctx, yui_obj, "setBrightness", JS_NewCFunction(g_js_ctx, js_set_brightness, "setBrightness", 1));
+    JS_SetPropertyStr(g_js_ctx, yui_obj, "getBrightness", JS_NewCFunction(g_js_ctx, js_get_brightness, "getBrightness", 0));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "getWindowSize", JS_NewCFunction(g_js_ctx, js_get_window_size, "getWindowSize", 0));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "renderFromJson", JS_NewCFunction(g_js_ctx, js_render_from_json, "renderFromJson", 3));
     JS_SetPropertyStr(g_js_ctx, yui_obj, "update", JS_NewCFunction(g_js_ctx, js_update, "update", 1));
@@ -2178,7 +2326,15 @@ JSValue js_list_dir(JSContext* ctx, JSValueConst this_val, int argc, JSValueCons
         if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) continue;
 
         JSValue item = JS_NewObject(ctx);
-        JS_SetPropertyStr(ctx, item, "name", JS_NewString(ctx, entry->d_name));
+        /* YiYiYa: 文件名可能是 GBK 字节（fatfs FF_CODE_PAGE=936）——
+         * JS_NewString 会按 UTF-8 解码非法字节 ⇒ 丢字节/替换 ✗ ⇒ 之后按
+         * 该名字打开必失败（中文 ROM 加载不了）。JS_NewStringLen 原样保留
+         * 字节，JS_ToCString 往返也不失真，打开成功 ✓。
+         * （显示仍可能乱码：渲染按 UTF-8，GBK 字节画不出来 —— 那是"显示"
+         * 层面的问题，需要 GBK→UTF-8 转码表，另行处理。） */
+        JS_SetPropertyStr(ctx, item, "name",
+                          JS_NewStringLen(ctx, entry->d_name,
+                                          strlen(entry->d_name)));
 
         char full_path[1024];
         snprintf(full_path, sizeof(full_path), "%s/%s", open_dir, entry->d_name);
@@ -2205,15 +2361,7 @@ JSValue js_focus(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* 
 
     if (!layer) return JS_UNDEFINED;
 
-    // 清除旧焦点图层状态
-    extern Layer* focused_layer;
-    if (focused_layer && focused_layer != layer) {
-        CLEAR_STATE(focused_layer, LAYER_STATE_FOCUSED);
-    }
-
-    // 设置新焦点
-    focused_layer = layer;
-    SET_STATE(layer, LAYER_STATE_FOCUSED);
+    focus_set(layer);
 
     return JS_UNDEFINED;
 }

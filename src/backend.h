@@ -70,6 +70,19 @@ void backend_tick(Layer* ui_root);
 /* Auto-test helpers: quit after N frames (-1 = forever), or request quit with exit code */
 void backend_set_auto_frames(int frames);
 void backend_request_quit(int exit_code);
+/* YiYiYa: HOME 键退出开关（默认 0=不退出）。
+ * 由应用入口设置：ymain 带参数（应用模式）时开启；
+ * console-os 桌面（不带参数）保持关闭 —— 桌面按 HOME 不退出 ✓。 */
+void backend_set_home_quit(int enable);
+/* YiYiYa: 系统音量（0..100）—— 软件音量（内核 dsp write 乘系数）。
+ * 通用实现见 backend_common.c（走 /dev/dsp 的 SNDCTL_DSP_SETVOLUME）；
+ * 平台无支持时 set 返回 -1 / get 返回 -1 ✓。 */
+int backend_set_volume(int volume);
+int backend_get_volume(void);
+/* YiYiYa: 屏幕亮度（0..100）—— 走 /dev/fb 的 VGA_IOC_SET/GET_BRIGHTNESS
+ * （与 duck/modules/vga/vga.h 对齐）；平台无支持时 set/get 均返回 -1 ✓。 */
+int backend_set_brightness(int brightness);
+int backend_get_brightness(void);
 int backend_get_exit_code(void);
 int backend_should_quit(void);
 
@@ -135,6 +148,10 @@ void backend_texture_cache_warmup(DFont* font, const char** texts, int count, Co
 
 // 截取当前 UI 为 PNG（桌面 SDL；失败返回负值）
 int backend_screenshot(const char* path);
+
+/* 启动外部程序（PC/Linux/macOS/Windows）。cmd 为 shell 命令。
+ * 宿主平台返回 system() 的结果（阻塞直到程序退出），嵌入式返回 -1。 */
+int backend_spawn(const char* cmd);
 
 // 设置当前 UI 根图层（在 backend_run 之前即可截图）
 void backend_set_ui_root(Layer* root);

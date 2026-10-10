@@ -217,6 +217,38 @@ static void test_rounded_rect_fill(void **state)
     expect_close("rr_below", 130, 165, p, 0, 0, 0, 10);
 }
 
+/* 回归：浅色背景上的圆角不应出现比背景更暗的灰边。
+ * 烘焙到 target 纹理时若按预乘写色再非预乘 blit，圆角抗锯齿处会发黑。 */
+static void test_rounded_rect_no_dark_halo(void **state)
+{
+    Color bg = {238, 242, 250, 255};
+    Color fill = {255, 255, 255, 255};
+    Rect rc = {40, 40, 160, 100};
+    int radius = 16;
+    Pix p;
+    int x, y;
+
+    (void)state;
+
+    SDL_SetRenderDrawColor(renderer, bg.r, bg.g, bg.b, 255);
+    SDL_RenderClear(renderer);
+
+    backend_render_rounded_rect(&rc, fill, radius);
+
+    for (y = rc.y; y < rc.y + radius + 4; y++) {
+        for (x = rc.x; x < rc.x + radius + 4; x++) {
+            assert_int_equal(read_pixel(x, y, &p), 0);
+            if (p.r < 220 && p.g < 225 && p.b < 235) {
+                printf("FAIL dark halo @(%d,%d): got (%d,%d,%d)\n", x, y, p.r, p.g, p.b);
+                fail_msg("dark halo at (%d,%d)", x, y);
+            }
+        }
+    }
+
+    assert_int_equal(read_pixel(rc.x + rc.w / 2, rc.y + rc.h / 2, &p), 0);
+    expect_close("halo_center", rc.x + rc.w / 2, rc.y + rc.h / 2, p, 255, 255, 255, 4);
+}
+
 static void test_rounded_rect_with_border(void **state)
 {
     (void)state;
@@ -450,6 +482,7 @@ int main(int argc, char **argv)
         cmocka_unit_test_setup_teardown(test_render_rect_border, setup_target, teardown_target),
         cmocka_unit_test_setup_teardown(test_render_rect_color, setup_target, teardown_target),
         cmocka_unit_test_setup_teardown(test_rounded_rect_fill, setup_target, teardown_target),
+        cmocka_unit_test_setup_teardown(test_rounded_rect_no_dark_halo, setup_target, teardown_target),
         cmocka_unit_test_setup_teardown(test_rounded_rect_with_border, setup_target, teardown_target),
         cmocka_unit_test_setup_teardown(test_line_horizontal, setup_target, teardown_target),
         cmocka_unit_test_setup_teardown(test_line_vertical, setup_target, teardown_target),

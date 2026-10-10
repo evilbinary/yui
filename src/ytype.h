@@ -539,6 +539,16 @@ typedef struct Event {
 
     char resize_name[YUI_MAX_EVENT_NAME];
     void (*resize)(Layer* layer, const ResizeEvent* event);
+
+    // 焦点事件
+    char focus_name[YUI_MAX_EVENT_NAME];
+    EventHandler focus;
+    char blur_name[YUI_MAX_EVENT_NAME];
+    EventHandler blur;
+
+    // 按键事件（根层未消费的按键）
+    char key_name[YUI_MAX_EVENT_NAME];
+    EventHandler key;
 } Event;
 
 #define EVENT_INVOKE(handler, layer) \
@@ -625,6 +635,8 @@ typedef struct Layer {
     unsigned int state;
     // 是否可获得焦点
     int focusable;
+    // 可聚焦容器是否把焦点下钻到子元素（true=子元素独立聚焦；false=整块聚焦）
+    int focus_children;
     int visible;
 
     // Layer 生命周期：声明位 + 运行时状态，见 layer_lifecycle.h

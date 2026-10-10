@@ -6,7 +6,10 @@
 #include "../layout.h"
 #include "../render.h"
 #include "../util.h"
+#include <stdio.h>
 #include <stdlib.h>
+/* YiYiYa: 列表按键诊断打印开关（0=默认静默） */
+#define YUI_LIST_DIAG 0
 #include <string.h>
 
 static int list_get_padding(const Layer* layer, int index) {
@@ -253,6 +256,7 @@ ListComponent* list_component_create(Layer* layer) {
     component->spacing = 4;
     component->hovered_index = -1;
     component->pressed_index = -1;
+    component->focused_index = -1;
 
     layer->component = component;
     layer->render = list_component_render;
@@ -456,9 +460,22 @@ void list_component_render(Layer* layer) {
     }
 
     int count = list_component_get_item_count(component);
+    int focused = (layer->state & LAYER_STATE_FOCUSED) ? 1 : 0;
+    int active = -1;
+    if (focused) {
+        if (component->focused_index < 0 && count > 0) {
+            component->focused_index = 0;
+        }
+        if (component->focused_index >= count) {
+            component->focused_index = count > 0 ? count - 1 : -1;
+        }
+        /* 有键盘焦点时只显示键盘焦点项，避免鼠标 hover 造成两个高亮 */
+        active = component->focused_index;
+    } else {
+        active = component->hovered_index;
+    }
     for (int i = 0; i < count; i++) {
-        list_render_item(component, i,
-                         component->hovered_index == i,
+        list_render_item(component, i, i == active,
                          component->pressed_index == i);
     }
 
@@ -466,6 +483,19 @@ void list_component_render(Layer* layer) {
 }
 
 static int list_can_vertical_pan(const Layer* layer);
+
+/* 鼠标 hover：若列表已聚焦，同步键盘焦点项，避免出现两个高亮 */
+static void list_set_hover(ListComponent* component, int index) {
+    Layer* layer;
+    if (!component) return;
+    component->hovered_index = index;
+    layer = component->layer;
+    if (layer && (layer->state & LAYER_STATE_FOCUSED) && index >= 0 &&
+        component->focused_index != index) {
+        component->focused_index = index;
+        mark_layer_dirty(layer, DIRTY_COLOR | DIRTY_TEXT);
+    }
+}
 
 int list_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
     if (!layer || !event || !layer->component) return 0;
@@ -483,9 +513,18 @@ int list_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
         return 0;
     }
 
+    /* 鼠标滚轮：List 不是 View/Grid，默认滚动处理不会接管，这里自行滚动 */
+    if (event->phase == POINTER_WHEEL) {
+        if (!in_layer) {
+            return 0;
+        }
+        list_component_handle_scroll_event(layer, event->delta_y);
+        return 1;
+    }
+
     if (event->phase == POINTER_MOVE) {
         if (event->device == POINTER_DEVICE_TOUCH && event->finger_count > 1) {
-            component->hovered_index = inside ? index : -1;
+            list_set_hover(component, inside ? index : -1);
             return inside || can_pan || tracking;
         }
         int adx = event->delta_x < 0 ? -event->delta_x : event->delta_x;
@@ -499,7 +538,7 @@ int list_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
             }
         }
 
-        component->hovered_index = inside ? index : -1;
+        list_set_hover(component, inside ? index : -1);
         if (!inside || component->pressed_index < 0) {
             if (!inside) component->pressed_index = -1;
         }
@@ -516,7 +555,7 @@ int list_component_handle_pointer_event(Layer* layer, PointerEvent* event) {
         }
         component->touch_scrolled = 0;
         component->pressed_index = inside ? index : -1;
-        component->hovered_index = inside ? index : -1;
+        list_set_hover(component, inside ? index : -1);
         return 1;
     }
 
@@ -557,35 +596,77 @@ static int list_can_vertical_pan(const Layer* layer) {
     return layer->content_height > visible_height;
 }
 
+/* 把聚焦项滚动到可见区域 */
+static void list_ensure_index_visible(ListComponent* component, int index) {
+    Layer* layer = component->layer;
+    Rect item_rect;
+    int top;
+    int bottom;
+    if (!layer || index < 0) return;
+
+    list_component_update_content_size(component);
+    list_get_item_rect(component, index, &item_rect);
+
+    top = layer->rect.y;
+    bottom = layer->rect.y + layer->rect.h;
+    /* layout_scroll_vertical 的 delta 为“内容下移量”：正数使内容下移（显示上方），
+     * 负数使内容上移（显示下方），与 scroll_offset 反向。 */
+    if (item_rect.y < top) {
+        layout_scroll_vertical(layer, top - item_rect.y);
+    } else if (item_rect.y + item_rect.h > bottom) {
+        layout_scroll_vertical(layer, -((item_rect.y + item_rect.h) - bottom));
+    }
+}
+
 int list_component_handle_key_event(Layer* layer, KeyEvent* event) {
     if (!layer || !event || !layer->component) return 0;
+
+    /* YiYiYa: 诊断——列表收到键盘事件的时刻（与 SDL 侧的 t= 同一个毫秒钟），
+       用它减去 "YIYIYA pump key=… t=" 就是"xwin事件→SDL→列表"这跳的延迟。 */
+    if (event->type == KEY_EVENT_DOWN) {
+        if (YUI_LIST_DIAG) printf("YUI: list key=%d t=%u\n", (int)event->data.key.key_code,
+               (unsigned)backend_get_ticks());
+    }
 
     ListComponent* component = (ListComponent*)layer->component;
     if (event->type != KEY_EVENT_DOWN) return 0;
 
-    int step = component->item_height + list_get_spacing(component);
-    if (step <= 0) step = component->item_height;
+    int count = list_component_get_item_count(component);
+    if (count <= 0) return 0;
 
     switch (event->data.key.key_code) {
-        case SDLK_UP:
-            layer->scroll_offset -= step;
-            if (layer->scroll_offset < 0) layer->scroll_offset = 0;
+        case SDLK_UP: {
+            int next = component->focused_index <= 0 ? 0 : component->focused_index - 1;
+            /* 已在首项：不消费，让焦点移到列表上方 */
+            if (component->focused_index <= 0 && layer->scroll_offset <= 0) return 0;
+            component->focused_index = next;
+            list_ensure_index_visible(component, next);
+            mark_layer_dirty(layer, DIRTY_COLOR | DIRTY_TEXT);
             return 1;
-        case SDLK_DOWN:
-            layer->scroll_offset += step;
-            {
-                int max_offset = layer->content_height - layer->rect.h;
-                if (max_offset < 0) max_offset = 0;
-                if (layer->scroll_offset > max_offset) layer->scroll_offset = max_offset;
+        }
+        case SDLK_DOWN: {
+            int last = count - 1;
+            int next = component->focused_index < 0 ? 0 : component->focused_index + 1;
+            /* 末项：保持焦点不丢失（消费按键但不移动） */
+            if (next > last) {
+                return 1;
             }
+            component->focused_index = next;
+            list_ensure_index_visible(component, next);
+            mark_layer_dirty(layer, DIRTY_COLOR | DIRTY_TEXT);
             return 1;
+        }
         case SDLK_RETURN:
-        case SDLK_SPACE:
-            if (component->hovered_index >= 0) {
-                list_dispatch_select(component, component->hovered_index);
+        case SDLK_SPACE: {
+            int index = component->focused_index >= 0
+                            ? component->focused_index
+                            : component->hovered_index;
+            if (index >= 0) {
+                list_dispatch_select(component, index);
                 return 1;
             }
             return 0;
+        }
         default:
             return 0;
     }

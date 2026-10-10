@@ -131,9 +131,11 @@ Create your UI definition (`app/ui/main.json`):
 ## 🖼️ Screenshots
 
 <div style="display: flex; gap: 20px; flex-wrap: wrap;">
-  <img src="docs/inspect-demo.png" alt="Inspector Demo" width="260" />
-  <img src="docs/scroll.png" alt="Scroll Demo" width="260" />
-  <img src="docs/login.png" alt="Login Demo" width="260" />
+  <img src="docs/images/console-os.png" alt="Login Demo" width="260" />
+
+  <img src="docs/images/inspect-demo.png" alt="Inspector Demo" width="260" />
+  <img src="docs/images/scroll.png" alt="Scroll Demo" width="260" />
+  <img src="docs/images/login.png" alt="Login Demo" width="260" />
 </div>
 
 ## 🏗️ Architecture Overview

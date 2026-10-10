@@ -6,6 +6,7 @@
 #include "ytype.h"
 #include "util.h"
 #include "popup_manager.h"
+#include "focus.h"
 #include "screenshot.h"
 #include "game/game.h"
 #include "input/state.h"
@@ -57,6 +58,115 @@ SDL_Window* window=NULL;
 DFont* default_font=NULL;
 Layer* g_ui_root = NULL;
 int g_running=0;
+/* YiYiYa: HOME 退出开关（默认关 —— console-os 桌面按 HOME 不退出） */
+static int g_home_quit_enable = 0;
+
+/* ==================== 游戏手柄 ==================== */
+#define YUI_MAX_GAMEPADS 4
+static SDL_GameController* g_gamepads[YUI_MAX_GAMEPADS];
+/* YiYiYa: 手柄方向诊断打印开关（0=默认静默） */
+#define YUI_PAD_DIAG 0
+static int g_pad_dir_held[4]; /* left, right, up, down */
+static Uint32 g_pad_repeat_at;
+
+static void backend_gamepad_add(int device_index) {
+    int i;
+    if (!SDL_IsGameController(device_index)) return;
+    for (i = 0; i < YUI_MAX_GAMEPADS; i++) {
+        if (!g_gamepads[i]) {
+            g_gamepads[i] = SDL_GameControllerOpen(device_index);
+            if (g_gamepads[i]) {
+                printf("Gamepad connected: %s\n", SDL_GameControllerName(g_gamepads[i]));
+            }
+            break;
+        }
+    }
+}
+
+static void backend_gamepad_remove(int instance_id) {
+    int i;
+    for (i = 0; i < YUI_MAX_GAMEPADS; i++) {
+        if (g_gamepads[i] &&
+            SDL_JoystickInstanceID(SDL_GameControllerGetJoystick(g_gamepads[i])) == instance_id) {
+            SDL_GameControllerClose(g_gamepads[i]);
+            g_gamepads[i] = NULL;
+            break;
+        }
+    }
+}
+
+static int backend_gamepad_keycode(Uint8 button) {
+    switch (button) {
+        case SDL_CONTROLLER_BUTTON_DPAD_LEFT: return SDLK_LEFT;
+        case SDL_CONTROLLER_BUTTON_DPAD_RIGHT: return SDLK_RIGHT;
+        case SDL_CONTROLLER_BUTTON_DPAD_UP: return SDLK_UP;
+        case SDL_CONTROLLER_BUTTON_DPAD_DOWN: return SDLK_DOWN;
+        case SDL_CONTROLLER_BUTTON_A: return SDLK_RETURN;
+        case SDL_CONTROLLER_BUTTON_B: return SDLK_ESCAPE;
+        case SDL_CONTROLLER_BUTTON_X: return SDLK_x;
+        case SDL_CONTROLLER_BUTTON_Y: return SDLK_y;
+        case SDL_CONTROLLER_BUTTON_START: return SDLK_RETURN;
+        case SDL_CONTROLLER_BUTTON_BACK: return SDLK_ESCAPE;
+        default: return 0;
+    }
+}
+
+static void backend_gamepad_send_key(Layer* root, int key_code, int down) {
+    KeyEvent ke;
+    memset(&ke, 0, sizeof(ke));
+    ke.type = down ? KEY_EVENT_DOWN : KEY_EVENT_UP;
+    ke.data.key.key_code = key_code;
+    handle_key_event(root, &ke);
+}
+
+/* YiYiYa: 诊断——最近一次手柄方向变化的时刻，用来量"方向变化 → 屏幕真正刷新"的延迟 */
+static Uint32 g_pad_move_t = 0;
+
+/* YiYiYa: 手柄方向【当成方向键派发】✓
+ * handle_key_event() 的顺序正是我们要的：先给焦点组件（List 会推进选中项并
+ * focus_scroll_into_view 滚动到可见 ✓），组件没消费才走 focus_handle_key
+ * （控件之间的焦点导航 ✓）。之前直接 focus_move ⇒ 列表只动焦点、不滚动 item ✗ */
+static void backend_pad_do_move(Layer* root, int dir) {
+    KeyEvent ev;
+    memset(&ev, 0, sizeof(ev));
+    ev.type = KEY_EVENT_DOWN;
+    ev.data.key.key_code = (dir == 0) ? SDLK_LEFT
+                         : (dir == 1) ? SDLK_RIGHT
+                         : (dir == 2) ? SDLK_UP
+                                      : SDLK_DOWN;
+    handle_key_event(root, &ev);
+}
+
+static void backend_gamepad_dir(Layer* root, int dir, int down) {
+    if (dir < 0 || dir > 3) return;
+    if (down == g_pad_dir_held[dir]) return;
+    g_pad_dir_held[dir] = down;
+    /* YiYiYa: 诊断打印——UI 侧【真正响应方向】的时刻（SDL ms），
+       与内核 [tick]、SDL YIYIYA2 的 t= 一起看，可定位是哪一跳慢。 */
+    g_pad_move_t = SDL_GetTicks();
+    if (YUI_PAD_DIAG) printf("YUI: pad dir=%d down=%d t=%u\n", dir, down, (unsigned)g_pad_move_t);
+    if (down) {
+        backend_pad_do_move(root, dir);
+        g_pad_repeat_at = SDL_GetTicks() + 300;
+    }
+}
+
+/* 每帧推进：按住方向键/摇杆时重复移动焦点 */
+static void backend_gamepad_update(Layer* root) {
+    Uint32 now = SDL_GetTicks();
+    int any = 0;
+    int i;
+    if (now < g_pad_repeat_at) return;
+    for (i = 0; i < 4; i++) {
+        if (g_pad_dir_held[i]) {
+            backend_pad_do_move(root, i);
+            any = 1;
+        }
+    }
+    if (any) {
+        g_pad_repeat_at = now + 80;
+    }
+}
 
 static int g_auto_frames = -1; /* -1 = run forever */  
 static int g_request_quit = 0;
@@ -175,6 +285,12 @@ static int sdl_end_frame(void) {
     }
     SDL_RenderPresent(renderer);
     g_sdl_presented_once = 1;
+    /* YiYiYa: 诊断——"方向变化 → 屏幕真正刷新"的延迟（用户感知的就是这一段） */
+    if (g_pad_move_t != 0) {
+        Uint32 now = SDL_GetTicks();
+        if (YUI_PAD_DIAG) printf("YUI: pad->present %ums\n", (unsigned)(now - g_pad_move_t));
+        g_pad_move_t = 0;
+    }
     return 1;
 }
 
@@ -212,6 +328,11 @@ void backend_set_auto_frames(int frames)
     g_auto_frames = frames;
     g_request_quit = 0;
     g_exit_code = 0;
+}
+
+void backend_set_home_quit(int enable)
+{
+    g_home_quit_enable = enable ? 1 : 0;
 }
 
 void backend_request_quit(int exit_code)
@@ -389,14 +510,16 @@ static int backend_texture_cache_pick_evict_index(uint64_t key_hash) {
     int probe = start;
     int empty_slot = -1;
     int lru_slot = -1;
-    Uint32 oldest_time = SDL_GetTicks();
+    Uint32 oldest_time = 0xFFFFFFFFu; /* YiYiYa: 最大初值，保证一定能选出一个 ✓ */
     int probes = 0;
-    
-    // 探测寻找空槽或 LRU 条目
-    while (probes < 16) {  // 探测最多 16 个位置
+
+    /* YiYiYa: 遍历【全部】槽位 —— 原来只探 16 个 ✗，可能返回 -1 ⇒ 调用者
+     * SDL_DestroyTexture(texture) 但之后的绘制仍引用它 ⇒ 画面出现错乱/放大的
+     * 纹理（"移动时飘出放大的 texture"）。全表扫描 + 兜底 ⇒ 绝不返回 -1 ✓。 */
+    while (probes < TEXTURE_CACHE_SIZE) {
         if (!texture_cache[probe].texture) {
             empty_slot = probe;
-            break;  // 找到空槽，直接使用
+            break; /* 找到空槽 ✓ */
         }
         if (!texture_cache[probe].pinned && texture_cache[probe].last_used < oldest_time) {
             oldest_time = texture_cache[probe].last_used;
@@ -406,9 +529,10 @@ static int backend_texture_cache_pick_evict_index(uint64_t key_hash) {
         probes++;
         if (probe == start) break;
     }
-    
-    // 优先使用空槽，否则使用 LRU 位置
-    return empty_slot >= 0 ? empty_slot : lru_slot;
+
+    if (empty_slot >= 0) return empty_slot;
+    if (lru_slot >= 0) return lru_slot;
+    return start; /* 兜底：全部 pinned ⇒ 覆盖起点，绝不返回 -1 ✓ */
 }
 
 static void backend_texture_cache_store_entry(int cache_index, uint64_t key_hash, DFont* font,
@@ -437,7 +561,7 @@ static void backend_texture_cache_store_entry(int cache_index, uint64_t key_hash
 }
 
 static char g_font_fallback_path[YUI_MAX_PATH] = "";
-#define YUI_FALLBACK_FONT_CACHE 8
+#define YUI_FALLBACK_FONT_CACHE 32
 static DFont* s_fb_font[YUI_FALLBACK_FONT_CACHE];
 static int s_fb_px[YUI_FALLBACK_FONT_CACHE];
 static int s_fb_n;
@@ -793,13 +917,10 @@ static void backend_apply_font_options(TTF_Font* font) {
     if (!font) {
         return;
     }
-#if defined(__YIYIYA__)
-    /* T113：autohinter + 灰度 AA 每个字形可达数百毫秒；关 hinting/kerning */
-    TTF_SetFontHinting(font, TTF_HINTING_NONE);
-    TTF_SetFontKerning(font, 0);
-#else
+    /* YiYiYa: 曾为 T113 性能关 hinting/kerning（小字号字形定位差 ⇒ 更糊 ✗）。
+     * 统一 LIGHT hinting + kerning（清晰度优先，性能影响很小 ✓）。 */
     TTF_SetFontHinting(font, TTF_HINTING_LIGHT);
-#endif
+    TTF_SetFontKerning(font, 1);
     TTF_SetFontOutline(font, 0);
 }
 
@@ -808,6 +929,7 @@ static TTF_Font* backend_open_ttf(const char* path, int pt) {
     int len = 0;
     SDL_RWops* rw;
     TTF_Font* font;
+    unsigned t0 = backend_get_ticks();
 
     if (!path || pt <= 0) {
         return NULL;
@@ -822,6 +944,16 @@ static TTF_Font* backend_open_ttf(const char* path, int pt) {
     font = TTF_OpenFontRW(rw, 1, pt);
     if (font) {
         backend_apply_font_options(font);
+    }
+    /* YiYiYa: 诊断——只有"真正打开字体"（缓存未命中）才会走到这里。
+       只打印 >=20ms 的，便于找出启动时是谁在吞时间（见 main.c 的
+       "YUI: startup fonts …ms"）✓ */
+    {
+        unsigned dt = backend_get_ticks() - t0;
+        if (dt >= 20) {
+            printf("YUI: font open %s pt=%d %ums %s\n", path, pt, dt,
+                   font ? "ok" : "FAIL");
+        }
     }
     return font;
 }
@@ -1130,11 +1262,10 @@ static SDL_Surface* backend_render_blended_utf8(DFont* font, const char* text, S
         return NULL;
     }
     /* 不要先 SizeUTF8 再 Render：SDL_ttf 内部还会 Size 一遍，T113 上等于每个字形 FT_Load_Glyph 两次 */
-#if defined(__YIYIYA__)
-    return TTF_RenderUTF8_Solid(font, text, color);
-#else
+    /* YiYiYa: 曾为 T113 性能用 Solid（1-bit、无抗锯齿 ⇒ 字体锯齿多/发糊 ✗）。
+     * 现在 miyoo 等平台性能足够，统一 Blended（灰度 AA，平滑 ✓）。
+     * 若某平台字形渲染又变慢，可在此按平台条件回退到 Solid。 */
     return TTF_RenderUTF8_Blended(font, text, color);
-#endif
 }
 
 #ifdef __EMSCRIPTEN__
@@ -1734,10 +1865,6 @@ void add_texture_to_cache(DFont* font, const char* text, Color color, int font_s
     if (font_size <= 0) {
         font_size = backend_get_font_size(font);
     }
-    if (!pinned && backend_text_cache_volatile(text)) {
-        return;
-    }
-
     key_hash = backend_texture_cache_make_hash(font, font_size, color, text);
     cache_index = backend_texture_cache_find_index(key_hash, font, font_size, color, text);
     if (cache_index >= 0) {
@@ -1821,7 +1948,7 @@ TTF_Font* find_font_in_cache(const char* font_path, int size, const char* weight
     int probe = start;
     int probes = 0;
     
-    while (probes < 8) {
+    while (probes < 32) {
         if (font_cache[probe].font && font_cache[probe].hash == hash &&
             strcmp(font_cache[probe].font_path, font_path) == 0 &&
             font_cache[probe].size == size &&
@@ -2169,7 +2296,20 @@ int backend_init(){
     SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "0");
 
     // 初始化SDL
-    SDL_Init(SDL_INIT_VIDEO);
+    SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER);
+    /* YiYiYa: 打开手柄/控制器事件态 —— SDL2 不像 SDL1 那样在 PumpEvents 里自动
+       刷新手柄状态（这正是 testjoystick(SDL1) 跟手、yui(SDL2) 慢的原因 ✗）。
+       开启后 PumpEvents 每帧都会刷；主循环里另有显式 SDL_GameControllerUpdate()
+       兜底 ✓。四个里任意一个生效都能让手柄每帧刷新 ✓。 */
+    SDL_JoystickEventState(SDL_ENABLE);
+    SDL_GameControllerEventState(SDL_ENABLE);
+
+    /* 打开已连接的手柄 */
+    memset(g_gamepads, 0, sizeof(g_gamepads));
+    memset(g_pad_dir_held, 0, sizeof(g_pad_dir_held));
+    for (int gi = 0; gi < SDL_NumJoysticks(); gi++) {
+        backend_gamepad_add(gi);
+    }
 
     // 启用 IME UI 显示（候选词窗口）
     SDL_SetHint(SDL_HINT_IME_SHOW_UI, "1");
@@ -2316,7 +2456,12 @@ int backend_init(){
         }
     }
 #if defined(__YIYIYA__)
-    g_sdl_persistent_fb = 1;
+    /* YiYiYa: 不能假设窗口 surface 跨帧持久。本机（GPU 渲染器）走的是
+       “离屏画布 + 每帧整帧拷贝”，DIRTY 局部重绘因此始终正确、不闪；
+       若在这里假定持久（直写 surface 并跳过拷贝），局部更新会被内核的
+       翻页/光标等打扰，表现为“按一下整页闪一下”。改为与主机一致：0 ⇒
+       走离屏画布 + 整帧拷贝。 */
+    g_sdl_persistent_fb = 0;
 #endif
     
     // 启用透明度混合
@@ -2521,8 +2666,65 @@ int pointInLayer(SDL_Point* point, Layer* layer) {
 }
 
 void handle_event(Layer* root, SDL_Event* event) {
+    /* YiYiYa: HOME 键退出 —— 掌机 HOME（YIYIYA SDL 后端 button 14）按下时
+     * 请求退出整个应用（所有 ymain 应用通用：带参启动的应用退出后回
+     * console-os；console-os 自身退出回 shell）。SDL_QUIT 走的也是
+     * backend_request_quit(0)，行为一致 ✓。 */
+    /* 【诊断·可删】joystick 原始事件（定位 HOME 退出链路：事件有没有来/开关值） */
+    if (event->type == SDL_JOYBUTTONDOWN || event->type == SDL_JOYBUTTONUP) {
+        printf("YUI: JOY btn=%d %s home_quit=%d\n",
+               event->jbutton.button,
+               event->type == SDL_JOYBUTTONDOWN ? "down" : "up",
+               g_home_quit_enable);
+    }
+    if (g_home_quit_enable &&
+        event->type == SDL_JOYBUTTONDOWN && event->jbutton.button == 14) {
+        printf("YUI: HOME pressed, quit\n");
+        backend_request_quit(0);
+        return;
+    }
     if (event->type == SDL_WINDOWEVENT) {
         sdl_handle_window_event(root, event);
+        return;
+    }
+
+    // 手柄：方向键/左摇杆移动焦点，A/B/X/Y 映射为按键
+    if (event->type == SDL_CONTROLLERDEVICEADDED) {
+        backend_gamepad_add(event->cdevice.which);
+        return;
+    }
+    if (event->type == SDL_CONTROLLERDEVICEREMOVED) {
+        backend_gamepad_remove(event->cdevice.which);
+        return;
+    }
+    if (event->type == SDL_CONTROLLERBUTTONDOWN || event->type == SDL_CONTROLLERBUTTONUP) {
+        int down = (event->type == SDL_CONTROLLERBUTTONDOWN);
+        switch (event->cbutton.button) {
+            case SDL_CONTROLLER_BUTTON_DPAD_LEFT:
+                backend_gamepad_dir(root, 0, down); return;
+            case SDL_CONTROLLER_BUTTON_DPAD_RIGHT:
+                backend_gamepad_dir(root, 1, down); return;
+            case SDL_CONTROLLER_BUTTON_DPAD_UP:
+                backend_gamepad_dir(root, 2, down); return;
+            case SDL_CONTROLLER_BUTTON_DPAD_DOWN:
+                backend_gamepad_dir(root, 3, down); return;
+            default: {
+                int kc = backend_gamepad_keycode(event->cbutton.button);
+                if (kc) backend_gamepad_send_key(root, kc, down);
+                return;
+            }
+        }
+    }
+    if (event->type == SDL_CONTROLLERAXISMOTION) {
+        const int DEADZONE = 16384;
+        int v = event->caxis.value;
+        if (event->caxis.axis == SDL_CONTROLLER_AXIS_LEFTX) {
+            backend_gamepad_dir(root, 0, v < -DEADZONE);
+            backend_gamepad_dir(root, 1, v > DEADZONE);
+        } else if (event->caxis.axis == SDL_CONTROLLER_AXIS_LEFTY) {
+            backend_gamepad_dir(root, 2, v < -DEADZONE);
+            backend_gamepad_dir(root, 3, v > DEADZONE);
+        }
         return;
     }
 
@@ -2872,6 +3074,14 @@ void backend_run(Layer* ui_root){
             break;
         }
 
+        /* YiYiYa: 每帧显式刷新手柄状态。
+         * 本应用 SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER) 之后
+         * 从未调用 SDL_GameControllerUpdate()，也没开事件态 ⇒ SDL2 不会自动
+         * 刷新手柄状态（SDL1 的 PumpEvents 会自动刷，SDL2 不会 ✗）——实测要
+         * 1 秒以上才拿到方向键，且按下/松开被挤在一起读走 ✗。
+         * 这里每帧刷一次，延迟降到 1 帧（~16ms）✓。 */
+        SDL_GameControllerUpdate();
+
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) running = 0;
             handle_event(ui_root, &event);
@@ -2883,6 +3093,8 @@ void backend_run(Layer* ui_root){
                 update_callbacks[i]();
             }
         }
+
+        backend_gamepad_update(ui_root);
 
 #if YUI_WITH_GAME
         game_update(-1.0f);
@@ -2945,6 +3157,9 @@ void backend_tick(Layer* ui_root) {
         return;
     }
 
+    /* YiYiYa: 同 backend_run —— 每帧显式刷新手柄状态（SDL2 不会自动刷） */
+    SDL_GameControllerUpdate();
+
     while (SDL_PollEvent(&event)) {
         if (event.type == SDL_QUIT) {
             backend_request_quit(0);
@@ -2958,6 +3173,8 @@ void backend_tick(Layer* ui_root) {
             update_callbacks[i]();
         }
     }
+
+    backend_gamepad_update(ui_root);
 
 #if YUI_WITH_GAME
     game_update(-1.0f);
@@ -4063,7 +4280,8 @@ static void yui_draw_rounded_rect_direct(SDL_Renderer* renderer, int x, int y, i
     if (r > w / 2) r = w / 2;
     if (r > h / 2) r = h / 2;
 
-    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+    /* 混合模式由调用者设置：直接绘制到主表面用 BLEND，
+     * 烘焙到透明纹理用 NONE（否则 target 上会写入预乘色，blit 出黑边）。 */
 
     if (r <= 0) {
         SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
@@ -4128,6 +4346,7 @@ void draw_rounded_rect(SDL_Renderer* renderer, int x, int y, int w, int h, int r
         return;
     }
 
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
     yui_draw_rounded_rect_direct(renderer, x, y, w, h, r, color);
 }
 
@@ -4284,7 +4503,10 @@ static SDL_Texture* yui_rounded_rect_texture_get(int w, int h, int radius, SDL_C
     }
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
     SDL_RenderClear(renderer);
+    /* 烘焙到透明纹理：用 NONE 直写非预乘颜色，避免 target 混合写入预乘色导致 blit 黑边 */
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
     yui_draw_rounded_rect_direct(renderer, 0, 0, w, h, radius, color);
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
     SDL_SetRenderTarget(renderer, prev);
 
     if (clip_on) SDL_RenderSetClipRect(renderer, &prev_clip);
@@ -4314,7 +4536,7 @@ static void yui_draw_vertical_gradient_fast(int x, int y, int w, int h, int radi
         if (!aa) r = 0;
     }
 
-    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+    /* 混合模式由调用者设置（主表面 BLEND / 纹理烘焙 NONE） */
     strip = (h >= 96) ? 4 : ((h >= 48) ? 2 : 1);
 
     for (int py = 0; py < h; ) {
@@ -4357,7 +4579,7 @@ static void yui_draw_horizontal_gradient_fast(int x, int y, int w, int h, int ra
         if (!aa) r = 0;
     }
 
-    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+    /* 混合模式由调用者设置（主表面 BLEND / 纹理烘焙 NONE） */
     strip = (w >= 96) ? 4 : ((w >= 48) ? 2 : 1);
 
     if (r <= 0) {
@@ -4733,11 +4955,14 @@ static SDL_Texture* yui_gradient_texture_get(int w, int h, int radius, int verti
     }
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
     SDL_RenderClear(renderer);
+    /* 烘焙到透明纹理用 NONE 直写非预乘色，避免圆角 blit 黑边 */
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
     if (vertical) {
         yui_draw_vertical_gradient_fast(0, 0, w, h, radius, colors, n);
     } else {
         yui_draw_horizontal_gradient_fast(0, 0, w, h, radius, colors, n);
     }
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
     SDL_SetRenderTarget(renderer, prev);
 
     g_style_fx[slot].tex = tex;
@@ -4776,6 +5001,7 @@ void backend_render_rounded_gradient(const Rect* rect, int radius, int vertical,
         return;
     }
 
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
     if (vertical) {
         yui_draw_vertical_gradient_fast(x, y, w, h, r, colors, count);
     } else {

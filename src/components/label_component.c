@@ -239,7 +239,31 @@ void label_component_render(Layer* layer) {
             p = p->parent;
         }
         if (p) {
-            backend_render_fill_rect(&layer->rect, p->bg_color);
+            /* 裁剪到 Label rect，按祖先“内容区圆角”填背景色：
+             * 不填平祖先圆角、不盖住边框，且只填一次（圆角走缓存 blit）。 */
+            int bw = layer_border_visible(&p->border) ? p->border.width : 0;
+            Rect inner = p->rect;
+            int r = p->radius - bw;
+            if (bw > 0) {
+                inner.x += bw;
+                inner.y += bw;
+                inner.w -= bw * 2;
+                inner.h -= bw * 2;
+            }
+            if (inner.w > 0 && inner.h > 0) {
+                Rect prev_clip;
+                if (render_clip_push(&layer->rect, &prev_clip)) {
+                    if (p->bg_gradient.enabled) {
+                        /* 渐变背景需完整重绘，纯色走下面的轻量填充 */
+                        render_layer_background(p, NULL);
+                    } else if (r > 0) {
+                        backend_render_rounded_rect(&inner, p->bg_color, r);
+                    } else {
+                        backend_render_fill_rect(&inner, p->bg_color);
+                    }
+                    render_clip_pop(&prev_clip);
+                }
+            }
         }
     }
     t_erase = backend_get_ticks() - t0;
@@ -389,12 +413,20 @@ void label_component_render(Layer* layer) {
         }
         {
             Uint32 total = backend_get_ticks() - t0;
-            if (total >= 8) {
+            /* YiYiYa: 默认静默。这行在串口上是同步输出（~9ms/行），每帧每标签都打
+               会把帧率压到个位数（实测 miyoo 上 7fps），拖慢按键响应。
+               需要时 export YUI_DEBUG=1 打开。 */
+            static int s_dbg_env = -1;
+            if (s_dbg_env < 0) {
+                const char* e = getenv("YUI_DEBUG");
+                s_dbg_env = (e && e[0] != '0') ? 1 : 0;
+            }
+            if (s_dbg_env && total >= 8) {
                 const char* lid = layer->id ? layer->id : "?";
                 const char* txt = original_text ? original_text : "";
-                printf("YUI: label %s erase=%ums measure=%ums raster=%ums blit=%ums total=%ums %dx%d \"%s\"\n",
-                       lid, (unsigned)t_erase, (unsigned)t_measure, (unsigned)t_raster, (unsigned)t_blit,
-                       (unsigned)total, layer->rect.w, layer->rect.h, txt);
+                // printf("YUI: label %s erase=%ums measure=%ums raster=%ums blit=%ums total=%ums %dx%d \"%s\"\n",
+                //        lid, (unsigned)t_erase, (unsigned)t_measure, (unsigned)t_raster, (unsigned)t_blit,
+                //        (unsigned)total, layer->rect.w, layer->rect.h, txt);
             }
         }
         return;

@@ -985,6 +985,9 @@ static cJSON* layer_json_events(const Layer* layer)
         layer_json_add_event(events, "onScroll", layer->event->scroll_name);
         layer_json_add_event(events, "onTouch", layer->event->touch_name);
         layer_json_add_event(events, "onResize", layer->event->resize_name);
+        layer_json_add_event(events, "onFocus", layer->event->focus_name);
+        layer_json_add_event(events, "onBlur", layer->event->blur_name);
+        layer_json_add_event(events, "onKey", layer->event->key_name);
     }
 
     layer_json_add_event(events, "onLoad", layer->lifecycle_on_load);

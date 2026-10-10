@@ -5,6 +5,7 @@
 #include "../event.h"
 #include "../backend.h"
 #include "../render.h"
+#include "../focus.h"
 #include "../util.h"
 #include "text_edit_history.h"
 #include "text_style_runs.h"
@@ -2934,11 +2935,7 @@ static void text_component_focus(TextComponent* component) {
     if (!component || !component->layer) return;
     Layer* layer = component->layer;
 
-    if (focused_layer && focused_layer != layer) {
-        CLEAR_STATE(focused_layer, LAYER_STATE_FOCUSED);
-    }
-    focused_layer = layer;
-    SET_STATE(layer, LAYER_STATE_FOCUSED);
+    focus_set(layer);
 
     if (component->editable) {
         backend_start_text_input();
@@ -2958,9 +2955,8 @@ static void text_component_blur(TextComponent* component) {
     if (!component || !component->layer) return;
     Layer* layer = component->layer;
 
-    CLEAR_STATE(layer, LAYER_STATE_FOCUSED);
-    if (focused_layer == layer) {
-        focused_layer = NULL;
+    if (focus_get() == layer) {
+        focus_clear();
     }
     backend_stop_text_input();
     /* DIRTY 模式：失焦状态变化需重绘 */

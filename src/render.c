@@ -458,10 +458,12 @@ static void render_layer_impl(Layer* layer, int force, RenderCtx* ctx) {
             backend_render_backdrop_filter(&layer->rect, layer->blur_radius, layer->saturation, layer->brightness);
         }
         /* 不透明 View 背景：只在几何/结构/自身颜色变化时重画。
-         * 子孙 DIRTY_TEXT 会传播到本层，但不能因此把整块底再 SPI 一遍。 */
+         * 子孙 DIRTY_TEXT 会传播到本层，但不能因此把整块底再 SPI 一遍。
+         * force 表示祖先重画了不透明底并已盖住本层像素，此时必须重画自身背景，
+         * 否则滚动/布局刷新后不透明子 View 的底色会丢失。 */
         int draw_cover_bg = 1;
         if (render_dirty_mode() && ctx->rendered_once && !ctx->force_full_redraw &&
-            !ctx->local_rect_active) {
+            !ctx->local_rect_active && !force) {
             draw_cover_bg = (layer->dirty_flags & (DIRTY_RECT | DIRTY_LAYOUT | DIRTY_LAYOUT_RECT |
                                                    DIRTY_CHILDREN | DIRTY_VISIBLE | DIRTY_COLOR | DIRTY_STYLE)) ? 1 : 0;
         }

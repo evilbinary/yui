@@ -104,6 +104,9 @@ TreeNode* treeview_create_node(const char* text) {
     node->collapse_icon_path = NULL;
     node->expand_icon_tex = NULL;
     node->collapse_icon_tex = NULL;
+    node->expand_icon_failed = 0;
+    node->collapse_icon_failed = 0;
+    node->icon_load_failed = 0;
     node->icon = NULL;
     node->icon_text = NULL;
     node->icon_tex = NULL;
@@ -1363,8 +1366,9 @@ void treeview_component_render(Layer* layer) {
 
                 if (node->expanded) {
                     const char* path = node->collapse_icon_path ? node->collapse_icon_path : component->collapse_icon_path;
-                    if (path && !node->collapse_icon_tex) {
+                    if (path && !node->collapse_icon_tex && !node->collapse_icon_failed) {
                         node->collapse_icon_tex = backend_load_texture((char*)path);
+                        if (!node->collapse_icon_tex) node->collapse_icon_failed = 1;
                     }
                     if (node->collapse_icon_tex) { icon_tex = node->collapse_icon_tex; }
                     else {
@@ -1373,8 +1377,9 @@ void treeview_component_render(Layer* layer) {
                     }
                 } else {
                     const char* path = node->expand_icon_path ? node->expand_icon_path : component->expand_icon_path;
-                    if (path && !node->expand_icon_tex) {
+                    if (path && !node->expand_icon_tex && !node->expand_icon_failed) {
                         node->expand_icon_tex = backend_load_texture((char*)path);
+                        if (!node->expand_icon_tex) node->expand_icon_failed = 1;
                     }
                     if (node->expand_icon_tex) { icon_tex = node->expand_icon_tex; }
                     else {
@@ -1419,11 +1424,12 @@ void treeview_component_render(Layer* layer) {
                 // 绘制节点icon: 优先加载SVG/图片，回退到icon_text文本
                 Texture* node_icon_tex = NULL;
                 int node_icon_owned = 0;
-                if (node->icon && !node->icon_tex) {
+                if (node->icon && !node->icon_tex && !node->icon_load_failed) {
                     // 只有看起来像文件路径时才尝试加载图片
                     if (strchr(node->icon, '.') || strchr(node->icon, '/') || strchr(node->icon, '\\')) {
                         node->icon_tex = backend_load_texture(node->icon);
                     }
+                    if (!node->icon_tex) node->icon_load_failed = 1; /* 失败只试一次 ✓ */
                 }
                 if (node->icon_tex) {
                     node_icon_tex = node->icon_tex;

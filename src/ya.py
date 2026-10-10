@@ -14,53 +14,27 @@ set_kind('static')
 add_files("*.c")
 add_files("components/*.c")
 add_files("perf/*.c")
+add_files("game/*.c")
 add_files("input/*.c")
 add_files("backend/backend_common.c")
-
-if get_plat() == "esp32":
-    # ESP32 资源有限，编译 game 核心但禁用 audio（miniaudio 依赖 POSIX pthread/dlfcn）
-    add_files("game/*.c")
-    add_cflags("-DYUI_WITH_GAME=1")
-    add_cflags("-DYUI_WITH_GAME_AUDIO=0")
-    # 静态数组压缩适配 400KB SRAM（GameEntity ~600B，128 个 ≈ 76KB）
-    add_cflags("-DGAME_MAX_ENTITIES=16")
-    add_cflags("-DGAME_MAX_PARTICLES=32")
-else:
-    add_files("game/*.c")
-    add_cflags("-DYUI_WITH_GAME=1")
-    add_cflags("-DYUI_WITH_GAME_AUDIO=1")
-    add_includedirs('../lib/miniaudio')
+# YUI_WITH_GAME defaults to 1 in game.h; disable with -DYUI_WITH_GAME=0
+add_cflags("-DYUI_WITH_GAME=1")
+add_cflags("-DYUI_WITH_GAME_AUDIO=1")
+# YiYiYa: UI 框架原来没有任何 -O（gcc 默认 -O0），整屏重绘（文字/字体/
+# 抗锯齿）在模拟 armv5 上会慢到"秒"级。开 -O2；老代码带类型双关，
+# 同时关掉严格别名。
+add_cflags("-O2 -fno-strict-aliasing")
+add_includedirs('../lib/miniaudio')
 
 if get_plat() in ("lvgl", "em-lvgl"):
     add_files("backend/backend_lvgl.c")
     add_cflags("-DYUI_USE_LVGL_BACKEND")
     add_cflags("-DYUI_HAS_LVGLMODULE")
     add_cflags("-DYUI_LVGL_PORT_SDL")
-    add_deps("lvgl", "lvgl_extra", "lvglmodule")
+    add_deps("yui-lvgl", "yui-lvgl_extra", "lvglmodule")
 elif get_plat() == "stm32":
     add_files("backend/backend_stm32.c")
-    add_files("backend/backend_embed_font.c")
-    add_includedirs('../lib/stb')
     add_cflags("-DSTM32_PLATFORM")
-    add_cflags("-DYUI_BACKEND_EMBEDDED")
-elif get_plat() == "esp32":
-    # ya 只编译 yui 核心 + 通用字体（不依赖 ESP-IDF）
-    # backend_esp32.c 依赖 esp_lcd/esp_lcd_touch 等 ESP-IDF 组件，
-    # 其 include 路径由 idf.py 生成，故由 ESP-IDF 工程编译
-    add_files("backend/backend_embed_font.c")
-    add_includedirs('../lib/stb')
-    add_cflags("-DYUI_BACKEND_EMBEDDED")
-    # ESP32-C3 仅 400KB SRAM，缩小桌面级静态池，腾出堆给 115KB 的
-    # RGB565 framebuffer（否则 backend_init 的 calloc 会失败）
-    add_cflags("-DPERF_MAX_SLOTS=16")
-    add_cflags("-DMAX_EVENT=64")
-    add_cflags("-DYUI_MAX_TYPES=32")
-    add_cflags("-DEMBED_TEXT_CACHE_DEFAULT=16")
-    add_cflags("-DMAX_JS_EVENTS=64")
-    add_cflags("-DMAX_C_EVENT_HANDLERS=32")
-    add_cflags("-DYUI_MAX_PATH=256")
-    add_cflags("-DYUI_PATH_MAX=256")
-    add_cflags("-DJS_MEM_POOL_SIZE=96*1024")
 elif get_plat() in ("android", "ios"):
     add_files("backend/backend_mobile.c")
     add_files("backend/mobile_text.c")
@@ -69,3 +43,6 @@ elif get_plat() in ("android", "ios"):
 else:
     add_files("backend/backend_sdl.c")
     add_cflags("-DYUI_USE_SDL_BACKEND")
+    add_deps("sdl2","sdl2-ttf","sdl2-image","freetype")
+    add_includedirs('../../libfreetype/include')
+    add_cflags("-D__YIYIYA__")

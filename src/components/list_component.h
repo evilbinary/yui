@@ -14,6 +14,7 @@ typedef struct ListComponent {
     int spacing;
     int hovered_index;
     int pressed_index;
+    int focused_index;   /* 键盘焦点项（方向键上下移动） */
     int touch_scrolled;
     char on_select_name[128];
 } ListComponent;

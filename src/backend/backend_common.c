@@ -2,6 +2,138 @@
 #include "../backend.h"
 #include <math.h>
 #include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <errno.h>
+
+#if defined(__unix__) || defined(__APPLE__)
+#include <sys/wait.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/ioctl.h>
+#endif
+
+/* YiYiYa: 系统音量 —— 软件音量（内核 dsp write 乘系数）。
+ * ioctl 号与 duck/modules/sound/sound.h 的 SNDCTL_DSP_SETVOLUME 对齐；
+ * 无 /dev/dsp（桌面开发等）时静默失败：set/get 均返回 -1 ✓。 */
+#define BACKEND_SNDCTL_DSP_SETVOLUME 100
+#define BACKEND_SNDCTL_DSP_GETVOLUME 101
+/* 与 duck/modules/vga/vga.h 的 VGA_IOC_SET/GET_BRIGHTNESS 对齐（magic 'v'，11/12） */
+#define BACKEND_VGA_IOC_SET_BRIGHTNESS _IOW('v', 11, int)
+#define BACKEND_VGA_IOC_GET_BRIGHTNESS _IOW('v', 12, int)
+
+int backend_set_volume(int volume) {
+#if defined(__unix__) || defined(__APPLE__)
+    int fd;
+    int v = volume;
+    if (v < 0) v = 0;
+    if (v > 100) v = 100;
+    fd = open("/dev/dsp", O_WRONLY);
+    if (fd < 0) {
+        return -1;
+    }
+    if (ioctl(fd, BACKEND_SNDCTL_DSP_SETVOLUME, &v) < 0) {
+        close(fd);
+        return -1;
+    }
+    close(fd);
+    return v;
+#else
+    (void)volume;
+    return -1;
+#endif
+}
+
+int backend_get_volume(void) {
+#if defined(__unix__) || defined(__APPLE__)
+    int fd;
+    int v = -1;
+    fd = open("/dev/dsp", O_WRONLY);
+    if (fd < 0) {
+        return -1;
+    }
+    if (ioctl(fd, BACKEND_SNDCTL_DSP_GETVOLUME, &v) < 0) {
+        close(fd);
+        return -1;
+    }
+    close(fd);
+    return v;
+#else
+    return -1;
+#endif
+}
+
+/* YiYiYa: 屏幕亮度 —— 走 /dev/fb 的 VGA_IOC_SET/GET_BRIGHTNESS（值传参，
+ * 与 vga_ioctl 的 va_arg(void*) 读法一致 ✓）；无 /dev/fb 时返回 -1 ✓。 */
+int backend_set_brightness(int brightness) {
+#if defined(__unix__) || defined(__APPLE__)
+    int fd;
+    int v = brightness;
+    int r;
+    if (v < 0) v = 0;
+    if (v > 100) v = 100;
+    fd = open("/dev/fb", O_RDWR);
+    if (fd < 0) {
+        return -1;
+    }
+    r = ioctl(fd, BACKEND_VGA_IOC_SET_BRIGHTNESS, v);
+    close(fd);
+    if (r < 0) {
+        return -1;
+    }
+    return v;
+#else
+    (void)brightness;
+    return -1;
+#endif
+}
+
+int backend_get_brightness(void) {
+#if defined(__unix__) || defined(__APPLE__)
+    int fd;
+    int v;
+    fd = open("/dev/fb", O_RDWR);
+    if (fd < 0) {
+        return -1;
+    }
+    v = ioctl(fd, BACKEND_VGA_IOC_GET_BRIGHTNESS, 0);
+    close(fd);
+    return v;
+#else
+    return -1;
+#endif
+}
+
+/* 启动外部程序（阻塞到程序退出），返回其退出码；失败返回 -1，并打印原因。
+ * system() 是标准库函数，所有平台都用它；POSIX 下额外解析 wait status 得到真实退出码。 */
+int backend_spawn(const char* cmd) {
+    int rc;
+    if (!cmd || !cmd[0]) {
+        fprintf(stderr, "backend_spawn: empty command\n");
+        return -1;
+    }
+    rc = system(cmd);
+    if (rc == -1) {
+        fprintf(stderr, "backend_spawn: system failed: %s\n", strerror(errno));
+        return -1;
+    }
+#if defined(__unix__) || defined(__APPLE__)
+    if (WIFEXITED(rc)) {
+        int code = WEXITSTATUS(rc);
+        if (code == 127) {
+            fprintf(stderr, "backend_spawn: command not found: %s\n", cmd);
+        } else if (code != 0) {
+            fprintf(stderr, "backend_spawn: command exited with code %d: %s\n", code, cmd);
+        }
+        return code;
+    }
+    if (WIFSIGNALED(rc)) {
+        fprintf(stderr, "backend_spawn: killed by signal %d: %s\n", WTERMSIG(rc), cmd);
+        return -1;
+    }
+#endif
+    return rc;
+}
 
 typedef struct {
     float x;

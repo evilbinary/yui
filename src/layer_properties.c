@@ -352,6 +352,12 @@ static int handle_focusable(Layer* layer, cJSON* value, int is_creating) {
     return 1;
 }
 
+static int handle_focus_children(Layer* layer, cJSON* value, int is_creating) {
+    if (!cJSON_IsBool(value)) return 0;
+    layer->focus_children = cJSON_IsTrue(value) ? 1 : 0;
+    return 1;
+}
+
 static int handle_scrollable(Layer* layer, cJSON* value, int is_creating) {
     if (cJSON_IsNumber(value)) {
         layer->scrollable = value->valueint;
@@ -599,6 +605,7 @@ static const PropertyHandlerEntry property_handlers[] = {
     {"visible", handle_visible},
     {"enabled", handle_enabled},
     {"focusable", handle_focusable},
+    {"focusChildren", handle_focus_children},
     {"scrollable", handle_scrollable},
     {"scrollbar", handle_scrollbar},
     {"scrollbarColor", handle_scrollbar_color},
@@ -808,6 +815,9 @@ cJSON* layer_get_property_as_json(Layer* layer, const char* key) {
     }
     else if (strcmp(key, "focusable") == 0) {
         return cJSON_CreateBool(layer->focusable);
+    }
+    else if (strcmp(key, "focusChildren") == 0) {
+        return cJSON_CreateBool(layer->focus_children);
     }
     else if (strcmp(key, "scrollable") == 0) {
         return cJSON_CreateNumber(layer->scrollable);

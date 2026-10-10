@@ -1,0 +1,24 @@
+{
+  "themeMode": "dark",
+  "emulatorRunMode": "external",
+  "gridColumns": 6,
+  "volume": 60,
+  "brightness": 70,
+  "wifi": "HOME-5G",
+  "recent": [
+    {
+      "emu": "nes",
+      "icon": "🎮",
+      "title": "超级马里奥兄弟",
+      "meta": "FC · 本次新增",
+      "when": "刚刚"
+    },
+    {
+      "emu": "snes",
+      "icon": "🦔",
+      "title": "超级马里奥世界",
+      "meta": "SFC · 本次新增",
+      "when": "刚刚"
+    }
+  ]
+}
